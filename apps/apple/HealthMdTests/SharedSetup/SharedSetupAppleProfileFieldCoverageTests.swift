@@ -55,7 +55,12 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 1)
+        XCTAssertEqual(ledger.schemaVersion, 2)
+        let drive = try XCTUnwrap(ledger.fields.first {
+            $0.sourceType == "ExportProfile" && $0.field == "googleDriveDestinationID"
+        })
+        XCTAssertEqual(drive.disposition, .prohibited)
+        XCTAssertNil(drive.contractPath)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -164,7 +169,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -290,6 +295,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             target: .apiEndpoint,
             folderVaultID: vaultID,
             apiEndpointID: endpointID,
+            googleDriveDestinationID: UUID(),
             createdAt: fixedDate,
             updatedAt: fixedDate.addingTimeInterval(60),
             isMigrationDefault: true
@@ -577,6 +583,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
     }
 }

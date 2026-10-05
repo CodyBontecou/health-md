@@ -7,6 +7,8 @@ import com.healthmd.R
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportHeaders
 import com.healthmd.data.scheduler.ExportScheduler
+import com.healthmd.data.drive.GoogleDriveConfiguration
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.ScheduleCadenceUnit
@@ -34,6 +36,7 @@ class ScheduleViewModel @Inject constructor(
     private val entitlementRepository: EntitlementRepository,
     private val distributionPolicy: DistributionPolicy,
     private val apiCredentialStore: APIExportCredentialStore? = null,
+    private val googleDriveSelectionStore: GoogleDriveSelectionStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ScheduleUiState())
@@ -102,6 +105,16 @@ class ScheduleViewModel @Inject constructor(
             }
         }
 
+        viewModelScope.launch {
+            googleDriveSelectionStore.destinationId.collect { destinationId ->
+                _uiState.update {
+                    it.copy(
+                        googleDriveConfigured = destinationId != null && GoogleDriveConfiguration.isConfigured(),
+                    )
+                }
+            }
+        }
+
         refreshAPIAuthorizationStatus()
         refreshSchedulingState()
 
@@ -138,6 +151,15 @@ class ScheduleViewModel @Inject constructor(
             }
             return
         }
+        if (enabled && state.selectedTarget == ExportTarget.GOOGLE_DRIVE && !state.googleDriveConfigured) {
+            _uiState.update {
+                it.copy(
+                    isEnabled = false,
+                    configurationError = ScheduleUiMessage.Text(R.string.google_drive_configuration_missing),
+                )
+            }
+            return
+        }
         _uiState.update { it.copy(isEnabled = enabled, configurationError = null) }
         persistAndRescheduleIfNeeded()
     }
@@ -151,6 +173,7 @@ class ScheduleViewModel @Inject constructor(
             val ready = when (target) {
                 ExportTarget.DEVICE_FOLDER -> state.hasExportFolder
                 ExportTarget.API_ENDPOINT -> state.apiEndpointConfigured
+                ExportTarget.GOOGLE_DRIVE -> state.googleDriveConfigured
             }
             state.copy(
                 selectedTarget = target,
@@ -418,6 +441,8 @@ data class ScheduleUiState(
     val apiAuthorizationConfigured: Boolean = false,
     val apiRequestHeadersConfigured: Boolean = false,
     val hasExportFolder: Boolean = false,
+    val googleDriveConfigured: Boolean = false,
+    val googleDriveConfigurationAvailable: Boolean = GoogleDriveConfiguration.isConfigured(),
     val configurationError: ScheduleUiMessage? = null,
     val exactTimingAvailable: Boolean = true,
     val requiresHealthConnectBackgroundAccess: Boolean = true,

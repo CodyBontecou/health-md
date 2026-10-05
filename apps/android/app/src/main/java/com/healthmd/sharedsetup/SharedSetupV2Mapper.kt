@@ -42,6 +42,7 @@ class SharedSetupV2Mapper(
         schedules: List<ScheduledProfileEntry>,
         appVersion: String,
         preservedAppleExtensionsByProfileId: Map<String, SharedSetupV2AppleExtension> = emptyMap(),
+        pendingDestinationsByProfileId: Map<String, SharedSetupV2Destination> = emptyMap(),
     ): SharedSetupV2 {
         require(profiles.size in 1..SHARED_SETUP_V2_MAX_PROFILES) {
             "Shared Setup v2 requires between 1 and 100 export profiles."
@@ -80,6 +81,7 @@ class SharedSetupV2Mapper(
                 snapshot = snapshot,
                 schedule = scheduleByNativeId[profile.id],
                 preservedAppleExtension = preservedAppleExtensionsByProfileId[profile.id],
+                pendingDestination = pendingDestinationsByProfileId[profile.id],
             )
         }
 
@@ -215,6 +217,7 @@ class SharedSetupV2Mapper(
         snapshot: AndroidExportSettingsSnapshot,
         schedule: ScheduledProfileEntry?,
         preservedAppleExtension: SharedSetupV2AppleExtension?,
+        pendingDestination: SharedSetupV2Destination?,
     ): SharedSetupV2Profile {
         val enabledIds = snapshot.metricSelection.enabledMetrics
             .map { selectionId -> bindingForAndroidSelection(selectionId, bundleId).semanticId }
@@ -301,7 +304,9 @@ class SharedSetupV2Mapper(
                 createIfMissing = snapshot.dailyNoteInjection.createIfMissing,
                 injectSections = snapshot.dailyNoteInjection.injectMarkdownSections,
             ),
-            destination = when (profile.target) {
+            // Pending imported meaning takes precedence even after an unsuccessful local edit.
+            destination = pendingDestination ?: when (profile.target) {
+                ExportTarget.GOOGLE_DRIVE -> SharedSetupV2Destination(kind = "cloud", apiEndpoint = null)
                 ExportTarget.DEVICE_FOLDER -> SharedSetupV2Destination(
                     kind = "device_folder",
                     apiEndpoint = null,

@@ -82,6 +82,7 @@ class FdroidDistributionPolicyTest {
             "com.android.installreferrer",
             "com.google.android.play",
             "com.google.android.gms.wearable",
+            "com.google.android.gms.auth",
             "com.healthmd.data.health.oauth",
             "com.healthmd.data.health.providers.cloud",
             "com.healthmd.data.health.providers.direct",

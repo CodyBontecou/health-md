@@ -140,6 +140,7 @@ class AutomationReceiver : BroadcastReceiver() {
     private suspend fun resolveProfileForRun(
         profileReference: String?,
     ): ProfileRunScope {
+        if (exportProfileRepository.hasOpaqueProfiles()) throw AutomationProfileUnavailable()
         val reference = profileReference?.trim().orEmpty()
         if (reference.isEmpty()) {
             val activeAccess = try {
@@ -153,7 +154,10 @@ class AutomationReceiver : BroadcastReceiver() {
                 throw AutomationProfileRebindRequired()
             }
             val profiles = exportProfileRepository.getProfiles()
-            if (profiles.isEmpty()) return ProfileRunScope(null, null)
+            if (profiles.isEmpty()) {
+                if (exportProfileRepository.hasOpaqueProfiles()) throw AutomationProfileUnavailable()
+                return ProfileRunScope(null, null)
+            }
             val active = exportProfileRepository.getActiveProfile()
                 ?: return ProfileRunScope(null, null)
             requireProfileExecutable(active)
@@ -211,6 +215,11 @@ class AutomationReceiver : BroadcastReceiver() {
             )
             publishExportResult(result, "$PROTOCOL_PROFILE_NOT_FOUND:$profileReference")
             return
+        } catch (_: AutomationProfileUnavailable) {
+            val result = ExportResult(0, dates.size,
+                dates.map { FailedDateDetail(it, ExportFailureReason.ACCESS_DENIED, PROTOCOL_PROFILE_UNAVAILABLE) })
+            publishExportResult(result, PROTOCOL_PROFILE_UNAVAILABLE)
+            return
         } catch (_: AutomationProfileRebindRequired) {
             val result = ExportResult(
                 successCount = 0,
@@ -247,6 +256,15 @@ class AutomationReceiver : BroadcastReceiver() {
         }
         val settings = profileSettingsAndName.settings ?: currentSettings
         val target = profile?.target ?: settings.exportTarget
+        if (target == ExportTarget.GOOGLE_DRIVE) {
+            val result = ExportResult(0, dates.size,
+                dates.map { FailedDateDetail(it, ExportFailureReason.ACCESS_DENIED, PROTOCOL_DRIVE_REQUIRES_FOREGROUND) },
+                target = target)
+            recordHistory(context, dates, result, ExportFailureReason.ACCESS_DENIED,
+                PROTOCOL_DRIVE_REQUIRES_FOREGROUND, settings, profile, target)
+            publishExportResult(result, PROTOCOL_DRIVE_REQUIRES_FOREGROUND)
+            return
+        }
         entitlementRepository.refresh()
         val isPurchased = distributionPolicy.fullAccessIncluded ||
             settingsRepository.isPurchased.first() ||
@@ -330,6 +348,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 dates = dates,
                 settings = settings.copy(exportTarget = target),
             )
+            ExportTarget.GOOGLE_DRIVE -> error("Drive automation requires foreground authorization")
         }
         recordHistory(
             context,
@@ -393,6 +412,7 @@ class AutomationReceiver : BroadcastReceiver() {
                 failedDateDetails = result.failedDateDetails,
                 target = target,
                 targetLabel = when (target) {
+                    ExportTarget.GOOGLE_DRIVE -> "Google Drive"
                     ExportTarget.DEVICE_FOLDER ->
                         profile?.folderDisplayName?.trim()?.takeIf { it.isNotEmpty() }
                             ?: targetLabel(settings)
@@ -467,6 +487,7 @@ class AutomationReceiver : BroadcastReceiver() {
 
     /** Thrown when an explicit profile reference does not resolve; never falls back. */
     private class AutomationProfileNotFound(val reference: String) : Exception(reference)
+    private class AutomationProfileUnavailable : Exception()
 
     /** Non-secret blocked-profile signal; no profile or destination text enters the error. */
     private class AutomationProfileRebindRequired : Exception()
@@ -505,6 +526,8 @@ class AutomationReceiver : BroadcastReceiver() {
         private const val PROTOCOL_NO_EXPORT_FOLDER = "No export folder selected"
         private const val PROTOCOL_HEALTH_PERMISSIONS_MISSING = "Health Connect permissions missing"
         private const val PROTOCOL_NO_EXPORT_HISTORY = "No export history"
+        private const val PROTOCOL_DRIVE_REQUIRES_FOREGROUND = "destination_requires_foreground:google_drive"
+        private const val PROTOCOL_PROFILE_UNAVAILABLE = "profile_unavailable"
         private const val PROTOCOL_EXPORT_CANCELLED = "Export cancelled"
         private const val PROTOCOL_PROFILE_NOT_FOUND = "profile_not_found"
         private const val PROTOCOL_PROFILE_SNAPSHOT_INVALID = "profile_snapshot_invalid"

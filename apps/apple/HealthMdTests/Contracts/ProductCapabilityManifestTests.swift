@@ -30,7 +30,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            ["core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive"]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -99,6 +99,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
         "direct-cli.shared-qr-pairing",
+        "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
     ]
 
@@ -127,7 +128,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration", "destination.google-drive"])
     }
 
     private enum ManifestError: Error {

@@ -1374,6 +1374,43 @@
     <string name="clinician_report_unit_respiratory_rate">breaths/min</string>
 
     <!-- Share My Setup -->
+    <!-- Google Drive destination. Error copy is privacy-safe and never includes account/file IDs. -->
+    <string name="google_drive_title">Upload to Google Drive</string>
+    <string name="google_drive_description">Choose a writable Drive folder for direct device-to-Google exports.</string>
+    <string name="google_drive_connect">Connect Google Drive</string>
+    <string name="google_drive_reauthorize">Reauthorize</string>
+    <string name="google_drive_disconnect">Disconnect</string>
+    <string name="google_drive_configuration_missing">Google Drive is unavailable because this build has no public OAuth client configuration.</string>
+    <string name="google_drive_connected_destination">%1$s · %2$s</string>
+    <string name="google_drive_target_ready">Connected folder: %1$s</string>
+    <string name="google_drive_target_ready_generic">Connected Drive folder</string>
+    <string name="google_drive_target_not_connected">Connect a Drive folder in Settings before exporting.</string>
+    <string name="google_drive_privacy_note">Uses only Drive file access. Health data and authorization go directly between this device and Google; Health.md has no token or health-data server.</string>
+    <string name="google_drive_reauthorization_title">Google Drive authorization needed</string>
+    <string name="google_drive_reauthorization_message">Open Health.md to authorize the same account and resume the retained export.</string>
+    <string name="google_drive_error_reauthorization_required">Authorization is required before this export can resume.</string>
+    <string name="google_drive_error_account_mismatch">The authorized Google account does not match this destination.</string>
+    <string name="google_drive_error_folder_unavailable">The selected Drive folder is unavailable or no longer writable.</string>
+    <string name="google_drive_error_permission_denied">Google Drive denied this operation.</string>
+    <string name="google_drive_error_remote_conflict">The remote file changed, moved, was renamed, or is ambiguous. Nothing was force-replaced.</string>
+    <string name="google_drive_error_ambiguous_commit">Drive could not confirm whether the upload committed. The retained operation can be reconciled safely.</string>
+    <string name="google_drive_error_quota_exceeded">Google Drive storage quota is unavailable.</string>
+    <string name="google_drive_error_rate_limited">Google Drive is temporarily unavailable. The retained operation can retry.</string>
+    <string name="google_drive_error_checksum_mismatch">Drive could not verify the uploaded bytes.</string>
+    <string name="google_drive_error_partial_completion">Some files were verified before the operation stopped. Remaining files are retained for recovery.</string>
+
+    <!-- Distribution and licensing -->
+    <string name="distribution_channel_play">Google Play build</string>
+    <string name="distribution_channel_fdroid">F-Droid build</string>
+    <string name="section_about">About and support</string>
+    <string name="about_license_summary">Health.md is free software licensed under AGPL-3.0-only.</string>
+    <string name="about_source_code">Source code</string>
+    <string name="about_license">AGPL-3.0 license</string>
+    <string name="fdroid_full_access_included">Full access included</string>
+    <string name="fdroid_onboarding_access_title">Full access is included</string>
+    <string name="fdroid_onboarding_access_body">The official F-Droid build includes every local export and automation feature at no charge.</string>
+    <string name="fdroid_onboarding_no_purchase">No purchase, restore, price, or Play account is required.</string>
+    <string name="fdroid_onboarding_no_play_services">Scheduled exports work without Google Play Billing.</string>
     <string name="shared_setup_title">Share My Setup</string>
     <string name="shared_setup_back">Back</string>
     <string name="shared_setup_intro">Copy export preferences between Health.md devices without sharing health data, credentials, permissions, purchases, or folder access.</string>
@@ -1437,17 +1474,4 @@
     <string name="shared_setup_v2_transaction_failed">Shared Setup Import Failed</string>
     <string name="shared_setup_v2_try_again">Review Again</string>
     <string name="shared_setup_v2_undoing">Undoing import…</string>
-
-    <!-- Distribution and licensing -->
-    <string name="distribution_channel_play">Google Play build</string>
-    <string name="distribution_channel_fdroid">F-Droid build</string>
-    <string name="section_about">About and support</string>
-    <string name="about_license_summary">Health.md is free software licensed under AGPL-3.0-only.</string>
-    <string name="about_source_code">Source code</string>
-    <string name="about_license">AGPL-3.0 license</string>
-    <string name="fdroid_full_access_included">Full access included</string>
-    <string name="fdroid_onboarding_access_title">Full access is included</string>
-    <string name="fdroid_onboarding_access_body">The official F-Droid build includes every local export and automation feature at no charge.</string>
-    <string name="fdroid_onboarding_no_purchase">No purchase, restore, price, or Play account is required.</string>
-    <string name="fdroid_onboarding_no_play_services">Scheduled exports work without Google Play Billing.</string>
 </resources>

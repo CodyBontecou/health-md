@@ -30,6 +30,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertThrows
@@ -167,6 +168,7 @@ class SharedSetupV2ProductionTransactionTest {
             scheduledProfileEntryStore = scheduleStore,
             appVersion = "test",
             preservedAppleExtensions = adapter::preservedAppleExtensionsByProfileId,
+            pendingDestinations = adapter::pendingDestinationsByProfileId,
         ).load()
         assertThat(exportContext.preservedAppleExtensionsByProfileId)
             .containsExactly(GENERATED_ONE_ID, APPLE_ARCHIVE_EXTENSION)
@@ -302,6 +304,72 @@ class SharedSetupV2ProductionTransactionTest {
 
         assertThat(rebound).isFalse()
         assertThat(profileRepository.isSharedSetupV2Blocked(apiImportId)).isTrue()
+    }
+
+    @Test
+    fun `production sharing retains cloud after import duplicate and unsuccessful folder and API rebind`() = runTest {
+        seed(listOf(nativeProfile(EXISTING_ONE_ID, "Existing")), EXISTING_ONE_ID)
+        val source = importPlan().source
+        val cloud = source.copy(profiles = source.profiles.map {
+            it.copy(destination = SharedSetupV2Destination("cloud", null))
+        })
+        adapter.apply(SharedSetupV2ApplyRequest(
+            SharedSetupV2Mapper(EmptyRegistry).planImport(cloud),
+            listOf("profile-001"), SharedSetupV2ApplyMode.ADD,
+        )).getOrThrow()
+        assertThat(sharedDocument().profiles.last().destination)
+            .isEqualTo(SharedSetupV2Destination("cloud", null))
+
+        val imported = profileRepository.profileById(GENERATED_ONE_ID)!!
+        val duplicate = profileRepository.add(
+            name = "Cloud copy",
+            settingsSnapshotJson = imported.settingsSnapshotJson,
+            target = imported.target,
+            derivedFromProfileId = imported.id,
+        )
+        assertThat(sharedDocument().profiles.drop(1).map { it.destination.kind })
+            .containsExactly("cloud", "cloud").inOrder()
+        assertThat(adapter.rebindBlockedFolder(imported.id, "content://synthetic/tree/docs", "Docs"))
+            .isFalse()
+        assertThat(profileRepository.updateProfile(
+            duplicate.id, target = ExportTarget.API_ENDPOINT,
+            apiEndpointUrl = "https://setup.invalid/edited",
+        )).isTrue()
+        assertThat(profileRepository.bindSharedSetupV2ApiEndpointAfterConfirmation(duplicate.id)).isFalse()
+        assertThat(profileRepository.clearSharedSetupV2BlockAfterApiCredentialConfirmation(duplicate.id)).isFalse()
+        assertThat(sharedDocument().profiles.drop(1).map { it.destination })
+            .containsExactly(SharedSetupV2Destination("cloud", null), SharedSetupV2Destination("cloud", null))
+        assertThat(profileRepository.isSharedSetupV2Blocked(imported.id)).isTrue()
+        assertThat(profileRepository.isSharedSetupV2Blocked(duplicate.id)).isTrue()
+    }
+
+    @Test
+    fun `production sharing fails closed on corrupt absent or invalid pending preservation`() = runTest {
+        adapter.apply(SharedSetupV2ApplyRequest(importPlan(), listOf("profile-001"), SharedSetupV2ApplyMode.ADD))
+            .getOrThrow()
+        val valid = dataStore.data.first()[SharedSetupV2ProfilePersistence.profileStateKey]!!
+        val invalidDestination = valid.replace("\"kind\":\"device_folder\"", "\"kind\":\"unreviewed_cloud\"")
+        assertThat(invalidDestination).isNotEqualTo(valid)
+        for (raw in listOf("{not-json", invalidDestination, null)) {
+            dataStore.edit { prefs ->
+                if (raw == null) prefs.remove(SharedSetupV2ProfilePersistence.profileStateKey)
+                else prefs[SharedSetupV2ProfilePersistence.profileStateKey] = raw
+            }
+            val before = dataStore.data.first().asMap()
+            assertThrows(Throwable::class.java) { kotlinx.coroutines.runBlocking { sharedDocument() } }
+            assertThat(dataStore.data.first().asMap()).isEqualTo(before)
+        }
+    }
+
+    private suspend fun sharedDocument(): SharedSetupV2 {
+        val scheduleStore = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        val source = RepositorySharedSetupV2ExportSource(
+            profileRepository, scheduleStore, "test",
+            adapter::preservedAppleExtensionsByProfileId,
+            adapter::pendingDestinationsByProfileId,
+        )
+        val bytes = SharedSetupService(EmptyRegistry).exportV2Bytes(source)
+        return (SharedSetupV2Codec(EmptyRegistry).decode(bytes) as SharedSetupVersionedDecodeResult.Valid).document
     }
 
     private fun transaction(vararg ids: String): SharedSetupV2ProfileTransaction {

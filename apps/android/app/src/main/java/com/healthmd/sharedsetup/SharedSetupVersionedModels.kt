@@ -20,11 +20,15 @@ data class SharedSetupV2ExportContext(
     val schedules: List<ScheduledProfileEntry>,
     val appVersion: String,
     val preservedAppleExtensionsByProfileId: Map<String, SharedSetupV2AppleExtension>,
+    val pendingDestinationsByProfileId: Map<String, SharedSetupV2Destination> = emptyMap(),
 ) {
     init {
         require(appVersion.isNotBlank()) { "The app version is required for Shared Setup v2." }
         require(appVersion.length <= 256) { "The app version is too long for Shared Setup v2." }
         val profileIDs = profiles.map { it.id }.toSet()
+        require(pendingDestinationsByProfileId.keys.all(profileIDs::contains)) {
+            "A pending destination does not belong to an exported profile."
+        }
         require(preservedAppleExtensionsByProfileId.keys.all(profileIDs::contains)) {
             "A preserved Apple extension does not belong to an exported profile."
         }
@@ -39,14 +43,15 @@ fun interface SharedSetupV2ExportSource {
 /**
  * Narrow repository adapter for the production v2 writer.
  *
- * The extension loader is deliberately mandatory: a caller must read the transaction lane's
- * per-profile preservation state rather than silently dropping foreign typed extensions.
+ * Both preservation loaders are mandatory: sharing must read validated transaction state rather
+ * than drop foreign extensions or rewrite a still-pending destination into a native projection.
  */
 class RepositorySharedSetupV2ExportSource(
     private val profileRepository: ExportProfileRepository,
     private val scheduledProfileEntryStore: ScheduledProfileEntryStore,
     private val appVersion: String,
     private val preservedAppleExtensions: suspend () -> Map<String, SharedSetupV2AppleExtension>,
+    private val pendingDestinations: suspend () -> Map<String, SharedSetupV2Destination>,
 ) : SharedSetupV2ExportSource {
     override suspend fun load(): SharedSetupV2ExportContext = SharedSetupV2ExportContext(
         profiles = profileRepository.getProfiles(),
@@ -54,6 +59,7 @@ class RepositorySharedSetupV2ExportSource(
         schedules = scheduledProfileEntryStore.getEntries(),
         appVersion = appVersion,
         preservedAppleExtensionsByProfileId = preservedAppleExtensions(),
+        pendingDestinationsByProfileId = pendingDestinations(),
     )
 }
 

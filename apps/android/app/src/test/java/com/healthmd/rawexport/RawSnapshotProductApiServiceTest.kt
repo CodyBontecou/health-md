@@ -4,7 +4,16 @@ import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.export.APIExportCredentialStore
 import com.healthmd.data.export.APIExportRequestConfiguration
+import com.healthmd.data.export.CsvExporter
+import com.healthmd.data.export.JsonExporter
+import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.data.export.RawSnapshotExportRunner
+import com.healthmd.data.drive.GeneratedExportBundle
+import com.healthmd.data.drive.GeneratedExportBundleFactory
+import com.healthmd.data.drive.GoogleDriveDestinationRunner
+import com.healthmd.data.drive.GoogleDriveRunResult
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -12,6 +21,8 @@ import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.model.RawSnapshotSettings
 import com.healthmd.domain.repository.SettingsRepository
 import io.mockk.coEvery
+import io.mockk.coVerify
+import io.mockk.slot
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
@@ -110,6 +121,102 @@ class RawSnapshotProductApiServiceTest {
     }
 
     @Test
+    fun driveRawExportJournalsArtifactAndChecksumSidecarUnderOneOperation() = runTest {
+        val root = createTempDirectory("healthmd-raw-drive-test").toFile()
+        val context = mockk<Context>()
+        every { context.noBackupFilesDir } returns root
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepository.getSelectedHealthProviderId() } returns RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID
+        coEvery { settingsRepository.getConnectedHealthProviderIds() } returns setOf(RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID)
+        val selection = mockk<GoogleDriveSelectionStore>()
+        coEvery { selection.get() } returns "destination-1"
+        val driveRunner = mockk<GoogleDriveDestinationRunner>()
+        coEvery { driveRunner.resumeIfPresent("raw-operation", "destination-1", null, any()) } returns null
+        val bundle = slot<GeneratedExportBundle>()
+        coEvery { driveRunner.run(capture(bundle), "destination-1") } returns GoogleDriveRunResult.Complete(2)
+        val runner = RawSnapshotExportRunner(
+            context = context,
+            rawRepository = EmptyCompleteRepository(),
+            apiClient = mockk(relaxed = true),
+            credentialStore = mockk(relaxed = true),
+            settingsRepository = settingsRepository,
+            driveBundleFactory = GeneratedExportBundleFactory(
+                MarkdownExporter(), JsonExporter(), CsvExporter(), ObsidianBasesExporter(),
+            ),
+            driveRunner = driveRunner,
+            driveSelectionStore = selection,
+        )
+        val settings = ExportSettings(
+            exportMode = ExportMode.RAW_SNAPSHOT,
+            exportTarget = ExportTarget.GOOGLE_DRIVE,
+            rawSnapshot = RawSnapshotSettings(format = RawExportFormat.NDJSON),
+            metricSelection = MetricSelectionState(setOf("steps")),
+        )
+
+        val result = runner.exportRange(
+            LocalDate.of(2026, 3, 8),
+            LocalDate.of(2026, 3, 9),
+            settings,
+            ExportTarget.GOOGLE_DRIVE,
+            googleDriveDestinationId = "destination-1",
+            googleDriveProfileId = "profile-1",
+            googleDriveOperationId = "raw-operation",
+        )
+
+        assertThat(result.isFullSuccess).isTrue()
+        assertThat(bundle.captured.operationId).isEqualTo("raw-operation")
+        assertThat(bundle.captured.profileId).isEqualTo("profile-1")
+        assertThat(bundle.captured.artifacts).hasSize(2)
+        assertThat(bundle.captured.artifacts.map { it.relativePath }.count { it.endsWith(".sha256") }).isEqualTo(1)
+        assertThat(completedArtifacts(root)).isEmpty()
+    }
+
+    @Test
+    fun driveRawRetryResumesBeforeProviderCapture() = runTest {
+        val root = createTempDirectory("healthmd-raw-drive-resume-test").toFile()
+        val context = mockk<Context>()
+        every { context.noBackupFilesDir } returns root
+        val repository = EmptyCompleteRepository()
+        val settingsRepository = mockk<SettingsRepository>(relaxed = true)
+        coEvery { settingsRepository.getSelectedHealthProviderId() } returns RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID
+        coEvery { settingsRepository.getConnectedHealthProviderIds() } returns setOf(RawSnapshotExportRunner.HEALTH_CONNECT_PROVIDER_ID)
+        val selection = mockk<GoogleDriveSelectionStore>()
+        coEvery { selection.get() } returns "destination-1"
+        val driveRunner = mockk<GoogleDriveDestinationRunner>()
+        coEvery { driveRunner.resumeIfPresent("raw-operation", "destination-1", null, any()) } returns
+            GoogleDriveRunResult.Complete(2)
+        val runner = RawSnapshotExportRunner(
+            context = context,
+            rawRepository = repository,
+            apiClient = mockk(relaxed = true),
+            credentialStore = mockk(relaxed = true),
+            settingsRepository = settingsRepository,
+            driveBundleFactory = mockk(relaxed = true),
+            driveRunner = driveRunner,
+            driveSelectionStore = selection,
+        )
+        val settings = ExportSettings(
+            exportMode = ExportMode.RAW_SNAPSHOT,
+            exportTarget = ExportTarget.GOOGLE_DRIVE,
+            rawSnapshot = RawSnapshotSettings(format = RawExportFormat.NDJSON),
+            metricSelection = MetricSelectionState(setOf("steps")),
+        )
+
+        val result = runner.exportRange(
+            LocalDate.of(2026, 3, 8),
+            LocalDate.of(2026, 3, 9),
+            settings,
+            ExportTarget.GOOGLE_DRIVE,
+            googleDriveDestinationId = "destination-1",
+            googleDriveOperationId = "raw-operation",
+        )
+
+        assertThat(result.isFullSuccess).isTrue()
+        assertThat(repository.streamCalls).isEqualTo(0)
+        coVerify(exactly = 0) { driveRunner.run(any(), any()) }
+    }
+
+    @Test
     fun apiServiceDeletesPrivateFileAfterRejectedUpload() = runTest {
         withTlsServer(500) { server, client ->
             val fixture = fixture(client, server)
@@ -157,6 +264,9 @@ class RawSnapshotProductApiServiceTest {
                 apiClient = RawSnapshotApiClient(client),
                 credentialStore = credentialStore,
                 settingsRepository = settingsRepository,
+                driveBundleFactory = mockk(relaxed = true),
+                driveRunner = mockk(relaxed = true),
+                driveSelectionStore = mockk(relaxed = true),
             ),
         )
     }
@@ -210,9 +320,12 @@ class RawSnapshotProductApiServiceTest {
     }
 
     private class EmptyCompleteRepository : RawHealthRepository {
+        var streamCalls: Int = 0
+            private set
         override suspend fun capabilities() = RawProviderCapabilities(available = true)
 
         override fun stream(request: RawSnapshotRequest): Flow<RawExportItem> = flow {
+            streamCalls += 1
             emit(RawExportItem.Status(RawSnapshotStatus.RUNNING))
             RawExportTypeCatalog.definitions.forEach { definition ->
                 val selected = RawExportTypeCatalog.isSelected(definition, request)

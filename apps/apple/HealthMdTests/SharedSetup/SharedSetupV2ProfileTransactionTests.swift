@@ -33,6 +33,302 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         super.tearDown()
     }
 
+    func testEnvelopeAddPreservesDriveProfileAndLegacyBytesAndExactUndo() throws {
+        let legacy = ExportProfile(name: "Downgrade", settings: nativeSnapshot(filename: "legacy-{date}"), target: .localIPhoneFolder)
+        seed(profiles: [legacy], active: legacy.id, schedules: [])
+        let drive = ExportProfile(name: "Drive", settings: nativeSnapshot(filename: "drive-{date}"), target: .googleDrive, googleDriveDestinationID: uuid(900))
+        defaults.set(try ExportProfilePersistence.encode([drive], envelope: true), forKey: ExportProfilePersistence.envelopeKey)
+        // Absent envelope-active key must not inherit the legacy active identity.
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        let transaction = makeTransaction(profileIDs: [uuid(101)], scheduleIDs: [])
+        let result = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .add)
+        let profiles = try authoritativeProfiles()
+        XCTAssertEqual(profiles.first, drive)
+        XCTAssertEqual(profiles.map(\.id), [drive.id, uuid(101)])
+        XCTAssertEqual(result.activeProfileID, uuid(101))
+        XCTAssertEqual(defaults.data(forKey: ExportProfilePersistence.legacyListKey), before[ExportProfilePersistence.legacyListKey] as? Data)
+        XCTAssertEqual(defaults.string(forKey: ExportProfilePersistence.legacyActiveIDKey), legacy.id.uuidString)
+        XCTAssertEqual(ExportProfileStore(userDefaults: defaults).profiles, profiles)
+        _ = try transaction.undo()
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+        XCTAssertThrowsError(try transaction.undo())
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testEnvelopeReplaceAndUndoLeaveDestinationCredentialStoresUnchanged() throws {
+        let drive = ExportProfile(name: "Drive", settings: nativeSnapshot(filename: "drive-{date}"), target: .googleDrive, googleDriveDestinationID: uuid(901))
+        defaults.set(Data("opaque downgrade bytes".utf8), forKey: ExportProfilePersistence.legacyListKey)
+        defaults.set(try ExportProfilePersistence.encode([drive], envelope: true), forKey: ExportProfilePersistence.envelopeKey)
+        defaults.set(drive.id.uuidString, forKey: ExportProfilePersistence.activeIDKey)
+        defaults.set(Data("synthetic destination authority".utf8), forKey: "test.drive.destination")
+        defaults.set(Data("synthetic secure store marker".utf8), forKey: "test.secure.store")
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        let transaction = makeTransaction(profileIDs: [uuid(102)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace)
+        XCTAssertEqual(try authoritativeProfiles().map(\.id), [uuid(102)])
+        for key in [ExportProfilePersistence.legacyListKey, "test.drive.destination", "test.secure.store"] {
+            XCTAssertEqual(defaults.data(forKey: key), before[key] as? Data)
+        }
+        _ = try transaction.undo()
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testEnvelopeFailedApplyAndUndoRecoveryAreByteAndAbsenceExact() throws {
+        let drive = ExportProfile(name: "Drive", settings: nativeSnapshot(filename: "drive-{date}"), target: .googleDrive)
+        defaults.set(try ExportProfilePersistence.encode([drive], envelope: true), forKey: ExportProfilePersistence.envelopeKey)
+        defaults.set(Data("previous local Undo".utf8), forKey: SharedSetupV2ProfileTransaction.undoKey)
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        let failing = makeTransaction(profileIDs: [uuid(103)], scheduleIDs: [], verificationOverride: { false })
+        XCTAssertThrowsError(try failing.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .add))
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+        let transaction = makeTransaction(profileIDs: [uuid(104)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace)
+        let postApply = defaults.dictionaryRepresentation() as NSDictionary
+        XCTAssertThrowsError(try failing.undo())
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, postApply)
+        XCTAssertTrue(transaction.canUndo)
+        _ = try transaction.undo()
+        // Successful Undo consumes the new snapshot, not a chain of previous Undos.
+        let expected = before.mutableCopy() as! NSMutableDictionary
+        expected.removeObject(forKey: SharedSetupV2ProfileTransaction.undoKey)
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, expected)
+    }
+
+    func testUndoAfterLazyNativeMigrationRestoresLegacyAuthorityAndEnvelopeAbsence() throws {
+        let legacy = ExportProfile(name: "Legacy", settings: nativeSnapshot(filename: "legacy-{date}"), target: .localIPhoneFolder)
+        seed(profiles: [legacy], active: legacy.id, schedules: [])
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        let transaction = makeTransaction(profileIDs: [uuid(105)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .add)
+        let store = ExportProfileStore(userDefaults: defaults)
+        XCTAssertEqual(store.rename(id: legacy.id, to: "Edited"), "Edited")
+        XCTAssertNotNil(defaults.object(forKey: ExportProfilePersistence.envelopeKey))
+        _ = try transaction.undo()
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+        XCTAssertNil(defaults.object(forKey: ExportProfilePersistence.envelopeKey))
+        XCTAssertNil(defaults.object(forKey: ExportProfilePersistence.activeIDKey))
+        XCTAssertEqual(store.activeProfile, legacy, "a pre-existing native store re-reads restored authority")
+    }
+
+    func testOldLocalUndoVersionRestoresLegacyAndRemovesLazyEnvelope() throws {
+        let legacy = ExportProfile(name: "Legacy", settings: nativeSnapshot(filename: "legacy-{date}"), target: .localIPhoneFolder)
+        seed(profiles: [legacy], active: legacy.id, schedules: [])
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        let transaction = makeTransaction(profileIDs: [uuid(106)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .add)
+        var oldUndo = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey))) as? [String: Any])
+        oldUndo["version"] = 1
+        oldUndo.removeValue(forKey: "profileEnvelope")
+        oldUndo.removeValue(forKey: "activeProfileIDV2")
+        defaults.set(try JSONSerialization.data(withJSONObject: oldUndo), forKey: SharedSetupV2ProfileTransaction.undoKey)
+        _ = ExportProfileStore(userDefaults: defaults).rename(id: legacy.id, to: "Edited")
+        XCTAssertTrue(transaction.canUndo)
+        _ = try transaction.undo()
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testTransactionsRejectOpaqueCorruptFutureAndWrongTypedAuthorityWithoutWrites() throws {
+        let known = ExportProfile(name: "Known", settings: nativeSnapshot(filename: "known-{date}"), target: .googleDrive)
+        let record = try JSONSerialization.jsonObject(with: JSONEncoder().encode(known))
+        var futureRecord = try XCTUnwrap(record as? [String: Any])
+        futureRecord["future_authority"] = "synthetic"
+        var futureSettingsRecord = try XCTUnwrap(record as? [String: Any])
+        var futureSettings = try XCTUnwrap(futureSettingsRecord["settings"] as? [String: Any])
+        futureSettings["future_output_policy"] = "synthetic"
+        futureSettingsRecord["settings"] = futureSettings
+        let invalid: [Any] = [
+            Data("corrupt".utf8), "wrong storage type",
+            try JSONSerialization.data(withJSONObject: ["version": 99, "records": [record]]),
+            try JSONSerialization.data(withJSONObject: ["version": 2, "records": [record, ["target": "future"]]]),
+            try JSONSerialization.data(withJSONObject: ["version": 2, "records": [record, record]]),
+            try JSONSerialization.data(withJSONObject: ["version": 2, "records": [futureRecord]]),
+            try JSONSerialization.data(withJSONObject: ["version": 2, "records": [futureSettingsRecord]])
+        ]
+        for value in invalid {
+            defaults.removePersistentDomain(forName: suiteName)
+            seed(profiles: [known], active: known.id, schedules: [])
+            let transaction = makeTransaction(profileIDs: [uuid(107)], scheduleIDs: [])
+            _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .add)
+            defaults.set(value, forKey: ExportProfilePersistence.envelopeKey)
+            let before = defaults.dictionaryRepresentation() as NSDictionary
+            for mode in [SharedSetupV2TransactionMode.add, .replace] {
+                XCTAssertThrowsError(try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: mode)) {
+                    XCTAssertEqual($0 as? SharedSetupV2TransactionError, .invalidPersistedState)
+                }
+                XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+            }
+            XCTAssertThrowsError(try transaction.undo())
+            XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+            XCTAssertNil(ExportProfileStore(userDefaults: defaults).activeProfile)
+        }
+        // The same tolerant-record boundary applies before envelope migration.
+        defaults.removePersistentDomain(forName: suiteName)
+        defaults.set(try JSONSerialization.data(withJSONObject: [record, futureRecord]), forKey: ExportProfilePersistence.legacyListKey)
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        XCTAssertThrowsError(try makeTransaction(profileIDs: [], scheduleIDs: []).apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace))
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testFutureSidecarVersionRejectsApplyAndUndoWithoutChangingAnyKey() throws {
+        let transaction = makeTransaction(profileIDs: [uuid(109)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace)
+        var sidecar = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileStateKey))) as? [String: Any])
+        sidecar["version"] = 99
+        defaults.set(try JSONSerialization.data(withJSONObject: sidecar), forKey: SharedSetupV2ProfileTransaction.profileStateKey)
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        XCTAssertThrowsError(try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace))
+        XCTAssertThrowsError(try transaction.undo())
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testUnknownUndoFieldsRejectWithoutConsumingTheSnapshotOrChangingKeys() throws {
+        let transaction = makeTransaction(profileIDs: [uuid(110)], scheduleIDs: [])
+        _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-001"], mode: .replace)
+        var undo = try XCTUnwrap(JSONSerialization.jsonObject(with: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.undoKey))) as? [String: Any])
+        undo["future_authority"] = "synthetic"
+        defaults.set(try JSONSerialization.data(withJSONObject: undo), forKey: SharedSetupV2ProfileTransaction.undoKey)
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        XCTAssertFalse(transaction.canUndo)
+        XCTAssertThrowsError(try transaction.undo())
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+    }
+
+    func testOpaqueSelectedAuthorityDoesNotAutomaticallyActivateAnotherKnownProfile() throws {
+        let known = ExportProfile(name: "Known", settings: nativeSnapshot(filename: "known-{date}"), target: .googleDrive)
+        let unknownID = uuid(950)
+        defaults.set(try JSONSerialization.data(withJSONObject: ["version": 2, "records": [
+            JSONSerialization.jsonObject(with: JSONEncoder().encode(known)),
+            ["id": unknownID.uuidString, "target": "future_destination"]
+        ]]), forKey: ExportProfilePersistence.envelopeKey)
+        defaults.set(unknownID.uuidString, forKey: ExportProfilePersistence.activeIDKey)
+        let coordinator = coordinatorDependencies().coordinator
+        XCTAssertEqual(coordinator.profileStore.profiles, [known])
+        XCTAssertEqual(coordinator.profileStore.unknownProfileRecordCount, 1)
+        XCTAssertNil(coordinator.activeProfileName)
+        XCTAssertNil(coordinator.profileStore.activeProfile)
+        XCTAssertTrue(coordinator.isActiveProfileExecutionBlocked)
+    }
+
+    func testBlockedNativeDuplicateAndCloudRebindRemainFailClosed() throws {
+        var document = try appleDocument()
+        document.profiles[0].destination = .init(kind: .cloud, apiEndpoint: nil)
+        let transaction = makeTransaction(profileIDs: [uuid(108)], scheduleIDs: [])
+        _ = try transaction.apply(SharedSetupV2Mapper.preview(document, registry: fixtureRegistry()), selectedBundleIDs: ["profile-001"], mode: .replace)
+        let store = ExportProfileStore(userDefaults: defaults)
+        let before = defaults.dictionaryRepresentation() as NSDictionary
+        XCTAssertNil(store.duplicate(id: uuid(108)))
+        XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+        let coordinator = coordinatorDependencies().coordinator
+        let folder = coordinator.destinationStore.upsertVault(name: "Synthetic", standardizedPath: "/synthetic", bookmarkData: Data("synthetic".utf8))
+        XCTAssertThrowsError(try coordinator.confirmFolderRebind(profileID: uuid(108), destinationID: folder.id))
+        let endpoint = coordinator.destinationStore.upsertAPIEndpoint(name: "Synthetic", endpointURLString: "https://synthetic.example.test/upload", bearerToken: nil)
+        XCTAssertThrowsError(try coordinator.confirmAPIEndpointRebind(profileID: uuid(108), endpointID: endpoint.id, credentialsConfirmed: true))
+        XCTAssertTrue(SharedSetupV2ExecutionGate(userDefaults: defaults).isExecutionBlocked(profileID: uuid(108)))
+        XCTAssertEqual(try transaction.preservationSnapshot().pendingDestinations[uuid(108)]?.kind, .cloud)
+        XCTAssertNil(coordinator.profileStore.profile(id: uuid(108))?.folderVaultID)
+        XCTAssertNil(coordinator.profileStore.profile(id: uuid(108))?.apiEndpointID)
+        let exported = try SharedSetupV2Mapper.exportDocument(profiles: coordinator.profileStore.profiles, activeProfileID: uuid(108), destinations: .init(), scheduledEntries: [], registry: fixtureRegistry(), appVersion: "test", pendingDestinationIntents: transaction.preservationSnapshot().pendingDestinations, calendar: utcCalendar())
+        XCTAssertEqual(exported.profiles[0].destination.kind, .cloud)
+    }
+
+    #if os(iOS)
+    func testProductionSharingPreservesImportedCloudAndForeignExtensionAndRejectsInvalidRetention() throws {
+        var document = try fixtureDocument(named: "android-shared-setup-v2.json")
+        document.profiles[0].destination = .init(kind: .cloud, apiEndpoint: nil)
+        let service = SharedSetupV2TransactionAdapter(userDefaults: defaults, calendar: utcCalendar())
+        let result = try service.apply(
+            SharedSetupV2Mapper.preview(document, registry: fixtureRegistry()),
+            selectedBundleIDs: ["profile-001"], mode: .replace
+        )
+        let owner = coordinatorDependencies().coordinator
+        XCTAssertEqual(owner.profileStore.profile(id: result.importedProfileIDs[0])?.target, .localIPhoneFolder)
+        let writer = SharedSetupCoordinator(registry: fixtureRegistry(), v2ExportContext: {
+            try SharedSetupV2ExportContext.production(exportProfiles: owner, service: service)
+        })
+        let healthy = try writer.exportData(appVersion: "test", calendar: utcCalendar())
+        let exported = try SharedSetupV2Codec.decode(healthy)
+        XCTAssertEqual(exported.profiles[0].destination.kind, .cloud)
+        XCTAssertEqual(exported.profiles[0].platformExtensions.android, document.profiles[0].platformExtensions.android)
+        let sidecarKey = SharedSetupV2ProfileTransaction.profileStateKey
+        let blockedKey = SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+        let sidecar = try XCTUnwrap(defaults.data(forKey: sidecarKey))
+        let blocked = try XCTUnwrap(defaults.data(forKey: blockedKey))
+        var future = try XCTUnwrap(JSONSerialization.jsonObject(with: sidecar) as? [String: Any])
+        future["version"] = 99
+        let cases: [(String, Any)] = [
+            (sidecarKey, Data("corrupt".utf8)), (sidecarKey, "wrong type"),
+            (sidecarKey, try JSONSerialization.data(withJSONObject: future)),
+            (blockedKey, Data("corrupt".utf8)), (blockedKey, "wrong type"),
+            (blockedKey, Data("[42]".utf8)), (blockedKey, Data("{\"version\":99}".utf8))
+        ]
+        for (key, value) in cases {
+            defaults.set(value, forKey: key)
+            let before = defaults.dictionaryRepresentation() as NSDictionary
+            XCTAssertThrowsError(try writer.exportData(appVersion: "test", calendar: utcCalendar()))
+            XCTAssertThrowsError(try writer.makeShareArtifact(appVersion: "test", calendar: utcCalendar()))
+            XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+            defaults.set(sidecar, forKey: sidecarKey)
+            defaults.set(blocked, forKey: blockedKey)
+        }
+        // An absent sidecar with retained blocked identity is not an empty map.
+        defaults.removeObject(forKey: sidecarKey)
+        XCTAssertThrowsError(try writer.exportData(appVersion: "test", calendar: utcCalendar()))
+        defaults.set(sidecar, forKey: sidecarKey)
+        XCTAssertEqual(try writer.exportData(appVersion: "test", calendar: utcCalendar()), healthy)
+    }
+    #endif
+
+    func testSuccessfulAddPreservesNoncanonicalProfileAndScheduleSlicesInBothStores() throws {
+        for envelope in [false, true] {
+            defaults.removePersistentDomain(forName: suiteName)
+            let date = Date(timeIntervalSinceReferenceDate: 1000)
+            let existing = ExportProfile(
+                name: "Slash / quote \" brackets ][ backslash \\",
+                settings: nativeSnapshot(filename: "existing-{date}"), target: .localIPhoneFolder,
+                createdAt: date, updatedAt: date
+            )
+            let schedule = ScheduledExportEntry(
+                profileID: existing.id, isEnabled: false, frequency: .daily,
+                preferredHour: 5, lastExportDate: date
+            )
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            func noncanonical<T: Encodable>(_ value: T) throws -> String {
+                String(decoding: try encoder.encode(value), as: UTF8.self)
+                    .replacingOccurrences(of: ": 1000", with: ": 1.000e+3")
+            }
+            let record = try noncanonical(existing)
+            let scheduleRecord = try noncanonical(schedule)
+            XCTAssertTrue(record.contains("\\/"))
+            XCTAssertTrue(record.contains("1.000e+3"))
+            let key = envelope ? ExportProfilePersistence.envelopeKey : ExportProfilePersistence.legacyListKey
+            let profileBytes = Data((envelope
+                ? "{ \"records\" : [\n" + record + "\n ], \"version\" : 2 }\n"
+                : "[\n" + record + "\n ]\n").utf8)
+            let scheduleBytes = Data(("[\n" + scheduleRecord + "\n ]\n").utf8)
+            defaults.set(profileBytes, forKey: key)
+            defaults.set(scheduleBytes, forKey: SharedSetupV2ProfileTransaction.scheduledEntriesKey)
+            let before = defaults.dictionaryRepresentation() as NSDictionary
+            let transaction = makeTransaction(profileIDs: [uuid(101)], scheduleIDs: [uuid(201)])
+            _ = try transaction.apply(try applePlan(), selectedBundleIDs: ["profile-002"], mode: .add)
+            let addedProfiles = try XCTUnwrap(defaults.data(forKey: key))
+            let addedSchedules = try XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.scheduledEntriesKey))
+            XCTAssertNotNil(addedProfiles.range(of: Data(record.utf8)))
+            XCTAssertNotNil(addedSchedules.range(of: Data(scheduleRecord.utf8)))
+            XCTAssertEqual(try authoritativeProfiles().first, existing)
+            XCTAssertEqual(try storedSchedules().first, schedule)
+            XCTAssertEqual(try authoritativeProfiles().count, 2)
+            XCTAssertEqual(try storedSchedules().count, 2)
+            _ = try transaction.undo()
+            XCTAssertEqual(defaults.dictionaryRepresentation() as NSDictionary, before)
+        }
+    }
+
+    private func authoritativeProfiles() throws -> [ExportProfile] {
+        let envelope = ExportProfilePersistence.hasEnvelope(in: defaults)
+        return try ExportProfilePersistence.transactionProfiles(defaults.data(forKey: envelope ? ExportProfilePersistence.envelopeKey : ExportProfilePersistence.legacyListKey), envelope: envelope)
+    }
+
     func testAddNormalizesSelectionMaterializesExactFreshProfilesAndKeepsSchedulesInert() throws {
         let existingID = uuid(1)
         let existingScheduleID = uuid(2)
@@ -936,10 +1232,7 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     }
 
     private func storedProfiles() throws -> [ExportProfile] {
-        try JSONDecoder().decode(
-            [ExportProfile].self,
-            from: XCTUnwrap(defaults.data(forKey: SharedSetupV2ProfileTransaction.profileListKey))
-        )
+        try authoritativeProfiles()
     }
 
     private func storedSchedules() throws -> [ScheduledExportEntry] {
@@ -966,7 +1259,8 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
     }
 
     private func storedActiveID() -> UUID? {
-        defaults.string(forKey: SharedSetupV2ProfileTransaction.activeProfileIDKey)
+        defaults.string(forKey: ExportProfilePersistence.hasEnvelope(in: defaults)
+            ? ExportProfilePersistence.activeIDKey : ExportProfilePersistence.legacyActiveIDKey)
             .flatMap(UUID.init(uuidString:))
     }
 
@@ -976,7 +1270,9 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
             SharedSetupV2ProfileTransaction.activeProfileIDKey,
             SharedSetupV2ProfileTransaction.scheduledEntriesKey,
             SharedSetupV2ProfileTransaction.profileStateKey,
-            SharedSetupV2ProfileTransaction.blockedProfileIDsKey
+            SharedSetupV2ProfileTransaction.blockedProfileIDsKey,
+            ExportProfilePersistence.envelopeKey,
+            ExportProfilePersistence.activeIDKey
         ]
         return defaults.dictionaryRepresentation().filter { keys.contains($0.key) } as NSDictionary
     }

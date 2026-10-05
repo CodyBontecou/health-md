@@ -42,6 +42,8 @@ data class ScheduledProfilePendingExport(
     val folderUri: String? = null,
     val folderDisplayName: String? = null,
     val durableOperationId: String? = null,
+    /** Local Drive binding frozen with residual work; never part of portable setup. */
+    val destinationId: String? = null,
 ) {
     val ownerDates: List<LocalDate>
         get() = ownerEpochDays.distinct().sorted().map(LocalDate::ofEpochDay)

@@ -170,6 +170,10 @@ class ExportEnginePinPlanner @Inject constructor() {
             ExportTarget.API_ENDPOINT ->
                 settings.exportMode == ExportMode.COMPATIBILITY &&
                     settings.selectedExportFormats.isNotEmpty()
+            ExportTarget.GOOGLE_DRIVE ->
+                AndroidDailyAggregateExportPlanner.supportsNonLegacy(
+                    settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER),
+                )
         }
 
         fun supportsNewDirectGeneratedFilesPin(settings: ExportSettings): Boolean =

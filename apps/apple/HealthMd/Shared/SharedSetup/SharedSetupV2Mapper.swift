@@ -84,6 +84,7 @@ enum SharedSetupV2Mapper {
         registry: SharedSetupMetricRegistry,
         appVersion: String,
         preservedAndroidExtensions: [UUID: SharedSetupV2.AndroidExtension] = [:],
+        pendingDestinationIntents: [UUID: SharedSetupV2.Destination] = [:],
         calendar: Calendar
     ) throws -> SharedSetupV2 {
         guard !profiles.isEmpty, profiles.count <= SharedSetupV2.maximumProfiles else {
@@ -106,7 +107,8 @@ enum SharedSetupV2Mapper {
                 "Scheduled entries must reference exported profiles exactly once."
             )
         }
-        guard Set(preservedAndroidExtensions.keys).isSubset(of: profileIDs) else {
+        guard Set(pendingDestinationIntents.keys).isSubset(of: profileIDs),
+              Set(preservedAndroidExtensions.keys).isSubset(of: profileIDs) else {
             throw SharedSetupV2Error.invalid(
                 "A preserved Android extension references a profile outside this bundle."
             )
@@ -145,6 +147,7 @@ enum SharedSetupV2Mapper {
                     enabledSemanticIDs: enabledSemanticIDs,
                     individualSemantic: individualSemantic,
                     endpoint: nativeProfile.apiEndpointID.flatMap { endpointByID[$0] },
+                    pendingDestinationIntent: pendingDestinationIntents[nativeProfile.id],
                     scheduledEntry: scheduledEntry,
                     schedule: schedule,
                     preservedAndroidExtension: preservedAndroidExtensions[nativeProfile.id]
@@ -425,6 +428,7 @@ enum SharedSetupV2Mapper {
         enabledSemanticIDs: [String],
         individualSemantic: [String: SharedSetupV2.IndividualMetric],
         endpoint: SavedAPIEndpoint?,
+        pendingDestinationIntent: SharedSetupV2.Destination?,
         scheduledEntry: ScheduledExportEntry?,
         schedule: SharedSetupV2.Schedule?,
         preservedAndroidExtension: SharedSetupV2.AndroidExtension?
@@ -447,18 +451,25 @@ enum SharedSetupV2Mapper {
             ? .apple : .portable
 
         let destination: SharedSetupV2.Destination
-        switch nativeProfile.target {
-        case .localIPhoneFolder:
-            // File Provider/iCloud path details are intentionally ignored. A
-            // native folder target is always inert device_folder intent.
-            destination = .init(kind: .deviceFolder, apiEndpoint: nil)
-        case .connectedMac:
-            destination = .init(kind: .connectedMac, apiEndpoint: nil)
-        case .apiEndpoint:
-            destination = .init(
-                kind: .apiEndpoint,
-                apiEndpoint: endpoint.flatMap { endpointHint($0.endpointURLString) }
-            )
+        if let pendingDestinationIntent {
+            destination = pendingDestinationIntent
+        } else {
+            switch nativeProfile.target {
+            case .localIPhoneFolder:
+                // File Provider/iCloud path details are intentionally ignored. A
+                // native folder target is always inert device_folder intent.
+                destination = .init(kind: .deviceFolder, apiEndpoint: nil)
+            case .googleDrive:
+                // Only portable cloud intent: never read Google destination/account stores.
+                destination = .init(kind: .cloud, apiEndpoint: nil)
+            case .connectedMac:
+                destination = .init(kind: .connectedMac, apiEndpoint: nil)
+            case .apiEndpoint:
+                destination = .init(
+                    kind: .apiEndpoint,
+                    apiEndpoint: endpoint.flatMap { endpointHint($0.endpointURLString) }
+                )
+            }
         }
 
         let trimmedName = nativeProfile.name.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -108,6 +108,21 @@ final class ScheduledExportCoordinator {
         let profileName: String
         let target: ExportTargetSelection
         let settings: ExportSettingsSnapshot
+        let googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot?
+
+        init(
+            profileID: UUID,
+            profileName: String,
+            target: ExportTargetSelection,
+            settings: ExportSettingsSnapshot,
+            googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil
+        ) {
+            self.profileID = profileID
+            self.profileName = profileName
+            self.target = target
+            self.settings = settings
+            self.googleDriveDestinationSnapshot = googleDriveDestinationSnapshot
+        }
     }
 
     private func makePendingScheduledExportRequest(
@@ -154,6 +169,7 @@ final class ScheduledExportCoordinator {
             settingsSnapshot: frozenSettings,
             profileID: profile?.profileID,
             profileName: profile?.profileName,
+            googleDriveDestinationSnapshot: profile?.googleDriveDestinationSnapshot,
             calendar: requestCalendar
         )
     }

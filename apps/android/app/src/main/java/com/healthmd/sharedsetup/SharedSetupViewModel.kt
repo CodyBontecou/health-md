@@ -207,6 +207,7 @@ class SharedSetupViewModel @Inject constructor(
             scheduledProfileEntryStore = scheduledProfileEntryStore,
             appVersion = BuildConfig.VERSION_NAME,
             preservedAppleExtensions = { v2Production.preservedAppleExtensionsByProfileId() },
+            pendingDestinations = { v2Production.pendingDestinationsByProfileId() },
         )
 
     private suspend fun createShareIntent(

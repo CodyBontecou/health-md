@@ -59,6 +59,7 @@ class SharedSetupActivityLifecycleTest {
             scheduledProfileEntryStore = entryPoint.scheduledProfileEntryStore(),
             appVersion = BuildConfig.VERSION_NAME,
             preservedAppleExtensions = { production.preservedAppleExtensionsByProfileId() },
+            pendingDestinations = { production.pendingDestinationsByProfileId() },
         )
         return runBlocking { entryPoint.sharedSetupService().exportV2Bytes(source) }
     }

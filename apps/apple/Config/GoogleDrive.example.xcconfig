@@ -1,0 +1,6 @@
+// Copy values into a developer-local, gitignored xcconfig or CI/App Store build settings.
+// This is an OAuth public native client. Never add a client secret.
+// Enable both Google Drive API and Google Picker API in the matching Google Cloud project.
+GOOGLE_DRIVE_IOS_CLIENT_ID = 000000000000-example.apps.googleusercontent.com
+GOOGLE_DRIVE_REDIRECT_SCHEME = com.googleusercontent.apps.000000000000-example
+GOOGLE_DRIVE_REDIRECT_URI = com.googleusercontent.apps.000000000000-example:/oauthredirect

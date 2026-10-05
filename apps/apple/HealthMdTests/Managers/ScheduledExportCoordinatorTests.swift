@@ -82,6 +82,57 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(scheduler.scheduledRequests[request.id]?.exportTarget, .apiEndpoint)
     }
 
+    func testPrepareProfileGoogleDriveScheduleFreezesExactDestinationSnapshot() async throws {
+        let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fireDate)
+        let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
+        let destination = GoogleDriveDestination(
+            credentialReferenceID: UUID(),
+            accountPermissionID: "permission",
+            folderID: "folder-a",
+            canAddChildren: true
+        )
+        let frozen = GoogleDriveDestinationSnapshot(destination: destination)
+        let profileID = UUID()
+        let settings = makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin())
+
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate,
+            profile: .init(
+                profileID: profileID,
+                profileName: "Drive",
+                target: .googleDrive,
+                settings: settings,
+                googleDriveDestinationSnapshot: frozen
+            )
+        )
+        let changedDestination = GoogleDriveDestination(
+            credentialReferenceID: UUID(),
+            accountPermissionID: "permission",
+            folderID: "folder-b",
+            canAddChildren: true
+        )
+        let preparedAgain = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule,
+            fireDate: fireDate,
+            profile: .init(
+                profileID: profileID,
+                profileName: "Drive edited",
+                target: .googleDrive,
+                settings: settings,
+                googleDriveDestinationSnapshot: .init(destination: changedDestination)
+            )
+        )
+
+        XCTAssertEqual(request.exportTarget, .googleDrive)
+        XCTAssertEqual(request.googleDriveDestinationSnapshot, frozen)
+        XCTAssertEqual(preparedAgain, request)
+        XCTAssertEqual(scheduler.scheduledRequests[request.id]?.googleDriveDestinationSnapshot, frozen)
+    }
+
     func testCompletePendingScheduledExport_successClearsRequestAndCancelsNotification() async throws {
         let fireDate = date(year: 2026, month: 5, day: 18, hour: 8)
         let store = InMemoryPendingExportStore()

@@ -3,6 +3,7 @@ package com.healthmd.data.scheduler
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
 import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequest
 import androidx.work.Operation
 import androidx.work.WorkManager
@@ -10,6 +11,10 @@ import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.SettableFuture
 import com.healthmd.data.export.APIExportCredentialStore
+import com.healthmd.data.drive.GoogleDriveDestination
+import com.healthmd.data.drive.GoogleDriveDestinationStore
+import com.healthmd.data.drive.GoogleDriveFolderCapabilities
+import com.healthmd.data.drive.GoogleDriveSelectionStore
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
 import com.healthmd.domain.exportengine.ExportEnginePinPlanner
 import com.healthmd.domain.model.ExportSettings
@@ -548,6 +553,27 @@ class ExportSchedulerGenerationTest {
     }
 
     @Test
+    fun googleDriveOccurrenceRequiresConnectedNetwork() = runTest {
+        val currentSettings = settings(ExportTarget.GOOGLE_DRIVE)
+        val due = occurrence(currentSettings, "generation-drive").copy(
+            triggerAtMillis = System.currentTimeMillis() - 60_000L,
+            intendedLocalDate = LocalDate.now(ZoneId.of("UTC")),
+        )
+        stateStore.markGenerationMigrationComplete()
+        stateStore.save(due)
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val scheduler = scheduler(
+            workManager = workManager(requests),
+            currentSettings = { currentSettings },
+        )
+
+        assertThat(scheduler.handleOccurrence(due, expedited = true)).isTrue()
+
+        val export = requests.single { ExportScheduler.EXPORT_OCCURRENCE_TAG in it.tags }
+        assertThat(export.workSpec.constraints.requiredNetworkType).isEqualTo(NetworkType.CONNECTED)
+    }
+
+    @Test
     fun interruptedArmRecoversTheSameAdmissionWithoutReadmittingCompletedOccurrence() = runTest {
         val currentSettings = settings(ExportTarget.DEVICE_FOLDER)
         val due = occurrence(currentSettings, "generation-active").copy(
@@ -667,6 +693,20 @@ class ExportSchedulerGenerationTest {
         every {
             enginePinPlanner.persistedPinAppliesToScheduledExport(any(), any(), any())
         } returns true
+        val driveSelectionStore = mockk<GoogleDriveSelectionStore>(relaxed = true)
+        val driveDestinationStore = mockk<GoogleDriveDestinationStore>(relaxed = true)
+        val driveDestination = GoogleDriveDestination(
+            id = "drive-destination",
+            accountReferenceId = "drive-account",
+            permissionId = "drive-permission",
+            folderId = "drive-folder",
+            accountLabel = "Google account",
+            folderLabel = "Exports",
+            capabilities = GoogleDriveFolderCapabilities(canAddChildren = true),
+            lastValidatedAtEpochMillis = 1,
+        )
+        coEvery { driveSelectionStore.get() } returns driveDestination.id
+        coEvery { driveDestinationStore.find(driveDestination.id) } returns driveDestination
         return ExportScheduler(
             context = context,
             workManager = workManager,
@@ -678,6 +718,8 @@ class ExportSchedulerGenerationTest {
             generationFactory = generationFactory,
             runCoordinator = runCoordinator,
             transitionObserver = ScheduledExportTransitionObserver(),
+            googleDriveSelectionStore = driveSelectionStore,
+            googleDriveDestinationStore = driveDestinationStore,
         )
     }
 
@@ -696,14 +738,27 @@ class ExportSchedulerGenerationTest {
         val snapshot = AndroidExportSettingsSnapshot.capture(settings, pin = null, zone = zone)
         return ScheduledExportConfiguration.from(
             settings = settings,
-            destinationFingerprint = API_FINGERPRINT.takeIf {
-                settings.scheduledExportTarget == ExportTarget.API_ENDPOINT
+            destinationFingerprint = when (settings.scheduledExportTarget) {
+                ExportTarget.DEVICE_FOLDER -> null
+                ExportTarget.API_ENDPOINT -> API_FINGERPRINT
+                ExportTarget.GOOGLE_DRIVE -> driveDestination().fingerprint
             },
             zoneId = zone,
             enginePin = null,
             settingsSnapshot = snapshot,
         )
     }
+
+    private fun driveDestination() = GoogleDriveDestination(
+        id = "drive-destination",
+        accountReferenceId = "drive-account",
+        permissionId = "drive-permission",
+        folderId = "drive-folder",
+        accountLabel = "Google account",
+        folderLabel = "Exports",
+        capabilities = GoogleDriveFolderCapabilities(canAddChildren = true),
+        lastValidatedAtEpochMillis = 1,
+    )
 
     private fun settings(target: ExportTarget): ExportSettings = ExportSettings(
         exportTarget = target,

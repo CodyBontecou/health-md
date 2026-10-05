@@ -132,10 +132,11 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(delete.waitForExistence(timeout: 5))
         delete.tap()
-        let confirm = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH 'Delete '")
-        ).firstMatch
+        // The prefix also matches the background "Delete Profile…" opener.
+        // Require the actual named destructive confirmation, not the first match.
+        let confirm = app.buttons["Delete “Weekly Sleep”"]
         XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertTrue(confirm.isHittable)
         confirm.tap()
         XCTAssertTrue(
             app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
@@ -258,6 +259,11 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         )
         copy.tap()
         wait(for: [copied], timeout: 5)
+        // The hosted first AX observation arrived four seconds after the tap.
+        // Confirmation must remain readable while this unchanged detail is open,
+        // rather than racing slow snapshots or a VoiceOver user's reading pace.
+        RunLoop.current.run(until: Date().addingTimeInterval(4))
+        XCTAssertEqual(copy.value as? String, "Copied")
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()

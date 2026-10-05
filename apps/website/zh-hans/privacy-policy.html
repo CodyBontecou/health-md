@@ -47,7 +47,7 @@
       <div class="legal-hero-inner">
         <p class="legal-eyebrow">法律 · 隐私</p>
         <h1 id="privacy-title">隐私保护，<br>简单明了。</h1>
-        <p class="legal-updated">最后更新：2026 年 8 月 6 日</p>
+        <p class="legal-updated">最后更新：2026 年 8 月 20 日</p>
         <p class="legal-lede">Health.md 帮助您传输敏感的健康数据，但不会建立 Health.md 健康数据云。您的设备读取您授权的记录，每次导出或直接响应发送到哪里，都由您决定。</p>
 
         <div class="legal-promise" role="list" aria-label="隐私原则">
@@ -132,6 +132,7 @@
             <li><strong>您的 API 端点：</strong>由用户配置、用于接收您所选导出内容的 API 端点。受保护端点模式要求使用 HTTPS。</li>
             <li><strong>已连接健康服务提供方：</strong>在您授权连接后发起的只读提供方请求。</li>
           </ul>
+          <p><strong>直接导出到 Google Drive：</strong>当此目标位置可用且您选择使用时，Health.md 会请求 Google 的 <code>drive.file</code> 权限范围，并使用 Google Picker 绑定您选择的账户，以及“我的云端硬盘”或共享云端硬盘中的可写文件夹。安装的应用会将敏感导出文件直接发送给 Google；Health.md 不运营健康数据上传服务器或 Google 令牌服务器。这与在 Apple“文件”或 Android SAF 中选择 Google Drive 文件提供方不同。Google 会根据您的 Google 或 Workspace 设置和条款接收并保留其副本。Health.md 对从 Google API 接收的信息的使用和传输遵守<a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener">《Google API 服务用户数据政策》</a>，包括其“受限使用”要求。断开连接会删除本地凭据和未来访问权限，但不会删除 Drive 中已有的文件。请参阅<a href="../zh-hans/docs/guides/google-drive-export/">上传到 Google Drive</a>。</p>
           <p>Health.md 不会保留健康数据的服务器副本供日后查询。iPhone 始终是 Apple Health 直连查询的数据源。直接传输可能会在已配对计算机上留下持久作业状态和输出，但这些状态并非由 Health.md 托管的健康数据集合。</p>
         </section>
 

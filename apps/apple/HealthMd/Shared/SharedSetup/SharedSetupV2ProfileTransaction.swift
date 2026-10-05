@@ -255,6 +255,7 @@ enum SharedSetupV2AppleProfileMaterializer {
             target: nativeTarget(source.destination.kind),
             folderVaultID: nil,
             apiEndpointID: nil,
+            googleDriveDestinationID: nil,
             createdAt: now,
             updatedAt: now,
             isMigrationDefault: false
@@ -457,8 +458,10 @@ enum SharedSetupV2AppleProfileMaterializer {
 final class SharedSetupV2ProfileTransaction {
     nonisolated deinit {}
 
-    static let profileListKey = "exportProfiles.list"
-    static let activeProfileIDKey = "exportProfiles.activeProfileID"
+    static let profileListKey = ExportProfilePersistence.legacyListKey
+    static let activeProfileIDKey = ExportProfilePersistence.legacyActiveIDKey
+    static let profileEnvelopeKey = ExportProfilePersistence.envelopeKey
+    static let activeProfileIDV2Key = ExportProfilePersistence.activeIDKey
     static let scheduledEntriesKey = "scheduledExportEntries.list"
     static let profileStateKey = "sharedSetup.apple.v2.profileState"
     static let blockedProfileIDsKey = "sharedSetup.apple.v2.blockedProfileIDs"
@@ -492,27 +495,30 @@ final class SharedSetupV2ProfileTransaction {
     var canUndo: Bool {
         guard let data = userDefaults.data(forKey: Self.undoKey),
               data.count <= Self.maximumUndoBytes,
-              let snapshot = try? decoder().decode(UndoSnapshot.self, from: data) else {
+              let snapshot = try? decodeUndoSnapshot(data) else {
             return false
         }
-        return snapshot.version == UndoSnapshot.currentVersion &&
-            (try? decodeState(snapshot.raw)) != nil
+        return snapshot.isSupported && (try? decodeState(snapshot.raw)) != nil
     }
 
-    /// Read-only map of each retained profile's preserved Android platform
-    /// extension, keyed by native profile ID, in profile-store order. The v2
-    /// sidecar is the preservation authority; unreadable state fails closed
-    /// to an empty map so the production writer shares without preserved
-    /// extensions rather than guessing.
-    var preservedAndroidExtensionsByProfileID: [UUID: SharedSetupV2.AndroidExtension] {
-        guard let state = try? readState() else { return [:] }
-        var preserved: [UUID: SharedSetupV2.AndroidExtension] = [:]
-        for row in state.sidecar.profiles {
-            if let android = row.sourceProfile.platformExtensions.android {
-                preserved[row.profileID] = android
-            }
-        }
-        return preserved
+    struct PreservationSnapshot {
+        let androidExtensions: [UUID: SharedSetupV2.AndroidExtension]
+        let pendingDestinations: [UUID: SharedSetupV2.Destination]
+    }
+
+    /// One validated read: unreadable retention is not absence of meaning.
+    /// Sharing must fail before mapping when any authoritative store is invalid.
+    func preservationSnapshot() throws -> PreservationSnapshot {
+        let state = try readState()
+        let blocked = Set(state.blockedProfileIDs)
+        return PreservationSnapshot(
+            androidExtensions: Dictionary(uniqueKeysWithValues: state.sidecar.profiles.compactMap { row in
+                row.sourceProfile.platformExtensions.android.map { (row.profileID, $0) }
+            }),
+            pendingDestinations: Dictionary(uniqueKeysWithValues: state.sidecar.profiles.compactMap { row in
+                blocked.contains(row.profileID) ? (row.profileID, row.sourceProfile.destination) : nil
+            })
+        )
     }
 
     func apply(
@@ -562,6 +568,9 @@ final class SharedSetupV2ProfileTransaction {
                 )
             case .replace:
                 importedName = source.name
+            }
+            guard SharedSetupV2Validation.isNonEmptyShortString(importedName) else {
+                throw SharedSetupV2TransactionError.invalidSelection("The imported profile name exceeds the native profile bound.")
             }
             let timestamp = now()
             importedProfiles.append(SharedSetupV2AppleProfileMaterializer.profile(
@@ -629,7 +638,8 @@ final class SharedSetupV2ProfileTransaction {
         }
 
         let candidateProfileIDs = Set(candidateProfiles.map(\.id))
-        guard candidateProfileIDs.count == candidateProfiles.count,
+        guard candidateProfiles.count <= SharedSetupV2.maximumProfiles,
+              candidateProfileIDs.count == candidateProfiles.count,
               candidateProfiles.contains(where: { $0.id == activeProfileID }),
               candidateSchedules.count <= ScheduledExportEntryStore.maximumScheduledEntries,
               Set(candidateSchedules.map(\.id)).count == candidateSchedules.count,
@@ -647,25 +657,41 @@ final class SharedSetupV2ProfileTransaction {
             throw SharedSetupV2TransactionError.sidecarTooLarge
         }
         let blockedData = try Self.encodeBlockedProfileIDs(candidateBlockedIDs)
-        let profileData = try encoder().encode(candidateProfiles)
-        let scheduleData = try encoder().encode(candidateSchedules)
+        let usesEnvelope = prior.raw.profileEnvelope != nil
+        let profileData: Data
+        if mode == .add {
+            profileData = try ExportProfilePersistence.appending(
+                importedProfiles,
+                to: usesEnvelope ? prior.raw.profileEnvelope : prior.raw.profiles,
+                envelope: usesEnvelope
+            )
+        } else {
+            profileData = try ExportProfilePersistence.encode(candidateProfiles, envelope: usesEnvelope)
+        }
+        let scheduleData = try mode == .add
+            ? ExportProfilePersistence.appending(importedSchedules, to: prior.raw.schedules, envelope: false)
+            : encoder().encode(candidateSchedules)
         let undoData = try encoder().encode(prior.undoSnapshot)
         guard undoData.count <= Self.maximumUndoBytes else {
             throw SharedSetupV2TransactionError.undoTooLarge
         }
 
         let candidate = RawState(
-            profiles: profileData,
-            activeProfileID: activeProfileID.uuidString,
+            profiles: usesEnvelope ? prior.raw.profiles : profileData,
+            activeProfileID: usesEnvelope ? prior.raw.activeProfileID : activeProfileID.uuidString,
             schedules: scheduleData,
             profileState: sidecarData,
-            blockedProfileIDs: blockedData
+            blockedProfileIDs: blockedData,
+            profileEnvelope: usesEnvelope ? profileData : nil,
+            activeProfileIDV2: usesEnvelope ? activeProfileID.uuidString : prior.raw.activeProfileIDV2
         )
+        guard matches(prior.raw), try rawDataOrAbsence(forKey: Self.undoKey) == previousUndo else {
+            throw SharedSetupV2TransactionError.invalidPersistedState
+        }
         do {
             write(candidate)
             userDefaults.set(undoData, forKey: Self.undoKey)
-            _ = userDefaults.synchronize()
-            guard matches(candidate),
+            guard userDefaults.synchronize(), matches(candidate),
                   userDefaults.data(forKey: Self.undoKey) == undoData,
                   verificationOverride?() ?? true else {
                 throw SharedSetupV2TransactionError.persistenceVerificationFailed
@@ -674,8 +700,7 @@ final class SharedSetupV2ProfileTransaction {
             let originalError = error
             write(prior.raw)
             restoreRawData(previousUndo, forKey: Self.undoKey)
-            _ = userDefaults.synchronize()
-            guard matches(prior.raw), rawDataOrNil(forKey: Self.undoKey) == previousUndo else {
+            guard userDefaults.synchronize(), matches(prior.raw), matchesUndo(previousUndo) else {
                 throw SharedSetupV2TransactionError.rollbackVerificationFailed
             }
             throw originalError
@@ -692,8 +717,8 @@ final class SharedSetupV2ProfileTransaction {
     func undo() throws -> SharedSetupV2UndoResult {
         guard let undoData = userDefaults.data(forKey: Self.undoKey),
               undoData.count <= Self.maximumUndoBytes,
-              let snapshot = try? decoder().decode(UndoSnapshot.self, from: undoData),
-              snapshot.version == UndoSnapshot.currentVersion else {
+              let snapshot = try? decodeUndoSnapshot(undoData),
+              snapshot.isSupported else {
             throw SharedSetupV2TransactionError.noUndoSnapshot
         }
         let target = snapshot.raw
@@ -707,23 +732,23 @@ final class SharedSetupV2ProfileTransaction {
             throw SharedSetupV2TransactionError.noUndoSnapshot
         }
         let current = try readState()
+        guard matches(current.raw), userDefaults.data(forKey: Self.undoKey) == undoData else {
+            throw SharedSetupV2TransactionError.invalidPersistedState
+        }
 
         do {
             write(target)
-            _ = userDefaults.synchronize()
-            guard matches(target) else {
+            guard userDefaults.synchronize(), matches(target), verificationOverride?() ?? true else {
                 throw SharedSetupV2TransactionError.persistenceVerificationFailed
             }
             userDefaults.removeObject(forKey: Self.undoKey)
-            _ = userDefaults.synchronize()
-            guard userDefaults.object(forKey: Self.undoKey) == nil else {
+            guard userDefaults.synchronize(), userDefaults.object(forKey: Self.undoKey) == nil else {
                 throw SharedSetupV2TransactionError.persistenceVerificationFailed
             }
         } catch {
             write(current.raw)
             userDefaults.set(undoData, forKey: Self.undoKey)
-            _ = userDefaults.synchronize()
-            guard matches(current.raw), userDefaults.data(forKey: Self.undoKey) == undoData else {
+            guard userDefaults.synchronize(), matches(current.raw), userDefaults.data(forKey: Self.undoKey) == undoData else {
                 throw SharedSetupV2TransactionError.rollbackVerificationFailed
             }
             throw error
@@ -822,7 +847,7 @@ final class SharedSetupV2ProfileTransaction {
             throw SharedSetupV2TransactionError.sidecarTooLarge
         }
         do {
-            return try decoder().decode(SharedSetupV2AppleProfileState.self, from: data)
+            return try Self.decodeProfileState(data)
         } catch {
             throw SharedSetupV2TransactionError.invalidPersistedState
         }
@@ -842,7 +867,9 @@ final class SharedSetupV2ProfileTransaction {
                 activeProfileID: raw.activeProfileID,
                 schedules: raw.schedules,
                 profileState: raw.profileState,
-                blockedProfileIDs: raw.blockedProfileIDs
+                blockedProfileIDs: raw.blockedProfileIDs,
+                profileEnvelope: raw.profileEnvelope,
+                activeProfileIDV2: raw.activeProfileIDV2
             )
         }
     }
@@ -853,10 +880,12 @@ final class SharedSetupV2ProfileTransaction {
         var schedules: Data?
         var profileState: Data?
         var blockedProfileIDs: Data?
+        var profileEnvelope: Data? = nil
+        var activeProfileIDV2: String? = nil
     }
 
     private struct UndoSnapshot: Codable, Equatable {
-        nonisolated static let currentVersion = 1
+        nonisolated static let currentVersion = 2
 
         var version: Int
         var profiles: Data?
@@ -864,6 +893,14 @@ final class SharedSetupV2ProfileTransaction {
         var schedules: Data?
         var profileState: Data?
         var blockedProfileIDs: Data?
+        var profileEnvelope: Data?
+        var activeProfileIDV2: String?
+
+        // Version 1 predates the envelope; its absence is authoritative on Undo.
+        var isSupported: Bool {
+            version == Self.currentVersion ||
+                (version == 1 && profileEnvelope == nil && activeProfileIDV2 == nil)
+        }
 
         init(
             version: Int = currentVersion,
@@ -871,7 +908,9 @@ final class SharedSetupV2ProfileTransaction {
             activeProfileID: String?,
             schedules: Data?,
             profileState: Data?,
-            blockedProfileIDs: Data?
+            blockedProfileIDs: Data?,
+            profileEnvelope: Data? = nil,
+            activeProfileIDV2: String? = nil
         ) {
             self.version = version
             self.profiles = profiles
@@ -879,6 +918,8 @@ final class SharedSetupV2ProfileTransaction {
             self.schedules = schedules
             self.profileState = profileState
             self.blockedProfileIDs = blockedProfileIDs
+            self.profileEnvelope = profileEnvelope
+            self.activeProfileIDV2 = activeProfileIDV2
         }
 
         var raw: RawState {
@@ -887,19 +928,37 @@ final class SharedSetupV2ProfileTransaction {
                 activeProfileID: activeProfileID,
                 schedules: schedules,
                 profileState: profileState,
-                blockedProfileIDs: blockedProfileIDs
+                blockedProfileIDs: blockedProfileIDs,
+                profileEnvelope: profileEnvelope,
+                activeProfileIDV2: activeProfileIDV2
             )
         }
     }
 
+    private func decodeUndoSnapshot(_ data: Data) throws -> UndoSnapshot {
+        let allowed: Set<String> = ["version", "profiles", "activeProfileID", "schedules",
+                                    "profileState", "blockedProfileIDs", "profileEnvelope", "activeProfileIDV2"]
+        guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              Set(root.keys).isSubset(of: allowed) else {
+            throw SharedSetupV2TransactionError.noUndoSnapshot
+        }
+        return try decoder().decode(UndoSnapshot.self, from: data)
+    }
+
     private func readState() throws -> DecodedState {
-        try decodeState(RawState(
+        try decodeState(readRawState())
+    }
+
+    private func readRawState() throws -> RawState {
+        try RawState(
             profiles: rawDataOrAbsence(forKey: Self.profileListKey),
             activeProfileID: rawStringOrAbsence(forKey: Self.activeProfileIDKey),
             schedules: rawDataOrAbsence(forKey: Self.scheduledEntriesKey),
             profileState: rawDataOrAbsence(forKey: Self.profileStateKey),
-            blockedProfileIDs: rawDataOrAbsence(forKey: Self.blockedProfileIDsKey)
-        ))
+            blockedProfileIDs: rawDataOrAbsence(forKey: Self.blockedProfileIDsKey),
+            profileEnvelope: rawDataOrAbsence(forKey: Self.profileEnvelopeKey),
+            activeProfileIDV2: rawStringOrAbsence(forKey: Self.activeProfileIDV2Key)
+        )
     }
 
     private func decodeState(_ raw: RawState) throws -> DecodedState {
@@ -908,9 +967,10 @@ final class SharedSetupV2ProfileTransaction {
         let sidecar: SharedSetupV2AppleProfileState
         let blocked: [UUID]
         do {
-            profiles = try raw.profiles.map {
-                try decoder().decode([ExportProfile].self, from: $0)
-            } ?? []
+            profiles = try ExportProfilePersistence.transactionProfiles(
+                raw.profileEnvelope ?? raw.profiles,
+                envelope: raw.profileEnvelope != nil
+            )
             schedules = try raw.schedules.map {
                 try decoder().decode([ScheduledExportEntry].self, from: $0)
             } ?? []
@@ -918,7 +978,7 @@ final class SharedSetupV2ProfileTransaction {
                 guard $0.count <= Self.maximumProfileStateBytes else {
                     throw SharedSetupV2TransactionError.sidecarTooLarge
                 }
-                return try decoder().decode(SharedSetupV2AppleProfileState.self, from: $0)
+                return try Self.decodeProfileState($0)
             } ?? SharedSetupV2AppleProfileState(profiles: [])
             blocked = try raw.blockedProfileIDs.map(Self.decodeBlockedProfileIDs) ?? []
         } catch let error as SharedSetupV2TransactionError {
@@ -927,7 +987,8 @@ final class SharedSetupV2ProfileTransaction {
             throw SharedSetupV2TransactionError.invalidPersistedState
         }
         let profileIDs = Set(profiles.map(\.id))
-        guard profileIDs.count == profiles.count,
+        guard sidecar.version == SharedSetupV2AppleProfileState.currentVersion,
+              profileIDs.count == profiles.count,
               schedules.count <= ScheduledExportEntryStore.maximumScheduledEntries,
               Set(schedules.map(\.id)).count == schedules.count,
               Set(schedules.map(\.profileID)).count == schedules.count,
@@ -944,7 +1005,8 @@ final class SharedSetupV2ProfileTransaction {
         guard Set(liveBlocked).isSubset(of: Set(liveRows.map(\.profileID))) else {
             throw SharedSetupV2TransactionError.invalidPersistedState
         }
-        let active = raw.activeProfileID.flatMap(UUID.init(uuidString:))
+        let active = (raw.profileEnvelope != nil ? raw.activeProfileIDV2 : raw.activeProfileID)
+            .flatMap(UUID.init(uuidString:))
         return DecodedState(
             raw: raw,
             profiles: profiles,
@@ -957,22 +1019,22 @@ final class SharedSetupV2ProfileTransaction {
 
     private func write(_ state: RawState) {
         restoreRawData(state.profiles, forKey: Self.profileListKey)
-        if let activeProfileID = state.activeProfileID {
-            userDefaults.set(activeProfileID, forKey: Self.activeProfileIDKey)
-        } else {
-            userDefaults.removeObject(forKey: Self.activeProfileIDKey)
-        }
+        restoreRawString(state.activeProfileID, forKey: Self.activeProfileIDKey)
+        restoreRawData(state.profileEnvelope, forKey: Self.profileEnvelopeKey)
+        restoreRawString(state.activeProfileIDV2, forKey: Self.activeProfileIDV2Key)
         restoreRawData(state.schedules, forKey: Self.scheduledEntriesKey)
         restoreRawData(state.profileState, forKey: Self.profileStateKey)
         restoreRawData(state.blockedProfileIDs, forKey: Self.blockedProfileIDsKey)
     }
 
     private func matches(_ state: RawState) -> Bool {
-        rawDataOrNil(forKey: Self.profileListKey) == state.profiles &&
-            rawStringOrNil(forKey: Self.activeProfileIDKey) == state.activeProfileID &&
-            rawDataOrNil(forKey: Self.scheduledEntriesKey) == state.schedules &&
-            rawDataOrNil(forKey: Self.profileStateKey) == state.profileState &&
-            rawDataOrNil(forKey: Self.blockedProfileIDsKey) == state.blockedProfileIDs
+        guard let current = try? readRawState() else { return false }
+        return current == state
+    }
+
+    private func matchesUndo(_ value: Data?) -> Bool {
+        do { return try rawDataOrAbsence(forKey: Self.undoKey) == value }
+        catch { return false }
     }
 
     private func rawDataOrAbsence(forKey key: String) throws -> Data? {
@@ -1002,8 +1064,19 @@ final class SharedSetupV2ProfileTransaction {
     }
 
     private func restoreRawData(_ value: Data?, forKey key: String) {
-        if let value { userDefaults.set(value, forKey: key) }
-        else { userDefaults.removeObject(forKey: key) }
+        if let value {
+            if userDefaults.object(forKey: key) as? Data != value { userDefaults.set(value, forKey: key) }
+        } else if userDefaults.object(forKey: key) != nil {
+            userDefaults.removeObject(forKey: key)
+        }
+    }
+
+    private func restoreRawString(_ value: String?, forKey key: String) {
+        if let value {
+            if userDefaults.object(forKey: key) as? String != value { userDefaults.set(value, forKey: key) }
+        } else if userDefaults.object(forKey: key) != nil {
+            userDefaults.removeObject(forKey: key)
+        }
     }
 
     private func encoder() -> JSONEncoder {
@@ -1036,7 +1109,11 @@ final class SharedSetupV2ProfileTransaction {
     static func decodeProfileState(_ data: Data) throws -> SharedSetupV2AppleProfileState {
         guard data.count <= maximumProfileStateBytes,
               let value = try? JSONDecoder().decode(SharedSetupV2AppleProfileState.self, from: data),
-              value.version == SharedSetupV2AppleProfileState.currentVersion else {
+              value.version == SharedSetupV2AppleProfileState.currentVersion,
+              let original = try? JSONSerialization.jsonObject(with: data),
+              let encoded = try? JSONEncoder().encode(value),
+              let known = try? JSONSerialization.jsonObject(with: encoded),
+              ExportProfilePersistence.preservesKeys(original, known: known, path: "sidecar") else {
             throw SharedSetupV2TransactionError.invalidPersistedState
         }
         return value

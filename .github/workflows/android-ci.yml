@@ -86,6 +86,9 @@ jobs:
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          # The action default includes the retired SDK "tools" package.
+          packages: platform-tools
 
       - name: Install pinned Google Play CLI
         shell: bash
@@ -121,6 +124,7 @@ jobs:
           ruby -c fastlane/Fastfile
           python3 -m py_compile scripts/*.py scripts/tests/*.py
           python3 scripts/tests/test_android_workflow_action_pins.py
+          python3 scripts/tests/test_run_wear_emulator_smoke.py
           python3 scripts/tests/test_android_release_documentation_policy.py
           python3 scripts/tests/test_extract_wear_release_evidence_archive.py
           python3 scripts/tests/test_validate_wear_release_attestation.py
@@ -236,6 +240,8 @@ jobs:
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
 
       - name: Set up pinned Rust Android toolchain
         working-directory: ${{ github.workspace }}
@@ -280,6 +286,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell wm dismiss-keyguard
             # The short-window editor matrix exercises the real software keyboard. Hosted
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.
@@ -288,6 +296,19 @@ jobs:
             for attempt in $(seq 1 30); do default_ime=$(adb -s emulator-5554 shell settings get secure default_input_method | tr -d '\r'); if [ -n "$default_ime" ] && [ "$default_ime" != null ] && adb -s emulator-5554 shell ime list -s | tr -d '\r' | grep -Fx "$default_ime"; then exit 0; fi; sleep 1; done; exit 1
             cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
+
+      - name: Retain synthetic instrumentation diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/healthmd-core/build/reports/androidTests/
+            apps/android/healthmd-core/build/outputs/androidTest-results/
+            apps/android/app/build/reports/androidTests/
+            apps/android/app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+          retention-days: 7
 
   fdroid:
     name: F-Droid clean build
@@ -312,6 +333,8 @@ jobs:
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
 
       - name: Install pinned Rust and Android native toolchains
         shell: bash
@@ -402,6 +425,8 @@ jobs:
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with: { distribution: temurin, java-version: '17' }
       - uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm

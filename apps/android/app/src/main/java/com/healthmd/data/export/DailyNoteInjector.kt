@@ -24,7 +24,7 @@ class DailyNoteInjector {
         if (!settings.enabled) return Pair(InjectionResult.SKIPPED, null)
 
         val dateString = customization.dateFormat.format(data.date)
-        val injectionContent = buildInjectionContent(data, dateString, settings, customization)
+        val injectionContent = buildInjectionFragment(data, settings, customization)
         if (injectionContent.isBlank()) return Pair(InjectionResult.SKIPPED, null)
 
         if (existingContent == null && !settings.createIfMissing) {
@@ -36,12 +36,14 @@ class DailyNoteInjector {
         return Pair(if (existingContent == null) InjectionResult.CREATED else InjectionResult.UPDATED, mergedContent)
     }
 
-    private fun buildInjectionContent(
+    /** Destination-neutral fragment used by SAF and Drive before either reads a baseline. */
+    fun buildInjectionFragment(
         data: HealthData,
-        dateString: String,
         settings: DailyNoteInjectionSettings,
-        customization: FormatCustomization,
-    ): String = buildString {
+        customization: FormatCustomization = FormatCustomization(),
+    ): String {
+        val dateString = customization.dateFormat.format(data.date)
+        return buildString {
         val frontmatterValues = buildFrontmatterValues(data, dateString, customization)
         if (frontmatterValues.isNotEmpty()) {
             append("---\n")
@@ -69,6 +71,11 @@ class DailyNoteInjector {
             append("\n")
         }
     }
+    }
+
+    /** Applies the existing preamble/frontmatter-aware merger exactly once. */
+    fun mergeFragment(existingContent: String, fragment: String): String =
+        markdownMerger.merge(existingContent, fragment)
 
     private fun buildFrontmatterValues(
         data: HealthData,

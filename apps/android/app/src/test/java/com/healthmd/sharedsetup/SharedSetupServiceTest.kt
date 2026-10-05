@@ -77,6 +77,7 @@ class SharedSetupServiceTest {
                 extensionLoads += 1
                 emptyMap()
             },
+            pendingDestinations = { emptyMap() },
         )
 
         val bytes = service.exportV2Bytes(source)

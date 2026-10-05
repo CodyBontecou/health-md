@@ -160,6 +160,7 @@ class ExportViewModelTest {
         val exportRepository = FakeExportRepository()
         val historyRepository = FakeExportHistoryRepository()
         val profileRepository = mockk<ExportProfileRepository>()
+        every { profileRepository.hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
         coEvery { profileRepository.activeSharedSetupV2ExecutionAccess() } returns
             SharedSetupV2ProfileExecutionAccess.DestinationRebindRequired
         val viewModel = createViewModel(
@@ -322,6 +323,9 @@ class ExportViewModelTest {
                 settings: ExportSettings,
                 target: ExportTarget,
                 expectedDestinationFingerprint: String?,
+                googleDriveDestinationId: String?,
+                googleDriveProfileId: String?,
+                googleDriveOperationId: String?,
                 allowInteractiveRouteConsent: Boolean,
             ): ExportResult {
                 rawExportCalls++
@@ -606,6 +610,7 @@ class ExportViewModelTest {
     }
 
     private fun allowedProfileRepository() = mockk<ExportProfileRepository> {
+        every { hasOpaqueProfileState } returns kotlinx.coroutines.flow.flowOf(false)
         coEvery { activeSharedSetupV2ExecutionAccess() } returns
             SharedSetupV2ProfileExecutionAccess.Allowed
     }
@@ -635,6 +640,11 @@ class ExportViewModelTest {
             fileExportManager = fileExportManager,
             apiEndpointExportRunner = apiEndpointExportRunner,
             rawSnapshotExportRunner = rawSnapshotService,
+            googleDriveExportOrchestrator = mockk(relaxed = true),
+            googleDriveSelectionStore = mockk(relaxed = true) {
+                every { destinationId } returns kotlinx.coroutines.flow.flowOf(null)
+            },
+            googleDriveDestinationStore = mockk(relaxed = true),
         )
     }
 }

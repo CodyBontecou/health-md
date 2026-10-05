@@ -7,9 +7,11 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.mutablePreferencesOf
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
+import com.healthmd.data.settings.ExportProfilePersistence
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.AndroidExportSettingsSnapshot
@@ -672,11 +674,8 @@ class SharedSetupV2ProfileTransactionTest {
                     row
                 }
             }
-            preferences[SharedSetupV2ProfilePersistence.profilesKey] =
-                SharedSetupV2ProfilePersistence.json.encodeToString(
-                    SharedSetupV2ProfilePersistence.profileListSerializer,
-                    rewritten,
-                )
+            preferences[ExportProfilePersistence.profilesKey] =
+                ExportProfilePersistence.encode(rewritten, true)
         }
         assertThat(repository.bindSharedSetupV2ApiEndpointAfterConfirmation(GENERATED_TWO_ID)).isFalse()
         assertThat(
@@ -911,6 +910,136 @@ class SharedSetupV2ProfileTransactionTest {
         assertThat(second.reason).isEqualTo(SharedSetupV2ProfileTransactionFailure.NO_UNDO)
     }
 
+    @Test
+    fun `authoritative Drive envelope Add and Replace preserve downgrade bytes and Undo exactly`() = runTest {
+        val drive = nativeProfile(EXISTING_ONE_ID, "Drive", target = ExportTarget.GOOGLE_DRIVE)
+            .copy(destinationId = "synthetic-drive-destination")
+        for (mode in SharedSetupV2ProfileImportMode.entries) {
+            dataStore.edit { prefs ->
+                prefs.clear()
+                // Legacy is deliberately undecodable: it is not authority once v2 exists.
+                prefs[ExportProfilePersistence.legacyProfilesKey] = "downgrade-byte-sentinel"
+                prefs[ExportProfilePersistence.legacyActiveKey] = "downgrade-active-sentinel"
+                prefs[ExportProfilePersistence.profilesKey] = "  " + ExportProfilePersistence.encode(listOf(drive), true) + "\n"
+                prefs[ExportProfilePersistence.activeKey] = drive.id
+                prefs[stringPreferencesKey("synthetic_drive_destination_store")] = "folder-authority-sentinel"
+                prefs[stringPreferencesKey("synthetic_credential_store")] = "credential-sentinel"
+            }
+            val before = snapshotBytes()
+            val tx = transaction(GENERATED_ONE_ID)
+            tx.apply(importPlan(), listOf("profile-001"), mode).getOrThrow()
+            assertThat(dataStore.data.first()[ExportProfilePersistence.legacyProfilesKey]).isEqualTo("downgrade-byte-sentinel")
+            assertThat(dataStore.data.first()[ExportProfilePersistence.legacyActiveKey]).isEqualTo("downgrade-active-sentinel")
+            if (mode == SharedSetupV2ProfileImportMode.ADD) {
+                assertThat(storedProfiles().first()).isEqualTo(drive)
+                assertThat(storedActiveId()).isEqualTo(drive.id)
+            } else assertThat(storedProfiles().map { it.id }).containsExactly(GENERATED_ONE_ID)
+            tx.undo().getOrThrow()
+            assertThat(snapshotBytes()).isEqualTo(before)
+            assertThat(tx.undo().exceptionOrNull()).isInstanceOf(SharedSetupV2ProfileTransactionException::class.java)
+            assertThat(snapshotBytes()).isEqualTo(before)
+        }
+    }
+
+    @Test
+    fun `Drive writer emits cloud intent with no destination authority or credentials`() {
+        val drive = nativeProfile(SOURCE_ONE_ID, "Portable output", target = ExportTarget.GOOGLE_DRIVE).copy(
+            destinationId = "synthetic-drive-local-id", folderUri = "content://synthetic-private-authority",
+            folderDisplayName = "synthetic-folder-label", apiEndpointUrl = "https://synthetic.invalid/private")
+        val source = SharedSetupV2Mapper(EmptyRegistry).export(listOf(drive), drive.id, emptyList(), "test")
+        val bytes = SharedSetupV2Codec(EmptyRegistry).encode(source).decodeToString()
+        assertThat(source.profiles.single().destination).isEqualTo(SharedSetupV2Destination("cloud", null))
+        for (excluded in listOf(drive.id, "synthetic-drive-local-id", "synthetic-private-authority",
+            "synthetic-folder-label", "synthetic.invalid", "GOOGLE_DRIVE", "destinationId", "accessToken", "permissionId", "folderId")) {
+            assertThat(bytes).doesNotContain(excluded)
+        }
+    }
+
+    @Test
+    fun `Undo restores absent keys even after native lazy migration`() = runTest {
+        val before = snapshotBytes()
+        val tx = transaction(GENERATED_ONE_ID)
+        tx.apply(importPlan(), listOf("profile-001"), SharedSetupV2ProfileImportMode.ADD).getOrThrow()
+        val repository = ExportProfileRepository(dataStore, mockk<Context>(relaxed = true))
+        repository.rename(GENERATED_ONE_ID, "Locally renamed")
+        assertThat(dataStore.data.first()[ExportProfilePersistence.profilesKey]).isNotNull()
+        tx.undo().getOrThrow()
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
+    @Test
+    fun `old version one local Undo removes a later envelope and restores logical legacy state`() = runTest {
+        val old = nativeProfile(EXISTING_ONE_ID, "Old local state")
+        val profilesJson = SharedSetupV2ProfilePersistence.json.encodeToString(
+            SharedSetupV2ProfilePersistence.profileListSerializer, listOf(old))
+        dataStore.edit { prefs ->
+            prefs[ExportProfilePersistence.profilesKey] = ExportProfilePersistence.encode(listOf(old.copy(name = "After")), true)
+            prefs[ExportProfilePersistence.activeKey] = old.id
+            prefs[SharedSetupV2ProfilePersistence.undoKey] = """{"version":1,"previous":{"profiles":$profilesJson,"active_profile_id":"${old.id}","scheduled_profile_entries":[],"profile_state":null,"blocked_profile_ids":[]}}"""
+        }
+        transaction().undo().getOrThrow()
+        assertThat(storedProfiles()).containsExactly(old)
+        assertThat(dataStore.data.first()[ExportProfilePersistence.profilesKey]).isNull()
+        assertThat(dataStore.data.first()[ExportProfilePersistence.activeKey]).isNull()
+        assertThat(dataStore.data.first()[SharedSetupV2ProfilePersistence.undoKey]).isNull()
+    }
+
+    @Test
+    fun `opaque corrupt future envelopes reject Add Replace and Undo without writes`() = runTest {
+        val known = ExportProfilePersistence.encode(listOf(nativeProfile(EXISTING_ONE_ID, "Known")), true)
+        val records = listOf("{not-json", "{\"version\":3,\"records\":[]}",
+            "{\"version\":2,\"records\":[{\"target\":\"FUTURE_CLOUD\"}]}",
+            known.replace("\"name\":\"Known\"", "\"future_authority\":true,\"name\":\"Known\""))
+        for (raw in records) {
+            dataStore.edit { prefs ->
+                prefs[ExportProfilePersistence.profilesKey] = raw
+                prefs[SharedSetupV2ProfilePersistence.undoKey] = "unreadable-undo-sentinel"
+            }
+            val before = snapshotBytes()
+            for (mode in SharedSetupV2ProfileImportMode.entries) {
+                val error = transaction(GENERATED_ONE_ID).apply(importPlan(), listOf("profile-001"), mode).exceptionOrNull()
+                    as SharedSetupV2ProfileTransactionException
+                assertThat(error.reason).isEqualTo(SharedSetupV2ProfileTransactionFailure.INVALID_STORED_STATE)
+                assertThat(snapshotBytes()).isEqualTo(before)
+            }
+            assertThat(transaction().undo().isFailure).isTrue()
+            assertThat(snapshotBytes()).isEqualTo(before)
+        }
+    }
+
+    @Test
+    fun `failed Undo restores post apply envelope and retains the same one shot snapshot`() = runTest {
+        val drive = nativeProfile(EXISTING_ONE_ID, "Drive", target = ExportTarget.GOOGLE_DRIVE)
+        dataStore.edit { prefs ->
+            prefs[ExportProfilePersistence.profilesKey] = ExportProfilePersistence.encode(listOf(drive), true)
+            prefs[ExportProfilePersistence.activeKey] = drive.id
+        }
+        transaction(GENERATED_ONE_ID).apply(importPlan(), listOf("profile-001"), SharedSetupV2ProfileImportMode.REPLACE).getOrThrow()
+        val afterApply = snapshotBytes()
+        val faulting = OneReadVerificationFaultDataStore(dataStore)
+        val error = transactionWithStore(faulting).undo().exceptionOrNull() as SharedSetupV2ProfileTransactionException
+        assertThat(error.reason).isEqualTo(SharedSetupV2ProfileTransactionFailure.UNDO_VERIFICATION_FAILED)
+        assertThat(snapshotBytes()).isEqualTo(afterApply)
+        transaction().undo().getOrThrow()
+        assertThat(storedProfiles()).containsExactly(drive)
+    }
+
+    @Test
+    fun `envelope verification failure rolls back exact bytes absence and prior Undo`() = runTest {
+        val drive = nativeProfile(EXISTING_ONE_ID, "Drive", target = ExportTarget.GOOGLE_DRIVE).copy(destinationId = "synthetic-destination")
+        dataStore.edit { prefs ->
+            prefs[ExportProfilePersistence.profilesKey] = "\n" + ExportProfilePersistence.encode(listOf(drive), true) + "\n"
+            prefs[ExportProfilePersistence.activeKey] = drive.id
+            prefs[SharedSetupV2ProfilePersistence.undoKey] = "prior-undo-sentinel"
+        }
+        val before = snapshotBytes()
+        val faulting = OneReadVerificationFaultDataStore(dataStore)
+        val error = transactionWithStore(faulting, GENERATED_ONE_ID).apply(importPlan(), listOf("profile-001"), SharedSetupV2ProfileImportMode.ADD)
+            .exceptionOrNull() as SharedSetupV2ProfileTransactionException
+        assertThat(error.reason).isEqualTo(SharedSetupV2ProfileTransactionFailure.COMMIT_VERIFICATION_FAILED)
+        assertThat(snapshotBytes()).isEqualTo(before)
+    }
+
     private fun importPlan(): SharedSetupV2ImportPlan {
         val firstSettings = baseSettings().copy(
             exportFormats = setOf(ExportFormat.JSON, ExportFormat.CSV),
@@ -1033,14 +1162,8 @@ class SharedSetupV2ProfileTransactionTest {
         }
     }
 
-    private suspend fun storedProfiles(): List<ExportProfile> {
-        val raw = dataStore.data.first()[SharedSetupV2ProfilePersistence.profilesKey]
-            ?: return emptyList()
-        return SharedSetupV2ProfilePersistence.json.decodeFromString(
-            SharedSetupV2ProfilePersistence.profileListSerializer,
-            raw,
-        )
-    }
+    private suspend fun storedProfiles(): List<ExportProfile> =
+        ExportProfilePersistence.requireTransactionProfiles(dataStore.data.first())
 
     private suspend fun storedSchedules(): List<ScheduledProfileEntry> {
         val raw = dataStore.data.first()[SharedSetupV2ProfilePersistence.scheduledProfileEntriesKey]
@@ -1055,7 +1178,7 @@ class SharedSetupV2ProfileTransactionTest {
         dataStore.data.first().asMap()
 
     private suspend fun storedActiveId(): String? =
-        dataStore.data.first()[SharedSetupV2ProfilePersistence.activeProfileIdKey]
+        ExportProfilePersistence.activeId(dataStore.data.first())
 
     private suspend fun storedBlockedIds(): Set<String> =
         dataStore.data.first()[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
@@ -1069,8 +1192,10 @@ class SharedSetupV2ProfileTransactionTest {
         override val data: Flow<Preferences> = delegate.data.map { preferences ->
             if (faultNextRead.compareAndSet(true, false)) {
                 preferences.mutableCopy().apply {
-                    this[SharedSetupV2ProfilePersistence.activeProfileIdKey] =
-                        "verification-corrupt"
+                    val activeKey = if (this[ExportProfilePersistence.profilesKey] != null) {
+                        ExportProfilePersistence.activeKey
+                    } else SharedSetupV2ProfilePersistence.activeProfileIdKey
+                    this[activeKey] = "verification-corrupt"
                 }
             } else {
                 preferences

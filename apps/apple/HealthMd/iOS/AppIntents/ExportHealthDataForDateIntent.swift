@@ -35,6 +35,7 @@ struct ExportHealthDataForDateIntent: AppIntent {
     func perform() async throws -> some IntentResult & ProvidesDialog {
         let day = Calendar.current.startOfDay(for: date)
         let outcome = await ExportIntentRunner.run(dates: [day], profileName: profile)
+        try ExportIntentRunner.requireNoForegroundTransition(outcome)
         return .result(dialog: IntentDialog(stringLiteral: ExportIntentRunner.dialog(for: outcome)))
     }
 }

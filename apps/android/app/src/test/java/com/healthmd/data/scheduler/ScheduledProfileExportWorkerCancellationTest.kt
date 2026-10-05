@@ -438,6 +438,8 @@ class ScheduledProfileExportWorkerCancellationTest {
                 snapshotFactory = snapshotFactory,
                 folderAdoption = mockk<ProfileFolderAdoptionScope>(relaxed = true),
                 profileScheduler = Lazy { profileScheduler },
+                googleDriveExportOrchestrator = mockk(relaxed = true),
+                rawSnapshotService = mockk(relaxed = true),
                 entitlementRepository = FakeBillingRepository(),
                 distributionPolicy = DistributionPolicy.play(),
             )

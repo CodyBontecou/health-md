@@ -415,7 +415,8 @@ object AndroidExportSettingsSnapshotCodec {
         }
 
         when (snapshot.scheduledExportTarget) {
-            ExportTarget.DEVICE_FOLDER -> if (snapshot.apiEndpointIdentitySha256 != null) return false
+            ExportTarget.DEVICE_FOLDER, ExportTarget.GOOGLE_DRIVE ->
+                if (snapshot.apiEndpointIdentitySha256 != null) return false
             ExportTarget.API_ENDPOINT -> if (!snapshot.apiEndpointIdentitySha256.isLowercaseSha256()) return false
         }
         true

@@ -4,6 +4,27 @@ import XCTest
 
 @MainActor
 final class SharedSetupV2CodecMapperTests: XCTestCase {
+    func testDriveOriginExportsOnlyPortableCloudIntentWithoutNativeAuthority() throws {
+        let destinationID = UUID(uuidString: "AAAAAAAA-AAAA-4AAA-8AAA-AAAAAAAAAAAA")!
+        let endpointID = UUID(uuidString: "BBBBBBBB-BBBB-4BBB-8BBB-BBBBBBBBBBBB")!
+        var profile = makeProfile(id: profileID(1), name: "Drive", enabledNativeIDs: ["steps"], target: .googleDrive, apiEndpointID: endpointID)
+        profile.googleDriveDestinationID = destinationID
+        let endpoint = SavedAPIEndpoint(id: endpointID, name: "Synthetic unrelated credential destination", endpointURLString: "https://synthetic-user:synthetic-password@synthetic.example.test/private", createdAt: Date())
+        let document = try map(profiles: [profile], activeProfileID: profile.id, destinations: .init(apiEndpoints: [endpoint]))
+        XCTAssertEqual(document.profiles[0].destination.kind, .cloud)
+        XCTAssertNil(document.profiles[0].destination.apiEndpoint)
+        let bytes = try SharedSetupV2Codec.encode(document)
+        XCTAssertEqual(try SharedSetupV2Codec.decode(bytes), document)
+        let text = String(decoding: bytes, as: UTF8.self).lowercased()
+        for excluded in [profile.id.uuidString.lowercased(), destinationID.uuidString.lowercased(), endpointID.uuidString.lowercased(), "synthetic-user", "synthetic-password", "synthetic.example.test", "googledrivedestinationid", "permissionid", "folderid", "resourcekey", "accesstoken", "refreshtoken", "uploadsession", "destinationfingerprint"] {
+            XCTAssertFalse(text.contains(excluded), excluded)
+        }
+        let preview = SharedSetupV2Mapper.preview(document, registry: fixtureRegistry())
+        XCTAssertFalse(preview.profiles[0].destinationKindIsSupported)
+        XCTAssertFalse(preview.profiles[0].destinationIsLocallyBound)
+        XCTAssertFalse(preview.profiles[0].importsScheduleEnabled)
+    }
+
     func testFourAppleDetailPoliciesRemainOrthogonalAndRangeSummaryUsesCurrentPreference() throws {
         let policies: [(String, AppleExportDetailPolicy)] = [
             ("Summary", .summary),

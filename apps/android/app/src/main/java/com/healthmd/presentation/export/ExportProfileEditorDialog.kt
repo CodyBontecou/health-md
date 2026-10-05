@@ -104,9 +104,10 @@ fun ExportProfileEditorDialog(
     val trimmedName = draft.name.trim()
     val endpointValid = draft.target != ExportTarget.API_ENDPOINT ||
         APIExportEndpoint.isConfigured(draft.apiEndpointUrl)
+    val driveValid = draft.target != ExportTarget.GOOGLE_DRIVE || !draft.destinationId.isNullOrBlank()
     val canSave = trimmedName.isNotEmpty() &&
         draft.settings.exportFormats.isNotEmpty() &&
-        endpointValid
+        endpointValid && driveValid
 
     val overlappingNames = overlapPreview(draft.target, draft.folderUri, draft.settings)
 
@@ -150,6 +151,12 @@ fun ExportProfileEditorDialog(
                         onClick = { draft = draft.copy(target = ExportTarget.API_ENDPOINT) },
                         modifier = Modifier.weight(1f),
                     )
+                    EditorChoiceButton(
+                        text = "Google Drive",
+                        selected = draft.target == ExportTarget.GOOGLE_DRIVE,
+                        onClick = { draft = draft.copy(target = ExportTarget.GOOGLE_DRIVE) },
+                        modifier = Modifier.weight(1f),
+                    )
                 }
                 when (draft.target) {
                     ExportTarget.DEVICE_FOLDER -> {
@@ -190,6 +197,15 @@ fun ExportProfileEditorDialog(
                             )
                         }
                     }
+                    ExportTarget.GOOGLE_DRIVE -> Text(
+                        text = if (driveValid) {
+                            "Uses the connected local Google Drive destination."
+                        } else {
+                            "Connect Google Drive in Settings before saving this profile."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (driveValid) AppColors.textMuted else AppColors.error,
+                    )
                 }
 
                 EditorSectionLabel("Output")

@@ -43,7 +43,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
     fun ledgerExactlyCoversSerializableAndSupplementalProfileFields() {
         val ledger = ledgerObject()
         assertEquals("healthmd.shared_setup.android_profile_field_coverage", ledger.getValue("schema").jsonPrimitive.content)
-        assertEquals(1, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
+        assertEquals(2, ledger.getValue("schema_version").jsonPrimitive.content.toInt())
 
         val target = ledger.getValue("target_contract").jsonObject
         assertEquals("healthmd.shared_setup", target.getValue("schema").jsonPrimitive.content)
@@ -144,8 +144,10 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         }
     }
 
-    private fun rows(ledger: kotlinx.serialization.json.JsonObject): List<FieldRow> =
-        ledger.getValue("fields").jsonArray.map { element ->
+    private fun rows(ledger: kotlinx.serialization.json.JsonObject): List<FieldRow> {
+        // Revision 2 classifies local Drive fields without rewriting the frozen original audit
+        // or widening the public healthmd.shared_setup v2 grammar.
+        return ledger.getValue("fields").jsonArray.map { element ->
             val value = element.jsonObject
             assertEquals(
                 "Coverage row keys changed without updating the executable reader",
@@ -163,6 +165,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
                 evidence = value.getValue("evidence").jsonPrimitive.content,
             )
         }
+    }
 
     private fun ledgerObject() = Json.parseToJsonElement(ledgerFile().readText()).jsonObject
 
@@ -172,7 +175,7 @@ class SharedSetupAndroidProfileFieldCoverageTest {
         while (directory != null) {
             val candidate = File(
                 directory,
-                "packages/contracts/shared-setup/v2/android-profile-field-coverage.json",
+                "packages/contracts/shared-setup/v2/android-profile-field-coverage-v2.json",
             )
             if (candidate.isFile) return candidate
             directory = directory.parentFile

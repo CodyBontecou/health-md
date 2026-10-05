@@ -28,6 +28,8 @@ struct ExportProfile: Codable, Identifiable, Equatable {
     /// Bound API endpoint in `ProfileDestinationStore` when
     /// `target == .apiEndpoint`. Nil keeps the current single-endpoint state.
     var apiEndpointID: UUID?
+    /// Local non-secret Drive destination ID. Google authority never enters profile JSON.
+    var googleDriveDestinationID: UUID?
     var createdAt: Date
     var updatedAt: Date
     /// True only for the profile synthesized from legacy live settings during
@@ -42,6 +44,7 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
         apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil,
         createdAt: Date = Date(),
         updatedAt: Date = Date(),
         isMigrationDefault: Bool = false
@@ -52,19 +55,38 @@ struct ExportProfile: Codable, Identifiable, Equatable {
         self.target = target
         self.folderVaultID = folderVaultID
         self.apiEndpointID = apiEndpointID
+        self.googleDriveDestinationID = googleDriveDestinationID
         self.createdAt = createdAt
         self.updatedAt = updatedAt
         self.isMigrationDefault = isMigrationDefault
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, settings, target, folderVaultID, apiEndpointID
+        case googleDriveDestinationID, createdAt, updatedAt, isMigrationDefault
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        name = try container.decode(String.self, forKey: .name)
+        settings = try container.decode(ExportSettingsSnapshot.self, forKey: .settings)
+        target = try container.decode(ExportTargetSelection.self, forKey: .target)
+        folderVaultID = try container.decodeIfPresent(UUID.self, forKey: .folderVaultID)
+        apiEndpointID = try container.decodeIfPresent(UUID.self, forKey: .apiEndpointID)
+        googleDriveDestinationID = try container.decodeIfPresent(UUID.self, forKey: .googleDriveDestinationID)
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        isMigrationDefault = try container.decodeIfPresent(Bool.self, forKey: .isMigrationDefault) ?? false
     }
 }
 
 /// Observable, UserDefaults-backed store for the ordered export profile list.
 ///
-/// Persistence follows the `ExportSchedule` pattern: the whole list is stored
-/// as one JSON payload. An empty or undecodable payload means "legacy mode" —
-/// no profiles exist and callers keep using live `AdvancedExportSettings` —
-/// so corruption or a partial decode can never change export behavior, only
-/// lose saved profiles that the user can re-create.
+/// Persistence remains compatible with the shipped JSON array while decoding each record
+/// independently. Unknown or corrupt records are retained opaquely, so they cannot erase or
+/// redirect unrelated runnable profiles when the list is saved again. Unreadable authority
+/// blocks legacy fallback rather than redirecting an export to live settings.
 ///
 /// Use from the main thread, matching `AdvancedExportSettings`.
 final class ExportProfileStore: ObservableObject {
@@ -78,13 +100,20 @@ final class ExportProfileStore: ObservableObject {
 
     @Published private(set) var profiles: [ExportProfile]
     @Published private(set) var activeProfileID: UUID?
+    /// Unknown or individually corrupt records retained verbatim so one future profile kind cannot
+    /// erase unrelated runnable profiles when a Drive-capable build reads and later saves the list.
+    @Published private(set) var unknownProfileRecordCount: Int
 
     private let userDefaults: UserDefaults
     private let now: () -> Date
+    private var opaqueProfileRecords: [Data]
+    private var persistenceUnavailable = false
 
     private enum Key {
-        static let list = "exportProfiles.list"
-        static let activeProfileID = "exportProfiles.activeProfileID"
+        static let list = ExportProfilePersistence.legacyListKey
+        static let activeProfileID = ExportProfilePersistence.legacyActiveIDKey
+        static let listV2 = ExportProfilePersistence.envelopeKey
+        static let activeProfileIDV2 = ExportProfilePersistence.activeIDKey
     }
 
     static let defaultProfileName = String(localized: "Default", comment: "Name of the export profile migrated from existing settings")
@@ -96,14 +125,21 @@ final class ExportProfileStore: ObservableObject {
         self.userDefaults = userDefaults
         self.now = now
 
-        if let data = userDefaults.data(forKey: Key.list),
-           let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) {
-            profiles = decoded
+        let hasV2 = ExportProfilePersistence.hasEnvelope(in: userDefaults)
+        let key = hasV2 ? Key.listV2 : Key.list
+        let data = userDefaults.data(forKey: key)
+        let decoded = data.flatMap { ExportProfilePersistence.decode($0, envelope: hasV2) }
+        if let decoded {
+            profiles = decoded.profiles
+            opaqueProfileRecords = decoded.opaque
         } else {
             profiles = []
+            opaqueProfileRecords = []
+            persistenceUnavailable = userDefaults.object(forKey: key) != nil
         }
+        unknownProfileRecordCount = opaqueProfileRecords.count + (persistenceUnavailable ? 1 : 0)
 
-        if let idString = userDefaults.string(forKey: Key.activeProfileID),
+        if let idString = userDefaults.string(forKey: hasV2 ? Key.activeProfileIDV2 : Key.activeProfileID),
            let id = UUID(uuidString: idString),
            decodedContainsProfile(withID: id, in: profiles) {
             activeProfileID = id
@@ -115,19 +151,35 @@ final class ExportProfileStore: ObservableObject {
     /// Re-reads persisted state so instances owned by different subsystems
     /// (UI coordinator, SchedulingManager, CLI paths) observe each other's
     /// mutations. Safe on the main thread, matching every existing call site.
+    /// Detail views call this during rendering: publishing equal values would
+    /// invalidate the same observed body again and prevent the UI from idling.
     private func reloadFromDefaults() {
-        guard let data = userDefaults.data(forKey: Key.list),
-              let decoded = try? JSONDecoder().decode([ExportProfile].self, from: data) else {
-            return
+        let hasV2 = ExportProfilePersistence.hasEnvelope(in: userDefaults)
+        let key = hasV2 ? Key.listV2 : Key.list
+        let decoded = userDefaults.data(forKey: key).flatMap {
+            ExportProfilePersistence.decode($0, envelope: hasV2)
         }
-        if decoded != profiles {
-            profiles = decoded
+        let loadedProfiles = decoded?.profiles ?? []
+        let loadedOpaque = decoded?.opaque ?? []
+        persistenceUnavailable = userDefaults.object(forKey: key) != nil && decoded == nil
+
+        if loadedProfiles != profiles {
+            profiles = loadedProfiles
         }
-        if let idString = userDefaults.string(forKey: Key.activeProfileID),
-           let id = UUID(uuidString: idString),
-           decodedContainsProfile(withID: id, in: profiles),
-           id != activeProfileID {
-            activeProfileID = id
+        if loadedOpaque != opaqueProfileRecords {
+            opaqueProfileRecords = loadedOpaque
+        }
+        let unknownCount = loadedOpaque.count + (persistenceUnavailable ? 1 : 0)
+        if unknownProfileRecordCount != unknownCount {
+            unknownProfileRecordCount = unknownCount
+        }
+        let activeKey = hasV2 ? Key.activeProfileIDV2 : Key.activeProfileID
+        let persistedID = userDefaults.string(forKey: activeKey).flatMap(UUID.init(uuidString:))
+        let loadedActiveID = persistedID.flatMap {
+            decodedContainsProfile(withID: $0, in: loadedProfiles) ? $0 : nil
+        }
+        if activeProfileID != loadedActiveID {
+            activeProfileID = loadedActiveID
         }
     }
 
@@ -135,7 +187,7 @@ final class ExportProfileStore: ObservableObject {
 
     /// True when at least one profile exists. Callers without profile support
     /// keep the legacy single-settings behavior while this is false.
-    var hasProfiles: Bool { !profiles.isEmpty }
+    var hasProfiles: Bool { !profiles.isEmpty || unknownProfileRecordCount > 0 }
 
     /// The profile used by manual exports, or nil in legacy mode (no profiles,
     /// or the persisted active id dangles after external data loss).
@@ -172,9 +224,11 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil
+        apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil
     ) -> Bool {
-        guard profiles.isEmpty else { return false }
+        reloadFromDefaults()
+        guard profiles.isEmpty, opaqueProfileRecords.isEmpty, !persistenceUnavailable else { return false }
 
         let profile = ExportProfile(
             name: uniquifiedName(Self.defaultProfileName),
@@ -182,6 +236,7 @@ final class ExportProfileStore: ObservableObject {
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID,
             createdAt: now(),
             updatedAt: now(),
             isMigrationDefault: true
@@ -200,14 +255,17 @@ final class ExportProfileStore: ObservableObject {
         settings: ExportSettingsSnapshot,
         target: ExportTargetSelection,
         folderVaultID: UUID? = nil,
-        apiEndpointID: UUID? = nil
+        apiEndpointID: UUID? = nil,
+        googleDriveDestinationID: UUID? = nil
     ) -> ExportProfile {
+        reloadFromDefaults()
         let profile = ExportProfile(
             name: uniquifiedName(name),
             settings: settings,
             target: target,
             folderVaultID: folderVaultID,
             apiEndpointID: apiEndpointID,
+            googleDriveDestinationID: googleDriveDestinationID,
             createdAt: now(),
             updatedAt: now()
         )
@@ -223,6 +281,8 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the id is unknown.
     @discardableResult
     func updateSettings(id: UUID, settings: ExportSettingsSnapshot) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles[index].settings = settings
         profiles[index].updatedAt = now()
@@ -234,6 +294,8 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the profile id is unknown.
     @discardableResult
     func setFolderBinding(profileID: UUID, destinationID: UUID?) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
         guard profiles[index].folderVaultID != destinationID else { return true }
         profiles[index].folderVaultID = destinationID
@@ -246,9 +308,24 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the profile id is unknown.
     @discardableResult
     func setAPIEndpointBinding(profileID: UUID, endpointID: UUID?) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
         guard profiles[index].apiEndpointID != endpointID else { return true }
         profiles[index].apiEndpointID = endpointID
+        profiles[index].updatedAt = now()
+        persist()
+        return true
+    }
+
+    /// Binds a profile to a local non-secret Google Drive destination record.
+    @discardableResult
+    func setGoogleDriveBinding(profileID: UUID, destinationID: UUID?) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
+        guard let index = profiles.firstIndex(where: { $0.id == profileID }) else { return false }
+        guard profiles[index].googleDriveDestinationID != destinationID else { return true }
+        profiles[index].googleDriveDestinationID = destinationID
         profiles[index].updatedAt = now()
         persist()
         return true
@@ -258,6 +335,8 @@ final class ExportProfileStore: ObservableObject {
     /// Returns false when the id is unknown.
     @discardableResult
     func updateTarget(id: UUID, target: ExportTargetSelection) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles[index].target = target
         profiles[index].updatedAt = now()
@@ -270,6 +349,8 @@ final class ExportProfileStore: ObservableObject {
     /// unknown or the trimmed name is empty.
     @discardableResult
     func rename(id: UUID, to rawName: String) -> String? {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return nil }
         guard let index = profiles.firstIndex(where: { $0.id == id }) else { return nil }
         let trimmed = rawName.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
@@ -287,13 +368,15 @@ final class ExportProfileStore: ObservableObject {
     /// unknown.
     @discardableResult
     func duplicate(id: UUID) -> ExportProfile? {
-        guard let source = profile(id: id) else { return nil }
+        guard !SharedSetupV2ExecutionGate(userDefaults: userDefaults).isExecutionBlocked(profileID: id),
+              let source = profile(id: id) else { return nil }
         return add(
             name: source.name,
             settings: source.settings,
             target: source.target,
             folderVaultID: source.folderVaultID,
-            apiEndpointID: source.apiEndpointID
+            apiEndpointID: source.apiEndpointID,
+            googleDriveDestinationID: source.googleDriveDestinationID
         )
     }
 
@@ -305,6 +388,8 @@ final class ExportProfileStore: ObservableObject {
     /// profile was deleted; false for unknown ids or the final profile.
     @discardableResult
     func delete(id: UUID) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard profiles.count > 1,
               let index = profiles.firstIndex(where: { $0.id == id }) else { return false }
         profiles.remove(at: index)
@@ -320,6 +405,8 @@ final class ExportProfileStore: ObservableObject {
     /// or while in legacy mode.
     @discardableResult
     func activate(id: UUID) -> Bool {
+        reloadFromDefaults()
+        guard !persistenceUnavailable else { return false }
         guard profiles.contains(where: { $0.id == id }) else { return false }
         activeProfileID = id
         persist()
@@ -351,12 +438,15 @@ final class ExportProfileStore: ObservableObject {
     // MARK: - Persistence
 
     private func persist() {
-        if let encoded = try? JSONEncoder().encode(profiles) {
-            userDefaults.set(encoded, forKey: Key.list)
-        }
+        guard !persistenceUnavailable else { return }
+        guard let encoded = try? ExportProfilePersistence.encode(
+            profiles, opaque: opaqueProfileRecords, envelope: true
+        ) else { return }
+        userDefaults.set(encoded, forKey: Key.listV2)
+        unknownProfileRecordCount = opaqueProfileRecords.count
         userDefaults.set(
             activeProfileID?.uuidString,
-            forKey: Key.activeProfileID
+            forKey: Key.activeProfileIDV2
         )
     }
 

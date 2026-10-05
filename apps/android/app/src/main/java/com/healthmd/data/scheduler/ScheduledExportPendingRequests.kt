@@ -149,6 +149,7 @@ object ScheduledExportPendingRequests {
                         } else {
                             request.folderOperationId == null || request.folderOperationId == folderOperationId
                         }
+                        ExportTarget.GOOGLE_DRIVE -> true
                     }
             }
             .map { it.date }
@@ -183,6 +184,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings = applyAttemptResult(
         settings = settings,
@@ -195,6 +197,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson = settingsSnapshotJson,
         apiOperationIds = apiOperationIds,
         folderOperationIds = folderOperationIds,
+        driveOperationIds = driveOperationIds,
         freshCaptureRetryDates = freshCaptureRetryDates,
     )
 
@@ -209,6 +212,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -250,6 +254,11 @@ object ScheduledExportPendingRequests {
                         } else {
                             existing?.folderOperationId ?: folderOperationIds[failure.date]
                         },
+                        driveOperationId = if (failure.date in freshCaptureRetryDates) {
+                            null
+                        } else {
+                            existing?.driveOperationId ?: driveOperationIds[failure.date]
+                        },
                         firstFailedAtMillis = existing?.firstFailedAtMillis?.takeIf { it > 0L } ?: nowMillis,
                         lastAttemptAtMillis = nowMillis,
                         lastFailureReason = failure.reason,
@@ -278,6 +287,7 @@ object ScheduledExportPendingRequests {
         settingsSnapshotJson: String? = null,
         apiOperationIds: Map<LocalDate, String> = emptyMap(),
         folderOperationIds: Map<LocalDate, String> = emptyMap(),
+        driveOperationIds: Map<LocalDate, String> = emptyMap(),
         freshCaptureRetryDates: Set<LocalDate> = emptySet(),
     ): ExportSettings {
         val attempted = attemptedDates.toSet()
@@ -309,6 +319,9 @@ object ScheduledExportPendingRequests {
                     null
                 } else {
                     folderOperationIds[date] ?: existing?.folderOperationId
+                },
+                driveOperationId = if (date in freshCaptureRetryDates) null else {
+                    driveOperationIds[date] ?: existing?.driveOperationId
                 },
                 firstFailedAtMillis = existing?.firstFailedAtMillis ?: 0L,
                 lastAttemptAtMillis = nowMillis,
@@ -367,6 +380,7 @@ object ScheduledExportPendingRequests {
             settingsSnapshotJson = existing.settingsSnapshotJson,
             apiOperationId = existing.apiOperationId,
             folderOperationId = existing.folderOperationId,
+            driveOperationId = existing.driveOperationId,
         )
     }
 

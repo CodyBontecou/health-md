@@ -205,20 +205,13 @@ struct HealthMdApp: App {
                 )
             },
             v2ExportContext: {
-                guard let exportProfiles = SharedSetupV2ExportProfileBridge.current else {
+                guard let exportProfiles = SharedSetupV2ExportProfileBridge.current,
+                      let service = sharedSetupV2Service else {
                     return nil
                 }
-                // Freeze any debounced live edits into the active profile so
-                // the shared document reflects the settings the user sees.
-                exportProfiles.flushEdits()
-                return SharedSetupV2ExportContext(
-                    profiles: exportProfiles.profileStore.profiles,
-                    activeProfileID: exportProfiles.profileStore.activeProfileID,
-                    destinationVaults: exportProfiles.destinationStore.vaults,
-                    destinationAPIEndpoints: exportProfiles.destinationStore.apiEndpoints,
-                    scheduledEntries: exportProfiles.scheduledEntryStore.entries,
-                    preservedAndroidExtensions:
-                        sharedSetupV2Service?.preservedAndroidExtensionsByProfileID ?? [:]
+                return try SharedSetupV2ExportContext.production(
+                    exportProfiles: exportProfiles,
+                    service: service
                 )
             }
         ))
@@ -348,8 +341,10 @@ struct HealthMdApp: App {
         // was written; clear them so a UI-test journey never inherits profile
         // state from an earlier journey on the same install. Shared Setup v2
         // sidecar/blocked/Undo state is the same kind of profile state.
-        UserDefaults.standard.removeObject(forKey: "exportProfiles.list")
-        UserDefaults.standard.removeObject(forKey: "exportProfiles.activeProfileID")
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.legacyListKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.legacyActiveIDKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.envelopeKey)
+        UserDefaults.standard.removeObject(forKey: ExportProfilePersistence.activeIDKey)
         UserDefaults.standard.removeObject(forKey: "scheduledExportEntries.list")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.vaults")
         UserDefaults.standard.removeObject(forKey: "exportProfileDestinations.apiEndpoints")

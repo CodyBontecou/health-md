@@ -47,6 +47,7 @@ class SharedSetupService private constructor(
             schedules = context.schedules,
             appVersion = context.appVersion,
             preservedAppleExtensionsByProfileId = context.preservedAppleExtensionsByProfileId,
+            pendingDestinationsByProfileId = context.pendingDestinationsByProfileId,
         )
         return versionedCodec.encode(document)
     }
