@@ -8,19 +8,21 @@
 
 ## Implementation progress (2026-10-04)
 
-The dedicated `goal/agent-bridge/integration` branch includes three serial waves through
-`770c74319`: deferred B01/B05 contracts and bounded native codecs, B02/B03 mobile-source
-repairs, partial B04 profile handling, B09 detached native JSON/settings resolvers, B16
-before-capture authority and durable discard, Worker-only B15 FCM, and scoped Apple compiler/SDK
-repairs. The audit findings below retain their original baseline context; consult the
+The dedicated `goal/agent-bridge/integration` branch includes four serial waves through
+`4df7cc180`: deferred B01/B05 contracts and bounded native codecs, B02/B03 mobile-source
+repairs, partial B04 profile handling, B09 native JSON/settings resolution, B16 before-capture
+authority and durable discard, Worker-only B15 FCM, scoped Apple compiler/SDK repairs, and
+native/host private issuer stores with callable configuration-only plan/exact-approval services. The audit findings below retain their original baseline context; consult the
 [implementation ledger](../qa/agent-bridge-implementation.md) for commits, exact test/build evidence,
 retained failures and remaining acceptance.
 
 Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Stored native/host
-authority, v4 dispatch/capture/journals, zero-read planning, typed queries/projection, permissioned
-controls, recipes/schedules and ZIP/dictionaries remain unfinished. Native builds and bounded
-resolver tests pass; they do not establish the complete four-way no-settings journey. Capabilities
-stay planned; no physical, installed-build, live-provider or release qualification is inferred.
+authority and zero-read planning now have partial working source services, not native setup/routes
+or bound execution. Stale packaged MCP catalog, native discovery-pointer interoperability and
+delayed clock/publication checks still block acceptance; combined builds are disk-admission-blocked.
+V4 dispatch/capture/journals, typed queries/projection, permissioned controls, recipes/schedules and
+ZIP/dictionaries remain unfinished. Capabilities stay planned; no four-way, physical, installed,
+live-provider or release qualification is inferred.
 
 ## Product outcome
 
@@ -140,7 +142,7 @@ The todo store contains older items whose open/blocked labels are not sufficient
 - Preserve desktop native destination/credential hardening and the Android opaque binding. Never retarget a durable job during resume or expose arbitrary shell/SQL/URL/file authority through MCP.
 - Preserve local-read-only and remote-read-only profiles. Export/configuration/scheduling actions require separately scoped approval; adding controls must not silently widen those profiles.
 - A full phone-owned configuration API is a later layer. Host recipes achieve desktop agent control without mutating the user's unrelated phone API-export setup.
-- Public alpha.7 has 19 MCP tools; current source has 21. The [production readiness decision](../../apps/cli/docs/production-readiness.md) and [mobile ledger](../../apps/cli/docs/mobile-compatibility.md) say the public standalone release is unqualified. New Android queries/FCM/control APIs are not silently added to the frozen CLI 1.0 scope; an explicit scope/release decision is required.
+- Public alpha.7 has 19 MCP tools; pre-fourth-wave source has21, current operation declarations23 including plan/exact-approval relay. The packaged catalog is still21 pending canonical regeneration and full verification. The [production readiness decision](../../apps/cli/docs/production-readiness.md) and [mobile ledger](../../apps/cli/docs/mobile-compatibility.md) say the public standalone release is unqualified. New Android queries/FCM/control APIs are not silently added to the frozen CLI 1.0 scope; an explicit scope/release decision is required.
 - Wake Worker changes stay notification-only under [its component instructions](../../apps/wake/AGENTS.md). This plan authorizes no secrets, infrastructure deployment, live health reads or product releases. Cloud/Practice remain outside this backlog.
 
 ## Verification and completion criteria
@@ -161,6 +163,8 @@ The [implementation ledger](../qa/agent-bridge-implementation.md) records subseq
 
 The third wave through `770c74319` adds bounded both-platform request-settings/renderer resolution, authoritative Apple profile-ID lookup, Android exact-owned discard/reconciliation and strict private revocation parsing. Scoped Apple repairs preserve wire bytes and fail closed on unsupported history-boundary SDKs. Combined Play/F-Droid unit/lint/build/binding gates and generic iOS application/test-target build-for-testing now pass; app-host tests, full export-doc generation and installed/physical qualification are not run.
 
-These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising, stored native authority/approval, request-owned capture/journals, zero-read planning/execution and recipes remain pending. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. B21 follow-ups `aac010955`/`5a03fa7ea` correct unsupported native history-readiness and OS-only guidance while retaining legacy wire keys/types. Both committed macOS/iOS test-target build-for-testing gates pass; the actual-source metadata probe has retained red/green evidence, not app/service-host execution.
+The fourth wave through `4df7cc180` adds real bounded native/host issuer-private stores, independent local decisions, actual request-settings-backed source planning services and shared CLI/MCP plan/approval adapters. Lane tests exercise actual stores/services and encrypted synthetic peers; they do not connect the production Swift/Kotlin counterparts. Full Rust workspace remains red on the stale packaged catalog; coordinator regeneration paused before compilation with exit70 below6GiB. Contract validator after each serial merge and60 tests pass; combined compiler gates remain unrun.
+
+These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising/native setup/routes, request-owned capture/journals, bound execution and recipes remain pending. Kotlin discovery's three layout pointers do not satisfy the host's full effective-settings support check; delayed consent/private-key/metadata expiry boundaries require further tests. HMAC does not prevent valid historical-snapshot rollback, native fresh-open root protection is unqualified, Windows new issuer storage deliberately rejects, and host setup is currently single-root. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. B21 follow-ups `aac010955`/`5a03fa7ea` correct unsupported native history-readiness and OS-only guidance while retaining legacy wire keys/types. Both committed macOS/iOS test-target build-for-testing gates pass; the actual-source metadata probe has retained red/green evidence, not app/service-host execution.
 
 The pinned-consumer failure, broad support/website/consumer reconciliation, physical/live qualification and B19/B20 approval gates remain explicit. No task is closed or planned capability promoted from these increments.
