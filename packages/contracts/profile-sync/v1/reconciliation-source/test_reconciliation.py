@@ -1144,6 +1144,44 @@ class SourceTests(unittest.TestCase):
             self.assertEqual(saved.state.locals[0].accepted.raw, self.content["base"])
             self.assertEqual((j.read(), pj.read()), (saved, saved))
 
+    def test_byte_capacity_eligibility(self):
+        for tail, denial, wanted, size in ((5311, "quarantined", "requires_action", 131019),
+                                          (5331, "quota_exceeded", "quota_exceeded", 131059)):
+            c = self.contexts["env1"]
+            k, j = self.make(context=c)
+            b = encode(dict(json.loads(self.bodies["create"]), mutation_id="psm_" + "d" * 32))
+            self.code(k.local(c, "local-byte", self.content["base"]), "local_preserved")
+            self.code(k.select(c, "publish", "local-byte", b), "queued")
+            r = k.next_request().request  # actual capture BEFORE public byte filling
+            self.assertEqual((r.body, r.mutation_id, r.request_hash, r.context),
+                             (b, "psm_" + "d" * 32, request_hash(b), c))
+            inputs = [self.content["base"]]
+            for i, n in enumerate((26000, 26000, tail)):
+                raw = self.content["current"] + b" " * (n - len(self.content["current"]))
+                inputs.append(raw)
+                self.code(k.local(c, f"local-fill-{i}", raw), "local_preserved")
+            saved, applies = j.read(), j.calls[1]
+            s = saved.state
+            self.assertEqual((saved.serial, len(s.history), len(s.locals), len(s.links),
+                              len(s.candidates), len(s.outbox)), (5, 5, 4, 0, 0, 1))
+            self.assertEqual(model.logical_bytes(s), size)  # independently worked input charges
+            self.code(k.acknowledge(c, r.mutation_id, "0" * 64, self.records["first"]), denial)
+            after = j.read()
+            if tail == 5331:
+                self.assertEqual((after, k.view(), j.calls[1]), (saved, s, applies))
+            else:
+                self.assertEqual((after.serial, after.state.outbox[0].status), (6, "quarantined"))
+            e = after.state.outbox[0]
+            self.assertEqual((e.body, e.mutation_id, e.request_hash, e.base_revision, e.context),
+                             (b, "psm_" + "d" * 32, request_hash(b), 0, c))
+            self.assertEqual([l.accepted.raw for l in after.state.locals], inputs)
+            self.assertEqual([l.content.raw for l in after.state.locals], inputs)
+            peer, pj = self.make(context=c, journal=MemoryJournal(c, record=after))
+            for u in (k, peer):
+                self.code(u.next_request(), wanted)  # literal fail-closed rule, no Request
+                self.assertEqual(u.view(), after.state)
+            self.assertEqual((j.read(), pj.read()), (after, after))
+
     def test_all_test_filesystem_operations_are_read_only(self):
         original = io.open
         def reads_only(file, mode="r", *args, **kwargs):
