@@ -55,6 +55,17 @@ Request objects must have unique decoded field names. Duplicate rejection occurs
 before authentication, D1 access or provider dispatch, without reflecting the
 request or logging it. Ordinary v1/v2 fields and proof transcripts are unchanged.
 
+V2 management timestamps retain the same inclusive ±120-second window. Enrollment,
+rotation and revocation check it again using trusted live server time after awaited
+registration lookup/proof verification, before submitting their mutation batch.
+Expired or now-too-far-future proofs return `401 wake_timestamp_stale` without that
+management batch, nonce consumption or renewed timestamp/authority. A separately
+fresh proof may reuse a nonce that expired work never consumed. Admitted management
+metadata uses that live admission time, not the earlier arrival snapshot. This is
+not a global transaction across wall time and D1 scheduling: an already submitted
+batch cannot be recalled by a later clock change. The ownership/bootstrap limitations
+and current-key conditional mutation/replay protection below are unchanged.
+
 ### POST `/wake/v2/register`
 
 Required fields:
@@ -293,6 +304,16 @@ states that queries without it go to the primary database. New replica/session
 adoption must separately preserve current-authority reads. Current best-practices
 and D1 references were retrieved; `5.20261005.1` remains a scratch-only type check,
 not a lockfile/configuration/compatibility-profile change.
+
+2026-10-05 bounded management-time follow-up: actual WebCrypto verification and
+synthetic HTTP requests reproduce stale enrollment and revocation after delayed
+verification; the unchanged window is rechecked before management mutations.
+Rotation preservation, inclusive boundaries, clock retreat, fresh nonce reuse and
+live stored timestamps are also exercised. These are Node24 source tests; the
+unchanged ephemeral local workerd test does not inject these crypto/clock delays or
+establish a globally atomic D1 deadline. Current best-practices/WebCrypto/D1 references
+were retrieved, latest types remain scratch-only `5.20261005.1`, and no provider,
+native enrollment, deployment, dependency or configuration action is performed.
 
 ## Later gates (not performed here)
 

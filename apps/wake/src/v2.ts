@@ -97,7 +97,7 @@ export async function handleV2Register(request: Request, env: WakeEnv): Promise<
   if (!json) return jsonResponse({ error: "Invalid JSON body" }, 400);
   const body = parseEnrollment(json);
   if (!body) return jsonResponse({ error: "wake_registration_invalid" }, 400);
-  const now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
+  let now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
   if (!timestampWithinWindow(v2Timestamp(body.timestamp)!, now)) return jsonResponse({ error: "wake_timestamp_stale" }, 401);
   const existing = body.operation === "rotate" ? await managementRow(env, body.wakeId, body.userId) : null;
   if (body.operation === "rotate" && !existing) return jsonResponse({ error: "wake_unknown" }, 404);
@@ -105,6 +105,9 @@ export async function handleV2Register(request: Request, env: WakeEnv): Promise<
   if (!await verifyV2Proof(signingHash, managementMessage(body), body.proof)) {
     return jsonResponse({ error: "wake_proof_invalid" }, 401);
   }
+  // Storage/crypto awaits do not freeze management authority or its replay clock.
+  now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
+  if (!timestampWithinWindow(v2Timestamp(body.timestamp)!, now)) return jsonResponse({ error: "wake_timestamp_stale" }, 401);
   if (existing && (body.managementKeyVerificationHash === existing.verification_hash
     || body.wakeKeyVerificationHash === existing.management_hash)) {
     return jsonResponse({ error: "wake_registration_invalid" }, 400);
@@ -146,13 +149,15 @@ export async function handleV2Unregister(request: Request, env: WakeEnv): Promis
     || typeof timestamp !== "string" || v2Timestamp(timestamp) === null
     || typeof proof !== "string" || !HMAC_RE.test(proof)
   ) return jsonResponse({ error: "wake_registration_invalid" }, 400);
-  const now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
+  let now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
   if (!timestampWithinWindow(v2Timestamp(timestamp)!, now)) return jsonResponse({ error: "wake_timestamp_stale" }, 401);
   const existing = await managementRow(env, wakeId, userId);
   if (!existing?.management_hash) return jsonResponse({ error: "wake_unknown" }, 404);
   if (!await verifyV2Proof(existing.management_hash, JSON.stringify([MANAGEMENT_DOMAIN, "revoke", wakeId, userId, nonce, timestamp]), proof)) {
     return jsonResponse({ error: "wake_proof_invalid" }, 401);
   }
+  now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
+  if (!timestampWithinWindow(v2Timestamp(timestamp)!, now)) return jsonResponse({ error: "wake_timestamp_stale" }, 401);
   const results = await env.DB.batch([
     ...burnManagementNonce(env, wakeId, userId, existing.management_hash, nonce, now),
     env.DB.prepare("INSERT INTO wake_v2_revocations (wake_id, revoked_at) SELECT ?, ? WHERE changes() = 1").bind(wakeId, now),
