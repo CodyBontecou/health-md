@@ -8,37 +8,59 @@ compatibility: Automated CLI checks require the independently locked shared-core
 
 Validate the Rust CLI, portable Rust MCP server, and iPhone/Android direct services. The macOS app, loopback API, Mac destination bookmark, and legacy Swift CLI are out of scope unless explicitly requested.
 
+## Current source and qualification
+
+Apple application 1, Android application 2, iPhone query 3 and independent agent extension 4
+are separate negotiations, not pairing selectors or permission. Existing Android raw/generated
+and durable controls do not enable its planned typed-query/extraction services (B06–B08).
+
+iPhone new reads require foreground/protected data. Android's already-active user-started foreground service
+can support ordinary screen locking after first unlock after reboot; absent/stopped/force-stop
+sessions need human reopening/restart. Wake cannot unlock, grant native permissions or approve work.
+See the [Android source guide](../../../apps/android/docs/features/direct-cli.md).
+
+Native extension-4 routes remain unwired/unadvertised. Stored planning/DTO checks do not deliver
+native consent/configuration/session adapters, send boundaries, bound execution/bridge receipts,
+recipes or the complete CLI/MCP × iOS/Android journey. Unit/conformance/build passes are not installed/release qualification.
+Use [mobile compatibility](../../../apps/cli/docs/mobile-compatibility.md),
+[production readiness](../../../apps/cli/docs/production-readiness.md) and the
+[implementation ledger](../../../docs/qa/agent-bridge-implementation.md) for exact pending gates.
+
 ## Rules
 
-- Treat this as a three-component contract: shared protocol under `packages/healthmd-core-rust`, portable client under `apps/cli`, and the iPhone service/exporters under `apps/apple`.
+- Validate shared protocol under `packages/healthmd-core-rust`, portable client under `apps/cli`, and the corresponding native producer under `apps/apple` or `apps/android`; source-specific unavailable branches must reject rather than fabricate parity.
 - Keep CLI commands bounded and non-interactive. On macOS/Linux use `NO_COLOR=1 TERM=dumb`, `timeout`, and stdin from `/dev/null`.
 - Use stdout JSON, artifacts, durable job records, and commit receipts as evidence.
-- Never put raw health payloads in logs, issues, fixtures, or reports. Record only counts, dates, statuses, diagnostics, and digests.
-- Separate automated checks from physical-iPhone checks. Never claim live coverage without observations.
+- No health payloads, owner dates, private paths, native identities, tokens or QR/credential values in reports. Record synthetic case labels, safe status/counts and artifact digests only; fixtures are synthetic, not owner data.
+- Separate synthetic automation, compilation and separately authorized physical/live checks for both sources. Missing environments or authorization remain not run; no unit-test proxy for installed grants, lifecycle or releases.
 - Do not weaken crypto, digest, path, schema, peer-binding, or partial-result validation to pass a test.
 
 ## Layers
 
 1. Independently locked shared-core and CLI Rust format/build/lint/workspace tests.
-2. Swift-generated protocol-v1 export and protocol-v3 query fixture conformance from `healthmd-protocol`.
-3. Connectivity package, focused direct-service/query/export tests, and iOS build.
+2. Swift-generated v1/v3 and Kotlin-generated v2 fixture conformance from `healthmd-protocol`; deferred extension-4 native candidates require separate provenance and are not permissions or installed routes.
+3. Apple Connectivity/direct/exporter tests and build; Android focused direct/protocol and Play/F-Droid tests/builds per component instructions. These are source gates, not physical Pixel 7 qualification.
 4. Local CLI/MCP help, initialize/tools/resources, and offline trust smoke.
 5. Live LAN pair/status/raw/extract/file/durability plus every direct MCP query/export/UI/PNG path.
 6. Live Tailscale network coverage.
 7. macOS/Linux/Windows release matrix with both packaged binaries.
 
-Do not insert a Mac-app control-server smoke test: the portable client listens directly for iPhone.
+Do not insert a Mac-app control-server smoke test: the portable client listens directly for the selected mobile source.
 
 ## Rust gate
 
-Validate the shared-core workspace first:
+Validate the shared-core workspace first: the whole-core workspace/tooling uses Rust 1.88
+from its pinned `rust-toolchain.toml`; the runtime-only Rust 1.85 gate selects the
+three runtime crates and excludes `xtask`/UniFFI generation. See the
+[core toolchain authority](../../../packages/healthmd-core-rust/README.md#checks).
+Keep core and CLI working directories, target directories and independent lockfiles separate.
 
 ```bash
 cd packages/healthmd-core-rust
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 cargo test -p healthmd-protocol --test swift_v3_query_vectors --locked
 ```
@@ -140,18 +162,35 @@ Negative smoke:
 
 ## Extraction contract
 
-Verify:
+Verify the current iPhone source below against its negotiated profile/version and
+[Apple daily schema](../../../apps/apple/docs/features/export-schema.md).
+Older peers keep their historical v5/v6/v7 grammar; never relabel their bytes as v8.
 
 1. `extract --category Sleep --yesterday` sends `health_data_projection` with resolved Sleep selection and summary detail.
 2. iPhone clones settings and does not persist selection.
-3. Summary returns schema-v7 documents with `raw_capture_status: not_requested` and no hidden archive.
+3. Current Apple v8 summaries report `raw_capture_status: not_requested` and no hidden archive.
 4. `--object records` or archive pointers imply lossless and return honest projections, not falsely complete documents.
 5. Receipts cover every requested day; JSONL writes to stderr or `OUTPUT.receipt.json`.
 6. Incomplete extraction emits no retained data without `--allow-partial`.
 7. Unknown metrics/categories/sources/pointers and unsupported peers fail closed.
 8. JSONL enforces its per-item bound; unusually dense days use JSON.
 
+Android source-shaped extraction remains planned (B08). Its deferred
+`android_source_projection_v1` product is distinct from reserved v2
+`android_daily_records_v1`, Android frozen-v4/analytical-v5 generated files and
+provider-native raw snapshots. Codecs and existing raw/generated support do not
+make extraction callable. Use the [B08 target and acceptance](../../../docs/architecture/agent-bridge-parity-roadmap.md#backlog-index)
+and [new projection contract](../../../packages/contracts/direct-protocol/v4/protocol.md)
+for future synthetic qualification, not Apple-shaped placeholders.
+
 ## Live prerequisites
+
+Run live LAN/Tailscale, native credential/permission setup, exports or notifications only when
+separately authorized. Otherwise keep those rows not run and use synthetic fixtures/fake peers.
+The following detailed examples are iPhone-specific; Android raw/generated/durable testing needs
+its own exact app/versionCode/OS/Health Connect/provider/channel and active-service matrix.
+Existing disposable destinations must be preapproved on the actual desktop OS, including Windows.
+Keep payloads and immutable private job/receipt state out of reports.
 
 - Exact CLI and iOS builds under test.
 - Health.md open on unlocked-enough iPhone.
@@ -248,7 +287,9 @@ Pass:
 | macOS Keychain denies the current binary | Prompt-free bounded `direct_storage_unavailable`; no hang or plaintext fallback. |
 | Linux Secret Service absent | `direct_storage_unavailable`; secret not written to file. |
 | Wrong address/port or network denial | Bounded `direct_iphone_unavailable`; no switch. |
-| Locked/protected data unavailable | Safe failure without disclosure. |
+| iPhone foreground/protected data unavailable | New-read admission rejects safely; active export only has finite continuation, not unlimited capture. |
+| Android before first unlock / absent or force-stopped service | No provider read/service revival from a doorbell; human first unlock/reopening/restart required. |
+| Android later screen lock with active service | Exercise supported raw/generated controls in the already user-started service; not the iPhone foreground rejection. |
 | Altered packet/frame/manifest/digest/replay | Rejected before acknowledgement/output. |
 | Traversal/symlink/alias/mutation | Rejected before escaping/corrupting root. |
 | Interrupted append/merge | Resume commits once. |
@@ -271,17 +312,18 @@ Verify private state/output permissions and checksums. Do not describe unsigned 
 ```markdown
 ## Standalone Health.md CLI QA
 
-- Rust fmt/build/lint/tests: pass/fail
-- Swift protocol fixture: pass/fail
-- iOS build/direct tests: pass/fail
-- Local CLI smoke: pass/fail
-- Live LAN: pass/fail/not run
-- Live Tailscale: pass/fail/not run
-- Platforms: macOS/Linux/Windows
+- Rust fmt/build/lint/runtime-MSRV/tooling: pass/fail/not run
+- Swift/Kotlin protocol fixtures/native candidates: pass/fail/not run (name scope)
+- iOS and Play/F-Droid source builds/direct tests: pass/fail/not run
+- Local CLI smoke: pass/fail/not run
+- Separately authorized exact-build LAN: pass/fail/not run
+- Separately authorized exact-build Tailscale/Pixel 7/lifecycle: pass/fail/not run
+- Full four-way bridge journey: pass/fail/not run (not inferred from planning)
+- Platforms/builds under test: macOS/Linux/Windows; iOS/Android
 
 ### Evidence
-- versions, commits, commands, exit codes, JSON statuses, job IDs
-- counts, paths, receipts, artifact digests only
+- versions, source SHAs, sanitized commands, exit codes, safe JSON status codes, synthetic case IDs
+- counts, safe receipt states, artifact digests; exclude owner dates/private paths/native identities/secrets
 
 ### Result
 [summary]

@@ -413,5 +413,72 @@ class ConsumerSkillDocumentationTests(unittest.TestCase):
         self.assertIn("existing user-approved absolute non-symlink destination", text)
 
 
+class DevelopmentQASkillDocumentationTests(unittest.TestCase):
+    """Static skill gate/scope instructions, not compiled or physical qualification."""
+
+    ROOT = MODULE_PATH.resolve().parents[3]
+    SKILLS = (ROOT / ".agents/skills/healthmd-cli-development/SKILL.md",
+              ROOT / ".agents/skills/healthmd-cli-qa/SKILL.md")
+
+    def test_skill_core_msrv_gate_excludes_tooling_and_keeps_cli_workspace(self) -> None:
+        core = self.ROOT / "packages/healthmd-core-rust"
+        self.assertIn('channel = "1.88.0"', (core / "rust-toolchain.toml").read_text())
+        self.assertIn('rust-version = "1.88"', (core / "xtask/Cargo.toml").read_text())
+        runtime = ("rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol "
+                   "-p healthmd-core-uniffi --all-features --locked")
+        self.assertIn(runtime, (core / "AGENTS.md").read_text())
+        for path in self.SKILLS:
+            with self.subTest(skill=path.parent.name):
+                text = path.read_text(encoding="utf-8")
+                blocks = re.findall(r"```bash\n(.*?)\n```", text, re.DOTALL)
+                core_block = next(block for block in blocks if "cd packages/healthmd-core-rust" in block)
+                cli_block = next(block for block in blocks if "cd apps/cli" in block)
+                self.assertIn(runtime, core_block)
+                self.assertNotIn("rustup run 1.85.0 cargo check --workspace", core_block)
+                self.assertIn("rustup run 1.85.0 cargo check --workspace --all-features --locked", cli_block)
+                self.assertIn("whole-core workspace/tooling uses Rust 1.88", text)
+                self.assertIn("runtime-only Rust 1.85", text)
+                self.assertIn("independent lockfiles", text)
+
+    def test_qa_extraction_expectation_preserves_current_and_historical_profiles(self) -> None:
+        native = (self.ROOT / "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift").read_text()
+        declaration = re.search(r"enum HealthMdExportSchema\s*\{(.*?)\n\}", native, re.DOTALL)
+        self.assertIsNotNone(declaration)
+        version = re.search(r"static let version = (\d+)\b", declaration.group(1))
+        self.assertIsNotNone(version)
+        self.assertEqual(version.group(1), "8")
+        text = self.SKILLS[1].read_text(encoding="utf-8")
+        extraction = text.split("## Extraction contract\n", 1)[1].split("\n## Live prerequisites", 1)[0]
+        self.assertNotIn("Summary returns schema-v7 documents", extraction)
+        self.assertIn(f"Apple v{version.group(1)}", extraction)
+        for term in ("historical v5/v6/v7", "raw_capture_status: not_requested", "no hidden archive",
+                     "Android source-shaped extraction remains planned", "android_source_projection_v1",
+                     "android_daily_records_v1", "reserved", "frozen-v4/analytical-v5"):
+            self.assertIn(term, extraction)
+        self.assertIn("apple/docs/features/export-schema.md", extraction)
+
+    def test_skill_qa_matrix_is_source_specific_and_authorization_gated(self) -> None:
+        for path in self.SKILLS:
+            with self.subTest(skill=path.parent.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("## Current source and qualification", text)
+                for term in ("Apple application 1", "Android application 2", "iPhone query 3",
+                             "independent agent extension 4", "unwired/unadvertised",
+                             "user-started foreground service", "ordinary screen locking",
+                             "first unlock after reboot", "force-stop", "native consent",
+                             "bound execution", "not installed/release qualification",
+                             "mobile-compatibility.md", "production-readiness.md"):
+                    self.assertIn(term, text)
+        with self.subTest(surface="QA authorization and report"):
+            text = self.SKILLS[1].read_text(encoding="utf-8")
+            self.assertIn("separately authorized", text)
+            self.assertIn("No health payloads, owner dates, private paths", text)
+            self.assertNotIn("Record only counts, dates, statuses, diagnostics, and digests.", text)
+            self.assertNotIn("counts, paths, receipts, artifact digests only", text)
+            self.assertIn("not run", text)
+            self.assertIn("Android before first unlock / absent or force-stopped service", text)
+            self.assertIn("Android later screen lock with active service", text)
+
+
 if __name__ == "__main__":
     unittest.main()

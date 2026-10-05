@@ -6,20 +6,42 @@ compatibility: Requires the Health.md monorepo. Rust lives in the independent `p
 
 # Standalone Health.md CLI Development
 
-The public portable CLI does not depend on the Health.md macOS app. Treat the Rust CLI and iPhone direct service as one cross-component product joined by a versioned protocol.
+The public portable CLI does not depend on the Health.md macOS app. Treat the Rust CLI and iPhone/Android direct services as one cross-component product joined by versioned, source-specific protocols.
 
 ```text
 standalone Rust healthmd (`mcp serve`) on macOS / Linux / Windows
   TCP listener :17647
   ← authenticated encrypted Manual IP/Tailscale channel →
-foreground Health.md iPhone direct service
-  → HealthKit / production exporters / protected spool
+Health.md mobile direct service (iPhone or Android)
+  → native health permission / production exporters / protected spool
   → bounded query pages or durable transfer → MCP/JSON output or explicit destination
 ```
 
-The iPhone owns HealthKit permission, protected-data checks, quota, canonical capture, and production file generation. Rust owns pairing identity, native credentials, listener transport, durable receiver state, validation, output, and safe destination commits.
+Each source owns its native health permissions, lifecycle/admission, quota, capture and production file generation. Rust owns pairing identity, native credentials, listener transport, durable receiver state, validation, output and safe destination commits.
 
 The legacy Swift CLI, Mac loopback backend, encrypted Mac query context, bundled Swift MCP helper, and `apps/apple/scripts/healthmd` wrapper are compatibility surfaces, not standalone implementation targets. The portable Rust MCP server uses direct iPhone query protocol v3. Never make portable commands depend on Mac app availability or localhost.
+
+## Current source and qualification
+
+Apple application 1, Android application 2, iPhone query 3 and independent agent extension 4
+are separate negotiations, not pairing selectors or permission. iPhone query/extraction stays
+native-Apple; Android typed queries/extraction remain planned (B06–B08), while its existing
+provider-native raw/generated/status/resume/cancel paths use application 2.
+
+iPhone new work requires foreground/protected data; finite continuation applies only to an
+already-active export. Android's already-active user-started foreground service can support
+ordinary screen locking after first unlock after reboot. Absent/stopped/force-stop service
+needs human reopening/restart; wake cannot unlock, grant access or approve unattended work.
+Use the [Android source guide](../../../apps/android/docs/features/direct-cli.md) for its boundaries.
+
+Native extension-4 routes remain unwired/unadvertised. Stored planning/codec/resolver tests do
+not implement native consent/configuration/session adapters, send boundaries, bound execution,
+bridge receipts, recipes or the full journey. Source passes are not installed/release qualification:
+consult [exact mobile evidence](../../../apps/cli/docs/mobile-compatibility.md),
+[release scope](../../../apps/cli/docs/production-readiness.md) and the
+[implementation ledger](../../../docs/qa/agent-bridge-implementation.md).
+Use synthetic peers and isolated authority for automated work; live/native provisioning needs
+separate authorization and missing environments remain not run.
 
 ## Code map
 
@@ -60,7 +82,7 @@ The legacy Swift CLI, Mac loopback backend, encrypted Mac query context, bundled
 | Production exporters | `apps/apple/HealthMd/Shared/Export`, `apps/apple/HealthMd/Shared/Managers/VaultManager.swift` |
 | Tests | `apps/apple/Packages/HealthMdConnectivity/Tests`, `apps/apple/HealthMdTests/iOS`, `apps/apple/HealthMdTests/Sync` |
 
-Portable logic belongs in Rust; HealthKit/export generation stays on iPhone. Do not implement standalone behavior in `apps/apple/HealthMdCLI/` unless explicitly maintaining the legacy Swift client too.
+Portable logic belongs in Rust; native HealthKit/Health Connect/provider capture and generation stay in the corresponding mobile component. Do not implement standalone behavior in `apps/apple/HealthMdCLI/` unless explicitly maintaining the legacy Swift client too.
 
 ## Invariants
 
@@ -188,14 +210,18 @@ The Rust MCP server exposes only fixed operations. It must retain strict stdio b
 
 ## Tests
 
-Rust shared core and protocol:
+Rust shared core and protocol: the whole-core workspace/tooling uses Rust 1.88
+from its pinned `rust-toolchain.toml`; the runtime-only Rust 1.85 gate selects the
+three runtime crates and excludes `xtask`/UniFFI generation. See the
+[core toolchain authority](../../../packages/healthmd-core-rust/README.md#checks).
+Keep core and CLI working directories, target directories and independent lockfiles separate.
 
 ```bash
 cd packages/healthmd-core-rust
 cargo fmt --all --check
 cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
-rustup run 1.85.0 cargo check --workspace --all-features --locked
+rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 cargo test -p healthmd-protocol --test swift_v1_vectors --locked
 ```
 
