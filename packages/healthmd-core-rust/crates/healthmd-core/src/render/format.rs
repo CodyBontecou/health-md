@@ -38,9 +38,13 @@ pub(crate) fn render_frontmatter(
         .iter()
         .collect::<BTreeSet<_>>();
     let mut output = String::from("---\n");
-    let apple = config.profile == SemanticProfile::AppleHealthDataV8;
+    let apple = config.profile.is_apple();
     if apple {
-        output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
+        output.push_str(if config.profile == SemanticProfile::AppleHealthDataV7 {
+            "schema: healthmd.health_data\nschema_version: 7\n"
+        } else {
+            "schema: healthmd.health_data\nschema_version: 8\n"
+        });
         output.push_str("time_context:\n  calendar_timezone: ");
         output.push_str(&config.calendar_time_zone);
         output.push_str("\n  timestamp_timezone: UTC\n");
@@ -421,7 +425,7 @@ pub(crate) fn render_csv(
         }
         return output.into_bytes();
     }
-    if profile == SemanticProfile::AppleHealthDataV8 {
+    if profile.is_apple() {
         for row in [
             [
                 day.owner_date.as_str(),
@@ -435,7 +439,11 @@ pub(crate) fn render_csv(
                 day.owner_date.as_str(),
                 "Metadata",
                 "schema_version",
-                "8",
+                if profile == SemanticProfile::AppleHealthDataV7 {
+                    "7"
+                } else {
+                    "8"
+                },
                 "",
                 "",
             ],
@@ -585,12 +593,15 @@ pub(crate) fn public_json_entries(
     public_fields.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
     let mut entries = Vec::new();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => {
+        SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8 => {
             entries.push((
                 "schema".to_owned(),
                 Value::String("healthmd.health_data".to_owned()),
             ));
-            entries.push(("schema_version".to_owned(), Value::from(8)));
+            entries.push((
+                "schema_version".to_owned(),
+                Value::from(profile.public_schema_version()),
+            ));
             entries.push(("date".to_owned(), Value::String(day.owner_date.clone())));
             entries.push(("type".to_owned(), Value::String("health-data".to_owned())));
             entries.push(("time_context".to_owned(), serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC"})));

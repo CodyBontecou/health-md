@@ -282,6 +282,7 @@
     },
     "profile": {
       "enum": [
+        "apple_health_data_v7",
         "apple_health_data_v8",
         "android_frozen_v4",
         "android_analytical_v5"

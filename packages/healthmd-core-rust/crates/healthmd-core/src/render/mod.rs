@@ -12,21 +12,27 @@ use serde_json::Value;
 use thiserror::Error;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
+    CANONICAL_MODEL_VERSION, REGISTRY_VERSION,
     semantic::{
         ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
         SemanticValue,
     },
 };
 
+#[cfg(test)]
+use crate::REGISTRY_SHA256;
+
 mod android_analytical_v5;
 mod android_frozen_v4;
 mod apple_range_rollup_v9;
+mod apple_rollup_v7;
 mod apple_rollup_v8;
+mod apple_v7;
 mod apple_v8;
 pub mod artifact_plan;
 mod format;
 mod markdown_merge;
+mod markdown_merge_v1;
 pub mod stream;
 
 pub use artifact_plan::{ArtifactPlan, ArtifactPlanItem, validate_relative_path};
@@ -646,7 +652,8 @@ impl RenderSession {
                 )
             })
             .collect();
-        let presentation_categories = profile_presentation_categories(config.profile)?;
+        let presentation_categories =
+            profile_presentation_categories(config.profile, &config.registry_sha256)?;
         let retained_extensions = semantic
             .retained_extensions
             .iter()
@@ -802,8 +809,12 @@ impl RenderSession {
 
 fn profile_presentation_categories(
     profile: SemanticProfile,
+    registry_sha256: &str,
 ) -> Result<HashMap<String, BTreeSet<String>>, RenderError> {
     let registry_profile = match profile {
+        SemanticProfile::AppleHealthDataV7 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV7
+        }
         SemanticProfile::AppleHealthDataV8 => {
             crate::registry::MetricRegistryProfile::AppleHealthDataV8
         }
@@ -812,8 +823,12 @@ fn profile_presentation_categories(
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
         }
     };
-    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, REGISTRY_VERSION)
-        .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot = crate::registry::metric_registry_snapshot_at_authority(
+        registry_profile,
+        REGISTRY_VERSION,
+        registry_sha256,
+    )
+    .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -876,18 +891,23 @@ fn validate_config(
     if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
-    if config.render_profile_revision != RENDER_PROFILE_REVISION
-        || !matches!(config.profile_revision, 1 | 2)
-    {
+    if !crate::authority::supports_render(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.render_profile_revision,
+    ) || !crate::authority::supports_semantic(
+        &config.registry_sha256,
+        config.profile.id(),
+        config.profile_revision,
+    ) {
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
         || config.canonical_model_version != CANONICAL_MODEL_VERSION
         || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
         || semantic.schema != "healthmd.semantic_result"
         || semantic.canonical_model_version != CANONICAL_MODEL_VERSION
-        || semantic.registry_sha256 != REGISTRY_SHA256
+        || semantic.registry_sha256 != config.registry_sha256
         || semantic.profile_revision != config.profile_revision
         || semantic.session_id != config.session_id
         || semantic.profile != config.profile
@@ -935,9 +955,7 @@ fn validate_config(
     {
         return Err(RenderError::InvalidSemanticResult);
     }
-    if config.profile != SemanticProfile::AppleHealthDataV8
-        && (!semantic.rollups.is_empty() || config.rollups.is_some())
-    {
+    if !config.profile.is_apple() && (!semantic.rollups.is_empty() || config.rollups.is_some()) {
         return Err(RenderError::UnsupportedOperation);
     }
     let semantic_rollup_keys = semantic
@@ -1031,7 +1049,7 @@ fn validate_config(
                     || api.external_record_schema.is_some()
                     || api.envelope_version != 1
                     || api.source != "android"))
-            || (config.profile == SemanticProfile::AppleHealthDataV8
+            || (config.profile.is_apple()
                 && ((api.envelope_version == 1
                     && (!api.external_records.is_empty() || api.external_record_schema.is_some()))
                     || (api.envelope_version == 2 && api.external_record_schema.is_none())
@@ -1110,7 +1128,10 @@ fn validate_day(
         return Err(RenderError::LimitExceeded);
     }
     match (config.profile, &day.archive_diagnostics) {
-        (SemanticProfile::AppleHealthDataV8, Some(diagnostics)) => {
+        (
+            SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8,
+            Some(diagnostics),
+        ) => {
             if !matches!(
                 diagnostics.capture_status.as_str(),
                 "complete" | "partial" | "not_requested" | "legacy_unavailable"
@@ -1612,7 +1633,9 @@ fn render_plan(
             }
         }
     }
-    if config.profile == SemanticProfile::AppleHealthDataV8 {
+    if config.profile == SemanticProfile::AppleHealthDataV7 {
+        apple_v7::add_rollups(&mut builder, config, semantic)?;
+    } else if config.profile == SemanticProfile::AppleHealthDataV8 {
         apple_v8::add_rollups(&mut builder, config, semantic)?;
     }
     if let Some(api) = &config.api {
@@ -1629,6 +1652,7 @@ fn render_day(
     format: RenderFormat,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_day(config, day, format),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_day(config, day, format),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_day(config, day, format),
         SemanticProfile::AndroidAnalyticalV5 => {
@@ -1640,7 +1664,9 @@ fn render_day(
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => formats.sort_by_key(|format| format.id()),
+        SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8 => {
+            formats.sort_by_key(|format| format.id());
+        }
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => formats
             .sort_by_key(|format| match format {
                 RenderFormat::Markdown => 0,
@@ -1909,6 +1935,7 @@ fn render_api_record(
     day: &RenderDay,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_record(config, day),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
@@ -1921,6 +1948,7 @@ fn render_api_envelope(
     records: &[(String, Vec<u8>)],
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
+        SemanticProfile::AppleHealthDataV7 => apple_v7::render_api_envelope(api, records),
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
@@ -1929,6 +1957,7 @@ fn render_api_envelope(
 
 pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
     match profile {
+        SemanticProfile::AppleHealthDataV7 => "apple_health_data_v7",
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
@@ -2031,7 +2060,7 @@ mod tests {
                 .unwrap();
             let text = String::from_utf8(json.content.clone()).unwrap();
             match profile {
-                SemanticProfile::AppleHealthDataV8 => {
+                SemanticProfile::AppleHealthDataV7 | SemanticProfile::AppleHealthDataV8 => {
                     assert!(text.contains("\"schema\" : \"healthmd.health_data\""));
                     assert!(text.contains("\"schema_version\" : 8"));
                 }

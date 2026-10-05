@@ -18,6 +18,23 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     static let profileID = "apple_health_data_v8"
+    // Exact pre-v8 authority; never treat registry version 1 as a wildcard.
+    static let historicalRegistrySHA256 = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+
+    var coreProfile: CoreMetricRegistryProfile {
+        profile == "apple_health_data_v7" ? .appleHealthDataV7 : .appleHealthDataV8
+    }
+
+    static func supportsRegistry(_ registry: CoreMetricRegistrySnapshot) -> Bool {
+        let historical = registry.registrySha256 == historicalRegistrySHA256
+        return registry.registryVersion == 1
+            && registry.profileRevision == 1
+            && registry.publicSchema == HealthMdExportSchema.identifier
+            && registry.profileId == (historical ? "apple_health_data_v7" : profileID)
+            && registry.publicProfileId == (historical ? "apple-v7" : "apple-v8")
+            && registry.publicSchemaVersion == (historical ? 7 : 8)
+            && (historical || registry.registrySha256 == HealthMetrics.registrySHA256)
+    }
     private static let supportedCoreAPIVersion: UInt32 = 4
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
@@ -93,13 +110,13 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         guard Self.isIANAIdentifier(calendarTimeZoneIdentifier) else {
             throw CompatibilityError.invalidCalendarTimeZone
         }
-        guard profile == Self.profileID,
-              registrySnapshot.profileId == Self.profileID,
-              registrySnapshot.publicProfileId == "apple-v8" else {
+        guard profile == Self.profileID || profile == "apple_health_data_v7",
+              profile == registrySnapshot.profileId,
+              registrySnapshot.publicProfileId == (profile == "apple_health_data_v7" ? "apple-v7" : "apple-v8") else {
             throw CompatibilityError.invalidProfile
         }
         guard publicSchema == HealthMdExportSchema.identifier,
-              publicSchemaVersion == UInt32(HealthMdExportSchema.version),
+              publicSchemaVersion == (profile == "apple_health_data_v7" ? 7 : 8),
               registrySnapshot.publicSchema == publicSchema,
               registrySnapshot.publicSchemaVersion == publicSchemaVersion else {
             throw CompatibilityError.incompatiblePublicSchema
@@ -124,11 +141,13 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
               artifactPlanVersion == buildInfo.artifactPlanVersion else {
             throw CompatibilityError.incompatibleArtifactPlan
         }
-        guard registryVersion == HealthMdSemanticInputAdapter.registryVersion,
+        guard (registrySHA256 == Self.historicalRegistrySHA256 && profile == "apple_health_data_v7")
+                || (registrySHA256 == HealthMetrics.registrySHA256 && profile == Self.profileID),
+              registryVersion == HealthMdSemanticInputAdapter.registryVersion,
               registryVersion == buildInfo.registryVersion,
               registryVersion == registrySnapshot.registryVersion,
               Self.isLowercaseSHA256(registrySHA256),
-              registrySHA256 == buildInfo.registrySha256,
+              buildInfo.registrySha256 == HealthMetrics.registrySHA256,
               registrySHA256 == registrySnapshot.registrySha256 else {
             throw CompatibilityError.incompatibleRegistry
         }
@@ -136,8 +155,8 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
               semanticProfileRevision == registrySnapshot.profileRevision else {
             throw CompatibilityError.incompatibleSemanticProfile
         }
-        guard renderProfileRevision == Self.supportedRenderProfileRevision,
-              renderProfileRevision == buildInfo.renderProfileRevision else {
+        guard renderProfileRevision == (registrySHA256 == Self.historicalRegistrySHA256 ? 1 : Self.supportedRenderProfileRevision),
+              buildInfo.renderProfileRevision == Self.supportedRenderProfileRevision else {
             throw CompatibilityError.incompatibleRenderProfile
         }
         // Source revision is durable provenance, not an equality gate. A rollback release may
@@ -152,7 +171,9 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     }
 
     func validateRangeCompatibility(buildInfo: CoreBuildInfo) throws {
-        guard coreAPIVersion >= Self.rangeCoreAPIVersion,
+        guard profile == Self.profileID,
+              registrySHA256 == HealthMetrics.registrySHA256,
+              coreAPIVersion >= Self.rangeCoreAPIVersion,
               buildInfo.coreApiVersion >= Self.rangeCoreAPIVersion,
               semanticInputVersion == HealthMdSemanticInputAdapter.semanticInputVersion,
               buildInfo.semanticInputVersion == semanticInputVersion else {
