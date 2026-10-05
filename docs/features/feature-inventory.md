@@ -58,7 +58,7 @@
 | Obsidian Bases export | iOS, macOS, Android | Frontmatter-only `.md` database notes | `ObsidianBasesExporter` | ✅ `obsidian-bases.md` |
 | JSON daily export | iOS, macOS, Android | `healthmd.health_data` v8 (Apple) / v4+v5 (Android) + typed provider sections | `JSONExporter`, `HealthMetricsDictionary.swift`; android `JsonExporter.kt` | ✅ `json-export.md`, `export-schema.md` |
 | CSV export | iOS, macOS, Android | Summary rows + canonical source objects as RFC 4180-safe JSON rows | `CSVExporter` | ✅ `csv-export.md` |
-| NDJSON raw output | Android, CLI | Raw snapshot artifacts in JSON or NDJSON | android `rawexport/`; CLI `--raw-format ndjson` | ✅ `raw-snapshot-v1.md` |
+| NDJSON raw output | Android; CLI with Android source | Android provider-native Raw API Snapshot artifacts in JSON or NDJSON. iPhone `export --raw` emits Apple `healthmd.health_data` JSON; bounded host-side `extract --format jsonl` is a separate canonical projection, not this snapshot product. | android `rawexport/`; CLI Android `--raw-format ndjson`; `healthmd-cli/src/main.rs` | ✅ `raw-snapshot-v1.md` |
 | Multi-format single run | iOS, macOS, Android | MD+Bases+JSON+CSV in one export action (counts as one action) | `AdvancedExportSettings` | ✅ `multi-format-export.md` |
 | Roll-up summaries | iOS, macOS (Android planned) | Weekly/monthly/yearly + requested-range rollups in every selected format | `HealthRollupGenerator`, `Rollup*Exporter`; contract `rollup-summary/v9` | ✅ `rollup-summaries.md` |
 | Lossless HealthKit archive | iOS | Every selected public source record retained (`healthmd.healthkit_records` v1), UUIDs/provenance/relationships | `HealthKitRecordArchiveSerializer` | ✅ `time-series-data.md` |

@@ -207,5 +207,89 @@ class RootFeatureInventoryDocumentationTests(unittest.TestCase):
         self.assertIn("no permission", row)
 
 
+class RootFeatureParityDocumentationTests(unittest.TestCase):
+    """Static public claims, not native permission, import or transport qualification."""
+
+    ROOT = MODULE_PATH.resolve().parents[3]
+
+    def row(self, path: Path, capability: str) -> list[str]:
+        rows = [
+            line for line in path.read_text(encoding="utf-8").splitlines()
+            if line.startswith(f"| {capability} |")
+        ]
+        self.assertEqual(len(rows), 1, f"retain one public row for {capability}")
+        cells = [cell.strip() for cell in rows[0].strip("|").split("|")]
+        self.assertEqual(len(cells), 5)
+        return cells
+
+    def test_shared_setup_parity_preserves_planned_and_deferred_status(self) -> None:
+        capabilities = json.loads(
+            (self.ROOT / "packages/contracts/product-capabilities.json").read_text(encoding="utf-8")
+        )
+        capability = next(
+            row for row in capabilities["capabilities"]
+            if row["id"] == "setup.share-portable-configuration"
+        )
+        self.assertEqual(capability["classification"], "planned")
+        for platform in ("apple", "android"):
+            self.assertEqual(capability["platforms"][platform]["state"], "planned")
+        manifest = json.loads(
+            (self.ROOT / "packages/contracts/manifest.json").read_text(encoding="utf-8")
+        )
+        contract = next(
+            row for row in manifest["contracts"]
+            if row["id"] == "healthmd.shared_setup" and row["version"] == 2
+        )
+        self.assertEqual(contract["status"], "deferred")
+        cells = self.row(self.ROOT / "docs/features/feature-parity.md", "Share My Setup")
+        self.assertEqual(cells[3], capability["classification"])
+        for term in ("deferred", "physical-device", "accessibility", "v2", "v1"):
+            with self.subTest(term=term):
+                self.assertIn(term, cells[4])
+        pages = sorted(
+            (self.ROOT / "apps/website/docs-src/src/content/docs")
+            .glob("**/guides/platform-features.md")
+        )
+        self.assertEqual(len(pages), 10)
+        for path in pages:
+            with self.subTest(page=path.relative_to(self.ROOT)):
+                rows = [line for line in path.read_text(encoding="utf-8").splitlines()
+                        if line.startswith("| Share My Setup")]
+                self.assertEqual(len(rows), 1)
+                website_cells = [cell.strip() for cell in rows[0].strip("|").split("|")]
+                self.assertEqual(len(website_cells), 5)
+                self.assertTrue(all(cell.startswith("△") for cell in website_cells[1:4]))
+
+    def test_raw_ndjson_claims_do_not_conflate_iphone_jsonl_extraction(self) -> None:
+        with self.subTest(document="parity"):
+            cells = self.row(self.ROOT / "docs/features/feature-parity.md", "NDJSON raw output")
+            self.assertEqual(cells[3], "android_only")
+            self.assertNotIn("--raw-format", cells[1])
+            self.assertIn("export --raw", cells[1])
+            self.assertIn("extract --format jsonl", cells[1])
+            self.assertIn("provider-native", cells[4])
+            self.assertIn("not iPhone", cells[4])
+        with self.subTest(document="inventory"):
+            cells = self.row(self.ROOT / "docs/features/feature-inventory.md", "NDJSON raw output")
+            self.assertEqual(cells[1], "Android; CLI with Android source")
+            self.assertIn("provider-native", cells[2])
+            self.assertIn("`healthmd.health_data` JSON", cells[2])
+            self.assertIn("extract --format jsonl", cells[2])
+        pages = sorted(
+            (self.ROOT / "apps/website/docs-src/src/content/docs")
+            .glob("**/guides/platform-features.md")
+        )
+        self.assertEqual(len(pages), 10)
+        for path in pages:
+            with self.subTest(page=path.relative_to(self.ROOT)):
+                rows = [line for line in path.read_text(encoding="utf-8").splitlines()
+                        if line.startswith("| ") and "NDJSON" in line]
+                self.assertEqual(len(rows), 1)
+                cells = [cell.strip() for cell in rows[0].strip("|").split("|")]
+                self.assertEqual(len(cells), 5)
+                self.assertEqual(cells[1:3], ["—", "—"])
+                self.assertTrue(cells[3].startswith("✓"))
+
+
 if __name__ == "__main__":
     unittest.main()
