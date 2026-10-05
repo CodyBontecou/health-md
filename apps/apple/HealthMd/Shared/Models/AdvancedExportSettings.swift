@@ -428,6 +428,9 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private let userDefaults: UserDefaults
+    /// Request-owned execution can disable every preference-write/subscription path.
+    /// Live settings and historical snapshot callers retain their existing persistence behavior.
+    private var persistChanges = true
     
     /// Combine subscriptions for observing nested ObservableObject changes
     private var metricSelectionCancellable: AnyCancellable?
@@ -472,6 +475,10 @@ class AdvancedExportSettings: ObservableObject {
     /// Request-scoped source calendar used by connected exports. It is never
     /// persisted; local exports continue using the device's current time zone.
     var exportTimeZoneOverride: TimeZone? = nil
+
+    /// Detached request-only presentation context; never serialized as phone preferences.
+    var exportCalendarOverride: Calendar? = nil
+    var exportLocaleOverride: Locale? = nil
 
     /// Request-scoped durable renderer provenance. It is never written to UserDefaults; queued,
     /// connected, and direct operations restore it only from their immutable settings snapshot.
@@ -534,6 +541,8 @@ class AdvancedExportSettings: ObservableObject {
     /// Common method to apply date placeholders to a template string
     private func applyDatePlaceholders(to template: String, for date: Date) -> String {
         let dateFormatter = DateFormatter()
+        if let exportLocaleOverride { dateFormatter.locale = exportLocaleOverride }
+        if let exportCalendarOverride { dateFormatter.calendar = exportCalendarOverride }
         dateFormatter.timeZone = exportTimeZoneOverride ?? .current
         var result = template
 
@@ -566,7 +575,7 @@ class AdvancedExportSettings: ObservableObject {
         result = result.replacingOccurrences(of: "{monthName}", with: dateFormatter.string(from: date))
 
         // {quarter} -> Q1, Q2, Q3, Q4
-        var calendar = Calendar.current
+        var calendar = exportCalendarOverride ?? Calendar.current
         calendar.timeZone = exportTimeZoneOverride ?? .current
         let month = calendar.component(.month, from: date)
         let quarter = "Q\((month - 1) / 3 + 1)"
@@ -576,9 +585,9 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     /// Reconstructs request-scoped export settings without replaying every
-    /// property observer into UserDefaults. The returned object remains mutable,
-    /// and later caller mutations persist only to the supplied isolated domain.
-    init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults) {
+    /// property observer into UserDefaults. Historical callers persist later mutations to their
+    /// supplied domain. Request-owned execution passes false and cannot persist later mutations.
+    init(snapshot: ExportSettingsSnapshot, userDefaults: UserDefaults, persistChanges: Bool = true) {
         let metricSelection = MetricSelectionState()
         snapshot.metricSelection.apply(to: metricSelection)
         metricSelection.removeMetricsUnavailableInCurrentBuild()
@@ -591,6 +600,7 @@ class AdvancedExportSettings: ObservableObject {
         snapshot.dailyNoteInjection.apply(to: dailyNoteInjection)
 
         self.userDefaults = userDefaults
+        self.persistChanges = persistChanges
         dataTypes = DataTypeSelection()
         self.metricSelection = metricSelection
         exportFormats = snapshot.exportFormats
@@ -892,6 +902,7 @@ class AdvancedExportSettings: ObservableObject {
     // MARK: - Nested ObservableObject Subscriptions
     
     private func subscribeToMetricSelection() {
+        guard persistChanges else { return }
         metricSelectionCancellable = metricSelection.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -908,6 +919,7 @@ class AdvancedExportSettings: ObservableObject {
     }
     
     private func subscribeToIndividualTracking() {
+        guard persistChanges else { return }
         individualTrackingCancellable = individualTracking.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -923,6 +935,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func subscribeToFormatCustomization() {
+        guard persistChanges else { return }
         formatCustomizationCancellable = formatCustomization.objectWillChange
             .debounce(for: .milliseconds(200), scheduler: RunLoop.main)
             .sink { [weak self] _ in
@@ -932,6 +945,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func subscribeToDailyNoteInjection() {
+        guard persistChanges else { return }
         dailyNoteInjectionCancellable = dailyNoteInjection.objectWillChange
             .sink { [weak self] _ in
                 // Forward immediately so parent views re-render (e.g. summary row).
@@ -945,30 +959,35 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func saveMetricSelection() {
+        guard persistChanges else { return }
         if let encoded = try? JSONEncoder().encode(metricSelection) {
             userDefaults.set(encoded, forKey: metricSelectionKey)
         }
     }
     
     private func saveFormatCustomization() {
+        guard persistChanges else { return }
         if let encoded = try? Self.internalSettingsEncoder().encode(formatCustomization) {
             userDefaults.set(encoded, forKey: formatCustomizationKey)
         }
     }
     
     private func saveIndividualTracking() {
+        guard persistChanges else { return }
         if let encoded = try? JSONEncoder().encode(individualTracking) {
             userDefaults.set(encoded, forKey: individualTrackingKey)
         }
     }
 
     private func saveDailyNoteInjection() {
+        guard persistChanges else { return }
         if let encoded = try? JSONEncoder().encode(dailyNoteInjection) {
             userDefaults.set(encoded, forKey: dailyNoteInjectionKey)
         }
     }
 
     private func saveFormats() {
+        guard persistChanges else { return }
         let sorted = Array(exportFormats).sorted(by: { $0.rawValue < $1.rawValue })
         if let encoded = try? JSONEncoder().encode(sorted) {
             userDefaults.set(encoded, forKey: formatsKey)
@@ -976,6 +995,7 @@ class AdvancedExportSettings: ObservableObject {
     }
 
     private func save() {
+        guard persistChanges else { return }
         // Save data types
         if let encoded = try? JSONEncoder().encode(dataTypes) {
             userDefaults.set(encoded, forKey: dataTypesKey)
@@ -1055,6 +1075,9 @@ class AdvancedExportSettings: ObservableObject {
         _ candidate: SharedSetupPortableSnapshot,
         verificationOverride: (() -> Bool)? = nil
     ) throws {
+        guard persistChanges else {
+            throw SharedSetupError.invalid("Detached export settings cannot persist configuration.")
+        }
         var snapshot = candidate
         let normalizedDetailPolicy = candidate.detailPolicy
         snapshot.compatibilityDetail = normalizedDetailPolicy.compatibilityDetail

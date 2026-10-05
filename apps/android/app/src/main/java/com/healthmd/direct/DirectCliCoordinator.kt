@@ -88,6 +88,14 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
+/** Configuration-only adapter for a future native-authorized/journaled generated-files route.
+ * Not dispatched or advertised by the deployed protocol; resolution never starts source work. */
+internal fun resolveDirectAgentBridgeRequestSettings(
+    intent: com.healthmd.direct.protocol.AgentBridgeGeneratedIntent,
+    inputs: AgentBridgeRequestSettingsInputs,
+    clock: java.time.Clock,
+): AgentBridgeRequestSettingsResolution = AgentBridgeRequestSettingsResolver.resolve(intent, inputs, clock)
+
 internal fun resolveDirectGeneratedFilesEnginePin(
     settings: ExportSettings,
     planFreshPin: () -> ExportEnginePin?,
