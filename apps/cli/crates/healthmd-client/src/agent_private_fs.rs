@@ -156,12 +156,21 @@ pub(crate) fn read_private(dir: &Dir, name: &str, bound: usize) -> Result<Vec<u8
     Ok(bytes)
 }
 
-pub(crate) fn publish(dir: &Dir, name: &str, bytes: &[u8], new: bool) -> Result<(), ClientError> {
+/// Stage and sync bounded private bytes, then check live authority immediately before linking
+/// or replacing the published record. A rejected fence removes only this uncommitted temporary.
+pub(crate) async fn publish<F: std::future::Future<Output = Result<(), ClientError>>>(
+    dir: &Dir,
+    name: &str,
+    bytes: &[u8],
+    new: bool,
+    fence: impl FnOnce() -> F,
+) -> Result<(), ClientError> {
     let temporary = format!(".issuer-{}.tmp", uuid::Uuid::new_v4());
-    let result = (|| {
+    let result = async {
         let mut file = open_private(dir, &temporary, true, true)?;
         file.write_all(bytes).map_err(unavailable)?;
         file.sync_all().map_err(unavailable)?;
+        fence().await?;
         if new {
             dir.hard_link(&temporary, dir, name).map_err(unavailable)?;
             dir.remove_file(&temporary).map_err(unavailable)?;
@@ -173,7 +182,8 @@ pub(crate) fn publish(dir: &Dir, name: &str, bytes: &[u8], new: bool) -> Result<
             .into_std_file()
             .sync_all()
             .map_err(unavailable)
-    })();
+    }
+    .await;
     if result.is_err() {
         let _ = dir.remove_file(&temporary);
     }

@@ -12,7 +12,99 @@ use super::client_crate::{
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose::STANDARD};
 use healthmd_protocol::v4::*;
-use std::sync::Arc;
+use std::sync::{
+    Arc,
+    atomic::{AtomicI64, AtomicUsize, Ordering},
+};
+
+/// Trusted synthetic clock used by the actually awaited native consent/key seams.
+pub struct AdvancingClock(AtomicI64);
+impl AdvancingClock {
+    pub const fn new() -> Self {
+        Self(AtomicI64::new(0))
+    }
+    pub fn advance_to(&self, seconds: i64) {
+        self.0.store(seconds, Ordering::SeqCst);
+    }
+}
+impl PlanningClock for AdvancingClock {
+    fn now(&self) -> UtcTimestamp {
+        later(&now(), self.0.load(Ordering::SeqCst))
+    }
+}
+
+pub struct DelayedProtectedKey {
+    pub clock: Arc<AdvancingClock>,
+    remaining: AtomicUsize,
+    seconds: AtomicI64,
+    pub delays: AtomicUsize,
+}
+impl DelayedProtectedKey {
+    pub fn new(clock: Arc<AdvancingClock>) -> Self {
+        Self {
+            clock,
+            remaining: AtomicUsize::new(0),
+            seconds: AtomicI64::new(0),
+            delays: AtomicUsize::new(0),
+        }
+    }
+    pub fn arm(&self, loads: usize, seconds: i64) {
+        self.seconds.store(seconds, Ordering::SeqCst);
+        self.remaining.store(loads, Ordering::SeqCst);
+    }
+}
+#[async_trait]
+impl ProtectedHostKey for DelayedProtectedKey {
+    async fn load_existing(&self, host: &ControlUuid) -> Result<SecretString, ClientError> {
+        if self
+            .remaining
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+            == Ok(1)
+        {
+            tokio::task::yield_now().await;
+            self.clock.advance_to(self.seconds.load(Ordering::SeqCst));
+            self.delays.fetch_add(1, Ordering::SeqCst);
+        }
+        FakeProtectedKey.load_existing(host).await
+    }
+}
+
+/// Arm the real host protected-key provider after an independently issued source response.
+/// Two loads select the publication load, after the host's preceding authorization read.
+pub struct KeyDelaySource {
+    pub native: NativeFake,
+    pub key: Arc<DelayedProtectedKey>,
+    pub on_plan: bool,
+    pub on_approval: bool,
+    pub seconds: i64,
+    pub loads: usize,
+}
+#[async_trait]
+impl PlanningSource for KeyDelaySource {
+    async fn require_current(&self) -> Result<(), ClientError> {
+        self.native.require_current().await
+    }
+    fn peer(&self) -> &Peer {
+        &self.native.peer
+    }
+    async fn discover(&mut self) -> Result<Discovery, ClientError> {
+        self.native.discover().await
+    }
+    async fn plan(&mut self, request: PlanRequest) -> Result<ExportPlan, ClientError> {
+        let plan = self.native.plan(request).await?;
+        if self.on_plan {
+            self.key.arm(self.loads, self.seconds);
+        }
+        Ok(plan)
+    }
+    async fn relay_approval(&mut self, request: ApprovalRequest) -> Result<Approval, ClientError> {
+        let approval = self.native.relay_approval(request).await?;
+        if self.on_approval {
+            self.key.arm(self.loads, self.seconds);
+        }
+        Ok(approval)
+    }
+}
 
 pub fn id(number: u64) -> ControlUuid {
     ControlUuid(format!("00000000-0000-4000-8000-{number:012x}"))
@@ -175,6 +267,21 @@ pub async fn enroll(
     peer: &Peer,
     time: &UtcTimestamp,
 ) -> (HostAuthorityStore, std::path::PathBuf) {
+    enroll_with_key(
+        base,
+        peer,
+        delegation(peer, AuthorityReferenceIssuer::AuthorizedHost, time),
+        Arc::new(FakeProtectedKey),
+    )
+    .await
+}
+
+pub async fn enroll_with_key(
+    base: &std::path::Path,
+    peer: &Peer,
+    grant: ExportDelegation,
+    key: Arc<dyn ProtectedHostKey>,
+) -> (HostAuthorityStore, std::path::PathBuf) {
     let base = std::fs::canonicalize(base).unwrap();
     let private = base.join("agent-host-v1");
     let output = base.join("output");
@@ -188,9 +295,9 @@ pub async fn enroll(
     let store = HostAuthorityStore::enroll_local(
         private,
         peer.host_installation_id.clone(),
-        Arc::new(FakeProtectedKey),
+        key,
         LocalEnrollment {
-            delegation: delegation(peer, AuthorityReferenceIssuer::AuthorizedHost, time),
+            delegation: grant,
             binding_id: id(3),
             root: output.clone(),
         },
