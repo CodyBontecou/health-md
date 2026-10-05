@@ -49,6 +49,18 @@ gates; no compile/admission/cleanup/bypass or native/user action. Broader native
 website/skills reconciliation remains eligible for bounded static work; the actual journey, merged
 compiler gates and Kotlin-after remain incomplete. B21 in progress/B22 open; no capability/task/goal promotion.
 
+Native direct-doc follow-up `ef33aba48` clarifies Apple pinned-SDK history/full-corpus dates and Android
+active user-started FGS/first unlock/first-grant history/app-level quota, without changing runtime bytes.
+Both pages separate development23/read-only13/publicalpha.7 19/frozen21 from installed/exact-build support;
+native4 remains unwired/unadvertised, bound execution/recipes/full journey absent, Android queries planned.
+Three new public-doc methods/static CI31+contract60 and eight local links pass; all other page/test bytes
+are preserved. The85-file source index `33937b3d22479e64260fb8eac7f6622652b56335c9065c067eb75d8b1a292ae8`
+binds this static increment, all691 previous entries intact; it is not native lifecycle/permission evidence.
+Observed2026-10-05T13:33:39Z3,881,092KiB/no warning remains below compiler/native-app admission; no new
+compiler/admission/cleanup/bypass or native/user action. Wider native portability/support/consumer/website
+mirrors remain separately reviewable. Merged/native/Kotlin-after/full journey gates remain incomplete;
+B21 in progress, B22 open, no task/capability/goal promotion.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.
