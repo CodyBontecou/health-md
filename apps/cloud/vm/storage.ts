@@ -19,6 +19,9 @@ const ASSETS = new Map([
   ["/deletion-status", ["deletion-status.html", "text/html; charset=utf-8"]],
   ["/deletion-status.js", ["deletion-status.js", "text/javascript; charset=utf-8"]],
   ["/style.css", ["style.css", "text/css; charset=utf-8"]],
+  ["/app-icon.png", ["app-icon.png", "image/png"]],
+  ["/favicon.png", ["favicon.png", "image/png"]],
+  ["/favicon.ico", ["favicon.ico", "image/x-icon"]],
 ]);
 
 // An opt-in dedicated reader Unix group permits only read/search access to

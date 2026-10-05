@@ -6,7 +6,7 @@ import type { Env } from "./types";
 const GET_ROUTES = new Set([
   "/", "/health", "/login", "/login.html", "/dashboard", "/dashboard.html", "/dashboard.js",
   "/explore", "/explore.js", "/repair", "/repair.js", "/repair-panel", "/deletion-status",
-  "/deletion-status.js", "/style.css", "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/sessions", "/api/security-events", "/api/ingest-tokens", "/api/exports",
+  "/deletion-status.js", "/style.css", "/app-icon.png", "/favicon.png", "/favicon.ico", "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/sessions", "/api/security-events", "/api/ingest-tokens", "/api/exports",
   "/api/dashboard/trends", "/api/explore/catalog", "/api/repair/drafts",
 ]);
 

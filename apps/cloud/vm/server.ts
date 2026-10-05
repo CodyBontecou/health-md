@@ -94,7 +94,7 @@ function accountRoute(method: string, path: string): boolean {
   if (method === "GET") return new Set([
     "/health", "/login", "/dashboard", "/dashboard.js", "/explore", "/explore.js",
     "/repair", "/repair.js", "/repair-panel", "/deletion-status", "/deletion-status.js",
-    "/style.css", "/api/repair/drafts",
+    "/style.css", "/app-icon.png", "/favicon.png", "/favicon.ico", "/api/repair/drafts",
     "/api/repair/devices", "/api/repair/device/status", "/api/repair/dispatches",
     "/api/runtime", "/api/account", "/api/account/deletion-status", "/api/security-events",
     "/api/sessions", "/api/ingest-tokens", "/api/agent-tokens", "/api/exports",

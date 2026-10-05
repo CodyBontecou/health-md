@@ -30,6 +30,7 @@
     "@cloudflare/workers-types": "^5.20260903.1",
     "@types/node": "24.10.1",
     "esbuild": "0.28.1",
+    "linkedom": "0.18.12",
     "typescript": "^5.9.2",
     "vitest": "^4.1.2",
     "wrangler": "^4.0.0"

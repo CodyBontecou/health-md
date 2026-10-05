@@ -369,7 +369,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       expect((await request("/api/account", "GET", undefined, cookie, token)).status).toBe(404);
       expect((await request("/api/exports", "GET", undefined, cookie, token)).status).toBe(404);
       for (const path of ["/api/security-events", "/api/account/export/page/1",
-        "/api/account/deletion-status", "/deletion-status", "/deletion-status.js"]) {
+        "/api/account/deletion-status", "/deletion-status", "/deletion-status.js",
+        "/app-icon.png", "/favicon.png", "/favicon.ico"]) {
         expect((await request(path, "GET", undefined, cookie, token)).status).toBe(404);
       }
       expect((await request("/api/dashboard/trends", "GET", undefined, cookie, token)).status).toBe(404);
@@ -441,6 +442,18 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
         expect(asset.headers["cache-control"]).toBe("no-store");
         expect(asset.body).toContain(content);
       }
+      for (const [name, type] of [
+        ["app-icon.png", "image/png"], ["favicon.png", "image/png"], ["favicon.ico", "image/x-icon"],
+      ] as const) {
+        const asset = await req(`/${name}`);
+        expect(asset.status).toBe(200);
+        expect(asset.headers["content-type"]).toBe(type);
+        expect(asset.headers["cache-control"]).toBe("no-store");
+        expect(asset.headers["content-security-policy"]).toContain("img-src 'self'");
+        expect(Buffer.from(asset.bytes)).toEqual(readFileSync(resolve(sourceDirectory, "public", name)));
+        expect((await req(`/${name}`, "POST", {})).status).toBe(404);
+      }
+      expect((await req("/unknown.png")).status).toBe(404);
       expect((await req("/api/dashboard/trends")).status).toBe(401);
       expect((await req("/api/agent-tokens", "POST", {})).status).toBe(401);
       expect(JSON.parse((await req("/api/runtime")).body)).toMatchObject({
