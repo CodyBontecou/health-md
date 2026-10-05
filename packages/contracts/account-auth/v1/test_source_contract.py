@@ -15,6 +15,10 @@ import re
 import unittest
 from urllib.parse import urlsplit
 
+from build_reply_header_vectors import build_vectors as build_reply_header_vectors
+from reply_headers import (MAX_NAME_BYTES, MAX_PAIR_BYTES, MAX_PAIRS, MAX_VALUE_BYTES,
+                           parse_reply_headers)
+
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[3]
 
@@ -304,6 +308,74 @@ class SourceContractTests(unittest.TestCase):
             self.assertEqual(challenge, vector["challenge"])
         self.assertIn("restart_stale_or_corrupt_no_resurrection", vectors["lifecycle_required"])
         self.assertIn("no_health_or_profile_or_destination_or_schedule_or_purchase_effects", vectors["lifecycle_required"])
+
+    def test_reply_header_profile_and_reference_vectors(self):
+        # SOURCE reference/corpus evidence only; no Swift/Kotlin/HTTP/TLS authority.
+        profile = POLICY["native_reply_headers"]
+        self.assertEqual(profile["source_profile"], "healthmd.account_auth.reply_headers")
+        self.assertEqual(profile["source_profile_version"], 1)
+        self.assertEqual(profile["status"], "locally_reviewed_synthetic_source_only")
+        self.assertEqual(profile["input"], "lossless_decoded_name_value_pairs_before_map")
+        self.assertEqual(profile["operations"], ["code_exchange", "refresh", "revoke"])
+        self.assertEqual(profile["bounds"], {"pairs": 16, "name_bytes": 64, "value_bytes": 1024, "total_name_value_bytes": 4096})
+        self.assertEqual((MAX_PAIRS, MAX_NAME_BYTES, MAX_VALUE_BYTES, MAX_PAIR_BYTES), (16, 64, 1024, 4096))
+        self.assertEqual(profile["name_full_match"], "[A-Za-z0-9-]{1,64}")
+        self.assertEqual(profile["value_ascii_range"], [32, 126])
+        self.assertEqual(profile["forbidden_names"], ["authorization", "cookie", "proxy-authorization", "set-cookie"])
+        self.assertEqual(profile["required"], {
+            "content-type": ["application/json", "application/json; charset=utf-8"],
+            "cache-control": ["no-store"], "referrer-policy": ["no-referrer"],
+        })
+        self.assertEqual(profile["name_comparison"], "ascii_case_insensitive")
+        self.assertEqual(profile["duplicate_rule"], "reject_identical_and_ascii_folded_before_map")
+        self.assertEqual(profile["other_headers"], "bounded_safe_pairs_allowed_not_acted_upon")
+        self.assertTrue(profile["preserve_accepted_pairs"])
+        self.assertTrue(profile["empty_nonrequired_value_allowed"])
+        for flag in ("bounds_include_http_framing", "native_consumers_qualified", "http_transport_qualified", "grants_authority"):
+            self.assertFalse(profile[flag])
+        vectors = load(HERE / "fixtures/native-reply-header-vectors.json")
+        self.assertEqual(vectors, build_reply_header_vectors())
+        self.assertEqual(vectors["schema"], "healthmd.account_auth.native_reply_header_vectors")
+        self.assertEqual(vectors["schema_version"], 1)
+        self.assertTrue(vectors["synthetic_only"])
+        self.assertFalse(vectors["native_consumers_qualified"] or vectors["grants_authority"])
+        self.assertEqual(vectors["operations"], profile["operations"])
+        encoded = json.dumps(profile, sort_keys=True, separators=(",", ":")).encode()
+        self.assertEqual(vectors["policy_sha256"], hashlib.sha256(encoded).hexdigest())
+        cases = vectors["cases"]
+        self.assertEqual(len({case["id"] for case in cases}), len(cases))
+        for case in cases:
+            with self.subTest(header_case=case["id"]):
+                if case["valid"]:
+                    parsed = parse_reply_headers(case["pairs"])
+                    self.assertEqual(parsed.pairs, tuple(tuple(pair) for pair in case["pairs"]))
+                    self.assertEqual(parsed.get("CACHE-CONTROL"), "no-store")
+                    self.assertEqual(parsed.get("referrer-policy"), "no-referrer")
+                else:
+                    with self.assertRaisesRegex(ValueError, "^invalid source reply headers$"):
+                        parse_reply_headers(case["pairs"])
+
+    def test_reply_header_reference_immutable_and_nonreflecting(self):
+        pairs = [["Content-Type", "application/json"], ["Cache-Control", "no-store"],
+                 ["Referrer-Policy", "no-referrer"], ["X-Private-Label", "synthetic-private-label"]]
+        accepted = parse_reply_headers(pairs)
+        captured = accepted.pairs
+        pairs[3][1] = "changed"
+        pairs.append(["Authorization", "synthetic-no-authority"])
+        self.assertEqual(accepted.pairs, captured)
+        self.assertEqual(accepted.get("X-PRIVATE-LABEL"), "synthetic-private-label")
+        self.assertIsNone(accepted.get(" X-Private-Label"))
+        with self.assertRaises(AttributeError):
+            accepted.pairs = ()
+        for text in (repr(accepted), str(accepted)):
+            self.assertNotIn("synthetic-private-label", text)
+            self.assertNotIn("X-Private-Label", text)
+            self.assertIn("no authority", text)
+        with self.assertRaisesRegex(ValueError, "^invalid source reply headers$"):
+            parse_reply_headers(iter(captured))
+        with self.assertRaisesRegex(ValueError, "^invalid source reply headers$"):
+            parse_reply_headers([[b"Content-Type", "application/json"]])
+        self.assertEqual(parse_reply_headers(captured).pairs, captured)
 
     def test_callback_vectors(self):
         for vector in VECTORS["callback_vectors"]:

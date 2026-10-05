@@ -60,6 +60,31 @@
     "token_type", "access_token", "expires_in", "refresh_token", "session_id", "scope",
     "issuer", "environment", "audience", "client_id", "installation_id", "account_id", "session_generation"
   ],
+  "native_reply_headers": {
+    "source_profile": "healthmd.account_auth.reply_headers",
+    "source_profile_version": 1,
+    "status": "locally_reviewed_synthetic_source_only",
+    "input": "lossless_decoded_name_value_pairs_before_map",
+    "operations": ["code_exchange", "refresh", "revoke"],
+    "bounds": {"pairs": 16, "name_bytes": 64, "value_bytes": 1024, "total_name_value_bytes": 4096},
+    "name_full_match": "[A-Za-z0-9-]{1,64}",
+    "value_ascii_range": [32, 126],
+    "empty_nonrequired_value_allowed": true,
+    "name_comparison": "ascii_case_insensitive",
+    "duplicate_rule": "reject_identical_and_ascii_folded_before_map",
+    "required": {
+      "content-type": ["application/json", "application/json; charset=utf-8"],
+      "cache-control": ["no-store"],
+      "referrer-policy": ["no-referrer"]
+    },
+    "forbidden_names": ["authorization", "cookie", "proxy-authorization", "set-cookie"],
+    "other_headers": "bounded_safe_pairs_allowed_not_acted_upon",
+    "preserve_accepted_pairs": true,
+    "bounds_include_http_framing": false,
+    "native_consumers_qualified": false,
+    "http_transport_qualified": false,
+    "grants_authority": false
+  },
   "native_account_binding": {
     "namespace": ["issuer", "environment", "account_id"],
     "subject_source": "authoritative_account_and_grant_records",

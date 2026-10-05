@@ -40,7 +40,8 @@
       "implementations": [
         "apps/cloud/src/account-auth-v1/authority.ts",
         "apps/cloud/src/account-auth-v1/http.ts",
-        "apps/cloud/src/account-auth-v1/parsing.ts"
+        "apps/cloud/src/account-auth-v1/parsing.ts",
+        "packages/contracts/account-auth/v1/reply_headers.py"
       ],
       "consumers": [
         "apps/cloud/test/account-auth-v1.test.ts",
@@ -57,6 +58,12 @@
           "path": "packages/contracts/account-auth/v1/fixtures/native-client-vectors.json",
           "sha256": "0453dc3cb7e5f78e53eb82c648ae3c7b876b9ff507a8659d3914298daab47435",
           "provenance": "Coordinator synthetic closed response/fixed-error/PKCE corpus and required lifecycle seams; integrity checked, native consumers and OS proof remain gated.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/account-auth/v1/fixtures/native-reply-header-vectors.json",
+          "sha256": "8aea56632d515baf2829ac699400ec641c3c9797c327675d0032430156020bb6",
+          "provenance": "Reversible synthetic reply-header profile v1: 99 independently authored boundary/negative vectors and Python reference parsing; not Swift/Kotlin/TS, HTTP/TLS, account authority or native repair qualification.",
           "mirrors": []
         }
       ]
