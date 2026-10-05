@@ -260,6 +260,44 @@ impl HealthDataBackend for DirectMobileBackend {
             .map_err(|error| backend_error(&error, None))
     }
 
+    async fn plan_export(
+        &self,
+        context: &CallContext,
+        input: healthmd_operations::AgentPlanInput,
+    ) -> Result<healthmd_protocol::v4::ExportPlan, BackendError> {
+        crate::agent_direct::DirectAgentBackend::new(
+            Arc::clone(&self.client),
+            Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+                healthmd_client::agent_host::NativeHostKeyReader,
+            )),
+            self.configuration.device_id,
+            self.configuration.port,
+            self.configuration.timeout,
+            Arc::clone(&self.operation_gate),
+        )
+        .plan_export(context, input)
+        .await
+    }
+
+    async fn relay_export_approval(
+        &self,
+        context: &CallContext,
+        request: healthmd_protocol::v4::ApprovalRequest,
+    ) -> Result<healthmd_protocol::v4::Approval, BackendError> {
+        crate::agent_direct::DirectAgentBackend::new(
+            Arc::clone(&self.client),
+            Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+                healthmd_client::agent_host::NativeHostKeyReader,
+            )),
+            self.configuration.device_id,
+            self.configuration.port,
+            self.configuration.timeout,
+            Arc::clone(&self.operation_gate),
+        )
+        .relay_export_approval(context, request)
+        .await
+    }
+
     async fn start_export(
         &self,
         context: &CallContext,

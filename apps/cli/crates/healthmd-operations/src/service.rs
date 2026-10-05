@@ -7,6 +7,13 @@ use crate::{
     SurfaceProfile, registry::QueryInvocation,
 };
 
+fn agent_error(error: healthmd_protocol::v4::Error) -> BackendError {
+    BackendError::new(
+        error.to_string(),
+        "The typed agent request is invalid or unauthorized.",
+    )
+}
+
 /// Shared application service used by CLI and MCP adapters.
 pub struct HealthOperations {
     backend: Arc<dyn HealthDataBackend>,
@@ -49,6 +56,61 @@ impl HealthOperations {
         self.list_operations()
             .iter()
             .any(|operation| operation.get("name").and_then(Value::as_str) == Some(name))
+    }
+
+    /// Shared CLI/MCP configuration-only plan. Strict complete DTO validation precedes backend work.
+    /// # Errors
+    /// Read-only/remote surfaces, invalid DTOs or missing existing issuer state reject.
+    pub async fn plan_export(
+        &self,
+        context: &CallContext,
+        raw: &[u8],
+    ) -> Result<Value, BackendError> {
+        self.require_local_agent(context, false)?;
+        let input = crate::agent_plan_from_bytes(raw).map_err(agent_error)?;
+        let plan = self.backend.plan_export(context, input).await?;
+        healthmd_protocol::v4::ValidateShape::validate_shape(&plan).map_err(agent_error)?;
+        serde_json::to_value(plan).map_err(|_| {
+            BackendError::new("invalid_request", "The typed plan could not be encoded.")
+        })
+    }
+
+    /// Relay an exact previously issued plan binding; no `approve` field or tool annotation is consent.
+    /// # Errors
+    /// No stored independent local decision means `approval_required` from the issuer.
+    pub async fn relay_export_approval(
+        &self,
+        context: &CallContext,
+        raw: &[u8],
+    ) -> Result<Value, BackendError> {
+        self.require_local_agent(context, true)?;
+        let request = crate::agent_approval_from_bytes(raw).map_err(agent_error)?;
+        let approval = self.backend.relay_export_approval(context, request).await?;
+        healthmd_protocol::v4::ValidateShape::validate_shape(&approval).map_err(agent_error)?;
+        serde_json::to_value(approval).map_err(|_| {
+            BackendError::new(
+                "invalid_request",
+                "The typed approval could not be encoded.",
+            )
+        })
+    }
+
+    fn require_local_agent(
+        &self,
+        context: &CallContext,
+        approval: bool,
+    ) -> Result<(), BackendError> {
+        if self.profile.is_read_only()
+            || context.caller.mode != crate::CallerMode::LocalStdio
+            || !context.caller.has_scope("healthmd:read")
+            || (approval && !context.caller.has_scope("healthmd:export"))
+        {
+            return Err(BackendError::new(
+                "permission_required",
+                "This operation requires the authorized local surface.",
+            ));
+        }
+        Ok(())
     }
 
     /// Execute an already-normalized query operation with bounded cursor traversal.
