@@ -26,6 +26,13 @@ V4 dispatch/capture/journals, typed queries/projection, permissioned controls, r
 ZIP/dictionaries remain unfinished. Capabilities stay planned; no four-way, physical, installed,
 live-provider or release qualification is inferred.
 
+Static B21 follow-up `417f2c11d` corrects CLI OS27 history promises, bounded query/wake examples and
+platform-specific failure guidance without changing runtime bytes or pending alpha.7 counterpart rows.
+Three new public-doc regressions, existing CI static24/contract60 and seven local links pass; these are
+not native authorization or installed capability evidence. All469 fifth-wave evidence hashes remain
+intact. Latest observed5,412,520KiB/no warning still admits neither compiler nor native-app gates.
+Broader runtime/native/website/localization/consumer-skill reconciliation and B22 acceptance remain open.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.
