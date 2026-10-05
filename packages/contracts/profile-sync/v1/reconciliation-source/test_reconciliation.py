@@ -1125,6 +1125,25 @@ class SourceTests(unittest.TestCase):
         actual = wj.read()
         self.assertEqual((actual.pending, actual.state.outbox[-1].body, actual.state.outbox[-1].desired_order), (None, first, 0))
 
+    def test_step_capacity_eligibility(self):
+        for n, wanted in ((29, "pending"), (30, "quota_exceeded")):
+            k, j = self.seeded()
+            for i in range(1, n + 1):
+                c = replace(self.contexts["a"], generation=i)
+                self.code(k.switch(c), "quarantined")
+            b = self.bodies["create"]
+            self.code(k.select(c, "publish", "local-one", b), "queued")
+            saved = j.read()
+            peer, pj = self.make(context=c, journal=MemoryJournal(c, record=saved))
+            for u in (k, peer):
+                r = u.next_request()
+                self.assertEqual((r.code, r.request is None, u.view()), (wanted, n == 30, saved.state))
+            e = saved.state.outbox[0]
+            self.assertEqual((e.body, e.mutation_id, e.request_hash, e.base_revision, e.context),
+                             (b, "psm_" + "a" * 32, request_hash(b), 0, c))
+            self.assertEqual(saved.state.locals[0].accepted.raw, self.content["base"])
+            self.assertEqual((j.read(), pj.read()), (saved, saved))
+
     def test_all_test_filesystem_operations_are_read_only(self):
         original = io.open
         def reads_only(file, mode="r", *args, **kwargs):
