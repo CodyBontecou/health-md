@@ -86,6 +86,7 @@ class Outbox:
     content: object
     base: Candidate | None
     choice: str
+    desired_order: int | None = None  # validated reorder metadata, never content
     status: str = "pending"
     acknowledgement: Candidate | None = None
 
@@ -348,7 +349,7 @@ class Kernel:
                                         outbox=entries, links=links), code)
 
     def select(self, context, choice, native_id, payload, *, conflict_id=None):
-        """Explicit synthetic publish/edit/delete/adopt/keep_both selection.
+        """Explicit synthetic publish/edit/delete/reorder/adopt/keep_both selection.
 
         adopt payload is an already observed cloud ID; all others are EXACT AS05
         mutation bytes. No request builder, bundle import, automatic rebase or ID
@@ -357,7 +358,7 @@ class Kernel:
         with self._lock:
             if error := self._ready(context):
                 return Result(error)
-            if choice not in ("publish", "edit", "delete", "adopt", "keep_both") or not _native_id(native_id):
+            if choice not in ("publish", "edit", "delete", "reorder", "adopt", "keep_both") or not _native_id(native_id):
                 return Result("requires_action")
             s = self._state
             if choice == "adopt":
@@ -377,7 +378,9 @@ class Kernel:
                 return Result("quota_exceeded" if type(payload) is bytes else "invalid")
             try:
                 m, content = self._codec.parse_mutation(payload)
-            except (self._codec.Invalid, ValueError):
+            except (self._codec.Invalid, ValueError, TypeError):
+                # Frozen AS05 rejects unhashable mistyped operation values by
+                # TypeError; the caller still returns a fixed invalid refusal.
                 return Result("invalid")
             # Idempotency belongs to the owner partition, NOT local generation.
             prior = next((e for e in s.outbox if e.context.partition == context.partition
@@ -389,7 +392,8 @@ class Kernel:
                     return Result("quarantined")
                 return Result("unchanged" if prior.native_id == native_id and prior.choice == choice else "requires_action")
             op = m["operation"]
-            required_op = {"publish": "create", "keep_both": "create", "edit": "update", "delete": "delete"}[choice]
+            required_op = {"publish": "create", "keep_both": "create", "edit": "update",
+                           "delete": "delete", "reorder": "reorder"}[choice]
             if op != required_op:
                 return Result("requires_action")
             local = next((l for l in s.locals if l.native_id == native_id), None)
@@ -415,13 +419,15 @@ class Kernel:
                     return Result("not_found")
                 if base.deleted:
                     return Result("gone")
-                if local is None or base.object_revision != m["base_revision"]:
+                if (choice != "reorder" and local is None) or base.object_revision != m["base_revision"]:
                     return Result("requires_action")
                 if any(e.context == context and e.profile_id == base.profile_id and e.status in ("pending", "conflict")
                        for e in s.outbox):
                     return Result("requires_action")
+            if op == "reorder":
+                content = base.content  # exact immutable captured reference, not an overlay
             entry = Outbox(context, native_id, payload, m["mutation_id"], self._codec.mutation_digest(payload),
-                           m["base_revision"], op, m.get("profile_id"), content, base, choice)
+                           m["base_revision"], op, m.get("profile_id"), content, base, choice, m.get("order_key"))
             return self._commit(replace(s, outbox=s.outbox + (entry,)), "queued")
 
     def next_request(self):
@@ -453,6 +459,15 @@ class Kernel:
         if entry.operation == "delete":
             return (c.deleted and c.object_revision == base.object_revision + 1
                     and c.event_sequence > base.event_sequence)
+        if entry.operation == "reorder":
+            if (c.deleted or c.content.raw != base.content.raw or c.content.sha256 != base.content.sha256
+                    or c.content_revision != base.content_revision or c.order_key != entry.desired_order):
+                return False
+            if entry.desired_order == base.order_key:
+                return (c.object_revision == base.object_revision and c.event_sequence == base.event_sequence)
+            # Actual AS05 parsing bounds every counter first; overflow can never
+            # wrap into a valid success. Receipt is not a latest-head proof.
+            return c.object_revision == base.object_revision + 1 and c.event_sequence > base.event_sequence
         if c.deleted or c.content.raw != entry.content.raw or c.order_key != base.order_key:
             return False
         if base.content.raw == entry.content.raw:  # exact server no-op receipt

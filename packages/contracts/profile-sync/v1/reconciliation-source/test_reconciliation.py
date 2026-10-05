@@ -382,10 +382,24 @@ class SourceTests(unittest.TestCase):
         self.assertEqual([c.content.sha256 for c in heads], [self.vectors["content"]["base"]["hash"]])
         self.assertEqual([c.content.raw for c in heads], [self.content["base"]])
         self.assertEqual([c.context for c in heads], [self.contexts["a"]])
-        # Outbound reorder and pages/resets are explicitly NOT implemented.
+        # Explicit outbound reorder is metadata only; pages/resets remain absent.
         reorder = {"schema": "healthmd.profile_sync", "schema_version": 1, "operation": "reorder",
                    "mutation_id": "psm_" + "7" * 32, "profile_id": self.profiles["p1"], "base_revision": 2, "order_key": 1}
-        self.code(k.select(self.contexts["a"], "reorder", "local-one", encode(reorder)), "requires_action")
+        self.code(k.select(self.contexts["a"], "reorder", "local-one", encode(reorder)), "queued")
+        entry = k.view().outbox[-1]
+        self.assertEqual((entry.operation, entry.desired_order, entry.base_revision), ("reorder", 1, 2))
+        self.assertEqual(entry.base.raw, encode(row))
+        self.assertEqual(entry.content.raw, self.content["base"])
+        self.assertEqual(k.next_request().request.body, encode(reorder))
+        receipt = encode(dict(row, object_revision=3, event_sequence=3, order_key=1))
+        self.code(k.acknowledge(self.contexts["a"], "psm_77777777777777777777777777777777",
+                               request_hash(encode(reorder)), receipt), "pending_review")
+        head = k.view().head(self.profiles["p1"])
+        self.assertEqual((head.object_revision, head.event_sequence, head.order_key, head.content_revision), (3, 3, 1, 1))
+        self.assertEqual(head.content.raw, self.content["base"])
+        self.assertEqual(head.content.sha256, "315912058e734b1613fb4b4775dbf8bd78944641151e8bd559eaa47e21e38750")
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+        self.assertEqual(k.view().ordered_heads, (head,))
         page = {"schema": "healthmd.profile_sync", "schema_version": 1, "mode": "snapshot", "snapshot_id": "pss_" + "1" * 32,
                 "high_watermark": 2, "items": [], "next_cursor": None, "complete": True}
         self.code(k.observe(self.contexts["a"], encode(page)), "invalid")
@@ -739,6 +753,377 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(k.view().outbox[0].context, a)
         self.assertEqual(k.view().outbox[0].status, "quarantined")
         self.assertEqual(k.view().ordered_heads, (head,))
+
+    def reorder_request(self, *, base=1, order=0, key="psm_77777777777777777777777777777777", profile=None):
+        # Synthetic INPUT builder only; receipt fields/expected outcomes below
+        # are literal examples, never derived from the selected outbox/model.
+        return encode({"schema": "healthmd.profile_sync", "schema_version": 1,
+                       "operation": "reorder", "mutation_id": key, "base_revision": base,
+                       "profile_id": profile or self.profiles["p1"], "order_key": order})
+
+    def test_reorder_changed_receipt_preserves_order_content_and_accepted_marker(self):
+        a = self.contexts["a"]
+        k, j = self.published()
+        before = k.view()
+        self.code(k.observe(a, self.records["second"]), "pending_review")
+        raw = b" \n" + self.reorder_request(order=0) + b" "
+        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+        entry = k.view().outbox[-1]
+        self.assertEqual((entry.operation, entry.choice, entry.base_revision, entry.desired_order, entry.context),
+                         ("reorder", "reorder", 1, 0, a))
+        self.assertIs(entry.base, before.candidates[0])
+        self.assertIs(entry.content, entry.base.content)
+        pending = k.next_request()
+        self.assertEqual(pending.code, "pending")
+        self.assertEqual((pending.request.body, pending.request.mutation_id, pending.request.request_hash),
+                         (raw, "psm_77777777777777777777777777777777", request_hash(raw)))
+        receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=3, order_key=0))
+        self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw), receipt), "pending_review")
+        state = k.view()
+        self.assertEqual(j.read().state, state)
+        self.assertEqual((state.outbox[-1].status, state.outbox[-1].body, state.outbox[-1].acknowledgement.raw),
+                         ("acknowledged", raw, receipt))
+        self.assertEqual([(c.profile_id, c.order_key, c.object_revision, c.event_sequence, c.content_revision)
+                          for c in state.ordered_heads],
+                         [("psp_11111111111111111111111111111111", 0, 2, 3, 1),
+                          ("psp_22222222222222222222222222222222", 2, 1, 2, 1)])
+        self.assertEqual([(c.content.raw, c.content.sha256, c.context) for c in state.ordered_heads],
+                         [(self.content["base"], "315912058e734b1613fb4b4775dbf8bd78944641151e8bd559eaa47e21e38750", a)] * 2)
+        self.assertIs(state.locals[0], before.locals[0])
+        self.assertEqual(state.locals[0].accepted.raw, self.content["base"])
+        self.code(k.next_request(), "requires_action")
+        with self.assertRaises(FrozenInstanceError):
+            entry.desired_order = 1
+
+    def test_reorder_same_order_no_op_retains_original_record_reference_and_readback(self):
+        a = self.contexts["a"]
+        for order, revision in ((0, 2), (2, 1), (9007199254740991, 2)):
+            k, j = self.published()
+            if order != 2:
+                self.code(k.observe(a, encode(dict(json.loads(self.records["first"]),
+                                                  object_revision=2, event_sequence=2, order_key=order))), "pending_review")
+            before = k.view()
+            raw = self.reorder_request(base=revision, order=order)
+            self.code(k.select(a, "reorder", "local-one", raw), "queued")
+            self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw), before.head(self.profiles["p1"]).raw), "pending_review")
+            state, head = k.view(), k.view().head(self.profiles["p1"])
+            self.assertEqual((head.object_revision, head.event_sequence, head.content_revision, head.order_key),
+                             (revision, revision, 1, order))
+            self.assertEqual(state.candidates, before.candidates)
+            self.assertEqual((state.outbox[-1].status, state.outbox[-1].acknowledgement.raw), ("acknowledged", head.raw))
+            self.assertIs(state.locals[0], before.locals[0])
+            self.assertEqual((head.content.raw, state.locals[0].accepted.raw), (self.content["base"], self.content["base"]))
+            self.assertEqual(head.content.sha256, "315912058e734b1613fb4b4775dbf8bd78944641151e8bd559eaa47e21e38750")
+            self.assertEqual((state.ordered_heads, j.read().state), ((head,), state))
+
+    def test_reorder_ties_zero_and_safe_max_preserve_separate_identical_names(self):
+        a = self.contexts["a"]
+        for order in (0, 9007199254740991):
+            k, j = self.published()
+            self.code(k.observe(a, encode(dict(json.loads(self.records["second"]), order_key=order))), "pending_review")
+            raw = self.reorder_request(order=order)
+            self.code(k.select(a, "reorder", "local-one", raw), "queued")
+            receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=3, order_key=order))
+            self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw), receipt), "pending_review")
+            self.assertEqual([(c.profile_id, c.order_key, c.content_revision) for c in k.view().ordered_heads],
+                             [("psp_11111111111111111111111111111111", order, 1),
+                              ("psp_22222222222222222222222222222222", order, 1)])
+            self.assertEqual([c.content.raw for c in k.view().ordered_heads], [self.content["base"]] * 2)
+            self.assertEqual(len(k.view().links), 1)  # no same-name merge/adopt
+            self.assertEqual(j.read().state, k.view())
+
+    def test_reorder_safe_counter_receipts_and_overflow_are_codec_bounded(self):
+        a = self.contexts["a"]
+        key, same_key, changed_key = ("psm_" + digit * 32 for digit in ("7", "6", "5"))
+        k, j = self.published()
+        high = encode(dict(json.loads(self.records["first"]), object_revision=9007199254740990,
+                           event_sequence=9007199254740990))
+        self.code(k.observe(a, high), "pending_review")
+        raw = self.reorder_request(base=9007199254740990, order=0)
+        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+        last = encode(dict(json.loads(self.records["first"]), object_revision=9007199254740991,
+                           event_sequence=9007199254740991, order_key=0))
+        self.code(k.acknowledge(a, key, request_hash(raw), last), "pending_review")
+        head = k.view().head(self.profiles["p1"])
+        self.assertEqual((head.object_revision, head.event_sequence, head.content_revision, head.order_key),
+                         (9007199254740991, 9007199254740991, 1, 0))
+        same = self.reorder_request(base=9007199254740991, order=0, key=same_key)
+        self.code(k.select(a, "reorder", "local-one", same), "queued")
+        self.code(k.acknowledge(a, same_key, request_hash(same), last), "pending_review")
+        self.assertIs(k.view().head(self.profiles["p1"]), head)
+        # Valid intent is not server capacity proof; actual codec denies overflow.
+        changed = self.reorder_request(base=9007199254740991, order=2, key=changed_key)
+        self.code(k.select(a, "reorder", "local-one", changed), "queued")
+        overflow = encode(dict(json.loads(last), object_revision=9007199254740992,
+                               event_sequence=9007199254740992, order_key=2))
+        self.code(k.acknowledge(a, changed_key, request_hash(changed), overflow), "quarantined")
+        self.assertIs(k.view().head(self.profiles["p1"]), head)
+        self.assertEqual(k.view().outbox[-1].body, changed)
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+        self.assertEqual(j.read().state, k.view())
+
+    def test_reorder_exact_retry_key_mismatch_and_verified_snapshot_restart(self):
+        a, key = self.contexts["a"], "psm_77777777777777777777777777777777"
+        k, j = self.published()
+        raw = b"\n" + self.reorder_request() + b" "
+        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+        before, applies = k.view(), j.calls[1]
+        self.code(k.select(a, "reorder", "local-one", raw), "unchanged")
+        for changed in (raw + b" ", self.reorder_request(order=1)):
+            self.code(k.select(a, "reorder", "local-one", changed), "idempotency_mismatch")
+        self.code(k.select(a, "reorder", "local-two", raw), "requires_action")
+        self.assertEqual((k.view(), j.calls[1]), (before, applies))
+        saved = j.read()
+        restart, rj = self.make(journal=MemoryJournal(a, record=saved))
+        for _ in range(2):
+            result = restart.next_request()
+            self.assertEqual(result.code, "pending")
+            self.assertEqual((result.request.body, result.request.mutation_id, result.request.request_hash, result.request.context),
+                             (raw, key, request_hash(raw), a))
+        self.assertEqual((rj.read(), rj.calls[1]), (saved, 0))
+        receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=2, order_key=0))
+        self.code(restart.acknowledge(a, key, request_hash(raw), receipt), "pending_review")
+        saved = rj.read()
+        again, aj = self.make(journal=MemoryJournal(a, record=saved))
+        self.code(again.acknowledge(a, key, request_hash(raw), receipt), "unchanged")
+        self.code(again.next_request(), "requires_action")
+        self.assertEqual((aj.read(), aj.calls[1]), (saved, 0))
+
+    def test_reorder_bad_requests_and_scope_refuse_before_journal_apply(self):
+        a = self.contexts["a"]
+        k, j = self.published()
+        raw = self.reorder_request()
+        value = json.loads(raw)
+        patches = ({"order_key": True}, {"order_key": None}, {"order_key": "0"}, {"order_key": [0]},
+                   {"order_key": {}}, {"order_key": -1}, {"order_key": 9007199254740992},
+                   {"base_revision": 0}, {"base_revision": False}, {"base_revision": 1.0},
+                   {"base_revision": "1"}, {"base_revision": 9007199254740992},
+                   {"mutation_id": "psm_bad"}, {"profile_id": "local-one"},
+                   {"schema_version": 2}, {"operation": []}, {"operation": {}}, {"extra": None})
+        malformed = [encode(dict(value, **p)) for p in patches]
+        malformed += [encode({f: v for f, v in value.items() if f != "order_key"}),
+                      raw.replace(b'"order_key":0', b'"order_key":-0'),
+                      raw.replace(b'"order_key":0', b'"order_key":0e0'),
+                      raw.replace(b'"order_key":0', b'"order_key":0,"order_key":0'),
+                      b"\xff", b"\xef\xbb\xbf" + raw, raw + b"{}", b"[]", None, raw.decode(), bytearray(raw)]
+        before, calls = k.view(), j.calls
+        for index, bad in enumerate(malformed):
+            with self.subTest(malformed=index):
+                self.code(k.select(a, "reorder", "local-one", bad), "invalid")
+                self.assertIs(k.view(), before)
+                self.assertEqual(j.calls, calls)
+        self.code(k.select(a, "reorder", "local-one", raw + b" " * model.MAX_ITEM_BYTES), "quota_exceeded")
+        for body in (self.bodies["create"], self.bodies["edit"], self.bodies["delete"]):
+            self.code(k.select(a, "reorder", "local-one", body), "requires_action")
+        self.code(k.select(a, "reorder", "local-one", self.reorder_request(profile=self.profiles["p2"])), "not_found")
+        self.code(k.select(a, "reorder", "local-one", self.reorder_request(base=2)), "requires_action")
+        self.code(k.select(a, "reorder", "local-missing", raw), "not_found")
+        self.code(k.select(a, "reorder", None, raw), "requires_action")
+        for scope in ("a1", "b1", "env1", "issuer1"):
+            self.code(k.select(self.contexts[scope], "reorder", "local-one", raw), "quarantined")
+        self.assertIs(k.view(), before)
+        self.assertEqual(j.calls, calls)
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+
+    def test_reorder_unlinked_deleted_dirty_and_conflict_preserve_prior_work(self):
+        a = self.contexts["a"]
+        k, j = self.seeded()
+        self.code(k.observe(a, self.records["first"]), "pending_review")
+        before, calls = k.view(), j.calls
+        self.code(k.select(a, "reorder", "local-one", self.reorder_request()), "not_found")
+        self.assertEqual((k.view(), j.calls), (before, calls))
+        for choice, body in (("edit", self.bodies["edit"]), ("delete", self.bodies["delete"]), ("reorder", self.reorder_request())):
+            for remote in ("remote_edit", "deleted"):
+                k, j = self.published()
+                self.code(k.select(a, choice, "local-one", body), "queued")
+                original = k.view().outbox[-1]
+                before, applies = k.view(), j.calls[1]
+                self.code(k.select(a, "reorder", "local-one", self.reorder_request(key="psm_66666666666666666666666666666666")), "requires_action")
+                self.assertEqual((k.view(), j.calls[1]), (before, applies))
+                self.code(k.observe(a, self.records[remote]), "edit_delete_conflict" if remote == "deleted" else "edit_edit_conflict")
+                before, applies = k.view(), j.calls[1]
+                self.code(k.select(a, "reorder", "local-one", self.reorder_request(base=2, key="psm_66666666666666666666666666666666")),
+                          "gone" if remote == "deleted" else "requires_action")
+                self.code(k.acknowledge(a, original.mutation_id, original.request_hash, self.records["first"]), "requires_action")
+                self.code(k.next_request(), "requires_action")
+                self.assertEqual((k.view(), j.calls[1]), (before, applies))
+                self.assertEqual((k.view().outbox[-1].body, k.view().outbox[-1].base, k.view().outbox[-1].status),
+                                 (body, original.base, "conflict"))
+                self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+
+    def test_reorder_explicit_adopted_link_remains_portable_only(self):
+        a = self.contexts["a"]
+        k, j = self.make()
+        self.code(k.observe(a, self.records["first"]), "pending_review")
+        self.code(k.select(a, "adopt", "local-new", self.profiles["p1"]), "pending_review")
+        raw = self.reorder_request()
+        self.code(k.select(a, "reorder", "local-new", raw), "queued")
+        receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=2, order_key=0))
+        self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw), receipt), "pending_review")
+        self.assertEqual((k.view().locals, k.view().head(self.profiles["p1"]).order_key), ((), 0))
+        self.assertEqual(j.read().state, k.view())  # no native row/accepted marker
+
+    def test_reorder_wrong_receipts_never_replace_base_content_or_accepted_marker(self):
+        a = self.contexts["a"]
+        changed = dict(json.loads(self.records["first"]), object_revision=2, event_sequence=2, order_key=0)
+        bad_changed = [dict(changed, **p) for p in (
+            {"profile_id": self.profiles["p2"]}, {"object_revision": 1}, {"object_revision": 3},
+            {"event_sequence": 1}, {"order_key": 1}, {"order_key": 2}, {"content_revision": 2},
+            {"content_json": self.content["edit"].decode(), "content_hash": self.vectors["content"]["edit"]["hash"]},
+            {"content_hash": "0" * 64}, {"schema_version": 2}, {"order_key": 9007199254740992},
+            {"object_revision": 9007199254740992}, {"event_sequence": 9007199254740992},
+            {"event_sequence": 2.0}, {"deleted": "false"}, {"extra": None})]
+        no_op = json.loads(self.records["first"])
+        bad_no_op = [dict(no_op, **p) for p in (
+            {"object_revision": 2, "event_sequence": 2}, {"event_sequence": 2}, {"order_key": 0},
+            {"object_revision": 2, "content_revision": 2},
+            {"content_json": self.content["remote"].decode(), "content_hash": self.vectors["content"]["remote"]["hash"]})]
+        for order, rows in ((0, bad_changed), (2, bad_no_op)):
+            malformed = [encode(row) for row in rows] + [self.records["deleted"], b"\xff", None,
+                encode({"schema": "healthmd.profile_sync", "schema_version": 1, "result": "conflict"})]
+            for index, receipt in enumerate(malformed):
+                with self.subTest(order=order, receipt=index):
+                    k, j = self.published()
+                    raw = self.reorder_request(order=order)
+                    self.code(k.select(a, "reorder", "local-one", raw), "queued")
+                    before = k.view()
+                    self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw), receipt), "quarantined")
+                    state = k.view()
+                    self.assertEqual((state.candidates, state.links, state.locals), (before.candidates, before.links, before.locals))
+                    entry = state.outbox[-1]
+                    self.assertEqual((entry.status, entry.acknowledgement, entry.body), ("quarantined", None, raw))
+                    self.assertEqual(state.locals[0].accepted.raw, self.content["base"])
+                    self.assertEqual(j.read().state, state)
+                    self.code(k.next_request(), "requires_action")
+        # Capacity refusal retains the pending original intent.
+        k, j = self.published()
+        raw = self.reorder_request()
+        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+        before, applies = k.view(), j.calls[1]
+        self.code(k.acknowledge(a, "psm_77777777777777777777777777777777", request_hash(raw),
+                               encode(changed) + b" " * model.MAX_ITEM_BYTES), "quota_exceeded")
+        self.assertIs(k.view(), before)
+        self.assertEqual(j.calls[1], applies)
+        self.assertEqual(k.next_request().request.body, raw)
+
+    def test_reorder_receipt_owner_hash_and_generation_fences_retain_original_intent(self):
+        a = self.contexts["a"]
+        raw = self.reorder_request()
+        key = "psm_77777777777777777777777777777777"
+        receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=2, order_key=0))
+        for owner, digest in [(self.contexts[s], request_hash(raw)) for s in ("a1", "b1", "env1", "issuer1")] + [(a, "0" * 64)]:
+            k, _ = self.published()
+            self.code(k.select(a, "reorder", "local-one", raw), "queued")
+            self.code(k.acknowledge(owner, key, digest, receipt), "quarantined")
+            self.assertEqual((k.view().head(self.profiles["p1"]).raw, k.view().outbox[-1].body), (self.records["first"], raw))
+        k, j = self.published()
+        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+        original = k.view().outbox[-1]
+        self.code(k.acknowledge(a, "psm_66666666666666666666666666666666", request_hash(raw), receipt), "not_found")
+        self.code(k.switch(self.contexts["a1"]), "quarantined")
+        self.code(k.acknowledge(a, key, request_hash(raw), receipt), "quarantined")
+        self.code(k.observe(self.contexts["a1"], receipt), "pending_review")
+        self.code(k.select(self.contexts["a1"], "reorder", "local-one", raw), "quarantined")
+        self.code(k.select(self.contexts["a1"], "reorder", "local-one",
+                           self.reorder_request(base=2, key="psm_66666666666666666666666666666666")), "not_found")
+        self.code(k.next_request(), "requires_action")
+        retained = k.view().outbox[-1]
+        self.assertEqual((retained.context, retained.body, retained.request_hash, retained.base,
+                          retained.base_revision, retained.desired_order, retained.status),
+                         (a, raw, request_hash(raw), original.base, 1, 0, "quarantined"))
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+        self.assertEqual(j.read().state, k.view())
+
+    def test_reorder_journal_enqueue_and_receipt_faults_keep_proposal_not_guessed_success(self):
+        a = self.contexts["a"]
+        raw, key = self.reorder_request(), "psm_77777777777777777777777777777777"
+        receipt = encode(dict(json.loads(self.records["first"]), object_revision=2, event_sequence=2, order_key=0))
+        for phase in ("enqueue", "receipt"):
+            for fault in FaultJournal.FAULTS:
+                with self.subTest(phase=phase, fault=fault):
+                    j = FaultJournal(a)
+                    k, _ = self.published(journal=j)
+                    if phase == "receipt":
+                        self.code(k.select(a, "reorder", "local-one", raw), "queued")
+                    before, applies = k.view(), j.calls[1]
+                    j.arm(fault, replacement=self.contexts["a1"])
+                    result = (k.select(a, "reorder", "local-one", raw) if phase == "enqueue" else
+                              k.acknowledge(a, key, request_hash(raw), receipt))
+                    success = "queued" if phase == "enqueue" else "pending_review"
+                    self.code(result, success if fault == "lost_response" else
+                              "fenced" if fault == "stale_owner" else "verification_pending")
+                    if fault != "lost_response":
+                        self.assertIs(k.view(), before)
+                    if fault == "unreadable":
+                        with self.assertRaises(JournalError):
+                            j.read()
+                        j.make_readable()
+                        self.code(k.verify(), success)
+                    actual = j.read()
+                    desired = actual.state if actual.pending is None else actual.pending.desired
+                    entry = desired.outbox[-1]
+                    self.assertEqual((entry.body, entry.mutation_id, entry.request_hash, entry.context,
+                                      entry.base_revision, entry.desired_order, entry.status),
+                                     (raw, key, request_hash(raw), a, 1, 0, "pending" if phase == "enqueue" else "acknowledged"))
+                    self.assertEqual((entry.base.raw, entry.content.raw), (self.records["first"], self.content["base"]))
+                    self.assertEqual(desired.locals, before.locals)
+                    if phase == "receipt":
+                        self.assertEqual(entry.acknowledgement.raw, receipt)
+                    expected = ("fenced" if fault == "stale_owner" else "verification_pending") if actual.pending else "unchanged"
+                    if actual.pending:
+                        self.assertEqual(actual.pending.before, before)
+                        self.assertEqual(actual.state.outbox, before.outbox)
+                        if fault == "partial":
+                            self.assertEqual(actual.state.candidates, desired.candidates)
+                    restarted, rj = self.make(journal=MemoryJournal(a, record=actual))
+                    self.code(restarted.verify(), expected)
+                    self.assertEqual(restarted.view(), before if actual.pending else desired)
+                    pending = restarted.next_request()
+                    self.assertEqual(pending.code, expected if actual.pending else "pending" if phase == "enqueue" else "requires_action")
+                    if pending.request:
+                        self.assertEqual(pending.request.body, raw)
+                    self.assertEqual(restarted.view().locals[0].accepted.raw, self.content["base"])
+                    self.assertEqual((rj.calls[1], j.calls[1]), (0, applies + 1))  # no repair/rollback
+
+    def test_reorder_real_outbox_bound_and_competing_cas_do_not_replace_prior_work(self):
+        a = self.contexts["a"]
+        k, j = self.make()
+        self.code(k.local(a, "local-one", self.content["current"]), "local_preserved")
+        create = encode(dict(json.loads(self.bodies["create"]), content_json=self.content["current"].decode(),
+                             content_hash=self.vectors["content"]["current"]["hash"]))
+        row = encode(dict(json.loads(self.records["first"]), content_json=self.content["current"].decode(),
+                          content_hash=self.vectors["content"]["current"]["hash"]))
+        self.code(k.select(a, "publish", "local-one", create), "queued")
+        self.code(k.acknowledge(a, "psm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", request_hash(create), row), "pending_review")
+        for i in range(7):
+            key = "psm_" + f"{i:032x}"
+            raw = self.reorder_request(order=2, key=key)
+            self.code(k.select(a, "reorder", "local-one", raw), "queued")
+            # Retained non-success has no receipt payload, isolating count from
+            # byte capacity. Seven successful receipts exceeded the real byte
+            # bound first (both failures/diagnostic retained), not a kernel bug.
+            self.code(k.acknowledge(a, key, "0" * 64, row), "quarantined")
+            self.assertEqual(k.view().outbox[-1].body, raw)
+            self.assertEqual(k.view().outbox[-1].base.raw, row)
+            self.assertEqual(k.view().outbox[-1].desired_order, 2)
+        self.assertEqual(len(k.view().outbox), 8)
+        self.assertEqual([e.status for e in k.view().outbox], ["acknowledged"] + ["quarantined"] * 7)
+        before, applies = j.read(), j.calls[1]
+        self.code(k.select(a, "reorder", "local-one", self.reorder_request()), "quota_exceeded")
+        self.assertEqual(j.read(), before)
+        self.assertEqual(j.calls[1], applies)
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["current"])
+        # Deterministic actual CAS loser, not thread/OS durability proof.
+        winner, wj = self.published()
+        loser, _ = self.make(journal=wj)
+        prior = loser.view()
+        first, second = self.reorder_request(), self.reorder_request(order=1, key="psm_" + "6" * 32)
+        self.code(winner.select(a, "reorder", "local-one", first), "queued")
+        self.code(loser.select(a, "reorder", "local-one", second), "verification_pending")
+        self.code(loser.next_request(), "verification_pending")
+        self.assertIs(loser.view(), prior)
+        actual = wj.read()
+        self.assertEqual((actual.pending, actual.state.outbox[-1].body, actual.state.outbox[-1].desired_order), (None, first, 0))
 
     def test_all_test_filesystem_operations_are_read_only(self):
         original = io.open
