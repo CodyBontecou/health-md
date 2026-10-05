@@ -1,6 +1,8 @@
 package com.healthmd.data.export
 
+import com.healthmd.direct.protocol.AgentBridgeCodec
 import com.healthmd.domain.exportengine.sha256Hex
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.nio.channels.FileChannel
@@ -118,7 +120,7 @@ internal class RecoveryDiscardFence(
             if (!metadata.exists()) continue
             try {
                 check(metadata.isFile && metadata.length() in 1..MAX_LEDGER_BYTES)
-                val stored = json.parseToJsonElement(metadata.readText()).jsonObject
+                val stored = json.parseToJsonElement(readStrictJson(metadata)).jsonObject
                 val authorityKey = if (root == apiRoot) "apiAuthorityJson" else "authorityJson"
                 check(stored["operationId"]?.jsonPrimitive?.contentOrNull == id &&
                     stored[authorityKey]?.jsonPrimitive?.contentOrNull == expected.authorityJson &&
@@ -135,10 +137,29 @@ internal class RecoveryDiscardFence(
         if (!ledger.exists()) return State(1, emptyList(), emptyList(), emptyList())
         check(ledger.isFile && ledger.length() in 1..MAX_LEDGER_BYTES) { "api_recovery_discard_state_invalid" }
         return try {
-            json.decodeFromString<State>(ledger.readText()).also(::validate)
+            json.decodeFromString<State>(readStrictJson(ledger)).also(::validate)
         } catch (_: Exception) {
             error("api_recovery_discard_state_invalid")
         }
+    }
+
+    /** Validate bounded raw bytes before a lenient tree/typed decoder can erase evidence. */
+    private fun readStrictJson(file: File): String {
+        val bytes = file.inputStream().use { input ->
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(8192)
+            while (true) {
+                val read = input.read(buffer)
+                if (read < 0) break
+                check(output.size().toLong() + read <= MAX_LEDGER_BYTES)
+                output.write(buffer, 0, read)
+            }
+            output.toByteArray()
+        }
+        // Generic strict validation only: no v4 document/authority decoding or stored-byte rewrite.
+        // Existing ledger hash lists fit these bounds. Legacy binding metadata beyond the reader's
+        // string/array/depth limits remains untouched and fails closed; it is never clipped or repaired.
+        return AgentBridgeCodec.canonicalize(bytes).decodeToString()
     }
 
     private fun validate(state: State) {
