@@ -61,6 +61,17 @@ compiler/admission/cleanup/bypass or native/user action. Wider native portabilit
 mirrors remain separately reviewable. Merged/native/Kotlin-after/full journey gates remain incomplete;
 B21 in progress, B22 open, no task/capability/goal promotion.
 
+Consumer-skill follow-up `d515ed869` gates history/full-corpus dates, Android service/first-unlock
+and source-vs-installed onboarding/tools, plus iPhone source readiness/portable existing destinations.
+Actual alpha.7 tag catalog19 lacks four current23 names (raw/artifact and plan/approval); first-iOS
+onboarding differs from source first-mobile. These static source facts are not new installed support.
+Three new public-doc methods/static CI34+contract60, six links and exact section/release preservation pass;
+88-file index `e9bb74395649859c3f2ba2e7e82a54f497906f5132980ad1e73923744de4b413` binds this source,
+all776 prior indexed entries intact. Native4/recipes/full journey remain missing; no permission verdict.
+Observed2026-10-05T14:23:52Z1,243,032KiB/no warning still admits neither compiler nor native-app gates;
+no compiler/admission/cleanup/bypass, new worktree/build or native/user action. QA/development/native/website
+mirrors remain separately reviewable; B21 in progress/B22 open, no capability/task/goal promotion.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.
