@@ -26,7 +26,6 @@ export async function handleV2Request(request: Request, env: WakeEnv, fcmConfig:
     || typeof timestamp !== "string" || v2Timestamp(timestamp) === null
     || typeof hmac !== "string" || !HMAC_RE.test(hmac)
   ) return jsonResponse({ error: "wake_request_invalid" }, 400);
-  const now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
   const registration = await env.DB.prepare("SELECT verification_hash, device_token, transport, registration_version FROM wake_registrations WHERE wake_id = ?")
     .bind(wakeId).first<Registration>();
   if (!registration || registration.registration_version !== 2 || registration.transport !== "fcm") {
@@ -35,6 +34,8 @@ export async function handleV2Request(request: Request, env: WakeEnv, fcmConfig:
   if (!await verifyV2Proof(registration.verification_hash, JSON.stringify([REQUEST_DOMAIN, wakeId, nonce, timestamp]), hmac)) {
     return jsonResponse({ error: "wake_hmac_invalid" }, 401);
   }
+  // Only verified live admission sets the original replay/policy/lease time.
+  const now = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
   if (!timestampWithinWindow(v2Timestamp(timestamp)!, now)) return jsonResponse({ error: "wake_timestamp_stale" }, 401);
   const bucket = Math.floor(now / 3600);
   // D1 batch is a transaction. changes() couples nonce consumption and lease

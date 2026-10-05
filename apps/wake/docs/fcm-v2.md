@@ -140,7 +140,12 @@ fallback log is emitted.
 
 - Unknown/wrong-version ID: `404 wake_unknown`.
 - Wrong HMAC/proof: `401 wake_hmac_invalid` / `wake_proof_invalid`.
-- Timestamp outside ±120 seconds: `401 wake_timestamp_stale`.
+- Timestamp outside ±120 seconds: `401 wake_timestamp_stale`. Trusted server time
+  is sampled after awaited registration lookup and HMAC verification, before
+  pruning/consuming nonces, reserving delivery policy or checking provider config.
+  Stale/now-future work cannot consume a nonce; separately fresh signed work may
+  reuse that unconsumed nonce. Valid admission fixes replay age, policy bucket and
+  the original lease deadline from this sample, never renewed after OAuth.
 - A nonce consumed by either v2 domain for this ID: `401 wake_nonce_replayed`.
 - Replay nonces retain server `seen_at` times for 300 seconds and are pruned for
   the same wake ID when it is used again. Idle rows may remain until next use or
@@ -314,6 +319,17 @@ unchanged ephemeral local workerd test does not inject these crypto/clock delays
 establish a globally atomic D1 deadline. Current best-practices/WebCrypto/D1 references
 were retrieved, latest types remain scratch-only `5.20261005.1`, and no provider,
 native enrollment, deployment, dependency or configuration action is performed.
+
+2026-10-05 bounded request-time follow-up: a real HMAC/HTTP tracer shows that a
+wake proof expiring during verification previously reached configuration handling
+and consumed its nonce; a public stale control and same-nonce retry distinguish
+arrival-clock use from absent clock/validation. Live time now precedes replay and
+delivery-policy reservation. Supplemental clock-retreat/inclusive-boundary,
+admitted-lease, dedupe/hour-boundary tests use synthetic state and intercepted
+providers. Node24 source tests and the unchanged local workerd test pass; workerd
+does not inject these crypto/clock delays. This is not atomic wall-time/D1 commit
+qualification or a recall/ownership/permission claim. Latest types remain the
+scratch-only same-day version, with no actual provider/native/user/deploy action.
 
 ## Later gates (not performed here)
 
