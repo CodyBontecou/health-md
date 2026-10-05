@@ -299,7 +299,7 @@
     <string name="sleep_attribution_night_begins">Night begins</string>
     <string name="sleep_attribution_morning_ends">Morning ends</string>
     <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
-    <string name="sleep_attribution_morning_ends_description">Each sleep session belongs to the daily note for the morning it ends, matching the Health Connect app. A session from 11:45 PM to 7:30 AM appears in the wake-up day’s note.</string>
+    <string name="sleep_attribution_morning_ends_description">Morning ends is unavailable for current export profiles. Choose Night begins for a new export.</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>

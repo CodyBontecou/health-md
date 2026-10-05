@@ -145,6 +145,7 @@ fun AdvancedSettingsScreen(
                     FilterChip(
                         selected = sleepDayAttribution == mode,
                         onClick = { onSleepDayAttributionChanged(mode) },
+                        enabled = mode.isAvailableForShippedProfiles,
                         label = { Text(label) },
                         modifier = Modifier
                             .weight(1f)

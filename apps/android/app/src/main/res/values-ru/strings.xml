@@ -557,8 +557,8 @@
     <string name="sleep_attribution_title">Принадлежность сна дню</string>
     <string name="sleep_attribution_night_begins">Ночь начала</string>
     <string name="sleep_attribution_morning_ends">Утро окончания</string>
-    <string name="sleep_attribution_night_begins_description">Каждый сон относится к ежедневной заметке той ночи, в которую он начался. Это значение по умолчанию, совпадающее с прежними экспортами.</string>
-    <string name="sleep_attribution_morning_ends_description">Каждый сон относится к ежедневной заметке того утра, когда он заканчивается, как в приложении Health Connect. Сон с 23:45 до 7:30 отображается в заметке дня пробуждения.</string>
+    <string name="sleep_attribution_night_begins_description">Сон использует интервал ежедневной заметки от полудня до следующего полудня. Это значение по умолчанию, совпадающее с прежними экспортами.</string>
+    <string name="sleep_attribution_morning_ends_description">Утро окончания недоступно для текущих профилей экспорта. Выберите Ночь начала для нового экспорта.</string>
 
     <string name="metric_category_cycling">Велоспорт</string>
     <string name="metric_category_medications">Лекарства</string>

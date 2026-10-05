@@ -271,8 +271,8 @@
     <string name="sleep_attribution_title">Ұйықтау күнін белгілеу</string>
     <string name="sleep_attribution_night_begins">Түн басталады</string>
     <string name="sleep_attribution_morning_ends">Таң аяқталады</string>
-    <string name="sleep_attribution_night_begins_description">Әр ұйықтау сессиясы басталған түннің күндік жазбасына жатады. Бұл әдепкі параметр және алдыңғы экспорттарға сәйкес.</string>
-    <string name="sleep_attribution_morning_ends_description">Әр ұйықтау сессиясы аяқталған таңның күндік жазбасына жатады, бұл Health Connect қолданбасымен бірдей. Түнгі 23:45-тен таңертең 7:30-ға дейінгі сессия оянған күннің жазбасында көрінеді.</string>
+    <string name="sleep_attribution_night_begins_description">Ұйқы күндік жазбаның түстен келесі күннің түсіне дейінгі аралығын пайдаланады. Бұл әдепкі параметр және алдыңғы экспорттарға сәйкес.</string>
+    <string name="sleep_attribution_morning_ends_description">Таң аяқталады параметрі ағымдағы экспорт профильдерінде қолжетімді емес. Жаңа экспорт үшін Түн басталады параметрін таңдаңыз.</string>
 
     <string name="metric_selection_title">Денсаулық көрсеткіштері</string>
     <string name="search_metrics_hint">Көрсеткіштерді іздеу…</string>

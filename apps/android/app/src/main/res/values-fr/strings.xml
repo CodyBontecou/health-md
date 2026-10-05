@@ -547,8 +547,8 @@
     <string name="sleep_attribution_title">Attribution du jour de sommeil</string>
     <string name="sleep_attribution_night_begins">Début de nuit</string>
     <string name="sleep_attribution_morning_ends">Fin au matin</string>
-    <string name="sleep_attribution_night_begins_description">Chaque session de sommeil appartient à la note du jour où la nuit commence. Il s\'agit du réglage par défaut, identique aux exportations précédentes.</string>
-    <string name="sleep_attribution_morning_ends_description">Chaque session de sommeil appartient à la note du jour où elle se termine le matin, comme dans l\'application Health Connect. Une session de 23 h 45 à 7 h 30 apparaît dans la note du jour du réveil.</string>
+    <string name="sleep_attribution_night_begins_description">Le sommeil utilise la période de midi à midi de la note quotidienne. Il s\'agit du réglage par défaut, identique aux exportations précédentes.</string>
+    <string name="sleep_attribution_morning_ends_description">Fin au matin est indisponible pour les profils d\'exportation actuels. Choisissez Début de nuit pour une nouvelle exportation.</string>
 
     <string name="metric_category_cycling">Vélo</string>
     <string name="metric_category_medications">Médicaments</string>

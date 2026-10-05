@@ -547,8 +547,8 @@
     <string name="sleep_attribution_title">Atribuição do dia de sono</string>
     <string name="sleep_attribution_night_begins">Começa à noite</string>
     <string name="sleep_attribution_morning_ends">Termina de manhã</string>
-    <string name="sleep_attribution_night_begins_description">Cada sessão de sono pertence à nota diária da noite em que começa. Este é o padrão e corresponde às exportações anteriores.</string>
-    <string name="sleep_attribution_morning_ends_description">Cada sessão de sono pertence à nota diária da manhã em que termina, como no app Health Connect. Uma sessão das 23h45 às 7h30 aparece na nota do dia do despertar.</string>
+    <string name="sleep_attribution_night_begins_description">O sono usa o intervalo de meio-dia a meio-dia da nota diária. Este é o padrão e corresponde às exportações anteriores.</string>
+    <string name="sleep_attribution_morning_ends_description">Termina de manhã não está disponível para os perfis de exportação atuais. Escolha Começa à noite para uma nova exportação.</string>
 
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>

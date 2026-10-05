@@ -592,15 +592,18 @@ struct ExportTabView: View {
             VStack(alignment: .leading, spacing: Spacing.s2) {
                 Picker("Sleep Day Attribution", selection: Binding(
                     get: { healthKitManager.sleepDayAttribution },
-                    set: { healthKitManager.setSleepDayAttribution($0) }
+                    set: { mode in
+                        if mode.isAvailableForShippedProfiles { healthKitManager.setSleepDayAttribution(mode) }
+                    }
                 )) {
                     ForEach(SleepDayAttribution.allCases, id: \.rawValue) { mode in
                         Text(mode.localizedDisplayName).tag(mode)
+                            .disabled(!mode.isAvailableForShippedProfiles)
                     }
                 }
                 .pickerStyle(.menu)
                 .font(.body.weight(.semibold))
-                .accessibilityHint(SleepDayAttribution.morningEnds.localizedDescription)
+                .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
 
                 Text(healthKitManager.sleepDayAttribution.localizedDescription)
                     .font(.footnote)

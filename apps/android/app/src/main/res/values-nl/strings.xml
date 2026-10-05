@@ -537,8 +537,8 @@
     <string name="sleep_attribution_title">Toewijzing slaapdag</string>
     <string name="sleep_attribution_night_begins">Nacht begint</string>
     <string name="sleep_attribution_morning_ends">Ochtend eindigt</string>
-    <string name="sleep_attribution_night_begins_description">Elke slaapsessie hoort bij de dagnotitie van de nacht waarin deze begint. Dit is de standaard en komt overeen met eerdere exports.</string>
-    <string name="sleep_attribution_morning_ends_description">Elke slaapsessie hoort bij de dagnotitie van de ochtend waarop deze eindigt, net als in de Health Connect-app. Een sessie van 23:45 tot 7:30 uur verschijnt in de notitie van de ontwakdag.</string>
+    <string name="sleep_attribution_night_begins_description">Slaap gebruikt het venster van middag tot middag van de dagnotitie. Dit is de standaard en komt overeen met eerdere exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Ochtend eindigt is niet beschikbaar voor de huidige exportprofielen. Kies Nacht begint voor een nieuwe export.</string>
 
     <string name="metric_category_cycling">Fietsen</string>
     <string name="metric_category_medications">Medicijnen</string>

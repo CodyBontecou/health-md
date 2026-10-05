@@ -283,8 +283,8 @@
     <string name="sleep_attribution_title">नींद दिन निर्धारण</string>
     <string name="sleep_attribution_night_begins">रात शुरू</string>
     <string name="sleep_attribution_morning_ends">सुबह खत्म</string>
-    <string name="sleep_attribution_night_begins_description">हर नींद सत्र उस रात के दैनिक नोट में आता है जिस रात वह शुरू होता है। यह डिफ़ॉल्ट है और पिछले निर्यात से मेल खाता है।</string>
-    <string name="sleep_attribution_morning_ends_description">हर नींद सत्र उस सुबह के दैनिक नोट में आता है जिस सुबह वह समाप्त होता है, जो Health Connect ऐप से मेल खाता है। रात 11:45 से सुबह 7:30 तक का सत्र जागने वाले दिन के नोट में दिखता है।</string>
+    <string name="sleep_attribution_night_begins_description">नींद दैनिक नोट की दोपहर से अगले दिन की दोपहर तक की अवधि का उपयोग करती है। यह डिफ़ॉल्ट है और पिछले निर्यात से मेल खाता है।</string>
+    <string name="sleep_attribution_morning_ends_description">मौजूदा निर्यात प्रोफ़ाइलों के लिए सुबह खत्म उपलब्ध नहीं है। नए निर्यात के लिए रात शुरू चुनें।</string>
 
     <!-- Metric selection screen -->
     <string name="metric_selection_title">स्वास्थ्य मेट्रिक्स</string>

@@ -263,8 +263,8 @@
     <string name="sleep_attribution_title">睡眠日の帰属</string>
     <string name="sleep_attribution_night_begins">就寝時刻で</string>
     <string name="sleep_attribution_morning_ends">起床時刻で</string>
-    <string name="sleep_attribution_night_begins_description">各睡眠セッションは、開始した夜のデイリーノートに記録されます。これがデフォルトで、以前のエクスポートと同じです。</string>
-    <string name="sleep_attribution_morning_ends_description">各睡眠セッションは、終了した朝のデイリーノートに記録され、Health Connect アプリと同じ動作です。午後11時45分から午前7時30分までのセッションは、起きた日のノートに表示されます。</string>
+    <string name="sleep_attribution_night_begins_description">睡眠は、デイリーノートの正午から翌日の正午までの範囲で記録されます。これがデフォルトで、以前のエクスポートと同じです。</string>
+    <string name="sleep_attribution_morning_ends_description">現在のエクスポート形式では「起床時刻で」は利用できません。新しいエクスポートには「就寝時刻で」を選択してください。</string>
 
     <string name="metric_selection_title">健康メトリクス</string>
     <string name="search_metrics_hint">メトリクスを検索\u2026</string>
