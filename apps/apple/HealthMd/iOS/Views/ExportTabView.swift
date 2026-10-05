@@ -573,7 +573,7 @@ struct ExportTabView: View {
                         .font(.subheadline.weight(.semibold))
                     Text(isLimited
                          ? "Earlier data is unknown, not absent. All Time and all-available automation require full history access."
-                         : "All Time and all-available automation require an OS 27+ assessment that covers every selected metric. Use an explicit date range until then.")
+                         : "This build cannot verify full-history authorization boundaries. Use an explicit date range; an OS upgrade alone does not enable this assessment.")
                         .font(.footnote)
                         .foregroundStyle(Color.textSecondary)
                     Button("Review Health permissions") {
