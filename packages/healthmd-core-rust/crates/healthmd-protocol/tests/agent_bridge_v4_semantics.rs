@@ -5,10 +5,7 @@ use serde::{Serialize, de::DeserializeOwned};
 use serde_json::{Value, json};
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!(
-        "../../../../contracts/agent-bridge/v1/fixtures/conformance.json"
-    ))
-    .unwrap()
+    serde_json::from_str(include_str!("fixtures/agent-bridge-v1-conformance.json")).unwrap()
 }
 fn typed<T: DeserializeOwned + ValidateShape>(value: &Value) -> T {
     decode_typed(&serde_json::to_vec(value).unwrap()).unwrap()
@@ -27,7 +24,7 @@ fn zones() -> Vec<CalendarZone> {
 }
 fn metrics() -> Vec<MetricSupport> {
     let registry: Value = serde_json::from_str(include_str!(
-        "../../healthmd-core/registry/metric-registry-v1.json"
+        "fixtures/agent-bridge-metric-registry-v1.json"
     ))
     .unwrap();
     let mut result = Vec::new();
@@ -51,7 +48,7 @@ fn metrics() -> Vec<MetricSupport> {
 }
 fn projection_digest() -> Digest {
     let value: Value = serde_json::from_str(include_str!(
-        "../../../../contracts/agent-bridge/v1/reviewed-projection-catalog.json"
+        "fixtures/agent-bridge-projection-catalog-v1.json"
     ))
     .unwrap();
     document_digest(&value).unwrap()
@@ -737,8 +734,11 @@ fn explicit_scratch_candidate_generation_and_coverage() {
             "candidate output cannot be a symlink"
         );
     }
-    let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../../..")
+    let manifest = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repo = manifest
+        .ancestors()
+        .find(|path| path.join(".git").exists())
+        .unwrap_or(manifest)
         .canonicalize()
         .unwrap();
     let parent = output.parent().unwrap().canonicalize().unwrap();

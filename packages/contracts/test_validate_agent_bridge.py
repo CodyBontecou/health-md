@@ -35,6 +35,17 @@ class AgentBridgeTests(unittest.TestCase):
     def test_fixture_entry_point_and_canonical_vectors(self):
         V.validate_fixture(ROOT, HERE / "agent-bridge/v1/fixtures/conformance.json", validate.validate_json_schema_subset, validate.fail)
 
+    def test_rust_packaging_mirrors_are_byte_identical_to_authorities(self):
+        mirrors = ROOT / "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures"
+        sources = {
+            "agent-bridge-v1-conformance.json": HERE / "agent-bridge/v1/fixtures/conformance.json",
+            "agent-bridge-projection-catalog-v1.json": HERE / "agent-bridge/v1/reviewed-projection-catalog.json",
+            "agent-bridge-metric-registry-v1.json": ROOT / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        }
+        for filename, source in sources.items():
+            with self.subTest(mirror=filename):
+                self.assertEqual((mirrors / filename).read_bytes(), source.read_bytes())
+
     def test_every_fixed_operation_has_request_response_and_negative(self):
         operations = {"metric_catalog", "metric_series", "sleep_session_listing", "workout_listing", "coverage", "period_comparison", "workout_sleep_alignment", "source_record_listing", "derive_packet"}
         for operation in operations:

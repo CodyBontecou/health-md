@@ -691,7 +691,7 @@
       "id": "healthmd.agent_bridge",
       "version": 1,
       "status": "deferred",
-      "summary": "B01/B05 deferred foundation for complete intent, stored native/host delegation bootstrap, zero-health candidate-bound control plan/approval relay and immutable execution; no native implementation or availability promotion.",
+      "summary": "B01/B05 deferred foundation for complete intent, stored native/host delegation bootstrap, zero-health candidate-bound control plan/approval relay and immutable execution; partial pure native codecs do not establish native execution or availability.",
       "specification": "packages/contracts/agent-bridge/v1/contract.md",
       "authorities": ["packages/contracts/agent-bridge/v1/contract.md", "packages/contracts/agent-bridge/v1/agent.schema.json"],
       "implementations": ["packages/contracts/agent-bridge/v1/validation.py"],
@@ -714,8 +714,10 @@
         {
           "path": "packages/contracts/agent-bridge/v1/fixtures/conformance.json",
           "sha256": "a94e2bc8a7c9a3bcf40b149e857f8d514f7eee9b0fea53319a57fbe04189f076",
-          "provenance": "Python-generated synthetic B01/B05/v4 bootstrap/control approval, accepted projection selector/job/transfer journeys and native identity/metadata/precision candidates. Rust/Swift/Kotlin generation and independent conformance NOT RUN; no live identities, credentials or health data.",
-          "mirrors": []
+          "provenance": "Python-generated synthetic B01/B05/v4 bootstrap/control approval, accepted projection selector/job/transfer journeys and native identity/metadata/precision candidates. Partial native codec/constructor evidence is recorded in docs/qa/agent-bridge-implementation.md; full native/runtime conformance remains unproven. No live identities, credentials or health data.",
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/agent-bridge-v1-conformance.json"
+          ]
         }
       ]
     },
@@ -746,7 +748,9 @@
           "path": "packages/contracts/agent-bridge/v1/reviewed-projection-catalog.json",
           "sha256": "2e994368cceeedcea956dc7247e012e3eae49e990c06c0d1c69ea98626323150",
           "provenance": "Five bounded planned Health Connect SDK field/object mappings: daily aggregates, interval Steps counts, child BPM points and selected record evidence. No health values, runtime/provider availability or native conformance claim.",
-          "mirrors": []
+          "mirrors": [
+            "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/agent-bridge-projection-catalog-v1.json"
+          ]
         }
       ]
     },

@@ -4,10 +4,8 @@ use healthmd_protocol::v4::{canonical_json, parse_strict, sha256_hex};
 use serde_json::Value;
 
 fn fixture() -> Value {
-    serde_json::from_str(include_str!(
-        "../../../../contracts/agent-bridge/v1/fixtures/conformance.json"
-    ))
-    .expect("synthetic fixture must parse")
+    serde_json::from_str(include_str!("fixtures/agent-bridge-v1-conformance.json"))
+        .expect("synthetic fixture must parse")
 }
 
 #[test]
