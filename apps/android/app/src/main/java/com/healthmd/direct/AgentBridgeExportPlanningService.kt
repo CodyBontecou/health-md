@@ -65,7 +65,7 @@ internal class AgentBridgeExportPlanningService(
             is AgentBridgeApproval -> payload.binding.peer
             else -> null // Fixed rejection conveys no private authority/configuration.
         }
-        if (responsePeer != null) peer(authenticated, responsePeer)
+        if (responsePeer != null) recheckReturn(authenticated, responsePeer, response.payload)
         return encoded
     }
 
@@ -143,7 +143,7 @@ internal class AgentBridgeExportPlanningService(
             val record = tx.plan(peer, request.planId)
             AgentBridgeValidation.validateApprovalBinding(request, record.plan())
             val snapshot = configuration.readConfiguration()
-            validateCurrent(record, tx, snapshot, peer, now())
+            validateCurrent(record, tx, snapshot, peer, now(), AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
             requireReady(snapshot, record.plan())
             tx.decision(request.planId) ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
         }
@@ -163,15 +163,21 @@ internal class AgentBridgeExportPlanningService(
             require(frozenBinding == AgentBridgeValidation.bindingFor(record.plan()), AgentBridgeErrorCode.BINDING_CHANGED)
             val snapshot = configuration.readConfiguration()
             val approved = now()
-            validateCurrent(record, tx, snapshot, peer, approved)
+            validateCurrent(record, tx, snapshot, peer, approved, AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
             requireReady(snapshot, record.plan())
             val parent = tx.grant(peer, frozenBinding.authorityReferences.native.authorityId, frozenBinding.authorityReferences.native.grantRevision, approved)
             require(AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE in parent.rights, AgentBridgeErrorCode.APPROVAL_REQUIRED)
             tx.decision(planId)?.let { return@access it }
             peer(authenticated, peer) // A native session can revoke/change live trust during a decision.
             native.requireDecision(AgentBridgeExportNativeDecision.ExactApproval(planId, frozenBinding))
-            peer(authenticated, peer)
-            val approval = AgentBridgeApproval(UUID.randomUUID().toString(), approved.toString(), parent.authorityId, frozenBinding,
+            val current = configuration.readConfiguration()
+            peer(authenticated, peer) // This callback can delay: sample time only AFTER current trust.
+            val decided = now()
+            validateCurrent(record, tx, current, peer, decided, AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE)
+            requireReady(current, record.plan())
+            val currentParent = tx.grant(peer, parent.authorityId, parent.grantRevision, decided)
+            require(AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE in currentParent.rights, AgentBridgeErrorCode.APPROVAL_REQUIRED)
+            val approval = AgentBridgeApproval(UUID.randomUUID().toString(), decided.toString(), currentParent.authorityId, frozenBinding,
                 listOf(AgentBridgeApprovalRightsItem.EXPORT_EXECUTE), "healthmd.agent_approval", 1)
             tx.decide(planId, approval)
             approval
@@ -179,12 +185,13 @@ internal class AgentBridgeExportPlanningService(
     }
 
     private fun validateCurrent(record: AgentBridgeExportIssuedPlanRecord, tx: AgentBridgeExportAuthorityTransaction,
-        snapshot: AgentBridgeExportPlanningConfiguration, peer: AgentBridgePeer, instant: Instant) {
+        snapshot: AgentBridgeExportPlanningConfiguration, peer: AgentBridgePeer, instant: Instant,
+        right: AgentBridgeExportDelegationRightsItem = AgentBridgeExportDelegationRightsItem.PLAN) {
         val plan = record.plan()
         require(instant >= Instant.parse(plan.issuedAt) && instant < Instant.parse(plan.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
         val ref = plan.authorityReferences.native
         val parent = tx.grant(peer, ref.authorityId, ref.grantRevision, instant)
-        require(ref == AgentBridgeExportAuthorityStore.reference(parent), AgentBridgeErrorCode.APPROVAL_REQUIRED)
+        require(ref == AgentBridgeExportAuthorityStore.reference(parent) && right in parent.rights, AgentBridgeErrorCode.APPROVAL_REQUIRED)
         requirePresence(snapshot)
         require(configurationDigest(snapshot) == record.configurationSha256, AgentBridgeErrorCode.BINDING_CHANGED)
         require(discovery(record.request().requestId, peer, snapshot, tx, instant).capabilitySha256 == plan.capabilitySha256,
@@ -204,7 +211,7 @@ internal class AgentBridgeExportPlanningService(
             listOf(AgentBridgeOutputProfile.ANDROID_FROZEN_V4), AgentBridgeOutputSupport(listOf(AgentBridgeCompatibilityDetail.SUMMARY),
                 listOf(AgentBridgeFormat.JSON), MAX_ARTIFACTS, 4096, listOf(AgentBridgeOutputSupportNativeArchiveProductsItem.NONE),
                 listOf(AgentBridgeOutputSupportPathTokensItem.DATE, AgentBridgeOutputSupportPathTokensItem.DAY, AgentBridgeOutputSupportPathTokensItem.MONTH,
-                    AgentBridgeOutputSupportPathTokensItem.YEAR), listOf("/filename_template", "/folder_template", "/subfolder"), listOf(AgentBridgeWriteMode.OVERWRITE)),
+                    AgentBridgeOutputSupportPathTokensItem.YEAR), leaves(json.encodeToJsonElement(DEFAULT_OUTPUT), "").sorted(), listOf(AgentBridgeWriteMode.OVERWRITE)),
             peer, ZERO, emptyList(), queryCatalogSha256 = ZERO, queryOperations = emptyList(), requestId = requestId,
             requiredActions = actions(snapshot).map { token -> actionEnum(token) }, schema = "healthmd.agent_discovery", schemaVersion = 1,
             settingsPolicies = listOf(AgentBridgeDiscoverySettingsPoliciesItem.EXPLICIT, AgentBridgeDiscoverySettingsPoliciesItem.PROFILE,
@@ -212,9 +219,64 @@ internal class AgentBridgeExportPlanningService(
         val response = draft.copy(capabilitySha256 = AgentBridgeValidation.capabilityDigest(draft))
         return AgentBridgeCodec.decode(AgentBridgeCodec.encode(response)) as AgentBridgeDiscovery
     }
-    private fun <T> access(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
-        block: (AgentBridgeExportAuthorityTransaction?) -> T): T =
-        store.access(fence = { peer(authenticated, expected) }, block = block).also { peer(authenticated, expected) }
+    private fun <T : AgentBridgeDocument> access(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
+        block: (AgentBridgeExportAuthorityTransaction?) -> T): T {
+        var candidate: T? = null
+        val result = store.access(fence = { tx ->
+            candidate?.let { validateBoundary(authenticated, expected, tx, it) } ?: peer(authenticated, expected)
+        }) { tx -> block(tx).also { candidate = it } }
+        return recheckReturn(authenticated, expected, result)
+    }
+
+    private fun <T : AgentBridgeDocument> recheckReturn(authenticated: AgentBridgeExportAuthenticatedPeer,
+        expected: AgentBridgePeer, value: T): T {
+        // Trust may delay or revoke a parent AFTER the previous transaction released its lock.
+        // Reload issuer-owned state after that callback; cached transaction data is not permission.
+        peer(authenticated, expected)
+        return store.access(fence = { tx -> validateBoundary(authenticated, expected, tx, value) }) { value }
+    }
+
+    private fun validateBoundary(authenticated: AgentBridgeExportAuthenticatedPeer, expected: AgentBridgePeer,
+        tx: AgentBridgeExportAuthorityTransaction?, value: AgentBridgeDocument) {
+        peer(authenticated, expected)
+        val snapshot = configuration.readConfiguration() // Fresh configuration AFTER the publication/return trust callback.
+        peer(authenticated, expected) // Sample live expiry AFTER configuration and current-trust callbacks.
+        val instant = now()
+        when (value) {
+            is AgentBridgeDiscovery -> {
+                require(instant >= Instant.parse(value.issuedAt) && instant < Instant.parse(value.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+                for (ref in value.authorityReferences) {
+                    val parent = (tx ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED))
+                        .grant(expected, ref.authorityId, ref.grantRevision, instant)
+                    require(ref == AgentBridgeExportAuthorityStore.reference(parent) && AgentBridgeExportDelegationRightsItem.DISCOVER in parent.rights,
+                        AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                }
+                require(discovery(value.requestId, expected, snapshot, tx, instant).capabilitySha256 == value.capabilitySha256,
+                    AgentBridgeErrorCode.BINDING_CHANGED)
+                require(now() < Instant.parse(value.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+                value.authorityReferences.forEach { ref -> requireNotNull(tx).grant(expected, ref.authorityId, ref.grantRevision, now()) }
+            }
+            is AgentBridgeGeneratedPlan, is AgentBridgeApproval -> {
+                val current = tx ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                val record = if (value is AgentBridgeGeneratedPlan) current.plan(expected, value.planId)
+                    else current.planForApproval(expected, value as AgentBridgeApproval)
+                val plan = record.plan()
+                val right = if (value is AgentBridgeApproval) AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE else AgentBridgeExportDelegationRightsItem.PLAN
+                validateCurrent(record, current, snapshot, expected, instant, right)
+                if (value is AgentBridgeGeneratedPlan) require(value == plan, AgentBridgeErrorCode.BINDING_CHANGED)
+                if (value is AgentBridgeApproval) {
+                    requireReady(snapshot, plan)
+                    require(current.decision(plan.planId) == value && value.binding == AgentBridgeValidation.bindingFor(plan), AgentBridgeErrorCode.APPROVAL_REQUIRED)
+                    require(Instant.parse(value.approvedAt) <= instant, AgentBridgeErrorCode.PLAN_EXPIRED)
+                }
+                // Bounded parsing/derivation takes time too; it cannot renew or retarget the candidate.
+                val finalInstant = now()
+                require(finalInstant >= Instant.parse(plan.issuedAt) && finalInstant < Instant.parse(plan.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+                current.grant(expected, plan.authorityReferences.native.authorityId, plan.authorityReferences.native.grantRevision, finalInstant)
+            }
+            else -> throw AgentBridgeException(AgentBridgeErrorCode.UNSUPPORTED_CAPABILITY)
+        }
+    }
 
     private fun peer(authenticated: AgentBridgeExportAuthenticatedPeer, wire: AgentBridgePeer): AgentBridgePeer {
         val current = authenticated.requireCurrent()
@@ -274,5 +336,15 @@ internal class AgentBridgeExportPlanningService(
     companion object {
         const val MAX_ARTIFACTS = 128 // Smaller installed planning ledger limit, not a capture quota.
         private val ZERO = "0".repeat(64)
+        // Support names mean the DTO leaf is understood, including its fixed/disabled value; they
+        // do NOT promise arbitrary customization. The actual resolver still rejects nondefaults.
+        private val DEFAULT_OUTPUT = AgentBridgeOutputSettings(
+            AgentBridgeDailyNotes(false, false, "{date}", "", false, emptyList()), AgentBridgeDictionaryNone("none"),
+            "{date}", "{year}", listOf(AgentBridgeFormat.JSON),
+            AgentBridgeIndividualEntries(false, false, "{metric}-{date}", "", emptyList()),
+            AgentBridgeOutputProfile.ANDROID_FROZEN_V4, AgentBridgePackagingLooseFiles("loose_files"),
+            AgentBridgePresentation(AgentBridgePresentationDisplayUnits.METRIC,
+                AgentBridgeFrontmatter(emptyList(), emptyList(), false, true), true, true, "en-US", "canonical",
+                AgentBridgeMarkdown("", emptyList(), AgentBridgeMarkdownStyle.LISTS)), "", AgentBridgeWriteMode.OVERWRITE)
     }
 }

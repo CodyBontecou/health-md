@@ -101,7 +101,20 @@ internal class AgentBridgeExportTestNativeAuthorization : AgentBridgeExportNativ
 internal class AgentBridgeExportTestKeys : AgentBridgeExportProtectedKeyProvider {
     var calls = 0
     var key: SecretKey? = SecretKeySpec(ByteArray(32) { 0x37 }, "HmacSHA256")
-    override fun loadExisting(): SecretKey? { calls++; return key }
+    var onLoad: (() -> Unit)? = null
+    var onEncode: (() -> Unit)? = null
+    override fun loadExisting(): SecretKey? {
+        calls++
+        onLoad?.invoke()
+        val existing = key ?: return null
+        if (onEncode == null) return existing
+        // Actual JCE HMAC initialization/signing calls this injected synthetic key boundary.
+        return object : SecretKey {
+            override fun getAlgorithm() = existing.algorithm
+            override fun getFormat() = existing.format
+            override fun getEncoded(): ByteArray { onEncode?.invoke(); return existing.encoded }
+        }
+    }
 }
 internal class AgentBridgeExportTestClock(var now: Instant) : Clock() {
     override fun instant(): Instant = now
