@@ -9,6 +9,9 @@ use healthmd_protocol::wire::PeerPlatform;
 mod support;
 use support::*;
 
+#[path = "agent_bridge_send_boundary_tests.rs"]
+mod send_boundary_tests;
+
 async fn stored_pair(
     platform: PeerPlatform,
 ) -> (

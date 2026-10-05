@@ -44,6 +44,7 @@ pub struct BridgeSession<'a> {
     negotiation: Negotiation,
     timeout: Duration,
     cancellation: CancellationToken,
+    send_interrupted: bool,
 }
 
 /// Never forwards a credential mutation. The unchanged reconnect handshake's metadata-only
@@ -198,6 +199,7 @@ impl<'a> BridgeSession<'a> {
                 negotiation,
                 timeout,
                 cancellation: cancellation.clone(),
+                send_interrupted: false,
             })
         };
         tokio::select! {
@@ -217,12 +219,24 @@ impl<'a> BridgeSession<'a> {
         request_id: &ControlUuid,
     ) -> Result<Message, ClientError> {
         let operation = async {
+            if self.send_interrupted {
+                return Err(Error::BindingChanged.into());
+            }
             self.trust_fence
                 .require_current(self.requested_device, &self.expected_trust)
                 .await?;
+            // Armed before the send future can yield. Errors, timeouts and dropped futures
+            // leave this connection unusable: a partial frame/consumed sequence is not retried.
+            self.send_interrupted = true;
+            let trust = self.trust_fence;
+            let requested = self.requested_device;
+            let expected = &self.expected_trust;
             self.channel
-                .send_v4(&Envelope::new(request), self.negotiation)
+                .send_v4_guarded(&Envelope::new(request), self.negotiation, || {
+                    trust.require_current(requested, expected)
+                })
                 .await?;
+            self.send_interrupted = false;
             let message = self.channel.receive_v4(self.negotiation).await?.message;
             self.trust_fence
                 .require_current(self.requested_device, &self.expected_trust)
@@ -246,6 +260,9 @@ impl<'a> BridgeSession<'a> {
 #[async_trait]
 impl PlanningSource for BridgeSession<'_> {
     async fn require_current(&self) -> Result<(), ClientError> {
+        if self.send_interrupted {
+            return Err(Error::BindingChanged.into());
+        }
         self.trust_fence
             .require_current(self.requested_device, &self.expected_trust)
             .await
