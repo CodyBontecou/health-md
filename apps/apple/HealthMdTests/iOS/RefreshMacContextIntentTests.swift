@@ -33,6 +33,28 @@ final class RefreshMacContextIntentTests: XCTestCase {
         XCTAssertTrue(request.selection.fieldPointers.isEmpty)
     }
 
+    func testRequestBuilderUsesOnlySelectedMetricIDsWithoutChangingSettings() throws {
+        let suite = "RefreshMacContextIntentTests.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        settings.metricSelection.enabledMetrics = ["steps", "heart_rate"]
+        let before = defaults.persistentDomain(forName: suite) ?? [:]
+
+        let request = IPhoneMacContextRefreshCoordinator.makeRequest(
+            profile: nil,
+            settings: settings,
+            days: 1,
+            allAvailable: false,
+            now: Date(timeIntervalSince1970: 1_800_000_000)
+        )
+
+        XCTAssertEqual(request.selection.metricIDs, ["heart_rate", "steps"])
+        XCTAssertEqual(settings.metricSelection.enabledMetrics, ["heart_rate", "steps"])
+        XCTAssertEqual(before as NSDictionary, (defaults.persistentDomain(forName: suite) ?? [:]) as NSDictionary)
+    }
+
     func testDurableReceiptPersistsPendingAndTerminalStatus() throws {
         let suite = "RefreshMacContextIntentTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))

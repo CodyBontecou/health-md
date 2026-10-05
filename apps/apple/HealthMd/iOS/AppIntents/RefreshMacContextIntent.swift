@@ -1,3 +1,4 @@
+#if os(iOS)
 import AppIntents
 import Foundation
 
@@ -111,7 +112,7 @@ final class IPhoneMacContextRefreshCoordinator {
             dateRangeStart: allAvailable ? end : start,
             dateRangeEnd: end,
             selection: CanonicalHealthDataSelection(
-                metricIDs: Array(settings.metricSelection.enabledMetricIDs),
+                metricIDs: settings.metricSelection.enabledMetrics.sorted(),
                 sourceIDs: ["apple_health"],
                 detailLevel: detailLevel
             ),
@@ -200,3 +201,4 @@ struct GetMacContextRefreshStatusIntent: AppIntent {
         return .result(dialog: IntentDialog(stringLiteral: "\(status.state.rawValue): \(status.message) Job: \(status.jobID.uuidString.lowercased())."))
     }
 }
+#endif
