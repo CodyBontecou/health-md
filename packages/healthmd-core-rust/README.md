@@ -63,6 +63,12 @@ lifecycle, sockets, and health exporters remain untouched. Stateful secure-chann
 replay rejection, nonce/key lifecycle, seal/open, reconnect/trusted transcripts, and session
 persistence remain security-review gated and are not exported by UniFFI.
 
+## Deferred agent v4 foundation
+
+`healthmd-protocol::v4` adds independently negotiated, bounded pure generated-export/discovery DTOs, strict integer-only raw JSON and canonical UTF-8, exact source identity/time helpers, and supplied-context integrity comparisons. It does not change the legacy hello, dispatch, crypto, frame or transfer bytes, and does not advertise installed v4 support. Query/projection/control execution, private authority issuance/persistence, native consent, capture and filesystem transactions remain outside this foundation.
+
+The new protocol tests use byte-identical crate-local mirrors of the deferred contract candidates and frozen registry. Contract checks compare every mirror with its authority; native constructor evidence is distinct from decoding/re-encoding those candidates. Local `cargo package` archives can run all protocol tests without the monorepo. See [the implementation ledger](../../docs/qa/agent-bridge-implementation.md) for per-language coverage and unrun qualification.
+
 ## Binding generation
 
 The scripts build the host `cdylib` and generate deterministic source with the pinned UniFFI generator:

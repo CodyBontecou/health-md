@@ -24,7 +24,7 @@ Every row requires the linked todo's individual acceptance items, implementation
 
 | Requirement | Artifact/test surface to inspect | Integrated evidence / remaining work |
 |---|---|---|
-| B01 contracts: precedence, scope, output, plan, approvals, revisions, authority, versions | New bounded contract/schema/fixtures; source resolvers; cross-language conformance | `d0ffb6542` + `a2832dc02`, merged through `f55a71a08`: deferred foundation; native implementations/conformance remain missing |
+| B01 contracts: precedence, scope, output, plan, approvals, revisions, authority, versions | New bounded contract/schema/fixtures; source resolvers; cross-language conformance | Deferred specification plus pure Rust/Swift/Kotlin codecs, merged through `e61ef90ce`; one common independently constructed intent agrees byte-for-byte. Native execution/authority and complete conformance remain missing |
 | B02 source-aware generated MCP dispatch and durable receipts | CLI/client shared dispatcher; MCP adapter; both-source fake peers; filesystem/digest/cancel regressions | `14ac445a2`, merge `b9392ef74`: source-bound iOS-v1/Android-v2 dispatcher and validated host commit receipts; hermetic tests pass; four-way v4 journey remains pending |
 | B03 mobile MCP/host pairing, approval, single credential identity | Pairing coordinator/client, onboarding, image/App privacy tests, transcript preservation | `14ac445a2`, merge `b9392ef74`: first-mobile pairing/onboarding and both-source fake peers; no transcript rewrite or physical pairing performed |
 | B04 advertised profile grammar/policy matches parsing and negotiation | Operations registry/normalizer, CLI guidance, generated schemas, old-peer/profile conflict tests | `14ac445a2`: portable registry/parser/assets agree, Android policy gated; iOS remains fail-closed pending authoritative-ID resolution and explicit policy discovery; Apple MCP projection pending |
@@ -125,3 +125,56 @@ On base `31828abd172fc23b523ede4920272ee4d822a53a`, the iPhone-only refresh inte
 - From `apps/apple`, `xcodebuild build-for-testing -project HealthMd.xcodeproj -scheme HealthMd-Tests-iOS -configuration Debug-iOS -destination 'generic/platform=iOS Simulator' -derivedDataPath <isolated scratch>/build-apple-ios -jobs 2` with signing disabled: 65. Compilation fails at `SystemHealthStoreAdapter.swift:388` because the pinned SDK's `HKHealthStore` has no `earliestAuthorizedSampleDate` member. Log `apple-ios-intent-repair-build.log`, SHA-256 `c7dfe8fcc3a5ea9ed20cb8338e8604519459bb428539d8df71b2cb584f44a26c`. Build-only: no simulator launch, health read or device action occurred.
 
 These are repair-diff compiler observations, not passing application/accounting tests or installed-build qualification. Neither additional blocker is repaired here. Other agents' PR/Cloud/website work remains untouched. The next disjoint wave targets pure Rust/Swift/Kotlin v4 models and independent synthetic conformance; it must not advertise v4 or substitute DTO conformance for native execution/authority acceptance.
+
+### Second serial integration: bounded native v4 foundations
+
+All three workers were confirmed **done**, with committed clean worktrees and complete handoffs, before coordinator repository edits resumed. Their base was `fb7b9815c9a2c585874d4e16d7ea1a24a6704e0a`. The scope audit records 13 Rust paths (only existing `src/lib.rs` gains a module), 12 new Swift files, and seven Kotlin paths (only the existing module build file registers read-only fixture resources). No dependencies, lockfiles, installed hello lists, legacy dispatch, crypto, frames, public export schemas, credentials, native settings or capability availability changed.
+
+| Lane source commits | Integration merge | Implemented boundary / deliberate limits |
+|---|---|---|
+| Rust `1c9d5382696d2b97a3d58786d013c202cd8e0500`, `5dbcf31b159f56acea436be86283f6171bf436ef` | `82a91d78c19b6c23e5d259ff2bc35d2bee3a3528` | Closed generated-export/discovery DTOs, strict canonical codec, pure integrity/context comparisons and exact source identity/time. No query/projection/control execution, native persistence, journal transaction or filesystem authority. Non-ASCII path collision scope fails closed. |
+| Swift `697b0f89a796215b27c7a90e76a3daee3159e0d3`, `f6b7f3de74f9f5e437f0c079225761bfcbcf3d4b` | `4503f84015673b9d62090b7b00e47ccdc16c148e` | Closed generated-export/discovery documents, strict raw boundary, pure binding/path/source checks. Categories/all-metric expansion and query/projection/control branches remain unsupported; no stored native authorization. Foundation Codable alone is not the raw boundary. |
+| Kotlin `d9473da42114820f6406bddbdfb08be7f241d414` | `e61ef90ce078e5f8ce9fc53858462f88aee7ea23` | Closed export and source-query/projection DTOs plus pure supplied-catalog/binding checks. Controls, projection jobs, dictionaries and runtime capture/authorization/cursors remain unsupported. Successful Unicode filesystem collision validation is restricted to ASCII NFC spellings. |
+
+All strict raw boundaries reject duplicate decoded keys, unknown domain members/enums, forbidden nulls, malformed UTF-8/scalars and noninteger lexical JSON. Shared default bounds are 2 MiB, depth 24, 262144 nodes, 512 object members, 4096 array entries and 65536 string scalars. Compact canonical UTF-8 recursively sorts Unicode codepoints, without normalization, slash/Unicode escaping or trailing LF. Domain integers retain their declared widths; Swift's generic tree additionally retains arbitrary bounded integer text, which is **not** an expanded common domain guarantee. Source binary64 time is checked with exact rational rounding rather than floating multiplication. Correct bytes, hashes or DTOs do not issue permissions.
+
+#### Independent candidates and unequal coverage
+
+The native constructor source was inspected: the shared standalone `intent-request-owned-summary` is assembled from literal primitives and closed DTO constructors before expected-fixture comparison, never constructed by decoding that fixture. All three emit the same 1782 bytes, SHA-256 **`b9bf00875dbc4178491f5b3f8debd412e31c24d02e837e6bd4ada3d84a2e5217`**. This is one constructor-agreement result, not stored approval, native capture, or a full v4 conformance verdict.
+
+| Evidence level | Rust | Swift | Kotlin |
+|---|---:|---:|---:|
+| Generic codec specification vectors exercised | 58 | 58 (not exported as candidates) | 58 |
+| Exported independent constructor rows | 6 | 8 | 15 (14 unique values) |
+| Typed round-trip evidence | 25 vector indices | 13 envelope vectors | 90 positive case IDs |
+| Fixture-specific evidence | 96/481 intrinsic/lexical/synthetic context cases | 65/481 IDs at expressly narrower pure/round-trip levels | Overlapping lists: 58 standalone-document cases, 92 supplied query binding cases, 18 lexical path cases |
+| Explicit remaining limits | 346 unsupported targets, 39 pending assertions | 416 IDs unexercised; no query/control/cursor/projection-transfer fixture verdicts | 93 unexercised IDs; conservative 388 runtime-context-not-proven IDs; unsupported rejection is not a normative authority outcome |
+
+Counts across rows/languages are not additive. Complete IDs and qualifications remain in the handoffs and candidate/coverage artifacts under `evidence/{rust-v4,swift-v4,kotlin-v4}/`. The coordinator's independent comparator checks canonical bytes/base64/digests and identifies the one common constructor; it does not manufacture native semantic or authorization verdicts. Initial comparison had **zero** common constructor values, so all lanes added the common-input assertion without deleting their original candidates.
+
+Candidate file SHA-256 values: Rust `949edf6998c55a8aa83bc8b719517c484f4d320ab9515052d5a82753b3804a87`; Swift `18540568bec20b46c6fa171dd486d6a12951d9cce3e95a34042f501540d1de06`; Kotlin `fb34bcf02d8e655eb4f0d241814569f979be4e431382f82d1902a52413043f5f`. Native generation requires both `HEALTHMD_GENERATE_AGENT_BRIDGE_V4=1` and explicit scratch `HEALTHMD_AGENT_BRIDGE_CANDIDATES`; missing-output probes fail as intended and remain recorded. No native test invokes Python to obtain its verdict.
+
+#### Post-merge gates and published-crate repair
+
+The main consumer gates below tested committed source through `e61ef90ce078e5f8ce9fc53858462f88aee7ea23`. Additional registry/binding and packaging checks include the subsequent test-only repair `4a987f11feec6c7ca3edb8b5d345dbec1b946954`. Scratch logs retain command output and failures; no mobile build was installed or launched.
+
+| Command / directory | Exit / result / retained log prefix |
+|---|---|
+| `cargo test -p healthmd-protocol --all-features --locked`, core | 0; 70 passed. `integrated-v4-rust-protocol-tests.log`; old v1/v2/v3/pairing/frame vectors included |
+| `cargo test --workspace --all-features --locked`; workspace fmt/clippy `-D warnings`, core | All 0; 169 passed. `integrated-v4-core-workspace-*` |
+| Runtime-only `rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked`, core | 0; `integrated-v4-core-runtime-msrv.log`; tooling still independently pinned to Rust 1.88 |
+| CLI locked workspace tests/fmt/clippy/MSRV; generated MCP asset check | All 0; 227 passed, 2 ignored. `integrated-v4-cli-*`; no CLI v4 dispatch was added |
+| `swift test --package-path apps/apple/Packages/HealthMdConnectivity --scratch-path <scratch>/build-swift-connectivity --jobs 2` | 0; 73 passed. `integrated-v4-swift-package-tests.log`; application/XCFramework qualification is separate |
+| `:direct-protocol:test --rerun-tasks --max-workers=2` with isolated JVM flags, Android | 0; 31 passed, one live-listener gate skipped. `integrated-v4-kotlin-protocol-tests.log` |
+| Full Play/F-Droid unit tests, both lints/assembles and Kotlin binding check, Android | 0; Play 1362 tests / 0 failures / 1 skipped; F-Droid 1201 / 0 / 1. `integrated-v4-android-full-gates.log`; max workers 2; Java 21.0.12 explicitly selected |
+| Contract validator and `test_validate*.py` discovery | 0; initially 59 tests, then 60 after packaging mirror regression; 15 registered mirrors. `integrated-v4-{contracts,mirrors-contracts}-*` |
+| Native importer and registry adapter checks; two independently generated Swift/Kotlin binding sets and byte diff | All 0. `integrated-v4-core-{import,adapters}.log`, `integrated-v4-bindings-*`; existing check artifacts were preserved |
+| `cargo package -p healthmd-protocol --no-verify --offline --locked`, then standalone `cargo test --manifest-path <extracted crate>/Cargo.toml --offline --locked` | Archive build 0; initial standalone test **101** because external monorepo includes were absent. After repair, standalone tests **0 / 70 passed**. `integrated-v4-protocol-package-*` |
+
+The packaging repair adds byte-identical test mirrors of the unchanged conformance fixture, reviewed projection catalog and entire frozen registry; it does not regenerate or promote their provenance. Two contract mirrors are registered in the manifest, and an independent Python regression checks all three source/mirror byte identities. The generator now locates the actual enclosing Git root (or the standalone crate root) instead of assuming monorepo depth. The first missing-mirror regression exited 1; corrected source tests/fmt/clippy and all 60 contract tests exited 0. The retained fixed `.crate` has SHA-256 **`0128d516088db9cecd58420a23fde342c07c701bb7a741cc3f264b9350af51b0`**. Subsequent default `cargo package -p healthmd-protocol --offline --locked` verification also exited 0 (`integrated-v4-protocol-package-default-verify.log`). This is local packaging/test evidence, not publishing or release qualification.
+
+The frozen fixture digest remains `a94e2bc8a7c9a3bcf40b149e857f8d514f7eee9b0fea53319a57fbe04189f076`; registry remains `56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99`. Preservation audit `integrated-v4-frozen-preservation.json` records no second-wave changes to frozen source paths. Packaging subsequently changes only new test assets, their include paths, manifest packaging metadata and a regression; historical fixture/inventory/public bytes stay unchanged.
+
+The sanitized log/digest index `integrated-v4-evidence-index.json` has SHA-256 `386d17e97ec36789d18bba54ee981487cc3c84992f543129d60805a89d3387b3` and binds these retained source/codec/packaging observations, not runtime qualification.
+
+No v4 runtime is advertised. B01/B05/B08 remain incomplete; native consent/authority persistence, zero-read planning/execution, request-local captures, artifact transfer and immutable journal recovery still require implementation. Apple application compilation blockers, the pinned external consumer failure, live/physical qualification and B19/B20 approvals remain open. No todo closes and no capability is promoted from this wave.
