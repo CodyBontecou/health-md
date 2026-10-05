@@ -66,10 +66,23 @@ export async function handleV2Request(request: Request, env: WakeEnv, fcmConfig:
     return jsonResponse({ error: "wake_in_flight", retryAfterSeconds: Math.max(1, (counter?.in_flight_until ?? now + DELIVERY_LEASE_SEC) - now) }, 429);
   }
 
-  const result = await sendFcmWake(fcmConfig, registration.device_token, now);
+  const result = await sendFcmWake(fcmConfig, registration.device_token, now, async () => {
+    // Default D1 queries use the primary, not a stale read replica. One query
+    // binds the original registration and exact lease owner; no lease renewal.
+    const current = await env.DB.prepare(`SELECT c.in_flight_until FROM wake_registrations r
+      JOIN wake_counters c ON c.wake_id = r.wake_id
+      WHERE r.wake_id = ? AND r.verification_hash = ? AND r.device_token = ?
+        AND r.transport = 'fcm' AND r.registration_version = 2 AND c.in_flight_nonce = ?`)
+      .bind(wakeId, registration.verification_hash, registration.device_token, nonce)
+      .first<{ in_flight_until: number }>();
+    const liveNow = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
+    return current !== null && Number.isSafeInteger(current.in_flight_until) && Number.isSafeInteger(liveNow)
+      && current.in_flight_until > liveNow && timestampWithinWindow(v2Timestamp(timestamp)!, liveNow);
+  });
   if (result.kind !== "delivered") {
     await env.DB.prepare("UPDATE wake_counters SET in_flight_nonce = NULL, in_flight_until = 0 WHERE wake_id = ? AND in_flight_nonce = ?")
       .bind(wakeId, nonce).run();
+    if (result.kind === "authorization_changed") return jsonResponse({ error: "wake_auth_changed" }, 409);
     return result.kind === "unavailable" ? jsonResponse({ error: result.code }, 503) : jsonResponse({ status: "undeliverable" });
   }
   const acceptedAt = env.nowSec?.() ?? Math.floor(Date.now() / 1000);

@@ -147,8 +147,20 @@ fallback log is emitted.
 - Success: `200 {"status":"delivered"}` means **provider acceptance only**,
   not display, tap, unlock, execution, or data authorization. Timeouts can have
   uncertain provider outcomes; this is not an exactly-once delivery guarantee.
-- A concurrent credential change can return `409 wake_auth_changed`. Storage
-  failures return fixed `503 wake_storage_unavailable`, without bound values.
+- A concurrent credential change can return `409 wake_auth_changed`. After
+  signing, OAuth and notification-body preparation, a required non-wire callback
+  re-reads the original wake key/token/version and exact lease owner, then checks
+  trusted live time and the original timestamp window immediately before starting
+  the FCM request. Revocation, wake-key/token replacement, lost/expired lease or a
+  now-invalid timestamp reject with that same code without newly dispatching the
+  notification. They do not renew/replan the consumed nonce or lease. Cleanup is
+  conditional on this invocation's nonce and cannot clear another active lease.
+  Storage failures return fixed `503 wake_storage_unavailable`, without bound values.
+  OAuth contact may already have happened; this is not a zero-provider-I/O claim.
+- The check is not a global transaction across D1, wall time and HTTP dispatch.
+  A mutation after the observed read or a provider push already started/accepted
+  may race and cannot be recalled. Provider acceptance remains the only meaning
+  of `delivered`; no exactly-once, display, lifecycle or permission claim is added.
 
 Independent synthetic vectors are pinned in tests. For raw wake secret `[7;32]`,
 management secret `[9;32]`, ID `12` repeated 16 times, install
@@ -266,6 +278,19 @@ additional scratch-only `5.20261005.1` type check. Synthetic HTTP and the existi
 ephemeral local workerd/D1 test cover duplicate enrollment/ring/provider rejection
 and valid legacy/v2 behavior. This is Worker-source qualification only, not native
 FCM enrollment, device notification, deployment or complete B15 qualification.
+
+2026-10-05 bounded send-admission follow-up: synthetic public HTTP requests cover
+successful revocation/rotation during OAuth, exact lease expiry and competing
+lease ownership, live timestamp failure, contained admission-read failure,
+separate management-key rotation and already-started provider acceptance. The
+existing ephemeral local workerd/D1 test also exercises actual Worker revocation
+and token rotation while awaiting mocked OAuth. These are exercised local source
+boundaries, not native FCM delivery or atomic send qualification. The unchanged
+D1 access uses no Sessions API; [D1 read-replication documentation](https://developers.cloudflare.com/d1/best-practices/read-replication/)
+states that queries without it go to the primary database. New replica/session
+adoption must separately preserve current-authority reads. Current best-practices
+and D1 references were retrieved; `5.20261005.1` remains a scratch-only type check,
+not a lockfile/configuration/compatibility-profile change.
 
 ## Later gates (not performed here)
 

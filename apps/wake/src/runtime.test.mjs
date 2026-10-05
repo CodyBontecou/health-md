@@ -12,11 +12,14 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
   let oauthCalls = 0;
   let deliveryCalls = 0;
   let ambiguousOAuth = false;
+  let duringOAuth;
+  const deliveredTokens = [];
   const localJson = (body) => new LocalResponse(JSON.stringify(body), { headers: { "content-type": "application/json" } });
   // The locked Miniflare 5 alpha exposes a v4 options adapter and outbound service.
   const outboundService = async (request) => {
     if (request.url === "https://oauth2.googleapis.com/token") {
       oauthCalls++;
+      if (duringOAuth) { const action = duringOAuth; duringOAuth = undefined; await action(); }
       if (ambiguousOAuth) return new LocalResponse(
         '{"access_token":"synthetic-first","access\\u005ftoken":"synthetic-runtime-access","token_type":"Bearer","expires_in":3600}',
         { headers: { "content-type": "application/json" } },
@@ -26,6 +29,7 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
     if (request.url === "https://fcm.googleapis.com/v1/projects/synthetic-project/messages:send") {
       deliveryCalls++;
       const body = await request.json();
+      deliveredTokens.push(body.message.token);
       expect(body.message.notification.body).toBe("A paired computer is requesting data. Tap to continue.");
       expect(body.message.data).toBeUndefined();
       return localJson({ name: "projects/synthetic-project/messages/synthetic-message" });
@@ -97,5 +101,38 @@ it("executes v2 enrollment, OAuth/FCM, replay, rotation and revoke on local work
     expect(await (await request("/wake/v2/request", secondRing)).json()).toEqual({ error: "wake_nonce_replayed" });
     expect(oauthCalls).toBe(2);
     expect(deliveryCalls).toBe(1);
+    ambiguousOAuth = false;
+    // These management operations execute through the actual bundled Worker
+    // while it awaits OAuth, before it may start the separate FCM request.
+    const revokedDuringOAuth = await enrollment({ timestamp, wakeId: "16".repeat(16) });
+    expect((await request("/wake/v2/register", revokedDuringOAuth)).status).toBe(200);
+    duringOAuth = async () => {
+      expect(await (await request("/wake/v2/register", await revokeBody(revokedDuringOAuth.wakeId, "ce".repeat(16), undefined, USER_ID, timestamp), "DELETE")).json())
+        .toEqual({ ok: true });
+    };
+    const revokedRing = await request("/wake/v2/request", await ringBody(revokedDuringOAuth.wakeId, "cd".repeat(16), WAKE_HASH, timestamp));
+    expect(revokedRing.status).toBe(409);
+    expect(await revokedRing.json()).toEqual({ error: "wake_auth_changed" });
+    expect((await request("/wake/v2/request", await ringBody(revokedDuringOAuth.wakeId, "cf".repeat(16), WAKE_HASH, timestamp))).status).toBe(404);
+    expect(oauthCalls).toBe(3);
+    expect(deliveryCalls).toBe(1);
+    const rotatedDuringOAuth = await enrollment({ timestamp, wakeId: "18".repeat(16) });
+    expect((await request("/wake/v2/register", rotatedDuringOAuth)).status).toBe(200);
+    duringOAuth = async () => {
+      expect((await request("/wake/v2/register", await enrollment({ operation: "rotate", wakeId: rotatedDuringOAuth.wakeId,
+        timestamp, nonce: "ce".repeat(16), deliveryToken: "synthetic-current-runtime-token" }))).status).toBe(200);
+    };
+    const rotatedRequest = await ringBody(rotatedDuringOAuth.wakeId, "cd".repeat(16), WAKE_HASH, timestamp);
+    const rotatedRing = await request("/wake/v2/request", rotatedRequest);
+    expect(rotatedRing.status).toBe(409);
+    expect(await rotatedRing.json()).toEqual({ error: "wake_auth_changed" });
+    expect(await (await request("/wake/v2/request", rotatedRequest)).json()).toEqual({ error: "wake_nonce_replayed" });
+    expect(oauthCalls).toBe(4);
+    expect(deliveryCalls).toBe(1);
+    expect(await (await request("/wake/v2/request", await ringBody(rotatedDuringOAuth.wakeId, "cf".repeat(16), WAKE_HASH, timestamp))).json())
+      .toEqual({ status: "delivered" });
+    expect(deliveredTokens).toEqual([body.deliveryToken, "synthetic-current-runtime-token"]);
+    expect(oauthCalls).toBe(5);
+    expect(deliveryCalls).toBe(2);
   } finally { await mf.dispose(); }
 }, 20_000);

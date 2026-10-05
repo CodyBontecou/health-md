@@ -9,6 +9,7 @@ const MAX_CONFIG_BYTES = 16 * 1024;
 
 export type FcmResult =
   | { kind: "delivered" }
+  | { kind: "authorization_changed" }
   | { kind: "unavailable"; code: "fcm_not_configured" | "fcm_config_invalid" }
   | { kind: "undeliverable"; code: "fcm_oauth_failed" | "fcm_provider_failed" | "fcm_response_invalid" | "fcm_transport_failed" };
 
@@ -76,10 +77,18 @@ export function fcmNotificationPayload(deliveryToken: string): Record<string, un
   } };
 }
 
-export async function sendFcmWake(config: string | undefined, deliveryToken: string, now: number): Promise<FcmResult> {
+/** Admission is non-wire and mandatory: OAuth/key work is not notification
+ * authority. The caller must inspect its existing current private records.
+ */
+export async function sendFcmWake(
+  config: string | undefined, deliveryToken: string, now: number,
+  authorizeSend: () => Promise<boolean>,
+): Promise<FcmResult> {
   if (!config) return { kind: "unavailable", code: "fcm_not_configured" };
   const credentials = await credentialsFromJson(config);
   if (!credentials) return { kind: "unavailable", code: "fcm_config_invalid" };
+  let sendUrl: string;
+  let sendOptions: RequestInit;
   try {
     const form = new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: await assertion(credentials, now) });
     const oauth = await providerJson(OAUTH_TOKEN_URL, {
@@ -93,10 +102,19 @@ export async function sendFcmWake(config: string | undefined, deliveryToken: str
       || typeof oauth.body.access_token !== "string" || oauth.body.access_token.length > 4096
       || !/^[A-Za-z0-9._~+/-]+=*$/.test(oauth.body.access_token)
     ) return { kind: "undeliverable", code: "fcm_response_invalid" };
-    const delivery = await providerJson(`https://fcm.googleapis.com/v1/projects/${credentials.projectId}/messages:send`, {
+    sendUrl = `https://fcm.googleapis.com/v1/projects/${credentials.projectId}/messages:send`;
+    sendOptions = {
       method: "POST", headers: { authorization: `Bearer ${oauth.body.access_token}`, "content-type": "application/json" },
       body: JSON.stringify(fcmNotificationPayload(deliveryToken)),
-    });
+    };
+  } catch {
+    return { kind: "undeliverable", code: "fcm_transport_failed" };
+  }
+  // After signing/OAuth/serialization, before starting the FCM request. Storage
+  // failures propagate to the router's fixed storage error, not provider errors.
+  if (!await authorizeSend()) return { kind: "authorization_changed" };
+  try {
+    const delivery = await providerJson(sendUrl, sendOptions);
     if (delivery.status !== 200) return { kind: "undeliverable", code: "fcm_provider_failed" };
     if (!isObject(delivery.body) || typeof delivery.body.name !== "string"
       || !new RegExp(`^projects/${credentials.projectId}/messages/[A-Za-z0-9%:_-]{1,512}$`).test(delivery.body.name)) {
