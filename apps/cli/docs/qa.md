@@ -5,6 +5,9 @@ exact Health.md builds advertised by a release.
 
 ## Automated gate
 
+Use Python 3.11+ for the release-policy scripts (`tomllib` is required). Static documentation checks
+are not native history-authorization or physical qualification.
+
 Run the independently locked shared-core workspace first:
 
 ```bash
@@ -127,6 +130,11 @@ Never attach raw output to an issue or CI log.
    redial on its own within roughly 20 seconds of its heartbeat/reconnect window (no toggle of
    Direct CLI Access, no QR re-scan), and the command must succeed. Repeat once over Tailscale.
 6. Export one day, seven days, complete-empty data, warning-only data, and an honest partial result.
+   Check the peer's history assessment separately: the current pinned Apple SDK reports `api_unavailable`,
+   and missing/`unknown` assessment cannot prove full access. Use explicit ranges with completeness
+   unverified; an empty result does not prove permission or absence. Exercise verified limited/full
+   boundaries only with an exact native build that actually supports the assessment, not from its OS
+   number. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations).
 7. Run summary and lossless extraction with category, metric, object, and JSON Pointer selectors;
    confirm partial extraction emits no retained values without `--allow-partial`.
 8. Interrupt during a multi-partition raw job, inspect `status --job`, resume, compare the final
@@ -156,9 +164,10 @@ wake plus the operation bound. Expect the identical in-flight command to complet
 opened — never accept a re-run as success.
 
 ```bash
-# unreachable/locked phone, default window: command holds, then completes when Health.md opens
+# Dates are illustrative: replace this bounded week with the authorized test range before running.
+# Unreachable/locked phone: the same command waits, then proceeds when Health.md opens.
 NO_COLOR=1 TERM=dumb timeout 300 healthmd query healthmd_sleep_sessions \
-  --arguments '{"dates":{"type":"all_available"}}' </dev/null
+  --arguments '{"dates":{"type":"exact","range":{"start_date":"2026-01-01","end_date":"2026-01-07"}}}' </dev/null
 
 # fail-fast and custom window
 NO_COLOR=1 TERM=dumb timeout 60 healthmd export --yesterday --raw --wake-timeout 0 \

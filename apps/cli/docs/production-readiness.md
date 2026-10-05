@@ -6,7 +6,7 @@ The latest public standalone release, `healthmd-cli/v0.1.0-alpha.7`, is an expli
 
 Published alpha.7 exposes 19 MCP tools. Current development source exposes 23: the 21-tool export/query set plus agent-bridge `healthmd_export_plan` and `healthmd_export_approval`. These two planning/approval-relay tools are not additions to the frozen 1.0 scope below; native bridge setup/routes and bound execution remain incomplete. Documentation, support, and release evidence must name the exact version rather than assigning development tools to alpha.7.
 
-`healthmd_capabilities` reports `support_status: preview_unqualified` and `cli_1_0_qualified: false`. `healthmd_doctor` adds the exact CLI version, negotiated application protocol, source app/build/OS when the mobile peer supplies them, and history-authorization evidence on OS 27+. These fields are evidence, not a self-certification switch.
+`healthmd_capabilities` reports `support_status: preview_unqualified` and `cli_1_0_qualified: false`. `healthmd_doctor` adds the exact CLI version, negotiated application protocol, source app/build/OS and peer-supplied history-authorization metadata when available. An OS version does not establish boundary-API support or full-history access. See [current source history limitations](mobile-compatibility.md#current-source-history-limitations); these fields are evidence, not a self-certification switch.
 
 ## Frozen 1.0 scope
 
@@ -35,7 +35,7 @@ A candidate is stable only when one immutable tag SHA has retained health-free e
 | Linux ARM64 | Archive/install; Secret Service locked/unlocked/failure behavior; LAN and Tailscale; iPhone and Android retained paths |
 | Linux x86-64 | Same Linux checks and systemd/session-environment edge cases |
 | Windows x86-64 | Archive/PowerShell install; checksum/signing-ledger posture; Credential Manager continuity; LAN and Tailscale; iPhone and Android retained paths |
-| iPhone | Exact app version/build/OS; foreground start; protected-data denial; permission denial/empty ambiguity; OS 27 limited history; partition interruption/resume; cancellation acknowledgement; seven-day expiry |
+| iPhone | Exact app version/build/SDK/OS; foreground start; protected-data denial; permission denial/empty ambiguity; unavailable/unknown history assessment and explicit-range behavior; verified limited/full-history assessments only when that exact native build supports them; partition interruption/resume; cancellation acknowledgement; seven-day expiry |
 | Android | Exact app version/versionCode/OS/Health Connect; provider permission/history boundary; native snapshot/file limits; interruption/resume/cancel; unsupported typed-query behavior |
 | Security/integrity | Swift↔Rust and Kotlin↔Rust fixtures; peer/install binding; replay rejection; immutable request/destination; digest/partition validation; no health payloads in diagnostics/evidence |
 | Distribution | Exact-SHA CI, MSRV, all features, crate packages, SBOMs, signed checksum closure, native archive execution, Homebrew install/upgrade, repository latest-release pointer preserved for Apple |

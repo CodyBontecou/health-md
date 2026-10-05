@@ -41,6 +41,33 @@ Before approving the protected `cli-release` environment, the reviewer must comp
 `evidence_sha256` with its separately retained health-free physical record. If the first qualified
 store build has a later version/build, update this ledger and release notes before tagging.
 
+## Current source history limitations
+
+The current Apple native adapter cannot assess per-type history-authorization boundaries with the
+pinned SDK (Xcode 26.6 / SDK 26.5). It reports `api_unavailable`; this is not proof of denial or no data.
+An absent assessment or `unknown` likewise cannot establish full-history access. Use explicit date ranges
+with completeness unverified, and preserve HealthKit's denied-versus-empty ambiguity. See
+[HealthKit permission and history semantics](../../apple/docs/features/healthkit-permissions.md).
+
+An OS upgrade alone cannot enable an API missing from this build. Related legacy API hints such as
+`minimum_source_os: 27` and `full_history_claim_requires_os_27_boundary_check` remain compatibility
+fields, not upgrade instructions or support claims. The contract can represent `limited_history` and
+`full_history` from a capable source or synthetic tests; that grammar does not make the current native
+adapter capable. Qualification must name the exact app/build/SDK and the assessment it actually produced.
+
+`healthmd_doctor` forwards peer-supplied history metadata when available; a ready transport or an OS
+version is not a verified history grant. Unqualified `all_available` completeness requests are rejected
+by the current Apple capture paths. Configuration-only bridge planning may retain logical
+`all_available` without resolving history bounds or reading data; its callable source services are not
+yet advertised native routes or approved execution.
+
+Android Health Connect uses its own historical-read permission and first-grant-date window. That grant
+is not an Apple per-type boundary assessment, and provider-specific limits remain independent. Do not
+replace unavailable history or privacy-hidden records with empty/zero values to claim parity.
+
+These are current development-source limits, not new claims about alpha.7's immutable binaries.
+Physical release qualification remains pending; source tests do not qualify an installed counterpart.
+
 ## Compatibility rules
 
 - RFC-0005 P1 is a host-side wait-only wake window shared by iOS and Android. It changes no pairing,

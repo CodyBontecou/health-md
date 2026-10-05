@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import re
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 MODULE_PATH = Path(__file__).with_name("verify-release.py")
@@ -122,6 +125,51 @@ class MobileQualificationTests(unittest.TestCase):
             )
         with self.assertRaisesRegex(SystemExit, "malformed mobile compatibility row"):
             verify_release.validate_mobile_qualification(path, require_qualified=False)
+
+
+class HistoryReadinessDocumentationTests(unittest.TestCase):
+    """Static consumer-copy checks, not native permission or runtime qualification."""
+
+    DOCS = MODULE_PATH.parents[1] / "docs"
+
+    def test_readiness_does_not_promote_os_hint_to_history_support(self) -> None:
+        text = (self.DOCS / "production-readiness.md").read_text(encoding="utf-8")
+        self.assertNotIn("history-authorization evidence on OS 27+", text)
+        self.assertNotIn("OS 27 limited history", text)
+        self.assertIn("peer-supplied history-authorization metadata", text)
+        self.assertIn("current-source-history-limitations", text)
+
+    def test_history_guidance_distinguishes_build_support_and_android(self) -> None:
+        text = (self.DOCS / "mobile-compatibility.md").read_text(encoding="utf-8")
+        self.assertIn("## Current source history limitations", text)
+        for term in (
+            "pinned SDK", "api_unavailable", "unknown", "explicit date ranges",
+            "Health Connect", "historical-read", "An OS upgrade alone",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, text)
+        self.assertIn("not proof of denial or no data", text)
+        native_link = "../../apple/docs/features/healthkit-permissions.md"
+        self.assertIn(native_link, text)
+        self.assertTrue((self.DOCS / native_link).is_file())
+
+    def test_execution_examples_use_bounded_exact_dates_not_full_history(self) -> None:
+        for filename in ("qa.md", "command-guidance.md"):
+            with self.subTest(document=filename):
+                text = (self.DOCS / filename).read_text(encoding="utf-8")
+                examples = re.findall(r"--arguments '([^'\n]+)'", text)
+                self.assertTrue(examples, "retain a typed execution example")
+                for raw in examples:
+                    arguments = json.loads(raw)
+                    dates = arguments["dates"]
+                    self.assertEqual(set(dates), {"type", "range"})
+                    self.assertEqual(dates["type"], "exact")
+                    self.assertEqual(set(dates["range"]), {"start_date", "end_date"})
+                    start = date.fromisoformat(dates["range"]["start_date"])
+                    end = date.fromisoformat(dates["range"]["end_date"])
+                    self.assertGreaterEqual(end, start)
+                    self.assertLessEqual((end - start).days + 1, 7)
+                self.assertIn("illustrative", text)
 
 
 if __name__ == "__main__":
