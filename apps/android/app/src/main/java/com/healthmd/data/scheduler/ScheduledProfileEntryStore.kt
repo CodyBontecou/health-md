@@ -5,12 +5,15 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.healthmd.domain.model.ExportProfile
+import com.healthmd.data.export.RecoveryDiscardFence
 import com.healthmd.domain.model.ExportProfileRules
 import com.healthmd.sharedsetup.SharedSetupV2ProfilePersistence
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -32,6 +35,7 @@ class ScheduledProfileEntryStore @Inject constructor(
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val listSerializer = ListSerializer(ScheduledProfileEntry.serializer())
+    private val discardFence by lazy { RecoveryDiscardFence(context.noBackupFilesDir) }
 
     private object Keys {
         val ENTRIES = stringPreferencesKey("scheduled_profile_entries")
@@ -43,7 +47,24 @@ class ScheduledProfileEntryStore @Inject constructor(
         decode(prefs[Keys.ENTRIES]).orEmpty()
     }
 
-    suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
+    suspend fun getEntries(): List<ScheduledProfileEntry> {
+        reconcilePendingDiscards()
+        return entries.first()
+    }
+
+    /** Finishes a crash after revocation/unlink but before the pending-state/generation commit. */
+    private suspend fun reconcilePendingDiscards() = withContext(Dispatchers.IO) {
+        discardFence.reconcile()
+        dataStore.edit { prefs ->
+            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            val updated = existing.map { entry ->
+                if (discardFence.isProfileGenerationDiscarded(entry.profileId, entry.recoveryGeneration)) {
+                    entry.copy(pendingExports = emptyList(), recoveryGeneration = Math.addExact(entry.recoveryGeneration, 1L))
+                } else entry
+            }
+            if (updated != existing) prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated)
+        }
+    }
 
     suspend fun entry(profileId: String): ScheduledProfileEntry? =
         getEntries().firstOrNull { it.profileId == profileId }
@@ -114,7 +135,8 @@ class ScheduledProfileEntryStore @Inject constructor(
             val index = existing.indexOfFirst { it.profileId == profileId }
             if (index < 0) return@edit
             if (expectedRecoveryGeneration != null &&
-                existing[index].recoveryGeneration != expectedRecoveryGeneration
+                (existing[index].recoveryGeneration != expectedRecoveryGeneration ||
+                    discardFence.isProfileGenerationDiscarded(profileId, expectedRecoveryGeneration))
             ) return@edit
             val requested = change(existing[index])
             val changed = requested.copy(recoveryGeneration = maxOf(
@@ -172,15 +194,34 @@ class ScheduledProfileEntryStore @Inject constructor(
     }
 
     /**
-     * Abandons frozen retry groups without changing configuration, credentials, history, or
-     * completed/refresh frontiers. The atomic generation bump fences late worker checkpoints;
-     * cancelling WorkManager alone does not wait for the worker coroutine to finish.
+     * Persist exact private revocation before unlink and before clearing the DataStore admission.
+     * A crash in between is replayed by getEntries; no worker can recreate the private operation.
+     * Configuration, credentials, history and completed/refresh frontiers remain untouched.
      */
-    suspend fun discardPendingRecovery(profileId: String): Boolean = update(profileId) { current ->
-        current.copy(
-            pendingExports = emptyList(),
-            recoveryGeneration = Math.addExact(current.recoveryGeneration, 1L),
-        )
+    suspend fun discardPendingRecovery(profileId: String): Boolean = try {
+        withContext(Dispatchers.IO) {
+            var discarded = false
+            dataStore.edit { prefs ->
+                val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+                val current = existing.firstOrNull { it.profileId == profileId } ?: return@edit
+                val nextGeneration = Math.addExact(current.recoveryGeneration, 1L)
+                val bindings = current.pendingExports.filter {
+                    it.target == com.healthmd.domain.model.ExportTarget.API_ENDPOINT && it.durableOperationId != null
+                }.groupBy { requireNotNull(it.durableOperationId) }.mapValues { (_, pending) ->
+                    pending.map { RecoveryDiscardFence.Binding(it.apiAuthorityJson, it.settingsSnapshotJson) }.distinct().single()
+                }
+                discardFence.discard(bindings.keys, profileId, current.recoveryGeneration, expectedBindings = bindings)
+                prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, existing.map {
+                    if (it.profileId == profileId) it.copy(pendingExports = emptyList(), recoveryGeneration = nextGeneration) else it
+                })
+                discarded = true
+            }
+            discarded
+        }
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (_: Exception) {
+        false
     }
 
     suspend fun delete(profileId: String) {

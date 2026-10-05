@@ -80,7 +80,9 @@ class RawSnapshotExportRunner @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val rawRepositoryRegistry: RawHealthRepositoryRegistry = RawHealthRepositoryRegistry.healthConnectOnly(rawRepository),
 ) : RawSnapshotService {
-    private val scheduledAPIStore = ScheduledRawAPIExportStore(File(context.noBackupFilesDir, "scheduled-raw-api-v1"))
+    private val scheduledAPIStore = ScheduledRawAPIExportStore(
+        File(context.noBackupFilesDir, "scheduled-raw-api-v1"), RecoveryDiscardFence(context.noBackupFilesDir),
+    )
 
     override suspend fun discardCompletedDurableOperation(operationId: String) {
         scheduledAPIStore.discardCompleted(operationId)
@@ -421,7 +423,9 @@ class RawSnapshotExportRunner @Inject constructor(
         configuration: APIExportRequestConfiguration,
     ): ExportResult {
         val execution = settings.executionAPIRecovery
-        val guard = settings.apiRecoveryGuard(credentialStore, configuration)
+        val guard = settings.apiRecoveryGuard(credentialStore, configuration) {
+            execution?.operationId?.let(scheduledAPIStore::requireActive)
+        }
         var operation: ScheduledRawAPIExportStore.Operation? = null
         val dates = generateSequence(startDate) { current ->
             if (current < endDate) current.plusDays(1) else null
@@ -438,6 +442,9 @@ class RawSnapshotExportRunner @Inject constructor(
                 ),
                 requireExisting = context.requireExistingJournal,
             )
+            // Pin missing-journal refusal before the first capture attempt too. If the process loses
+            // the whole raw journal before any upload, recovery must not start a second snapshot.
+            guard.markJournalPrepared()
             // Materialize every provider before ANY upload; an unknown delivery cannot cause later
             // providers to be captured using today's source state on recovery.
             for (index in providerIds.indices) {
@@ -449,8 +456,7 @@ class RawSnapshotExportRunner @Inject constructor(
                     ?: error("Raw API provider is unavailable.")
                 var produced: RawExportResult? = null
                 try {
-                    produced = RawSnapshotExportOrchestrator(context = this.context, repository = repository,
-                        storage = NoBackupRawExportStorage(this.context)).export(request)
+                    produced = scheduledAPIStore.capture(requireNotNull(operation), index, repository, guard::verify)
                     operation = scheduledAPIStore.prepare(requireNotNull(operation), index, produced)
                 } finally {
                     produced?.finalLocation?.let { cleanupPrivateArtifact(File(it)) }

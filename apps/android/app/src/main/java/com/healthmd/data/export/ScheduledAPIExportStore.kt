@@ -83,6 +83,7 @@ internal data class DurableAPIExportOperation(
 }
 
 internal interface APIExportOperationStore {
+    suspend fun requireActive(operationId: String) = Unit
     suspend fun load(operationId: String): DurableAPIExportOperation?
     suspend fun create(operation: DurableAPIExportOperation)
     suspend fun acknowledge(operationId: String, expectedFrontier: Int)
@@ -98,7 +99,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
     @ApplicationContext context: Context,
 ) : APIExportOperationStore {
     private val root = File(context.noBackupFilesDir, "scheduled-api-export-v1")
-    private val lock = Any()
+    private val discardFence = RecoveryDiscardFence(context.noBackupFilesDir)
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
     private val json = Json {
         encodeDefaults = true
@@ -106,17 +107,21 @@ internal class FileAPIExportOperationStore @Inject constructor(
         ignoreUnknownKeys = false
     }
 
+    override suspend fun requireActive(operationId: String) = withContext(ioDispatcher) {
+        discardFence.withOperation(operationId) { Unit }
+    }
+
     override suspend fun load(operationId: String): DurableAPIExportOperation? =
-        withContext(ioDispatcher) { synchronized(lock) { loadLocked(operationId) } }
+        withContext(ioDispatcher) { discardFence.withOperation(operationId) { loadLocked(operationId) } }
 
     override suspend fun create(operation: DurableAPIExportOperation) = withContext(ioDispatcher) {
-        synchronized(lock) {
+        discardFence.withOperation(operation.operationId) {
             val existing = loadLocked(operation.operationId)
             if (existing != null) {
                 require(existing.immutableContentEquals(operation)) {
                     "Durable API export operation conflicts with existing state."
                 }
-                return@synchronized
+                return@withOperation
             }
             check(root.mkdirs() || root.isDirectory)
             val target = operationDirectory(operation.operationId)
@@ -142,7 +147,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
 
     override suspend fun acknowledge(operationId: String, expectedFrontier: Int) =
         withContext(ioDispatcher) {
-            synchronized(lock) {
+            discardFence.withOperation(operationId) {
                 val operation = requireNotNull(loadLocked(operationId)) {
                     "Durable API export operation is unavailable."
                 }
@@ -160,7 +165,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
         }
 
     override suspend fun delete(operationId: String) = withContext(ioDispatcher) {
-        synchronized(lock) {
+        discardFence.withOperation(operationId) {
             val directory = operationDirectory(operationId)
             if (directory.exists()) check(directory.deleteRecursively())
         }
@@ -171,7 +176,9 @@ internal class FileAPIExportOperationStore @Inject constructor(
         val directory = operationDirectory(operationId)
         if (!directory.exists()) return null
         require(directory.isDirectory)
-        val metadataBytes = File(directory, METADATA_FILE).readBytes()
+        val metadataFile = File(directory, METADATA_FILE)
+        require(!Files.isSymbolicLink(metadataFile.toPath()) && metadataFile.length() in 1..MAX_METADATA_BYTES.toLong())
+        val metadataBytes = metadataFile.readBytes()
         require(metadataBytes.size <= MAX_METADATA_BYTES)
         val metadataText = metadataBytes.decodeToString()
         require(metadataText.encodeToByteArray().contentEquals(metadataBytes))
@@ -183,7 +190,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
         val batches = metadata.batches.map { stored ->
             require(stored.byteCount in 0..MAX_BODY_BYTES)
             val bodyFile = File(directory, bodyName(stored.index))
-            require(bodyFile.length() == stored.byteCount.toLong())
+            require(!Files.isSymbolicLink(bodyFile.toPath()) && bodyFile.length() == stored.byteCount.toLong())
             val bytes = bodyFile.readBytes()
             require(bytes.size == stored.byteCount && sha256Hex(bytes) == stored.sha256)
             DurableAPIExportBatch(
@@ -241,9 +248,10 @@ internal class FileAPIExportOperationStore @Inject constructor(
     )
 
     private fun operationDirectory(operationId: String): File =
-        File(root, sha256Hex(operationId.encodeToByteArray()))
+        File(root, RecoveryDiscardFence.operationHash(operationId))
 
     private fun durableWrite(file: File, bytes: ByteArray) {
+        require(!Files.isSymbolicLink(file.toPath())) { "api_recovery_private_state_invalid" }
         FileOutputStream(file).use { stream ->
             stream.write(bytes)
             stream.flush()
@@ -271,9 +279,7 @@ internal class FileAPIExportOperationStore @Inject constructor(
         }
     }
 
-    private fun syncDirectory(directory: File) {
-        runCatching { FileOutputStream(directory).use { it.fd.sync() } }
-    }
+    private fun syncDirectory(directory: File) = RecoveryDiscardFence.syncDirectory(directory)
 
     @Serializable
     private data class OperationMetadata(

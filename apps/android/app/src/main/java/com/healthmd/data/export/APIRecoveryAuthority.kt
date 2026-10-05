@@ -88,6 +88,7 @@ internal class APIRecoveryGuard(
     private val configuration: APIExportRequestConfiguration,
     private val execution: APIRecoveryExecution?,
     private val required: Boolean,
+    private val requirePrivateOperationActive: suspend () -> Unit = {},
 ) {
     suspend fun markJournalPrepared() {
         if (!required && execution == null) return
@@ -106,11 +107,13 @@ internal class APIRecoveryGuard(
         if (!required && execution == null) return
         val context = execution ?: throw APIRecoveryAuthorityException()
         try {
+            requirePrivateOperationActive()
             if (!context.isStillAuthorized()) throw APIRecoveryAuthorityException()
             val current = credentials.requestConfiguration(configuration.endpointUrl) ?: throw APIRecoveryAuthorityException()
             if (!credentials.matchesRecoveryAuthority(context.authorityJson, current, context.profileBinding) ||
                 current != configuration || !context.isStillAuthorized()
             ) throw APIRecoveryAuthorityException()
+            requirePrivateOperationActive()
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
@@ -119,5 +122,8 @@ internal class APIRecoveryGuard(
     }
 }
 
-internal fun ExportSettings.apiRecoveryGuard(credentials: APIExportCredentialStore, configuration: APIExportRequestConfiguration) =
-    APIRecoveryGuard(credentials, configuration, executionAPIRecovery, executionAPIRecoveryRequired)
+internal fun ExportSettings.apiRecoveryGuard(
+    credentials: APIExportCredentialStore,
+    configuration: APIExportRequestConfiguration,
+    requirePrivateOperationActive: suspend () -> Unit = {},
+) = APIRecoveryGuard(credentials, configuration, executionAPIRecovery, executionAPIRecoveryRequired, requirePrivateOperationActive)

@@ -10,6 +10,12 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.data.export.APIExportRequestConfiguration
 import com.healthmd.data.export.APIRecoveryAuthorities
+import com.healthmd.data.export.DurableAPIExportBatch
+import com.healthmd.data.export.DurableAPIExportOperation
+import com.healthmd.data.export.FileAPIExportOperationStore
+import com.healthmd.data.export.RecoveryDiscardFence
+import com.healthmd.domain.exportengine.ExportEngineMode
+import io.mockk.every
 import io.mockk.mockk
 import java.time.LocalDate
 import java.time.ZoneId
@@ -35,6 +41,7 @@ class ScheduledProfileEntryStoreTest {
     private lateinit var dataStoreScope: CoroutineScope
     private lateinit var dataStore: DataStore<Preferences>
     private lateinit var store: ScheduledProfileEntryStore
+    private lateinit var context: Context
 
     @Before
     fun setUp() {
@@ -44,10 +51,9 @@ class ScheduledProfileEntryStoreTest {
             scope = dataStoreScope,
             produceFile = { dataStoreFile },
         )
-        store = ScheduledProfileEntryStore(
-            dataStore = dataStore,
-            context = mockk<Context>(relaxed = true),
-        )
+        val privateRoot = temporaryFolder.newFolder("private")
+        context = mockk<Context> { every { noBackupFilesDir } returns privateRoot }
+        store = ScheduledProfileEntryStore(dataStore = dataStore, context = context)
     }
 
     @After
@@ -63,6 +69,72 @@ class ScheduledProfileEntryStoreTest {
     )
 
     @Test
+    fun `discard refuses a pending pointer rebound to another operation authority`() = runTest {
+        val day = LocalDate.ofEpochDay(10_000)
+        val pending = ScheduledProfilePendingExport("pending", listOf(day.toEpochDay()), 1000L, "snapshot",
+            ExportTarget.API_ENDPOINT, "Synthetic", durableOperationId = "operation", apiAuthorityJson = "original-proof")
+        val original = entry("alpha").copy(isEnabled = true, pendingExports = listOf(pending))
+        store.upsert(original)
+        val journals = FileAPIExportOperationStore(context)
+        journals.create(DurableAPIExportOperation("operation", "a".repeat(64), ExportEngineMode.legacy,
+            null, "snapshot", listOf(day), setOf(day), emptyList(),
+            listOf(DurableAPIExportBatch(0, "POST/api-v1.json", listOf(day), "synthetic".encodeToByteArray())),
+            apiAuthorityJson = "different-proof"))
+
+        assertThat(store.discardPendingRecovery("alpha")).isFalse()
+
+        assertThat(store.entry("alpha")).isEqualTo(original)
+        assertThat(journals.load("operation")!!.apiAuthorityJson).isEqualTo("different-proof")
+    }
+
+    @Test
+    fun `startup replays fence before pending clear and rejects late callbacks before generation commit`() = runTest {
+        val pending = ScheduledProfilePendingExport("pending", listOf(10_000L), 1000L, "snapshot",
+            ExportTarget.API_ENDPOINT, "Synthetic", durableOperationId = "owned-operation")
+        val original = entry("alpha").copy(isEnabled = true, pendingExports = listOf(pending),
+            lastSuccessEpochMillis = 123L, lastRefreshSuccessEpochMillis = 456L)
+        store.upsert(original)
+        RecoveryDiscardFence(context.noBackupFilesDir).discard(listOf("owned-operation"), "alpha", 0L)
+        // The disk fence is durable but the original DataStore generation is deliberately still zero.
+        assertThat(store.recordRetry("alpha", 999L, pending.id, listOf(pending), 0L)).isFalse()
+        assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, "unverified", "owned-operation")).isFalse()
+        val restarted = ScheduledProfileEntryStore(dataStore, context)
+        assertThat(restarted.entry("alpha")).isEqualTo(original.copy(pendingExports = emptyList(), recoveryGeneration = 1L))
+        assertThat(restarted.entry("alpha")!!.recoveryGeneration).isEqualTo(1L)
+    }
+
+    @Test
+    fun `discard purges only owned private bodies and late create cannot resurrect them`() = runTest {
+        val day = LocalDate.ofEpochDay(10_000)
+        val authority = APIRecoveryAuthorities.create(APIExportRequestConfiguration(
+            "https://synthetic.example.test", null, emptyList(), "a".repeat(64)), "alpha")
+        val pending = ScheduledProfilePendingExport("pending", listOf(day.toEpochDay()), 1000L, "snapshot",
+            ExportTarget.API_ENDPOINT, "Synthetic", durableOperationId = "owned-operation", apiAuthorityJson = authority)
+        store.upsert(entry("alpha").copy(isEnabled = true, pendingExports = listOf(pending),
+            lastSuccessEpochMillis = 123L, lastRefreshSuccessEpochMillis = 456L))
+        val journals = FileAPIExportOperationStore(context)
+        val owned = DurableAPIExportOperation("owned-operation", "a".repeat(64), ExportEngineMode.legacy,
+            null, "snapshot", listOf(day), setOf(day), emptyList(),
+            listOf(DurableAPIExportBatch(0, "POST/api-v1.json", listOf(day), "synthetic".encodeToByteArray())),
+            apiAuthorityJson = authority)
+        val past = owned.copy(operationId = "past-operation")
+        journals.create(owned)
+        journals.create(past)
+        journals.acknowledge(past.operationId, 0)
+
+        assertThat(store.discardPendingRecovery("alpha")).isTrue()
+
+        assertThat(context.noBackupFilesDir.walkTopDown().filter { it.name.startsWith("body-") }.count()).isEqualTo(1)
+        val restarted = FileAPIExportOperationStore(context)
+        assertThat(runCatching { restarted.create(owned) }.isFailure).isTrue()
+        assertThat(restarted.load(past.operationId)!!.acknowledgedBatchCount).isEqualTo(1)
+        val cleared = store.entry("alpha")!!
+        assertThat(cleared.pendingExports).isEmpty()
+        assertThat(cleared.lastSuccessEpochMillis).isEqualTo(123L)
+        assertThat(cleared.lastRefreshSuccessEpochMillis).isEqualTo(456L)
+    }
+
+    @Test
     fun `prepared delivery fence persists and stale discard callback cannot recreate it`() = runTest {
         store.upsert(entry("alpha").copy(isEnabled = true, lastSuccessEpochMillis = 1234L))
         val authority = APIRecoveryAuthorities.create(APIExportRequestConfiguration(
@@ -72,7 +144,7 @@ class ScheduledProfileEntryStoreTest {
         assertThat(store.admitAPIExport("alpha", 0L, pending)).isTrue()
         assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "wrong-operation")).isFalse()
         assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "operation")).isTrue()
-        val reloaded = ScheduledProfileEntryStore(dataStore, mockk<Context>(relaxed = true))
+        val reloaded = ScheduledProfileEntryStore(dataStore, context)
         assertThat(reloaded.entry("alpha")!!.pendingExports.single().apiJournalRequired).isTrue()
         assertThat(store.discardPendingRecovery("alpha")).isTrue()
         assertThat(store.markAPIJournalRequired("alpha", 0L, pending.id, authority, "operation")).isFalse()
