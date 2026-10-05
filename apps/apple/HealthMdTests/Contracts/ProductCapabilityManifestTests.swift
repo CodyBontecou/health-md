@@ -30,7 +30,11 @@ final class ProductCapabilityManifestTests: XCTestCase {
         )
         XCTAssertEqual(
             Self.ids(with: .planned, in: states),
-            ["core.shared-rust-profile-engine", "setup.share-portable-configuration"]
+            [
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "settings.sleep-attribution",
+            ]
         )
         XCTAssertEqual(Set(states.keys), Self.allCapabilities)
         XCTAssertEqual(
@@ -41,6 +45,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
             inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
             "planned"
         )
+
+        let sleepAttributionCapability = inventory.capabilities.first { $0.id == "settings.sleep-attribution" }
+        XCTAssertEqual(sleepAttributionCapability?.classification, "planned")
+        XCTAssertEqual(sleepAttributionCapability?.profiles, [])
 
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple
@@ -95,7 +103,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.completed-workouts",
         "export.mobility-and-performance",
         "export.profiles",
-        "settings.sleep-attribution",
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
@@ -129,7 +136,12 @@ final class ProductCapabilityManifestTests: XCTestCase {
         sharedCapabilities
             .union(appleCapabilities)
             .union(androidCapabilities)
-            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+            .union([
+                "source.private-platform-database",
+                "core.shared-rust-profile-engine",
+                "setup.share-portable-configuration",
+                "settings.sleep-attribution",
+            ])
     }
 
     private enum ManifestError: Error {
@@ -157,6 +169,7 @@ private struct CapabilityInventory: Decodable {
     struct Capability: Decodable {
         let id: String
         let classification: String
+        let profiles: [String]
         let platforms: Platforms
     }
 

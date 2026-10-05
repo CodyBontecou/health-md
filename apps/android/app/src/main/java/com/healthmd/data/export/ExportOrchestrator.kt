@@ -53,12 +53,8 @@ class ExportOrchestrator(
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportResult {
         val totalDays = dates.size
-        val captureContext = try {
-            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
-        } catch (error: SleepAttributionUnavailableException) {
-            return ExportResult(successCount = 0, totalCount = totalDays,
-                failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) })
-        }
+        // Recovery commits immutable journal bytes without consulting today's capture preferences.
+        // Only a new capture needs to resolve and validate the device context below.
         if (durableFolderOperationId != null) {
             val snapshotJson = durableSettingsSnapshotJson
                 ?: return folderFailure(dates, durableFolderOperationId)
@@ -107,6 +103,23 @@ class ExportOrchestrator(
                 // cancelled exporter child to strand an in-memory operation.
                 withContext(NonCancellable) { finalizeResult(cancelled) }
             }
+        }
+
+        val captureContext = try {
+            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+        } catch (_: CancellationException) {
+            return cancelledResult()
+        } catch (error: Exception) {
+            val safeDetails = if (error is SleepAttributionUnavailableException) error.message else null
+            return finalizeResult(
+                ExportResult(
+                    successCount = 0,
+                    totalCount = totalDays,
+                    failedDateDetails = dates.map {
+                        FailedDateDetail(it, ExportFailureReason.UNKNOWN, safeDetails)
+                    },
+                ),
+            )
         }
 
         // Manual interactive runs select route-consent candidates across the complete date scope

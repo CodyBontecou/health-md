@@ -20,10 +20,12 @@ import com.healthmd.domain.exportengine.sha256Hex as artifactSha256Hex
 import com.healthmd.domain.exportengine.testPin
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepAttributionUnavailableException
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.WriteMode
 import com.healthmd.domain.repository.HealthRepository
@@ -183,7 +185,10 @@ class ScheduledFolderExportDurabilityTest {
         val restartedRepository = repository(manager, settingsRepository, store, restartedPlanner)
         val unavailableHealth = mockk<HealthRepository>()
         every { unavailableHealth.isBeforeFirstUnlock() } answers { error("resume must not read lock state") }
-        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any()) } answers {
+        // Today's unavailable preference cannot veto committing already-captured bytes.
+        coEvery { unavailableHealth.resolveCaptureContext(any(), any()) } returns
+            AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        coEvery { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
             error("resume must not capture")
         }
 
@@ -201,6 +206,8 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.successfulWriteCount("health/2026-03-16.json")).isEqualTo(1)
         assertThat(destination.successfulWriteCount("health/2026-03-17.json")).isEqualTo(1)
         verify(exactly = 0) { unavailableHealth.isBeforeFirstUnlock() }
+        coVerify(exactly = 0) { unavailableHealth.resolveCaptureContext(any(), any()) }
+        coVerify(exactly = 0) { unavailableHealth.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
         directory.deleteRecursively()
     }
 
@@ -344,6 +351,81 @@ class ScheduledFolderExportDurabilityTest {
         assertThat(destination.events).isEmpty()
         assertThat(store.load(OPERATION_ID)).isEqualTo(ScheduledFolderJournalLoad.Missing)
         directory.deleteRecursively()
+    }
+
+    @Test
+    fun cancellationDuringContextResolutionDetachesNewJournalWithoutCapture() = runTest {
+        val directory = temporaryDirectory("folder-journal-context-cancel")
+        val store = ScheduledFolderExportJournalStore(directory)
+        val destination = InMemoryDurableDestination()
+        val pin = testPin(ExportEngineMode.rust)
+        val settings = durableSettings(pin)
+        val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+            AndroidExportSettingsSnapshot.capture(settings, pin, ZoneId.of(pin.ianaTimeZone)),
+        )
+        val date = LocalDate.of(2026, 3, 15)
+        val repository = repository(
+            destination.manager,
+            settingsRepository(),
+            store,
+            LocalDailyAggregateExportPlanner { _, _ -> error("must not render") },
+        )
+        val health = mockk<HealthRepository>()
+        coEvery { health.resolveCaptureContext(any(), any()) } throws
+            kotlinx.coroutines.CancellationException("cancel before capture")
+
+        val result = ExportOrchestrator(health, repository)
+            .exportDatesDurably(listOf(date), settings, OPERATION_ID, snapshotJson)
+
+        assertThat(result.wasCancelled).isTrue()
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.retryFolderOperationIds).isEmpty()
+        assertThat(result.freshCaptureRetryDates).containsExactly(date)
+        assertThat(destination.events).isEmpty()
+        assertThat(store.load(OPERATION_ID)).isEqualTo(ScheduledFolderJournalLoad.Missing)
+        verify(exactly = 0) { health.isBeforeFirstUnlock() }
+        coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+        directory.deleteRecursively()
+    }
+
+    @Test
+    fun captureContextFailuresFinalizeNewJournalWithoutCaptureOrDestinationWrites() = runTest {
+        for (failure in listOf(SleepAttributionUnavailableException(), java.io.IOException("preferences unavailable"))) {
+            val directory = temporaryDirectory("folder-journal-context-unavailable")
+            val store = ScheduledFolderExportJournalStore(directory)
+            val destination = InMemoryDurableDestination()
+            val pin = testPin(ExportEngineMode.rust)
+            val settings = durableSettings(pin)
+            val snapshotJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(
+                AndroidExportSettingsSnapshot.capture(settings, pin, ZoneId.of(pin.ianaTimeZone)),
+            )
+            val date = LocalDate.of(2026, 3, 15)
+            val repository = repository(
+                destination.manager,
+                settingsRepository(),
+                store,
+                LocalDailyAggregateExportPlanner { _, _ -> error("must not render") },
+            )
+            val health = mockk<HealthRepository>()
+            coEvery { health.resolveCaptureContext(any(), any()) } throws failure
+
+            val result = ExportOrchestrator(health, repository)
+                .exportDatesDurably(listOf(date), settings, OPERATION_ID, snapshotJson)
+
+            assertThat(result.isFailure).isTrue()
+            assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.UNKNOWN)
+            // Durable capture failures persist only the bounded reason, never exception text.
+            assertThat(result.failedDateDetails.single().errorDetails).isNull()
+            assertThat(result.retryFolderOperationIds).isEmpty()
+            assertThat(result.freshCaptureRetryDates).containsExactly(date)
+            assertThat(destination.events).isEmpty()
+            val loaded = store.load(OPERATION_ID) as ScheduledFolderJournalLoad.Found
+            assertThat(loaded.journal.phase).isEqualTo(ScheduledFolderJournalPhase.READY)
+            assertThat(loaded.journal.days).isEmpty()
+            verify(exactly = 0) { health.isBeforeFirstUnlock() }
+            coVerify(exactly = 0) { health.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) }
+            directory.deleteRecursively()
+        }
     }
 
     @Test
