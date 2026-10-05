@@ -72,6 +72,16 @@ Observed2026-10-05T14:23:52Z1,243,032KiB/no warning still admits neither compile
 no compiler/admission/cleanup/bypass, new worktree/build or native/user action. QA/development/native/website
 mirrors remain separately reviewable; B21 in progress/B22 open, no capability/task/goal promotion.
 
+QA/development instruction follow-up `8b8cbf794` corrects whole-core-tooling1.88/runtime-only1.85
+versus independent CLI1.85 gates, stale current-v7 extraction to actual Applev8/historical-version
+preservation, and bounded source-specific automation/physical/privacy matrices. Android extraction
+and native4 remain planned/unwired; no installed grants/routes/execution/full journey inferred.
+Three new public-instruction methods/static CI37+contract60,13links/11section preservation pass.
+88-file index `242e81f1adf1476ed81deb1953fb3ee216491dff1a954507f71cbeac607704c4` binds clean source;
+all864 prior entries intact. Observed2026-10-05T15:21:28Z4,809,232KiB/no warning remains below6/10GiB;
+no compiler/admission/cleanup/bypass/new lane/build or native/user action. Detailed skill/iPhone
+workflow and other native/client/website mirrors remain separately reviewable; B21in_progress/B22open.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.
