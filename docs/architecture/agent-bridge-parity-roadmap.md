@@ -18,8 +18,9 @@ retained failures and remaining acceptance.
 
 Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Stored native/host
 authority and zero-read planning now have partial working source services, not native setup/routes
-or bound execution. Stale packaged MCP catalog, native discovery-pointer interoperability and
-delayed clock/publication checks still block acceptance; combined builds are disk-admission-blocked.
+or bound execution. Canonical MCP regeneration and unfiltered combined CLI gates now pass after
+fresh disk admission; native discovery-pointer interoperability, delayed clock/publication checks
+and combined native gates still block acceptance.
 V4 dispatch/capture/journals, typed queries/projection, permissioned controls, recipes/schedules and
 ZIP/dictionaries remain unfinished. Capabilities stay planned; no four-way, physical, installed,
 live-provider or release qualification is inferred.
@@ -142,7 +143,7 @@ The todo store contains older items whose open/blocked labels are not sufficient
 - Preserve desktop native destination/credential hardening and the Android opaque binding. Never retarget a durable job during resume or expose arbitrary shell/SQL/URL/file authority through MCP.
 - Preserve local-read-only and remote-read-only profiles. Export/configuration/scheduling actions require separately scoped approval; adding controls must not silently widen those profiles.
 - A full phone-owned configuration API is a later layer. Host recipes achieve desktop agent control without mutating the user's unrelated phone API-export setup.
-- Public alpha.7 has 19 MCP tools; pre-fourth-wave source has21, current operation declarations23 including plan/exact-approval relay. The packaged catalog is still21 pending canonical regeneration and full verification. The [production readiness decision](../../apps/cli/docs/production-readiness.md) and [mobile ledger](../../apps/cli/docs/mobile-compatibility.md) say the public standalone release is unqualified. New Android queries/FCM/control APIs are not silently added to the frozen CLI 1.0 scope; an explicit scope/release decision is required.
+- Public alpha.7 has 19 MCP tools; pre-fourth-wave source has21, current operation declarations23 including plan/exact-approval relay. The canonically regenerated packaged catalog is23 and passes unfiltered combined-source CLI verification; native setup/routes and bound execution remain incomplete. The [production readiness decision](../../apps/cli/docs/production-readiness.md) and [mobile ledger](../../apps/cli/docs/mobile-compatibility.md) say the public standalone release is unqualified. New Android queries/FCM/control APIs are not silently added to the frozen CLI 1.0 scope; an explicit scope/release decision is required.
 - Wake Worker changes stay notification-only under [its component instructions](../../apps/wake/AGENTS.md). This plan authorizes no secrets, infrastructure deployment, live health reads or product releases. Cloud/Practice remain outside this backlog.
 
 ## Verification and completion criteria
@@ -166,5 +167,7 @@ The third wave through `770c74319` adds bounded both-platform request-settings/r
 The fourth wave through `4df7cc180` adds real bounded native/host issuer-private stores, independent local decisions, actual request-settings-backed source planning services and shared CLI/MCP plan/approval adapters. Lane tests exercise actual stores/services and encrypted synthetic peers; they do not connect the production Swift/Kotlin counterparts. Full Rust workspace remains red on the stale packaged catalog; coordinator regeneration paused before compilation with exit70 below6GiB. Contract validator after each serial merge and60 tests pass; combined compiler gates remain unrun.
 
 These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising/native setup/routes, request-owned capture/journals, bound execution and recipes remain pending. Kotlin discovery's three layout pointers do not satisfy the host's full effective-settings support check; delayed consent/private-key/metadata expiry boundaries require further tests. HMAC does not prevent valid historical-snapshot rollback, native fresh-open root protection is unqualified, Windows new issuer storage deliberately rejects, and host setup is currently single-root. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. B21 follow-ups `aac010955`/`5a03fa7ea` correct unsupported native history-readiness and OS-only guidance while retaining legacy wire keys/types. Both committed macOS/iOS test-target build-for-testing gates pass; the actual-source metadata probe has retained red/green evidence, not app/service-host execution.
+
+After fresh disk admission returned, the coordinator regenerated the canonical MCP catalog (23 tools; all21 previous entries preserved) and ran unfiltered combined CLI tests:246 passed/two preexisting ignored/zero filtered. CLI fmt/clippy/runtime1.85 compilation and canonical asset freshness each pass; earlier red/filtered results remain historical evidence. Read-only stays13, alpha.7 stays19, and frozen CLI1.0 stays21; the bridge additions are not release-scope promotion. Actual counterpart/expiry follow-ups, combined native gates and the full journey remain pending.
 
 The pinned-consumer failure, broad support/website/consumer reconciliation, physical/live qualification and B19/B20 approval gates remain explicit. No task is closed or planned capability promoted from these increments.

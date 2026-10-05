@@ -4,7 +4,7 @@
 
 The latest public standalone release, `healthmd-cli/v0.1.0-alpha.7`, is an explicitly unqualified preview. It is not Health.md CLI 1.0 and no 1.0 date is committed. The bundled Mac MCP helper is a separate production component versioned with the Health.md Mac app; installing or qualifying one topology does not qualify the other.
 
-Published alpha.7 exposes 19 MCP tools. Current development source exposes 21 after adding `healthmd_export_raw` and `healthmd_raw_artifact_read`. Documentation, support, and release evidence must name the exact version rather than assigning development tools to alpha.7.
+Published alpha.7 exposes 19 MCP tools. Current development source exposes 23: the 21-tool export/query set plus agent-bridge `healthmd_export_plan` and `healthmd_export_approval`. These two planning/approval-relay tools are not additions to the frozen 1.0 scope below; native bridge setup/routes and bound execution remain incomplete. Documentation, support, and release evidence must name the exact version rather than assigning development tools to alpha.7.
 
 `healthmd_capabilities` reports `support_status: preview_unqualified` and `cli_1_0_qualified: false`. `healthmd_doctor` adds the exact CLI version, negotiated application protocol, source app/build/OS when the mobile peer supplies them, and history-authorization evidence on OS 27+. These fields are evidence, not a self-certification switch.
 

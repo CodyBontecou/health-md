@@ -3478,6 +3478,433 @@
     "title": "Check mobile pairing status"
   },
   {
+    "annotations": {
+      "destructiveHint": false,
+      "idempotentHint": true,
+      "openWorldHint": false,
+      "readOnlyHint": true
+    },
+    "description": "Resolve a configuration-only summary/JSON/overwrite plan using existing independently approved native/host authority and an opaque previously registered host destination. No health/earliest-date/preview reads, wake, enrollment, quota, output or settings writes. Installed v4 support is required; this does not execute or approve an export.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "calendar_timezone": {
+          "maxLength": 128,
+          "minLength": 1,
+          "type": "string"
+        },
+        "dates": {
+          "oneOf": [
+            {
+              "additionalProperties": false,
+              "properties": {
+                "range": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "end_date": {
+                      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                      "type": "string"
+                    },
+                    "start_date": {
+                      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "start_date",
+                    "end_date"
+                  ],
+                  "type": "object"
+                },
+                "type": {
+                  "const": "exact"
+                }
+              },
+              "required": [
+                "type",
+                "range"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "type": {
+                  "const": "all_available"
+                }
+              },
+              "required": [
+                "type"
+              ],
+              "type": "object"
+            },
+            {
+              "additionalProperties": false,
+              "properties": {
+                "anchor_date": {
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                  "type": "string"
+                },
+                "days": {
+                  "maximum": 3650,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "type": {
+                  "const": "past_complete_days"
+                }
+              },
+              "required": [
+                "type",
+                "anchor_date",
+                "days"
+              ],
+              "type": "object"
+            }
+          ]
+        },
+        "destination_binding_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "filename_template": {
+          "maxLength": 255,
+          "minLength": 1,
+          "type": "string"
+        },
+        "folder_template": {
+          "maxLength": 4096,
+          "type": "string"
+        },
+        "host_authority_reference": {
+          "additionalProperties": false,
+          "properties": {
+            "authority_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "grant_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "grant_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "issuer": {
+              "const": "authorized_host"
+            }
+          },
+          "required": [
+            "authority_id",
+            "issuer",
+            "grant_revision",
+            "grant_sha256"
+          ],
+          "type": "object"
+        },
+        "metric_ids": {
+          "description": "Sorted exact reviewed semantic IDs; SDNN hrv and android.hrv_rmssd are distinct.",
+          "items": {
+            "pattern": "^[a-z][a-z0-9_.-]{0,127}$",
+            "type": "string"
+          },
+          "maxItems": 256,
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "native_authority_reference": {
+          "additionalProperties": false,
+          "properties": {
+            "authority_id": {
+              "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+              "type": "string"
+            },
+            "grant_revision": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "type": "integer"
+            },
+            "grant_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "issuer": {
+              "const": "native_source"
+            }
+          },
+          "required": [
+            "authority_id",
+            "issuer",
+            "grant_revision",
+            "grant_sha256"
+          ],
+          "type": "object"
+        },
+        "output_profile": {
+          "enum": [
+            "apple-v8",
+            "android-frozen-v4"
+          ]
+        },
+        "subfolder": {
+          "maxLength": 4096,
+          "type": "string"
+        }
+      },
+      "required": [
+        "dates",
+        "calendar_timezone",
+        "metric_ids",
+        "output_profile",
+        "subfolder",
+        "folder_template",
+        "filename_template",
+        "destination_binding_id"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_plan",
+    "title": "Plan a stored-authority JSON export"
+  },
+  {
+    "annotations": {
+      "destructiveHint": true,
+      "idempotentHint": false,
+      "openWorldHint": false,
+      "readOnlyHint": false
+    },
+    "description": "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. No execution adapter is provided.",
+    "inputSchema": {
+      "additionalProperties": false,
+      "properties": {
+        "binding": {
+          "additionalProperties": false,
+          "properties": {
+            "authority_references": {
+              "additionalProperties": false,
+              "properties": {
+                "host": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "authority_id": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "grant_revision": {
+                      "maximum": 2147483647,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "grant_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "issuer": {
+                      "const": "authorized_host"
+                    }
+                  },
+                  "required": [
+                    "authority_id",
+                    "issuer",
+                    "grant_revision",
+                    "grant_sha256"
+                  ],
+                  "type": "object"
+                },
+                "native": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "authority_id": {
+                      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                      "type": "string"
+                    },
+                    "grant_revision": {
+                      "maximum": 2147483647,
+                      "minimum": 1,
+                      "type": "integer"
+                    },
+                    "grant_sha256": {
+                      "pattern": "^[0-9a-f]{64}$",
+                      "type": "string"
+                    },
+                    "issuer": {
+                      "const": "native_source"
+                    }
+                  },
+                  "required": [
+                    "authority_id",
+                    "issuer",
+                    "grant_revision",
+                    "grant_sha256"
+                  ],
+                  "type": "object"
+                }
+              },
+              "required": [
+                "host",
+                "native"
+              ],
+              "type": "object"
+            },
+            "capability_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "destination": {
+              "additionalProperties": false,
+              "properties": {
+                "binding_id": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "host_installation_id": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "identity_sha256": {
+                  "pattern": "^[0-9a-f]{64}$",
+                  "type": "string"
+                },
+                "revision": {
+                  "maximum": 2147483647,
+                  "minimum": 1,
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "binding_id",
+                "host_installation_id",
+                "identity_sha256",
+                "revision"
+              ],
+              "type": "object"
+            },
+            "expires_at": {
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$",
+              "type": "string"
+            },
+            "peer": {
+              "additionalProperties": false,
+              "properties": {
+                "host_installation_id": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                },
+                "platform": {
+                  "enum": [
+                    "apple",
+                    "android"
+                  ]
+                },
+                "source_installation_id": {
+                  "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                  "type": "string"
+                }
+              },
+              "required": [
+                "source_installation_id",
+                "host_installation_id",
+                "platform"
+              ],
+              "type": "object"
+            },
+            "plan_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "revisions": {
+              "items": {
+                "additionalProperties": false,
+                "properties": {
+                  "domain": {
+                    "enum": [
+                      "device_settings",
+                      "native_profile",
+                      "local_recipe",
+                      "host_schedule",
+                      "native_schedule",
+                      "native_destination",
+                      "native_credential_reference"
+                    ]
+                  },
+                  "object_id": {
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+                    "type": "string"
+                  },
+                  "revision": {
+                    "maximum": 2147483647,
+                    "minimum": 1,
+                    "type": "integer"
+                  },
+                  "sha256": {
+                    "pattern": "^[0-9a-f]{64}$",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "domain",
+                  "object_id",
+                  "revision",
+                  "sha256"
+                ],
+                "type": "object"
+              },
+              "maxItems": 16,
+              "type": "array"
+            },
+            "scope_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            "settings_sha256": {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            }
+          },
+          "required": [
+            "authority_references",
+            "capability_sha256",
+            "destination",
+            "expires_at",
+            "peer",
+            "plan_sha256",
+            "revisions",
+            "scope_sha256",
+            "settings_sha256"
+          ],
+          "type": "object"
+        },
+        "plan_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "request_id": {
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+          "type": "string"
+        },
+        "schema": {
+          "const": "healthmd.agent_approval_request"
+        },
+        "schema_version": {
+          "const": 1
+        }
+      },
+      "required": [
+        "schema",
+        "schema_version",
+        "request_id",
+        "plan_id",
+        "binding"
+      ],
+      "type": "object"
+    },
+    "name": "healthmd_export_approval",
+    "title": "Relay an existing exact export decision"
+  },
+  {
     "_meta": {
       "anthropic/requiresUserInteraction": true
     },
