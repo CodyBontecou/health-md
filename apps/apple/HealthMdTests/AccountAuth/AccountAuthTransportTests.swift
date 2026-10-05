@@ -40,6 +40,10 @@ nonisolated enum AccountAuthTransportChecks {
             let good = AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint,
                 redirectHistory: [], status: 200, headers: replyHeaders, body: body)
             try AccountAuthTestCheck.require(try good.validatedBody(for: plan) == body, "correlated-response-bytes")
+            var proxy = replyHeaders; proxy["Proxy-Authorization"] = "synthetic-no-authority"
+            let unsafe = AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint,
+                redirectHistory: [], status: 200, headers: proxy, body: body)
+            try AccountAuthTestCheck.denies("proxy-authorization-must-not-return-body") { _ = try unsafe.validatedBody(for: plan) }
             var badHeaders = replyHeaders; badHeaders["Set-Cookie"] = "synthetic"
             var duplicate = replyHeaders; duplicate["content-type"] = "application/json"
             let negatives = [

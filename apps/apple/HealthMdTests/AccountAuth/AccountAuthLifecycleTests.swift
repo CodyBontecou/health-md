@@ -48,6 +48,77 @@ nonisolated enum AccountAuthLifecycleChecks {
         try require(rig.entropy.calls == 0 && rig.clock.calls == 0 && counters.0 == 0 && counters.1 == 0 &&
             requests.isEmpty, "zero-all-system-ports")
     }
+    private static func priorMissingRecord(root: URL) async throws {
+        let old = try AccountAuthTestRig(root: root)
+        try await old.signIn()
+        let populated = await old.vault.actual.read()
+        try require(populated.normal != nil && populated.receipt?.kind == .install, "prior-custody-real-install")
+        let boundary = AccountAuthFaultVault(actual: old.vault.actual)
+        await boundary.configureRead(.missingRecord)
+        let partial = try await boundary.read()
+        try require(partial.integrity == .complete && partial.normal == nil && partial.receipt == populated.receipt,
+            "prior-custody-missing-row-retains-install-receipt")
+        let fresh = try AccountAuthTestRig(root: root, vault: boundary)
+        let plan = try await fresh.begin()
+        let state = await fresh.coordinator.snapshot()
+        let cleared = await boundary.actual.read()
+        try require(cleared.normal == nil && cleared.receipt?.kind == .prepare && state.localErase == .verified &&
+            state.namespace == nil && state.remoteRevoke == .unknown, "prior-missing-row-begin-preserves-unknown")
+        await boundary.configureRead(.normal)
+        let different = try fresh.replacement(fresh.initial, fields: ["account_id": "synthetic-account-b",
+            "session_id": String(repeating: "F", count: 42) + "A",
+            "access_token": "hmd_nac_" + String(repeating: "D", count: 42) + "A",
+            "refresh_token": "hmd_nrf_" + String(repeating: "U", count: 42) + "A"])
+        await fresh.transport.enqueue(.body(different, 200), operation: .exchange)
+        try require(await fresh.coordinator.consumeCallback(try fresh.callback(plan: plan)) == .installed,
+            "prior-missing-row-fresh-different-family")
+        let installed = await boundary.actual.read()
+        try require(installed.normal?.session.namespace.accountID == "synthetic-account-b" &&
+            installed.normal?.session.sessionID != populated.normal?.session.sessionID, "new-family-real-custody-only")
+        let out = await fresh.coordinator.signOut()
+        let erased = await boundary.actual.read()
+        try require(out.localErase == .verified && out.remoteRevoke == .pending && erased.normal == nil &&
+            erased.receipt?.kind == .erase, "unknown-prior-and-known-new-family-independent-of-erasure")
+        await fresh.transport.enqueue(.body(Data("{\"revoked\":true}".utf8), 200), operation: .revoke)
+        let ack = await fresh.coordinator.retryRemoteRevocation()
+        let requests = await fresh.transport.sent()
+        let revoke = requests.filter { $0.operation == .revoke }
+        let fields = try JSONSerialization.jsonObject(with: revoke[0].wireBody()) as! [String: String]
+        try require(ack.remoteRevoke == .unknown && ack.localErase == .verified && ack.namespace == nil &&
+            revoke.count == 1 && fields["refresh_token"] == installed.normal?.session.refresh.wireValue() &&
+            fields["refresh_token"] != populated.normal?.session.refresh.wireValue(), "different-family-ack-not-prior-confirmation")
+        _ = await fresh.coordinator.retryRemoteRevocation()
+        try require(await count(fresh, .revoke) == 1, "unknown-prior-has-no-adopted-revoke-proof")
+
+        let oldDirect = try AccountAuthTestRig(root: root)
+        try await oldDirect.signIn()
+        let directBoundary = AccountAuthFaultVault(actual: oldDirect.vault.actual)
+        await directBoundary.configureRead(.missingRecord)
+        let direct = try AccountAuthTestRig(root: root, vault: directBoundary)
+        let signedOut = await direct.coordinator.signOut()
+        let directlyErased = await directBoundary.actual.read()
+        try require(signedOut.localErase == .verified && signedOut.durableFence == .verified &&
+            signedOut.remoteRevoke == .unknown && directlyErased.normal == nil && directlyErased.receipt?.kind == .erase,
+            "direct-signout-missing-installed-row-remains-unknown")
+        _ = await direct.coordinator.retryRemoteRevocation()
+        try require(await direct.transport.sent().isEmpty, "direct-signout-no-unproven-proof-adoption")
+
+        let empty = try AccountAuthTestRig(root: root)
+        let bootstrap = await empty.vault.actual.read()
+        try require(bootstrap.normal == nil && bootstrap.receipt == nil && bootstrap.durableGeneration == 0,
+            "structurally-empty-bootstrap")
+        _ = try await empty.begin()
+        let emptyPrepared = await empty.coordinator.snapshot()
+        try require(emptyPrepared.remoteRevoke == .notRequested && emptyPrepared.localErase == .verified,
+            "coherent-empty-bootstrap-does-not-invent-unknown")
+        let emptyErased = await empty.coordinator.signOut()
+        try require(emptyErased.remoteRevoke == .notRequested && emptyErased.localErase == .verified,
+            "coherent-empty-prepare-does-not-invent-unknown")
+        let newEmpty = try AccountAuthTestRig(root: root, vault: AccountAuthFaultVault(actual: empty.vault.actual))
+        _ = try await newEmpty.begin()
+        try require(await newEmpty.coordinator.snapshot().remoteRevoke == .notRequested,
+            "coherent-empty-erase-does-not-invent-unknown")
+    }
     private static func pendingAndCancel(root: URL) async throws {
         let rig = try AccountAuthTestRig(root: root)
         let plan = try await rig.begin()
@@ -498,6 +569,7 @@ nonisolated enum AccountAuthLifecycleChecks {
     static func run(root: URL) async throws -> String {
         var covered: Set<String> = []
         try await defaultZero(root: root); covered.insert("default_unavailable_zero_ports")
+        try await priorMissingRecord(root: root)
         try await pendingAndCancel(root: root); covered.formUnion(["one_pending_attempt", "cancel_then_late_callback"])
         try await callbackReplayAndSwitch(root: root); covered.formUnion(["callback_replay", "switch_then_late_exchange"])
         try await installFaults(root: root); covered.formUnion(["commit_noop", "commit_lost_reply_verified_readback", "commit_unreadable_uncertain"])
@@ -512,7 +584,7 @@ nonisolated enum AccountAuthLifecycleChecks {
         try await exhaustionAndIndependentState(root: root); covered.formUnion(["generation_exhaustion_fail_closed", "no_health_or_profile_or_destination_or_schedule_or_purchase_effects"])
         let required = try AccountAuthTestCheck.corpus(root: root)["lifecycle_required"] as! [String]
         try require(Set(required) == covered && covered.count == 22, "all-required-actual-lifecycle-seams")
-        return "lifecycle-required=22 covered=22 default-admission-cases=4 install-read-faults=7 refresh-binding-faults=12 refresh-load-faults=6 revoke-negative=9 actor-races=14 clock-expiry-custody=4 installation-stability=1"
+        return "lifecycle-required=22 covered=22 default-admission-cases=4 install-read-faults=7 refresh-binding-faults=12 refresh-load-faults=6 revoke-negative=9 actor-races=14 clock-expiry-custody=4 installation-stability=1 prior-custody-scenarios=4"
     }
 }
 #if !ACCOUNT_AUTH_SOURCE_HOST

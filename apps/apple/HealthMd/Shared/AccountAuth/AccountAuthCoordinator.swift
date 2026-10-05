@@ -121,6 +121,13 @@ actor AccountAuthCoordinator {
         else if exchangeMayHaveCommitted { noteUnknownRemoteObligation() }
         // knownActiveFamily survives. Clearing access visibility is not erasure or remote revocation.
     }
+    /// Only coherent bootstrap/clear custody proves absence. A missing installed row is unknown,
+    /// even when the boundary labels its partial snapshot complete. Never adopt its old proof.
+    private func provesEmptyCustody(_ prior: AccountAuthVaultSnapshot) -> Bool {
+        guard prior.integrity == .complete, prior.normal == nil else { return false }
+        guard let receipt = prior.receipt else { return prior.durableGeneration == 0 }
+        return receipt.generation == prior.durableGeneration && (receipt.kind == .prepare || receipt.kind == .erase)
+    }
     private func verify(_ snapshot: AccountAuthVaultSnapshot, command: AccountAuthVaultCommand) throws {
         guard snapshot.integrity == .complete, snapshot.durableGeneration == command.receipt.generation,
               snapshot.receipt == command.receipt, snapshot.normal == command.normal else {
@@ -160,7 +167,7 @@ actor AccountAuthCoordinator {
             guard active(generation), preparingID == id else { throw AccountAuthSourceError.stale }
             guard stored.integrity == .complete else { throw AccountAuthSourceError.uncertain }
             inspectingPriorCustody = false
-            if stored.normal != nil { noteUnknownRemoteObligation() } // Never adopt an unproven row/proof/account.
+            if !provesEmptyCustody(stored) { noteUnknownRemoteObligation() }
             if stored.durableGeneration >= generation {
                 generation = try fence.advance(minimum: stored.durableGeneration)
                 event = .fenced(generation)
@@ -348,7 +355,9 @@ actor AccountAuthCoordinator {
             if active(generation), erasingID == id {
                 if prior.integrity != .complete {
                     if revokeQueue.isEmpty { noteUnknownRemoteObligation() }
-                } else if let row = prior.normal, !revokeQueue.contains(where: { $0.matches(row) }) {
+                } else if let row = prior.normal {
+                    if !revokeQueue.contains(where: { $0.matches(row) }) { noteUnknownRemoteObligation() }
+                } else if !provesEmptyCustody(prior) {
                     noteUnknownRemoteObligation()
                 }
             }
