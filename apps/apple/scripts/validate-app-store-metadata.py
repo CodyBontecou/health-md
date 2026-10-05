@@ -3,7 +3,7 @@
 
 Checks every locale under apps/apple/metadata:
   * app-info: name and subtitle Unicode length (30 each), privacy URL present.
-  * version/<v>/<locale>.json: keywords length (100 Unicode code points), comma
+  * version/<v>/<locale>.json: keywords length (100 UTF-8 bytes), comma
     formatting, intra-field duplicate terms, exact duplication against the
     visible name/subtitle tokens, required keys, and locale parity with
     app-info and en-US.
@@ -27,7 +27,7 @@ VERSION_DIR = METADATA_ROOT / "version"
 
 NAME_LIMIT = 30
 SUBTITLE_LIMIT = 30
-KEYWORDS_LIMIT = 100
+KEYWORDS_LIMIT_BYTES = 100
 
 REQUIRED_VERSION_KEYS = ("description", "keywords", "marketingUrl", "supportUrl", "whatsNew")
 
@@ -70,8 +70,9 @@ def validate_app_info(errors: list[str]) -> dict[str, dict]:
 
 def validate_keywords(locale: str, keywords: str, visible: set[str], errors: list[str]) -> None:
     where = f"{locale}"
-    check(0 < code_points(keywords) <= KEYWORDS_LIMIT, errors,
-          f"{where}: keywords are {code_points(keywords)} chars (limit {KEYWORDS_LIMIT})")
+    keyword_bytes = len(keywords.encode("utf-8"))
+    check(0 < keyword_bytes <= KEYWORDS_LIMIT_BYTES, errors,
+          f"{where}: keywords are {keyword_bytes} UTF-8 bytes (limit {KEYWORDS_LIMIT_BYTES})")
     check(", " not in keywords, errors, f"{where}: keywords contain a space after a comma")
     check(" ," not in keywords, errors, f"{where}: keywords contain a space before a comma")
     terms = keywords.split(",")
