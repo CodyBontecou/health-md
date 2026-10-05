@@ -35,7 +35,19 @@ Broader runtime/native/website/localization/consumer-skill reconciliation and B2
 Root inventory follow-up `bba3106b9` corrects portable23/bundledMac21/publicalpha.7 19/read-only13/frozen21
 accounting and universal pairing3 versus legacy1/2, with two new public-doc regressions/static26+contract60.
 Native4 remains unwired/unadvertised, with no bound execution; remaining parity/website/skill claims
-are not corrected by this static slice. Latest observed5,255,100KiB still blocks compiler/native gates.
+are not corrected by this static slice. That checkpoint observed5,255,100KiB, below compiler/native gates.
+
+Static parity follow-up `95d890094` corrects the root Share My Setup row to existing planned/deferred
+status and distinguishes Android provider-native raw NDJSON from iPhone JSON and bounded host-side
+JSONL extraction. Exactly three complete root rows/two docs and two new public-doc methods; unchanged
+website English/nine locale rows already agree and are checked read-only, not fully qualified.
+Current source static CI28/contract60, exact scope/two links and preservation pass; all609 earlier
+indexed entries rehash intact. The82-file static index `e5a1507bc3371a7867aa538389ceba4877095c838d81ebabe78723716d2c3c95`
+binds that source, not native import/permission/parser/transport or installed/release evidence.
+Observed2026-10-05T13:11:51Z2,874,296KiB/no recorded warning still admits neither compiler nor native-app
+gates; no compile/admission/cleanup/bypass or native/user action. Broader native lifecycle/MCP/support/
+website/skills reconciliation remains eligible for bounded static work; the actual journey, merged
+compiler gates and Kotlin-after remain incomplete. B21 in progress/B22 open; no capability/task/goal promotion.
 
 ## Product outcome
 
