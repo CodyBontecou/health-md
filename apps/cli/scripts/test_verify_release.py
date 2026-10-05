@@ -172,5 +172,40 @@ class HistoryReadinessDocumentationTests(unittest.TestCase):
                 self.assertIn("illustrative", text)
 
 
+class RootFeatureInventoryDocumentationTests(unittest.TestCase):
+    """Static public inventory accounting, not installed capability qualification."""
+
+    ROOT = MODULE_PATH.resolve().parents[3]
+
+    def test_portable_catalog_counts_do_not_promote_the_bundled_or_public_release(self) -> None:
+        inventory = (self.ROOT / "docs/features/feature-inventory.md").read_text(encoding="utf-8")
+        catalog = json.loads(
+            (self.ROOT / "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json")
+            .read_text(encoding="utf-8")
+        )
+        self.assertEqual(len(catalog), 23)
+        serve = next(line for line in inventory.splitlines() if line.startswith("| `healthmd mcp serve` /"))
+        self.assertIn(f"current development source has {len(catalog)}", serve)
+        self.assertIn("preview has 19 tools", serve)
+        self.assertIn("13 tools", serve)
+        self.assertIn("frozen CLI 1.0 scope remains 21", serve)
+        row = next(line for line in inventory.splitlines() if line.startswith("| MCP tool catalog"))
+        self.assertIn("portable development: 23; bundled Mac: 21", row)
+        for name in ("healthmd_export_plan", "healthmd_export_approval"):
+            self.assertIn(name, {tool["name"] for tool in catalog})
+            self.assertIn(name, row)
+        self.assertIn("unwired/unadvertised", row)
+        self.assertIn("no bound execution", row)
+
+    def test_pairing_inventory_distinguishes_universal_and_legacy_selectors(self) -> None:
+        inventory = (self.ROOT / "docs/features/feature-inventory.md").read_text(encoding="utf-8")
+        row = next(line for line in inventory.splitlines() if line.startswith("| `healthmd direct pair` |"))
+        for term in ("selector 3", "20-digit", "legacy Apple selector 1", "Android selector 2"):
+            with self.subTest(term=term):
+                self.assertIn(term, row)
+        self.assertIn("not query v3", row)
+        self.assertIn("no permission", row)
+
+
 if __name__ == "__main__":
     unittest.main()
