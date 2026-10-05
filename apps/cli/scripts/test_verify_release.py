@@ -291,5 +291,71 @@ class RootFeatureParityDocumentationTests(unittest.TestCase):
                 self.assertTrue(cells[3].startswith("✓"))
 
 
+class NativeDirectDocumentationTests(unittest.TestCase):
+    """Static native-page guidance, not provider, permission or lifecycle execution."""
+
+    ROOT = MODULE_PATH.resolve().parents[3]
+    APPLE = ROOT / "apps/apple/docs/features/cli-direct-iphone.md"
+    ANDROID = ROOT / "apps/android/docs/features/direct-cli.md"
+
+    def test_iphone_history_example_matches_current_build_limits(self) -> None:
+        text = self.APPLE.read_text(encoding="utf-8")
+        self.assertIn("## Current build and history scope", text)
+        for term in ("pinned SDK", "api_unavailable", "unknown", "denied-versus-empty",
+                     "explicit date ranges", "type scope, not date scope", "OS upgrade alone"):
+            with self.subTest(term=term):
+                self.assertIn(term, text)
+        commands = [line for line in text.splitlines()
+                    if line.startswith("healthmd export ") and "--full-corpus" in line]
+        self.assertEqual(len(commands), 1)
+        command = commands[0]
+        self.assertNotIn("--all", command.split())
+        start = re.search(r"--from (\d{4}-\d{2}-\d{2})\b", command)
+        end = re.search(r"--to (\d{4}-\d{2}-\d{2})\b", command)
+        self.assertIsNotNone(start)
+        self.assertIsNotNone(end)
+        days = (date.fromisoformat(end.group(1)) - date.fromisoformat(start.group(1))).days + 1
+        self.assertGreaterEqual(days, 1)
+        self.assertLessEqual(days, 7)
+        self.assertIn("Source dates in these examples are illustrative", text)
+        self.assertIn("healthkit-permissions.md", text)
+
+    def test_android_lifecycle_and_native_admission_are_not_pairing_authority(self) -> None:
+        text = self.ANDROID.read_text(encoding="utf-8")
+        self.assertIn("## Session lifecycle and native admission", text)
+        for term in ("user-started foreground service", "ordinary screen locking",
+                     "first unlock after reboot", "first permission grant", "boundary day",
+                     "historical-read permission", "app-level export entitlement/quota",
+                     "pairing does not reset", "Play and F-Droid", "wait-only", "force-stop"):
+            with self.subTest(term=term):
+                self.assertIn(term, text)
+        locked = [line for line in text.splitlines() if line.startswith("| Device locked error |")]
+        quota = [line for line in text.splitlines() if line.startswith("| Quota exhausted |")]
+        self.assertEqual(len(locked), 1)
+        self.assertEqual(len(quota), 1)
+        self.assertIn("first unlock", locked[0])
+        self.assertNotIn("Phone locked mid-session", locked[0])
+        self.assertIn("app-level", quota[0])
+        self.assertNotIn("re-pair", quota[0])
+        self.assertNotIn("Transfer quota for the pairing", quota[0])
+
+    def test_native_pages_do_not_promote_development_bridge_to_installed_support(self) -> None:
+        for path in (self.APPLE, self.ANDROID):
+            with self.subTest(document=path.relative_to(self.ROOT).as_posix()):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("## Source and qualification", text)
+                for term in ("not installed/release qualification", "alpha.7 preview has 19",
+                             "development catalog declares 23", "read-only profile 13",
+                             "frozen CLI 1.0 scope 21", "healthmd_export_plan",
+                             "healthmd_export_approval", "independently negotiated extension 4",
+                             "unwired/unadvertised", "native consent", "bound execution",
+                             "host-owned recipes", "exact-build matrix",
+                             "production-readiness.md", "mobile-compatibility.md"):
+                    self.assertIn(term, text)
+        self.assertNotIn("Swift direct client complete", self.APPLE.read_text(encoding="utf-8"))
+        self.assertIn("Android typed direct queries and extraction remain planned",
+                      self.ANDROID.read_text(encoding="utf-8"))
+
+
 if __name__ == "__main__":
     unittest.main()
