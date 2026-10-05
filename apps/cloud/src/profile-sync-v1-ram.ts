@@ -198,9 +198,10 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
     authority.assertConfigAtCommit(a.auth, p, "POST", path);
     if (p.issuer !== namespace.issuer || p.environment !== namespace.environment || p.accountId !== OWNER) deny();
   };
-  const capture = (p: ConfigPrincipal, path: string, selected = true): Capture => frame(() => {
+  const capture = (p: ConfigPrincipal, path: string, selected = true, profileId?: string): Capture => frame(() => {
     assert(current, p, path);
     if (!current.controls.consent.optedIn || (selected && !current.controls.intent)) deny();
+    if (path === READ && (profileId === undefined || current.controls.intent?.publishedProfileId !== profileId)) deny();
     return { principal: p, controls: structuredClone(current.controls), key: { ...current.key } };
   });
   const gate = (a: Aggregate, c: Capture, path: string): void => {
@@ -221,6 +222,8 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
   const inspectProof = (c: Capture, correlation: Correlation, path: string): Proof => {
     gate(current, c, path);
     const p = current.profile, h = correlation.head, slot = h.revisionSlot;
+    // READ admission and every fresh proof/return bind selection to THIS original profile, not some pending intent.
+    if (path === READ && current.controls.intent?.publishedProfileId !== h.profileId) deny();
     const revision = p.revisions[slot], envelope = p.cipherSlots[slot];
     proofCheck(revision && envelope && same(revision.correlation, correlation) && revision.cipherSlot === slot &&
       same(p.heads[h.profileId], h) && same(p.receipts[correlation.mutationId], correlation) &&
@@ -344,7 +347,7 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
       let verifying = false;
       try { entry(); const bytes = ownBytes(originalBytes, 8192), bearer = token(request, READ);
         const selector = parseProfileSyncV1Read(bytes); if (selector.mode !== "revision") deny();
-        const p = await authority.authorizeConfig(bearer, "POST", READ), c = capture(p, READ);
+        const p = await authority.authorizeConfig(bearer, "POST", READ), c = capture(p, READ, true, selector.profileId);
         verifying = true;
         const correlation = frame(() => {
           gate(current, c, READ);

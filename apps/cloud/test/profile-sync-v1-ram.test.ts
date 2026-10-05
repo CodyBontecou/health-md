@@ -314,6 +314,38 @@ describe("inactive AS06 compound RAM public authority", () => {
     expect(requireSuccess(await ram.mutate(native(session), encode(raw))).content?.contentJson).toBe(expectedContent);
   });
 
+  it("requires selection of the requested original immutable profile, not a pending create of the SAME literal fixture", async () => {
+    const ram = await createProfileSyncV1Ram({ sentinel: "healthmd.profile-sync.v1.ram.synthetic-only" });
+    const session = await issue(ram); await select(ram, session);
+    const record = requireSuccess(await ram.mutate(native(session), encode(raw)));
+    expect(record.content?.contentJson).toBe(expectedContent);
+    expect(record.content?.hash).toBe(CONTENT_HASH);
+    const published = ram.observe();
+    expect(published.controls[0]?.intent?.publishedProfileId).toBe(record.profileId);
+    const originalRead = revisionRequest(record);
+    expect(requireSuccess(await ram.read(native(session, readPath), originalRead))).toEqual(record);
+    expect(ram.observe()).toEqual(published); // positive real immutable decrypt, no read effects
+
+    expect(await ram.optIn(native(session))).toEqual({ ok: true });
+    expect(ram.observe().controls[0]?.intent).toBeNull();
+    expect(ram.observe().partitions).toEqual(published.partitions);
+    expect(await ram.selectCreate(native(session), encode(raw))).toEqual({ ok: true }); // verbatim AGAIN
+    const pending = ram.observe();
+    expect(pending.controls[0]?.consent).toEqual({ optedIn: true, epoch: 2 });
+    expect(pending.controls[0]?.selectionEpoch).toBe(4);
+    expect(pending.controls[0]?.intent).toEqual({ epoch: 4, consentEpoch: 2, keyEpoch: 1, keyVersion: 1,
+      mutationId: "psm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", requestHash: REQUEST_HASH, contentHash: CONTENT_HASH,
+      requestBytes: 2941, contentBytes: 2402, sessionId: session.session_id, sessionGeneration: 0, requiresAction: flags,
+      publishedProfileId: null }); // pending CREATE is not selection of the old immutable profile
+    expect(pending.partitions).toEqual(published.partitions); // COMPLETE values, not counts/hash-only
+    expect((await inventory(ram)).find(row => row.session_id === session.session_id)?.revoked).toBe(false);
+    const oldRead = await ram.read(native(session, readPath), originalRead); // SAME original selector and real bearer
+    if ("ok" in oldRead) expect(oldRead.record).toEqual(record); // RED distinguishes actual decrypted success
+    expect(ram.observe()).toEqual(pending); // even the reproduced unauthorized read did not write profile state
+    expect("ok" in oldRead).toBe(false); // genuine selection-correlated denial boundary
+    expect(oldRead).toEqual(unavailable);
+  });
+
   it("preserves a browser peer revoke during real preparation, then publishes/decrypts the SAME selected bytes from a NEW family", async () => {
     expect(encode(raw)).toHaveLength(2941);
     expect(encode(expectedContent)).toHaveLength(2402);
