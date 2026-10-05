@@ -6,7 +6,7 @@
 
 Outcome: a person may connect the dashboard and native apps to the same account, explicitly sync selected portable profiles, and keep working locally/offline. Sign-in and **Sync profiles** do not read health, upload exports, choose an active profile, bind a destination, enable automation, or grant agent access. **Health uploads** remain a separate explicit destination/credential/confirmation workflow.
 
-Owned source artifacts: [account-auth v1 contract](../../packages/contracts/account-auth/v1/contract.md), [source policy](../../packages/contracts/account-auth/v1/source-policy.json), [field scope](../../packages/contracts/account-auth/v1/field-scope.json), [capability classifications](../../packages/contracts/account-auth/v1/capability-classifications.json), and [synthetic vectors](../../packages/contracts/account-auth/v1/fixtures/security-vectors.json). They are deliberately not registered in the shared manifest or product ledger. `v1` versions this review surface, not an advertised OAuth/OIDC service or shipped wire contract.
+Owned AS01 source artifacts: [account-auth v1 contract](../../packages/contracts/account-auth/v1/contract.md), [source policy](../../packages/contracts/account-auth/v1/source-policy.json), [field scope](../../packages/contracts/account-auth/v1/field-scope.json), [capability classifications](../../packages/contracts/account-auth/v1/capability-classifications.json), and [synthetic vectors](../../packages/contracts/account-auth/v1/fixtures/security-vectors.json). The original lane left them unregistered; subsequent central integration added deferred manifest/fixture records, planned product capabilities and Cloud CI checks. These are inactive source inventory, not named approval or activation. `v1` versions this review surface, not an advertised OAuth/OIDC service or shipped wire contract. The [implementation ledger](account-sync-evidence-ledger.md) records current evidence; baseline observations, AS01 handoffs and receipts below remain historical.
 
 ## Evidence ledger (observed, not proposed)
 
@@ -159,7 +159,7 @@ Frozen in this lane: Shared Setup v2 grammar/schema/field ledgers/artifact and t
 
 | Gate | Accountable role / evidence | Current status / stop rule |
 |---|---|---|
-| Source interface review | Coordinator + AS02/AS05 review this revision, reversible routes/scopes/fields and synthetic vectors | Pending; permits only disabled synthetic-first source work, not AS01 feature completion. |
+| Source interface review | Coordinator + AS02/AS05 review reversible routes/scopes/fields and synthetic vectors | Locally reviewed for disabled synthetic-first AS02/AS05 source; their bounded source checks do not qualify the current native commits or complete AS01. Named/live gates remain closed. |
 | Identity / issuer / linking / recovery | Named owner + security/product choose real issuer/login/audience/callbacks/account matching/recovery, per-install revocation and refresh trade-offs | Unassigned / blocked. No automatic account linking, email reassignment, recovery bypass or pilot migration. |
 | Configuration privacy | Named privacy/legal + security + product approve encryption/key/retention/deletion/portability/processor/region/user copy | Unassigned / blocked. No real configuration persistence or transfer. |
 | Mobile | Named Apple/Android owners approve OS browser/link/secure storage/protection/rebind behavior; supported iPhone/iPad/macOS + Play/F-Droid physical evidence and accessibility | Unassigned / blocked. No capability availability claim or live enrollment. |
@@ -167,13 +167,15 @@ Frozen in this lane: Shared Setup v2 grammar/schema/field ledgers/artifact and t
 | General production / cohort | Named roles and all applicable ADR-0008 gates: fresh resources, independent security, recovery/deletion/rotation/tenant/abuse/load tests, operations/store/privacy disclosures, explicit owner cohort authorization | ADR proposed / blocked. No signup/flags/credentials/resources/deploy/restarts. |
 | P2 export request / presentation | AS13/AS14/AS18/AS19/AS20 decisions, immutable request, native review, upload isolation and verified receipts | Outside AS01. No chart precedence or direct-bridge decision. |
 
+Historical AS01 dependency handoffs follow. AS02's disabled synthetic authority and AS05's repaired codecs were subsequently integrated; their actual checks and limits are recorded in the implementation ledger. These handoffs are not a claim that those source slices remain absent, nor evidence of real browser identity, consent, durability or native qualification.
+
 AS02 next interface/tests: inject registry/store/browser identity and implement closed unavailable-by-default routing, then synthetic code/decision/exchange/rotation/revoke tests; test old pilot password/email/auth/ingest/MCP behavior unchanged and every service-profile deny. Real crypto/DB concurrency, fake adapter readback loss and OS callback lifecycle are not established by AS01 tests.
 
 AS05 next interface/tests: define independent portable-content wrapper and immutable identities/revisions; review field-scope gaps with the read-only portable audit; publish/adopt/keep-both, edit/edit, edit/delete, idempotency, full resync, registry drift, future version, foreign preservation, account switch and local execution-block vectors. Adjacent TODO-4cc35ad8 / TODO-775852d0 own direct configuration consent/protocol; only coordinate vocabulary, never consume their branches, tokens or approvals.
 
-## Verification receipt (source-only)
+## Historical AS01 verification receipt (source-only)
 
-Baseline/source checks from this isolated lane:
+Baseline/source checks from the original isolated AS01 lane; later registration and test counts are recorded separately in the implementation ledger:
 
 | Command | Exit / evidence |
 |---|---|
