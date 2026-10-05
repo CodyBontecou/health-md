@@ -921,7 +921,7 @@ struct HealthMdApp: App {
         guard historyAuthorization.supportsUnqualifiedFullHistoryClaim else {
             let message = historyAuthorization.state == .limitedHistory
                 ? "All-time sync stopped because Apple Health history is limited by date. Earlier data is unknown."
-                : "All-time sync stopped because full-history access could not be verified. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment."
+                : "All-time sync stopped because full-history access could not be verified. Full-history authorization boundaries are unavailable in this build. Choose an explicit date range."
             syncService.send(.syncProgress(SyncProgressInfo(
                 totalDays: 0,
                 processedDays: 0,

@@ -637,9 +637,12 @@ final class HealthMdAgentAPIService {
             "history_authorization": [
                 "state": "unknown",
                 "source": "iphone",
-                "limited_history_detection_supported": true,
+                // The pinned SDK has no supported native boundary API. This
+                // availability value does not infer the connected peer's grants.
+                "limited_history_detection_supported": false,
+                // Preserve the legacy integer hint, not a feature-support claim.
                 "minimum_source_os": 27,
-                "message": "The Mac cache cannot infer iPhone HealthKit authorization. Fresh all-available acquisition requires an OS 27+ iPhone assessment that covers the complete selected scope and reports full_history; limited, unknown, API-unavailable, and unassessed scopes are rejected."
+                "message": "The Mac cache cannot infer iPhone HealthKit authorization. This build does not support full-history authorization boundaries; an OS upgrade alone does not enable them. Choose an explicit date range for fresh acquisition. Limited, unknown, API-unavailable, and unassessed scopes cannot establish full-history completeness."
             ],
             "query_store": queryStore,
             "iphone": [

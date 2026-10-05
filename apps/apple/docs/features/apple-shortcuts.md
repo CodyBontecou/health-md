@@ -132,7 +132,7 @@ Export Shortcuts call the same export pipeline as the app. Sleep is attributed t
 - updates schedule bookkeeping when yesterday is part of the run;
 - does not send ordinary Shortcut exports to API Endpoint or Connected Mac, even if those destinations are selected for manual or scheduled exports.
 
-**Refresh Mac Health Context** is intentionally different. It freezes the selected profile's metric/detail scope into an authenticated request, uses an explicit date window (30 days by default) or a deliberate All Available History request, and persists the Mac job ID plus pending/completed/failed status on iPhone. All Available History fails closed unless an OS 27+ assessment covers every selected metric and reports `full_history`; limited, unknown, API-unavailable, and unassessed scopes require an explicit date window. A disconnect may leave the durable job pending; it never redirects output or silently changes the scope.
+**Refresh Mac Health Context** is intentionally different. It freezes the selected profile's metric/detail scope into an authenticated request, uses an explicit date window (30 days by default) or a deliberate All Available History request, and persists the Mac job ID plus pending/completed/failed status on iPhone. All Available History requires a verified `full_history` assessment covering the selected scope. The pinned SDK cannot provide that assessment, so this build fails closed and requires an explicit date window. A newer runtime alone does not enable the missing boundary API; limited, unknown, API-unavailable and unassessed scopes never establish completeness. A disconnect may leave the durable job pending; it never redirects output or silently changes the scope.
 
 ## Locked-device behavior
 
@@ -166,8 +166,8 @@ When an export Shortcut encounters locked HealthKit data, Health.md preserves th
 | No health data returned | No HealthKit data for that date or permission missing | Check Apple Health and Health.md permissions. |
 | Mac context refresh says no Mac is connected | The App Intent has no authenticated live Mac session | Open Health.md on both devices, confirm the expected peer, and retry. |
 | Mac context refresh remains pending | The durable Mac job was accepted but the phone locked, disconnected, or exhausted foreground execution time | Open/unlock both apps; check **Get Mac Context Refresh Status** and resume from the Mac readiness/job surfaces. |
-| All Available Mac refresh fails as limited | OS 27 reported a per-type earliest authorized sample date | Grant full history in Apple Health or use an explicit bounded number of days. |
-| All Available Mac refresh fails as unverified | The boundary API is unavailable, failed, or did not cover every selected metric | Use an explicit bounded number of days; on a supported device, update to OS 27+ and reassess permissions. |
+| All Available Mac refresh fails as limited | A compatible source assessment reports a per-type date boundary; the current native SDK cannot obtain one | Use an explicit bounded date window within any verified boundary. |
+| All Available Mac refresh fails as unverified | This build cannot assess full-history authorization, or an assessment is incomplete | Use an explicit bounded number of days. An OS upgrade alone does not add SDK support. |
 | Action appears but fails in Simulator | App Intents can be unreliable in simulator builds | Verify on a real iPhone before filming or shipping docs. |
 
 ## Video outline

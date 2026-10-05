@@ -1443,7 +1443,7 @@ final class IPhoneDirectFileExportProducer {
             }
             guard discovery.supportsUnqualifiedFullHistoryClaim else {
                 throw IPhoneDirectFileProducerError.invalidRequest(
-                    "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                    "Apple Health full-history access could not be verified for this scope. Full-history authorization boundaries are unavailable in this build. Choose an explicit date range."
                 )
             }
             var calendar = Calendar(identifier: .gregorian)

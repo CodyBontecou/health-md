@@ -156,7 +156,7 @@ struct RefreshMacContextIntent: AppIntent {
 
     @Parameter(
         title: "All Available History",
-        description: "Ask for all readable authorized history. This fails closed unless OS 27+ verifies full-history authorization for the entire profile scope.",
+        description: "Ask for all readable authorized history. This build cannot verify full-history authorization boundaries; choose an explicit date window.",
         default: false
     )
     var allAvailableHistory: Bool

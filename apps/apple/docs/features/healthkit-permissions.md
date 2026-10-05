@@ -27,14 +27,18 @@ Health.md uses public HealthKit/WorkoutKit APIs only. Normal local exports do no
 
 For many read types, HealthKit intentionally does not tell an app whether access was denied. A denied read can look like a successful query with zero records. Health.md reports the public result and cannot bypass or reliably distinguish that privacy behavior.
 
-On OS 27 and later, Health.md also calls HealthKit's `earliestAuthorizedSampleDate(for:)` API after authorization and before resolving an all-available request. The machine-readable history state is one of:
+The pinned Xcode 26.6 / SDK 26.5 does **not** declare a supported per-type history-authorization boundary API. The native adapter reports `api_unavailable` even on a newer runtime; an OS upgrade alone cannot add an API to this build. Health.md rejects unqualified **All Time** / `all_available` completeness claims and offers explicit date ranges with completeness unverified. It does not substitute the platform's general earliest permitted date, query an earliest sample or treat an empty result as proof of unrestricted access.
 
-- `limited_history`: HealthKit returned at least one per-type earliest readable date. Data before each boundary is unknown, not absent. Health.md warns in the export UI and refuses an unqualified **All Time** / `all_available` completeness claim.
-- `full_history`: HealthKit returned no limited date boundary for the assessed types. By Apple's privacy design, this still does not prove each read permission was granted; a denied type can also be omitted.
-- `unknown`: the boundary check failed or could not cover the requested scope. Health.md rejects `all_available`; an explicit date range remains available.
-- `api_unavailable`: the runtime predates OS 27. Health.md rejects `all_available` because it cannot verify full-history authorization, but continues explicit-range bounded exports with that limitation reported.
+The independently versioned history-authorization contract retains these states for compatible sources and synthetic tests; their grammar does not establish native support:
 
-The boundary is evaluated against a sample's end date, so a readable sample can begin before its reported boundary. Health.md never interprets the pre-boundary period as zero or missing-by-proof.
+- `limited_history`: a verified source assessment reports a per-type date boundary. Earlier data is unknown, not absent; unqualified completeness is rejected.
+- `full_history`: a verified source assessment covers the selected scope without a limited boundary. This still does not prove individual read permissions were granted; privacy-hidden types can be omitted. The current native adapter cannot produce this assessment from HealthKit.
+- `unknown`: an assessment failed or did not cover the requested scope. An explicit range remains available without a full-history claim.
+- `api_unavailable`: this build/runtime cannot perform the required assessment. This is the current native adapter outcome, not proof of denial or no data.
+
+Retained boundary assessments use sample end dates; a sample can begin before its boundary. Pre-boundary data is never represented as zero or absent-by-proof. Android's independently checked Health Connect historical-read grant is a different permission model, not an equivalent Apple boundary API.
+
+Mac readiness reports `limited_history_detection_supported: false` and authorization `unknown`. Legacy OS-number hints/keys remain for compatibility; they are not feature-support or upgrade instructions. Cached Mac data cannot infer the iPhone's current permissions.
 
 Therefore:
 
@@ -80,9 +84,9 @@ When canonical archive capture is off, output says `raw_capture_status: not_requ
 |---|---|---|
 | Ordinary metric missing | Permission off, metric off, no data, or read hidden | Check Health app, selection, and manifest. |
 | Empty query despite known data | HealthKit may be hiding denied read access | Revisit Apple Health permissions; Health.md cannot distinguish denial. |
-| All Time/all-available request rejected as limited | OS 27 reports a user-selected earliest readable date for at least one selected type | Grant full history in Apple Health or choose an explicit date range at or after the displayed boundary. |
-| All Time/all-available request rejected as unverified | The check failed, did not cover every selected metric, or the API is unavailable | Choose an explicit date range. On supported devices, use OS 27+ and rerun authorization so Health.md can reassess the full selected scope. |
-| History state is `api_unavailable` | The device is running an OS older than 27 | Treat full-history completeness as unverified and use explicit ranges; upgrade when OS 27 is supported for the device. |
+| All Time/all-available request rejected as limited | A compatible source assessment reports a limited boundary; current native SDK support is unavailable | Use an explicit range within any verified boundary; do not infer missing earlier data. |
+| All Time/all-available request rejected as unverified | The assessment is unavailable, failed or incomplete | Choose an explicit range. An OS upgrade alone does not enable this build's missing boundary API. |
+| History state is `api_unavailable` | This build cannot assess per-type authorization boundaries, regardless of runtime version | Use explicit ranges and retain unverified completeness; no permission bypass or inferred full history. |
 | Medication/Vision locked | Unsupported OS or selector incomplete | Use supported OS and complete separate selection. |
 | Clinical record metric unavailable | Clinical Health Records are omitted from this App Store build | Use an ordinary Apple Health metric; clinical access may return in a future reviewed release. |
 | Archive partial | One requested branch failed/skipped/unsupported/cancelled | Inspect manifest and retry recoverable paths. |
