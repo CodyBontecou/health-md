@@ -4270,6 +4270,22 @@ public func getMetricRegistry(profile: CoreMetricRegistryProfile, expectedRegist
 })
 }
 /**
+ * Retrieve an exact retained registry authority without rewriting the caller's pin.
+ *
+ * # Errors
+ * Unknown authorities and incompatible profile/version pairs fail closed.
+ */
+public func getMetricRegistryAtAuthority(profile: CoreMetricRegistryProfile, expectedRegistryVersion: UInt32, registrySha256: String)throws  -> CoreMetricRegistrySnapshot  {
+    return try  FfiConverterTypeCoreMetricRegistrySnapshot_lift(try rustCallWithError(FfiConverterTypeHealthmdCoreError_lift) {
+        uniffiCallStatus in
+    uniffi_healthmd_core_uniffi_fn_func_get_metric_registry_at_authority(
+        FfiConverterTypeCoreMetricRegistryProfile_lower(profile),
+        FfiConverterUInt32.lower(expectedRegistryVersion),
+        FfiConverterString.lower(registrySha256),uniffiCallStatus
+    )
+})
+}
+/**
  * Pure profile-exact managed-Markdown merge. Destination reads and writes remain native.
  *
  * # Errors
@@ -4427,6 +4443,9 @@ private let initializationResult: InitializationResult = {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry() != 44495) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_healthmd_core_uniffi_checksum_func_get_metric_registry_at_authority() != 54132) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_healthmd_core_uniffi_checksum_func_merge_profile_rendered_markdown() != 15241) {

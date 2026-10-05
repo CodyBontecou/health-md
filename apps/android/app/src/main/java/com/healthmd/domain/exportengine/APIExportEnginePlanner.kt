@@ -196,7 +196,9 @@ class HealthMdRustAPIExportPlanner(
                 "legacy API work cannot invoke the Rust planner"
             }
             val readiness = coreService.checkReadiness()
-            val registry = coreService.getMetricRegistry(request.profile.coreProfile)
+            val registry = request.suppliedPin?.let {
+                coreService.getMetricRegistryAtAuthority(request.profile.coreProfile, it.registryVersion, it.registrySha256)
+            } ?: coreService.getMetricRegistry(request.profile.coreProfile)
             val pin = request.suppliedPin?.also { persisted ->
                 val compatibility = ExportEnginePinValidator().validate(persisted, readiness, registry)
                 if (!compatibility.isCompatible ||

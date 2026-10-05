@@ -320,11 +320,29 @@ pub fn metric_registry_snapshot(
     if expected_registry_version != REGISTRY_VERSION {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
-    let document = REGISTRY
-        .get_or_init(|| decode_and_validate(REGISTRY_BYTES, true))
-        .as_ref()
-        .map_err(|error| *error)?;
-    project_snapshot(document, profile)
+    metric_registry_snapshot_at_authority(profile, expected_registry_version, REGISTRY_SHA256)
+}
+
+/// Project only an exact, explicitly retained authority; never upgrade its digest.
+///
+/// # Errors
+/// Unknown digests, profiles, versions, or corrupt embedded authorities fail closed.
+pub fn metric_registry_snapshot_at_authority(
+    profile: MetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: &str,
+) -> Result<MetricRegistrySnapshot, CoreError> {
+    if expected_registry_version != REGISTRY_VERSION {
+        return Err(CoreError::UnsupportedRegistryVersion);
+    }
+    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
+    if format!("{:x}", Sha256::digest(bytes)) != registry_sha256 {
+        return Err(CoreError::InvalidRegistry);
+    }
+    let document = decode_and_validate(bytes, false)?;
+    let mut snapshot = project_snapshot(&document, profile)?;
+    registry_sha256.clone_into(&mut snapshot.registry_sha256);
+    Ok(snapshot)
 }
 
 /// Validate exact embedded registry bytes and return deterministic inventory counts.

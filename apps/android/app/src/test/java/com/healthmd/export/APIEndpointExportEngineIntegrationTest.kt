@@ -375,6 +375,17 @@ class APIEndpointExportEngineIntegrationTest {
 
     @Test
     fun durableRestartUploadsOnlyUnacknowledgedPreparedBodiesWithoutRecapture() = runTest {
+        assertDurablePreparedReplay(testPin(ExportEngineMode.rust))
+    }
+
+    @Test
+    fun historicalAuthorityPreparedBodiesReplayWithoutUpgradingPinOrRerendering() = runTest {
+        assertDurablePreparedReplay(testPin(ExportEngineMode.rust).copy(
+            registrySha256 = com.healthmd.domain.exportengine.ExportEnginePin.HISTORICAL_REGISTRY_SHA256,
+        ))
+    }
+
+    private suspend fun assertDurablePreparedReplay(pin: com.healthmd.domain.exportengine.ExportEnginePin) {
         val third = second.plusDays(1)
         val operationId = "11111111-2222-3333-4444-555555555555"
         val bodies = listOf(
@@ -396,7 +407,7 @@ class APIEndpointExportEngineIntegrationTest {
             capture = firstCapture,
             native = APIExportNativePlanBuilder { error("Rust must not invoke native") },
             rust = APIExportRustPlanner {
-                APIExportRustPlan(testPin(ExportEngineMode.rust), apiPlan(it, bodies))
+                APIExportRustPlan(pin, apiPlan(it, bodies))
             },
             uploader = firstUploader,
             credentials = credentials,
@@ -436,7 +447,8 @@ class APIEndpointExportEngineIntegrationTest {
 
         assertThat(resumedCapture.calls).isEmpty()
         assertThat(resumedUploader.payloads).hasSize(1)
-        assertThat(resumedUploader.payloads.single()).contains("immutable-second")
+        assertThat(resumedUploader.payloads.single()).isEqualTo(bodies[1])
+        assertThat(store.load(operationId)!!.enginePinJson).isEqualTo(com.healthmd.domain.exportengine.ExportEnginePinCodec.encodeCanonical(pin))
         assertThat(resumed.successCount).isEqualTo(1)
         assertThat(resumed.totalCount).isEqualTo(1)
         assertThat(resumed.failedDateDetails).isEmpty()

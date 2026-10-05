@@ -16,6 +16,20 @@ public struct HealthMdCoreService: Sendable {
         }
     }
 
+    public func metricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt32 = 1,
+        registrySHA256: String
+    ) throws -> CoreMetricRegistrySnapshot {
+        try translateError {
+            try getMetricRegistryAtAuthority(
+                profile: profile,
+                expectedRegistryVersion: expectedRegistryVersion,
+                registrySha256: registrySHA256
+            )
+        }
+    }
+
     public func metricRegistry(
         profile: CoreMetricRegistryProfile,
         expectedRegistryVersion: UInt32 = 1

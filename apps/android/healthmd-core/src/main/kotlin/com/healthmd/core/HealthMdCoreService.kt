@@ -24,6 +24,14 @@ class HealthMdCoreService internal constructor(
         getMetricRegistry(profile, expectedRegistryVersion)
     }
 
+    fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt = EXPECTED_REGISTRY_VERSION,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = callNative {
+        getMetricRegistryAtAuthority(profile, expectedRegistryVersion, registrySha256)
+    }
+
     fun createSemanticSession(configurationBytes: ByteArray): HealthMdCoreSemanticSession {
         val directBytes = configurationBytes.toDirectByteBuffer()
         return callNative { HealthMdCoreSemanticSession(createSemanticSession(directBytes)) }
@@ -345,6 +353,12 @@ internal interface HealthMdCoreBindings {
         expectedRegistryVersion: UInt,
     ): CoreMetricRegistrySnapshot
 
+    fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = error("historical registry authority unavailable")
+
     fun createSemanticSession(configBytes: ByteBuffer): CoreSemanticSession
 
     fun createRenderSession(configBytes: ByteBuffer, semanticResultBytes: ByteBuffer): CoreRenderSession
@@ -417,6 +431,12 @@ private object UniFfiHealthMdCoreBindings : HealthMdCoreBindings {
         profile: CoreMetricRegistryProfile,
         expectedRegistryVersion: UInt,
     ): CoreMetricRegistrySnapshot = com.healthmd.core.getMetricRegistry(profile, expectedRegistryVersion)
+
+    override fun getMetricRegistryAtAuthority(
+        profile: CoreMetricRegistryProfile,
+        expectedRegistryVersion: UInt,
+        registrySha256: String,
+    ): CoreMetricRegistrySnapshot = com.healthmd.core.getMetricRegistryAtAuthority(profile, expectedRegistryVersion, registrySha256)
 
     override fun createSemanticSession(configBytes: ByteBuffer): CoreSemanticSession =
         com.healthmd.core.createSemanticSession(configBytes)

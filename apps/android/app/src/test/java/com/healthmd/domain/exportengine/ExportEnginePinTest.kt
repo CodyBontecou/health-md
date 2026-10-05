@@ -12,6 +12,21 @@ class ExportEnginePinTest {
     private val json = Json
 
     @Test
+    fun shippedAuthorityPinsRemainCompatibleAndUnknownOrCrossedAuthoritiesFailClosed() {
+        for (profile in AndroidExportProfile.entries) {
+            val pin = testPin(ExportEngineMode.rust, profile).copy(registrySha256 = ExportEnginePin.HISTORICAL_REGISTRY_SHA256)
+            val restored = json.decodeFromString<ExportEnginePin>(json.encodeToString(pin))
+            val historical = testRegistry(profile, pin.registrySha256)
+            val validator = ExportEnginePinValidator()
+            assertThat(validator.validate(restored, testReadiness(), historical).isCompatible).isTrue()
+            assertThat(restored).isEqualTo(pin)
+            assertThat(validator.validate(restored, testReadiness(), testRegistry(profile)).isCompatible).isFalse()
+            assertThat(validator.validate(restored.copy(registrySha256 = "0".repeat(64)), testReadiness(), historical).isCompatible).isFalse()
+            assertThat(validator.validate(restored.copy(renderProfileRevision = 1u), testReadiness(), historical).isCompatible).isFalse()
+        }
+    }
+
+    @Test
     fun compatiblePinRoundTripsWithExactStringEngineAndVersions() {
         val pin = testPin(
             mode = ExportEngineMode.rust,

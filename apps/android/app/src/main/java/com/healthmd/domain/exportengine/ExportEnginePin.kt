@@ -4,6 +4,7 @@ import com.healthmd.core.CoreMetricRegistryProfile
 import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.core.HealthMdCoreReadiness
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
 import java.time.ZoneId
 import java.util.Collections
 import kotlinx.serialization.EncodeDefault
@@ -107,6 +108,10 @@ data class ExportEnginePin(
     val ianaTimeZone: String,
 ) {
     companion object {
+        // Exact shipped registry at v3.4.2 (837687662aa2853d1872724c72a97e1526519bbc).
+        const val HISTORICAL_REGISTRY_SHA256: String = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+        fun supportsRegistryHash(hash: String): Boolean = hash == HEALTHMD_CORE_REGISTRY_SHA256 || hash == HISTORICAL_REGISTRY_SHA256
+
         const val PUBLIC_SCHEMA: String = "healthmd.health_data"
         const val EXPECTED_SEMANTIC_PROFILE_REVISION: UInt = 1u
 
@@ -188,7 +193,12 @@ class ExportEnginePinValidator {
         if (!readiness.isReady) {
             ExportEnginePinCompatibility(listOf(ExportEnginePinIssue.CORE_NOT_READY))
         } else {
-            validate(pin, readiness, service.getMetricRegistry(pin.profile.coreProfile))
+            val registry = if (pin.registrySha256 == readiness.buildInfo.registrySha256) {
+                service.getMetricRegistry(pin.profile.coreProfile, pin.registryVersion)
+            } else {
+                service.getMetricRegistryAtAuthority(pin.profile.coreProfile, pin.registryVersion, pin.registrySha256)
+            }
+            validate(pin, readiness, registry)
         }
     } catch (error: Throwable) {
         if (error.isFatalExportEngineFailure()) throw error
@@ -245,7 +255,8 @@ class ExportEnginePinValidator {
             issues += ExportEnginePinIssue.REGISTRY_VERSION
         }
         if (
-            pin.registrySha256 != info.registrySha256 ||
+            info.registrySha256 != HEALTHMD_CORE_REGISTRY_SHA256 ||
+            !ExportEnginePin.supportsRegistryHash(pin.registrySha256) ||
             pin.registrySha256 != registry.registrySha256 ||
             !pin.registrySha256.isLowercaseSha256()
         ) {

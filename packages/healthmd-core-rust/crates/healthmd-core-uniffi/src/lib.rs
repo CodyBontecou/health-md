@@ -1502,6 +1502,29 @@ pub fn get_metric_registry(
     })
 }
 
+/// Retrieve an exact retained registry authority without rewriting the caller's pin.
+///
+/// # Errors
+/// Unknown authorities and incompatible profile/version pairs fail closed.
+// UniFFI's owned-string ABI is required at the native boundary.
+#[allow(clippy::needless_pass_by_value)]
+#[uniffi::export]
+pub fn get_metric_registry_at_authority(
+    profile: CoreMetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: String,
+) -> Result<CoreMetricRegistrySnapshot, HealthmdCoreError> {
+    panic_guard(|| {
+        healthmd_core::registry::metric_registry_snapshot_at_authority(
+            profile.into(),
+            expected_registry_version,
+            &registry_sha256,
+        )
+        .map(CoreMetricRegistrySnapshot::from)
+        .map_err(HealthmdCoreError::from)
+    })
+}
+
 /// Validate exact bounded fixture bytes without returning fixture content.
 ///
 /// # Errors

@@ -65,7 +65,29 @@ nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
     ) async throws -> CoreArtifactPlan
 }
 
+extension AppleLooseDailyCoreExecuting {
+    /// A resumed operation chooses its original registry, not the new-operation default.
+    nonisolated func loadContext(pin: AppleExportEnginePin?) async throws -> AppleLooseDailyCoreContext {
+        let current = try await loadContext()
+        guard let pin,
+              pin.registrySHA256 != current.registry.registrySha256
+                || pin.profile != current.registry.profileId else { return current }
+        let registry = try await SystemAppleLooseDailyCoreExecutor.registry(for: pin)
+        return AppleLooseDailyCoreContext(buildInfo: current.buildInfo, registry: registry)
+    }
+}
+
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
+    static func registry(for pin: AppleExportEnginePin) async throws -> CoreMetricRegistrySnapshot {
+        try await SystemAppleLooseDailyCoreExecutor().runDetached {
+            try HealthMdCoreService().metricRegistryAtAuthority(
+                profile: pin.coreProfile,
+                expectedRegistryVersion: pin.registryVersion,
+                registrySHA256: pin.registrySHA256
+            )
+        }
+    }
+
     func loadContext() async throws -> AppleLooseDailyCoreContext {
         try await runDetached {
             let service = HealthMdCoreService()
@@ -375,11 +397,11 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
         let context: AppleLooseDailyCoreContext
         do {
-            context = try await coreExecutor.loadContext()
+            context = try await coreExecutor.loadContext(pin: suppliedPin)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if requestedMode == .shadow {
+            if suppliedPin == nil, requestedMode == .shadow {
                 await emitRustFailure(pin: nil)
                 return .legacy
             }

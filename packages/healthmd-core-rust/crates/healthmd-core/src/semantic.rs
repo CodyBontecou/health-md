@@ -11,9 +11,12 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, CoreError, REGISTRY_SHA256, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
+    CANONICAL_MODEL_VERSION, CoreError, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
     SEMANTIC_RESULT_CORE_API_VERSION,
 };
+
+#[cfg(test)]
+use crate::REGISTRY_SHA256;
 
 /// Maximum semantic-session configuration size.
 pub const MAX_CONFIG_BYTES: usize = 256 * 1024;
@@ -36,8 +39,6 @@ pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 /// Maximum UTF-8 bytes in one opaque extension retention token.
 pub const MAX_EXTENSION_TOKEN_BYTES: usize = 128;
 
-const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
-
 /// Closed output profiles. Profiles are never inferred from platform or app version.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -48,7 +49,7 @@ pub enum SemanticProfile {
 }
 
 impl SemanticProfile {
-    fn id(self) -> &'static str {
+    pub(crate) fn id(self) -> &'static str {
         match self {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
@@ -408,7 +409,7 @@ impl SemanticSession {
         let config: SemanticSessionConfig =
             serde_json::from_slice(config_bytes).map_err(|_| CoreError::InvalidSemanticConfig)?;
         validate_config(&config)?;
-        let profile = build_profile_index(config.profile)?;
+        let profile = build_profile_index(config.profile, &config.registry_sha256)?;
         if config
             .selected_selection_ids
             .iter()
@@ -1020,7 +1021,7 @@ impl SemanticSession {
             semantic_input_version: SEMANTIC_INPUT_VERSION,
             canonical_model_version: CANONICAL_MODEL_VERSION,
             core_api_version: SEMANTIC_RESULT_CORE_API_VERSION,
-            registry_sha256: REGISTRY_SHA256.to_owned(),
+            registry_sha256: self.config.registry_sha256.clone(),
             profile_revision: self.config.profile_revision,
             session_id: self.config.session_id.clone(),
             profile: self.config.profile,
@@ -1047,8 +1048,11 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
         || config.semantic_input_version != SEMANTIC_INPUT_VERSION
         || config.canonical_model_version != CANONICAL_MODEL_VERSION
         || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
-        || !matches!(config.profile_revision, 1 | 2)
+        || !crate::authority::supports_semantic(
+            &config.registry_sha256,
+            config.profile.id(),
+            config.profile_revision,
+        )
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
         || config.calendar_time_zone.parse::<chrono_tz::Tz>().is_err()
@@ -1105,9 +1109,10 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     Ok(())
 }
 
-fn build_profile_index(profile: SemanticProfile) -> Result<ProfileIndex, CoreError> {
+fn build_profile_index(profile: SemanticProfile, hash: &str) -> Result<ProfileIndex, CoreError> {
+    let bytes = crate::authority::registry_bytes(hash, profile.id())?;
     let registry: RawRegistry =
-        serde_json::from_slice(REGISTRY_BYTES).map_err(|_| CoreError::InvalidRegistry)?;
+        serde_json::from_slice(bytes).map_err(|_| CoreError::InvalidRegistry)?;
     let mut semantic_to_selection = HashMap::new();
     let mut valid_selections = HashSet::new();
     let mut aggregation_by_selection = HashMap::new();

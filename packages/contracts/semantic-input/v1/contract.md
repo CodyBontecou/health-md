@@ -19,7 +19,7 @@ An OS aggregate is represented as `kind: "sdk_aggregate"`; Rust must not reconst
 - `android_frozen_v4`
 - `android_analytical_v5`
 
-The caller supplies exact registry/version and profile-revision pins, an IANA calendar timezone, native persisted selection IDs, disabled profile output keys, an explicit platform-extension retention policy, and optional Apple roll-up periods. Profiles are never inferred. Android period requests fail with `unsupported_semantic_operation`.
+The caller supplies exact registry/version and profile-revision pins, an IANA calendar timezone, native persisted selection IDs, disabled profile output keys, an explicit platform-extension retention policy, and optional Apple roll-up periods. Profiles are never inferred. The exact registry digest shipped at v3.4.2 remains supported alongside the current inventory through the shared core's [historical authority policy](../../../healthmd-core-rust/docs/historical-export-authorities.md); results retain their input digest. Android period requests fail with `unsupported_semantic_operation`.
 
 Calendar periods (`iso_week`, `calendar_month`, and `calendar_year`) retain their semantic-input v1 shape and fixtures. A `range` request is gated to semantic-input v1, `apple_health_data_v8` profile revision 2, exactly one roll-up period, and a required `rollup_range` containing immutable inclusive civil bounds. Range bounds may cover at most 10,000 days; revision-1 calendar requests remain byte-compatible. Native code freezes the IANA timezone and requested bounds before capture; neither is inferred from successfully returned owner dates.
 

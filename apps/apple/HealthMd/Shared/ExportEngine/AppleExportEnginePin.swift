@@ -18,6 +18,21 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     static let profileID = "apple_health_data_v8"
+    // Exact authority embedded at the v3.4.2 source tag, before capability-only additions.
+    static let historicalRegistrySHA256 = "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+
+    var coreProfile: CoreMetricRegistryProfile { .appleHealthDataV8 }
+
+    static func supportsRegistry(_ registry: CoreMetricRegistrySnapshot) -> Bool {
+        registry.registryVersion == 1
+            && registry.profileRevision == 1
+            && registry.publicSchema == HealthMdExportSchema.identifier
+            && registry.profileId == profileID
+            && registry.publicProfileId == "apple-v8"
+            && registry.publicSchemaVersion == 8
+            && (registry.registrySha256 == HealthMetrics.registrySHA256
+                || registry.registrySha256 == historicalRegistrySHA256)
+    }
     private static let supportedCoreAPIVersion: UInt32 = 4
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
@@ -124,11 +139,12 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
               artifactPlanVersion == buildInfo.artifactPlanVersion else {
             throw CompatibilityError.incompatibleArtifactPlan
         }
-        guard registryVersion == HealthMdSemanticInputAdapter.registryVersion,
+        guard registrySHA256 == HealthMetrics.registrySHA256 || registrySHA256 == Self.historicalRegistrySHA256,
+              registryVersion == HealthMdSemanticInputAdapter.registryVersion,
               registryVersion == buildInfo.registryVersion,
               registryVersion == registrySnapshot.registryVersion,
               Self.isLowercaseSHA256(registrySHA256),
-              registrySHA256 == buildInfo.registrySha256,
+              buildInfo.registrySha256 == HealthMetrics.registrySHA256,
               registrySHA256 == registrySnapshot.registrySha256 else {
             throw CompatibilityError.incompatibleRegistry
         }
