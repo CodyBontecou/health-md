@@ -209,6 +209,7 @@ final class ConnectedCorpusOutboundStore {
                 .appendingPathComponent("ConnectedCorpusOutbound", isDirectory: true)
         }
         let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         self.encoder = encoder
         self.decoder = JSONDecoder()

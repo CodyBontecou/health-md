@@ -53,6 +53,12 @@ class ExportOrchestrator(
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)? = null,
     ): ExportResult {
         val totalDays = dates.size
+        val captureContext = try {
+            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+        } catch (error: SleepAttributionUnavailableException) {
+            return ExportResult(successCount = 0, totalCount = totalDays,
+                failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) })
+        }
         if (durableFolderOperationId != null) {
             val snapshotJson = durableSettingsSnapshotJson
                 ?: return folderFailure(dates, durableFolderOperationId)
@@ -85,7 +91,6 @@ class ExportOrchestrator(
         val failedDateDetails = mutableListOf<FailedDateDetail>()
         var processedDays = 0
         val effectiveSelection = settings.effectiveDataTypeSelection()
-        val captureContext = healthRepository.resolveCaptureContext()
 
         suspend fun cancelledResult(): ExportResult {
             val cancelled = ExportResult(
@@ -265,7 +270,12 @@ class ExportOrchestrator(
         val previewCandidates = normalizedDates.take(MAX_PREVIEW_FETCH_ATTEMPTS)
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
-        val captureContext = healthRepository.resolveCaptureContext()
+        val captureContext = try {
+            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+        } catch (_: SleepAttributionUnavailableException) {
+            return ExportPreview(requestedDateCount = normalizedDates.size, previewedDateCount = 0,
+                isTruncated = false, days = previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
+        }
 
         // Match iOS: show the most recent days with data, rendering at most five while
         // checking a wider window so an empty today does not make the preview look empty.

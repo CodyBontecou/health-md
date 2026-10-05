@@ -297,6 +297,7 @@ final class IPhoneDirectQueryCoordinator {
         if let continuationDays {
             days = continuationDays
         } else {
+            let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
             let dates = try await resolveDates(
                 query.dates,
                 metricIDs: metricIDs,
@@ -323,7 +324,8 @@ final class IPhoneDirectQueryCoordinator {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: timeZone
+                            timeZone: timeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: nil

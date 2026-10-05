@@ -663,6 +663,49 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         case unexpectedProduction
     }
 
+    #if os(iOS)
+    func testRecoveredProducerUsesPersistedSleepContextInBothMutationDirectionsAndRetainsMissingJournal() async throws {
+        let changes: [(SleepDayAttribution?, SleepDayAttribution)] = [(.nightBegins, .morningEnds), (.morningEnds, .nightBegins), (nil, .nightBegins)]
+        for (saved, current) in changes {
+            let fixture = try makeFixture(dayCount: 1, sleepAttribution: saved)
+            let relaunchedStore = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let journal = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            XCTAssertEqual(journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            let healthStore = FakeHealthStore()
+            let counter = SleepRecoveryQueryCounter()
+            healthStore.beforeQueryCategorySamples = { _ in await MainActor.run { counter.count += 1 } }
+            let healthManager = HealthKitManager(store: healthStore,
+                userDefaults: UserDefaults(suiteName: "SleepRecovery.\(UUID())")!)
+            healthManager.setSleepDayAttribution(current)
+            let manager = IPhoneCorpusExportRecoveryManager(store: relaunchedStore)
+            Self.retainedRecoveryManagers.append(manager)
+            let service = SyncService()
+            manager.configure(syncService: service, healthKitManager: healthManager, externalIntegrations: nil)
+            let producer = manager.makeRecoveredProducer(for: journal)
+            if saved == .nightBegins {
+                let item = try await producer(0, fixture.dates[0])
+                item.file.remove()
+                XCTAssertGreaterThan(counter.count, 0, "A recovered night operation must not read the changed morning preference")
+            } else {
+                do {
+                    _ = try await producer(0, fixture.dates[0])
+                    XCTFail("Missing or unapproved saved attribution must remain unavailable")
+                } catch {
+                    XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError,
+                        saved == nil ? .missingDurableAttribution : .unapprovedAttribution)
+                }
+                XCTAssertEqual(counter.count, 0)
+            }
+            let retained = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            XCTAssertEqual(retained.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            XCTAssertEqual(retained.session.requestFingerprint, journal.session.requestFingerprint)
+            XCTAssertEqual(healthManager.sleepDayAttribution, current)
+        }
+    }
+
+    @MainActor private final class SleepRecoveryQueryCounter { var count = 0 }
+    #endif
+
     private struct Fixture {
         let root: URL
         let store: ConnectedCorpusOutboundStore
@@ -677,6 +720,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         protocolVersion: Int = 2,
         includeCLIRequest: Bool = false,
+        sleepAttribution: SleepDayAttribution? = .nightBegins,
         sourceInstallationID: UUID? = nil,
         destinationInstallationID: UUID? = nil,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
@@ -690,6 +734,9 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
+        settings.executionSleepCaptureContext = sleepAttribution.map {
+            AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: $0)
+        }
         let start = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
         let dates = (0..<dayCount).compactMap {
             Calendar.current.date(byAdding: .day, value: $0, to: start)

@@ -31,6 +31,7 @@ import com.healthmd.domain.exportengine.isFatalExportEngineFailure
 import com.healthmd.domain.exportengine.validateAPIPlan
 import com.healthmd.domain.model.APIExportEndpoint
 import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepAttributionUnavailableException
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
@@ -305,7 +306,12 @@ class APIEndpointExportRunner private constructor(
             ids = idSource.next(),
         )
         val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
-        val captureContext = operationSource?.resolveCaptureContext(ZoneId.of(snapshot.calendarTimeZone))
+        val captureContext = try {
+            operationSource?.resolveCaptureContext(ZoneId.of(snapshot.calendarTimeZone))?.also { it.requireShippedProfile() }
+        } catch (error: SleepAttributionUnavailableException) {
+            return ExportResult(successCount = 0, totalCount = normalizedDates.size,
+                failedDateDetails = normalizedDates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) })
+        }
         if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
             try {
                 // Authorization sees the complete scope before owner dates are captured in their
@@ -549,7 +555,11 @@ class APIEndpointExportRunner private constructor(
         captureContext: AndroidCaptureContext? = null,
     ): CaptureResult {
         val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
-        val resolvedCaptureContext = captureContext ?: operationSource?.resolveCaptureContext(zoneId)
+        val resolvedCaptureContext = try {
+            (captureContext ?: operationSource?.resolveCaptureContext(zoneId))?.also { it.requireShippedProfile() }
+        } catch (error: SleepAttributionUnavailableException) {
+            return CaptureResult(emptyList(), dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) }, dates, wasCancelled = false)
+        }
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()

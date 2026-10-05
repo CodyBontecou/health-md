@@ -213,6 +213,12 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     /// Explicit source calendar used for day ownership, roll-ups, filenames, and clock fields.
     /// Missing preserves the legacy behavior of consulting the process's current time zone.
     var calendarTimeZoneIdentifier: String?
+    /// Internal durable capture authority. Missing remains missing on decode;
+    /// a pending job cannot acquire today's mutable preference during recovery.
+    var sleepCaptureContext: AppleSleepCaptureContext? = nil
+    /// Journal stores opt in explicitly. Wire packets, canonical request
+    /// fingerprints and portable configuration retain their historical bytes.
+    static let durableSleepContextEncoding = CodingUserInfoKey(rawValue: "healthmd.durable_sleep_context")!
 
     enum CodingKeys: String, CodingKey {
         case exportFormats
@@ -240,6 +246,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         case appleExportEnginePin
         case appleExportEngineAuthorityIsFrozen
         case calendarTimeZoneIdentifier
+        case sleepCaptureContext
     }
 
     private enum LegacyCodingKeys: String, CodingKey {
@@ -366,6 +373,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             String.self,
             forKey: .calendarTimeZoneIdentifier
         )
+        sleepCaptureContext = try container.decodeIfPresent(AppleSleepCaptureContext.self, forKey: .sleepCaptureContext)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -408,6 +416,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier,
             forKey: .calendarTimeZoneIdentifier
         )
+        if encoder.userInfo[Self.durableSleepContextEncoding] as? Bool == true {
+            try container.encodeIfPresent(sleepCaptureContext, forKey: .sleepCaptureContext)
+        }
     }
 
     static func from(
@@ -417,7 +428,7 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         appleExportEngineAuthorityIsFrozen: Bool = true,
         calendarTimeZoneIdentifier: String? = nil
     ) -> ExportSettingsSnapshot {
-        ExportSettingsSnapshot(
+        var snapshot = ExportSettingsSnapshot(
             exportFormats: settings.exportFormats,
             includeMetadata: settings.includeMetadata,
             groupByCategory: settings.groupByCategory,
@@ -443,6 +454,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
                 ?? settings.exportTimeZoneOverride?.identifier
         )
+        snapshot.sleepCaptureContext = settings.executionSleepCaptureContext
+            ?? AppleSleepCaptureContext.pinned.wrappedValue
+        return snapshot
     }
 
     /// Freezes the nondeterministic Apple operation inputs only while planning new work. Persisted
@@ -456,7 +470,9 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         policyResolver: AppleExportEnginePolicyResolver = AppleExportEnginePolicyResolver(),
         coreExecutor: any AppleLooseDailyCoreExecuting = SystemAppleLooseDailyCoreExecutor()
     ) async -> ExportSettingsSnapshot {
-        let resolvedTimeZone = calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
+        let resolvedTimeZone = settings.executionSleepCaptureContext?.timeZone
+            ?? AppleSleepCaptureContext.pinned.wrappedValue?.timeZone
+            ?? calendarTimeZone ?? settings.exportTimeZoneOverride ?? .current
         let identifier = resolvedTimeZone.identifier
         var snapshot = from(
             settings,
@@ -464,6 +480,12 @@ struct ExportSettingsSnapshot: Codable, Equatable {
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: identifier
         )
+
+        if snapshot.sleepCaptureContext == nil, !settings.executionSleepCaptureContextIsFrozen {
+            snapshot.sleepCaptureContext = AppleSleepCaptureContext.resolve(
+                timeZone: resolvedTimeZone, attribution: HealthKitManager.shared.sleepDayAttribution
+            )
+        }
 
         // This factory is only for new work, but preserve an injected execution pin defensively so
         // an accidental call during resume can never replace persisted authority with today's flag.
@@ -523,10 +545,15 @@ struct ExportSettingsSnapshot: Codable, Equatable {
     /// UserDefaults so applying a received iOS snapshot never mutates the Mac's
     /// persisted export preferences.
     func makeAdvancedExportSettings(
-        userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults()
+        userDefaults: UserDefaults = ExportSettingsSnapshot.makeTemporaryUserDefaults(),
+        forNewConfiguration: Bool = false
     ) -> AdvancedExportSettings {
         let settings = AdvancedExportSettings(snapshot: self, userDefaults: userDefaults)
-        applyCalendarTimeZone(to: settings)
+        if forNewConfiguration {
+            settings.executionSleepCaptureContext = nil
+            settings.executionSleepCaptureContextIsFrozen = false
+        }
+        applyCalendarTimeZone(to: settings, includeSleepContext: !forNewConfiguration)
         return settings
     }
 
@@ -552,7 +579,11 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         applyCalendarTimeZone(to: settings)
     }
 
-    private func applyCalendarTimeZone(to settings: AdvancedExportSettings) {
+    private func applyCalendarTimeZone(to settings: AdvancedExportSettings, includeSleepContext: Bool = false) {
+        if includeSleepContext, let sleepCaptureContext {
+            settings.exportTimeZoneOverride = sleepCaptureContext.timeZone
+            return
+        }
         if let calendarTimeZoneIdentifier,
            AppleExportEnginePin.isIANAIdentifier(calendarTimeZoneIdentifier),
            let timeZone = TimeZone(identifier: calendarTimeZoneIdentifier) {

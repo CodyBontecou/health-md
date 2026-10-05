@@ -605,7 +605,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
     }
 
-    private func makeRecoveredProducer(
+    func makeRecoveredProducer(
         for journal: ConnectedCorpusOutboundJournal
     ) -> ConnectedCorpusDurableSender.ItemProducer {
         let settings = journal.exportManifest.settingsSnapshot.makeAdvancedExportSettings()
@@ -639,6 +639,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             guard let healthKitManager else {
                 throw HealthKitManager.HealthKitError.dataNotAvailable
             }
+            // Never resolve a missing/persisted context from current preferences.
+            let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings, timeZone: sourceTimeZone)
             let isRequested = requestedDays.contains(sourceCalendar.startOfDay(for: date))
             switch journal.exportManifest.mode {
             case .writeFiles:
@@ -676,7 +678,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: selection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalFetcher
@@ -727,7 +730,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                                 for: date,
                                 detailPolicy: detailPolicy,
                                 metricSelection: selection,
-                                timeZone: sourceTimeZone
+                                timeZone: sourceTimeZone,
+                                captureContext: captureContext
                             )
                         }
                         return HealthData(
@@ -766,7 +770,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: selection,
-                            timeZone: sourceTimeZone
+                            timeZone: sourceTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: nil

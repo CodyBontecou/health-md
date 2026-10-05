@@ -1531,6 +1531,7 @@ struct ContentView: View {
                 let dateFormatter = DateFormatter()
                 dateFormatter.dateFormat = "yyyy-MM-dd"
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
+                let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: advancedSettings, timeZone: providerTimeZone)
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
@@ -1584,7 +1585,8 @@ struct ContentView: View {
                             jobID: jobID,
                             destinationName: destinationName,
                             dateFormatter: dateFormatter,
-                            externalRecordFetcher: externalRecordFetcher
+                            externalRecordFetcher: externalRecordFetcher,
+                            captureContext: captureContext
                         )
                     }
                     return
@@ -1604,7 +1606,8 @@ struct ContentView: View {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: advancedSettings.metricSelection,
-                            timeZone: providerTimeZone
+                            timeZone: providerTimeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: externalRecordFetcher,
@@ -1738,7 +1741,8 @@ struct ContentView: View {
         jobID: UUID,
         destinationName: String,
         dateFormatter: DateFormatter,
-        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
+        externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?,
+        captureContext: AppleSleepCaptureContext
     ) async throws {
         let metadata = await MacExportStreamingJobBuilder.metadataForNewOperation(
             startDate: startDate,
@@ -1843,7 +1847,8 @@ struct ContentView: View {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: advancedSettings.metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                     var record = ConnectedExportDetailPolicy.sanitized(
                         fetchedRecord,

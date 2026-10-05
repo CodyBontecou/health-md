@@ -319,6 +319,7 @@ final class IPhoneDirectFileExportProducer {
             savedSettings: baseSettings
         )
         settings.exportTimeZoneOverride = sourceTimeZone
+        settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         guard healthKitManager.isAuthorized else {
             throw IPhoneDirectFileProducerError.healthKitNotAuthorized
         }
@@ -539,6 +540,7 @@ final class IPhoneDirectFileExportProducer {
             identifier: journal.accepted.sourceTimeZoneIdentifier
         ) ?? .current
         settings.exportTimeZoneOverride = sourceTimeZone
+        let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = sourceTimeZone
         let requestedSet = Set(journal.requestedDates.map { sourceCalendar.startOfDay(for: $0) })
@@ -594,7 +596,8 @@ final class IPhoneDirectFileExportProducer {
                         metricSelection: metricSelection,
                         timeZone: TimeZone(
                             identifier: journal.accepted.sourceTimeZoneIdentifier
-                        )
+                        ),
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalFetcher
@@ -1331,7 +1334,7 @@ final class IPhoneDirectFileExportProducer {
         guard !SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profile.id) else {
             throw IPhoneDirectFileProducerError.profileRequiresRebind
         }
-        return profile.settings.makeAdvancedExportSettings()
+        return profile.settings.makeAdvancedExportSettings(forNewConfiguration: true)
     }
 
     /// Check every invocation, including durable resumes, before any journal,
@@ -1572,6 +1575,7 @@ final class IPhoneDirectFileExportProducer {
 
     private func saveJournal(_ journal: IPhoneDirectFileJournal) throws {
         let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         try protectedAtomicWrite(

@@ -851,11 +851,14 @@ struct HealthMdApp: App {
 
     /// Fetch health data from HealthKit for the requested dates and send to the connected Mac.
     private func handleDataRequest(dates: [Date]) async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         var records: [HealthData] = []
 
         for date in dates {
             do {
-                let data = try await healthKitManager.fetchHealthData(for: date)
+                let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                 if data.hasAnyData {
                     records.append(data)
                 }
@@ -881,6 +884,9 @@ struct HealthMdApp: App {
     /// Handle a request for ALL available health data.
     /// Discovers the earliest HealthKit data date and sends data in batches with progress updates.
     private func handleAllDataRequest() async {
+        let captureContext = AppleSleepCaptureContext.resolve(attribution: healthKitManager.sleepDayAttribution)
+        do { try captureContext.requireShippedProfile() }
+        catch { syncService.lastError = error.localizedDescription; return }
         // Find the earliest date with health data
         guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             // No data found — send a completion progress message
@@ -922,7 +928,7 @@ struct HealthMdApp: App {
             var records: [HealthData] = []
             for date in batchDates {
                 do {
-                    let data = try await healthKitManager.fetchHealthData(for: date)
+                    let data = try await healthKitManager.fetchHealthData(for: date, captureContext: captureContext)
                     if data.hasAnyData {
                         records.append(data)
                     }

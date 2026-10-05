@@ -126,11 +126,11 @@ class ClinicianReportDataSourceTest {
             coEvery { settings.getSelectedHealthProviderId() } returns "health_connect"
             coEvery { settings.getSleepDayAttribution() } answers {
                 TimeZone.setDefault(TimeZone.getTimeZone("Europe/Berlin"))
-                SleepDayAttribution.MORNING_ENDS
+                SleepDayAttribution.NIGHT_BEGINS
             }
             every { registry.providerFor("health_connect") } returns provider
             coEvery {
-                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.MORNING_ENDS)
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS)
             } returns listOf(HealthData(day, sleep = SleepData(totalDuration = 1.minutes)))
             val repository = HealthRepositoryImpl(registry, settings)
 
@@ -138,7 +138,7 @@ class ClinicianReportDataSourceTest {
 
             assertThat(captured.sleep.totalDuration).isEqualTo(1.minutes)
             coVerify(exactly = 1) {
-                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.MORNING_ENDS)
+                manager.fetchHealthDataRange(any(), any(), false, capturedZone, false, SleepDayAttribution.NIGHT_BEGINS)
             }
         } finally {
             TimeZone.setDefault(previous)

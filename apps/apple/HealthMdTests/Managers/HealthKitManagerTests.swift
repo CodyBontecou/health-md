@@ -1245,14 +1245,14 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         sut.setSleepDayAttribution(.morningEnds)
 
         // The wake date's note owns the full session, unclipped.
-        let wakeDay = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: night)!)
+        let wakeDay = try await sut.fetchUnapprovedSleepProjection(for: calendar.date(byAdding: .day, value: 1, to: night)!)
         XCTAssertEqual(wakeDay.sleep.totalDuration, 7 * 3600 + 45 * 60, accuracy: 1, "whole session must stay together, never split at midnight")
         XCTAssertEqual(wakeDay.sleep.inBedTime, 7 * 3600 + 45 * 60, accuracy: 1)
         XCTAssertEqual(wakeDay.sleep.sessionStart, calendar.date(bySettingHour: 23, minute: 45, second: 0, of: night))
         XCTAssertEqual(wakeDay.sleep.sessionEnd, calendar.date(bySettingHour: 7, minute: 30, second: 0, of: calendar.date(byAdding: .day, value: 1, to: night)!))
 
         // The start date's note no longer owns it.
-        let startDay = try await sut.fetchHealthData(for: night)
+        let startDay = try await sut.fetchUnapprovedSleepProjection(for: night)
         XCTAssertEqual(startDay.sleep.totalDuration, 0)
         XCTAssertNil(startDay.sleep.sessionStart)
     }
@@ -1272,10 +1272,10 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         sut.setSleepDayAttribution(.morningEnds)
 
         // A session entirely inside one calendar day stays on that day in both modes.
-        let sameDay = try await sut.fetchHealthData(for: day)
+        let sameDay = try await sut.fetchUnapprovedSleepProjection(for: day)
         XCTAssertEqual(sameDay.sleep.totalDuration, 90 * 60, accuracy: 1)
 
-        let nextDay = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: day)!)
+        let nextDay = try await sut.fetchUnapprovedSleepProjection(for: calendar.date(byAdding: .day, value: 1, to: day)!)
         XCTAssertEqual(nextDay.sleep.totalDuration, 0, "a nap ending on its own day must not leak into the next note")
     }
 
@@ -1293,10 +1293,10 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         let sut = makeSUT(store: store)
         sut.setSleepDayAttribution(.morningEnds)
 
-        let startDayNote = try await sut.fetchHealthData(for: day)
+        let startDayNote = try await sut.fetchUnapprovedSleepProjection(for: day)
         XCTAssertEqual(startDayNote.sleep.totalDuration, 0, "a session ending tomorrow belongs to tomorrow's note")
 
-        let wakeDayNote = try await sut.fetchHealthData(for: calendar.date(byAdding: .day, value: 1, to: day)!)
+        let wakeDayNote = try await sut.fetchUnapprovedSleepProjection(for: calendar.date(byAdding: .day, value: 1, to: day)!)
         XCTAssertEqual(wakeDayNote.sleep.totalDuration, 8 * 3600, accuracy: 1)
     }
 
@@ -1310,7 +1310,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         let sut = makeSUT(store: store)
         sut.setSleepDayAttribution(.morningEnds)
 
-        let wakeDay = try await sut.fetchHealthData(
+        let wakeDay = try await sut.fetchUnapprovedSleepProjection(
             for: calendar.date(byAdding: .day, value: 1, to: night)!,
             includeGranularData: true
         )
@@ -1332,8 +1332,13 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertNil(nightBegins.timeContext.sleepDayAttribution, "default captures keep legacy record bytes")
 
         sut.setSleepDayAttribution(.morningEnds)
-        let morningEnds = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
-        XCTAssertEqual(morningEnds.timeContext.sleepDayAttribution, .morningEnds)
+        do {
+            _ = try await sut.fetchHealthData(for: HealthKitFixtures.referenceDate)
+            XCTFail("No shipped v8 capture may publish unapproved ownership")
+        } catch {
+            XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
+        }
+        XCTAssertEqual(sut.sleepDayAttribution, .morningEnds, "Do not coerce a saved preference")
     }
 
     @MainActor
@@ -1490,12 +1495,12 @@ final class HealthKitManagerAggregationTests: XCTestCase {
             CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end),
         ]
         let sut = makeSUT(store: store)
-        sut.setSleepDayAttribution(.morningEnds)
+        sut.setSleepDayAttribution(.nightBegins)
         store.beforeQueryCategorySamples = { identifier in
             guard identifier == .sleepAnalysis else { return }
             await MainActor.run {
                 NSTimeZone.default = changedZone
-                sut.setSleepDayAttribution(.nightBegins)
+                sut.setSleepDayAttribution(.morningEnds)
             }
         }
 
@@ -1505,14 +1510,14 @@ final class HealthKitManagerAggregationTests: XCTestCase {
             "sleep_total", "sleep_bedtime", "sleep_wake", "sleep_core", "sleep_awake",
         ]
         let captured = try await sut.fetchHealthData(
-            for: wakeDay,
+            for: priorDay,
             includeGranularData: true,
             metricSelection: sleepSelection,
             timeZone: capturedZone
         )
 
         XCTAssertEqual(captured.timeContext.calendarTimeZoneIdentifier, capturedZone.identifier)
-        XCTAssertEqual(captured.timeContext.sleepDayAttribution, SleepDayAttribution.morningEnds)
+        XCTAssertNil(captured.timeContext.sleepDayAttribution, "Legacy capture meaning must survive a preference edit")
         XCTAssertEqual(captured.sleep.sessionStart, start)
         XCTAssertEqual(captured.sleep.sessionEnd, end)
     }
@@ -1542,7 +1547,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         sut.setSleepDayAttribution(.morningEnds)
         let selection = sleepOnlySelection()
 
-        let first = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        let first = try await sut.fetchUnapprovedSleepProjection(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertEqual(first.sleep.totalDuration, 7.5 * 3_600, accuracy: 0.001)
         XCTAssertEqual(first.sleep.coreSleep, 2.75 * 3_600, accuracy: 0.001)
         XCTAssertEqual(first.sleep.remSleep, 4.75 * 3_600, accuracy: 0.001)
@@ -1552,7 +1557,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertEqual(first.sleep.stages.map(\.stage), ["core", "rem"])
         XCTAssertTrue(first.sleep.stages.allSatisfy { $0.metadata["source"] == "stage-only" })
 
-        let second = try await sut.fetchHealthData(for: nextDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        let second = try await sut.fetchUnapprovedSleepProjection(for: nextDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertEqual(second.sleep.totalDuration, 9 * 3_600, accuracy: 0.001)
         XCTAssertEqual(second.sleep.inBedTime, 9 * 3_600, accuracy: 0.001)
         XCTAssertEqual(second.sleep.deepSleep, 9 * 3_600, accuracy: 0.001)
@@ -1561,7 +1566,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         XCTAssertEqual(second.sleep.stages.map(\.stage), ["inBed", "deep"])
         XCTAssertTrue(second.sleep.stages.allSatisfy { $0.metadata["source"] == "in-bed" })
 
-        let startDay = try await sut.fetchHealthData(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        let startDay = try await sut.fetchUnapprovedSleepProjection(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertFalse(startDay.sleep.hasData)
         XCTAssertNil(startDay.sleep.sessionStart)
         XCTAssertTrue(startDay.sleep.stages.isEmpty, "neither night may be duplicated on its start date")
@@ -1589,7 +1594,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         let sut = makeSUT(store: store)
         sut.setSleepDayAttribution(.morningEnds)
 
-        let captured = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: sleepOnlySelection(), timeZone: calendar.timeZone)
+        let captured = try await sut.fetchUnapprovedSleepProjection(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: sleepOnlySelection(), timeZone: calendar.timeZone)
 
         XCTAssertEqual(captured.sleep.totalDuration, (8 * 60 - 15 + 90) * 60, accuracy: 0.001)
         XCTAssertEqual(captured.sleep.inBedTime, 8 * 3_600, accuracy: 0.001)
@@ -1625,7 +1630,7 @@ final class HealthKitManagerAggregationTests: XCTestCase {
         sut.setSleepDayAttribution(.morningEnds)
         let selection = sleepOnlySelection()
 
-        let captured = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        let captured = try await sut.fetchUnapprovedSleepProjection(for: wakeDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertEqual(captured.sleep.totalDuration, (7 * 60 + 45) * 60, accuracy: 0.001)
         XCTAssertEqual(captured.sleep.coreSleep, 80 * 60, accuracy: 0.001)
         XCTAssertEqual(captured.sleep.remSleep, 220 * 60, accuracy: 0.001)
@@ -1641,12 +1646,12 @@ final class HealthKitManagerAggregationTests: XCTestCase {
             XCTAssertEqual(stage.metadata, source.metadata)
         }
 
-        let summary = try await sut.fetchHealthData(for: wakeDay, detailPolicy: .summary, metricSelection: selection, timeZone: calendar.timeZone)
+        let summary = try await sut.fetchUnapprovedSleepProjection(for: wakeDay, detailPolicy: .summary, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertEqual(summary.sleep.totalDuration, captured.sleep.totalDuration)
         XCTAssertEqual(summary.sleep.awakeTime, captured.sleep.awakeTime)
         XCTAssertTrue(summary.sleep.stages.isEmpty)
 
-        let startDay = try await sut.fetchHealthData(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
+        let startDay = try await sut.fetchUnapprovedSleepProjection(for: priorDay, detailPolicy: .detailedTimeSeries, metricSelection: selection, timeZone: calendar.timeZone)
         XCTAssertEqual(startDay.sleep.totalDuration, 0, "pre-midnight sleep belongs only to the wake-day note")
         XCTAssertEqual(startDay.sleep.awakeTime, 0)
         XCTAssertNil(startDay.sleep.sessionStart)

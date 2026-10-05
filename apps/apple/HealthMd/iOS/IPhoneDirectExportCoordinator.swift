@@ -480,6 +480,7 @@ final class IPhoneDirectExportCoordinator {
             savedSettings: AdvancedExportSettings()
         )
         settings.exportTimeZoneOverride = sourceTimeZone
+        settings.executionSleepCaptureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         guard healthKitManager.isAuthorized else {
             throw IPhoneDirectExportError.healthKitNotAuthorized
         }
@@ -553,6 +554,7 @@ final class IPhoneDirectExportCoordinator {
     ) async throws -> IPhoneDirectExportJournal {
         var journal = supplied
         let settings = journal.settingsSnapshot.makeAdvancedExportSettings()
+        let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         settings.exportTimeZoneOverride = TimeZone(
             identifier: journal.accepted.sourceTimeZoneIdentifier
         )
@@ -597,7 +599,8 @@ final class IPhoneDirectExportCoordinator {
                         metricSelection: metricSelection,
                         timeZone: TimeZone(
                             identifier: journal.accepted.sourceTimeZoneIdentifier
-                        )
+                        ),
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: nil
@@ -1182,6 +1185,7 @@ final class IPhoneDirectExportCoordinator {
 
     private func saveJournal(_ journal: IPhoneDirectExportJournal) throws {
         let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         try protectedAtomicWrite(

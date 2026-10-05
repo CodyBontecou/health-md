@@ -86,7 +86,7 @@ class HealthRepositoryImpl(
             SleepDayAttributionOverride.StoredPreference -> settingsRepository.getSleepDayAttribution()
             is SleepDayAttributionOverride.Value -> sleepDayAttributionOverride.attribution
         }
-        return AndroidCaptureContext(capturedZoneId, attribution)
+        return AndroidCaptureContext(capturedZoneId, attribution).also { it.requireShippedProfile() }
     }
 
     override suspend fun fetchHealthData(date: LocalDate): HealthData {

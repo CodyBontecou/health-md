@@ -113,7 +113,7 @@ class APIEndpointExportRunnerTest {
         try {
             TimeZone.setDefault(TimeZone.getTimeZone(capturedZone))
             val dates = listOf(LocalDate.of(2026, 7, 10), LocalDate.of(2026, 7, 11))
-            var storedAttribution = SleepDayAttribution.MORNING_ENDS
+            var storedAttribution = SleepDayAttribution.NIGHT_BEGINS
             val observedContexts = mutableListOf<Pair<ZoneId, SleepDayAttribution>>()
             val consentZones = mutableListOf<ZoneId>()
             val manager = mockk<HealthConnectManager>()
@@ -127,7 +127,7 @@ class APIEndpointExportRunnerTest {
             every { manager.isBeforeFirstUnlock() } returns false
             coEvery { manager.authorizeExerciseRouteConsent(any(), any(), any()) } answers {
                 consentZones += arg<ZoneId>(2)
-                storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+                storedAttribution = SleepDayAttribution.MORNING_ENDS
                 TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
             }
             coEvery { manager.fetchHealthDataRange(any(), any(), any(), any(), any(), any()) } answers {
@@ -136,7 +136,7 @@ class APIEndpointExportRunnerTest {
                 val attribution = arg<SleepDayAttribution>(5)
                 observedContexts += zone to attribution
                 if (observedContexts.size == 1) {
-                    storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+                    storedAttribution = SleepDayAttribution.MORNING_ENDS
                     TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
                 }
                 listOf(HealthData(
@@ -168,8 +168,8 @@ class APIEndpointExportRunnerTest {
             assertThat(result.successCount).isEqualTo(2)
             assertThat(consentZones).containsExactly(capturedZone)
             assertThat(observedContexts).containsExactly(
-                capturedZone to SleepDayAttribution.MORNING_ENDS,
-                capturedZone to SleepDayAttribution.MORNING_ENDS,
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
             ).inOrder()
             assertThat(uploader.calls).isEqualTo(1)
         } finally {
@@ -178,8 +178,9 @@ class APIEndpointExportRunnerTest {
     }
 
     @Test
-    fun sleepOnlyMorningApiUploadContainsWakeDayOnceAndNoStartDayFallback() = runTest {
+    fun shippedSleepOnlyApiUploadContainsNightDayOnceAndNoWakeDayFallback() = runTest {
         val fixture = SleepAttributionCaptureFixture()
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val uploader = CapturingUploader()
         val jsonExporter = JsonExporter()
         val runner = APIEndpointExportRunner(
@@ -202,23 +203,40 @@ class APIEndpointExportRunnerTest {
             )
 
             assertThat(result.successCount).isEqualTo(1)
-            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.startDay)
+            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.wakeDay)
             assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
             assertThat(uploader.calls).isEqualTo(1)
             val records = Json.parseToJsonElement(requireNotNull(uploader.payload)).jsonObject.getValue("records").jsonArray
             assertThat(records).hasSize(1)
-            assertThat(records.single().jsonObject.getValue("date").jsonPrimitive.content).isEqualTo(fixture.wakeDay.toString())
+            assertThat(records.single().jsonObject.getValue("date").jsonPrimitive.content).isEqualTo(fixture.startDay.toString())
             val sleep = records.single().jsonObject.getValue("sleep").jsonObject
             assertThat(sleep.getValue("awakeTime").jsonPrimitive.content.toDouble()).isEqualTo(30 * 60.0)
             assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(495 * 60.0)
             assertThat(fixture.singleDayReads).isEmpty()
             assertThat(fixture.observedContexts).containsExactly(
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
             ).inOrder()
         } finally {
             TimeZone.setDefault(previousZone)
         }
+    }
+
+    @Test
+    fun unapprovedSleepOwnershipDoesNotReadProviderOrUploadImmutableV4Envelope() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val uploader = CapturingUploader()
+        val jsonExporter = JsonExporter()
+        val runner = APIEndpointExportRunner(healthRepository = fixture.repository,
+            envelopeBuilder = APIExportEnvelopeBuilder(jsonExporter), jsonExporter = jsonExporter,
+            uploader = uploader, credentialStore = credentials())
+        val result = runner.exportDates(listOf(fixture.startDay, fixture.wakeDay),
+            ExportSettings(exportTarget = ExportTarget.API_ENDPOINT, apiEndpointUrl = "https://api.example.com/healthmd", dataTypes = fixture.selection))
+        assertThat(result.successCount).isEqualTo(0)
+        assertThat(result.failedDateDetails.map { it.reason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
+        assertThat(uploader.calls).isEqualTo(0)
+        assertThat(fixture.observedContexts).isEmpty()
+        assertThat(fixture.storedAttribution).isEqualTo(SleepDayAttribution.MORNING_ENDS)
     }
 
     @Test

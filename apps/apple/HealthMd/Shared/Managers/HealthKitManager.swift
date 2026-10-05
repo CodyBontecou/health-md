@@ -121,7 +121,7 @@ final class HealthKitManager: ObservableObject {
     }
 
     /// Which daily note owns a sleep session (issue #104). Device-local capture
-    /// preference, read live on every capture. Not part of portable setup sharing.
+    /// preference, resolved once per operation. Not part of portable setup sharing.
     @Published private(set) var sleepDayAttribution: SleepDayAttribution
 
     func setSleepDayAttribution(_ attribution: SleepDayAttribution) {
@@ -915,20 +915,36 @@ final class HealthKitManager: ObservableObject {
         let partialFailures: [ExportPartialFailure]
     }
 
+    /// Freeze new work, or restore a durable operation without consulting current
+    /// preferences. Configuration profiles are not operation snapshots.
+    func resolveSleepCaptureContext(settings: AdvancedExportSettings, timeZone: TimeZone? = nil) throws -> AppleSleepCaptureContext {
+        if settings.executionSleepCaptureContextIsFrozen {
+            return try AppleSleepCaptureContext.recovered(settings.executionSleepCaptureContext)
+        }
+        let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
+            timeZone: timeZone ?? settings.exportTimeZoneOverride,
+            attribution: sleepDayAttribution
+        )
+        try context.requireShippedProfile()
+        return context
+    }
+
     /// Fetches HealthKit data for the requested date without presenting additional authorization UI.
     func fetchHealthData(
         for date: Date,
         detailPolicy: AppleExportDetailPolicy,
         metricSelection: MetricSelectionState? = nil,
-        timeZone: TimeZone? = nil
+        timeZone: TimeZone? = nil,
+        captureContext: AppleSleepCaptureContext? = nil
     ) async throws -> HealthData {
-        // Snapshot both mutable capture preferences before the first suspension.
-        // Task locals keep every concurrent query and projection on this exact
-        // context even if the device timezone or setting changes mid-capture.
-        let capturedTimeZone = timeZone ?? .current
-        let capturedAttribution = sleepDayAttribution
-        return try await Self.pinnedFetchTimeZone.withValue(capturedTimeZone) {
-            try await Self.pinnedSleepDayAttribution.withValue(capturedAttribution) {
+        // Never shadow an operation pin with a fresh mutable preference per day.
+        let context = captureContext ?? AppleSleepCaptureContext.resolve(
+            timeZone: timeZone ?? Self.pinnedFetchTimeZone.wrappedValue,
+            attribution: Self.pinnedSleepDayAttribution.wrappedValue ?? sleepDayAttribution
+        )
+        try context.requireShippedProfile()
+        return try await Self.pinnedFetchTimeZone.withValue(context.timeZone) {
+            try await Self.pinnedSleepDayAttribution.withValue(context.sleepDayAttribution) {
                 try await HealthKitQueryExecutionController.withController {
                     #if DEBUG
                     let capturePhase: String
@@ -969,13 +985,15 @@ final class HealthKitManager: ObservableObject {
         for date: Date,
         includeGranularData: Bool = false,
         metricSelection: MetricSelectionState? = nil,
-        timeZone: TimeZone? = nil
+        timeZone: TimeZone? = nil,
+        captureContext: AppleSleepCaptureContext? = nil
     ) async throws -> HealthData {
         try await fetchHealthData(
             for: date,
             detailPolicy: includeGranularData ? .lossless : .summary,
             metricSelection: metricSelection,
-            timeZone: timeZone
+            timeZone: timeZone,
+            captureContext: captureContext
         )
     }
 
@@ -1016,8 +1034,10 @@ final class HealthKitManager: ObservableObject {
         // prevents one inaccessible/unselected type from blocking the requested
         // metric(s), and keeps preview/export aligned with the metric picker.
         async let sleepTask = fetchIfEnabled(fetchScope.sleep, fallback: SleepData()) {
-            try await fetchSleepData(
+            try await fetchSleepProjection(
                 for: date,
+                attribution: Self.effectiveSleepDayAttribution,
+                timeZone: Self.effectiveFetchTimeZone,
                 includeDetailedTimeSeries: detailPolicy.includesSelectedTimeSeries
             )
         }
@@ -2614,6 +2634,21 @@ final class HealthKitManager: ObservableObject {
             ?? nextDay.addingTimeInterval(12 * 3600)
 
         return (start: start, end: end)
+    }
+
+    /// Native calculation seam, not a public-profile writer. Retains the
+    /// proposed wake-date projection for qualification without enabling exports.
+    func fetchSleepProjection(
+        for date: Date,
+        attribution: SleepDayAttribution,
+        timeZone: TimeZone,
+        includeDetailedTimeSeries: Bool = false
+    ) async throws -> SleepData {
+        try await Self.pinnedFetchTimeZone.withValue(timeZone) {
+            try await Self.pinnedSleepDayAttribution.withValue(attribution) {
+                try await fetchSleepData(for: date, includeDetailedTimeSeries: includeDetailedTimeSeries)
+            }
+        }
     }
 
     private func fetchSleepData(

@@ -100,8 +100,9 @@ class DirectGeneratedFilesProducerTest {
     }
 
     @Test
-    fun sleepOnlyMorningFilesKeepWakeDayOnceWithoutSingleDateFallback() = runTest {
+    fun shippedSleepFilesKeepNightDayOnceAndRejectUnapprovedContextWithoutSingleDateFallback() = runTest {
         val fixture = SleepAttributionCaptureFixture()
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val producer = DirectGeneratedFilesProducer(
             healthRepository = fixture.repository,
             markdownExporter = MarkdownExporter(),
@@ -116,22 +117,29 @@ class DirectGeneratedFilesProducerTest {
         )
         val root = Files.createTempDirectory("direct-generated-sleep-test").toFile()
         try {
+            val unavailable = runCatching {
+                producer.produce(root, listOf(fixture.startDay, fixture.wakeDay), settings,
+                    AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS))
+            }
+            assertThat(unavailable.exceptionOrNull()).isInstanceOf(IllegalStateException::class.java)
+            assertThat(root.listFiles().orEmpty()).isEmpty()
+            assertThat(fixture.observedContexts).isEmpty()
             val files = producer.produce(
                 root,
                 listOf(fixture.startDay, fixture.wakeDay),
                 settings,
-                AndroidCaptureContext(fixture.zone, SleepDayAttribution.MORNING_ENDS),
+                AndroidCaptureContext(fixture.zone, SleepDayAttribution.NIGHT_BEGINS),
             )
 
             assertThat(files).hasSize(1)
             assertThat(files.single().format).isEqualTo(ArtifactFormat.JSON)
             val record = Json.parseToJsonElement(files.single().file.readText()).jsonObject
-            assertThat(record.getValue("date").jsonPrimitive.content).isEqualTo(fixture.wakeDay.toString())
+            assertThat(record.getValue("date").jsonPrimitive.content).isEqualTo(fixture.startDay.toString())
             val sleep = record.getValue("sleep").jsonObject
             assertThat(sleep.getValue("awakeTime").jsonPrimitive.content.toDouble()).isEqualTo(30 * 60.0)
             assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(495 * 60.0)
             assertThat(fixture.singleDayReads).isEmpty()
-            assertThat(fixture.observedContexts).containsExactly(fixture.zone to SleepDayAttribution.MORNING_ENDS)
+            assertThat(fixture.observedContexts).containsExactly(fixture.zone to SleepDayAttribution.NIGHT_BEGINS)
         } finally {
             root.deleteRecursively()
         }

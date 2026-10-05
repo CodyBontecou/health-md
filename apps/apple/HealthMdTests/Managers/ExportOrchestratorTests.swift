@@ -1449,6 +1449,65 @@ final class ExportOrchestratorTests: XCTestCase {
         XCTAssertFalse(result.isFailure) // totalCount must be > 0
     }
 
+    @MainActor
+    func testSleepAttributionNightOperationSurvivesPreferenceEditBetweenActualDailyFetches() async throws {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC")!
+        let night = calendar.date(from: DateComponents(year: 2026, month: 8, day: 9))!
+        let wake = calendar.date(byAdding: .day, value: 1, to: night)!
+        let start = calendar.date(bySettingHour: 23, minute: 45, second: 0, of: night)!
+        let end = calendar.date(bySettingHour: 7, minute: 30, second: 0, of: wake)!
+        let store = FakeHealthStore()
+        for date in [night, wake] { HealthKitFixtures.populateAllCategories(store, date: date) }
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepCore.rawValue, startDate: start, endDate: end)
+        ]
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/SleepPinnedOperationVault")
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        settings.executionSleepCaptureContext = nil
+        let result = await ExportOrchestrator.exportDates([night, wake], healthKitManager: manager,
+            vaultManager: vault, settings: settings, onProgress: { index, _, _ in
+                if index == 1 { manager.setSleepDayAttribution(.morningEnds) }
+            })
+        XCTAssertEqual(result.successCount, 2)
+        let records = try fileSystem.files.filter { !$0.key.hasSuffix("data_dictionary.json") }.map {
+            try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any])
+        }
+        let durations = records.compactMap { ($0["sleep"] as? [String: Any])?["totalDuration"] as? Double }
+        XCTAssertEqual(durations, [465 * 60], "Adjacent dates must own the synthetic overnight session exactly once")
+        XCTAssertEqual(manager.sleepDayAttribution, .morningEnds)
+    }
+
+    @MainActor
+    func testUnapprovedSleepAttributionWritesNoFormatAndMissingRecoveryContextDoesNotRepin() async {
+        let date = HealthKitFixtures.referenceDate
+        let store = FakeHealthStore()
+        HealthKitFixtures.populateAllCategories(store, date: date)
+        let manager = HealthKitManager(store: store, userDefaults: makeIsolatedDefaults())
+        manager.setSleepDayAttribution(.morningEnds)
+        for format in ExportFormat.allCases {
+            let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/SleepUnavailable-\(format.rawValue)")
+            let settings = makeExportSettings(formats: [format], rollupPeriods: [])
+            settings.executionSleepCaptureContext = nil
+            let result = await ExportOrchestrator.exportDates([date], healthKitManager: manager, vaultManager: vault, settings: settings)
+            XCTAssertEqual(result.successCount, 0)
+            XCTAssertTrue(fileSystem.files.isEmpty)
+            XCTAssertEqual(result.failedDateDetails.first?.errorDetails, AppleSleepCaptureContext.AvailabilityError.unapprovedAttribution.localizedDescription)
+        }
+        manager.setSleepDayAttribution(.nightBegins)
+        let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
+        var legacy = ExportSettingsSnapshot.from(settings)
+        legacy.sleepCaptureContext = nil
+        let (vault, fileSystem) = makeVaultManager(vaultPath: "/tmp/SleepMissingRecoveryContext")
+        let result = await ExportOrchestrator.exportDatesBackground([date], healthKitManager: manager,
+            vaultManager: vault, settings: legacy.makeAdvancedExportSettings(), frozenSettingsSnapshot: legacy)
+        XCTAssertEqual(result.successCount, 0)
+        XCTAssertTrue(fileSystem.files.isEmpty)
+        XCTAssertNil(legacy.sleepCaptureContext, "Do not mutate a saved operation to acquire a new policy")
+        XCTAssertEqual(result.failedDateDetails.first?.errorDetails, AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution.localizedDescription)
+    }
+
     // MARK: - Helpers
 
     private func makeDate(_ year: Int, _ month: Int, _ day: Int) -> Date {
@@ -1495,6 +1554,8 @@ final class ExportOrchestratorTests: XCTestCase {
         settings.exportFormats = formats
         settings.generateRangeSummary = !rollupPeriods.isEmpty
         settings.exportTimeZoneOverride = TimeZone(identifier: "UTC")!
+        // These existing controls model freshly frozen night-begins operations.
+        settings.executionSleepCaptureContext = AppleSleepCaptureContext(timeZone: settings.exportTimeZoneOverride!, sleepDayAttribution: .nightBegins)
         Self.retainedSettings.append(settings)
         return settings
     }

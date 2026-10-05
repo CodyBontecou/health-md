@@ -222,7 +222,7 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `manual folder operation pins context across chunks and cannot duplicate adjacent morning owner`() = runTest {
+    fun `manual folder operation pins shipped night context across chunks and a change to morning preference`() = runTest {
         val previousZone = TimeZone.getDefault()
         val capturedZone = ZoneId.of("America/Los_Angeles")
         val changedZone = ZoneId.of("Europe/Berlin")
@@ -232,7 +232,7 @@ class ExportOrchestratorRangeTest {
             val dates = (0 until 31).map { wakeDate.minusDays(it.toLong()) }
             val sessionStartDate = dates.last()
             val sessionWakeDate = dates[dates.lastIndex - 1]
-            var storedAttribution = SleepDayAttribution.MORNING_ENDS
+            var storedAttribution = SleepDayAttribution.NIGHT_BEGINS
             val observedContexts = mutableListOf<Pair<ZoneId, SleepDayAttribution>>()
             val manager = mockk<HealthConnectManager>()
             val provider = HealthConnectDataProvider(manager)
@@ -250,7 +250,7 @@ class ExportOrchestratorRangeTest {
                 observedContexts += zone to attribution
                 val owner = if (attribution == SleepDayAttribution.MORNING_ENDS) sessionWakeDate else sessionStartDate
                 if (observedContexts.size == 1) {
-                    storedAttribution = SleepDayAttribution.NIGHT_BEGINS
+                    storedAttribution = SleepDayAttribution.MORNING_ENDS
                     TimeZone.setDefault(TimeZone.getTimeZone(changedZone))
                 }
                 requested.map { date ->
@@ -270,11 +270,11 @@ class ExportOrchestratorRangeTest {
 
             assertThat(result.successCount).isEqualTo(31)
             assertThat(observedContexts).containsExactly(
-                capturedZone to SleepDayAttribution.MORNING_ENDS,
-                capturedZone to SleepDayAttribution.MORNING_ENDS,
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
+                capturedZone to SleepDayAttribution.NIGHT_BEGINS,
             ).inOrder()
             assertThat(exportRepository.exported.count { it.sleep.hasData }).isEqualTo(1)
-            assertThat(exportRepository.exported.single { it.sleep.hasData }.date).isEqualTo(sessionWakeDate)
+            assertThat(exportRepository.exported.single { it.sleep.hasData }.date).isEqualTo(sessionStartDate)
         } finally {
             TimeZone.setDefault(previousZone)
         }
@@ -298,8 +298,9 @@ class ExportOrchestratorRangeTest {
     }
 
     @Test
-    fun `sleep only morning export and preview never retry the empty start day`() = runTest {
+    fun `shipped sleep only export and preview never retry the empty wake day`() = runTest {
         val fixture = SleepAttributionCaptureFixture()
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val previousZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
@@ -316,18 +317,39 @@ class ExportOrchestratorRangeTest {
             val preview = orchestrator.previewDates(dates, settings)
 
             assertThat(result.successCount).isEqualTo(1)
-            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.startDay)
+            assertThat(result.failedDateDetails.single().date).isEqualTo(fixture.wakeDay)
             assertThat(result.failedDateDetails.single().reason).isEqualTo(ExportFailureReason.NO_HEALTH_DATA)
-            assertThat(exportRepository.exported.map { it.date }).containsExactly(fixture.wakeDay)
+            assertThat(exportRepository.exported.map { it.date }).containsExactly(fixture.startDay)
             assertThat(exportRepository.exported.single().sleep.awakeTime).isEqualTo(30.minutes)
             assertThat(preview.previewedDateCount).isEqualTo(1)
-            assertThat(exportRepository.previewed.map { it.date }).containsExactly(fixture.wakeDay)
+            assertThat(exportRepository.previewed.map { it.date }).containsExactly(fixture.startDay)
             assertThat(fixture.singleDayReads).isEmpty()
             assertThat(fixture.observedContexts).hasSize(3)
-            assertThat(fixture.observedContexts.distinct()).containsExactly(fixture.zone to SleepDayAttribution.MORNING_ENDS)
+            assertThat(fixture.observedContexts.distinct()).containsExactly(fixture.zone to SleepDayAttribution.NIGHT_BEGINS)
         } finally {
             TimeZone.setDefault(previousZone)
         }
+    }
+
+    @Test
+    fun `unapproved ownership is unavailable for every format and preview without provider or destination work`() = runTest {
+        val fixture = SleepAttributionCaptureFixture()
+        val destination = RecordingExportRepository()
+        val orchestrator = ExportOrchestrator(fixture.repository, destination)
+        val dates = listOf(fixture.startDay, fixture.wakeDay)
+        for (format in ExportFormat.entries) {
+            val settings = ExportSettings(exportFormat = format, exportFormats = setOf(format), dataTypes = fixture.selection)
+            val result = orchestrator.exportDates(dates, settings)
+            assertThat(result.successCount).isEqualTo(0)
+            assertThat(result.failedDateDetails.map { it.reason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
+            val preview = orchestrator.previewDates(dates, settings)
+            assertThat(preview.totalFileCount).isEqualTo(0)
+            assertThat(preview.days.map { it.failureReason }).containsExactly(ExportFailureReason.UNKNOWN, ExportFailureReason.UNKNOWN)
+        }
+        assertThat(destination.exported).isEmpty()
+        assertThat(destination.previewed).isEmpty()
+        assertThat(fixture.observedContexts).isEmpty()
+        assertThat(fixture.storedAttribution).isEqualTo(SleepDayAttribution.MORNING_ENDS)
     }
 
     private fun ninetyDays(): List<LocalDate> {

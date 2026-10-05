@@ -11,8 +11,9 @@ import kotlin.time.Duration.Companion.minutes
 
 class HealthRepositorySleepAttributionTest {
     @Test
-    fun singleDateReadsHonorStoredMorningOwnerAndMatchRangeWithoutDuplicateNight() = runTest {
+    fun singleDateReadsHonorShippedNightOwnerAndMatchRangeWithoutDuplicateNight() = runTest {
         val fixture = SleepAttributionCaptureFixture()
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val previousZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
@@ -25,24 +26,24 @@ class HealthRepositorySleepAttributionTest {
                 zoneId = fixture.zone,
             )
 
-            assertThat(start.hasAnyData).isFalse()
-            assertThat(start.sleep.sessions).isEmpty()
-            assertThat(wake.sleep.totalDuration).isEqualTo(495.minutes)
-            assertThat(wake.sleep.lightSleep).isEqualTo(465.minutes)
-            assertThat(wake.sleep.awakeTime).isEqualTo(30.minutes)
-            assertThat(wake.sleep.sessionStart).isEqualTo(fixture.start)
-            assertThat(wake.sleep.sessionEnd).isEqualTo(fixture.end)
-            assertThat(wake.sleep.sessions.single().identity?.nativeId).isEqualTo("synthetic-overnight")
-            assertThat(range.map { it.date }).containsExactly(fixture.wakeDay)
-            assertThat(range.single().sleep.totalDuration).isEqualTo(wake.sleep.totalDuration)
+            assertThat(wake.hasAnyData).isFalse()
+            assertThat(wake.sleep.sessions).isEmpty()
+            assertThat(start.sleep.totalDuration).isEqualTo(495.minutes)
+            assertThat(start.sleep.lightSleep).isEqualTo(465.minutes)
+            assertThat(start.sleep.awakeTime).isEqualTo(30.minutes)
+            assertThat(start.sleep.sessionStart).isEqualTo(fixture.start)
+            assertThat(start.sleep.sessionEnd).isEqualTo(fixture.end)
+            assertThat(start.sleep.sessions.single().identity?.nativeId).isEqualTo("synthetic-overnight")
+            assertThat(range.map { it.date }).containsExactly(fixture.startDay)
+            assertThat(range.single().sleep.totalDuration).isEqualTo(start.sleep.totalDuration)
             assertThat(range.single().sleep.stages.map { it.stage }).containsExactly("light", "awake", "light").inOrder()
             assertThat(range.single().sleep.stages[1].startTime).isEqualTo(fixture.startDay.atTime(23, 50))
             assertThat(range.single().sleep.stages[1].endTime).isEqualTo(fixture.wakeDay.atTime(0, 20))
             assertThat(fixture.singleDayReads).isEmpty()
             assertThat(fixture.observedContexts).containsExactly(
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
             ).inOrder()
             coVerify(exactly = 3) { fixture.settings.getSleepDayAttribution() }
         } finally {
@@ -51,23 +52,24 @@ class HealthRepositorySleepAttributionTest {
     }
 
     @Test
-    fun allConnectedSingleDateReadsAlsoKeepSleepOnlyNightOnWakeDate() = runTest {
+    fun allConnectedSingleDateReadsKeepShippedSleepOnlyNightOnStartDate() = runTest {
         val fixture = SleepAttributionCaptureFixture(allConnected = true)
+        fixture.storedAttribution = SleepDayAttribution.NIGHT_BEGINS
         val previousZone = TimeZone.getDefault()
         try {
             TimeZone.setDefault(TimeZone.getTimeZone(fixture.zone))
             val start = fixture.repository.fetchHealthData(fixture.startDay)
             val wake = fixture.repository.fetchHealthData(fixture.wakeDay)
 
-            assertThat(start.sleep.hasData).isFalse()
-            assertThat(wake.sleep.totalDuration).isEqualTo(495.minutes)
-            assertThat(wake.sleep.awakeTime).isEqualTo(30.minutes)
-            assertThat(wake.sleep.sessionStart).isEqualTo(fixture.start)
-            assertThat(wake.sleep.sessionEnd).isEqualTo(fixture.end)
+            assertThat(wake.sleep.hasData).isFalse()
+            assertThat(start.sleep.totalDuration).isEqualTo(495.minutes)
+            assertThat(start.sleep.awakeTime).isEqualTo(30.minutes)
+            assertThat(start.sleep.sessionStart).isEqualTo(fixture.start)
+            assertThat(start.sleep.sessionEnd).isEqualTo(fixture.end)
             assertThat(fixture.singleDayReads).isEmpty()
             assertThat(fixture.observedContexts).containsExactly(
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
-                fixture.zone to SleepDayAttribution.MORNING_ENDS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
+                fixture.zone to SleepDayAttribution.NIGHT_BEGINS,
             ).inOrder()
         } finally {
             TimeZone.setDefault(previousZone)

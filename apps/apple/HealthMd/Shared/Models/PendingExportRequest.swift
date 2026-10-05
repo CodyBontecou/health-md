@@ -23,8 +23,11 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Shortcut requests, which intentionally keep their iPhone-folder pipeline.
     let exportTarget: ExportTargetSelection?
     /// Frozen output-affecting settings for durable scheduled work. A missing snapshot identifies
-    /// an explicitly legacy request that continues to read mutable settings at execution time.
+    /// an explicitly legacy request for non-attribution settings.
     let settingsSnapshot: ExportSettingsSnapshot?
+    /// Capture-only authority also covers Shortcut jobs that intentionally do not
+    /// freeze the full export configuration. Missing legacy authority stays missing.
+    let sleepCaptureContext: AppleSleepCaptureContext?
     /// Export profile this scheduled request runs (phase 3). Per-profile
     /// in-flight identity: two profiles' pending requests never deduplicate
     /// each other. Nil identifies legacy profile-free requests.
@@ -73,6 +76,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         notificationMetadata: [String: String] = [:],
         exportTarget: ExportTargetSelection? = nil,
         settingsSnapshot: ExportSettingsSnapshot? = nil,
+        sleepCaptureContext: AppleSleepCaptureContext? = nil,
         profileID: UUID? = nil,
         profileName: String? = nil,
         attemptedAt: Date? = nil,
@@ -98,6 +102,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.notificationMetadata = notificationMetadata
         self.exportTarget = source == .scheduled ? exportTarget : nil
         self.settingsSnapshot = settingsSnapshot
+        self.sleepCaptureContext = sleepCaptureContext ?? settingsSnapshot?.sleepCaptureContext
         self.profileID = source == .scheduled ? profileID : nil
         self.profileName = source == .scheduled ? profileName : nil
         self.attemptedAt = source == .scheduled ? attemptedAt : nil
@@ -126,6 +131,7 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
             ExportSettingsSnapshot.self,
             forKey: .settingsSnapshot
         )
+        sleepCaptureContext = try container.decodeIfPresent(AppleSleepCaptureContext.self, forKey: .sleepCaptureContext)
         originalCalendarTimeZoneIdentifier = try container.decodeIfPresent(
             String.self,
             forKey: .originalCalendarTimeZoneIdentifier
@@ -139,6 +145,14 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         attemptedAt = try container.decodeIfPresent(Date.self, forKey: .attemptedAt)
     }
 
+
+    func recoveredSleepCaptureContext() throws -> AppleSleepCaptureContext {
+        if let sleepCaptureContext, let snapshotContext = settingsSnapshot?.sleepCaptureContext,
+           sleepCaptureContext != snapshotContext {
+            throw AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution
+        }
+        return try AppleSleepCaptureContext.recovered(sleepCaptureContext ?? settingsSnapshot?.sleepCaptureContext)
+    }
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {
         let startOfDays = dates.map { calendar.startOfDay(for: $0) }
@@ -168,6 +182,7 @@ struct PendingExportStore: PendingExportStoring {
     ) {
         self.userDefaults = userDefaults
         self.encoder = encoder
+        self.encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         self.decoder = decoder
     }
 

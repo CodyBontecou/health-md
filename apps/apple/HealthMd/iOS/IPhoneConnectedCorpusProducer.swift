@@ -30,6 +30,20 @@ enum IPhoneConnectedCorpusProducer {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         progress: ((IPhoneConnectedCorpusProgressUpdate) -> Void)? = nil
     ) async throws -> Result {
+        let captureContext: AppleSleepCaptureContext
+        if let savedSnapshot = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID)?.exportManifest.settingsSnapshot
+            ?? frozenSettingsSnapshot {
+            captureContext = try AppleSleepCaptureContext.recovered(savedSnapshot.sleepCaptureContext)
+        } else {
+            captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
+        }
+        // Clone configuration without borrowing a live settings object's operation
+        // authority. Metadata planning must use this operation's already frozen zone.
+        let operationSettings = ExportSettingsSnapshot.from(settings,
+            appleExportEngineAuthorityIsFrozen: settings.executionAppleExportEngineAuthorityIsFrozen)
+            .makeAdvancedExportSettings(forNewConfiguration: true)
+        operationSettings.executionSleepCaptureContext = captureContext
+        operationSettings.exportTimeZoneOverride = captureContext.timeZone
         #if DEBUG
         let performanceSpan = ExportPerformanceInstrumentation.beginSpan(
             pipeline: "connected-mac",
@@ -60,7 +74,7 @@ enum IPhoneConnectedCorpusProducer {
                 endDate: endDate,
                 requestedDates: requestedDates,
                 rollupRequestedDates: originalRequestedDates,
-                settings: settings,
+                settings: operationSettings,
                 healthSubfolder: healthSubfolder,
                 destinationDisplayName: destinationDisplayName,
                 enforceConnectedOperationGate: true,
@@ -72,10 +86,7 @@ enum IPhoneConnectedCorpusProducer {
             )
         }
         let createdAt = Date()
-        let sourceTimeZone = metadata.settingsSnapshot.calendarTimeZoneIdentifier
-            .flatMap(TimeZone.init(identifier:))
-            ?? settings.exportTimeZoneOverride
-            ?? .current
+        let sourceTimeZone = captureContext.timeZone
         var sourceCalendar = Calendar(identifier: .gregorian)
         sourceCalendar.timeZone = sourceTimeZone
         let dateFormatter = DateFormatter()
@@ -83,6 +94,8 @@ enum IPhoneConnectedCorpusProducer {
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         dateFormatter.timeZone = sourceTimeZone
         dateFormatter.dateFormat = "yyyy-MM-dd"
+        var operationSnapshot = metadata.settingsSnapshot
+        operationSnapshot.sleepCaptureContext = captureContext
         let exportManifest = ConnectedCorpusExportManifest(
             mode: .writeFiles,
             createdAt: createdAt,
@@ -96,7 +109,7 @@ enum IPhoneConnectedCorpusProducer {
                 ?? sourceTimeZone.identifier,
             requestedDateIdentifiers: metadata.requestedDates.map { dateFormatter.string(from: $0) },
             transferDates: metadata.transferDates,
-            settingsSnapshot: metadata.settingsSnapshot,
+            settingsSnapshot: operationSnapshot,
             appleExportEnginePin: metadata.settingsSnapshot.appleExportEnginePin,
             requestedTarget: metadata.requestedTarget
         )
@@ -153,7 +166,8 @@ enum IPhoneConnectedCorpusProducer {
                         for: date,
                         detailPolicy: detailPolicy,
                         metricSelection: metricSelection,
-                        timeZone: sourceTimeZone
+                        timeZone: sourceTimeZone,
+                        captureContext: captureContext
                     )
                 },
                 fetchExternalDailyRecords: externalRecordFetcher

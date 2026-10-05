@@ -9,17 +9,21 @@ import Foundation
 
 /// Which daily note owns a sleep session.
 ///
-/// Shared cross-platform setting (issue #104). Both platforms persist the same
+/// Planned cross-platform mode switch (issue #104). Both platforms persist the same
 /// raw values and default to `nightBegins`.
 ///
 /// - `nightBegins`: the shipped noon-to-noon journaling window clips summary
 ///   intervals at its boundaries. It remains the default so existing exports
 ///   never change silently.
-/// - `morningEnds`: the note for the wake-up date (the calendar date of the
-///   session end) owns the whole session, matching the Health Connect UI.
+/// - `morningEnds`: proposed wake-up-date ownership of the whole session,
+///   unavailable until successor profiles and consumers are approved.
 nonisolated enum SleepDayAttribution: String, CaseIterable, Codable, Sendable, Equatable {
     case nightBegins = "night_begins"
     case morningEnds = "morning_ends"
+
+    /// Wake-date semantics have no approved production profile or qualified
+    /// consumer set. Persisted values are retained, never coerced to the default.
+    var isAvailableForShippedProfiles: Bool { self == .nightBegins }
 
     var localizedDisplayName: String {
         switch self {
@@ -33,7 +37,7 @@ nonisolated enum SleepDayAttribution: String, CaseIterable, Codable, Sendable, E
         case .nightBegins:
             return String(localized: "Sleep uses the daily note's noon-to-noon window. This is the default and matches previous exports.")
         case .morningEnds:
-            return String(localized: "Each sleep session belongs to the daily note for the morning it ends, matching the Health Connect app. A session from 11:45 PM to 7:30 AM appears in the wake-up day's note.")
+            return String(localized: "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.")
         }
     }
 }

@@ -105,6 +105,7 @@ class DirectGeneratedFilesProducer private constructor(
         onProgress: (completed: Int, total: Int) -> Unit = { _, _ -> },
     ): List<ProducedGeneratedFile> {
         require(dates.isNotEmpty())
+        captureContext.requireShippedProfile()
         val output = File(jobDirectory, "generated").apply {
             check(mkdirs() || isDirectory) { "Unable to create direct generated-file storage." }
         }
