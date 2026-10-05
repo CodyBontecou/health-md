@@ -1,6 +1,15 @@
 import Foundation
 import HealthMdConnectionCore
 
+/// Trusted, non-wire live time source. Native adapters inject this dependency, never request dates
+/// or a request-wide timestamp. The production default samples wall time at each actual boundary.
+nonisolated protocol AgentBridgeExportClock: Sendable {
+    func now() -> Date
+}
+nonisolated struct AgentBridgeExportSystemClock: AgentBridgeExportClock {
+    func now() -> Date { Date() }
+}
+
 /// Non-wire native session/trust boundary. Implementers recheck current trust/revocation and the
 /// authenticated channel's exact installations; immutable copied IDs alone are never sufficient.
 nonisolated protocol AgentBridgeExportNativeSessionChecking: Sendable {
@@ -68,16 +77,18 @@ protocol AgentBridgeExportPlanningConfigurationReading {
 final class AgentBridgeExportPlanningService {
     private let store: AgentBridgeExportAuthorityStore
     private let configuration: any AgentBridgeExportPlanningConfigurationReading
+    private let clock: any AgentBridgeExportClock
     private let newPlanID: () throws -> AgentBridgeUUID
     // Transient issued discovery evidence; read-only discovery never mutates the private store.
     // Restart requires a fresh discovery for NEW plans, not for exact persisted-plan retries.
     private var issuedDiscoveries: [String: AgentBridgeDiscovery] = [:]
     init(store: AgentBridgeExportAuthorityStore, configuration: any AgentBridgeExportPlanningConfigurationReading,
+         clock: any AgentBridgeExportClock = AgentBridgeExportSystemClock(),
          newPlanID: @escaping () throws -> AgentBridgeUUID = { try AgentBridgeUUID(UUID().uuidString.lowercased()) }) {
-        self.store = store; self.configuration = configuration; self.newPlanID = newPlanID
+        self.store = store; self.configuration = configuration; self.clock = clock; self.newPlanID = newPlanID
     }
 
-    func handle(_ bytes: Data, authenticatedPeer: AgentBridgeExportAuthenticatedPeer, now: Date) throws -> Data {
+    func handle(_ bytes: Data, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> Data {
         try authenticatedPeer.requireCurrent()
         let envelope = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes)
         let requestID: AgentBridgeUUID
@@ -94,22 +105,26 @@ final class AgentBridgeExportPlanningService {
                 try requirePeer(request.peer, authenticatedPeer)
                 let state = try store.snapshot()
                 let config = try configuration.readConfiguration(for: authenticatedPeer, policy: nil)
-                let value = try discovery(requestID: requestID, peer: authenticatedPeer, config: config, state: state, now: now)
-                _ = try AgentBridgeV4Codec.encode(value)
-                let key = peerKey(authenticatedPeer)
-                guard issuedDiscoveries[key] != nil || issuedDiscoveries.count < 32 else { throw AgentBridgeValidationError.busy }
-                issuedDiscoveries[key] = value
+                try authenticatedPeer.requireCurrent()
+                let value = try discovery(requestID: requestID, peer: authenticatedPeer, config: config, state: state, now: clock.now())
                 response = .discovery(value)
             case .planRequest(let request):
                 try requirePeer(request.intent.peer, authenticatedPeer)
-                response = .plan(try plan(request, exactRequestBytes: bytes, peer: authenticatedPeer, now: now))
+                response = .plan(try plan(request, exactRequestBytes: bytes, peer: authenticatedPeer))
             case .approvalRequest(let request):
                 try requirePeer(request.binding.peer, authenticatedPeer)
-                response = .approval(try relayApproval(request, peer: authenticatedPeer, now: now))
+                response = .approval(try relayApproval(request, peer: authenticatedPeer))
             default: throw AgentBridgeValidationError.unsupportedCapability
             }
             let responseBytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: response))
-            try authenticatedPeer.requireCurrent()
+            // Serialization, protected-key/configuration reads and the LAST session callback must
+            // all finish BEFORE the return-time check. Even exact cached responses pass this fence.
+            try validateResponse(response, peer: authenticatedPeer)
+            if case .discovery(let value) = response {
+                let key = peerKey(authenticatedPeer)
+                guard issuedDiscoveries[key] != nil || issuedDiscoveries.count < 32 else { throw AgentBridgeValidationError.busy }
+                issuedDiscoveries[key] = value // No stale discovery is published into the cache.
+            }
             return responseBytes
         } catch let error as AgentBridgeValidationError {
             try authenticatedPeer.requireCurrent()
@@ -130,47 +145,61 @@ final class AgentBridgeExportPlanningService {
     /// Separate local-native exact decision. NOT reachable from handle(), JSON or an MCP annotation.
     /// The native authorizer must independently approve this complete issued binding, never a flag.
     func storeNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, approvalID: AgentBridgeUUID,
-                             authenticatedPeer: AgentBridgeExportAuthenticatedPeer, now: Date,
+                             authenticatedPeer: AgentBridgeExportAuthenticatedPeer,
                              authorization: any AgentBridgeExportNativeAuthorizing) throws {
         try authenticatedPeer.requireCurrent()
         try requirePeer(binding.peer, authenticatedPeer)
         let state = try store.snapshot()
-        let record = try state.issued(id: planID, peer: authenticatedPeer.peer)
-        let config = try configuration.readConfiguration(for: authenticatedPeer, policy: record.request().intent.settingsPolicy)
-        let issued = try revalidate(record, state: state, config: config, peer: authenticatedPeer, now: now, right: .exportExecute)
-        guard binding == AgentBridgeSemantics.binding(issued) else { throw AgentBridgeValidationError.bindingChanged }
-        try requireNativeReadiness(config)
-        let approval = AgentBridgeApproval(approvalId: approvalID, approvedAt: try utc(now), authorityId: issued.authorityReferences.native.authorityId,
-                                          binding: binding, rights: [.exportExecute])
-        try authenticatedPeer.requireCurrent()
-        try store.persistNativeDecision(.init(planID: planID, approvalBytes: AgentBridgeV4Codec.encode(approval)),
-                                        expectedGeneration: state.generation,
-                                        authorization: AgentBridgeExportSessionBoundAuthorization(peer: authenticatedPeer, native: authorization),
-                                        requireCurrentSession: authenticatedPeer.requireCurrent)
-        try authenticatedPeer.requireCurrent()
+        let current = try currentPlan(in: state, planID: planID, peer: authenticatedPeer, right: .exportExecute, requireReadiness: true)
+        guard binding == AgentBridgeSemantics.binding(current.plan) else { throw AgentBridgeValidationError.bindingChanged }
+        try store.persistNativeDecision(planID: planID, binding: binding, expectedGeneration: state.generation,
+            authorization: AgentBridgeExportSessionBoundAuthorization(peer: authenticatedPeer, native: authorization),
+            makeDecision: { currentState in
+                // Consent AND protected-key lookup have completed. Use the locked transaction's
+                // real state, refreshed configuration and live time, not pre-consent captured records.
+                let checked = try self.currentPlan(in: currentState, planID: planID, peer: authenticatedPeer, right: .exportExecute, requireReadiness: true)
+                guard binding == AgentBridgeSemantics.binding(checked.plan) else { throw AgentBridgeValidationError.bindingChanged }
+                if let previous = currentState.decisions.first(where: { $0.planID == planID }) {
+                    let approval = try previous.approval()
+                    guard approval.approvalId == approvalID, approval.binding == binding else { throw AgentBridgeValidationError.bindingChanged }
+                    return previous // Exact decision retry never changes approved_at or expiry.
+                }
+                let approval = AgentBridgeApproval(approvalId: approvalID, approvedAt: try self.utc(checked.now),
+                    authorityId: checked.plan.authorityReferences.native.authorityId, binding: binding, rights: [.exportExecute])
+                return try .init(planID: planID, approvalBytes: AgentBridgeV4Codec.encode(approval))
+            }, requireCurrentAuthority: { currentState in
+                _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer)
+            })
+        // A post-publication delay can suppress return but cannot roll back committed private
+        // metadata. Every later relay/scope/retry independently rejects expired/revoked records.
+        try store.inspectCurrent { currentState in
+            _ = try self.currentDecision(in: currentState, planID: planID, peer: authenticatedPeer)
+        }
     }
 
     /// Source-derived sanitized scope for a later adapter. The HOST must independently derive and
     /// verify its own authority/root; neither its wire reference nor this value establishes host rights.
-    func nativeScopedAuthority(planID: AgentBridgeUUID, authenticatedPeer: AgentBridgeExportAuthenticatedPeer, now: Date) throws -> AgentBridgeAuthority {
+    func nativeScopedAuthority(planID: AgentBridgeUUID, authenticatedPeer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeAuthority {
         try authenticatedPeer.requireCurrent()
-        let state = try store.snapshot(), record = try state.issued(id: planID, peer: authenticatedPeer.peer)
-        let config = try configuration.readConfiguration(for: authenticatedPeer, policy: record.request().intent.settingsPolicy)
-        let issued = try revalidate(record, state: state, config: config, peer: authenticatedPeer, now: now, right: .plan)
-        let parent = try state.delegation(id: issued.authorityReferences.native.authorityId, revision: issued.authorityReferences.native.grantRevision,
-                                          peer: authenticatedPeer.peer, now: utc(now))
-        let authority = try scopedNativeAuthority(parent: parent, plan: issued, config: config)
-        try authenticatedPeer.requireCurrent()
-        return authority
+        return try store.inspectCurrent { state in
+            let checked = try self.currentPlan(in: state, planID: planID, peer: authenticatedPeer, right: .plan)
+            let parent = try self.currentParent(for: checked.plan, state: state, peer: authenticatedPeer, now: checked.now)
+            let authority = try self.scopedNativeAuthority(parent: parent, plan: checked.plan, config: checked.config)
+            try self.requireLifetime(checked.plan, state: state, peer: authenticatedPeer, now: self.clock.now())
+            return authority
+        }
     }
 
-    private func plan(_ request: AgentBridgePlanRequest, exactRequestBytes: Data, peer: AgentBridgeExportAuthenticatedPeer, now: Date) throws -> AgentBridgePlan {
+    private func plan(_ request: AgentBridgePlanRequest, exactRequestBytes: Data, peer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgePlan {
         let state = try store.snapshot()
         let existing = try state.plans.first { try $0.request().requestId == request.requestId && $0.request().intent.peer == peer.peer }
         if let existing, existing.requestBytes != exactRequestBytes { throw AgentBridgeValidationError.bindingChanged }
-        let parent = try state.delegation(id: request.authorityId, revision: request.authorityRevision, peer: peer.peer, now: utc(now))
+        let parent = try state.delegation(id: request.authorityId, revision: request.authorityRevision, peer: peer.peer, now: utc(clock.now()))
         guard request.hostAuthorityReference.issuer == .authorizedHost, request.hostAuthorityReference.authorityId != parent.authorityID else { throw AgentBridgeValidationError.approvalRequired }
         let config = try configuration.readConfiguration(for: peer, policy: request.intent.settingsPolicy)
+        try peer.requireCurrent()
+        let now = clock.now()
+        _ = try state.delegation(id: request.authorityId, revision: request.authorityRevision, peer: peer.peer, now: utc(now))
         let current = try discovery(requestID: request.requestId, peer: peer, config: config, state: state, now: now)
         guard current.capabilitySha256 == request.capabilitySha256 else { throw AgentBridgeValidationError.bindingChanged }
         guard current.authorityReferences.contains(try parent.reference()) else { throw AgentBridgeValidationError.approvalRequired }
@@ -214,21 +243,80 @@ final class AgentBridgeExportPlanningService {
                                                      nativeAuthorityBytes: AgentBridgeV4Codec.encode(scopedNativeAuthority(parent: parent, plan: issued, config: config)))
         // Explicit MainActor serialization covers the entire synchronous service in BOTH ordinary
         // and default-MainActor builds. Independent issuer-store handles still require bounded CAS.
-        try peer.requireCurrent()
-        return try store.persistIssuedPlan(record, expectedGeneration: state.generation, requireCurrentSession: peer.requireCurrent).plan()
+        return try store.persistIssuedPlan(record, expectedGeneration: state.generation, requireCurrentAuthority: { currentState in
+            let checked = try self.currentPlan(in: currentState, planID: id, peer: peer, right: .plan)
+            guard advertised.issuedAt.rawValue <= (try self.utc(checked.now)).rawValue,
+                  advertised.expiresAt.rawValue > (try self.utc(checked.now)).rawValue else { throw AgentBridgeValidationError.planExpired }
+        }).plan()
     }
 
-    private func relayApproval(_ request: AgentBridgeApprovalRequest, peer: AgentBridgeExportAuthenticatedPeer, now: Date) throws -> AgentBridgeApproval {
-        let state = try store.snapshot(), record = try state.issued(id: request.planId, peer: peer.peer)
-        let issued = try record.plan()
-        guard request.binding == AgentBridgeSemantics.binding(issued) else { throw AgentBridgeValidationError.bindingChanged }
-        let config = try configuration.readConfiguration(for: peer, policy: record.request().intent.settingsPolicy)
-        _ = try revalidate(record, state: state, config: config, peer: peer, now: now, right: .exportExecute)
-        try requireNativeReadiness(config)
-        guard let decision = state.decisions.first(where: { $0.planID == request.planId }) else { throw AgentBridgeValidationError.approvalRequired }
+    private func relayApproval(_ request: AgentBridgeApprovalRequest, peer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeApproval {
+        try store.inspectCurrent { state in
+            let record = try state.issued(id: request.planId, peer: peer.peer)
+            guard try request.binding == AgentBridgeSemantics.binding(record.plan()) else { throw AgentBridgeValidationError.bindingChanged }
+            return try self.currentDecision(in: state, planID: request.planId, peer: peer)
+        } // No decision issuance/persistence from an approval_request.
+    }
+
+    private func validateResponse(_ response: AgentBridgeDocument, peer: AgentBridgeExportAuthenticatedPeer) throws {
+        try store.inspectCurrent { state in
+            switch response {
+            case .discovery(let value):
+                let config = try self.configuration.readConfiguration(for: peer, policy: nil)
+                try peer.requireCurrent()
+                let now = self.clock.now()
+                guard value.issuedAt.rawValue <= (try self.utc(now)).rawValue, value.expiresAt.rawValue > (try self.utc(now)).rawValue else { throw AgentBridgeValidationError.planExpired }
+                let current = try self.discovery(requestID: value.requestId, peer: peer, config: config, state: state, now: now)
+                guard current.authorityReferences == value.authorityReferences else { throw AgentBridgeValidationError.approvalRequired }
+                guard current.capabilitySha256 == value.capabilitySha256 else { throw AgentBridgeValidationError.bindingChanged }
+                let finalNow = try self.utc(self.clock.now())
+                guard value.expiresAt.rawValue > finalNow.rawValue else { throw AgentBridgeValidationError.planExpired }
+                guard try state.references(peer: peer.peer, now: finalNow) == value.authorityReferences else { throw AgentBridgeValidationError.approvalRequired }
+            case .plan(let value):
+                let checked = try self.currentPlan(in: state, planID: value.planId, peer: peer, right: .plan)
+                guard checked.plan == value else { throw AgentBridgeValidationError.bindingChanged }
+            case .approval(let value):
+                let record = try state.plans.first { try $0.plan().planSha256 == value.binding.planSha256 && $0.plan().intent.peer == peer.peer }
+                guard let record, try self.currentDecision(in: state, planID: record.plan().planId, peer: peer) == value else { throw AgentBridgeValidationError.approvalRequired }
+            default: throw AgentBridgeValidationError.unsupportedCapability
+            }
+        }
+    }
+
+    private func currentDecision(in state: AgentBridgeExportAuthoritySnapshot, planID: AgentBridgeUUID, peer: AgentBridgeExportAuthenticatedPeer) throws -> AgentBridgeApproval {
+        let checked = try currentPlan(in: state, planID: planID, peer: peer, right: .exportExecute, requireReadiness: true)
+        guard let decision = state.decisions.first(where: { $0.planID == planID }) else { throw AgentBridgeValidationError.approvalRequired }
         let approval = try decision.approval()
-        guard approval.binding == request.binding, approval.approvedAt.rawValue <= (try utc(now)).rawValue else { throw AgentBridgeValidationError.approvalRequired }
-        return approval // No decision issuance/persistence from an approval_request.
+        guard approval.binding == AgentBridgeSemantics.binding(checked.plan), approval.authorityId == checked.plan.authorityReferences.native.authorityId,
+              approval.approvedAt.rawValue >= checked.plan.issuedAt.rawValue, approval.approvedAt.rawValue < checked.plan.expiresAt.rawValue,
+              approval.approvedAt.rawValue <= (try utc(checked.now)).rawValue else { throw AgentBridgeValidationError.approvalRequired }
+        try requireLifetime(checked.plan, state: state, peer: peer, now: clock.now())
+        return approval
+    }
+
+    private func currentParent(for plan: AgentBridgePlan, state: AgentBridgeExportAuthoritySnapshot, peer: AgentBridgeExportAuthenticatedPeer, now: Date) throws -> AgentBridgeExportDelegation {
+        let ref = plan.authorityReferences.native
+        let parent = try state.delegation(id: ref.authorityId, revision: ref.grantRevision, peer: peer.peer, now: utc(now))
+        guard try parent.reference() == ref else { throw AgentBridgeValidationError.approvalRequired }
+        return parent
+    }
+
+    private func requireLifetime(_ plan: AgentBridgePlan, state: AgentBridgeExportAuthoritySnapshot, peer: AgentBridgeExportAuthenticatedPeer, now: Date) throws {
+        guard plan.issuedAt.rawValue <= (try utc(now)).rawValue, plan.expiresAt.rawValue > (try utc(now)).rawValue else { throw AgentBridgeValidationError.planExpired }
+        _ = try currentParent(for: plan, state: state, peer: peer, now: now)
+    }
+
+    private func currentPlan(in state: AgentBridgeExportAuthoritySnapshot, planID: AgentBridgeUUID, peer: AgentBridgeExportAuthenticatedPeer,
+                             right: AgentBridgeDelegationRight, requireReadiness: Bool = false) throws -> (plan: AgentBridgePlan, config: AgentBridgeExportPlanningConfiguration, now: Date) {
+        let record = try state.issued(id: planID, peer: peer.peer)
+        let config = try configuration.readConfiguration(for: peer, policy: record.request().intent.settingsPolicy)
+        try peer.requireCurrent() // The LAST potentially delaying session callback precedes live time.
+        let now = clock.now()
+        let plan = try revalidate(record, state: state, config: config, peer: peer, now: now, right: right)
+        if requireReadiness { try requireNativeReadiness(config) }
+        let finalNow = clock.now() // Also fence pure decoding/hash/resolver work after the callbacks.
+        try requireLifetime(plan, state: state, peer: peer, now: finalNow)
+        return (plan, config, finalNow)
     }
 
     private func revalidate(_ record: AgentBridgeExportIssuedPlan, state: AgentBridgeExportAuthoritySnapshot, config: AgentBridgeExportPlanningConfiguration,

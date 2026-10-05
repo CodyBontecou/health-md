@@ -8,6 +8,17 @@ nonisolated protocol AgentBridgeExportProtectedKeyReading {
     func loadExistingExportAuthorityKey() throws -> SymmetricKey?
 }
 
+/// Non-wire private-files boundary observer, used to exercise serialization/fsync delays. It has
+/// no authority to approve a write or bypass validators; throwing can only reject an operation.
+nonisolated protocol AgentBridgeExportPublicationObserving {
+    func prepared(_ state: AgentBridgeExportAuthoritySnapshot) throws
+    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws
+}
+nonisolated private struct AgentBridgeExportUnobservedPublication: AgentBridgeExportPublicationObserving {
+    func prepared(_ state: AgentBridgeExportAuthoritySnapshot) throws {}
+    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws {}
+}
+
 /// These non-Codable actions are presented by a trusted native UI/policy adapter, never wire JSON.
 nonisolated enum AgentBridgeExportNativeAction {
     case createPrivateStore
@@ -96,6 +107,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     private let rootFD: Int32
     private let rootIdentity: AgentBridgeExportFileIdentity
     private let keys: any AgentBridgeExportProtectedKeyReading
+    private let publication: any AgentBridgeExportPublicationObserving
     private static let domain = Data("HealthMd.AgentBridge.NativeExportAuthorityStore.v1\0".utf8)
     private static let recordLimit = 48 * 1024
     private struct SignedState: Codable {
@@ -104,19 +116,22 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         let mac: Data
     }
 
-    init(existingDirectory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading) throws {
+    init(existingDirectory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading,
+         publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws {
         directory = existingDirectory
         rootFD = try AgentBridgeExportPrivateFiles.openDirectory(existingDirectory, privateLeaf: true)
         do { rootIdentity = try AgentBridgeExportPrivateFiles.identity(rootFD) }
         catch { close(rootFD); throw error }
         keys = protectedKeys
+        self.publication = publication
     }
     deinit { close(rootFD) }
 
     /// Explicit local-native bootstrap only. Keys must already exist under independent native
     /// protection. The remote service has no access to this method or an authorizing context.
     static func createPrivateStore(at directory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading,
-                                   authorization: any AgentBridgeExportNativeAuthorizing) throws -> AgentBridgeExportAuthorityStore {
+                                   authorization: any AgentBridgeExportNativeAuthorizing,
+                                   publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws -> AgentBridgeExportAuthorityStore {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
         let key = try existingKey(protectedKeys)
         let parent = try AgentBridgeExportPrivateFiles.openDirectory(directory.deletingLastPathComponent(), privateLeaf: false)
@@ -124,7 +139,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         let leaf = directory.lastPathComponent
         guard !leaf.isEmpty, leaf != ".", leaf != "..", !leaf.contains("/"),
               mkdirat(parent, leaf, 0o700) == 0 else { throw AgentBridgeValidationError.bindingChanged }
-        let store = try Self(existingDirectory: directory, protectedKeys: protectedKeys)
+        let store = try Self(existingDirectory: directory, protectedKeys: protectedKeys, publication: publication)
         let lock = openat(store.rootFD, "lock", O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
         guard lock >= 0 else { throw AgentBridgeValidationError.bindingChanged }
         defer { close(lock) }
@@ -134,7 +149,13 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     }
 
     func snapshot() throws -> AgentBridgeExportAuthoritySnapshot {
-        try transaction { state in (state, false) }
+        try inspectCurrent { $0 }
+    }
+
+    /// Load protected key and current private state under the same lock as CAS/publication. The
+    /// validator receives THIS state, never an earlier captured snapshot presented as a refresh.
+    func inspectCurrent<T>(_ inspect: (AgentBridgeExportAuthoritySnapshot) throws -> T) throws -> T {
+        try transaction { state in (try inspect(state), false) }
     }
 
     func storeNativeDelegation(_ value: AgentBridgeExportDelegation, expectedGeneration: Int64,
@@ -171,8 +192,8 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
     }
 
     func persistIssuedPlan(_ record: AgentBridgeExportIssuedPlan, expectedGeneration: Int64,
-                           requireCurrentSession: () throws -> Void) throws -> AgentBridgeExportIssuedPlan {
-        try transaction(beforeCommit: requireCurrentSession) { state in
+                           requireCurrentAuthority: (AgentBridgeExportAuthoritySnapshot) throws -> Void) throws -> AgentBridgeExportIssuedPlan {
+        try transaction(beforeCommit: requireCurrentAuthority) { state in
             guard state.generation == expectedGeneration else { throw AgentBridgeValidationError.revisionConflict }
             let request = try record.request()
             if let previous = try state.plans.first(where: { try $0.request().requestId == request.requestId && $0.request().intent.peer == request.intent.peer }) {
@@ -185,17 +206,20 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         }
     }
 
-    func persistNativeDecision(_ decision: AgentBridgeExportStoredDecision, expectedGeneration: Int64,
+    func persistNativeDecision(planID: AgentBridgeUUID, binding: AgentBridgeBinding, expectedGeneration: Int64,
                                authorization: any AgentBridgeExportNativeAuthorizing,
-                               requireCurrentSession: () throws -> Void) throws {
-        let approval = try decision.approval()
-        try requireCurrentSession()
-        try authorization.requireNativeAuthorization(for: .decideExport(planID: decision.planID, binding: approval.binding))
-        try transaction(beforeCommit: requireCurrentSession) { state in
+                               makeDecision: (AgentBridgeExportAuthoritySnapshot) throws -> AgentBridgeExportStoredDecision,
+                               requireCurrentAuthority: (AgentBridgeExportAuthoritySnapshot) throws -> Void) throws {
+        // Native consent may delay or revoke authority. It runs outside the private lock, then the
+        // builder/validator receive the freshly loaded CAS state after protected-key lookup.
+        try authorization.requireNativeAuthorization(for: .decideExport(planID: planID, binding: binding))
+        try transaction(beforeCommit: requireCurrentAuthority) { state in
             guard state.generation == expectedGeneration else { throw AgentBridgeValidationError.revisionConflict }
-            let plan = try state.issued(id: decision.planID, peer: approval.binding.peer).plan()
-            guard approval.binding == AgentBridgeSemantics.binding(plan), approval.approvedAt.rawValue >= plan.issuedAt.rawValue else { throw AgentBridgeValidationError.bindingChanged }
-            if let previous = state.decisions.first(where: { $0.planID == decision.planID }) {
+            let decision = try makeDecision(state), approval = try decision.approval()
+            let plan = try state.issued(id: planID, peer: binding.peer).plan()
+            guard decision.planID == planID, approval.binding == binding, binding == AgentBridgeSemantics.binding(plan),
+                  approval.approvedAt.rawValue >= plan.issuedAt.rawValue, approval.approvedAt.rawValue < plan.expiresAt.rawValue else { throw AgentBridgeValidationError.bindingChanged }
+            if let previous = state.decisions.first(where: { $0.planID == planID }) {
                 guard previous.approvalBytes == decision.approvalBytes else { throw AgentBridgeValidationError.bindingChanged }
                 return ((), false)
             }
@@ -212,7 +236,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         } catch { throw AgentBridgeValidationError.permissionRequired }
     }
 
-    private func transaction<T>(beforeCommit: () throws -> Void = {}, _ body: (inout AgentBridgeExportAuthoritySnapshot) throws -> (T, Bool)) throws -> T {
+    private func transaction<T>(beforeCommit: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }, _ body: (inout AgentBridgeExportAuthoritySnapshot) throws -> (T, Bool)) throws -> T {
         // Reopen the entire path without following symlinks: moving/replacing the private root does
         // not silently redirect authority to a formerly valid retained directory handle.
         let current = try AgentBridgeExportPrivateFiles.openDirectory(directory, privateLeaf: true)
@@ -232,13 +256,15 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         let key = try Self.existingKey(keys)
         var state = try read(key: key)
         let (result, changed) = try body(&state)
-        try beforeCommit()
+        try beforeCommit(state)
         if changed {
             guard state.generation < Int64.max else { throw AgentBridgeValidationError.busy }
             state.generation += 1
             try validate(state)
-            try beforeCommit()
-            try write(state, key: key)
+            try write(state, key: key, beforePublish: beforeCommit)
+            // Post-rename/root-fsync expiry or revocation suppresses return. Publication cannot be
+            // undone here: stale private metadata remains retained and every consumer revalidates it.
+            try beforeCommit(state)
         }
         return result
     }
@@ -293,10 +319,17 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         return try AgentBridgeV4Codec.canonicalize(encoder.encode(value))
     }
-    private func write(_ state: AgentBridgeExportAuthoritySnapshot, key: SymmetricKey) throws {
+    private func write(_ state: AgentBridgeExportAuthoritySnapshot, key: SymmetricKey,
+                       beforePublish: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in }) throws {
         let stateBytes = try canonicalPrivate(state)
         let mac = Data(HMAC<SHA256>.authenticationCode(for: Self.domain + stateBytes, using: key))
-        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: 1, state: state, mac: mac)))
+        try AgentBridgeExportPrivateFiles.replace(rootFD, "state.json", bytes: canonicalPrivate(SignedState(version: 1, state: state, mac: mac)),
+            beforeRename: {
+                try self.publication.prepared(state)
+                // Canonical serialization, HMAC, temp write and fsync have ALREADY completed. This
+                // state-aware guard is the last callback before atomic rename; session THEN live time.
+                try beforePublish(state)
+            }, afterSync: { try self.publication.published(state) })
     }
 }
 
@@ -366,7 +399,7 @@ nonisolated private enum AgentBridgeExportPrivateFiles {
         try checkPath(root, name, fd: fd)
         return data
     }
-    static func replace(_ root: Int32, _ name: String, bytes: Data) throws {
+    static func replace(_ root: Int32, _ name: String, bytes: Data, beforeRename: () throws -> Void, afterSync: () throws -> Void) throws {
         guard !bytes.isEmpty, bytes.count <= AgentBridgeV4Codec.maximumBytes else { throw AgentBridgeValidationError.queryBudgetExceeded }
         let temporary = "transaction-" + UUID().uuidString.lowercased()
         let fd = openat(root, temporary, O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0o600)
@@ -382,6 +415,9 @@ nonisolated private enum AgentBridgeExportPrivateFiles {
             }
         }
         try checkPath(root, temporary, fd: fd)
-        guard fsync(fd) == 0, renameat(root, temporary, root, name) == 0, fsync(root) == 0 else { throw AgentBridgeValidationError.bindingChanged }
+        guard fsync(fd) == 0 else { throw AgentBridgeValidationError.bindingChanged }
+        try beforeRename()
+        guard renameat(root, temporary, root, name) == 0, fsync(root) == 0 else { throw AgentBridgeValidationError.bindingChanged }
+        try afterSync()
     }
 }

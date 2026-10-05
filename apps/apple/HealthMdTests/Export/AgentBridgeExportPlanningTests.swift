@@ -62,7 +62,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         // response pins all effective/capture leaves, not just a digest or a fixture verdict.
         XCTAssertEqual(AgentBridgeV4Codec.sha256(response), Self.tracerResponseSHA256)
         XCTAssertEqual(response, try AgentBridgeV4Codec.canonicalize(response))
-        let native = try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer, now: rig.now)
+        let native = try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer)
         XCTAssertEqual(native.issuer, .nativeSource)
         XCTAssertEqual(native.authorityId, plan.authorityReferences.native.authorityId)
         XCTAssertEqual(native.scopeSha256, plan.scopeSha256)
@@ -82,6 +82,24 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(effects, ["health_reads": 0, "earliest_date_reads": 0, "content_preview_reads": 0, "quota_consumed": 0, "output_writes": 0, "settings_mutations": 0, "credential_enrollments": 0, "wake_enrollments": 0])
     }
 
+    func testExpiryDuringNativeConsentNeverPersistsALateDecision() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        var consentCompleted = false
+        let native = FakeNativeAuthorization(binding: binding, afterAuthorization: {
+            consentCompleted = true
+            rig.clock.advance(seconds: 600) // Exact issued-plan expiry, while the real native callback runs.
+        })
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                                               authorization: native)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        XCTAssertTrue(consentCompleted)
+        XCTAssertEqual(rig.now, ISO8601DateFormatter().date(from: "2026-03-09T00:10:00Z"))
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
     func testApprovalRelayRequiresIndependentExactNativeDecisionAndSurvivesRestart() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let plan = try rig.makePlan()
@@ -90,13 +108,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         try rig.expectError(.approvalRequired, request: .approvalRequest(approvalRequest))
         XCTAssertEqual(try rig.store.snapshot().generation, before)
         XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: approvalRequest.binding, approvalID: id(8), authenticatedPeer: rig.peer,
-                                                               now: rig.now, authorization: FakeNativeAuthorization(deny: true)))
+                                                               authorization: FakeNativeAuthorization(deny: true)))
         XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
         try rig.service.storeNativeDecision(planID: plan.planId, binding: approvalRequest.binding, approvalID: id(8), authenticatedPeer: rig.peer,
-                                            now: rig.now, authorization: FakeNativeAuthorization(binding: approvalRequest.binding))
+                                            authorization: FakeNativeAuthorization(binding: approvalRequest.binding))
         let bytes = try rig.send(.approvalRequest(approvalRequest))
         let restarted = try rig.restartedService()
-        let replay = try restarted.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .approvalRequest(approvalRequest))), authenticatedPeer: rig.peer, now: rig.now.addingTimeInterval(30))
+        rig.clock.advance(seconds: 30)
+        let replay = try restarted.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .approvalRequest(approvalRequest))), authenticatedPeer: rig.peer)
         XCTAssertEqual(bytes, replay)
         guard case .approval(let approval) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: bytes).payload else { return XCTFail("approval required") }
         XCTAssertEqual(approval.approvalId, try id(8))
@@ -105,23 +124,387 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try rig.store.snapshot().decisions.count, 1)
     }
 
+    func testLiveClockRejectsCachedPlanAfterProtectedKeyDelay() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        _ = try rig.makePlan()
+        let state = try rig.store.snapshot(), request = try state.plans[0].request()
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        let loads = rig.keys.loads
+        rig.keys.onNextLoad { rig.clock.advance(seconds: 600) }
+        let reply = try rig.send(.planRequest(request))
+        XCTAssertEqual(try? error(reply), .planExpired)
+        XCTAssertGreaterThan(rig.keys.loads, loads)
+        XCTAssertEqual(rig.now, ISO8601DateFormatter().date(from: "2026-03-09T00:10:00Z"))
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 1)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testLiveClockRejectsPlanAfterConfigurationCrossesParentExpiry() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll(expires: "2026-03-09T00:01:00Z")
+        let request = try rig.request(discovery: rig.discover())
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        var delayed = false
+        rig.reader.beforeReturn = {
+            if !delayed { delayed = true; rig.clock.advance(seconds: 60) }
+        }
+        let reply = try rig.send(.planRequest(request))
+        XCTAssertEqual(try? error(reply), .approvalRequired)
+        XCTAssertTrue(delayed)
+        XCTAssertEqual(rig.now, ISO8601DateFormatter().date(from: "2026-03-09T00:01:00Z"))
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 0)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testLiveClockRejectsScopedAuthorityAtLastSessionCallback() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan()
+        let start = rig.session.checks
+        _ = try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer)
+        let checksPerReturn = rig.session.checks - start
+        let finalCheck = rig.session.checks + checksPerReturn
+        var advanced = false
+        rig.session.observeChecks { count in
+            if count == finalCheck { advanced = true; rig.clock.advance(seconds: 600) }
+        }
+        XCTAssertThrowsError(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer)) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired)
+        }
+        XCTAssertTrue(advanced) // Observed callback at the last fence of an otherwise identical return.
+        XCTAssertEqual(rig.session.checks, finalCheck)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+    }
+
+    func testLiveClockRejectsCachedApprovalAtLastSessionCallback() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                            authorization: FakeNativeAuthorization(binding: binding))
+        let request = AgentBridgeDocument.approvalRequest(.init(binding: binding, planId: plan.planId, requestId: try id(103)))
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), start = rig.session.checks
+        _ = try rig.send(request)
+        let finalCheck = rig.session.checks + (rig.session.checks - start)
+        var advanced = false
+        rig.session.observeChecks { count in
+            if count == finalCheck { advanced = true; rig.clock.advance(seconds: 600) }
+        }
+        let reply = try rig.send(request)
+        XCTAssertEqual(try? error(reply), .planExpired)
+        XCTAssertTrue(advanced)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 1) // Not renewed/evicted.
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testPublicationClockRejectsPlanBeforeAtomicRenameAfterFsync() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try rig.request(discovery: rig.discover())
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        var prepared = false
+        rig.publication.onPrepared = { candidate in
+            prepared = true
+            XCTAssertEqual(candidate.plans.count, 1)
+            XCTAssertEqual(candidate.decisions.count, 0)
+            XCTAssertEqual(candidate.generation, 2)
+            let temporary = try XCTUnwrap(FileManager.default.contentsOfDirectory(at: rig.directory, includingPropertiesForKeys: nil).first { $0.lastPathComponent.hasPrefix("transaction-") })
+            let serialized = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: temporary)) as? [String: Any])
+            XCTAssertEqual((serialized["state"] as? [String: Any])?["generation"] as? Int, 2)
+            rig.clock.advance(seconds: 600) // The actual private candidate is serialized and fsync'ed.
+        }
+        let reply = try rig.send(.planRequest(request))
+        XCTAssertEqual(try? error(reply), .planExpired)
+        XCTAssertTrue(prepared)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 0)
+        XCTAssertEqual(try rig.store.snapshot().generation, 1)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testPublicationClockRejectsDecisionBeforeAtomicRenameAfterFsync() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        var prepared = false
+        rig.publication.onPrepared = { candidate in
+            prepared = true
+            XCTAssertEqual(candidate.plans.count, 1)
+            XCTAssertEqual(candidate.decisions.count, 1)
+            XCTAssertEqual(candidate.generation, 3)
+            rig.clock.advance(seconds: 600)
+        }
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                                               authorization: FakeNativeAuthorization(binding: binding))) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired)
+        }
+        XCTAssertTrue(prepared)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+        XCTAssertEqual(try rig.store.snapshot().generation, 2)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testDecisionTimestampIsPostConsentAndExactRetryNeverRenewsIt() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        var consentCompleted = false
+        try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+            authorization: FakeNativeAuthorization(binding: binding, afterAuthorization: {
+                consentCompleted = true; rig.clock.advance(seconds: 30)
+            }))
+        XCTAssertTrue(consentCompleted)
+        let approval = try XCTUnwrap(rig.store.snapshot().decisions.first).approval()
+        XCTAssertEqual(approval.approvedAt.rawValue, "2026-03-09T00:00:30Z")
+        XCTAssertEqual(approval.binding.expiresAt, plan.expiresAt)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.clock.advance(seconds: 50)
+        try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                            authorization: FakeNativeAuthorization(binding: binding))
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().decisions[0].approval(), approval)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testProtectedKeyDelayAfterNativeConsentCannotPublishDecision() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        var delayedKeyLoaded = false
+        let native = FakeNativeAuthorization(binding: binding, afterAuthorization: {
+            rig.keys.onNextLoad { delayedKeyLoaded = true; rig.clock.advance(seconds: 600) }
+        })
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                                               authorization: native)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        XCTAssertTrue(delayedKeyLoaded)
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+    }
+
+    func testNativeConsentCannotMaskCurrentConfigOrGrantRevocation() throws {
+        for revokeGrant in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+            let before = try rig.store.snapshot().generation
+            var consentCompleted = false
+            let native = FakeNativeAuthorization(binding: binding, afterAuthorization: {
+                consentCompleted = true
+                if revokeGrant {
+                    try! rig.store.revokeNativeDelegation(binding.authorityReferences.native, expectedGeneration: before, authorization: FakeNativeAuthorization())
+                } else { rig.reader.grants = .required }
+            })
+            XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                                                   authorization: native)) {
+                XCTAssertEqual($0 as? AgentBridgeValidationError, revokeGrant ? .revisionConflict : .bindingChanged)
+            }
+            XCTAssertTrue(consentCompleted)
+            let state = try rig.store.snapshot()
+            XCTAssertEqual(state.decisions.count, 0)
+            XCTAssertEqual(state.generation, before + (revokeGrant ? 1 : 0))
+            XCTAssertEqual(state.delegations[0].revoked, revokeGrant)
+            XCTAssertEqual(rig.reader.defaults.writes, 0)
+        }
+    }
+
+    func testExpiryAfterPublicationSuppressesPlanAndRetainsUnusableMetadata() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let request = try rig.request(discovery: rig.discover())
+        var published = false
+        rig.publication.onPublished = { current in
+            published = true
+            XCTAssertEqual(current.plans.count, 1)
+            XCTAssertEqual(current.generation, 2)
+            rig.clock.advance(seconds: 600) // Atomic rename/root fsync ALREADY succeeded.
+        }
+        XCTAssertEqual(try? error(rig.send(.planRequest(request))), .planExpired)
+        XCTAssertTrue(published)
+        let state = try rig.store.snapshot(), plan = try state.plans[0].plan()
+        XCTAssertEqual(state.generation, 2)
+        XCTAssertEqual(state.decisions.count, 0)
+        XCTAssertEqual(plan.expiresAt.rawValue, "2026-03-09T00:10:00Z")
+        let bytes = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.publication.onPublished = nil
+        XCTAssertThrowsError(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        try rig.expectError(.planExpired, request: .planRequest(request))
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: AgentBridgeSemantics.binding(plan), approvalID: id(8), authenticatedPeer: rig.peer,
+                                                               authorization: FakeNativeAuthorization(binding: AgentBridgeSemantics.binding(plan)))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), bytes)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 1) // No eviction/recreation or expiry renewal.
+    }
+
+    func testExpiryAfterDecisionPublicationSuppressesReturnAndEveryLaterAuthorityUse() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
+        var published = false
+        rig.publication.onPublished = { current in
+            published = true
+            XCTAssertEqual(current.decisions.count, 1)
+            rig.clock.advance(seconds: 600)
+        }
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
+                                                               authorization: FakeNativeAuthorization(binding: binding))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        XCTAssertTrue(published)
+        let state = try rig.store.snapshot(), approval = try state.decisions[0].approval()
+        XCTAssertEqual(state.generation, 3)
+        XCTAssertEqual(approval.approvedAt.rawValue, "2026-03-09T00:00:00Z") // It was valid AT publication, not late consent.
+        let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+        rig.publication.onPublished = nil
+        let request = AgentBridgeDocument.approvalRequest(.init(binding: binding, planId: plan.planId, requestId: try id(103)))
+        XCTAssertEqual(try? error(rig.send(request)), .planExpired)
+        XCTAssertEqual(try? error(rig.restartedService().handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: request)), authenticatedPeer: rig.peer)), .planExpired)
+        XCTAssertThrowsError(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired) }
+        XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testRevocationAtPublicationRejectsBeforeRenameAndAfterPublicationSuppressesReturn() throws {
+        for afterRename in [false, true] {
+            let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+            let request = try rig.request(discovery: rig.discover())
+            let before = try Data(contentsOf: rig.directory.appendingPathComponent("state.json"))
+            var revoked = false
+            let revoke: (AgentBridgeExportAuthoritySnapshot) throws -> Void = { _ in revoked = true; rig.session.revoke() }
+            if afterRename { rig.publication.onPublished = revoke } else { rig.publication.onPrepared = revoke }
+            XCTAssertThrowsError(try rig.send(.planRequest(request))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+            XCTAssertTrue(revoked)
+            let state = try rig.store.snapshot()
+            XCTAssertEqual(state.plans.count, afterRename ? 1 : 0)
+            XCTAssertEqual(state.decisions.count, 0)
+            XCTAssertEqual(state.generation, afterRename ? 2 : 1)
+            if !afterRename { XCTAssertEqual(try Data(contentsOf: rig.directory.appendingPathComponent("state.json")), before) }
+            XCTAssertEqual(rig.reader.defaults.writes, 0)
+        }
+    }
+
+    func testDiscoveryNeverReturnsParentExpiredDuringFinalSessionCallback() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll(expires: "2026-03-09T00:01:00Z")
+        let start = rig.session.checks
+        _ = try rig.discover()
+        let finalCheck = rig.session.checks + (rig.session.checks - start)
+        var advanced = false
+        rig.session.observeChecks { count in
+            if count == finalCheck { advanced = true; rig.clock.advance(seconds: 60) }
+        }
+        let bytes = try rig.send(.discoveryRequest(.init(requestID: id(104), peer: rig.peer.peer)))
+        XCTAssertEqual(try? error(bytes), .approvalRequired)
+        XCTAssertTrue(advanced)
+        XCTAssertEqual(try rig.store.snapshot().generation, 1)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 0)
+    }
+
+    func testDiscoveryRechecksParentAfterResponseHashWork() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll(expires: "2026-03-09T00:01:00Z")
+        let finalRead = rig.reader.calls.count + 2
+        rig.reader.beforeReturn = {
+            if rig.reader.calls.count == finalRead { rig.clock.advanceAfterNextSample(seconds: 60) }
+        }
+        // Final validation first samples time, then performs canonical capability hashing. Model
+        // wall time advancing immediately AFTER that sample, before its last return-time sample.
+        let reply = try rig.send(.discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer)))
+        XCTAssertEqual(try? error(reply), .approvalRequired)
+        XCTAssertEqual(rig.now, ISO8601DateFormatter().date(from: "2026-03-09T00:01:00Z"))
+        XCTAssertEqual(try rig.store.snapshot().generation, 1)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+    }
+
+    func testGatedActualServiceDiscoveryCandidate() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let value = try rig.discover() // Native typed constructors + REAL stored production service.
+        XCTAssertEqual(value.outputSupport.settingPointers, outputPointers)
+        XCTAssertEqual(value.authorityReferences, [try rig.grant().reference()])
+        XCTAssertEqual(value.outputSupport.formats, [.json])
+        XCTAssertEqual(value.outputProfiles, [.appleV8])
+        XCTAssertEqual(value.features, [.explicitSettings, .zeroHealthPlan])
+        let bytes = try AgentBridgeV4Codec.encode(value)
+        XCTAssertEqual(try AgentBridgeV4Codec.decode(AgentBridgeDiscovery.self, from: bytes), value)
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["HEALTHMD_GENERATE_AGENT_BRIDGE_V4"] == "1" else { return }
+        let path = try XCTUnwrap(environment["HEALTHMD_AGENT_BRIDGE_CANDIDATES"])
+        let root = "/private/tmp/healthmd-agent-bridge-20261004/evidence/swift-planning-boundaries/"
+        guard path == root + "native-discovery-candidates.json" else { throw AgentBridgeValidationError.unsafePath }
+        guard !FileManager.default.fileExists(atPath: path) else { throw AgentBridgeValidationError.bindingChanged }
+        try bytes.write(to: URL(fileURLWithPath: path), options: .atomic) // Standalone closed discovery DTO ONLY.
+        let provenance: [String: Any] = ["format": "standalone healthmd.agent_discovery/1", "producer": "Swift actual AgentBridgeExportPlanningService", "test": "AgentBridgeExportPlanningTests.testGatedActualServiceDiscoveryCandidate", "stage": "after-live-boundary-fix", "byte_count": bytes.count, "sha256": AgentBridgeV4Codec.sha256(bytes), "installed_transport_qualification": false]
+        try JSONSerialization.data(withJSONObject: provenance, options: [.sortedKeys, .withoutEscapingSlashes]).write(to: URL(fileURLWithPath: path + ".provenance.json"), options: .atomic)
+    }
+
+    func testGatedActualServiceDiscoveryCompleteCandidate() throws {
+        let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
+        let discovery = try rig.discover()
+        let intent = try rig.intent(metrics: ["heart_rate_avg", "steps"]) // Independent native literal constructors.
+        let request = try AgentBridgePlanRequest(authorityId: id(7), authorityRevision: 1, capabilitySha256: discovery.capabilitySha256,
+            hostAuthorityReference: .init(authorityId: id(13), grantRevision: 1, grantSha256: digest("2"), issuer: .authorizedHost),
+            intent: intent, requestId: id(101))
+        let response = try rig.send(.planRequest(request))
+        guard case .plan(let plan) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: response).payload else { throw AgentBridgeValidationError.invalidRequest }
+        XCTAssertEqual(plan.intent, intent)
+        XCTAssertEqual(plan.capabilitySha256, discovery.capabilitySha256)
+        XCTAssertEqual(plan.predictedPaths.map(\.rawValue), ["2026/2026-03-07.json", "2026/2026-03-08.json"])
+        XCTAssertEqual(plan.resolvedMetricIds.map(\.rawValue), ["heart_rate_avg", "steps"])
+        XCTAssertEqual(plan.effectiveSettings, output())
+        XCTAssertEqual(discovery.outputSupport.settingPointers, outputPointers)
+        XCTAssertEqual(try rig.store.snapshot().plans.count, 1)
+        XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
+        XCTAssertEqual(rig.reader.defaults.writes, 0)
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["HEALTHMD_GENERATE_AGENT_BRIDGE_V4"] == "1" else { return }
+        let path = try XCTUnwrap(environment["HEALTHMD_AGENT_BRIDGE_CANDIDATES"])
+        guard path == "/private/tmp/healthmd-agent-bridge-20261004/evidence/swift-planning-boundaries/native-discovery-candidates-complete.json",
+              !FileManager.default.fileExists(atPath: path) else { throw AgentBridgeValidationError.unsafePath }
+        var sourceRoot = URL(fileURLWithPath: #filePath).resolvingSymlinksInPath()
+        for _ in 0..<5 { sourceRoot.deleteLastPathComponent() }
+        let sources = [
+            "apps/apple/HealthMd/Shared/Export/AgentBridgeExportPlanning.swift",
+            "apps/apple/HealthMd/Shared/Export/AgentBridgeExportAuthorityStore.swift",
+            "apps/apple/HealthMd/Shared/Export/AgentBridgeRequestSettings.swift",
+            "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+            "apps/apple/HealthMdTests/Export/AgentBridgeExportPlanningTests.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeBoundary.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeCodable.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeDelegation.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeDocuments.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeIntent.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeJSON.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeModels.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgePaths.swift",
+            "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/AgentBridgeSemantics.swift",
+            "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+        ]
+        var hashes: [String: String] = [:]
+        for source in sources { hashes[source] = AgentBridgeV4Codec.sha256(try Data(contentsOf: sourceRoot.appendingPathComponent(source))) }
+        // CLOSED interoperability wrapper, NOT a wire envelope or issuer permission. DTO values
+        // are actual service results. Hashing is native Swift; no Python verdict/fixture forwarding.
+        let candidate: [String: Any] = [
+            "discovery": try JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(discovery)),
+            "intent": try JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(intent)),
+            "plan": try JSONSerialization.jsonObject(with: AgentBridgeV4Codec.encode(plan)),
+            "producer": "swift_actual_service", "producer_source_sha256": hashes,
+            "source_base": "3bc392c823193ab04aeea4bb71e7cbcb5747b403"
+        ]
+        let bytes = try AgentBridgeV4Codec.canonicalize(JSONSerialization.data(withJSONObject: candidate, options: [.sortedKeys, .withoutEscapingSlashes]))
+        try bytes.write(to: URL(fileURLWithPath: path), options: .atomic)
+    }
+
     func testExactPlanRetryNeverRenewsAndChangedBytesCannotReplaceIssuedIdentity() throws {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try rig.request(discovery: rig.discover())
         let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(request)))
-        let first = try rig.service.handle(bytes, authenticatedPeer: rig.peer, now: rig.now)
+        let first = try rig.service.handle(bytes, authenticatedPeer: rig.peer)
         let generation = try rig.store.snapshot().generation
-        XCTAssertEqual(try rig.restartedService().handle(bytes, authenticatedPeer: rig.peer, now: rig.now.addingTimeInterval(50)), first)
+        rig.clock.advance(seconds: 50)
+        XCTAssertEqual(try rig.restartedService().handle(bytes, authenticatedPeer: rig.peer), first)
         XCTAssertEqual(try rig.store.snapshot().generation, generation)
         let whitespace = Data(" ".utf8) + bytes
-        let rejection = try rig.service.handle(whitespace, authenticatedPeer: rig.peer, now: rig.now)
+        let rejection = try rig.service.handle(whitespace, authenticatedPeer: rig.peer)
         XCTAssertEqual(try error(rejection), .bindingChanged)
         for changed in [try rig.request(discovery: rig.discover(), metrics: ["heart_rate_min"]),
                         try rig.request(discovery: rig.discover(), destination: .init(bindingID: id(14), identitySHA256: digest("b"), revision: 2, hostInstallationID: rig.peer.peer.hostInstallationID)),
                         try rig.request(discovery: rig.discover(), dates: .allAvailable)] {
             try rig.expectError(.bindingChanged, request: .planRequest(changed))
         }
-        let late = try rig.restartedService().handle(bytes, authenticatedPeer: rig.peer, now: rig.now.addingTimeInterval(600))
+        rig.clock.advance(seconds: 550)
+        let late = try rig.restartedService().handle(bytes, authenticatedPeer: rig.peer)
         XCTAssertEqual(try error(late), .planExpired)
         XCTAssertEqual(try rig.store.snapshot().plans.count, 1)
     }
@@ -133,9 +516,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let foreignSource = try XCTUnwrap(UUID(uuidString: id(1).rawValue)), foreignHost = try XCTUnwrap(UUID(uuidString: id(99).rawValue))
         let foreign = try AgentBridgeExportAuthenticatedPeer(nativeSourceInstallationID: foreignSource, authenticatedHostInstallationID: foreignHost,
                                                             currentNativeSession: RevocableNativeSession(source: foreignSource, host: foreignHost))
-        let wrong = try rig.service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(request))), authenticatedPeer: foreign, now: rig.now)
+        let wrong = try rig.service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(request))), authenticatedPeer: foreign)
         XCTAssertEqual(try error(wrong), .bindingChanged)
-        let foreignDiscovery = try rig.service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: foreign.peer)))), authenticatedPeer: foreign, now: rig.now)
+        let foreignDiscovery = try rig.service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: foreign.peer)))), authenticatedPeer: foreign)
         guard case .discovery(let filtered) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: foreignDiscovery).payload else { return XCTFail("discovery") }
         XCTAssertTrue(filtered.authorityReferences.isEmpty)
         let unknown = AgentBridgePlanRequest(authorityId: try id(90), authorityRevision: 1, capabilitySha256: discovery.capabilitySha256, hostAuthorityReference: request.hostAuthorityReference, intent: request.intent, requestId: try id(101))
@@ -166,7 +549,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(all.pathPrediction, .templateOnlyAllAvailable)
         XCTAssertEqual(all.limitations.map(\.rawValue), ["healthkit_read_authorization_unobservable", "history_bounds_unresolved"])
         XCTAssertTrue(all.predictedPaths.isEmpty)
-        XCTAssertEqual(allRig.reader.calls.count - calls, 2) // Discovery + plan use the actual configuration dependency.
+        XCTAssertEqual(allRig.reader.calls.count - calls, 7) // Issuance, pre-rename, post-sync and final-return configuration fences.
         XCTAssertEqual(allRig.reader.defaults.writes, 0)
         XCTAssertEqual(allRig.reader.defaults.reads, 0)
     }
@@ -193,7 +576,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
             XCTAssertEqual(plan.origins.filter { $0.pointer.hasPrefix("/effective_settings/") }.map(\.revision), Array(repeating: 7, count: outputPointers.count))
             XCTAssertEqual(rig.reader.defaults.writes, 0)
             let binding = AgentBridgeSemantics.binding(plan)
-            try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer, now: rig.now,
+            try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
                                                 authorization: FakeNativeAuthorization(binding: binding))
             let request = AgentBridgeApprovalRequest(binding: binding, planId: plan.planId, requestId: try id(103))
             var snapshot = try XCTUnwrap(rig.reader.saved)
@@ -216,13 +599,13 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         rig.reader.grants = .unverified
         let plan = try rig.makePlan()
         XCTAssertEqual(plan.requiredActions.map(\.rawValue), ["grant_health_access"])
-        XCTAssertEqual(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer, now: rig.now).nativeConsent, .required)
-        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: AgentBridgeSemantics.binding(plan), approvalID: id(8), authenticatedPeer: rig.peer, now: rig.now,
+        XCTAssertEqual(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: rig.peer).nativeConsent, .required)
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: AgentBridgeSemantics.binding(plan), approvalID: id(8), authenticatedPeer: rig.peer,
                                                                authorization: FakeNativeAuthorization(binding: AgentBridgeSemantics.binding(plan)))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
         let entitlementRig = try Rig(); defer { entitlementRig.cleanup() }; try entitlementRig.enroll(); entitlementRig.reader.entitlement = .required
         let blocked = try entitlementRig.makePlan()
         XCTAssertEqual(blocked.requiredActions.map(\.rawValue), ["purchase_required"])
-        XCTAssertThrowsError(try entitlementRig.service.storeNativeDecision(planID: blocked.planId, binding: AgentBridgeSemantics.binding(blocked), approvalID: id(8), authenticatedPeer: entitlementRig.peer, now: entitlementRig.now,
+        XCTAssertThrowsError(try entitlementRig.service.storeNativeDecision(planID: blocked.planId, binding: AgentBridgeSemantics.binding(blocked), approvalID: id(8), authenticatedPeer: entitlementRig.peer,
                                                                           authorization: FakeNativeAuthorization(binding: AgentBridgeSemantics.binding(blocked)))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .entitlementRequired) }
     }
 
@@ -230,7 +613,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let rig = try Rig(); defer { rig.cleanup() }
         for name in ["unknown", "query_request", "control_request", "execute_request", "cancel_request", "resume_request"] {
             let bytes = Data((#"{"protocol_version":4,"type":""# + name + #"","payload":{"schema":"healthmd.agent_discovery_request","schema_version":1,"request_id":"00000000-0000-4000-8000-000000000064","peer":{"source_installation_id":"00000000-0000-4000-8000-000000000001","host_installation_id":"00000000-0000-4000-8000-000000000002","platform":"apple"}}}"#).utf8)
-            XCTAssertThrowsError(try rig.service.handle(bytes, authenticatedPeer: rig.peer, now: rig.now))
+            XCTAssertThrowsError(try rig.service.handle(bytes, authenticatedPeer: rig.peer))
         }
         // A valid known non-planning DTO also rejects, not just mismatched/malformed discriminators.
         let cancel = try AgentBridgeCancel(approvalId: id(8), authorityId: id(7), jobId: id(10), peer: rig.peer.peer, requestSha256: digest("a"))
@@ -243,7 +626,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let first = try rig.makePlan()
         let firstBinding = AgentBridgeSemantics.binding(first)
-        try rig.service.storeNativeDecision(planID: first.planId, binding: firstBinding, approvalID: id(8), authenticatedPeer: rig.peer, now: rig.now,
+        try rig.service.storeNativeDecision(planID: first.planId, binding: firstBinding, approvalID: id(8), authenticatedPeer: rig.peer,
                                             authorization: FakeNativeAuthorization(binding: firstBinding))
         let changed = try rig.request(discovery: rig.discover(), metrics: ["heart_rate_min"],
                                       destination: .init(bindingID: id(14), identitySHA256: digest("b"), revision: 2, hostInstallationID: rig.peer.peer.hostInstallationID), requestID: id(102))
@@ -266,10 +649,10 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let requestBytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: copiedContext.peer))))
         let before = try rig.store.snapshot().generation, configReads = rig.reader.calls.count
         rig.session.revoke()
-        XCTAssertThrowsError(try rig.service.handle(requestBytes, authenticatedPeer: copiedContext, now: rig.now)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
-        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: copiedContext, now: rig.now,
+        XCTAssertThrowsError(try rig.service.handle(requestBytes, authenticatedPeer: copiedContext)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: copiedContext,
                                                                authorization: FakeNativeAuthorization(binding: binding))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
-        XCTAssertThrowsError(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: copiedContext, now: rig.now)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
+        XCTAssertThrowsError(try rig.service.nativeScopedAuthority(planID: plan.planId, authenticatedPeer: copiedContext)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
         XCTAssertEqual(rig.reader.calls.count, configReads)
         XCTAssertEqual(try rig.store.snapshot().generation, before)
         XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
@@ -282,7 +665,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         rig.reader.beforeReturn = { rig.session.revoke() }
         XCTAssertThrowsError(try rig.send(.planRequest(request))) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
         XCTAssertEqual(try rig.store.snapshot().plans.count, 0)
-        XCTAssertEqual(rig.reader.calls, ["discovery", "explicit"])
+        XCTAssertEqual(rig.reader.calls, ["discovery", "discovery", "explicit"]) // Discovery return also rechecks configuration.
     }
 
     func testRevocationInsideNativeDecisionAdapterCannotCommitOrReturnApproval() throws {
@@ -290,7 +673,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let plan = try rig.makePlan(), binding = AgentBridgeSemantics.binding(plan)
         let before = try rig.store.snapshot().generation
         let nativeDecision = FakeNativeAuthorization(binding: binding, afterAuthorization: { rig.session.revoke() })
-        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer, now: rig.now,
+        XCTAssertThrowsError(try rig.service.storeNativeDecision(planID: plan.planId, binding: binding, approvalID: id(8), authenticatedPeer: rig.peer,
                                                                authorization: nativeDecision)) { XCTAssertEqual($0 as? AgentBridgeValidationError, .permissionRequired) }
         XCTAssertEqual(try rig.store.snapshot().generation, before)
         XCTAssertEqual(try rig.store.snapshot().decisions.count, 0)
@@ -300,14 +683,14 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let discoveryBytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .discoveryRequest(.init(requestID: id(100), peer: rig.peer.peer))))
         let discoveries = try await withThrowingTaskGroup(of: Data.self) { group in
-            for _ in 0..<8 { group.addTask { @MainActor in try rig.service.handle(discoveryBytes, authenticatedPeer: rig.peer, now: rig.now) } }
+            for _ in 0..<8 { group.addTask { @MainActor in try rig.service.handle(discoveryBytes, authenticatedPeer: rig.peer) } }
             var results: [Data] = []; for try await result in group { results.append(result) }; return results
         }
         XCTAssertEqual(Set(discoveries).count, 1)
         guard case .discovery(let discovery) = try AgentBridgeV4Codec.decode(AgentBridgeEnvelope.self, from: discoveries[0]).payload else { return XCTFail("discovery") }
         let requestBytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(rig.request(discovery: discovery))))
         let replies = try await withThrowingTaskGroup(of: Data.self) { group in
-            for _ in 0..<8 { group.addTask { @MainActor in try rig.service.handle(requestBytes, authenticatedPeer: rig.peer, now: rig.now) } }
+            for _ in 0..<8 { group.addTask { @MainActor in try rig.service.handle(requestBytes, authenticatedPeer: rig.peer) } }
             var results: [Data] = []; for try await result in group { results.append(result) }; return results
         }
         XCTAssertEqual(Set(replies).count, 1)
@@ -315,7 +698,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         XCTAssertEqual(try rig.store.snapshot().plans.count, 1)
         let changed = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(rig.request(discovery: discovery, metrics: ["heart_rate_min"]))))
         let contested = try await withThrowingTaskGroup(of: Data.self) { group in
-            for bytes in [requestBytes, changed] { group.addTask { @MainActor in try rig.service.handle(bytes, authenticatedPeer: rig.peer, now: rig.now) } }
+            for bytes in [requestBytes, changed] { group.addTask { @MainActor in try rig.service.handle(bytes, authenticatedPeer: rig.peer) } }
             var results: [Data] = []; for try await result in group { results.append(result) }; return results
         }
         XCTAssertEqual(contested.filter { $0 == replies[0] }.count, 1)
@@ -327,8 +710,9 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
         let rig = try Rig(); defer { rig.cleanup() }; try rig.enroll()
         let request = try rig.request(discovery: rig.discover())
         let bytes = try AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: .planRequest(request)))
-        XCTAssertEqual(try error(rig.restartedService().handle(bytes, authenticatedPeer: rig.peer, now: rig.now)), .planExpired)
-        XCTAssertEqual(try error(rig.service.handle(bytes, authenticatedPeer: rig.peer, now: rig.now.addingTimeInterval(600))), .planExpired)
+        XCTAssertEqual(try error(rig.restartedService().handle(bytes, authenticatedPeer: rig.peer)), .planExpired)
+        rig.clock.advance(seconds: 600)
+        XCTAssertEqual(try error(rig.service.handle(bytes, authenticatedPeer: rig.peer)), .planExpired)
         XCTAssertEqual(try rig.store.snapshot().plans.count, 0)
     }
 
@@ -342,7 +726,7 @@ final class AgentBridgeExportPlanningTests: XCTestCase {
                         Data(repeating: 32, count: AgentBridgeV4Codec.maximumBytes + 1),
                         Data((String(repeating: "[", count: 26) + "0" + String(repeating: "]", count: 26)).utf8),
                         Data((#"{"a":""# + String(repeating: "x", count: 65_537) + #""}"#).utf8)] {
-            XCTAssertThrowsError(try rig.service.handle(invalid, authenticatedPeer: rig.peer, now: rig.now))
+            XCTAssertThrowsError(try rig.service.handle(invalid, authenticatedPeer: rig.peer))
         }
         XCTAssertEqual(rig.reader.calls.count, 0)
     }
@@ -377,20 +761,49 @@ nonisolated private final class RevocableNativeSession: AgentBridgeExportNativeS
     private let lock = NSLock()
     private let authenticatedPeer: AgentBridgePeer
     private var revoked = false
+    private var count = 0
+    private var observer: ((Int) -> Void)?
+    var checks: Int { lock.lock(); defer { lock.unlock() }; return count }
+    func observeChecks(_ callback: @escaping (Int) -> Void) { lock.lock(); defer { lock.unlock() }; observer = callback }
     init(source: UUID, host: UUID) throws {
         authenticatedPeer = try .init(sourceInstallationID: AgentBridgeUUID(source.uuidString.lowercased()), hostInstallationID: AgentBridgeUUID(host.uuidString.lowercased()), platform: .apple)
     }
     func requireCurrent(peer: AgentBridgePeer) throws {
+        lock.lock(); count += 1; let check = count, callback = observer; lock.unlock()
+        callback?(check)
         lock.lock(); defer { lock.unlock() }
         guard !revoked, peer == authenticatedPeer else { throw AgentBridgeValidationError.permissionRequired }
     }
     func revoke() { lock.lock(); defer { lock.unlock() }; revoked = true }
 }
 
+nonisolated private final class AdvancingPlanningClock: AgentBridgeExportClock, @unchecked Sendable {
+    private let lock = NSLock()
+    private var value = ISO8601DateFormatter().date(from: "2026-03-09T00:00:00Z")!
+    private var afterNextSample: TimeInterval?
+    func now() -> Date {
+        lock.lock(); defer { lock.unlock() }
+        let sampled = value
+        if let delay = afterNextSample { value = value.addingTimeInterval(delay); afterNextSample = nil }
+        return sampled
+    }
+    func advanceAfterNextSample(seconds: TimeInterval) { lock.lock(); defer { lock.unlock() }; afterNextSample = seconds }
+    func advance(seconds: TimeInterval) { lock.lock(); defer { lock.unlock() }; value = value.addingTimeInterval(seconds) }
+}
+
 nonisolated private final class FakeProtectedKeys: AgentBridgeExportProtectedKeyReading, @unchecked Sendable {
     let key: SymmetricKey?
+    private let lock = NSLock()
+    private var count = 0
+    private var nextLoad: (() -> Void)?
+    var loads: Int { lock.lock(); defer { lock.unlock() }; return count }
+    func onNextLoad(_ callback: @escaping () -> Void) { lock.lock(); defer { lock.unlock() }; nextLoad = callback }
     init(key: SymmetricKey? = SymmetricKey(data: Data(repeating: 9, count: 32))) { self.key = key }
-    func loadExistingExportAuthorityKey() throws -> SymmetricKey? { key }
+    func loadExistingExportAuthorityKey() throws -> SymmetricKey? {
+        lock.lock(); count += 1; let callback = nextLoad; nextLoad = nil; lock.unlock()
+        callback?()
+        return key
+    }
 }
 nonisolated private struct FakeNativeAuthorization: AgentBridgeExportNativeAuthorizing {
     var deny = false
@@ -402,6 +815,13 @@ nonisolated private struct FakeNativeAuthorization: AgentBridgeExportNativeAutho
         afterAuthorization?()
     }
 }
+nonisolated private final class PublicationProbe: AgentBridgeExportPublicationObserving {
+    var onPrepared: ((AgentBridgeExportAuthoritySnapshot) throws -> Void)?
+    var onPublished: ((AgentBridgeExportAuthoritySnapshot) throws -> Void)?
+    func prepared(_ state: AgentBridgeExportAuthoritySnapshot) throws { try onPrepared?(state) }
+    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws { try onPublished?(state) }
+}
+
 @MainActor
 private final class ConfigurationProbe: AgentBridgeExportPlanningConfigurationReading {
     let suite = "AgentBridgeExportPlanningTests." + UUID().uuidString
@@ -438,12 +858,14 @@ private final class Rig {
     let parent: URL
     let directory: URL
     let keys = FakeProtectedKeys()
+    let publication = PublicationProbe()
     let reader: ConfigurationProbe
     let store: AgentBridgeExportAuthorityStore
     let service: AgentBridgeExportPlanningService
     let peer: AgentBridgeExportAuthenticatedPeer
     let session: RevocableNativeSession
-    let now = ISO8601DateFormatter().date(from: "2026-03-09T00:00:00Z")!
+    let clock = AdvancingPlanningClock()
+    var now: Date { clock.now() }
     var calendar: Calendar { var c = Calendar(identifier: .gregorian); c.timeZone = TimeZone(identifier: "America/Los_Angeles")!; return c }
     init(withSaved: Bool = false) throws {
         parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-native-planning-test-" + UUID().uuidString)
@@ -453,9 +875,9 @@ private final class Rig {
         session = try RevocableNativeSession(source: source, host: host)
         peer = try .init(nativeSourceInstallationID: source, authenticatedHostInstallationID: host, currentNativeSession: session)
         reader = try ConfigurationProbe()
-        store = try AgentBridgeExportAuthorityStore.createPrivateStore(at: directory, protectedKeys: keys, authorization: FakeNativeAuthorization())
+        store = try AgentBridgeExportAuthorityStore.createPrivateStore(at: directory, protectedKeys: keys, authorization: FakeNativeAuthorization(), publication: publication)
         var nextPlanID = 6
-        service = AgentBridgeExportPlanningService(store: store, configuration: reader, newPlanID: {
+        service = AgentBridgeExportPlanningService(store: store, configuration: reader, clock: clock, newPlanID: {
             let chosen = nextPlanID; nextPlanID += 10; return try id(chosen)
         })
         if withSaved {
@@ -501,7 +923,7 @@ private final class Rig {
                   capabilitySha256: discovery.capabilitySha256, destination: intent().destination, expiresAt: AgentBridgeUTC("2026-03-09T00:10:00Z"), peer: peer.peer,
                   planSha256: digest("0"), revisions: [], scopeSha256: digest("0"), settingsSha256: digest("0"))
     }
-    func send(_ document: AgentBridgeDocument) throws -> Data { try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)), authenticatedPeer: peer, now: now) }
+    func send(_ document: AgentBridgeDocument) throws -> Data { try service.handle(AgentBridgeV4Codec.encode(AgentBridgeEnvelope(payload: document)), authenticatedPeer: peer) }
     func expectError(_ wanted: AgentBridgeErrorCode, request: AgentBridgeDocument) throws { XCTAssertEqual(try error(send(request)), wanted) }
-    func restartedService() throws -> AgentBridgeExportPlanningService { AgentBridgeExportPlanningService(store: try .init(existingDirectory: directory, protectedKeys: keys), configuration: reader, newPlanID: { throw AgentBridgeValidationError.invalidRequest }) }
+    func restartedService() throws -> AgentBridgeExportPlanningService { AgentBridgeExportPlanningService(store: try .init(existingDirectory: directory, protectedKeys: keys), configuration: reader, clock: clock, newPlanID: { throw AgentBridgeValidationError.invalidRequest }) }
 }
