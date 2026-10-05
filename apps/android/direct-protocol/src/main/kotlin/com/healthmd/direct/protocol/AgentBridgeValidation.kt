@@ -116,6 +116,71 @@ object AgentBridgeValidation {
         check(request.planId == id && request.binding == bindingFor(plan), changed)
     }
 
+    /** Pure bounded derivation from an issuer's ALREADY loaded private record. This helper neither
+     * looks up nor issues permission: the source verifies only native_source, the host only its own
+     * authorized_host record/root. The result keeps the parent identity and cannot grant controls.
+     * Logical history max_days must additionally be checked after approved execution, not by reads here. */
+    fun deriveExportAuthority(
+        parent: AgentBridgeExportDelegation,
+        plan: AgentBridgeGeneratedPlan,
+        now: Instant,
+        nativeConsent: AgentBridgeDiscoveryEntitlement,
+        entitlement: AgentBridgeDiscoveryEntitlement,
+    ): AgentBridgeAuthority = AgentBridgeCodec.sanitized {
+        // Exercise strict typed checks even for mutable native constructors.
+        AgentBridgeCodec.encode(parent); AgentBridgeCodec.encode(plan)
+        val reference = if (parent.issuer == AgentBridgeIssuer.NATIVE_SOURCE) plan.authorityReferences.native
+            else plan.authorityReferences.host
+        check(reference == AgentBridgeAuthorityReference(parent.authorityId, parent.grantRevision,
+            AgentBridgeCodec.fingerprint(parent), parent.issuer), approval)
+        check(parent.peer == plan.intent.peer, approval)
+        check(AgentBridgeExportDelegationRightsItem.PLAN in parent.rights, approval)
+        check(now < utc(parent.expiresAt) && now < utc(plan.expiresAt), AgentBridgeErrorCode.PLAN_EXPIRED)
+        val b = parent.bounds
+        val capture = plan.intent.captureScope
+        val output = plan.effectiveSettings
+        check(AgentBridgeExportDelegationBoundsProductsItem.GENERATED_FILES in b.products, approval)
+        check(b.metricIds.containsAll(plan.resolvedMetricIds) && plan.intent.calendarTimezone in b.calendarTimezones, approval)
+        check(capture.compatibilityDetail in b.compatibilityDetail, approval)
+        val archive = when (capture.nativeArchive) {
+            is AgentBridgeArchiveNone -> AgentBridgeOutputSupportNativeArchiveProductsItem.NONE
+            is AgentBridgeArchiveAppleHealthkitCanonicalV1 -> AgentBridgeOutputSupportNativeArchiveProductsItem.APPLE_HEALTHKIT_CANONICAL_V1
+            is AgentBridgeArchiveAndroidProviderNativeSnapshotV1 -> AgentBridgeOutputSupportNativeArchiveProductsItem.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1
+        }
+        check(archive in b.nativeArchiveProducts && b.formats.containsAll(output.formats) &&
+            output.outputProfile in b.outputProfiles && output.writeMode in b.writeModes, approval)
+        when (val policy = b.destinationPolicy) {
+            is AgentBridgeExportDelegationBoundsDestinationPolicyAuthenticatedHostBindings -> check(parent.issuer == AgentBridgeIssuer.NATIVE_SOURCE, approval)
+            is AgentBridgeExportDelegationBoundsDestinationPolicyRegisteredHostBindings -> check(parent.issuer == AgentBridgeIssuer.AUTHORIZED_HOST &&
+                plan.intent.destination.bindingId in policy.bindingIds, approval)
+        }
+        val datePolicy = b.datePolicy
+        when (val dates = plan.resolvedDates) {
+            is AgentBridgeDatesAllAvailable -> check(datePolicy is AgentBridgeExportDelegationBoundsDatePolicyAuthorizedHistory && datePolicy.allowAllAvailable, approval)
+            is AgentBridgeDatesExact -> {
+                val count = java.time.temporal.ChronoUnit.DAYS.between(date(dates.range.startDate), date(dates.range.endDate)) + 1
+                when (datePolicy) {
+                    is AgentBridgeExportDelegationBoundsDatePolicyAuthorizedHistory -> check(count <= datePolicy.maxDays, approval)
+                    is AgentBridgeExportDelegationBoundsDatePolicyBoundedExact -> check(count <= datePolicy.maxDays &&
+                        dates.range.startDate >= datePolicy.range.startDate && dates.range.endDate <= datePolicy.range.endDate, approval)
+                }
+            }
+            is AgentBridgeDatesPastCompleteDays -> throw AgentBridgeException(invalid) // Plans must resolve anchors first.
+        }
+        val rights = parent.rights.map {
+            when (it) {
+                AgentBridgeExportDelegationRightsItem.DISCOVER -> AgentBridgeAuthorityRightsItem.DISCOVER
+                AgentBridgeExportDelegationRightsItem.PLAN -> AgentBridgeAuthorityRightsItem.PLAN
+                AgentBridgeExportDelegationRightsItem.EXPORT_EXECUTE -> AgentBridgeAuthorityRightsItem.EXPORT_EXECUTE
+            }
+        }
+        AgentBridgeAuthority(parent.authorityId, AgentBridgeAuthorityConfigurationProtection.NOT_APPLICABLE,
+            destinationBindingIds = listOf(plan.intent.destination.bindingId), entitlement = entitlement,
+            expiresAt = minOf(utc(parent.expiresAt), utc(plan.expiresAt)).toString(), grantRevision = parent.grantRevision,
+            issuer = parent.issuer, nativeConsent = nativeConsent, peer = parent.peer, rights = rights,
+            schema = "healthmd.agent_authority", schemaVersion = 1, scopeSha256 = plan.scopeSha256)
+    }
+
     /** Exact journal-value comparison, NOT native resume/revocation/spool authorization. */
     fun validateResumeAgainst(request: AgentBridgeResumeRequest, preserved: AgentBridgeResumeRequest) = AgentBridgeCodec.sanitized {
         validate(request); validate(preserved)

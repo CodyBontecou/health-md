@@ -158,6 +158,12 @@ internal class AgentBridgeRequestSettingsResolution internal constructor(
     }
 }
 
+/** Planning-only return seam. No new fields are added to persisted private resolution v1. */
+internal data class AgentBridgeRequestSettingsOutputResolution(
+    val effectiveOutput: AgentBridgeOutputSettings,
+    val resolution: AgentBridgeRequestSettingsResolution,
+)
+
 /** Bounded production summary/no-archive loose-JSON settings adapter. Unsupported dialects reject.
  * Codec digests and catalog availability are data only. Native stored authorization/approval,
  * readiness, resume revalidation and journaled execution remain separate mandatory gates. */
@@ -166,7 +172,13 @@ internal object AgentBridgeRequestSettingsResolver {
         request: AgentBridgeGeneratedIntent,
         inputs: AgentBridgeRequestSettingsInputs,
         clock: Clock,
-    ): AgentBridgeRequestSettingsResolution {
+    ): AgentBridgeRequestSettingsResolution = resolveWithOutput(request, inputs, clock).resolution
+
+    fun resolveWithOutput(
+        request: AgentBridgeGeneratedIntent,
+        inputs: AgentBridgeRequestSettingsInputs,
+        clock: Clock,
+    ): AgentBridgeRequestSettingsOutputResolution {
         // Recheck constructors and copy caller-owned collections with the integrated strict codec.
         val bytes = AgentBridgeCodec.encode(request)
         val intent = AgentBridgeCodec.decode(bytes) as AgentBridgeGeneratedIntent
@@ -211,11 +223,11 @@ internal object AgentBridgeRequestSettingsResolver {
         val settings = settings(output, selection)
         val snapshot = AndroidExportSettingsSnapshot.capture(settings, null, ZoneId.of(intent.calendarTimezone))
         val frozenJson = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
-        return AgentBridgeRequestSettingsResolution(
+        return AgentBridgeRequestSettingsOutputResolution(output, AgentBridgeRequestSettingsResolution(
             1, AgentBridgeCodec.sha256(bytes), intent.peer, intent.destination, inputs.catalog.revision,
             inputs.catalog.configurationSha256, inputs.catalog.registrySha256, origin, revision, profileId, clock.instant().epochSecond,
             dates, intent.calendarTimezone, days.toList(), paths.toList(), selection.toList(), frozenJson,
-        )
+        ))
     }
 
     /** Configuration-only comparison, not stored authority, approval, expiry or journal validation.
