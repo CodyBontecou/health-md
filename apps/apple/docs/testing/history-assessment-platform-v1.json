@@ -1,0 +1,30 @@
+{
+  "schema": "healthmd.history_assessment.platform_staging",
+  "schema_version": 1,
+  "classification": "planned",
+  "outcome": "Disclose selected-type historical access evidence separately from capture completion, without dropping readable records or changing their timestamps.",
+  "platforms": {
+    "apple": {
+      "state": "planned",
+      "target": "Source-staged SDK27 ordinary-sample adapter, All Time and bounded-range warning, and interactive execution reassessment; native/UI qualification, negotiated consumer receipts, specialized eligibility and physical device acceptance remain required.",
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
+        "apps/apple/HealthMd/Shared/Models/HealthHistoryAssessment.swift",
+        "apps/apple/HealthMd/iOS/Views/ExportTabView.swift",
+        "apps/apple/HealthMd/iOS/ContentView.swift"
+      ]
+    },
+    "android": {
+      "state": "planned",
+      "target": "Health Connect feature/permission/first-grant history-boundary adapter, Export warning, and portable receipt compatibility tests. Unknown legacy grant boundaries remain conservative; history_permission_missing is not equivalent to Apple's privacy-ambiguous omission.",
+      "evidence": [
+        "apps/android/app/src/main/java/com/healthmd/data/health/HealthConnectManager.kt",
+        "apps/android/app/src/main/java/com/healthmd/rawexport/HealthConnectRawDataProvider.kt",
+        "apps/android/docs/features/health-connect-permissions.md"
+      ]
+    }
+  },
+  "wire_adoption": "not_approved",
+  "frozen_contracts": "No changes to Apple v5-v8, Android v4-v5/raw v1, archive v1, SharedSetup, M3, registry, pins or Rust. This independently versioned staging section is not a consumer receipt or an export schema."
+}

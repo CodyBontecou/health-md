@@ -199,6 +199,8 @@ final class DialogsA11yTests: XCTestCase {
         let oldFontSize = try XCTUnwrap(before.first?.font?.pointSize)
         let scroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
         let oldContentHeight = scroll.contentSize.height
+        let beforeNative = before.map { "font=\($0.font?.pointSize ?? -1),frame=\($0.frame),intrinsic=\($0.intrinsicContentSize),traits=\($0.traitCollection.preferredContentSizeCategory.rawValue)" }
+        let beforeScroll = "frame=\(scroll.frame),bounds=\(scroll.bounds),content=\(scroll.contentSize),traits=\(scroll.traitCollection.preferredContentSizeCategory.rawValue)"
         host.update(view(.accessibility5))
         _ = host.measured()
         let after = subviews(of: host.controller.view).compactMap { $0 as? UITextField }
@@ -206,7 +208,96 @@ final class DialogsA11yTests: XCTestCase {
         XCTAssertEqual(values, originals)
         XCTAssertEqual(writes, 0)
         XCTAssertGreaterThan(try XCTUnwrap(after.first?.font?.pointSize), oldFontSize)
-        XCTAssertGreaterThan(scroll.contentSize.height, oldContentHeight)
+        // Root/environment updates may replace the native scroll container. Measure
+        // the currently attached real control, not a retained pre-update object.
+        // Keep the same strict content-growth assertion and record both measurements
+        // so the SDK27 failure's cause can be established by hosted execution.
+        let currentScroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
+        let diagnostic = XCTAttachment(string: "Native scroll reused=\(currentScroll === scroll); before=\(oldContentHeight); retained=\(scroll.contentSize.height); attached=\(currentScroll.contentSize.height)")
+        diagnostic.name = "live-text-size-native-scroll-measurement"
+        diagnostic.lifetime = .keepAlways
+        add(diagnostic)
+        if currentScroll.contentSize.height <= oldContentHeight {
+            // Tiny synthetic-fixture-only public UIKit geometry receipt. No view
+            // hierarchy, private SwiftUI node types, health values or user strings.
+            print("Health172 synthetic a11y before fields: \(beforeNative.joined(separator: "; "))")
+            print("Health172 synthetic a11y before scroll: \(beforeScroll)")
+            let afterNative = after.map { "font=\($0.font?.pointSize ?? -1),frame=\($0.frame),intrinsic=\($0.intrinsicContentSize),traits=\($0.traitCollection.preferredContentSizeCategory.rawValue)" }
+            print("Health172 synthetic a11y after fields: \(afterNative.joined(separator: "; "))")
+            print("Health172 synthetic a11y after scroll: reused=\(currentScroll === scroll),attached=\(currentScroll.isDescendant(of: host.controller.view)),frame=\(currentScroll.frame),bounds=\(currentScroll.bounds),content=\(currentScroll.contentSize),traits=\(currentScroll.traitCollection.preferredContentSizeCategory.rawValue),windowTraits=\(host.window.traitCollection.preferredContentSizeCategory.rawValue),fieldCount=\(after.count)")
+        }
+        XCTAssertGreaterThan(currentScroll.contentSize.height, oldContentHeight)
+    }
+
+    // History's virtual SwiftUI AX identifiers are asserted by native
+    // HistoryA11yUITests and the phone/iPad HistoryAuthorizationJourneyUITests.
+    // UIView traversal cannot enumerate those accessibility-server nodes.
+
+    func testProductionLabeledFieldLiveEnvironmentSizeRemeasuresWithoutModalBoundary() throws {
+        let original = "  synthetic_identifier_without_normalization  "
+        var value = original
+        var writes = 0
+        let field = GeistDialogField(placeholder: "A complete synthetic external label", text: Binding(
+            get: { value }, set: { if value != $0 { writes += 1 }; value = $0 }
+        ))
+        func view(_ size: DynamicTypeSize) -> some View {
+            DialogsLiveFieldProbe(field: field).frame(width: 304).environment(\.dynamicTypeSize, size)
+        }
+        let host = A11yHosting(view(.large))
+        defer { host.close() }
+        _ = host.measured()
+        let before = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UITextField }.first)
+        let beforeHeight = before.frame.height
+        let beforeFont = try XCTUnwrap(before.font?.pointSize)
+        host.update(view(.accessibility5))
+        _ = host.measured()
+        let after = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UITextField }.first)
+        print("Health172 synthetic isolated production field: reused=\(before === after),beforeHeight=\(beforeHeight),afterHeight=\(after.frame.height),beforeFont=\(beforeFont),afterFont=\(after.font?.pointSize ?? -1),intrinsic=\(after.intrinsicContentSize),traits=\(after.traitCollection.preferredContentSizeCategory.rawValue)")
+        XCTAssertEqual(value, original)
+        XCTAssertEqual(after.text, original)
+        XCTAssertEqual(writes, 0)
+        XCTAssertGreaterThan(try XCTUnwrap(after.font?.pointSize), beforeFont)
+        XCTAssertGreaterThan(after.frame.height, beforeHeight)
+    }
+
+    func testProductionModalNativeTraitChangeRemeasuresWhileKeepingEditorFocusAndSelection() throws {
+        let original = "  synthetic_value_with_exact_spacing  "
+        var value = original
+        var writes = 0
+        let field = GeistDialogField(placeholder: "A complete synthetic external label", text: Binding(
+            get: { value }, set: { if value != $0 { writes += 1 }; value = $0 }
+        ))
+        // Unlike the original environment-override regression, this control
+        // changes UIKit's real trait input. It does not replace that regression.
+        let host = A11yHosting(card(maximumHeight: 400, fields: [field]).frame(width: 304))
+        defer { host.close() }
+        host.window.makeKeyAndVisible()
+        host.controller.traitOverrides.preferredContentSizeCategory = .large
+        _ = host.measured()
+        let before = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UITextField }.first)
+        let beforeHeight = before.frame.height
+        let beforeFont = try XCTUnwrap(before.font?.pointSize)
+        let scroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
+        let beforeContent = scroll.contentSize.height
+        XCTAssertTrue(before.becomeFirstResponder())
+        let position = try XCTUnwrap(before.position(from: before.beginningOfDocument, offset: 3))
+        before.selectedTextRange = before.textRange(from: position, to: position)
+        host.controller.traitOverrides.preferredContentSizeCategory = .accessibilityExtraExtraExtraLarge
+        _ = host.measured()
+        let after = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UITextField }.first)
+        let currentScroll = try XCTUnwrap(subviews(of: host.controller.view).compactMap { $0 as? UIScrollView }.first)
+        print("Health172 synthetic modal native trait: reusedField=\(before === after),beforeHeight=\(beforeHeight),afterHeight=\(after.frame.height),beforeFont=\(beforeFont),afterFont=\(after.font?.pointSize ?? -1),intrinsic=\(after.intrinsicContentSize),beforeContent=\(beforeContent),afterContent=\(currentScroll.contentSize.height),traits=\(after.traitCollection.preferredContentSizeCategory.rawValue)")
+        XCTAssertTrue(before === after, "Native editing identity must survive text-size reflow")
+        XCTAssertTrue(after.isFirstResponder)
+        let selection = try XCTUnwrap(after.selectedTextRange)
+        XCTAssertEqual(after.offset(from: after.beginningOfDocument, to: selection.start), 3)
+        XCTAssertEqual(after.offset(from: after.beginningOfDocument, to: selection.end), 3)
+        XCTAssertEqual(value, original)
+        XCTAssertEqual(after.text, original)
+        XCTAssertEqual(writes, 0)
+        XCTAssertGreaterThan(try XCTUnwrap(after.font?.pointSize), beforeFont)
+        XCTAssertGreaterThan(after.frame.height, beforeHeight)
+        XCTAssertGreaterThan(currentScroll.contentSize.height, beforeContent)
     }
 
     func testLongUnbrokenValuesGetARealWrappingReadingSurface() {
@@ -305,6 +396,15 @@ final class DialogsA11yTests: XCTestCase {
             }
         }
         return result
+    }
+}
+
+private struct DialogsLiveFieldProbe: View {
+    let field: GeistDialogField
+    @FocusState private var focus: Int?
+
+    var body: some View {
+        GeistDialogLabeledField(field: field, index: 0, isLast: true, focus: $focus, onSubmit: {})
     }
 }
 

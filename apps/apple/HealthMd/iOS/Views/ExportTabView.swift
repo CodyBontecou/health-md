@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Combine
 import os.log
 
 // MARK: - Export Tab View
@@ -46,6 +47,18 @@ struct ExportTabView: View {
     var onFirstExportPreviewDismissed: (() -> Void)? = nil
     let canExport: Bool
     let onExportTapped: () -> Void
+    let historyProfileStore: ExportProfileStore?
+    let executionHistoryAssessment: HealthHistoryAssessment?
+    let isAssessingHistory: Bool
+    let onContinueWithoutHistoryVerification: () -> Void
+    let onCancelHistoryVerification: () -> Void
+
+    @State private var historyAssessment: HealthHistoryAssessment?
+    @State private var historyRefreshID = UUID()
+    @State private var historyProfileID: UUID?
+    @State private var historyCoordinator = HealthHistoryAssessmentCoordinator()
+    @State private var historyPreviewWorker = HealthHistoryAssessmentWorker()
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject private var purchaseManager = PurchaseManager.shared
     @State private var showHealthPermissionsGuide = false
@@ -86,11 +99,21 @@ struct ExportTabView: View {
             SchedulingExportScroll(showsFooter: !isExporting) {
                 VStack(spacing: Spacing.md) {
                     heroHeader
+                    #if DEBUG
+                    if TestMode.isUITesting {
+                        // Synthetic journey diagnostics only, not a production
+                        // permission/capture status or bypass of any export guard.
+                        Text(exportStatusMessage)
+                            .font(.caption)
+                            .accessibilityIdentifier("export.synthetic.statusMessage")
+                    }
+                    #endif
                     statusBadges
                         .configurationChangesProtected()
                     exportTargetSection
                         .configurationChangesProtected()
                     dateRangeSection
+                    historyWarningSection
                     healthDataSection
                         .id("marketing-export-health-data")
                     formatsSection
@@ -130,6 +153,22 @@ struct ExportTabView: View {
             }
             #endif
             }
+        }
+        // SwiftUI owns the logical waiter; the parent-owned worker retains the
+        // physical provider slot through cancellation until the provider returns.
+        .task(id: historyPreviewRequest) { await refreshHistoryAssessment() }
+        .onChange(of: dateRangePreset) { _, _ in invalidateHistoryPreview() }
+        .onReceive(advancedSettings.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(healthKitManager.objectWillChange) { _ in invalidateHistoryPreview() }
+        .onReceive(historyProfileStore?.$activeProfileID.eraseToAnyPublisher() ?? Just<UUID?>(nil).eraseToAnyPublisher()) { id in
+            guard historyProfileID != id else { return }
+            historyProfileID = id
+            invalidateHistoryPreview()
+        }
+        .onChange(of: scenePhase) { _, _ in invalidateHistoryPreview() }
+        .onDisappear {
+            historyCoordinator.invalidate()
+            historyPreviewWorker.cancelLogicalWaiter()
         }
         .geistDialog(
             isPresented: $showHealthPermissionsGuide,
@@ -422,6 +461,61 @@ struct ExportTabView: View {
             return "Saved Mac destination \(destination) needs access. Re-select it on Mac."
         }
         return syncService.macExportReadinessMessage(requiring: advancedSettings)
+    }
+
+    // MARK: - History evidence (outside exported records)
+
+    private var historyScope: HealthHistoryScope {
+        HealthHistoryScope(
+            metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            startDate: startDate, endDate: endDate,
+            timeZoneIdentifier: (advancedSettings.exportTimeZoneOverride ?? .current).identifier,
+            allAvailable: dateRangePreset == .allTime, profileID: historyProfileID, rangeSemantics: .ownerDates
+        )
+    }
+
+    private var historyPreviewRequest: HealthHistoryPreviewRequest {
+        HealthHistoryPreviewRequest(scope: historyScope, refreshID: historyRefreshID)
+    }
+
+    private func invalidateHistoryPreview() {
+        historyCoordinator.invalidate()
+        historyPreviewWorker.cancelLogicalWaiter()
+        historyRefreshID = UUID()
+        historyAssessment = nil
+    }
+
+    private func refreshHistoryAssessment() async {
+        guard scenePhase == .active else { return }
+        let request = historyPreviewRequest
+        let result = await historyCoordinator.assessPreview(
+            worker: historyPreviewWorker,
+            notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope),
+            scope: request.scope, isCurrent: {
+            request == historyPreviewRequest && scenePhase == .active
+        }, operation: {
+            await healthKitManager.assessHistoryAccess(scope: request.scope)
+        })
+        guard let result else { return }
+        historyAssessment = result
+    }
+
+    @ViewBuilder private var historyWarningSection: some View {
+        if isAssessingHistory {
+            sectionCard(title: "Checking history access") {
+                HealthHistoryPendingContent(continueUnverified: onContinueWithoutHistoryVerification,
+                                            cancel: onCancelHistoryVerification)
+            }
+        }
+        if let assessment = HealthHistoryAssessment.displayed(preview: historyAssessment,
+            execution: executionHistoryAssessment, scope: historyScope), assessment.needsWarning {
+            sectionCard(title: assessment.warningTitle) {
+                HealthHistoryDisclosureContent(assessment: assessment,
+                    isExecution: assessment.id == executionHistoryAssessment?.id,
+                    reviewAccess: { showHealthPermissionsGuide = true })
+            }
+            .modifier(HealthHistoryWarningAccessibilityContainer())
+        }
     }
 
     // MARK: - Date Range

@@ -81,7 +81,10 @@ nonisolated struct HealthMdAgentQueryStoreBaseline: Sendable, Equatable {
     let ownerDateMutationIDs: [String: String]
 }
 
-protocol HealthMdAgentQueryExecuting: Sendable {
+// Executor-neutral async Sendable contract: actor implementations retain their
+// own isolation. Explicit opt-out prevents Swift 6.4's default MainActor from
+// turning this protocol into a global-actor conformance requirement.
+nonisolated protocol HealthMdAgentQueryExecuting: Sendable {
     func execute(
         _ request: HealthMdQueryRequest,
         detailLevel: HealthMdQueryDetailLevel,
@@ -116,7 +119,7 @@ nonisolated struct HealthMdAgentQueryStoreReadiness: Sendable, Equatable {
     let lastOwnerDate: String?
 }
 
-protocol HealthMdAgentQueryReadinessProviding: Sendable {
+nonisolated protocol HealthMdAgentQueryReadinessProviding: Sendable {
     func queryStoreReadiness() async throws -> HealthMdAgentQueryStoreReadiness
 }
 

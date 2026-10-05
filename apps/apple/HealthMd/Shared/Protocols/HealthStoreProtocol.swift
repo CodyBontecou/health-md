@@ -774,6 +774,10 @@ protocol HealthStoreProviding: Sendable {
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus
 
+    /// Public history evidence only; omitted identifiers remain unknown. Separate
+    /// from oldest-readable discovery, sharing authorization and query completion.
+    func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome
+
     // Statistics queries — return extracted numeric values
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
     func queryAverage(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double?
@@ -795,7 +799,8 @@ protocol HealthStoreProviding: Sendable {
 
     /// Earliest source date for any sample type, queried one type at a time so
     /// callers can isolate authorization/runtime failures without hiding a
-    /// later successful type. A nil result means this type has no readable samples.
+    /// later successful type. A nil result means the query returned no readable
+    /// samples, not that no samples exist or that full-history access was granted.
     func queryEarliestSampleDate(sampleType: HKSampleType) async throws -> Date?
     /// Activity summaries are not HKSample values and require their dedicated API.
     func queryEarliestActivitySummaryDate(calendar: Calendar) async throws -> Date?
@@ -876,6 +881,10 @@ protocol HealthStoreProviding: Sendable {
 // MARK: - Default Parameters
 
 extension HealthStoreProviding {
+    func historyAuthorizationDates(for types: Set<HKObjectType>) async -> HealthHistoryQueryOutcome {
+        .unavailable
+    }
+
     /// Convenience overload — calls through with `limit: nil`.
     func queryCategorySamples(identifier: HKCategoryTypeIdentifier, predicate: NSPredicate?, ascending: Bool) async throws -> [CategorySampleValue] {
         try await queryCategorySamples(identifier: identifier, predicate: predicate, ascending: ascending, limit: nil)

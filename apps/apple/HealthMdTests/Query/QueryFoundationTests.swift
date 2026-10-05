@@ -416,7 +416,7 @@ final class QueryFoundationTests: XCTestCase {
     @MainActor
     func testDirectQueryCaptureCacheExpiresWithoutSubsequentTraffic() async throws {
       let cache = IPhoneDirectQueryCaptureCache(lifetime: 0.02)
-      cache.store(key: Data("peer-bound-capture".utf8), days: [])
+      cache.store(key: Data("peer-bound-capture".utf8), snapshot: try HistoryQueryFixtures.snapshot())
       XCTAssertFalse(cache.isEmpty)
       try await Task.sleep(nanoseconds: 200_000_000)
       XCTAssertTrue(cache.isEmpty)

@@ -133,6 +133,9 @@ struct HealthMdApp: App {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var schedulingManager = SchedulingManager.shared
     @StateObject private var advancedSettings: AdvancedExportSettings
+    // Read/observe canonical persisted profile identity on the tablet route;
+    // do not bootstrap/apply profiles or alter legacy tablet settings/authority.
+    @StateObject private var iPadHistoryProfileStore = ExportProfileStore()
     @StateObject private var apiExportSettings: APIExportSettings
     @StateObject private var healthKitManager = HealthKitManager.shared
     @StateObject private var syncService: SyncService
@@ -391,7 +394,7 @@ struct HealthMdApp: App {
         WindowGroup {
             Group {
                 if UIDevice.current.userInterfaceIdiom == .pad {
-                    iPadContentView()
+                    iPadContentView(historyProfileStore: iPadHistoryProfileStore)
                 } else {
                     ContentView()
                 }
@@ -521,10 +524,12 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancel(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { request, channel in
+                directCLIService.queryRequestHandler = { [weak directCLIService] request, channel in
+                    guard let sourceInstallationID = directCLIService?.querySourceInstallationID else { return }
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
+                        sourceInstallationID: sourceInstallationID,
                         healthKitManager: healthKitManager
                     )
                 }

@@ -24,8 +24,11 @@ on:
         type: string
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Reusable workflows inherit github.workflow from the release caller. Keep
+  # this namespace distinct from the parent and isolate each qualification run
+  # so a later release cannot cancel (or replace a pending) exact-SHA suite.
+  group: apple-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.release_sha && github.run_id || 'branch' }}
+  cancel-in-progress: ${{ !inputs.release_sha }}
 
 jobs:
   changes:
@@ -51,12 +54,18 @@ jobs:
             packages/healthmd-core-rust/**
             Makefile
             .github/workflows/apple-ci.yml
+      - name: Verify both phone pipelines fail closed
+        if: ${{ steps.detect.outputs.run == 'true' }}
+        run: |
+          python3 apps/apple/scripts/test-history-ui-pipeline-status.py
+          python3 apps/apple/scripts/test-owned-ui-processes.py
 
   prepare-shared-core:
     name: Prepare shared Rust core once
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
-    runs-on: macos-26
+    # Free standard public-repository SDK27 runner, never xlarge.
+    runs-on: xcode-27
     timeout-minutes: 20
     defaults:
       run:
@@ -73,7 +82,13 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
+
+      - name: Require SDK27 public history signature and record provenance
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          mkdir -p Packages/HealthMdCoreRust/Artifacts
+          cp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - id: shared-core-cache
         name: Restore exact-source shared-core cache
@@ -83,7 +98,7 @@ jobs:
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           key: >-
-            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            apple-shared-core-sdk27-27A266a-${{ runner.os }}-${{ runner.arch }}-${{
             hashFiles('packages/healthmd-core-rust/Cargo.toml',
             'packages/healthmd-core-rust/Cargo.lock',
             'packages/healthmd-core-rust/rust-toolchain.toml',
@@ -104,10 +119,11 @@ jobs:
       - name: Share the exact prepared XCFramework
         uses: actions/upload-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: |
             apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
             apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
           include-hidden-files: true
           if-no-files-found: error
           retention-days: 1
@@ -115,9 +131,8 @@ jobs:
   test-ios:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    # Notelet requires Swift tools 6.3. The macos-26 hosted image includes
-    # Xcode 26.6, so PR validation does not depend on a self-hosted runner.
-    runs-on: macos-26
+    # Public history API requires verified SDK27, unchanged deployment floors.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -175,13 +190,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (iOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -241,6 +261,10 @@ jobs:
                     f"{summary.get('skippedTests', 0)} skipped")
           PY
 
+      - name: Preserve tiny synthetic native failure diagnostics
+        if: ${{ !cancelled() }}
+        run: grep -F 'Health172 synthetic' build/logs/xcodebuild-ios-raw.log || true
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
@@ -264,8 +288,8 @@ jobs:
   test-macos:
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.
-    runs-on: macos-26
+    # Same SDK27 toolchain and single prepared core as iOS.
+    runs-on: xcode-27
     timeout-minutes: 75
     defaults:
       run:
@@ -283,13 +307,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (macOS)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -344,7 +373,7 @@ jobs:
     name: iOS UI regressions
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
-    runs-on: macos-26
+    runs-on: xcode-27
     timeout-minutes: 60
     defaults:
       run:
@@ -362,13 +391,18 @@ jobs:
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '27.0'
 
       - name: Restore prepared shared Rust core
         uses: actions/download-artifact@v4
         with:
-          name: apple-shared-core
+          name: apple-sdk27-shared-core
           path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (UI)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
 
       - name: Validate prepared shared Rust core
         run: |
@@ -386,52 +420,53 @@ jobs:
           echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
 
+      - name: Verify UI ownership controls on actual macOS
+        timeout-minutes: 5
+        run: |
+          python3 --version
+          command -v python3 bash ps
+          bash --version
+          python3 scripts/test-history-ui-pipeline-status.py
+          python3 scripts/test-owned-ui-processes.py
+
       - name: Run UI smoke tests (iOS)
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          mkdir -p build/logs
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
-            -destination '${{ steps.simulator.outputs.ios_destination }}' \
-            -configuration Debug-iOS \
-            -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers \
-            -only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers \
-            -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
-            -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
-
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
-            -destination '${{ steps.simulator.outputs.ios_destination }}' \
-            -configuration Debug-iOS \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter \
-            -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+          # One shared deadline; reserve 30s INSIDE the existing 35-minute step.
+          python3 scripts/run-owned-ui.py --lane phone --records build/logs --seconds 2070 <<'PHONE_PLAN'
+          {"pipelines": [
+            {"command": ["xcodebuild", "test", "-project", "HealthMd.xcodeproj", "-scheme", "HealthMd-UITests-iOS",
+              "-destination", "${{ steps.simulator.outputs.ios_destination }}", "-configuration", "Debug-iOS",
+              "-only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches",
+              "-only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
+              "-only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault",
+              "-only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers",
+              "-only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
+              "-only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
+              "-only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
+              "-only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting",
+              "-only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
+              "-only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
+              "-test-timeouts-enabled", "YES", "-default-test-execution-time-allowance", "180", "-maximum-test-execution-time-allowance", "300",
+              "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="],
+             "raw": "build/logs/build-ios-ui.log", "filter": "Test Case|error:|PASSED|FAILED|Executed"},
+            {"command": ["xcodebuild", "test", "-project", "HealthMd.xcodeproj", "-scheme", "HealthMd-UITests-iOS",
+              "-destination", "${{ steps.simulator.outputs.ios_destination }}", "-configuration", "Debug-iOS",
+              "-only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
+              "-only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls",
+              "-only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings",
+              "-only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
+              "-only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
+              "-only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+              "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+              "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
+              "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
+              "-test-timeouts-enabled", "YES", "-default-test-execution-time-allowance", "180", "-maximum-test-execution-time-allowance", "300",
+              "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="],
+             "raw": "build/logs/build-ios-ui.log", "filter": "Test Case|error:|PASSED|FAILED|Executed"}
+          ]}
+          PHONE_PLAN
 
       - name: Run App Review export regression (iPad)
         if: ${{ !cancelled() }}
@@ -439,55 +474,20 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          IPAD_LINE=$(
-            xcrun simctl list devices available iOS \
-              | grep -E "iPad (Air|Pro)" \
-              | head -n 1 \
-              || true
-          )
-
-          if [[ -n "${IPAD_LINE}" ]]; then
-            IPAD_UDID=$(echo "${IPAD_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-          else
-            IPAD_DEVICE_TYPE=$(
-              xcrun simctl list devicetypes \
-                | grep -E "iPad Air 11-inch|iPad Pro 11-inch|iPad Air" \
-                | head -n 1 \
-                | sed -nE 's/.*\((com\.apple\.CoreSimulator\.SimDeviceType\.[^)]+)\).*/\1/p'
-            )
-            IOS_RUNTIME=$(
-              xcrun simctl list runtimes available \
-                | grep -E "^iOS " \
-                | tail -n 1 \
-                | sed -nE 's/.* - (com\.apple\.CoreSimulator\.SimRuntime\.iOS-[^)]+).*/\1/p'
-            )
-            if [[ -z "${IPAD_DEVICE_TYPE}" || -z "${IOS_RUNTIME}" ]]; then
-              echo "::error::No iPad device type or iOS runtime is available"
-              exit 1
-            fi
-            IPAD_UDID=$(xcrun simctl create "HealthMd CI iPad" "${IPAD_DEVICE_TYPE}" "${IOS_RUNTIME}")
-          fi
-
-          if [[ -z "${IPAD_UDID}" ]]; then
-            echo "::error::Could not resolve an iPad Simulator UDID"
-            exit 1
-          fi
-
-          echo "Running App Review regression on iPad ${IPAD_UDID}"
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
-            -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
-            -configuration Debug-iOS \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+          # Cleanup != continuation: abort/deadline/uncertain phone receipt blocks
+          # tablet. Setup shares this lane's deadline, with 30s reserved INSIDE15m.
+          python3 scripts/run-owned-ui.py --lane ipad --records build/logs --seconds 870 --require-clean phone <<'IPAD_PLAN'
+          {"setup": "IPAD_LINE=$(xcrun simctl list devices available iOS | grep -E 'iPad (Air|Pro)' | head -n 1 || true)\nif [[ -n \"${IPAD_LINE}\" ]]; then\n IPAD_UDID=$(echo \"${IPAD_LINE}\" | sed -nE 's/.*\\(([0-9A-Fa-f-]+)\\).*/\\1/p')\nelse\n IPAD_DEVICE_TYPE=$(xcrun simctl list devicetypes | grep -E 'iPad Air 11-inch|iPad Pro 11-inch|iPad Air' | head -n 1 | sed -nE 's/.*\\((com\\.apple\\.CoreSimulator\\.SimDeviceType\\.[^)]+)\\).*/\\1/p')\n IOS_RUNTIME=$(xcrun simctl list runtimes available | grep -E '^iOS ' | tail -n 1 | sed -nE 's/.* - (com\\.apple\\.CoreSimulator\\.SimRuntime\\.iOS-[^)]+).*/\\1/p')\n if [[ -z \"${IPAD_DEVICE_TYPE}\" || -z \"${IOS_RUNTIME}\" ]]; then echo '::error::No iPad device type or iOS runtime is available'; exit 1; fi\n IPAD_UDID=$(xcrun simctl create 'HealthMd CI iPad' \"${IPAD_DEVICE_TYPE}\" \"${IOS_RUNTIME}\")\nfi\nif [[ -z \"${IPAD_UDID}\" ]]; then echo '::error::Could not resolve an iPad Simulator UDID'; exit 1; fi\necho \"Running App Review regression on iPad ${IPAD_UDID}\"\nprintf '%s' \"${IPAD_UDID}\" > \"$HEALTHMD_UI_SETUP_FILE\"",
+           "pipelines": [{"command": ["xcodebuild", "test", "-project", "HealthMd.xcodeproj", "-scheme", "HealthMd-UITests-iOS",
+             "-destination", "platform=iOS Simulator,id=${IPAD_UDID}", "-configuration", "Debug-iOS",
+             "-only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
+             "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction",
+             "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+             "-only-testing:HealthMdUITests/HistoryAuthorizationJourneyUITests/testUnknownHistoryPreviewHasAccessibleActionOnNativeRoot",
+             "-test-timeouts-enabled", "YES", "-default-test-execution-time-allowance", "180", "-maximum-test-execution-time-allowance", "300",
+             "CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="],
+            "raw": "build/logs/build-ios-ui.log", "filter": "Test Case|error:|PASSED|FAILED|Executed"}]}
+          IPAD_PLAN
 
       - name: Check warnings (iOS UI)
         if: ${{ !cancelled() }}
@@ -498,7 +498,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-ui-build-logs
-          path: apps/apple/build/logs/build-ios-ui.log
+          path: |
+            apps/apple/build/logs/build-ios-ui.log
+            apps/apple/build/logs/ui-owner-*.json
+            apps/apple/build/logs/ui-owner-*.abort
           retention-days: 14
 
   connectivity-package:
