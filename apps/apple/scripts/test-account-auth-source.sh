@@ -2,20 +2,12 @@
 # Invoke VIA BASH under the coordinator's unchanged heavy-slot guard. Not a component/core build.
 set -euo pipefail
 if [ "$#" -ne 1 ]; then
-    printf 'Usage: bash test-account-auth-source.sh <new lane-owned output directory>\n' >&2
+    printf 'Usage: bash test-account-auth-source.sh <fresh existing lane-owned output directory>\n' >&2
     exit 2
 fi
 root=$(cd -P "$(dirname "$0")/../../.." && pwd)
-mkdir -p "$1"
-out=$(cd -P "$1" && pwd)
-case "$out" in
-    "$root/apps/apple/build/account-auth-source/"*|*/healthmd-account-sync.O0LAHV/evidence/as03-source-*) ;;
-    *) printf 'Refusing output outside AS03 namespace.\n' >&2; exit 2;;
-esac
-if [ -e "$out/compiler.log" ] || [ -e "$out/source-input-sha256.log" ]; then
-    printf 'Refusing to overwrite earlier artifacts. Choose a new directory.\n' >&2
-    exit 2
-fi
+source "$root/apps/apple/scripts/account-auth-source-output.sh"
+out=$(account_auth_source_validate_output "$root" "$1") || exit 2
 mkdir -p "$out/module-cache"
 /usr/bin/swiftc --version
 printf 'host_flags=-swift-version 6 -strict-concurrency=complete -warnings-as-errors -D ACCOUNT_AUTH_SOURCE_HOST\n'
@@ -24,9 +16,11 @@ tests=("$root"/apps/apple/HealthMdTests/AccountAuth/*.swift)
 printf 'source_head=%s\n' "$(git -C "$root" rev-parse HEAD)"
 git -C "$root" status --porcelain=v1 -- apps/apple/HealthMd/Shared/AccountAuth \
     apps/apple/HealthMdTests/AccountAuth apps/apple/scripts/test-account-auth-source.swift \
-    apps/apple/scripts/test-account-auth-source.sh > "$out/source-status.log"
+    apps/apple/scripts/test-account-auth-source.sh apps/apple/scripts/account-auth-source-output.sh \
+    apps/apple/scripts/test-account-auth-source-output.sh > "$out/source-status.log"
 shasum -a 256 "${sources[@]}" "${tests[@]}" "$root/apps/apple/HealthMd/Shared/AccountAuth/README.md" \
     "$root/apps/apple/scripts/test-account-auth-source.swift" "$root/apps/apple/scripts/test-account-auth-source.sh" \
+    "$root/apps/apple/scripts/account-auth-source-output.sh" "$root/apps/apple/scripts/test-account-auth-source-output.sh" \
     > "$out/source-input-sha256.log"
 /usr/bin/swiftc -swift-version 6 -strict-concurrency=complete -warnings-as-errors \
     -D ACCOUNT_AUTH_SOURCE_HOST -module-name AccountAuthSource \
