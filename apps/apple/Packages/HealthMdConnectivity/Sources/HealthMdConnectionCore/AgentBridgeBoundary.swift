@@ -1,11 +1,12 @@
 import Foundation
 
-/// Supported closed export/discovery documents. Queries, projections, delegations and controls are
-/// intentionally not generically forwarded by this bounded foundation.
+/// Supported closed export/discovery documents. Delegation descriptions have no wire enrollment
+/// discriminator. Queries, projections and controls are not generically forwarded.
 public enum AgentBridgeDocument: Codable, Equatable, Sendable, BridgeValueCodable {
     case discoveryRequest(AgentBridgeDiscoveryRequest), discovery(AgentBridgeDiscovery)
     case intent(AgentBridgeGeneratedIntent), planRequest(AgentBridgePlanRequest), plan(AgentBridgePlan)
-    case authority(AgentBridgeAuthority), approvalRequest(AgentBridgeApprovalRequest), approval(AgentBridgeApproval)
+    case authority(AgentBridgeAuthority), delegation(AgentBridgeExportDelegation)
+    case approvalRequest(AgentBridgeApprovalRequest), approval(AgentBridgeApproval)
     case execute(AgentBridgeExecute), receipt(AgentBridgeExecutionReceipt), cancel(AgentBridgeCancel), resume(AgentBridgeResume)
     case manifest(AgentBridgeArtifactManifest), commit(AgentBridgeCommitReceipt), error(AgentBridgeError)
 
@@ -19,6 +20,7 @@ public enum AgentBridgeDocument: Codable, Equatable, Sendable, BridgeValueCodabl
         case "healthmd.agent_plan_request": self = .planRequest(try .init(bridgeJSON: bridgeJSON))
         case "healthmd.agent_export_plan": self = .plan(try .init(bridgeJSON: bridgeJSON))
         case "healthmd.agent_authority": self = .authority(try .init(bridgeJSON: bridgeJSON))
+        case "healthmd.agent_export_delegation": self = .delegation(try .init(bridgeJSON: bridgeJSON))
         case "healthmd.agent_approval_request": self = .approvalRequest(try .init(bridgeJSON: bridgeJSON))
         case "healthmd.agent_approval": self = .approval(try .init(bridgeJSON: bridgeJSON))
         case "healthmd.agent_execute_request": self = .execute(try .init(bridgeJSON: bridgeJSON))
@@ -39,6 +41,7 @@ public enum AgentBridgeDocument: Codable, Equatable, Sendable, BridgeValueCodabl
         case .planRequest(let v): return v.bridgeJSON
         case .plan(let v): return v.bridgeJSON
         case .authority(let v): return v.bridgeJSON
+        case .delegation(let v): return v.bridgeJSON
         case .approvalRequest(let v): return v.bridgeJSON
         case .approval(let v): return v.bridgeJSON
         case .execute(let v): return v.bridgeJSON
@@ -65,7 +68,7 @@ public enum AgentBridgeDocument: Codable, Equatable, Sendable, BridgeValueCodabl
         case .manifest: return "artifact_manifest"
         case .commit: return "commit_receipt"
         case .error: return "rejected"
-        case .intent, .authority: return nil // Not standalone v4 discriminators.
+        case .intent, .authority, .delegation: return nil // Not standalone v4 discriminators.
         }
     }
 }

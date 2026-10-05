@@ -83,6 +83,12 @@ enum AgentBridgeRequestSettingsOrigin: String, Codable {
     case profile
 }
 
+/// Non-persisted public output alongside the unchanged version-1 private native resolution.
+struct AgentBridgeRequestSettingsOutputResolution {
+    let native: AgentBridgeRequestSettingsResolution
+    let effectiveOutput: AgentBridgeOutputSettings
+}
+
 /// Independently versioned private resolution material, not a plan, journal or authorization.
 /// Persist only inside a future authenticated journal that separately binds approvals and authority.
 /// Value snapshots copy on mutation; reconstruct execution from this value, never from live settings.
@@ -149,6 +155,15 @@ enum AgentBridgeRequestSettingsResolver {
         clock: Date,
         calendar: Calendar
     ) throws -> AgentBridgeRequestSettingsResolution {
+        try resolveWithOutput(intent, inputs: inputs, clock: clock, calendar: calendar).native
+    }
+
+    static func resolveWithOutput(
+        _ intent: AgentBridgeGeneratedIntent,
+        inputs: AgentBridgeRequestSettingsInputs,
+        clock: Date,
+        calendar: Calendar
+    ) throws -> AgentBridgeRequestSettingsOutputResolution {
         // Recheck constructors with the integrated strict codec, including closed paths and grammar.
         let intentDigest = try AgentBridgeV4Codec.digest(intent)
         guard intent.peer.platform == .apple,
@@ -199,12 +214,12 @@ enum AgentBridgeRequestSettingsResolver {
         let paths = try AgentBridgePaths.predictedPaths(dates: dates, settings: output)
         let days = try requestedDays(dates, calendar: calendar)
         let settings = snapshot(output: output, selection: selection, timeZone: intent.calendarTimezone.rawValue)
-        return .init(
+        return .init(native: .init(
             version: 1, intentSHA256: intentDigest, peer: intent.peer, destination: intent.destination,
             capabilityRevision: inputs.catalog.revision, catalogSHA256: inputs.catalog.configurationSHA256, registrySHA256: inputs.catalog.registrySHA256,
             settingsOrigin: origin, settingsRevision: revision, profileID: profileID, resolvedAt: clock,
             dates: dates, requestedDays: days, predictedRelativePaths: paths, selection: selection, settings: settings
-        )
+        ), effectiveOutput: output)
     }
 
     /// Configuration-only reuse check. The candidate is comparison material, never replacement
