@@ -83,7 +83,7 @@ Synthetic callback registrations are exact `https://callbacks.account-sync.examp
 
 These are allow/deny partitions, not a retrofit of narrower browser pilot authority. `source-policy.json` positively enumerates new routes and tests all foreign credential kinds. New prefixes must not match existing auth parsers; reject mixed cookie/bearer credentials on the new native token/resource routes rather than falling back to the cookie. New routes are denied from ingest, MCP, maintenance public HTTP, website, Practice, wake and provider broker. Default route/scope/credential denial precedes content reads or side effects.
 
-Future P2 request grants require AS13/AS14 immutable request, native confirmation, independently bound upload and verified receiver receipt. AS01 selects neither recovered-evidence presentation nor chart precedence and does not claim AS18. Existing repair flags, supplements, daily pointers and public schemas remain unchanged.
+Future P2 request grants require AS13/AS14 immutable request, native confirmation, independently bound upload and verified receiver receipt. AS01 selects neither recovered-evidence presentation nor chart precedence and does not claim AS18. The [unselected AS18 owner-input packet](account-export-provenance-owner-decision.md) compares separate evidence versus independently versioned gap filling, with MCP scope a separate decision and all approver fields unfilled. It is research, not owner consent, request/projection implementation or native acceptance. Existing repair flags, supplements, daily pointers and public schemas remain unchanged.
 
 ## Session lifecycle and isolation
 
