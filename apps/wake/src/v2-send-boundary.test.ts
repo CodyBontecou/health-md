@@ -82,6 +82,29 @@ it("does not start an FCM push after its original lease expires during OAuth", a
   expect(outbound).toHaveBeenCalledTimes(3);
 });
 
+it("does not let replaced lease metadata extend the invocation's original expiry", async () => {
+  const body = await enrollment();
+  expect((await worker.fetch(jsonRequest("/wake/v2/register", body), env())).status).toBe(200);
+  const outbound = vi.mocked(fetch).mockImplementation(async (url) => {
+    if (url === "https://oauth2.googleapis.com/token") {
+      clock += 30_000;
+      // External-store fault injection only. Observe rejection through HTTP
+      // and provider calls; a later private value is not fresh admission.
+      await DB.prepare("UPDATE wake_counters SET in_flight_until = in_flight_until + 60 WHERE wake_id = ?")
+        .bind(body.wakeId).run();
+      return oauth();
+    }
+    if (url === "https://fcm.googleapis.com/v1/projects/synthetic-project/messages:send") return accepted();
+    throw new Error("synthetic-outbound-denied");
+  });
+  const request = await ringBody(body.wakeId, "cd".repeat(16));
+  const response = await worker.fetch(jsonRequest("/wake/v2/request", request), env());
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({ error: "wake_auth_changed" });
+  expect(outbound).toHaveBeenCalledTimes(1);
+  expect(await (await worker.fetch(jsonRequest("/wake/v2/request", request), env())).json()).toEqual({ error: "wake_nonce_replayed" });
+});
+
 it.each(["delivery token", "wake key"])("does not send against a %s replaced by public rotation during OAuth", async (field) => {
   const body = await enrollment();
   expect((await worker.fetch(jsonRequest("/wake/v2/register", body), env())).status).toBe(200);

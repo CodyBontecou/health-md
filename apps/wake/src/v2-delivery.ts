@@ -77,6 +77,7 @@ export async function handleV2Request(request: Request, env: WakeEnv, fcmConfig:
       .first<{ in_flight_until: number }>();
     const liveNow = env.nowSec?.() ?? Math.floor(Date.now() / 1000);
     return current !== null && Number.isSafeInteger(current.in_flight_until) && Number.isSafeInteger(liveNow)
+      && current.in_flight_until === now + DELIVERY_LEASE_SEC
       && current.in_flight_until > liveNow && timestampWithinWindow(v2Timestamp(timestamp)!, liveNow);
   });
   if (result.kind !== "delivered") {

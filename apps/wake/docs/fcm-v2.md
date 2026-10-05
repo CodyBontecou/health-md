@@ -149,8 +149,9 @@ fallback log is emitted.
   uncertain provider outcomes; this is not an exactly-once delivery guarantee.
 - A concurrent credential change can return `409 wake_auth_changed`. After
   signing, OAuth and notification-body preparation, a required non-wire callback
-  re-reads the original wake key/token/version and exact lease owner, then checks
-  trusted live time and the original timestamp window immediately before starting
+  re-reads the original wake key/token/version and exact lease owner/unchanged
+  original 30-second deadline, then checks trusted live time and the original
+  timestamp window immediately before starting
   the FCM request. Revocation, wake-key/token replacement, lost/expired lease or a
   now-invalid timestamp reject with that same code without newly dispatching the
   notification. They do not renew/replan the consumed nonce or lease. Cleanup is
@@ -281,7 +282,8 @@ FCM enrollment, device notification, deployment or complete B15 qualification.
 
 2026-10-05 bounded send-admission follow-up: synthetic public HTTP requests cover
 successful revocation/rotation during OAuth, exact lease expiry and competing
-lease ownership, live timestamp failure, contained admission-read failure,
+lease ownership, rejection of replaced metadata extending the original deadline,
+live timestamp failure, contained admission-read failure,
 separate management-key rotation and already-started provider acceptance. The
 existing ephemeral local workerd/D1 test also exercises actual Worker revocation
 and token rotation while awaiting mocked OAuth. These are exercised local source
