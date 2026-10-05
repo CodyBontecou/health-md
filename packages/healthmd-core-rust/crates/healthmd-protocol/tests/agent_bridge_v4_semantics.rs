@@ -445,6 +445,65 @@ fn intent() -> ExportIntent {
         },
     }
 }
+// Independent Rust DTO literals. No fixture/tree value participates in construction.
+fn reviewed_summary_intent() -> ExportIntent {
+    let mut output = settings();
+    output.presentation.group_by_category = true;
+    output.individual_entries.folder_template = RelativePath("entries/{year}".to_owned());
+    output.individual_entries.filename_template = FilenameTemplate("{date}-{record_id}".to_owned());
+    output.daily_notes.folder_template = RelativePath("notes/{year}".to_owned());
+    ExportIntent {
+        schema: ExportIntentSchema::HealthmdAgentExportIntent,
+        schema_version: 1,
+        intent_id: id(4),
+        peer: peer(),
+        destination: Destination {
+            binding_id: id(3),
+            host_installation_id: id(2),
+            identity_sha256: Digest("1".repeat(64)),
+            revision: 1,
+        },
+        dates: Dates::Exact {
+            range: Range {
+                start_date: CivilDate("2000-01-01".to_owned()),
+                end_date: CivilDate("2000-01-02".to_owned()),
+            },
+        },
+        calendar_timezone: CalendarZone("Etc/UTC".to_owned()),
+        timestamp_timezone: ExportIntentTimestampTimezone::Utc,
+        capture_scope: Capture {
+            selection: Selection {
+                all_metrics: false,
+                category_ids: vec![],
+                metric_ids: vec![SemanticId("steps".to_owned())],
+                provider_ids: vec![],
+                source_ids: vec![SemanticId("health_connect".to_owned())],
+            },
+            compatibility_detail: CaptureCompatibilityDetail::Summary,
+            native_archive: Archive::None {},
+        },
+        product: ExportIntentProduct {
+            kind: ExportIntentProductType::GeneratedFiles,
+        },
+        settings_policy: Policy::Explicit {
+            settings: Box::new(output),
+        },
+    }
+}
+
+#[test]
+fn reviewed_summary_intent_is_an_independent_typed_constructor() {
+    let constructed = reviewed_summary_intent();
+    constructed.validate_shape().unwrap();
+    let fixture = fixture();
+    let expected = case(&fixture, "intent-request-owned-summary");
+    // Fixture data is an assertion only: construction above uses no decoded/tree values.
+    assert_eq!(
+        canonical_json(&constructed).unwrap(),
+        canonical_json(&expected["value"]).unwrap(),
+    );
+}
+
 fn plan() -> ExportPlan {
     let intent = intent();
     let settings = settings();
@@ -598,6 +657,10 @@ fn native_constructors() -> Vec<(&'static str, Value)> {
         ("rust-plan", json!(plan())),
         ("rust-execute", json!(execute())),
         ("rust-receipt", json!(receipt())),
+        (
+            "rust-intent-request-owned-summary",
+            json!(reviewed_summary_intent()),
+        ),
     ]
 }
 #[test]
@@ -608,6 +671,7 @@ fn independent_native_constructors_are_typed_not_tree_reencodes() {
     let config = configuration(&zones, &metrics, &projection);
     validate_discovery(&discovery(), &config).unwrap();
     validate_export_intent(&intent(), &config).unwrap();
+    validate_export_intent(&reviewed_summary_intent(), &config).unwrap();
     validate_export_plan(&plan(), &config).unwrap();
     validate_execution_receipt(&receipt()).unwrap();
     for (_, value) in native_constructors() {
@@ -699,7 +763,7 @@ fn explicit_scratch_candidate_generation_and_coverage() {
     let cases: Vec<_> = fixture["cases"].as_array().unwrap().iter().map(|case| json!({"family":case["family"],"id":case["id"],
         "coverage":if ids.contains(&case["id"].as_str().unwrap().to_owned()) { "typed-semantic-synthetic-context" } else { "unsupported-or-pending" }})).collect();
     let payload = json!({"language":"rust","coverage":{"generic_codec_vectors":58,"typed_dto_vector_indices":typed_indices,
-        "independent_typed_constructors":["discovery","intent","plan","execute","receipt"],"semantic_fixture_case_ids":ids,"cases":cases,
+        "independent_typed_constructors":["discovery","intent","plan","execute","receipt","intent-request-owned-summary"],"semantic_fixture_case_ids":ids,"cases":cases,
         "limitations":["synthetic immutable store snapshots, not native persistence/CAS","no query/projection/control envelope support","ASCII-only path collision subset; Unicode paths fail closed","no capture/transfer/artifact bytes/filesystem/device proof"]},"vectors":vectors});
     std::fs::write(output, serde_json::to_vec_pretty(&payload).unwrap()).unwrap();
 }
