@@ -72,25 +72,29 @@
       "id": "healthmd.profile_sync",
       "version": 1,
       "status": "deferred",
-      "summary": "Proposed independent exact-byte portable profile/revision/read/fixed-error codecs; finite synthetic conformance, not authenticated storage, reconciliation, native apply or a shipped contract.",
+      "summary": "Proposed independent exact-byte portable profile/revision/read/fixed-error codecs and a bounded Python-only synthetic reconciliation source reference; not authenticated durable storage, complete/native reconciliation, native apply or a shipped contract.",
       "specification": "packages/contracts/profile-sync/v1/contract.md",
       "authorities": [
         "packages/contracts/profile-sync/v1/contract.md",
         "packages/contracts/profile-sync/v1/portable-content.schema.json",
         "packages/contracts/profile-sync/v1/profile-sync.schema.json",
-        "packages/contracts/profile-sync/v1/source-pins.json"
+        "packages/contracts/profile-sync/v1/source-pins.json",
+        "packages/contracts/profile-sync/v1/reconciliation-source/README.md"
       ],
       "implementations": [
         "apps/cloud/src/profile-sync-v1-contract.ts",
         "apps/apple/HealthMd/Shared/AccountSync/ProfileSyncV1.swift",
         "apps/android/app/src/main/java/com/healthmd/accountsync/ProfileSyncV1.kt",
-        "packages/contracts/profile-sync/v1/validator.py"
+        "packages/contracts/profile-sync/v1/validator.py",
+        "packages/contracts/profile-sync/v1/reconciliation-source/model.py",
+        "packages/contracts/profile-sync/v1/reconciliation-source/journal.py"
       ],
       "consumers": [
         "apps/cloud/test/profile-sync-v1-contract.test.ts",
         "apps/apple/HealthMdTests/AccountSync/ProfileSyncV1Tests.swift",
         "apps/android/app/src/test/java/com/healthmd/accountsync/ProfileSyncV1Test.kt",
-        "packages/contracts/profile-sync/v1/test_contract.py"
+        "packages/contracts/profile-sync/v1/test_contract.py",
+        "packages/contracts/profile-sync/v1/reconciliation-source/test_reconciliation.py"
       ],
       "fixtures": [
         {
@@ -169,6 +173,12 @@
           "path": "packages/contracts/profile-sync/v1/fixtures/unicode-exact.json",
           "sha256": "d24a37d3b0b2152f393dbdc7d3f01438c7a6643fc8029d8d6ed4480dff631c74",
           "provenance": "AS05 synthetic exact Unicode content/hash bytes; accepted names are never trimmed or normalized.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/profile-sync/v1/reconciliation-source/fixtures/source-vectors.json",
+          "sha256": "049da30dd6ae1e5e9f3ff3f472936db98721bd6d2a85190c777e4c4212a34555",
+          "provenance": "AS07 Python-only SOURCE reference: 15 independently authored traces exercised through real bounded candidate/outbox and in-memory journal transitions; not the AS05 predicates, native conformance, private storage, OS durability, authentication or complete reconciliation.",
           "mirrors": []
         }
       ]
