@@ -126,3 +126,96 @@ test('homepage footer links the landing pages', () => {
     assert.ok(index.includes(`href="${page.dir}/"`), `footer link to ${page.dir}`);
   }
 });
+
+function textContent(html) {
+  return html.replace(/<[^>]*>/g, '').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+}
+
+function aiSectionHtml(id) {
+  const match = sources['health-data-for-ai'].match(
+    new RegExp(`<section\\b[^>]*id="${id}"[^>]*>([\\s\\S]*?)<\\/section>`),
+  );
+  assert.ok(match, `AI section exists: ${id}`);
+  return match[1];
+}
+
+function aiSection(id) {
+  return textContent(aiSectionHtml(id));
+}
+
+function assertLocalMcpTopologies(text) {
+  // Factual contract from the MCP guide and CLI qualification/compatibility ledgers.
+  const facts = [
+    ['standalone command', /healthmd mcp serve/],
+    ['standalone host platforms', /macOS, Linux, and Windows/],
+    ['standalone qualification', /explicitly unqualified preview, not a qualified stable release/],
+    ['direct paired-phone backend without the Mac app', /connects directly to a paired foreground phone without the Mac app/],
+    ['explicit standalone pairing', /healthmd direct pair/],
+    ['phone opt-in', /enable Direct CLI Access/],
+    ['local host transport', /local MCP host with stdio support/],
+    ['legacy Mac-app prerequisite', /legacy bundled[^]*healthmd-mcp[^]*requires Health\.md for Mac installed and open/i],
+    ['legacy query backend', /queries encrypted Mac context/],
+    ['legacy fresh-work prerequisite', /connected foreground iPhone for explicit refreshes and fresh exports/],
+    ['typed-query platform limit', /Typed queries require a query-capable iPhone; Android typed MCP queries are not supported/],
+  ];
+  for (const [fact, pattern] of facts) {
+    assert.match(text, pattern, fact);
+  }
+}
+
+test('health-data-for-ai: cards distinguish standalone preview and legacy Mac MCP requirements', () => {
+  assertLocalMcpTopologies(aiSection('two-paths'));
+});
+
+test('health-data-for-ai: setup separates standalone pairing and credentials from the Mac helper', () => {
+  const setup = aiSection('per-assistant');
+  assertLocalMcpTopologies(setup);
+  assert.match(setup, /Manual IP or Tailscale/, 'standalone reachability');
+  assert.match(setup, /Keychain on macOS, an unlocked Secret Service on Linux, or Credential Manager on Windows/, 'native credentials, including the Linux prerequisite');
+  assert.match(setup, /For standalone, configure the absolute installed healthmd path with arguments mcp serve/, 'Claude standalone stdio entry');
+  assert.match(setup, /For standalone, use healthmd setup codex/, 'Codex standalone setup command');
+});
+
+function visibleAiFaqAnswers() {
+  const html = aiSectionHtml('frequently-asked-questions');
+  return new Map([...html.matchAll(/<h3>([^<]+)<\/h3>\s*<p>([\s\S]*?)<\/p>/g)]
+    .map(([, question, answer]) => [question, textContent(answer)]));
+}
+
+function structuredAiFaqs() {
+  const jsonLd = sources['health-data-for-ai'].match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+  assert.ok(jsonLd, 'AI JSON-LD block exists');
+  const faq = JSON.parse(jsonLd[1])['@graph'].find((node) => node['@type'] === 'FAQPage');
+  assert.ok(faq, 'AI FAQPage entity exists');
+  return faq.mainEntity;
+}
+
+test('health-data-for-ai: visible and structured FAQs agree on both MCP topologies', () => {
+  const answers = visibleAiFaqAnswers();
+  const question = 'Do I need the Mac app to use MCP?';
+  assert.ok(answers.has(question), 'visible Mac-app prerequisite FAQ');
+  assertLocalMcpTopologies(answers.get(question));
+  const faq = structuredAiFaqs();
+  const prerequisite = faq.find((entity) => entity.name === question);
+  assert.ok(prerequisite, 'structured Mac-app prerequisite FAQ');
+  assertLocalMcpTopologies(prerequisite.acceptedAnswer.text);
+  for (const entity of faq) {
+    assert.equal(entity.acceptedAnswer['@type'], 'Answer');
+    assert.equal(entity.acceptedAnswer.text, answers.get(entity.name), `visible/JSON-LD answer parity: ${entity.name}`);
+  }
+});
+
+test('health-data-for-ai: local MCP does not imply Cloud consent, live retained reads, or hosted-client qualification', () => {
+  const answers = visibleAiFaqAnswers();
+  const cloudAnswer = answers.get("Is my health data sent to Health.md's servers for AI use?");
+  assert.ok(cloudAnswer, 'visible server/privacy FAQ');
+  for (const text of [aiSection('scoped'), cloudAnswer]) {
+    assert.match(text, /Local pairing does not authorize Cloud uploads or third-party Cloud reads/, 'separate consent boundaries');
+    assert.match(text, /separately authorized read-only Cloud MCP pilot reads retained exports, not a live phone/, 'retained-export topology is not a live-phone query');
+    assert.match(text, /disposable single-user VM pilot has no backups or independent security-review sign-off/, 'disposable pilot is not production security/durability approval');
+    assert.match(text, /General production rollout remains unapproved/, 'production approval blocker preserved');
+  }
+  assert.match(answers.get('Which AI assistants work with Health.md?'), /not a hosted-client compatibility guarantee/, 'local setup does not qualify hosted clients');
+  const body = sources['health-data-for-ai'].split('<body')[1];
+  assert.doesNotMatch(body, /Health\.md never stores your health data|keeps no health-data cloud|there is no Health\.md health-data cloud/, 'local-only claims must not deny the separate retained-export pilot');
+});
