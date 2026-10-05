@@ -32,6 +32,10 @@ Three new public-doc regressions, existing CI static24/contract60 and seven loca
 not native authorization or installed capability evidence. All469 fifth-wave evidence hashes remain
 intact. Latest observed5,412,520KiB/no warning still admits neither compiler nor native-app gates.
 Broader runtime/native/website/localization/consumer-skill reconciliation and B22 acceptance remain open.
+Root inventory follow-up `bba3106b9` corrects portable23/bundledMac21/publicalpha.7 19/read-only13/frozen21
+accounting and universal pairing3 versus legacy1/2, with two new public-doc regressions/static26+contract60.
+Native4 remains unwired/unadvertised, with no bound execution; remaining parity/website/skill claims
+are not corrected by this static slice. Latest observed5,255,100KiB still blocks compiler/native gates.
 
 ## Product outcome
 
