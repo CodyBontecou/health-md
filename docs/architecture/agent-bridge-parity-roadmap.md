@@ -8,17 +8,19 @@
 
 ## Implementation progress (2026-10-04)
 
-The dedicated `goal/agent-bridge/integration` branch now includes the first serial wave through
-`363d8693e`: reviewed deferred B01/B05 contracts, B02/B03 portable mobile-source repairs,
-partial B04 profile discovery, B16 before-capture Android recovery authority, and Worker-only
-B15 FCM. The audit findings below retain their original baseline context; consult the
-[implementation ledger](../qa/agent-bridge-implementation.md) for current commits, tests,
-failures, preservation decisions and remaining acceptance.
+The dedicated `goal/agent-bridge/integration` branch includes three serial waves through
+`770c74319`: deferred B01/B05 contracts and bounded native codecs, B02/B03 mobile-source
+repairs, partial B04 profile handling, B09 detached native JSON/settings resolvers, B16
+before-capture authority and durable discard, Worker-only B15 FCM, and scoped Apple compiler/SDK
+repairs. The audit findings below retain their original baseline context; consult the
+[implementation ledger](../qa/agent-bridge-implementation.md) for commits, exact test/build evidence,
+retained failures and remaining acceptance.
 
-Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Native DTOs,
-source v4 execution/query/projection, permissioned controls, recipes/schedules, ZIP/dictionaries,
-and the complete four-way no-settings journey remain unfinished. New capabilities stay planned;
-no physical, installed-build, live-provider or release qualification is inferred.
+Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Stored native/host
+authority, v4 dispatch/capture/journals, zero-read planning, typed queries/projection, permissioned
+controls, recipes/schedules and ZIP/dictionaries remain unfinished. Native builds and bounded
+resolver tests pass; they do not establish the complete four-way no-settings journey. Capabilities
+stay planned; no physical, installed-build, live-provider or release qualification is inferred.
 
 ## Product outcome
 
@@ -157,4 +159,6 @@ This audit performed source/document review and backlog creation only. A local c
 
 The [implementation ledger](../qa/agent-bridge-implementation.md) records subsequent serial integrations, exact source/test evidence and retained failures. Existing-protocol CLI/MCP dispatch/onboarding, Android recovery authority and mocked Worker FCM increments are integrated. The second wave adds bounded pure Rust/Swift/Kotlin v4 codecs and one independently constructed common intent with matching bytes; committed source through `e61ef90ce` passes the affected core/CLI/package/JVM and Play/F-Droid source gates. Published-crate test isolation is repaired separately in `4a987f11f`.
 
-These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising, stored native authority/approval, request-owned capture, zero-read planning/execution and recipes remain pending. Coverage is deliberately unequal across languages; canonical agreement does not prove native/runtime authorization. Apple application blockers, the retained pinned-consumer failure, physical/live qualification and B19/B20 approval gates remain explicit. No task is closed or planned capability promoted from these increments.
+The third wave through `770c74319` adds bounded both-platform request-settings/renderer resolution, authoritative Apple profile-ID lookup, Android exact-owned discard/reconciliation and strict private revocation parsing. Scoped Apple repairs preserve wire bytes and fail closed on unsupported history-boundary SDKs. Combined Play/F-Droid unit/lint/build/binding gates and generic iOS application/test-target build-for-testing now pass; app-host tests, full export-doc generation and installed/physical qualification are not run.
+
+These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising, stored native authority/approval, request-owned capture/journals, zero-read planning/execution and recipes remain pending. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. The retained pinned-consumer failure, stale SDK-history guidance/metadata, physical/live qualification and B19/B20 approval gates remain explicit. No task is closed or planned capability promoted from these increments.
