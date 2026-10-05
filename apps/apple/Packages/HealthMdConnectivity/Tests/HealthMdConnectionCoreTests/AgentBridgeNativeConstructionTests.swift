@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-import HealthMdConnectionCore
+@testable import HealthMdConnectionCore
 
 final class AgentBridgeNativeConstructionTests: XCTestCase {
     /// Assembly below uses Swift DTO constructors, never candidate JSON or a generic JSON tree.
@@ -26,18 +26,32 @@ final class AgentBridgeNativeConstructionTests: XCTestCase {
         let discovery = try discovery(peer: peer, reference: references.native)
         let receipt = AgentBridgeExecutionReceipt(artifactCount: 1, binding: binding, committedPartitionCount: 1, expiresAt: try AgentBridgeUTC("2000-01-10T00:00:00Z"), frontierSha256: try digest("7"), jobId: try id(10), manifestSha256: try digest("6"), requestSha256: requestHash, sourceAcknowledged: true, status: .complete)
         let payloads: [(Int, AgentBridgeDocument)] = [(35, .discoveryRequest(request)), (36, .discovery(discovery)), (38, .plan(plan)), (41, .execute(execute)), (43, .receipt(receipt)), (45, .manifest(manifest)), (46, .commit(commit))]
-        let actual = try payloads.map { index, document in
+        var actual = try payloads.map { index, document in
             let envelope = try AgentBridgeEnvelope(payload: document)
             let bytes = try AgentBridgeV4Codec.encode(envelope)
-            return Candidate(vector_index: index, value: envelope, canonical_base64: bytes.base64EncodedString(), sha256: AgentBridgeV4Codec.sha256(bytes))
+            return Candidate(vector_index: index, fixture_case_id: nil, provenance: "independent_native_constructor", value: .envelope(envelope), canonical_base64: bytes.base64EncodedString(), sha256: AgentBridgeV4Codec.sha256(bytes))
         }
+        // Emit the literal Swift-constructed intent above WITHOUT a v4 envelope. This is the
+        // shared input requested for cross-language constructor agreement, not runtime evidence.
+        let standaloneBytes = try AgentBridgeV4Codec.encode(intent)
+        actual.append(Candidate(vector_index: nil, fixture_case_id: "intent-request-owned-summary", provenance: "independent_native_constructor", value: .intent(intent), canonical_base64: standaloneBytes.base64EncodedString(), sha256: AgentBridgeV4Codec.sha256(standaloneBytes)))
         var root = URL(fileURLWithPath: #filePath)
         for _ in 0..<7 { root.deleteLastPathComponent() }
         let expected = try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: root.appendingPathComponent("packages/contracts/agent-bridge/v1/fixtures/conformance.json")))
-        XCTAssertEqual(actual.count, 7)
+        XCTAssertEqual(actual.count, 8) // Seven envelopes plus one standalone intent.
         for candidate in actual {
-            XCTAssertEqual(candidate.canonical_base64, expected.canonical_vectors[candidate.vector_index].canonical_base64, "native vector \(candidate.vector_index)")
-            XCTAssertEqual(candidate.sha256, expected.canonical_vectors[candidate.vector_index].sha256, "native vector \(candidate.vector_index)")
+            if let index = candidate.vector_index {
+                XCTAssertEqual(candidate.canonical_base64, expected.canonical_vectors[index].canonical_base64, "native vector \(index)")
+                XCTAssertEqual(candidate.sha256, expected.canonical_vectors[index].sha256, "native vector \(index)")
+            } else {
+                let expectedCase = try XCTUnwrap(expected.cases.first { $0.id == candidate.fixture_case_id })
+                // This trusted fixture tree is EXPECTED output only. It never constructs intent.
+                let expectedBytes = try expectedCase.value.canonicalBytes()
+                XCTAssertEqual(standaloneBytes, expectedBytes, expectedCase.id)
+                XCTAssertEqual(candidate.canonical_base64, expectedBytes.base64EncodedString(), expectedCase.id)
+                XCTAssertEqual(candidate.sha256, AgentBridgeV4Codec.sha256(expectedBytes), expectedCase.id)
+            }
+            XCTAssertEqual(candidate.provenance, "independent_native_constructor")
         }
         if ProcessInfo.processInfo.environment["HEALTHMD_GENERATE_AGENT_BRIDGE_V4"] == "1" {
             guard let path = ProcessInfo.processInfo.environment["HEALTHMD_AGENT_BRIDGE_CANDIDATES"], !path.isEmpty else { throw AgentBridgeValidationError.invalidRequest }
@@ -51,9 +65,19 @@ final class AgentBridgeNativeConstructionTests: XCTestCase {
 
     private func id(_ value: Int) throws -> AgentBridgeUUID { try .init(String(format: "00000000-0000-4000-8000-%012x", value)) }
     private func digest(_ digit: String) throws -> AgentBridgeDigest { try .init(String(repeating: digit, count: 64)) }
-    private struct Fixture: Decodable { let canonical_vectors: [Vector] }
+    private struct Fixture: Decodable { let canonical_vectors: [Vector]; let cases: [FixtureCase] }
+    private struct FixtureCase: Decodable { let id: String; let value: BridgeJSON }
     private struct Vector: Decodable { let canonical_base64: String; let sha256: String }
-    private struct Candidate: Encodable { let vector_index: Int; let value: AgentBridgeEnvelope; let canonical_base64: String; let sha256: String }
+    private struct Candidate: Encodable { let vector_index: Int?; let fixture_case_id: String?; let provenance: String; let value: NativeValue; let canonical_base64: String; let sha256: String }
+    private enum NativeValue: Encodable {
+        case envelope(AgentBridgeEnvelope), intent(AgentBridgeGeneratedIntent)
+        func encode(to encoder: Encoder) throws {
+            switch self {
+            case .envelope(let value): try value.encode(to: encoder)
+            case .intent(let value): try value.encode(to: encoder)
+            }
+        }
+    }
     private struct CandidateOutput: Encodable { let language: String; let coverage: Coverage; let vectors: [Candidate] }
     private struct Coverage: Encodable { let typed_constructor_vectors: Int; let generic_tree_vectors: Int; let runtime_authorization: Bool }
 
