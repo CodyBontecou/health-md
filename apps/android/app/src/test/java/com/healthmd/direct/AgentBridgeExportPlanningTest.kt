@@ -184,10 +184,19 @@ class AgentBridgeExportPlanningTest {
     fun responseBoundaryRechecksTrustEvenIfPrivateIssuanceCommittedBeforeRevocation() {
         AgentBridgeExportPlanningFixture().use { f ->
             val request = f.request(f.enrolled())
-            val revokeAt = f.peerContext.checks + 4 // Entry, after callback, precommit, postcommit response fence.
-            f.peerContext.onCheck = { if (f.peerContext.checks == revokeAt) f.peerContext.trusted = false }
+            val path = f.parent.resolve(AgentBridgeExportAuthorityStore.DIRECTORY_NAME).resolve(AgentBridgeExportAuthorityStore.LEDGER_NAME)
+            val before = Files.readAllBytes(path)
+            var revokedAfterPublication = false
+            f.peerContext.onCheck = {
+                if (!Files.readAllBytes(path).contentEquals(before)) {
+                    revokedAfterPublication = true
+                    f.peerContext.trusted = false
+                }
+            }
             f.expect(AgentBridgeErrorCode.PERMISSION_REQUIRED) { f.service.plan(f.peerContext, request) }
-            // A committed private plan is not an approval/export; no response or rollback fallback occurs.
+            assertThat(revokedAfterPublication).isTrue()
+            // Observed postpublication rejection, NOT evidence of prepublication rollback. A private
+            // issued plan is not an approval/export; no response or snapshot restoration occurs.
             f.peerContext.onCheck = null
             f.peerContext.trusted = true // Explicit fake native trust restoration, NOT a remote operation.
             val stored = f.restart().plan(f.peerContext, request)

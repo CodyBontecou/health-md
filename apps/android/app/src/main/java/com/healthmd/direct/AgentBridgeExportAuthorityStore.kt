@@ -127,13 +127,13 @@ internal class AgentBridgeExportAuthorityStore private constructor(
     }
 
     /** Only the production service uses this transaction seam; remote dispatch has no issuer APIs. */
-    internal fun <T> access(fence: () -> Unit = {}, block: (AgentBridgeExportAuthorityTransaction?) -> T): T = safe {
+    internal fun <T> access(fence: (AgentBridgeExportAuthorityTransaction?) -> Unit = {}, block: (AgentBridgeExportAuthorityTransaction?) -> T): T = safe {
         serialized {
             checkParent()
             if (!Files.exists(root, NOFOLLOW_LINKS)) {
                 demand(observedRootIdentity == null) // Previously observed state lost: never silently regenerate.
                 val result = block(null)
-                fence()
+                fence(null)
                 return@serialized result
             }
             val rootIdentity = attributes(root, true).fileKey()
@@ -154,7 +154,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                     val before = read(key)
                     val tx = AgentBridgeExportAuthorityTransaction(before)
                     val result = block(tx)
-                    fence()
+                    fence(tx)
                     if (tx.state != before) {
                         demand(before.revision < Long.MAX_VALUE, AgentBridgeErrorCode.BUSY)
                         val after = tx.state.copy(revision = before.revision + 1)
@@ -162,11 +162,14 @@ internal class AgentBridgeExportAuthorityStore private constructor(
                         val bytes = fileBytes(after, key)
                         demand(bytes.size <= MAX_BYTES, AgentBridgeErrorCode.BUSY)
                         checkIdentity(rootIdentity, lockIdentity)
-                        fence() // Current trust at the actual commit boundary, after bounded validation.
-                        replace(bytes)
+                        fence(tx) // Current trust/authority/time after bounded validation and MAC signing.
+                        replace(bytes) {
+                            checkIdentity(rootIdentity, lockIdentity)
+                            fence(tx) // Actual publication, AFTER pending-file write/fsync and native callbacks.
+                        }
                     }
                     checkIdentity(rootIdentity, lockIdentity)
-                    fence() // A late revocation can suppress response; no restore/rollback fallback.
+                    fence(tx) // Late expiry/revocation suppresses return, NOT a postpublication rollback.
                     result
                 }
             }
@@ -259,10 +262,19 @@ internal class AgentBridgeExportAuthorityStore private constructor(
         demand(state.decisions.map { it.planId }.distinct().size == approvals.size && approvals.map { it.approvalId }.distinct().size == approvals.size)
     }
 
-    private fun replace(bytes: ByteArray) {
+    private fun replace(bytes: ByteArray, beforePublication: () -> Unit) {
         val temporary = root.resolve("pending-" + UUID.randomUUID())
         writeNew(temporary, bytes)
-        // Interrupted leftovers are corruption, not silently deleted/reused on restart.
+        try {
+            beforePublication()
+        } catch (failure: Exception) {
+            // Orderly rejection removes ONLY this invocation's unpublished temporary file. It
+            // does not repair interrupted/corrupt state, erase old records or restore a snapshot.
+            Files.delete(temporary)
+            forceDirectory()
+            throw failure
+        }
+        // Interrupted leftovers are still corruption, never silently deleted/reused on restart.
         Files.move(temporary, root.resolve(LEDGER_NAME), ATOMIC_MOVE, REPLACE_EXISTING)
         forceDirectory()
     }
@@ -439,6 +451,11 @@ internal class AgentBridgeExportAuthorityTransaction(internal var state: AgentBr
     fun plan(peer: AgentBridgePeer, id: String): AgentBridgeExportIssuedPlanRecord = state.plans.singleOrNull {
         it.plan().intent.peer == peer && it.plan().planId == id
     } ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+    fun planForApproval(peer: AgentBridgePeer, approval: AgentBridgeApproval): AgentBridgeExportIssuedPlanRecord {
+        val decision = state.decisions.singleOrNull { it.approval() == approval }
+            ?: throw AgentBridgeException(AgentBridgeErrorCode.APPROVAL_REQUIRED)
+        return plan(peer, decision.planId)
+    }
     fun issue(record: AgentBridgeExportIssuedPlanRecord) {
         if (state.plans.size >= AgentBridgeExportAuthorityStore.MAX_PLANS) throw AgentBridgeException(AgentBridgeErrorCode.BUSY)
         state = state.copy(plans = state.plans + record)
