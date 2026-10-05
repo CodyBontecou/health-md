@@ -441,6 +441,8 @@ class Kernel:
             entry = next((e for e in self._state.outbox if e.context == self._current and e.status == "pending"), None)
             if entry is None:
                 return Result("requires_action")
+            if self._record.serial >= MAX_HISTORY:
+                return Result("quota_exceeded")
             return Result("pending", Request(entry.context, entry.mutation_id, entry.request_hash, entry.body))
 
     def _quarantine(self, entry):

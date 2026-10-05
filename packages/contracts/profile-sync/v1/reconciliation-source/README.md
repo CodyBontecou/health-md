@@ -153,6 +153,7 @@ objects share memory; it is not heap measurement. Exhaustion returns
 Unreadable/failed readback returns `verification_pending`; detected owner change
 remains `fenced`. These small budgets stop long-lived operation. No expiry,
 compaction or production retention/deletion choice exists.
+Full-step pending inspection: `quota_exceeded`; byte capacity unproved.
 
 ## Remaining omissions and conservative behavior
 
@@ -205,7 +206,7 @@ in place, never copied, mocked, modified or replaced by permissive validation.
 Source identity is not trust or native/heavy admission. Whole shared verifiers need
 complete inputs and separate coordinator verification, not this sparse receipt.
 
-36 tests retain all original24 invariants, except the intentionally obsolete
+37 tests retain all original24 invariants, except the intentionally obsolete
 reorder-unavailable assertion/comment now tests actual reorder/fields. Original
 observed-order/content assertions/page-reset refusals remain. The 15 byte-unchanged
 **independently authored** traces run twice: literal outcomes/state/history/calls,
