@@ -7,6 +7,41 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     // is unsafe during test teardown on some macOS runtimes. See docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testPreparedOriginalAuthorityJournalKeepsImmutableFileManifestAndFrontier() throws {
+        var journal = try makeJournal()
+        let bytes = Data("synthetic immutable prepared v7 bytes".utf8)
+        let digest = NativeExportArtifact.sha256(of: bytes)
+        let fileID = UUID(uuidString: "dddddddd-dddd-dddd-dddd-dddddddddddd")!
+        journal.generatedFiles = [IPhoneDirectGeneratedFile(
+            manifest: try DirectExportFileManifest(jobID: journal.request.jobID, fileID: fileID, relativePath: "Health/old.json", byteCount: Int64(bytes.count), sha256: digest, writeMode: .overwrite),
+            relativePath: "prepared/old.json"
+        )]
+        journal.partitions = [try DirectTransferPartition(index: 0, transferID: fileID, sourceDates: ["2027-01-15"], byteCount: Int64(bytes.count), chunkCount: 1, sha256: digest, previousSHA256: nil)]
+        journal.committedPartitionCount = 1
+        journal.committedBytes = Int64(bytes.count)
+        journal.generationCompleted = true
+        journal.state = "paused"
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(journal)) as? [String: Any])
+        var pin = try XCTUnwrap(object["appleExportEnginePin"] as? [String: Any])
+        pin["profile"] = "apple_health_data_v7"
+        pin["public_schema_version"] = 7
+        pin["registry_sha256"] = AppleExportEnginePin.historicalRegistrySHA256
+        pin["render_profile_revision"] = 1
+        object["appleExportEnginePin"] = pin
+        var settings = try XCTUnwrap(object["settingsSnapshot"] as? [String: Any])
+        settings["appleExportEnginePin"] = pin
+        object["settingsSnapshot"] = settings
+        let restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(restored.generatedFiles, journal.generatedFiles)
+        XCTAssertEqual(restored.partitions, journal.partitions)
+        XCTAssertEqual(restored.committedBytes, journal.committedBytes)
+        XCTAssertEqual(restored.committedPartitionCount, journal.committedPartitionCount)
+        XCTAssertTrue(restored.generationCompleted)
+        XCTAssertEqual(restored.appleExportEnginePin, restored.settingsSnapshot.appleExportEnginePin)
+        XCTAssertEqual(restored.appleExportEnginePin?.registrySHA256, AppleExportEnginePin.historicalRegistrySHA256)
+        XCTAssertEqual(restored.appleExportEnginePin?.renderProfileRevision, 1)
+    }
+
     func testVersionOneJournalDecodesAsLegacy() throws {
         let journal = try makeJournal()
         var object = try XCTUnwrap(

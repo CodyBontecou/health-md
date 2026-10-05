@@ -128,6 +128,25 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertIn("id-token: write", workflow)
         self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 
+    def test_ci_sdk_setup_does_not_request_the_retired_tools_package(self) -> None:
+        for filename in ("android-ci.yml",):
+            lines = (ROOT / ".github/workflows" / filename).read_text().splitlines()
+            setups = 0
+            for index, line in enumerate(lines):
+                if "uses: android-actions/setup-android@" not in line:
+                    continue
+                setups += 1
+                block: list[str] = []
+                for following in lines[index + 1:]:
+                    if re.match(r"^\s*-\s+(?:name|uses|run):", following):
+                        break
+                    block.append(following)
+                self.assertIn(
+                    "packages: platform-tools", "\n".join(block),
+                    f"{filename}:{index + 1} inherits the action's retired tools package",
+                )
+            self.assertGreater(setups, 0, f"No SDK setup exercised in {filename}")
+
     def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
         setting = "settings put secure show_ime_with_hard_keyboard 1"

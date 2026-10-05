@@ -175,6 +175,8 @@ pub enum CoreMetricRegistryProfile {
     AndroidFrozenV4,
     /// Android analytical v5.
     AndroidAnalyticalV5,
+    /// Historical Apple `healthmd.health_data` v7; appended to retain existing FFI discriminants.
+    AppleHealthDataV7,
 }
 
 /// One ordered native category.
@@ -1037,6 +1039,9 @@ const fn semantic_profile(
     profile: CoreMetricRegistryProfile,
 ) -> healthmd_core::semantic::SemanticProfile {
     match profile {
+        CoreMetricRegistryProfile::AppleHealthDataV7 => {
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV7
+        }
         CoreMetricRegistryProfile::AppleHealthDataV8 => {
             healthmd_core::semantic::SemanticProfile::AppleHealthDataV8
         }
@@ -1053,6 +1058,9 @@ const fn core_profile(
     profile: healthmd_core::semantic::SemanticProfile,
 ) -> CoreMetricRegistryProfile {
     match profile {
+        healthmd_core::semantic::SemanticProfile::AppleHealthDataV7 => {
+            CoreMetricRegistryProfile::AppleHealthDataV7
+        }
         healthmd_core::semantic::SemanticProfile::AppleHealthDataV8 => {
             CoreMetricRegistryProfile::AppleHealthDataV8
         }
@@ -1068,6 +1076,7 @@ const fn core_profile(
 impl From<CoreMetricRegistryProfile> for healthmd_core::registry::MetricRegistryProfile {
     fn from(value: CoreMetricRegistryProfile) -> Self {
         match value {
+            CoreMetricRegistryProfile::AppleHealthDataV7 => Self::AppleHealthDataV7,
             CoreMetricRegistryProfile::AppleHealthDataV8 => Self::AppleHealthDataV8,
             CoreMetricRegistryProfile::AndroidFrozenV4 => Self::AndroidFrozenV4,
             CoreMetricRegistryProfile::AndroidAnalyticalV5 => Self::AndroidAnalyticalV5,
@@ -1499,6 +1508,29 @@ pub fn get_metric_registry(
         healthmd_core::registry::metric_registry_snapshot(profile.into(), expected_registry_version)
             .map(CoreMetricRegistrySnapshot::from)
             .map_err(HealthmdCoreError::from)
+    })
+}
+
+/// Retrieve an exact retained registry authority without rewriting the caller's pin.
+///
+/// # Errors
+/// Unknown authorities and incompatible profile/version pairs fail closed.
+// UniFFI's owned-string ABI is required at the native boundary.
+#[allow(clippy::needless_pass_by_value)]
+#[uniffi::export]
+pub fn get_metric_registry_at_authority(
+    profile: CoreMetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: String,
+) -> Result<CoreMetricRegistrySnapshot, HealthmdCoreError> {
+    panic_guard(|| {
+        healthmd_core::registry::metric_registry_snapshot_at_authority(
+            profile.into(),
+            expected_registry_version,
+            &registry_sha256,
+        )
+        .map(CoreMetricRegistrySnapshot::from)
+        .map_err(HealthmdCoreError::from)
     })
 }
 

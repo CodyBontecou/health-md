@@ -57,6 +57,7 @@ object HealthMdRenderInputAdapter {
     data class Options(
         val requestId: String,
         val formats: List<String>,
+        val renderProfileRevision: UInt = 2u,
         val unitSystem: String = "metric",
         val includeMetadata: Boolean = true,
         val groupByCategory: Boolean = true,
@@ -167,7 +168,7 @@ object HealthMdRenderInputAdapter {
         put("registry_version", registry.registryVersion.toInt())
         put("registry_sha256", registry.registrySha256)
         put("profile_revision", registry.profileRevision.toInt())
-        put("render_profile_revision", 2)
+        put("render_profile_revision", options.renderProfileRevision.toLong())
         put("request_id", options.requestId)
         put("session_id", sessionId)
         put("profile", registry.profileId)

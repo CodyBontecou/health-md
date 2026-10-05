@@ -14,6 +14,8 @@ const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.jso
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MetricRegistryProfile {
+    /// Historical Apple `healthmd.health_data` v7, with its original authority.
+    AppleHealthDataV7,
     /// Apple `healthmd.health_data` v8.
     AppleHealthDataV8,
     /// Android byte-frozen iOS-compatible v4.
@@ -27,6 +29,7 @@ impl MetricRegistryProfile {
     #[must_use]
     pub const fn id(self) -> &'static str {
         match self {
+            Self::AppleHealthDataV7 => "apple_health_data_v7",
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
@@ -317,14 +320,34 @@ pub fn metric_registry_snapshot(
     profile: MetricRegistryProfile,
     expected_registry_version: u32,
 ) -> Result<MetricRegistrySnapshot, CoreError> {
+    let hash = if profile == MetricRegistryProfile::AppleHealthDataV7 {
+        crate::authority::HISTORICAL_REGISTRY_SHA256
+    } else {
+        REGISTRY_SHA256
+    };
+    metric_registry_snapshot_at_authority(profile, expected_registry_version, hash)
+}
+
+/// Project only an exact, explicitly retained authority; never upgrade its digest.
+///
+/// # Errors
+/// Unknown digests, profiles, versions, or corrupt embedded authorities fail closed.
+pub fn metric_registry_snapshot_at_authority(
+    profile: MetricRegistryProfile,
+    expected_registry_version: u32,
+    registry_sha256: &str,
+) -> Result<MetricRegistrySnapshot, CoreError> {
     if expected_registry_version != REGISTRY_VERSION {
         return Err(CoreError::UnsupportedRegistryVersion);
     }
-    let document = REGISTRY
-        .get_or_init(|| decode_and_validate(REGISTRY_BYTES, true))
-        .as_ref()
-        .map_err(|error| *error)?;
-    project_snapshot(document, profile)
+    let bytes = crate::authority::registry_bytes(registry_sha256, profile.id())?;
+    if format!("{:x}", Sha256::digest(bytes)) != registry_sha256 {
+        return Err(CoreError::InvalidRegistry);
+    }
+    let document = decode_and_validate(bytes, false)?;
+    let mut snapshot = project_snapshot(&document, profile)?;
+    registry_sha256.clone_into(&mut snapshot.registry_sha256);
+    Ok(snapshot)
 }
 
 /// Validate exact embedded registry bytes and return deterministic inventory counts.
@@ -428,13 +451,12 @@ fn validate_document(document: &RegistryDocument) -> Result<(), CoreError> {
         .map(|profile| profile.id.clone())
         .collect::<Vec<_>>();
     let profile_ids: HashSet<&str> = unique_nonempty(&profile_id_values)?;
-    if profile_ids
-        != HashSet::from([
-            "apple_health_data_v8",
-            "android_frozen_v4",
-            "android_analytical_v5",
-        ])
-    {
+    let apple_profile = if profile_ids.contains("apple_health_data_v7") {
+        "apple_health_data_v7"
+    } else {
+        "apple_health_data_v8"
+    };
+    if profile_ids != HashSet::from([apple_profile, "android_frozen_v4", "android_analytical_v5"]) {
         return Err(CoreError::InvalidRegistry);
     }
     for profile in &document.profiles {

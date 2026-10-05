@@ -15,6 +15,7 @@ enum HealthMdRenderInputAdapter {
     struct Options: Sendable, Equatable {
         var requestID: String
         var formats: [String]
+        var renderProfileRevision: UInt32 = 2
         var unitSystem: String = "metric"
         var includeMetadata: Bool = true
         var groupByCategory: Bool = true
@@ -77,6 +78,64 @@ enum HealthMdRenderInputAdapter {
     struct EncodedInput: Sendable, Equatable {
         let configuration: Data
         let batches: [Data]
+    }
+
+    /// Provider-free v7 and v8 use identical native presentation grammar except these schema
+    /// metadata fields. Preserve every other byte; never replace arbitrary payload text.
+    static func historicalNativeContent(_ content: String, format: ExportFormat, profile: String) throws -> String {
+        guard profile == "apple_health_data_v7" else { return content }
+        switch format {
+        case .json:
+            guard let root = try JSONSerialization.jsonObject(with: Data(content.utf8)) as? [String: Any],
+                  root["providers"] == nil,
+                  root["schema_version"] as? Int == 8,
+                  root["schema"] as? String == HealthMdExportSchema.identifier
+                    || root["schema"] as? String == "healthmd.rollup_summary" else {
+                throw AdapterError.invalidPresentation
+            }
+            var lines = content.components(separatedBy: "\n")
+            for key in ["schema_version", "source_schema_version", "rollup_rules_version"] {
+                let old = "  \"\(key)\" : 8,"
+                let last = "  \"\(key)\" : 8"
+                lines = lines.map { $0 == old ? "  \"\(key)\" : 7," : ($0 == last ? "  \"\(key)\" : 7" : $0) }
+            }
+            return lines.joined(separator: "\n")
+        case .csv:
+            // CSV can contain quoted multiline source values. Only a parsed metadata row owns
+            // this version, and the simple-operation gate excludes source archives/providers.
+            let rows = try parseCSV(content)
+            if rows.first?.first == "Period" { return content } // Calendar roll-up CSV has no schema metadata.
+            guard rows.count > 2, rows[2].count == 6,
+                  rows[2][1] == "Metadata", rows[2][2] == "schema_version", rows[2][3] == "8" else {
+                throw AdapterError.invalidPresentation
+            }
+            var lines = content.components(separatedBy: "\n")
+            guard lines.count > 2, lines[2] == rows[2].joined(separator: ",") else {
+                throw AdapterError.invalidPresentation
+            }
+            var versionRow = rows[2]
+            versionRow[3] = "7"
+            lines[2] = versionRow.joined(separator: ",")
+            return lines.joined(separator: "\n")
+        case .markdown, .obsidianBases:
+            guard content.hasPrefix("---\n"), let end = content.range(of: "\n---", range: content.index(content.startIndex, offsetBy: 4)..<content.endIndex) else {
+                // Markdown without metadata has no version field to project.
+                if format == .markdown { return content }
+                throw AdapterError.invalidPresentation
+            }
+            let front = String(content[..<end.lowerBound]).components(separatedBy: "\n").map { line in
+                ["schema_version: 8", "source_schema_version: 8", "rollup_rules_version: 8"].contains(line)
+                    ? String(line.dropLast()) + "7" : line
+            }.joined(separator: "\n")
+            var body = String(content[end.lowerBound...])
+            if front.contains("schema: healthmd.rollup_summary\n") {
+                body = body.components(separatedBy: "\n").map {
+                    $0 == "- **Rule source:** `_healthmd_data_dictionary.json` schema v8"
+                        ? "- **Rule source:** `_healthmd_data_dictionary.json` schema v7" : $0
+                }.joined(separator: "\n")
+            }
+            return front + body
+        }
     }
 
     private static let maxBatchBytes = 2 * 1024 * 1024
@@ -246,7 +305,7 @@ enum HealthMdRenderInputAdapter {
             "registry_version": Int(registry.registryVersion),
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
-            "render_profile_revision": 2,
+            "render_profile_revision": options.renderProfileRevision,
             "request_id": options.requestID,
             "session_id": sessionID,
             "profile": profile,
@@ -387,7 +446,8 @@ enum HealthMdRenderInputAdapter {
                 data: presentationData,
                 customization: presentationCustomization,
                 options: options,
-                semanticOutputKeys: selectedOutputKeys
+                semanticOutputKeys: selectedOutputKeys,
+                profile: registry.profileId
             ),
         ]
     }
@@ -396,7 +456,8 @@ enum HealthMdRenderInputAdapter {
         data: HealthData?,
         customization: FormatCustomization,
         options: Options,
-        semanticOutputKeys: [String]
+        semanticOutputKeys: [String],
+        profile: String
     ) throws -> [String: Any] {
         guard let data else {
             return [
@@ -409,11 +470,11 @@ enum HealthMdRenderInputAdapter {
         let requested = Set(options.formats)
         let markdown: Any
         if requested.contains("markdown") {
-            let rendered = data.toMarkdown(
+            let rendered = try historicalNativeContent(data.toMarkdown(
                 includeMetadata: options.includeMetadata,
                 groupByCategory: options.groupByCategory,
                 customization: customization
-            )
+            ), format: .markdown, profile: profile)
             let body: String
             if options.includeMetadata, rendered.hasPrefix("---\n") {
                 guard let delimiter = rendered.range(of: "\n---\n\n", range: rendered.index(rendered.startIndex, offsetBy: 4)..<rendered.endIndex)
@@ -428,7 +489,7 @@ enum HealthMdRenderInputAdapter {
         }
         let csvRows: Any
         if requested.contains("csv") {
-            let parsed = try parseCSV(data.toCSVThrowing(customization: customization))
+            let parsed = try parseCSV(historicalNativeContent(data.toCSVThrowing(customization: customization), format: .csv, profile: profile))
             guard parsed.first == ["Date", "Category", "Metric", "Value", "Unit", "Timestamp"]
             else { throw AdapterError.invalidPresentation }
             csvRows = parsed.dropFirst().map { row in
@@ -439,7 +500,7 @@ enum HealthMdRenderInputAdapter {
         }
         let jsonRoot: Any
         if requested.contains("json") || options.api != nil {
-            let rendered = try data.toJSONThrowing(customization: customization)
+            let rendered = try historicalNativeContent(data.toJSONThrowing(customization: customization), format: .json, profile: profile)
             jsonRoot = try orderedJSON(JSONSerialization.jsonObject(with: Data(rendered.utf8)))
         } else {
             jsonRoot = NSNull()

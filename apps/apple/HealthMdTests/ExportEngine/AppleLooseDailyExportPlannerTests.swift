@@ -11,6 +11,41 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testOriginalAuthorityUnmaterializedJobsResumeWithoutUpgradingTheirPin() async throws {
+        for mode in [ExportEngineMode.shadow, .rust] {
+            let current = try makeSyntheticAppleExportEnginePin(engine: mode, calendarTimeZoneIdentifier: "UTC")
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+            // Exact original authority from c77024b87170260531f8df8fc5b604ad35375466.
+            object["profile"] = "apple_health_data_v7"
+            object["public_schema_version"] = 7
+            object["registry_sha256"] = "b988fa9a0fea4cf3a0768ee6ad89251a15386c87eb929ce1e46b136fd33b1f4b"
+            object["render_profile_revision"] = 1
+            let original = try JSONDecoder().decode(AppleExportEnginePin.self, from: JSONSerialization.data(withJSONObject: object))
+            let settings = makeSimpleSettings(formats: [.json])
+            var snapshot = ExportSettingsSnapshot.from(
+                settings,
+                healthSubfolder: "Health",
+                appleExportEnginePin: original,
+                calendarTimeZoneIdentifier: "UTC"
+            )
+            // The scheduled and direct recovery boundary is the decoded frozen settings snapshot.
+            snapshot = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: JSONEncoder().encode(snapshot))
+            let planner = AppleLooseDailyExportPlanner(identitySource: fixedIdentitySource)
+            for surface in [AppleExportOperationSurface.localVaultWithoutSideEffects, .directGeneratedFilesWithoutSideEffects, .connectedReceivedFilesWithoutSideEffects] {
+                let operation = try unwrapPlanned(try await planner.plan(
+                    healthData: ExportFixtures.partialDay,
+                    settingsSnapshot: snapshot,
+                    surface: surface
+                ))
+                XCTAssertEqual(operation.pin, original)
+                XCTAssertEqual(operation.authority, mode)
+                let body = try XCTUnwrap(String(data: operation.selectedPlan.artifacts[0].inlineData, encoding: .utf8))
+                XCTAssertTrue(body.contains("\"schema_version\" : 7"))
+                XCTAssertFalse(body.contains("\"schema_version\" : 8"))
+            }
+        }
+    }
+
     func testConcreteShadowPlanAndAsyncPreviewAreTheExactNativeOraclePlan() async throws {
         let diagnostics = M6DiagnosticRecorder()
         let planner = AppleLooseDailyExportPlanner(
