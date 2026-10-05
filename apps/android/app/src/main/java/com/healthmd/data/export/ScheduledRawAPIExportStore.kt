@@ -1,7 +1,8 @@
 package com.healthmd.data.export
 
-import com.healthmd.domain.exportengine.sha256Hex
 import com.healthmd.rawexport.RawExportResult
+import com.healthmd.rawexport.RawHealthRepository
+import com.healthmd.rawexport.RawSnapshotExportOrchestrator
 import com.healthmd.rawexport.RawSnapshotRequest
 import java.io.File
 import java.io.FileOutputStream
@@ -10,8 +11,6 @@ import java.nio.file.StandardCopyOption
 import java.security.MessageDigest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -19,7 +18,10 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 /** Exact no-backup raw artifacts. No credentials, provider cursors, or fresh capture on ambiguity. */
-internal class ScheduledRawAPIExportStore(private val root: File) {
+internal class ScheduledRawAPIExportStore(
+    private val root: File,
+    private val discardFence: RecoveryDiscardFence = RecoveryDiscardFence(root, rawRoot = root),
+) {
     private val json = Json { encodeDefaults = true; ignoreUnknownKeys = false }
 
     @Serializable
@@ -37,7 +39,9 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
     @Serializable
     data class Slot(val captureStarted: Boolean = false, val result: RawExportResult? = null, val acknowledged: Boolean = false)
 
-    suspend fun open(expected: Operation, requireExisting: Boolean): Operation = transaction {
+    fun requireActive(operationId: String) = discardFence.withOperation(operationId) { Unit }
+
+    suspend fun open(expected: Operation, requireExisting: Boolean): Operation = transaction(expected.operationId) {
         require(expected.operationId.matches(Regex("[A-Za-z0-9._-]{1,128}")))
         require(APIRecoveryAuthorities.isValid(expected.authorityJson))
         require(expected.providerIds.size in 1..32 && expected.providerIds == expected.providerIds.distinct().sorted())
@@ -56,20 +60,21 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
         }
     }
 
-    suspend fun markCaptureStarted(operation: Operation, index: Int): Operation = transaction {
+    suspend fun markCaptureStarted(operation: Operation, index: Int): Operation = transaction(operation.operationId) {
         val slot = operation.slots[index]
         check(!slot.captureStarted && slot.result == null) { "Raw API capture cannot be repeated." }
         replace(operation, index, slot.copy(captureStarted = true))
     }
 
-    suspend fun prepare(operation: Operation, index: Int, result: RawExportResult): Operation = transaction {
+    suspend fun prepare(operation: Operation, index: Int, result: RawExportResult): Operation = transaction(operation.operationId) {
         check(operation.slots[index].captureStarted && operation.slots[index].result == null)
         val source = File(result.finalLocation)
-        require(result.bytesWritten in 0..MAX_TOTAL_BYTES && source.length() == result.bytesWritten)
+        require(!Files.isSymbolicLink(source.toPath()) && result.bytesWritten in 0..MAX_TOTAL_BYTES && source.length() == result.bytesWritten)
         check(retainedBytes() + result.bytesWritten <= MAX_TOTAL_BYTES) { "Raw API journal budget exhausted." }
         val target = File(directory(operation.operationId), artifactName(index))
-        check(!target.exists())
+        check(!target.exists() && !Files.isSymbolicLink(target.toPath()))
         val partial = File(target.parentFile, "${target.name}.partial")
+        check(!partial.exists() && !Files.isSymbolicLink(partial.toPath()))
         val digest = MessageDigest.getInstance("SHA-256")
         var count = 0L
         try {
@@ -96,11 +101,11 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
         }
     }
 
-    suspend fun artifact(operation: Operation, index: Int): File = transaction {
+    suspend fun artifact(operation: Operation, index: Int): File = transaction(operation.operationId) {
         val result = requireNotNull(operation.slots[index].result) { "Raw API artifact is unavailable; restart required." }
         require(result.finalLocation == artifactName(index))
         val file = File(directory(operation.operationId), artifactName(index))
-        require(file.isFile && file.length() == result.bytesWritten)
+        require(!Files.isSymbolicLink(file.toPath()) && file.isFile && file.length() == result.bytesWritten)
         val digest = MessageDigest.getInstance("SHA-256")
         file.inputStream().use { input ->
             val buffer = ByteArray(64 * 1024)
@@ -115,19 +120,48 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
         file
     }
 
-    suspend fun acknowledge(operation: Operation, index: Int): Operation = transaction {
+    suspend fun acknowledge(operation: Operation, index: Int): Operation = transaction(operation.operationId) {
         check(operation.slots[index].result != null)
         replace(operation, index, operation.slots[index].copy(acknowledged = true))
     }
 
     /** Only a successfully reconciled operation may be purged automatically. */
-    suspend fun discardCompleted(operationId: String) = transaction {
+    suspend fun discardCompleted(operationId: String) = transaction(operationId) {
         val operation = load(operationId) ?: return@transaction
         if (operation.slots.all { it.acknowledged }) check(directory(operationId).deleteRecursively())
     }
 
-    private suspend fun <T> transaction(action: suspend CoroutineScope.() -> T): T =
-        withContext(Dispatchers.IO) { mutex.withLock { action() } }
+    /**
+     * Metadata may suspend, but sorting-spool allocation must not race discard. Resolve it once,
+     * reverify native authority, then start native capture under the same owned mutation lock.
+     * All sort spools and capture partials live inside the exact journal's private directory.
+     */
+    suspend fun capture(operation: Operation, index: Int, repository: RawHealthRepository,
+        verifyBeforeRead: suspend () -> Unit): RawExportResult {
+        requireActive(operation.operationId)
+        val definitions = repository.typeDefinitions()
+        val capabilities = repository.capabilities()
+        verifyBeforeRead()
+        val frozenMetadata = object : RawHealthRepository by repository {
+            override fun typeDefinitions() = definitions
+            override suspend fun capabilities() = capabilities
+        }
+        return discardFence.beginOperation(operation.operationId) {
+            require(load(operation.operationId) == operation)
+            RawSnapshotExportOrchestrator(repository = frozenMetadata,
+                storage = captureStorage(operation, index), spoolRoot = directory(operation.operationId)).export(operation.request)
+        }
+    }
+
+    /** Capture partials are operation-owned too; a late writer cannot promote or recreate them. */
+    fun captureStorage(operation: Operation, index: Int): com.healthmd.rawexport.RawExportStorage =
+        discardFence.withOperation(operation.operationId) {
+            require(load(operation.operationId) == operation && index in operation.slots.indices)
+            RecoveryDiscardFenceRawStorage(discardFence, operation.operationId, directory(operation.operationId), index)
+        }
+
+    private suspend fun <T> transaction(operationId: String, action: CoroutineScope.() -> T): T =
+        withContext(Dispatchers.IO) { discardFence.withOperation(operationId) { action() } }
 
     private fun replace(operation: Operation, index: Int, slot: Slot): Operation {
         require(load(operation.operationId) == operation) { "Raw API journal frontier changed." }
@@ -138,7 +172,7 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
         val directory = directory(operationId)
         if (!directory.exists()) return null
         val file = File(directory, "journal.json")
-        require(file.isFile && file.length() in 1..MAX_METADATA_BYTES)
+        require(!Files.isSymbolicLink(file.toPath()) && file.isFile && file.length() in 1..MAX_METADATA_BYTES)
         val result = json.decodeFromString<Operation>(file.readText())
         require(result.version == 1 && result.operationId == operationId && result.slots.size == result.providerIds.size)
         return result
@@ -149,20 +183,20 @@ internal class ScheduledRawAPIExportStore(private val root: File) {
         require(bytes.size <= MAX_METADATA_BYTES)
         val directory = directory(operation.operationId)
         val temporary = File(directory, "journal.tmp")
+        require(!Files.isSymbolicLink(temporary.toPath()) && !Files.isSymbolicLink(File(directory, "journal.json").toPath()))
         FileOutputStream(temporary).use { it.write(bytes); it.flush(); it.fd.sync() }
         move(temporary, File(directory, "journal.json"))
         runCatching { java.nio.channels.FileChannel.open(directory.toPath(), java.nio.file.StandardOpenOption.READ).use { it.force(true) } }
     }
 
     private fun retainedBytes(): Long = root.walkTopDown().filter { it.isFile && it.name.endsWith(".bin") }.sumOf { it.length() }
-    private fun directory(operationId: String): File = File(root, sha256Hex(operationId.encodeToByteArray()))
+    private fun directory(operationId: String): File = File(root, RecoveryDiscardFence.operationHash(operationId))
     private fun artifactName(index: Int): String = "artifact-$index.bin"
     private fun move(source: File, target: File) {
         Files.move(source.toPath(), target.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
     }
     private fun ByteArray.hex(): String = joinToString("") { (it.toInt() and 255).toString(16).padStart(2, '0') }
     private companion object {
-        val mutex = Mutex()
         const val MAX_METADATA_BYTES = 1_048_576L
         const val MAX_TOTAL_BYTES = 536_870_912L
         const val MAX_OPERATIONS = 64

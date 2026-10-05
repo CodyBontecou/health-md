@@ -27,6 +27,8 @@ import io.mockk.mockk
 import java.nio.file.Files
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
@@ -34,6 +36,87 @@ import org.junit.Test
 class RawSnapshotRecoveryAuthorityTest {
     private val day = LocalDate.ofEpochDay(10_000)
     private val endpoint = "https://synthetic.example.test/raw"
+
+    @Test
+    fun losingTheWholeRawJournalAfterAttemptedCaptureNeverRecapturesWithoutAnUpload() = runTest {
+        withHarness { h ->
+            h.repository.failCapture = true
+            assertThat(h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT).isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(1)
+            java.io.File(h.root, "scheduled-raw-api-v1").deleteRecursively()
+            h.repository.failCapture = false
+            assertThat(h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT).isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.bodies).isEmpty()
+        }
+    }
+
+    @Test
+    fun explicitDiscardAfterUnknownRawUploadOutcomePurgesRetainedCopiesAndPreventsRestartedDelivery() = runTest {
+        withHarness { h ->
+            h.failUpload = true
+            h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT)
+            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.bodies).hasSize(1)
+            RecoveryDiscardFence(h.root).discard(listOf("raw-operation"))
+            h.failUpload = false
+            assertThat(h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT).isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.bodies).hasSize(1)
+            assertThat(h.root.walkTopDown().filter { it.name == "journal.json" || it.name.endsWith(".bin") || it.name.startsWith("spool-") }.toList()).isEmpty()
+        }
+    }
+
+    @Test
+    fun discardWhileRawMetadataIsSuspendedPreventsLateSpoolAllocationAndSourceRead() = runTest {
+        withHarness { h ->
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            h.repository.beforeCapabilities = { entered.complete(Unit); release.await() }
+            val late = async { h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT) }
+            entered.await()
+            RecoveryDiscardFence(h.root).discard(listOf("raw-operation"))
+            release.complete(Unit)
+            assertThat(late.await().isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(0)
+            assertThat(h.bodies).isEmpty()
+            assertThat(h.root.walkTopDown().filter { it.name.startsWith("spool-") || it.name == "journal.json" }.toList()).isEmpty()
+        }
+    }
+
+    @Test
+    fun discardDuringSuspendedRawReadPurgesOwnedSortSpoolsWithoutWaitingForCoroutineTeardown() = runTest {
+        withHarness { h ->
+            val entered = CompletableDeferred<Unit>()
+            val release = CompletableDeferred<Unit>()
+            h.repository.afterRead = { entered.complete(Unit); release.await() }
+            val late = async { h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT) }
+            entered.await()
+            assertThat(h.root.walkTopDown().filter { it.name.startsWith("spool-") }.count()).isEqualTo(1)
+            RecoveryDiscardFence(h.root).discard(listOf("raw-operation"))
+            assertThat(h.root.walkTopDown().filter { it.name.startsWith("spool-") }.toList()).isEmpty()
+            release.complete(Unit)
+            assertThat(late.await().isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.bodies).isEmpty()
+            assertThat(h.root.walkTopDown().filter { it.name.startsWith("spool-") || it.name == "journal.json" }.toList()).isEmpty()
+        }
+    }
+
+    @Test
+    fun explicitDiscardDuringRawPreparationCannotRecaptureAfterRunnerRestart() = runTest {
+        withHarness { h ->
+            h.repository.afterRead = { RecoveryDiscardFence(h.root).discard(listOf("raw-operation")) }
+            val first = h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT)
+            assertThat(first.isFailure).isTrue()
+            h.repository.afterRead = {}
+            val restarted = h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT)
+            assertThat(restarted.isFailure).isTrue()
+            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.bodies).isEmpty()
+            assertThat(h.root.walkTopDown().filter { it.name == "journal.json" || it.name.endsWith(".bin") || it.name.endsWith(".partial") }.toList()).isEmpty()
+        }
+    }
 
     @Test
     fun legacyAndRotatedEndpointAuthorizationHeaderOrProfileFailBeforeAnyRawReadOrUpload() = runTest {
@@ -95,7 +178,7 @@ class RawSnapshotRecoveryAuthorityTest {
             h.checkpointAllowed = false
             val notDurable = h.runner().exportRange(day, day, h.settings, ExportTarget.API_ENDPOINT)
             assertThat(notDurable.isFailure).isTrue()
-            assertThat(h.repository.reads).isEqualTo(1)
+            assertThat(h.repository.reads).isEqualTo(0)
             assertThat(h.bodies).isEmpty()
         }
     }
@@ -182,8 +265,12 @@ class RawSnapshotRecoveryAuthorityTest {
     private class Repository : RawHealthRepository {
         var reads = 0
         var failCapture = false
-        var afterRead: () -> Unit = {}
-        override suspend fun capabilities() = RawProviderCapabilities(available = true)
+        var afterRead: suspend () -> Unit = {}
+        var beforeCapabilities: suspend () -> Unit = {}
+        override suspend fun capabilities(): RawProviderCapabilities {
+            beforeCapabilities()
+            return RawProviderCapabilities(available = true)
+        }
         override fun stream(request: RawSnapshotRequest) = flow {
             reads++; afterRead()
             if (failCapture) error("synthetic capture interrupted")

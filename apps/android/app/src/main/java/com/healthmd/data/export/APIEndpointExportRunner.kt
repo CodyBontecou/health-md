@@ -266,7 +266,9 @@ class APIEndpointExportRunner private constructor(
             (frozenSettings.executionAPIRecovery?.operationId != durableOperationId ||
                 frozenSettings.executionAPIRecovery?.settingsSnapshotJson != durableSettingsSnapshotJson)
         ) return authorityFailure(normalizedDates)
-        val authorityGuard = frozenSettings.apiRecoveryGuard(credentialStore, requestConfiguration)
+        val authorityGuard = frozenSettings.apiRecoveryGuard(credentialStore, requestConfiguration) {
+            durableOperationId?.let { operationStore?.requireActive(it) }
+        }
         try {
             authorityGuard.verify()
         } catch (_: APIRecoveryAuthorityException) {
