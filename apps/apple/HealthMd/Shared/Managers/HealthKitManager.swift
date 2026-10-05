@@ -66,8 +66,8 @@ nonisolated struct HealthKitEarliestDataDiscovery: Equatable, Sendable {
         failedTypeIdentifiers.isEmpty && unresolvedMetricIDs.isEmpty
     }
 
-    /// Stronger than query completeness: only OS 27+ can prove that HealthKit
-    /// reported no limited-history boundary for the entire selected scope.
+    /// Stronger than query completeness: a compile-supported native boundary
+    /// assessment must cover the entire selected scope; OS version is not proof.
     var supportsUnqualifiedFullHistoryClaim: Bool {
         isComplete && historyAuthorization.supportsUnqualifiedFullHistoryClaim
     }
@@ -592,8 +592,8 @@ final class HealthKitManager: ObservableObject {
         ) == .unnecessary
     }
 
-    /// Assesses the selected sample types using HealthKit's OS 27 limited-history
-    /// API. HealthKit intentionally omits both unrestricted and denied types, so
+    /// Assesses selected sample types only when the adapter has a compile-supported
+    /// native boundary API. HealthKit omits both unrestricted and denied types, so
     /// `full_history` means "no limited boundary reported", not proof that every
     /// requested read permission was granted.
     func assessHistoryAuthorization(
@@ -633,7 +633,7 @@ final class HealthKitManager: ObservableObject {
                 state: .apiUnavailable,
                 assessedTypeIdentifiers: sampleTypes.map(\.identifier),
                 unassessedMetricIDs: Array(unassessedMetricIDs),
-                message: "This OS cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
+                message: "This build cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
             )
         } else if sampleTypes.isEmpty {
             assessment = HealthHistoryAuthorizationAssessment(
