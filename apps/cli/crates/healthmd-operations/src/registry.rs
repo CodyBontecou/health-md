@@ -138,6 +138,20 @@ const OPERATION_DEFINITIONS: &[OperationDefinition] = &[
         local_only: true,
     },
     OperationDefinition {
+        name: "healthmd_export_plan",
+        title: "Plan a stored-authority JSON export",
+        description: "Resolve a configuration-only summary/JSON/overwrite plan using existing independently approved native/host authority and an opaque previously registered host destination. No health/earliest-date/preview reads, wake, enrollment, quota, output or settings writes. Installed v4 support is required; this does not execute or approve an export.",
+        kind: OperationKind::Catalog,
+        local_only: true,
+    },
+    OperationDefinition {
+        name: "healthmd_export_approval",
+        title: "Relay an existing exact export decision",
+        description: "Relay only separately stored exact host and native decisions for an issued v4 plan binding. This request and MCP annotations cannot create consent or authority. No execution adapter is provided.",
+        kind: OperationKind::Export,
+        local_only: true,
+    },
+    OperationDefinition {
         name: "healthmd_export_files",
         title: "Export Health.md files",
         description: "After explicit user approval, run a durable generated-file export from the explicitly selected iPhone (v1) or Android phone (v2) into an existing desktop destination. Omitted policy uses iOS requested dates or Android saved settings. Android rejects request-scoped selectors; profiles own scope and require an installed-peer policy advertisement. Unknown or blocked profiles fail closed without saved-settings fallback.",
@@ -306,6 +320,12 @@ fn base_operation_declarations() -> Vec<Value> {
                         "openWorldHint": false
                     });
                 }
+                "healthmd_export_approval" => {
+                    declaration["annotations"] = mutating_annotations(false);
+                }
+                "healthmd_export_plan" => {
+                    declaration["annotations"] = json!({"readOnlyHint": true, "destructiveHint": false, "idempotentHint": false, "openWorldHint": false});
+                }
                 "healthmd_export_files" | "healthmd_export_raw" | "healthmd_export_job_resume" => {
                     declaration["_meta"] = json!({"anthropic/requiresUserInteraction": true});
                     declaration["annotations"] = mutating_annotations(false);
@@ -379,6 +399,8 @@ fn base_input_schema(name: &str) -> Value {
         }),
         "healthmd_pairing_start" => pairing_start_schema(),
         "healthmd_pairing_status" => pairing_status_schema(),
+        "healthmd_export_plan" => crate::agent_planning::plan_input_schema(),
+        "healthmd_export_approval" => crate::agent_planning::approval_input_schema(),
         "healthmd_export_files" => export_files_schema(),
         "healthmd_export_raw" => raw_export_schema(),
         "healthmd_raw_artifact_read" => raw_artifact_read_schema(),
@@ -1323,7 +1345,7 @@ mod tests {
     #[test]
     fn local_catalog_exposes_bounded_pairing_tools_with_safe_annotations() {
         let tools = list(SurfaceProfile::LocalDirect);
-        assert_eq!(tools.len(), 21);
+        assert_eq!(tools.len(), 23);
         let start = tools
             .iter()
             .find(|tool| tool["name"] == "healthmd_pairing_start")

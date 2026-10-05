@@ -113,6 +113,85 @@ pub fn tool_catalog(tool_name: Option<&str>) -> Result<Value, String> {
     healthmd_mcp::tool_catalog(healthmd_mcp::SurfaceProfile::LocalDirect, tool_name)
 }
 
+/// Execute one fixed CLI plan/approval operation without initializing identity or permissions.
+/// # Errors
+/// Invalid complete DTOs reject before native credentials or network work.
+pub async fn agent(
+    options: ServeOptions,
+    operation: &str,
+    raw: &[u8],
+    cancellation: CancellationToken,
+) -> Result<Value, healthmd_operations::BackendError> {
+    match operation {
+        "healthmd_export_plan" => {
+            healthmd_operations::agent_plan_from_bytes(raw).map_err(|e| {
+                healthmd_operations::BackendError::new(
+                    e.to_string(),
+                    "Invalid typed planning arguments.",
+                )
+            })?;
+        }
+        "healthmd_export_approval" => {
+            healthmd_operations::agent_approval_from_bytes(raw).map_err(|e| {
+                healthmd_operations::BackendError::new(
+                    e.to_string(),
+                    "Invalid typed approval arguments.",
+                )
+            })?;
+        }
+        _ => {
+            return Err(healthmd_operations::BackendError::new(
+                "unsupported_capability",
+                "Unknown fixed agent operation.",
+            ));
+        }
+    }
+    let client = Arc::new(
+        healthmd_client::direct::DirectClient::open_planning()
+            .map_err(crate::agent_direct::agent_backend_error)?,
+    );
+    let backend = crate::agent_direct::DirectAgentBackend::new(
+        client,
+        Arc::new(healthmd_client::agent_host::NativeProtectedHostKey(
+            healthmd_client::agent_host::NativeHostKeyReader,
+        )),
+        options.device_id,
+        options.port,
+        std::time::Duration::from_secs(options.timeout_seconds),
+        Arc::new(tokio::sync::Mutex::new(())),
+    );
+    execute_agent_operation(Arc::new(backend), operation, raw, cancellation).await
+}
+
+/// CLI/MCP parity seam using the same typed application service and injected backend.
+/// # Errors
+/// Permission/DTO/issuer failures return only stable health-free codes.
+pub async fn execute_agent_operation(
+    backend: Arc<dyn healthmd_operations::HealthDataBackend>,
+    operation: &str,
+    raw: &[u8],
+    cancellation: CancellationToken,
+) -> Result<Value, healthmd_operations::BackendError> {
+    let service = healthmd_operations::HealthOperations::new(
+        backend,
+        healthmd_operations::SurfaceProfile::LocalDirect,
+    );
+    let context = healthmd_operations::CallContext {
+        caller: healthmd_operations::CallerIdentity::local(),
+        cancellation,
+        session_id: None,
+        progress: None,
+    };
+    match operation {
+        "healthmd_export_plan" => service.plan_export(&context, raw).await,
+        "healthmd_export_approval" => service.relay_export_approval(&context, raw).await,
+        _ => Err(healthmd_operations::BackendError::new(
+            "unsupported_capability",
+            "Unknown fixed agent operation.",
+        )),
+    }
+}
+
 /// Execute one canonical typed query without an MCP transport envelope.
 ///
 /// CLI and MCP adapters both normalize through the shared operation registry and traverse pages

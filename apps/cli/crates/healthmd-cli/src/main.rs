@@ -111,6 +111,10 @@ enum Command {
     Extract(ExtractArgs),
     /// Run the same canonical typed operation exposed by local MCP.
     Query(QueryArgs),
+    /// Plan a summary JSON export using existing bounded native/host authority; never execute.
+    Plan(AgentArgs),
+    /// Relay separately stored exact decisions for an issued plan; never create consent.
+    Approval(AgentArgs),
     /// Resume an interrupted durable direct job.
     Resume(ResumeArgs),
     /// Request cancellation of a durable direct job.
@@ -121,6 +125,17 @@ enum Command {
     Mcp(McpArgs),
     /// Configure a supported local AI host and pair a mobile source when needed.
     Setup(SetupArgs),
+}
+
+#[derive(Debug, Args)]
+struct AgentArgs {
+    /// Complete strict JSON DTO; inspect `healthmd mcp schema healthmd_export_plan` or
+    /// `healthmd mcp schema healthmd_export_approval`. Destination is an existing opaque binding.
+    #[arg(long)]
+    arguments: String,
+    /// Bounded listener timeout. Planning never uses a wake nudge/window.
+    #[arg(long, default_value_t = 30)]
+    timeout_seconds: u64,
 }
 
 #[derive(Debug, Args)]
@@ -826,6 +841,14 @@ async fn run(cli: Cli) -> Result<CommandSuccess, CommandError> {
         Command::Query(options) => direct_query(options, device, port)
             .await
             .map(CommandSuccess::json),
+        Command::Plan(options) => direct_agent(options, "healthmd_export_plan", device, port)
+            .await
+            .map(CommandSuccess::json),
+        Command::Approval(options) => {
+            direct_agent(options, "healthmd_export_approval", device, port)
+                .await
+                .map(CommandSuccess::json)
+        }
         Command::Resume(options) => direct_resume(options, device, port).await,
         Command::Cancel(options) => direct_cancel(options, device, port)
             .await
@@ -958,6 +981,50 @@ async fn direct_query(
             code: "healthmd_query_failed",
             message: error.message,
         },
+    })
+}
+
+async fn direct_agent(
+    options: AgentArgs,
+    operation: &str,
+    device: Option<Uuid>,
+    port: u16,
+) -> Result<Value, CommandError> {
+    if !(5..=600).contains(&options.timeout_seconds) {
+        return Err(usage_error(
+            "agent timeout must be between 5 and 600 seconds",
+        ));
+    }
+    mcp::agent(
+        mcp::ServeOptions {
+            device_id: device,
+            port,
+            timeout_seconds: options.timeout_seconds,
+            wake_timeout_seconds: Some(0),
+        },
+        operation,
+        options.arguments.as_bytes(),
+        tokio_util::sync::CancellationToken::new(),
+    )
+    .await
+    .map_err(|error| CommandError {
+        code: match error.code.as_str() {
+            "invalid_request" => "invalid_request",
+            "approval_required" => "approval_required",
+            "permission_required" => "permission_required",
+            "plan_expired" => "plan_expired",
+            "binding_changed" => "binding_changed",
+            "revision_conflict" => "revision_conflict",
+            "unsupported_metric" => "unsupported_metric",
+            "unsafe_path" => "unsafe_path",
+            "path_collision" => "path_collision",
+            "native_rebind_required" => "native_rebind_required",
+            "direct_source_unavailable" => "direct_source_unavailable",
+            "query_budget_exceeded" => "query_budget_exceeded",
+            "entitlement_required" => "entitlement_required",
+            _ => "unsupported_capability",
+        },
+        message: error.message,
     })
 }
 
@@ -2350,6 +2417,8 @@ const fn command_name(command: &Command) -> &'static str {
         Command::Export(_) => "export",
         Command::Extract(_) => "extract",
         Command::Query(_) => "query",
+        Command::Plan(_) => "plan",
+        Command::Approval(_) => "approval",
         Command::Resume(_) => "resume",
         Command::Cancel(_) => "cancel",
         Command::Direct(DirectArgs {

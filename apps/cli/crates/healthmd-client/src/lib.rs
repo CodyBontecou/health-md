@@ -2,6 +2,12 @@
 
 //! Cross-platform transport, storage, and durable receivers for Health.md.
 
+pub mod agent_bridge;
+pub mod agent_host;
+mod agent_host_key;
+pub mod agent_planning;
+mod agent_private_fs;
+mod agent_validation;
 pub mod credentials;
 pub mod direct;
 pub mod file_receiver;
@@ -28,6 +34,16 @@ use thiserror::Error;
 #[derive(Debug, Error)]
 #[non_exhaustive]
 pub enum ClientError {
+    #[error("agent issuer authority is unavailable")]
+    AgentAuthorityUnavailable,
+    #[error("agent issuer store is busy")]
+    AgentStoreBusy,
+    #[error("agent issuer store reached its bounded capacity")]
+    AgentStoreFull,
+    #[error(transparent)]
+    Agent(#[from] healthmd_protocol::v4::Error),
+    #[error("agent source rejected the request")]
+    AgentRejected(healthmd_protocol::v4::AgentErrorCode),
     #[error("direct client storage is unavailable: {0}")]
     Storage(String),
     #[error("the direct client installation identity is invalid")]

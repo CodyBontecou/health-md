@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+pub mod agent_planning;
 pub mod backend;
 pub mod limits;
 pub mod model;
@@ -8,6 +9,9 @@ pub mod receipt;
 pub mod registry;
 pub mod service;
 
+pub use agent_planning::{
+    AgentPlanInput, agent_approval_from_bytes, agent_plan_from_bytes, agent_rpc_bytes_valid,
+};
 pub use backend::{
     BackendCapabilities, BackendError, CallContext, CallerIdentity, CallerMode, HealthDataBackend,
     PairingStartResult, ProgressUpdate, QueryDetailLevel, QueryPageRequest,

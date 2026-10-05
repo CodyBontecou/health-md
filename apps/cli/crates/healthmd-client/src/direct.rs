@@ -225,6 +225,14 @@ pub struct DirectClient<C = OsCredentialStore> {
 }
 
 impl DirectClient<OsCredentialStore> {
+    /// Open only existing identity for bridge planning. Unlike `open`, this cannot initialize
+    /// installation storage, jobs, output directories or credentials.
+    /// # Errors
+    /// Missing/corrupt/unsafe identity rejects without side effects.
+    pub fn open_planning() -> Result<Self, ClientError> {
+        Self::open_planning_with_credentials(StorageLayout::discover()?, OsCredentialStore)
+    }
+
     /// Open the durable portable direct-client context.
     ///
     /// # Errors
@@ -242,7 +250,99 @@ impl DirectClient<OsCredentialStore> {
     }
 }
 
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+struct ExistingPlanningIdentity {
+    version: u16,
+    #[serde(rename = "installationID")]
+    installation_id: SwiftUuid,
+    #[serde(with = "healthmd_protocol::time")]
+    created_at: chrono::DateTime<Utc>,
+}
+
 impl<C: crate::credentials::CredentialStore> DirectClient<C> {
+    /// Open an existing, no-follow private identity with an injected native credential reader.
+    /// Never creates identity/directories/permissions or calls credential mutation methods.
+    /// # Errors
+    /// Missing/unsafe/corrupt identity fails. The deployed binary64 identity timestamp is kept;
+    /// this local legacy record is not incorrectly interpreted as a new integer-only v4 DTO.
+    pub fn open_planning_with_credentials(
+        layout: StorageLayout,
+        credentials: C,
+    ) -> Result<Self, ClientError> {
+        let (directory, _) = crate::agent_private_fs::inspect_root(&layout.root)?;
+        crate::agent_private_fs::private_directory(&directory)?;
+        let bytes = crate::agent_private_fs::read_private(&directory, "identity.json", 16_384)?;
+        let existing: ExistingPlanningIdentity =
+            serde_json::from_slice(&bytes).map_err(|_| ClientError::InvalidIdentity)?;
+        if existing.version != 1 || existing.installation_id.0.is_nil() {
+            return Err(ClientError::InvalidIdentity);
+        }
+        let identity = ClientIdentity {
+            version: existing.version,
+            installation_id: existing.installation_id,
+            created_at: existing.created_at,
+        };
+        Ok(Self {
+            identity,
+            layout,
+            display_name: local_display_name(),
+            trust_store: TrustStore::new(credentials),
+        })
+    }
+
+    /// Authenticated identity selection for planning, with no platform guessing.
+    /// # Errors
+    /// Missing/ambiguous trust or an unknown platform requires explicit setup.
+    pub async fn planning_peer(
+        &self,
+        device: Option<Uuid>,
+    ) -> Result<healthmd_protocol::v4::Peer, ClientError> {
+        let selected = self.selected_source(device).await?;
+        let platform = match selected.platform {
+            Some(PeerPlatform::Ios) => healthmd_protocol::v4::PeerPlatform::Apple,
+            Some(PeerPlatform::Android) => healthmd_protocol::v4::PeerPlatform::Android,
+            _ => return Err(healthmd_protocol::v4::Error::UnsupportedCapability.into()),
+        };
+        Ok(healthmd_protocol::v4::Peer {
+            host_installation_id: healthmd_protocol::v4::ControlUuid(
+                self.identity.installation_id.0.to_string(),
+            ),
+            source_installation_id: healthmd_protocol::v4::ControlUuid(
+                selected.installation_id.0.to_string(),
+            ),
+            platform,
+        })
+    }
+
+    /// Separate opt-in bridge listener; no wake wait, nudge, enrollment or trust writes.
+    /// # Errors
+    /// Authentication/independent base-extension negotiation or bounded transport may fail.
+    pub async fn connect_bridge(
+        &self,
+        device: Option<Uuid>,
+        port: u16,
+        timeout: Duration,
+        cancellation: CancellationToken,
+    ) -> Result<crate::agent_bridge::BridgeSession<'_>, ClientError> {
+        let peer = self.planning_peer(device).await?;
+        let selected = Uuid::parse_str(&peer.source_installation_id.0)
+            .map_err(|_| ClientError::InvalidTrustState)?;
+        let trust = self.load_trust().await?;
+        let listener = bind_listener(port).await?;
+        crate::agent_bridge::BridgeSession::accept(
+            &listener,
+            self.identity.installation_id,
+            selected,
+            trust,
+            timeout,
+            cancellation,
+            self,
+            device,
+        )
+        .await
+    }
+
     /// List locally trusted mobile sources without making a network connection.
     ///
     /// # Errors
@@ -2633,6 +2733,43 @@ impl<C: crate::credentials::CredentialStore> DirectClient<C> {
             }
         }
         Err(last_error)
+    }
+}
+
+#[async_trait::async_trait]
+impl<C: crate::credentials::CredentialStore> crate::agent_bridge::CurrentBridgeTrust
+    for DirectClient<C>
+{
+    async fn require_current(
+        &self,
+        requested: Option<Uuid>,
+        expected: &TrustedClient,
+    ) -> Result<(), ClientError> {
+        // Fresh native-store read on every RPC/response and persistence/return fence. Do not
+        // consult wake enrollment or reuse the cached authenticated peer as authorization.
+        let current = self.load_trust().await?;
+        let selected = match requested {
+            Some(id) => id,
+            None => match current.trusted_clients.as_slice() {
+                [only] => only.installation_id.0,
+                _ => return Err(healthmd_protocol::v4::Error::ApprovalRequired.into()),
+            },
+        };
+        let record = current
+            .client(selected)
+            .ok_or(healthmd_protocol::v4::Error::ApprovalRequired)?;
+        if current.owner_installation_id != self.identity.installation_id
+            || record.installation_id != expected.installation_id
+            || record.platform != expected.platform
+            || record.paired_at != expected.paired_at
+            || !healthmd_protocol::crypto::constant_time_equal(
+                &record.reconnect_secret,
+                &expected.reconnect_secret,
+            )
+        {
+            return Err(healthmd_protocol::v4::Error::ApprovalRequired.into());
+        }
+        Ok(())
     }
 }
 
