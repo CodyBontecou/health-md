@@ -8,19 +8,20 @@
 
 ## Implementation progress (2026-10-04)
 
-The dedicated `goal/agent-bridge/integration` branch includes four serial waves through
-`4df7cc180`: deferred B01/B05 contracts and bounded native codecs, B02/B03 mobile-source
-repairs, partial B04 profile handling, B09 native JSON/settings resolution, B16 before-capture
-authority and durable discard, Worker-only B15 FCM, scoped Apple compiler/SDK repairs, and
-native/host private issuer stores with callable configuration-only plan/exact-approval services. The audit findings below retain their original baseline context; consult the
-[implementation ledger](../qa/agent-bridge-implementation.md) for commits, exact test/build evidence,
+The dedicated `goal/agent-bridge/integration` branch includes five serial source waves through
+`cccbb13de`: deferred B01/B05 contracts/codecs, B02/B03 repairs, partial B04 profile handling,
+B09 native JSON/settings resolution, B16 authority/discard, Worker-only B15 FCM, scoped Apple
+compiler/SDK repairs, private native/host stored planning, and exercised live consent/key/configuration/
+publication/return fences. The audit findings below retain their original baseline context; consult the
+[implementation ledger](../qa/agent-bridge-implementation.md) for commits, exact source/test evidence,
 retained failures and remaining acceptance.
 
-Central checks preserve frozen export/protocol/registry/Shared Setup bytes. Stored native/host
-authority and zero-read planning now have partial working source services, not native setup/routes
-or bound execution. Canonical MCP regeneration and unfiltered combined CLI gates now pass after
-fresh disk admission; native discovery-pointer interoperability, delayed clock/publication checks
-and combined native gates still block acceptance.
+Frozen export/protocol/registry/Shared Setup bytes remain unchanged. Callable stored planning is not
+native setup/routes or bound execution. Canonical catalog regeneration resolved prior drift; latest
+host lane tests pass unfiltered256/3ignored/0filtered. Kotlin now truthfully represents31 fixed/default
+output leaves without widening the preset. Actual Swift-complete discovery-to-host semantics pass;
+Kotlin-after candidate/interoperability and fifth-wave merged compiler/native gates are not run.
+Fresh coordinator disk is below6GiB; no post-merge compilation or admission bypass occurred.
 V4 dispatch/capture/journals, typed queries/projection, permissioned controls, recipes/schedules and
 ZIP/dictionaries remain unfinished. Capabilities stay planned; no four-way, physical, installed,
 live-provider or release qualification is inferred.
@@ -164,10 +165,16 @@ The [implementation ledger](../qa/agent-bridge-implementation.md) records subseq
 
 The third wave through `770c74319` adds bounded both-platform request-settings/renderer resolution, authoritative Apple profile-ID lookup, Android exact-owned discard/reconciliation and strict private revocation parsing. Scoped Apple repairs preserve wire bytes and fail closed on unsupported history-boundary SDKs. Combined Play/F-Droid unit/lint/build/binding gates and generic iOS application/test-target build-for-testing now pass; app-host tests, full export-doc generation and installed/physical qualification are not run.
 
-The fourth wave through `4df7cc180` adds real bounded native/host issuer-private stores, independent local decisions, actual request-settings-backed source planning services and shared CLI/MCP plan/approval adapters. Lane tests exercise actual stores/services and encrypted synthetic peers; they do not connect the production Swift/Kotlin counterparts. Full Rust workspace remains red on the stale packaged catalog; coordinator regeneration paused before compilation with exit70 below6GiB. Contract validator after each serial merge and60 tests pass; combined compiler gates remain unrun.
+The fourth wave through `4df7cc180` adds real bounded native/host issuer-private stores, independent local decisions, actual request-settings-backed source planning services and shared CLI/MCP plan/approval adapters. Lane tests exercise actual stores/services and encrypted synthetic peers; they do not connect the production Swift/Kotlin counterparts. At that handoff the full Rust workspace was red on stale packaged catalog and first coordinator regeneration refused below6GiB. Those retained historical failures are superseded only by the admitted catalog follow-up below; native routes/execution were not completed.
 
-These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising/native setup/routes, request-owned capture/journals, bound execution and recipes remain pending. Kotlin discovery's three layout pointers do not satisfy the host's full effective-settings support check; delayed consent/private-key/metadata expiry boundaries require further tests. HMAC does not prevent valid historical-snapshot rollback, native fresh-open root protection is unqualified, Windows new issuer storage deliberately rejects, and host setup is currently single-root. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. B21 follow-ups `aac010955`/`5a03fa7ea` correct unsupported native history-readiness and OS-only guidance while retaining legacy wire keys/types. Both committed macOS/iOS test-target build-for-testing gates pass; the actual-source metadata probe has retained red/green evidence, not app/service-host execution.
+These are **partial implementations**, not the four-way no-settings journey. Installed v4 advertising/native setup/routes, request-owned capture/journals, bound execution and recipes remain pending. Fourth-wave three-pointer Kotlin discovery and delayed consent/private-key/publication gaps were reproduced and receive bounded fifth-wave source fixes below; missing after-candidate and merged/native gates remain explicit. HMAC does not prevent valid historical-snapshot rollback, native fresh-open root protection is unqualified, Windows new issuer storage deliberately rejects, and host setup is currently single-root. Coverage is deliberately unequal across languages; canonical agreement and configuration equality do not prove runtime authorization. B21 follow-ups `aac010955`/`5a03fa7ea` correct unsupported native history-readiness and OS-only guidance while retaining legacy wire keys/types. Those committed macOS/iOS test-target build-for-testing gates pass; the actual-source metadata probe has retained red/green evidence, not app/service-host execution or fifth-wave app compilation.
 
 After fresh disk admission returned, the coordinator regenerated the canonical MCP catalog (23 tools; all21 previous entries preserved) and ran unfiltered combined CLI tests:246 passed/two preexisting ignored/zero filtered. CLI fmt/clippy/runtime1.85 compilation and canonical asset freshness each pass; earlier red/filtered results remain historical evidence. Read-only stays13, alpha.7 stays19, and frozen CLI1.0 stays21; the bridge additions are not release-scope promotion. Actual counterpart/expiry follow-ups, combined native gates and the full journey remain pending.
 
-The pinned-consumer failure, broad support/website/consumer reconciliation, physical/live qualification and B19/B20 approval gates remain explicit. No task is closed or planned capability promoted from these increments.
+The fifth wave serially integrates host `e03f49443`, Swift `9fe74f142` and Kotlin `4f9a9ec33` through `cccbb13de`. All lanes stopped/committed/clean before coordinator edits. Sixteen disjoint paths match lane bytes; all other tracked source/frozen contracts/dependencies/assets are preserved. Trusted live clocks/latest locked authority follow native consent/key/configuration/session callbacks and precede atomic metadata publication and return. Actual staged-file tests distinguish unchanged-byte prepublication rejection from retained stale metadata after postpublication rejection; no global atomicity, anti-rollback or native authority provisioning is claimed.
+
+Final lane-source evidence: host unfiltered256 passed/3ignored/0filtered plus fmt/clippy/runtime1.85 compilation/assets0; Swift74 package and54 unique actual-source cases repeated in ordinary/MainActor modes; Kotlin62 unique focused methods per flavor (one normally no-op generation method),38 protocol pass/one live skip and binding equality0. Actual native complete Swift discovery passes the strict host31-leaf check and negative tamper checks. Kotlin-before is a retained actual3-pointer red; Kotlin-after is **not produced/not run**, not inferred from focused31-leaf tests. Native candidates are capability interoperability only, not permission or live transport.
+
+After every merge static validator0/full60 contract tests0, exact union/provenance/diff audit0;420 retained lane-evidence hashes match. The469-file point-in-time index `fd74e0b1230f27e8caa239025e37c66496be4178eeec6588f523d106c773aa0b` binds this source increment and retained attempts. **No fifth-wave merged compiler gate ran:** observed4,721,440KiB free/no warning is below6,291,456KiB; native app/app-module gates additionally require10,485,760KiB. No cleanup/bypass/retry loop or cache reuse relabeled as new qualification. Resume missing gates only with fresh admission; actual Kotlin-after generation must be a separate gated invocation before ungated full variants and the exact host tracer.
+
+Native setup/routes/send fences, bound execution/transfers/receipts/recipes/resume, the pinned-consumer failure, broad support/website/consumer reconciliation, physical/live/OS qualification and B19/B20 approval gates remain explicit. B10/B21 stay in progress and B22 open. No task is closed or planned capability promoted; goal remains incomplete and further compile-dependent work is stopped pending headroom.
