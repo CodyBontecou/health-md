@@ -357,5 +357,61 @@ class NativeDirectDocumentationTests(unittest.TestCase):
                       self.ANDROID.read_text(encoding="utf-8"))
 
 
+class ConsumerSkillDocumentationTests(unittest.TestCase):
+    """Static agent-facing instructions, not installed commands or permission evidence."""
+
+    ROOT = MODULE_PATH.resolve().parents[3]
+    CLI = ROOT / ".agents/skills/healthmd-cli/SKILL.md"
+    OPERATOR = ROOT / ".agents/skills/healthmd-cli-operator/SKILL.md"
+
+    def test_consumer_history_requires_build_evidence_and_bounded_corpus_example(self) -> None:
+        for path in (self.CLI, self.OPERATOR):
+            with self.subTest(skill=path.parent.name):
+                text = path.read_text(encoding="utf-8")
+                for term in ("api_unavailable", "unknown", "denied-versus-empty",
+                             "exact app/build/SDK", "explicit date ranges", "type scope, not date scope"):
+                    self.assertIn(term, text)
+                self.assertNotIn("Use `--all` only when explicitly requested", text)
+                commands = [line for line in text.splitlines()
+                            if line.startswith("healthmd export ") and "--full-corpus" in line]
+                for command in commands:
+                    self.assertNotIn("--all", command.split())
+                    start = re.search(r"--from (\d{4}-\d{2}-\d{2})\b", command)
+                    end = re.search(r"--to (\d{4}-\d{2}-\d{2})\b", command)
+                    self.assertIsNotNone(start)
+                    self.assertIsNotNone(end)
+                    days = (date.fromisoformat(end.group(1)) - date.fromisoformat(start.group(1))).days + 1
+                    self.assertGreaterEqual(days, 1)
+                    self.assertLessEqual(days, 7)
+        self.assertEqual(len([line for line in self.CLI.read_text().splitlines()
+                              if line.startswith("healthmd export ") and "--full-corpus" in line]), 1)
+
+    def test_consumer_gates_development_tools_and_platform_lifecycle(self) -> None:
+        text = self.CLI.read_text(encoding="utf-8")
+        for term in ("alpha.7 exposes 19", "development catalog has 23", "development-only",
+                     "healthmd_export_raw", "healthmd_raw_artifact_read", "healthmd_export_plan",
+                     "healthmd_export_approval", "unwired/unadvertised", "host-owned recipes",
+                     "first-mobile", "alpha.7's iPhone-only", "user-started foreground service",
+                     "ordinary screen locking", "first unlock after reboot", "force-stop",
+                     "production-readiness.md"):
+            self.assertIn(term, text)
+        self.assertNotIn("Android pairing remains an explicit", text)
+        self.assertNotIn("foreground Health.md mobile app", text)
+        self.assertIn("when the installed catalog includes", text)
+
+    def test_iphone_operator_uses_source_readiness_and_portable_existing_destination(self) -> None:
+        text = self.OPERATOR.read_text(encoding="utf-8")
+        for term in ("source.platform == ios", "source.connected == true",
+                     "source.app_active == true", "source.protected_data_available == true",
+                     "source.can_trigger_raw_exports == true", "source.can_trigger_exports == true",
+                     "iOS-only compatibility alias", "null for Android", "iPhone-only skill",
+                     "macOS, Linux, and Windows", "PRIVATE_HEALTH_DIR", "qualification remains pending"):
+            self.assertIn(term, text)
+        self.assertNotIn("Windows supports raw and extract.", text)
+        self.assertNotIn("`iphone.connected == true`", text)
+        self.assertNotIn('mkdir -p "$HOME/Documents/HealthVault"', text)
+        self.assertIn("existing user-approved absolute non-symlink destination", text)
+
+
 if __name__ == "__main__":
     unittest.main()

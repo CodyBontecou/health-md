@@ -11,7 +11,7 @@ Use the standalone `healthmd` command. Health.md for Mac is not required.
 ```text
 agent/user → healthmd on macOS, Linux, or Windows
   ← authenticated encrypted Manual IP or Tailscale connection →
-foreground Health.md mobile app → HealthKit or Health Connect
+Health.md iPhone foreground / active Android direct service → native provider
   → bounded typed results, canonical data, or generated files
 ```
 
@@ -43,6 +43,12 @@ The `0.1.0-alpha.7` package is an explicitly unqualified public preview. Physica
 The unqualified protocol floors remain iOS 3.0.3 and Android 1.5.4 (`versionCode 25`), but protocol implementation and basic connectivity are not release qualification. Check the exact package and mobile build before live work. Do not claim App Store or Play Store compatibility from a marketing version alone.
 
 Authoritative ledger: <https://github.com/CodyBontecou/health-md/blob/main/apps/cli/docs/mobile-compatibility.md>
+
+### Version-gated development features
+
+Public alpha.7 exposes 19 MCP tools. The current development catalog has 23: `healthmd_export_raw`, `healthmd_raw_artifact_read`, `healthmd_export_plan` and `healthmd_export_approval` are development-only relative to that preview. Inspect the installed tool list/schema before using any of them; an absent operation is unavailable, not permission to guess a request or upgrade a peer. Read-only 13 and frozen CLI 1.0 scope 21 are separate profile/release facts. Consult [production readiness](../../../apps/cli/docs/production-readiness.md) before treating source examples as installed support.
+
+Current source uses first-mobile pairing for iPhone or Android in MCP/Codex setup, with explicit device selection and rejection of ambiguous trust; this does not replace alpha.7's iPhone-only in-host onboarding. Keep explicit approved Android shell pairing for a build without that in-host support. Development plan/exact-approval services still have native4 app/TCP routes unwired/unadvertised: bound execution, verified bridge receipts and host-owned recipes are not delivered. Pairing or a source schema cannot initialize native grants, host roots or configuration authority. Read-only MCP retains its narrower surface.
 
 ## Install or verify
 
@@ -132,8 +138,8 @@ Run `healthmd direct reset-trust --confirm` only with explicit approval. It remo
 ## Bounded wake window
 
 Live query, export, extract, resume, and cancel commands wait up to 120 seconds for the selected
-phone to become active. Tell the user that the request is waiting and ask them to unlock the phone
-and open Health.md; the same in-flight command should continue without a re-run. Use
+source to become available. Explain the wait and ask for the minimum platform-specific action
+under Check readiness below; the same in-flight command should continue without a re-run. Use
 `--wake-timeout SECONDS` for a different command window or `--wake-timeout 0` only when fail-fast
 behavior is explicitly needed. Keep any outer process timeout longer than the wake window plus the
 operation timeout.
@@ -152,7 +158,7 @@ durable-job cancellation.
 NO_COLOR=1 TERM=dumb timeout 30 healthmd status </dev/null
 ```
 
-Require the selected phone to be authenticated, active enough for new work, and ready for the requested operation. Respect `active_job_id` and all protected-data, permission, and capability fields. Status contains no backend or Mac fields; the standalone path is the only path. Direct generated-file mode always uses the explicit `--destination`; it never uses a Mac bookmark.
+Require the selected phone to be authenticated, active enough for the requested operation, and ready. Respect `active_job_id` and all protected-data, permission and capability fields. iPhone new reads require foreground/protected-data availability. Android's already-active user-started foreground service can serve supported sessions during ordinary screen locking, but Health Connect is unavailable before the first unlock after reboot. After service stop or force-stop, ask the user to reopen Health.md and explicitly start Connect; pairing/wake cannot restart it or create permission. Android typed queries/extraction remain unavailable until their native implementation and exact-build support exist. See [native lifecycle guidance](../../../apps/android/docs/features/direct-cli.md#session-lifecycle-and-native-admission). Status contains no backend or Mac fields; direct generated-file mode always uses the explicit `--destination`, never a Mac bookmark.
 
 ## Query typed health data
 
@@ -162,7 +168,7 @@ Typed queries currently require a compatible foreground iPhone. For least privil
 healthmd mcp serve-read-only
 ```
 
-This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing, generated-file jobs, or full-corpus raw jobs and bounded artifact reads. For Codex, `healthmd setup codex` configures the full local profile and can open iPhone pairing; review that broader authority with the user first. Android pairing remains an explicit `healthmd direct pair` workflow.
+This local stdio profile exposes only readiness, catalog, and typed-query tools. Use full `healthmd mcp serve` only when the user also approves in-host pairing, generated-file jobs, or full-corpus raw jobs and bounded artifact reads. For Codex, `healthmd setup codex` configures the full local profile and can offer pairing for the sources supported by that exact installed build; review broader authority with the user first. Apply the version-gated onboarding distinction above rather than silently re-pairing or assigning current source behavior to alpha.7.
 
 Query workflow:
 
@@ -194,20 +200,22 @@ Dates are illustrative; resolve the user's actual request. `healthmd extract` is
 
 ## Export or extract only approved scope
 
-Choose exactly one date range: `--yesterday`, `--last N`, `--from/--to`, or `--all`. Prefer an approved protected absolute output path so health data does not enter stdout, transcripts, or a repository. In the examples, first set `PRIVATE_HEALTH_DIR` to an existing private absolute directory selected by the user; never guess or create that location silently.
+Check history against the exact app/build/SDK before promising completeness. The current pinned Apple adapter reports `api_unavailable`; absent metadata or `unknown` cannot prove full access, denial or no data. Prefer explicit date ranges with completeness unverified and retain Apple's denied-versus-empty ambiguity. An OS upgrade, earliest sample, pairing or ready transport is not a history grant. `--all` requires both approved scope and verified source support/grants; if unavailable, ask the user to revise scope rather than silently narrowing it. See [current source history limitations](../../../apps/cli/docs/mobile-compatibility.md#current-source-history-limitations); they do not qualify an installed alpha.7 counterpart. Android's historical-read/first-permission-grant window is distinct.
 
-### Complete public, authorized corpus
+Choose exactly one approved date range: `--yesterday`, `--last N`, `--from/--to`, or verified `--all`. Prefer an approved protected absolute output path so health data does not enter stdout, transcripts, or a repository. In the examples, first set `PRIVATE_HEALTH_DIR` to an existing private absolute directory selected by the user; never guess or create that location silently.
 
-Use this only after the user explicitly approves the broad scope and a protected output path:
+### Public authorized types within an approved range
+
+Use this only after the user explicitly approves the broad type scope, exact dates and protected output path. `--full-corpus` expands type scope, not date scope; these seven-day dates are illustrative, not authorization:
 
 ```bash
-healthmd export --all --raw --full-corpus \
-  --output "$PRIVATE_HEALTH_DIR/complete-health-corpus.json"
+healthmd export --from 2026-07-01 --to 2026-07-07 --raw --full-corpus \
+  --output "$PRIVATE_HEALTH_DIR/public-types-range.json"
 ```
 
 `--full-corpus` requests every public record type supported by the selected mobile source and authorized by the user. It cannot read private Apple/Google databases. Preserve the native raw envelope and its capture/authorization/unsupported/skipped/partial/read-error evidence; do not claim that inaccessible or unsupported data was exported. On Android, add `--provider health_connect` or the exact discovered provider and choose JSON/NDJSON as needed. Readable exercise routes are included in this explicit scope; interactive platform consent may still make a route unavailable.
 
-The complete local MCP profile exposes the same scope through `healthmd_export_raw`. It leaves the validated artifact in a private durable job spool. Inspect status with the shared export-job tools and read it only through `healthmd_raw_artifact_read`, one base64 chunk of at most 64 KiB at a time. Never ask MCP for the entire corpus in one model response. These tools are absent from read-only and remote profiles.
+The complete local MCP profile exposes the same scope through `healthmd_export_raw` when the installed catalog includes it; this and `healthmd_raw_artifact_read` are not alpha.7 tools. The job leaves a validated artifact in a private durable spool. Inspect status with shared export-job tools and read only bounded artifact chunks of at most 64 KiB; never ask MCP for the entire corpus in one model response. These tools are absent from read-only and remote profiles.
 
 ### iPhone strict raw and canonical extraction
 
@@ -276,7 +284,7 @@ When values were requested, also preserve canonical units/statistics, owner date
 1. `healthmd direct devices` — local trust and selected identity.
 2. `healthmd status --job JOB_UUID` — durable state after any started operation.
 3. `healthmd status` or `healthmd_doctor` — live readiness.
-4. Verify the selected phone, foreground state, Direct CLI Access, address/port, local-network permission, native credential storage, and LAN/Tailscale reachability.
+4. Verify the selected phone's platform-specific lifecycle gate under Check readiness, Direct CLI Access, address/port, local-network permission, native credential storage, and LAN/Tailscale reachability.
 5. Resume the same job when appropriate; never switch peer, transport, or port silently.
 
 Common actions:
