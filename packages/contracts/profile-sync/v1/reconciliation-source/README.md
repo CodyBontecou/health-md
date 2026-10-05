@@ -69,6 +69,39 @@ There are **no** network, clock, random, browser, health/provider, native bindin
 destination, schedule, purchase or jobs ports. This absence is a library/source
 property, not app-wide cold/foreground zero-call evidence.
 
+## Stable partition consistency versus local generation
+
+Retained cloud retirement and immutable object/content/event constraints belong to
+`(issuer, environment, account)`, not a sign-in/cancellation generation. Before
+staging an event, `observe` checks all retained candidates in that same partition
+and its newest known object head, including when the current generation has no
+staged head. Known retired IDs cannot stage live content; known immutable
+references cannot change exact bytes; an older exact record is ignored as
+`unchanged`, and contradictory references return `requires_action` without writes.
+Exact newest-record replay also returns `unchanged` without relabelling provenance.
+A valid forward event can still stage a new current-generation candidate.
+
+`State.head`/`ordered_heads` deliberately expose only explicitly staged records
+for the requested/current **exact generation**. The internal partition-known head
+is a consistency restriction, not new-generation visibility, mapping, upload,
+execution or auth authority. Ignored/rejected input can therefore leave the current
+head absent while the original known head/tombstone remains intact. All retained
+candidate contexts/raw bytes, accepted markers and captured outbox contexts/bodies
+stay original. Outbound and mutation eligibility still require the exact current
+owner/generation; a forward candidate cannot unquarantine old work or mappings.
+
+Different issuer/environment/account partitions are independent: identical cloud
+IDs/revisions/event numbers (with identical or different valid content) do not
+inherit another owner's retirement/immutable/head constraints. Returning to a
+previous partition restores only its own retained consistency restrictions, never
+another partition's newest head or old execution authority. No resync, provenance
+rewrite or implicit copy of a cached candidate into a new generation occurs.
+
+The historical `97efea8348d14e88173d443f92c58f26e14b671c` 17-test proof did **not**
+establish these cross-generation constraints: three subsequent independent actual
+source probes failed. The separate bounded repair has its own red/green evidence;
+original logs/report remain historical, not current integration qualification.
+
 ## Journal seam, faults and restart limits
 
 `journal.py` defines one `read()` / `apply(expected_record, owner, proposed_state)`
@@ -171,8 +204,9 @@ replaced with permissive validation. This check is source identity, not trust or
 heavy/native admission. Whole-repository shared verifiers require complete inputs
 and are separate coordinator gates, not claimed from this sparse lane.
 
-17 source tests run 15 small **independently specified** positive/negative/fault
-traces twice, checking literal expected statuses/state/history/journal call counts,
+24 source tests retain the original 17 tests and 15 byte-unchanged
+**independently specified** positive/negative/fault traces, run twice, checking
+literal expected statuses/state/history/journal call counts,
 fixture SHA-256, deterministic input reproduction, actual AS05 parser calls,
 returned exact content/request/base/owner bytes, immutable candidate vs accepted
 markers, correlated receipts, real CAS/readback faults, restart fencing and actual
@@ -180,5 +214,12 @@ profile/outbox/history/byte limits. Same-name/tied-order and metadata-reorder te
 field-assert actual ordered IDs/order keys/content revisions/hashes/raw bytes and
 contexts against independently authored expectations. Fixtures contain only
 synthetic AS05 content. They are not copied/renamed AS05 scenario predicates or
-implementation-generated output goldens. Exact commands, all genuine failures,
-committed scope/hashes and remaining gates belong in the external lane handoff.
+implementation-generated output goldens. Seven additional public-interface tests
+cover partition retirement/immutable-reference/head regression after generation
+changes, historical object/content/event contradictions, exact replay and genuine
+forward positives, issuer/environment/account isolation and return through another
+owner with a higher unrelated head. The three original regressions were genuinely
+run red against the original model before repair; expected outcomes/state/reference
+bytes are independently specified literals, not implementation-generated goldens.
+Exact commands, all genuine failures, committed scope/hashes and remaining gates
+belong in the original and separate partition-repair external handoffs.

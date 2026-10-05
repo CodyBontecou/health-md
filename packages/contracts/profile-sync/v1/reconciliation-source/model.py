@@ -100,7 +100,14 @@ class State:
     history: tuple[str, ...] = ()
 
     def head(self, profile_id, context=None):
+        """Staged head for exactly one local generation; not account authority."""
         rows = [c for c in self.candidates if c.context == (context or self.context)
+                and c.profile_id == profile_id]
+        return max(rows, key=lambda c: c.object_revision, default=None)
+
+    def _known_head(self, profile_id):
+        """Partition knowledge only constrains input; never remap old provenance."""
+        rows = [c for c in self.candidates if c.context.partition == self.context.partition
                 and c.profile_id == profile_id]
         return max(rows, key=lambda c: c.object_revision, default=None)
 
@@ -231,13 +238,18 @@ class Kernel:
 
     def _consistent(self, c):
         for old in self._state.candidates:
-            if old.context != c.context:
+            if old.context.partition != c.context.partition:
                 continue
-            if old.event_sequence == c.event_sequence and old != c:
+            # The local generation is provenance/fencing, not cloud identity.
+            # Exact record bytes compare immutable metadata without relabelling
+            # either retained candidate's original Context.
+            if old.event_sequence == c.event_sequence and old.raw != c.raw:
                 return False
             if old.profile_id != c.profile_id:
                 continue
-            if old.object_revision == c.object_revision and old != c:
+            if old.deleted and not c.deleted:
+                return False
+            if old.object_revision == c.object_revision and old.raw != c.raw:
                 return False
             if (old.content is not None and c.content is not None
                     and old.content_revision == c.content_revision and old.content.raw != c.content.raw):
@@ -307,11 +319,13 @@ class Kernel:
                 c = self._read_candidate(context, raw)
             except (self._codec.Invalid, ValueError):
                 return Result("invalid")
-            head = self._state.head(c.profile_id)
+            if not self._consistent(c):
+                return Result("requires_action")
+            head = self._state._known_head(c.profile_id)
             if head is not None:
                 if c.object_revision < head.object_revision:
                     return Result("unchanged")
-                if c == head:
+                if c.raw == head.raw:
                     return Result("unchanged")
                 if (head.deleted and not c.deleted or c.object_revision <= head.object_revision
                         or c.event_sequence <= head.event_sequence):
@@ -321,8 +335,6 @@ class Kernel:
                     if ((same and c.content_revision != head.content_revision)
                             or (not same and c.content_revision <= head.content_revision)):
                         return Result("requires_action")
-            if not self._consistent(c):
-                return Result("requires_action")
             dirty = any(e.context == context and e.profile_id == c.profile_id and e.status in ("pending", "conflict")
                         for e in self._state.outbox)
             code = ("edit_delete_conflict" if c.deleted else "edit_edit_conflict") if dirty else (

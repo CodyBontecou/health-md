@@ -526,6 +526,220 @@ class SourceTests(unittest.TestCase):
         self.assertEqual(j.read(), before)
         self.assertEqual(k.view().outbox[0].body, encode(create))
 
+    def test_partition_retirement_survives_generation_switch(self):
+        k, j = self.published()
+        a, a1 = self.contexts["a"], self.contexts["a1"]
+        self.code(k.observe(a, self.records["deleted"]), "keep_local_unlink_review")
+        retired = k.view().head(self.profiles["p1"])
+        local = k.view().locals[0]
+        self.code(k.switch(a1), "quarantined")
+        self.assertIsNone(k.view().head(self.profiles["p1"]))
+        live = dict(json.loads(self.records["remote_edit"]), object_revision=3, event_sequence=3)
+        for context in (a1, replace(a, generation=2)):
+            if context != a1:
+                self.code(k.switch(context), "quarantined")
+            before, applies = k.view(), j.calls[1]
+            self.code(k.observe(context, encode(live)), "requires_action")
+            self.assertIs(k.view(), before)
+            self.assertIsNone(k.view().head(self.profiles["p1"]))
+            self.assertIs(k.view().candidates[1], retired)
+            self.assertEqual(retired.raw, self.records["deleted"])
+            self.assertEqual(retired.context, a)
+            self.assertTrue(retired.deleted)
+            self.assertIs(k.view().locals[0], local)
+            self.assertEqual(local.accepted.raw, self.content["base"])
+            self.assertEqual(j.calls[1], applies)
+            self.code(k.select(context, "adopt", "local-retired", self.profiles["p1"]), "not_found")
+            self.code(k.select(context, "edit", "local-one", self.bodies["gone"]), "not_found")
+        self.code(k.next_request(), "requires_action")
+        self.assertEqual(k.view().outbox[0].context, a)
+        self.assertEqual(k.view().outbox[0].body, self.bodies["create"])
+        self.assertEqual(k.view().outbox[0].status, "quarantined")
+
+    def test_partition_immutable_reference_survives_generation_switch(self):
+        k, j = self.published()
+        a, a1 = self.contexts["a"], self.contexts["a1"]
+        original = k.view().candidates[0]
+        local = k.view().locals[0]
+        self.code(k.switch(a1), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        # A separately valid AS05 record reuses object/event/content generation 1
+        # but proposes different exact content/hash after the local fence.
+        changed = dict(json.loads(self.records["first"]), content_json=self.content["remote"].decode(),
+                       content_hash=self.vectors["content"]["remote"]["hash"])
+        self.code(k.observe(a1, encode(changed)), "requires_action")
+        self.assertIs(k.view(), before)
+        self.assertIsNone(k.view().head(self.profiles["p1"]))
+        self.assertEqual(len(k.view().candidates), 1)
+        self.assertIs(k.view().candidates[0], original)
+        self.assertEqual(original.context, a)
+        self.assertEqual((original.object_revision, original.event_sequence, original.content_revision), (1, 1, 1))
+        self.assertEqual(original.content.raw, self.content["base"])
+        self.assertEqual(original.content.sha256, self.vectors["content"]["base"]["hash"])
+        self.assertIs(k.view().locals[0], local)
+        self.assertEqual(j.calls[1], applies)
+
+    def test_partition_newest_known_head_prevents_generation_regression(self):
+        k, j = self.published()
+        a, a1, a2 = self.contexts["a"], self.contexts["a1"], replace(self.contexts["a"], generation=2)
+        self.code(k.observe(a, self.records["remote_edit"]), "pending_review")
+        newest = k.view().candidates[1]
+        self.code(k.switch(a1), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        self.code(k.observe(a1, self.records["first"]), "unchanged")
+        self.assertIs(k.view(), before)
+        self.assertIsNone(k.view().head(self.profiles["p1"]))
+        self.assertIs(k.view().candidates[1], newest)
+        self.assertEqual(j.calls[1], applies)
+        forward = dict(json.loads(self.records["remote_edit"]), object_revision=3, event_sequence=3,
+                       content_revision=3, content_json=self.content["edit"].decode(),
+                       content_hash=self.vectors["content"]["edit"]["hash"])
+        forward_raw = encode(forward)
+        self.code(k.observe(a1, forward_raw), "pending_review")
+        current = k.view().head(self.profiles["p1"])
+        self.assertEqual((current.context, current.object_revision, current.content_revision), (a1, 3, 3))
+        self.assertEqual(current.raw, forward_raw)
+        self.code(k.switch(a2), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        for old in (self.records["first"], self.records["remote_edit"], forward_raw):
+            self.code(k.observe(a2, old), "unchanged")
+            self.assertIs(k.view(), before)
+            self.assertIsNone(k.view().head(self.profiles["p1"]))
+        self.assertEqual(len(k.view().candidates), 3)
+        self.assertEqual([c.context for c in k.view().candidates], [a, a, a1])
+        self.assertEqual([c.object_revision for c in k.view().candidates], [1, 2, 3])
+        self.assertEqual(j.calls[1], applies)
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+
+    def test_partition_exact_replay_and_forward_keep_original_provenance(self):
+        k, j = self.published()
+        a, a1 = self.contexts["a"], self.contexts["a1"]
+        original, local = k.view().candidates[0], k.view().locals[0]
+        self.code(k.switch(a1), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        self.code(k.observe(a1, self.records["first"]), "unchanged")
+        self.assertIs(k.view(), before)
+        self.assertIsNone(k.view().head(self.profiles["p1"]))
+        self.assertEqual(k.view().ordered_heads, ())
+        self.assertEqual(j.calls[1], applies)
+        self.code(k.observe(a1, self.records["remote_edit"]), "pending_review")
+        head = k.view().head(self.profiles["p1"])
+        self.assertEqual((head.context, head.object_revision, head.event_sequence, head.content_revision), (a1, 2, 2, 2))
+        self.assertEqual(head.raw, self.records["remote_edit"])
+        self.assertEqual(head.content.raw, self.content["remote"])
+        self.assertEqual(head.content.sha256, self.vectors["content"]["remote"]["hash"])
+        self.assertIs(k.view().candidates[0], original)
+        self.assertEqual(original.context, a)
+        self.assertEqual(original.raw, self.records["first"])
+        self.assertIs(k.view().locals[0], local)
+        self.assertEqual(local.accepted.raw, self.content["base"])
+        before = k.view()
+        self.code(k.observe(a1, self.records["remote_edit"]), "unchanged")
+        self.assertIs(k.view(), before)
+        self.assertEqual(k.view().links[0].context, a)
+        self.assertEqual(k.view().links[0].review, "quarantined")
+        self.code(k.select(a1, "edit", "local-one", self.bodies["edit"]), "not_found")
+        self.code(k.acknowledge(a1, self.vectors["mutations"]["create"]["key"],
+                               request_hash(self.bodies["create"]), self.records["first"]), "quarantined")
+        self.code(k.observe(a, self.records["remote_edit"]), "quarantined")
+        self.code(k.next_request(), "requires_action")
+        self.assertEqual(k.view().outbox[0].body, self.bodies["create"])
+        self.assertEqual(k.view().outbox[0].base_revision, 0)
+        self.assertEqual(k.view().outbox[0].context, a)
+        self.assertEqual(k.view().outbox[0].status, "quarantined")
+
+    def test_partition_historical_content_object_and_event_constraints(self):
+        a, a1 = self.contexts["a"], self.contexts["a1"]
+        k, j = self.published()
+        self.code(k.observe(a, self.records["remote_edit"]), "pending_review")
+        self.code(k.switch(a1), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        first, second = json.loads(self.records["first"]), json.loads(self.records["remote_edit"])
+        cases = (
+            dict(first, order_key=0),
+            dict(first, content_json=self.content["remote"].decode(), content_hash=self.vectors["content"]["remote"]["hash"]),
+            dict(first, profile_id=self.profiles["p2"]),
+            dict(second, event_sequence=3, order_key=0),
+            dict(second, object_revision=3, event_sequence=3, content_revision=1,
+                 content_json=self.content["edit"].decode(), content_hash=self.vectors["content"]["edit"]["hash"]),
+            dict(second, object_revision=3, event_sequence=1, content_revision=3),
+        )
+        for index, row in enumerate(cases):
+            with self.subTest(case=index):
+                self.code(k.observe(a1, encode(row)), "requires_action")
+                self.assertIs(k.view(), before)
+                self.assertIsNone(k.view().head(self.profiles["p1"]))
+                self.assertIsNone(k.view().head(self.profiles["p2"]))
+                self.assertEqual(j.calls[1], applies)
+        self.assertEqual([c.context for c in k.view().candidates], [a, a])
+        self.assertEqual([c.raw for c in k.view().candidates], [self.records["first"], self.records["remote_edit"]])
+        self.assertEqual(k.view().locals[0].accepted.raw, self.content["base"])
+
+    def test_partition_other_issuer_environment_account_allow_same_references(self):
+        a = self.contexts["a"]
+        changed = encode(dict(json.loads(self.records["first"]), content_json=self.content["remote"].decode(),
+                              content_hash=self.vectors["content"]["remote"]["hash"]))
+        for key in ("issuer1", "env1", "b1"):
+            for raw, content_key in ((self.records["first"], "base"), (changed, "remote")):
+                with self.subTest(partition=key, content=content_key):
+                    k, _ = self.published()
+                    self.code(k.observe(a, self.records["deleted"]), "keep_local_unlink_review")
+                    prior, local = k.view().candidates, k.view().locals[0]
+                    owner = self.contexts[key]
+                    self.code(k.switch(owner), "quarantined")
+                    self.assertIsNone(k.view().head(self.profiles["p1"]))
+                    self.code(k.observe(owner, raw), "pending_review")
+                    current = k.view().head(self.profiles["p1"])
+                    self.assertEqual((current.object_revision, current.event_sequence, current.content_revision), (1, 1, 1))
+                    self.assertEqual(current.profile_id, self.profiles["p1"])
+                    self.assertEqual(current.context, owner)
+                    self.assertFalse(current.deleted)
+                    self.assertEqual(current.raw, raw)
+                    self.assertEqual(current.content.raw, self.content[content_key])
+                    self.assertEqual(current.content.sha256, self.vectors["content"][content_key]["hash"])
+                    self.assertEqual(k.view().candidates[:2], prior)
+                    self.assertEqual([c.context for c in prior], [a, a])
+                    self.assertIs(k.view().locals[0], local)
+                    self.assertEqual(local.accepted.raw, self.content["base"])
+                    self.assertEqual(k.view().outbox[0].context, a)
+                    self.assertEqual(k.view().outbox[0].body, self.bodies["create"])
+                    self.assertEqual(k.view().outbox[0].status, "quarantined")
+                    self.assertEqual(k.view().links[0].context, a)
+                    self.assertEqual(k.view().links[0].review, "quarantined")
+                    self.code(k.next_request(), "requires_action")
+
+    def test_partition_return_uses_own_newest_head_not_other_owner_head(self):
+        a, b, a2 = self.contexts["a"], self.contexts["b1"], replace(self.contexts["a"], generation=2)
+        k, j = self.published()
+        self.code(k.observe(a, self.records["remote_edit"]), "pending_review")
+        local = k.view().locals[0]
+        self.code(k.switch(b), "quarantined")
+        other = encode(dict(json.loads(self.records["first"]), object_revision=10, event_sequence=10,
+                            content_revision=10, content_json=self.content["edit"].decode(),
+                            content_hash=self.vectors["content"]["edit"]["hash"]))
+        self.code(k.observe(b, other), "pending_review")
+        self.code(k.switch(a2), "quarantined")
+        before, applies = k.view(), j.calls[1]
+        self.code(k.observe(a2, self.records["first"]), "unchanged")
+        self.assertIs(k.view(), before)
+        self.assertIsNone(k.view().head(self.profiles["p1"]))
+        self.assertEqual(j.calls[1], applies)
+        # Source metadata forward in A's partition, not a rebase/accept action.
+        forward = encode(dict(json.loads(self.records["remote_edit"]), object_revision=3, event_sequence=3, order_key=0))
+        self.code(k.observe(a2, forward), "pending_review")
+        head = k.view().head(self.profiles["p1"])
+        self.assertEqual((head.context, head.object_revision, head.event_sequence, head.content_revision), (a2, 3, 3, 2))
+        self.assertEqual(head.raw, forward)
+        self.assertEqual(head.content.raw, self.content["remote"])
+        self.assertEqual([c.context for c in k.view().candidates], [a, a, b, a2])
+        self.assertEqual([c.object_revision for c in k.view().candidates], [1, 2, 10, 3])
+        self.assertEqual(k.view().candidates[2].raw, other)
+        self.assertIs(k.view().locals[0], local)
+        self.assertEqual(local.accepted.raw, self.content["base"])
+        self.assertEqual(k.view().outbox[0].context, a)
+        self.assertEqual(k.view().outbox[0].status, "quarantined")
+        self.assertEqual(k.view().ordered_heads, (head,))
+
     def test_all_test_filesystem_operations_are_read_only(self):
         original = io.open
         def reads_only(file, mode="r", *args, **kwargs):
