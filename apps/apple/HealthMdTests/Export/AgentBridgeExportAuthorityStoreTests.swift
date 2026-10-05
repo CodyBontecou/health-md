@@ -139,6 +139,37 @@ final class AgentBridgeExportAuthorityStoreTests: XCTestCase {
         XCTAssertEqual(try fresh.snapshot().references(peer: grant.peer, now: AgentBridgeUTC("2026-03-09T00:00:00Z")).count, 1)
     }
 
+    func testInspectAndPublicationHooksReceiveCurrentRevokedCASState() throws {
+        let rig = try StoreRig(); defer { rig.cleanup() }
+        let grant = try rig.grant(7)
+        try rig.store.storeNativeDelegation(grant, expectedGeneration: 0, authorization: IsolatedNativeAuthorization())
+        let old = try rig.store.snapshot()
+        try rig.store.revokeNativeDelegation(grant.reference(), expectedGeneration: 1, authorization: IsolatedNativeAuthorization())
+        let before = try rig.bytes()
+        try rig.store.inspectCurrent { current in
+            XCTAssertEqual(old.generation, 1)
+            XCTAssertFalse(old.delegations[0].revoked)
+            XCTAssertEqual(current.generation, 2)
+            XCTAssertTrue(current.delegations[0].revoked)
+            XCTAssertTrue(try current.references(peer: grant.peer, now: AgentBridgeUTC("2026-03-09T00:00:00Z")).isEmpty)
+        }
+        var prepared = false
+        rig.publication.beforeRename = { candidate in
+            prepared = true
+            XCTAssertEqual(candidate.generation, 3)
+            XCTAssertEqual(candidate.delegations.count, 2)
+            XCTAssertTrue(candidate.delegations[0].revoked) // Not the captured generation-1 authority.
+            throw AgentBridgeValidationError.planExpired
+        }
+        XCTAssertThrowsError(try rig.store.storeNativeDelegation(rig.grant(8), expectedGeneration: 2, authorization: IsolatedNativeAuthorization())) {
+            XCTAssertEqual($0 as? AgentBridgeValidationError, .planExpired)
+        }
+        XCTAssertTrue(prepared)
+        XCTAssertEqual(try rig.bytes(), before)
+        XCTAssertEqual(try rig.store.snapshot().generation, 2)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: rig.directory.path).sorted(), ["lock", "state.json"])
+    }
+
     func testNativeAuthorizationAndIssuerAreNotPayloadFlags() throws {
         let rig = try StoreRig(); defer { rig.cleanup() }
         XCTAssertThrowsError(try rig.store.storeNativeDelegation(rig.grant(7), expectedGeneration: 0, authorization: IsolatedNativeAuthorization(allowed: false)))
@@ -170,18 +201,24 @@ nonisolated private struct IsolatedNativeAuthorization: AgentBridgeExportNativeA
     var allowed = true
     func requireNativeAuthorization(for action: AgentBridgeExportNativeAction) throws { guard allowed else { throw AgentBridgeValidationError.permissionRequired } }
 }
+nonisolated private final class StorePublicationProbe: AgentBridgeExportPublicationObserving {
+    var beforeRename: ((AgentBridgeExportAuthoritySnapshot) throws -> Void)?
+    func prepared(_ state: AgentBridgeExportAuthoritySnapshot) throws { try beforeRename?(state) }
+    func published(_ state: AgentBridgeExportAuthoritySnapshot) throws {}
+}
 nonisolated private func storeID(_ n: Int) throws -> AgentBridgeUUID { try AgentBridgeUUID(String(format: "00000000-0000-4000-8000-%012x", n)) }
 nonisolated private final class StoreRig: @unchecked Sendable {
     let parent: URL
     let directory: URL
     let keys = IsolatedKeys()
+    let publication = StorePublicationProbe()
     let store: AgentBridgeExportAuthorityStore
     var stateFile: URL { directory.appendingPathComponent("state.json") }
     init() throws {
         parent = URL(fileURLWithPath: "/private/tmp").appendingPathComponent("healthmd-native-authority-test-" + UUID().uuidString)
         try FileManager.default.createDirectory(at: parent, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
         directory = parent.appendingPathComponent("authority")
-        store = try .createPrivateStore(at: directory, protectedKeys: keys, authorization: IsolatedNativeAuthorization())
+        store = try .createPrivateStore(at: directory, protectedKeys: keys, authorization: IsolatedNativeAuthorization(), publication: publication)
     }
     func grant(_ number: Int, revision: Int64 = 1) throws -> AgentBridgeExportDelegation {
         try .init(authorityID: storeID(number), issuer: .nativeSource, grantRevision: revision,
