@@ -73,6 +73,36 @@ impl SecureChannel {
         self.send_encrypted(&plaintext).await
     }
 
+    /// Send a closed typed v4 document only on the separate negotiated bridge path.
+    /// # Errors
+    /// Old peers, malformed DTOs or encrypted transport failures reject before transmission.
+    pub async fn send_v4(
+        &mut self,
+        message: &healthmd_protocol::v4::Envelope,
+        negotiation: healthmd_protocol::v4::Negotiation,
+    ) -> Result<(), ClientError> {
+        let plaintext = healthmd_protocol::v4::canonical_json(message)?;
+        healthmd_protocol::v4::decode_envelope(&plaintext, negotiation)?;
+        self.send_encrypted(&plaintext).await
+    }
+
+    /// Authenticate/sequence-check bytes, then apply the integrated strict v4 raw codec.
+    /// # Errors
+    /// Duplicate fields, invalid UTF-8, unknown fields/frames or unnegotiated v4 reject.
+    pub async fn receive_v4(
+        &mut self,
+        negotiation: healthmd_protocol::v4::Negotiation,
+    ) -> Result<healthmd_protocol::v4::Envelope, ClientError> {
+        if !negotiation.agent_v4 {
+            return Err(healthmd_protocol::v4::Error::UnsupportedCapability.into());
+        }
+        let plaintext = self.receive_plaintext().await?;
+        Ok(healthmd_protocol::v4::decode_envelope(
+            &plaintext,
+            negotiation,
+        )?)
+    }
+
     /// Send an encoded binary transfer frame in the authenticated channel.
     ///
     /// # Errors
