@@ -235,7 +235,12 @@ async fn bridge_real_store_and_encrypted_fake_sources_plan_then_relay_exact_deci
             Err(ClientError::Agent(Error::ApprovalRequired))
         ));
         store
-            .record_local_decision(2, &plan.plan_id, &now(), &ExplicitFakeLocalConsent)
+            .record_local_decision(
+                2,
+                &plan.plan_id,
+                &FixedClock(now()),
+                &ExplicitFakeLocalConsent,
+            )
             .await
             .unwrap();
         consent_sender.send(()).unwrap();
@@ -371,6 +376,250 @@ async fn revocation_during_actual_encrypted_plan_response_prevents_persistence_a
     assert_eq!(store.revision().await.unwrap(), 1);
     assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
     source.await.unwrap();
+}
+
+/// The key provider actually suspends inside the host publication load. The test revokes the
+/// ORIGINAL backing `TrustStore` while that await is held, not a copied/synthetic authorization.
+struct HeldPublicationKey {
+    remaining: std::sync::atomic::AtomicUsize,
+    fired: std::sync::atomic::AtomicUsize,
+    ready: tokio::sync::Mutex<Option<oneshot::Sender<()>>>,
+    release: tokio::sync::Mutex<Option<oneshot::Receiver<()>>>,
+}
+#[async_trait::async_trait]
+impl crate::agent_host::ProtectedHostKey for HeldPublicationKey {
+    async fn load_existing(
+        &self,
+        host: &ControlUuid,
+    ) -> Result<secrecy::SecretString, ClientError> {
+        use std::sync::atomic::Ordering;
+        if self
+            .remaining
+            .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |n| n.checked_sub(1))
+            == Ok(1)
+        {
+            self.ready.lock().await.take().unwrap().send(()).unwrap();
+            let receiver = self.release.lock().await.take().unwrap();
+            tokio::time::timeout(Duration::from_secs(10), receiver)
+                .await
+                .unwrap()
+                .unwrap();
+            self.fired.fetch_add(1, Ordering::SeqCst);
+        }
+        crate::agent_host::ProtectedHostKey::load_existing(&FakeProtectedKey, host).await
+    }
+}
+
+#[allow(clippy::too_many_lines)]
+#[tokio::test]
+async fn delayed_publication_key_rechecks_original_backing_trust_for_plan_and_approval() {
+    use std::sync::{
+        Arc,
+        atomic::{AtomicUsize, Ordering},
+    };
+    for (platform, approval_phase) in [
+        (PeerPlatform::Ios, false),
+        (PeerPlatform::Android, false),
+        (PeerPlatform::Ios, true),
+        (PeerPlatform::Android, true),
+    ] {
+        let (_temporary, client, saved, peer) = stored_pair(platform).await;
+        let (ready_sender, ready_receiver) = oneshot::channel();
+        let (release_sender, release_receiver) = oneshot::channel();
+        let key = Arc::new(HeldPublicationKey {
+            remaining: AtomicUsize::new(0),
+            fired: AtomicUsize::new(0),
+            ready: tokio::sync::Mutex::new(Some(ready_sender)),
+            release: tokio::sync::Mutex::new(Some(release_receiver)),
+        });
+        let (store, output) = enroll_with_key(
+            &client.layout.root,
+            &peer,
+            delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+            key.clone(),
+        )
+        .await;
+        let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = probe.local_addr().unwrap().port();
+        drop(probe);
+        let (decision_sender, decision_receiver) = oneshot::channel();
+        let source_peer = peer.clone();
+        let source_key = key.clone();
+        let source = tokio::spawn(async move {
+            let (mut channel, trust) =
+                connect_fake_mobile(port, 3, &saved.display_name, None, Some(&saved)).await;
+            let local = receive_cli_hello(&mut channel).await;
+            let remote = mobile_capabilities(
+                &trust,
+                platform,
+                if platform == PeerPlatform::Ios {
+                    vec![1, 3, 4]
+                } else {
+                    vec![2, 4]
+                },
+                None,
+            );
+            channel
+                .send(&DirectMessage::Hello(Unlabeled::from(remote.clone())))
+                .await
+                .unwrap();
+            if platform == PeerPlatform::Android {
+                channel
+                    .send_v2(&v2::Envelope::new(v2::Message::SourceHello(
+                        android_source_hello(&trust),
+                    )))
+                    .await
+                    .unwrap();
+            }
+            let negotiation = v4::negotiate(
+                &source_peer.platform,
+                &local.protocol_versions,
+                &remote.protocol_versions,
+                false,
+            )
+            .unwrap();
+            let mut native = NativeFake::new(source_peer, now());
+            let Message::DiscoveryRequest(request) =
+                channel.receive_v4(negotiation).await.unwrap().message
+            else {
+                panic!("discovery")
+            };
+            channel
+                .send_v4(
+                    &Envelope::new(Message::DiscoveryResponse(Box::new(
+                        native.discovery(request.request_id),
+                    ))),
+                    negotiation,
+                )
+                .await
+                .unwrap();
+            let Message::PlanRequest(request) =
+                channel.receive_v4(negotiation).await.unwrap().message
+            else {
+                panic!("plan")
+            };
+            let plan = native.plan(*request).await.unwrap();
+            if !approval_phase {
+                source_key.remaining.store(2, Ordering::SeqCst);
+            }
+            channel
+                .send_v4(
+                    &Envelope::new(Message::PlanResponse(Box::new(plan))),
+                    negotiation,
+                )
+                .await
+                .unwrap();
+            if approval_phase {
+                decision_receiver.await.unwrap();
+                native.store_exact_native_decision();
+                let Message::DiscoveryRequest(request) =
+                    channel.receive_v4(negotiation).await.unwrap().message
+                else {
+                    panic!("current discovery")
+                };
+                channel
+                    .send_v4(
+                        &Envelope::new(Message::DiscoveryResponse(Box::new(
+                            native.discovery(request.request_id),
+                        ))),
+                        negotiation,
+                    )
+                    .await
+                    .unwrap();
+                let Message::ApprovalRequest(request) =
+                    channel.receive_v4(negotiation).await.unwrap().message
+                else {
+                    panic!("approval")
+                };
+                let approval = native.relay_approval(*request).await.unwrap();
+                source_key.remaining.store(2, Ordering::SeqCst);
+                channel
+                    .send_v4(
+                        &Envelope::new(Message::ApprovalResponse(Box::new(approval))),
+                        negotiation,
+                    )
+                    .await
+                    .unwrap();
+            }
+        });
+        let mut bridge = client
+            .connect_bridge(
+                Some(Uuid::parse_str(&peer.source_installation_id.0).unwrap()),
+                port,
+                Duration::from_secs(10),
+                CancellationToken::new(),
+            )
+            .await
+            .unwrap();
+        let planner = HostPlanner::new(store.clone());
+        let clock = FixedClock(now());
+        let request = if approval_phase {
+            let plan = planner
+                .plan(&mut bridge, input(&peer), &clock)
+                .await
+                .unwrap();
+            store
+                .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
+                .await
+                .unwrap();
+            decision_sender.send(()).unwrap();
+            Some(ApprovalRequest {
+                schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
+                schema_version: 1,
+                plan_id: plan.plan_id.clone(),
+                request_id: id(11),
+                binding: approval_binding(&plan),
+            })
+        } else {
+            None
+        };
+        let before = std::fs::read(client.layout.root.join("agent-host-v1/issuer.json")).unwrap();
+        let work = async {
+            if let Some(request) = request {
+                planner
+                    .relay_approval(&mut bridge, request, &clock)
+                    .await
+                    .map(|_| ())
+            } else {
+                planner
+                    .plan(&mut bridge, input(&peer), &clock)
+                    .await
+                    .map(|_| ())
+            }
+        };
+        let (result, ()) = tokio::join!(work, async {
+            ready_receiver.await.unwrap();
+            client
+                .trust_store
+                .save(&TrustState::empty(client.identity.installation_id))
+                .await
+                .unwrap();
+            release_sender.send(()).unwrap();
+        });
+        assert!(result.is_err());
+        assert_eq!(key.fired.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            store.revision().await.unwrap(),
+            if approval_phase { 3 } else { 1 }
+        );
+        assert_eq!(
+            std::fs::read(client.layout.root.join("agent-host-v1/issuer.json")).unwrap(),
+            before
+        );
+        assert!(
+            client
+                .load_trust()
+                .await
+                .unwrap()
+                .trusted_clients
+                .is_empty()
+        );
+        assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+        source.await.unwrap();
+        eprintln!(
+            "original trust revoked during held publication key; approval_phase={approval_phase}; unpublished"
+        );
+    }
 }
 
 #[tokio::test]

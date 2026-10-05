@@ -4,15 +4,613 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use healthmd_client as client_crate;
-use healthmd_client::agent_host::{HostAuthorityStore, ProtectedHostKey};
+use healthmd_client::agent_host::{
+    HostAuthorityStore, LocalEnrollment, LocalHostConsent, ProtectedHostKey,
+};
 use healthmd_client::agent_planning::HostPlanner;
 use healthmd_protocol::v4::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 #[path = "support/agent.rs"]
 mod support;
 use healthmd_client::ClientError;
 use healthmd_protocol::v4::ControlUuid;
 use secrecy::SecretString;
 use support::*;
+
+struct DelayedConsent {
+    clock: Arc<AdvancingClock>,
+    calls: AtomicUsize,
+}
+#[async_trait]
+impl LocalHostConsent for DelayedConsent {
+    async fn enroll(&self, _: &LocalEnrollment) -> Result<(), ClientError> {
+        Err(ClientError::AgentAuthorityUnavailable)
+    }
+    async fn decide(&self, _: &ExportPlan) -> Result<(), ClientError> {
+        tokio::task::yield_now().await;
+        self.clock.advance_to(300);
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+}
+
+fn issuer_bytes(temporary: &tempfile::TempDir) -> Vec<u8> {
+    std::fs::read(temporary.path().join("agent-host-v1/issuer.json")).unwrap()
+}
+fn approval_request(plan: &ExportPlan) -> ApprovalRequest {
+    ApprovalRequest {
+        schema: ApprovalRequestSchema::HealthmdAgentApprovalRequest,
+        schema_version: 1,
+        request_id: id(11),
+        plan_id: plan.plan_id.clone(),
+        binding: approval_binding(plan),
+    }
+}
+
+#[tokio::test]
+async fn delayed_native_consent_expiry_never_publishes_a_host_decision() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let peer = peer(PeerPlatform::Apple);
+    let (store, _) = enroll(temporary.path(), &peer, &now()).await;
+    let clock = Arc::new(AdvancingClock::new());
+    let planner = HostPlanner::new(store.clone());
+    let plan = planner
+        .plan(
+            &mut NativeFake::new(peer.clone(), now()),
+            input(&peer),
+            clock.as_ref(),
+        )
+        .await
+        .unwrap();
+    let before = issuer_bytes(&temporary);
+    let consent = DelayedConsent {
+        clock: clock.clone(),
+        calls: AtomicUsize::new(0),
+    };
+    let result = store
+        .record_local_decision(2, &plan.plan_id, clock.as_ref(), &consent)
+        .await;
+    let revision = store.revision().await.unwrap();
+    assert_eq!(consent.calls.load(Ordering::SeqCst), 1);
+    eprintln!(
+        "delayed consent executed; host revision after decision={revision}; rejected={}",
+        result.is_err()
+    );
+    assert!(matches!(
+        result,
+        Err(ClientError::Agent(Error::PlanExpired))
+    ));
+    assert_eq!(revision, 2);
+    assert_eq!(issuer_bytes(&temporary), before);
+    assert!(
+        planner
+            .preflight_approval(&approval_request(&plan), &now())
+            .await
+            .is_err()
+    );
+}
+
+#[tokio::test]
+async fn delayed_protected_key_expiry_never_publishes_a_plan() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let peer = peer(PeerPlatform::Android);
+    let clock = Arc::new(AdvancingClock::new());
+    let key = Arc::new(DelayedProtectedKey::new(clock.clone()));
+    let (store, output) = enroll_with_key(
+        temporary.path(),
+        &peer,
+        delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+        key.clone(),
+    )
+    .await;
+    let before = issuer_bytes(&temporary);
+    let mut source = KeyDelaySource {
+        native: NativeFake::new(peer.clone(), now()),
+        key: key.clone(),
+        on_plan: true,
+        on_approval: false,
+        seconds: 300,
+        loads: 2,
+    };
+    let result = HostPlanner::new(store.clone())
+        .plan(&mut source, input(&peer), clock.as_ref())
+        .await;
+    let revision = store.revision().await.unwrap();
+    assert_eq!(key.delays.load(Ordering::SeqCst), 1);
+    eprintln!(
+        "delayed publication key executed; host revision after plan={revision}; rejected={}",
+        result.is_err()
+    );
+    assert!(matches!(
+        result,
+        Err(ClientError::Agent(Error::PlanExpired))
+    ));
+    assert_eq!(
+        revision, 1,
+        "final rejection is not prepublication rejection"
+    );
+    assert_eq!(issuer_bytes(&temporary), before);
+    assert_eq!(std::fs::read_dir(output).unwrap().count(), 0);
+}
+
+#[tokio::test]
+async fn delayed_protected_key_expiry_never_publishes_an_approval() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let peer = peer(PeerPlatform::Apple);
+    let clock = Arc::new(AdvancingClock::new());
+    let key = Arc::new(DelayedProtectedKey::new(clock.clone()));
+    let (store, _) = enroll_with_key(
+        temporary.path(),
+        &peer,
+        delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+        key.clone(),
+    )
+    .await;
+    let planner = HostPlanner::new(store.clone());
+    let mut source = KeyDelaySource {
+        native: NativeFake::new(peer.clone(), now()),
+        key: key.clone(),
+        on_plan: false,
+        on_approval: false,
+        seconds: 300,
+        loads: 2,
+    };
+    let plan = planner
+        .plan(&mut source, input(&peer), clock.as_ref())
+        .await
+        .unwrap();
+    store
+        .record_local_decision(2, &plan.plan_id, clock.as_ref(), &ExplicitFakeLocalConsent)
+        .await
+        .unwrap();
+    source.native.store_exact_native_decision();
+    source.on_approval = true;
+    let before = issuer_bytes(&temporary);
+    let result = planner
+        .relay_approval(&mut source, approval_request(&plan), clock.as_ref())
+        .await;
+    let revision = store.revision().await.unwrap();
+    assert_eq!(key.delays.load(Ordering::SeqCst), 1);
+    eprintln!(
+        "delayed publication key executed; host revision after approval={revision}; rejected={}",
+        result.is_err()
+    );
+    assert!(matches!(
+        result,
+        Err(ClientError::Agent(Error::PlanExpired))
+    ));
+    assert_eq!(
+        revision, 3,
+        "final rejection is not prepublication rejection"
+    );
+    assert_eq!(issuer_bytes(&temporary), before);
+}
+
+struct HostMutatingConsent {
+    store: HostAuthorityStore,
+    output: Option<std::path::PathBuf>,
+    calls: AtomicUsize,
+}
+#[async_trait]
+impl LocalHostConsent for HostMutatingConsent {
+    async fn enroll(&self, _: &LocalEnrollment) -> Result<(), ClientError> {
+        Err(ClientError::AgentAuthorityUnavailable)
+    }
+    async fn decide(&self, _: &ExportPlan) -> Result<(), ClientError> {
+        tokio::task::yield_now().await;
+        if let Some(output) = &self.output {
+            std::fs::rename(output, output.with_file_name("original-root")).unwrap();
+            std::fs::create_dir(output).unwrap();
+        } else {
+            self.store.revoke_local(2, &id(5)).await?;
+        }
+        self.calls.fetch_add(1, Ordering::SeqCst);
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn native_consent_delay_rechecks_revocation_cas_and_exact_root_before_decision() {
+    for replace_root in [false, true] {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let peer = peer(PeerPlatform::Android);
+        let (store, output) = enroll(temporary.path(), &peer, &now()).await;
+        let planner = HostPlanner::new(store.clone());
+        let clock = FixedClock(now());
+        let plan = planner
+            .plan(
+                &mut NativeFake::new(peer.clone(), now()),
+                input(&peer),
+                &clock,
+            )
+            .await
+            .unwrap();
+        let consent = HostMutatingConsent {
+            store: store.clone(),
+            output: replace_root.then_some(output),
+            calls: AtomicUsize::new(0),
+        };
+        let result = store
+            .record_local_decision(2, &plan.plan_id, &clock, &consent)
+            .await;
+        assert_eq!(consent.calls.load(Ordering::SeqCst), 1);
+        if replace_root {
+            assert!(matches!(
+                result,
+                Err(ClientError::Agent(Error::BindingChanged))
+            ));
+            assert_eq!(store.revision().await.unwrap(), 2);
+        } else {
+            assert!(matches!(
+                result,
+                Err(ClientError::Agent(Error::RevisionConflict))
+            ));
+            assert_eq!(store.revision().await.unwrap(), 3);
+            assert!(
+                store
+                    .authority_references(&peer, &now())
+                    .await
+                    .unwrap()
+                    .is_empty()
+            );
+        }
+        let signed: serde_json::Value = serde_json::from_slice(&issuer_bytes(&temporary)).unwrap();
+        assert!(signed["state"]["plans"][0].get("decision").is_none());
+        assert!(
+            planner
+                .preflight_approval(&approval_request(&plan), &now())
+                .await
+                .is_err()
+        );
+    }
+}
+
+/// Advance only once a fully serialized private temporary exists, after the real staging write.
+/// This is an exercised publication boundary, not unused time mocks or a final-only rejection.
+struct StagedExpiryClock {
+    private: std::path::PathBuf,
+    time: Arc<AdvancingClock>,
+    target_revision: u64,
+    observed: AtomicUsize,
+}
+impl healthmd_client::agent_planning::PlanningClock for StagedExpiryClock {
+    fn now(&self) -> UtcTimestamp {
+        for entry in std::fs::read_dir(&self.private).unwrap() {
+            let entry = entry.unwrap();
+            if !entry.file_name().to_string_lossy().starts_with(".issuer-") {
+                continue;
+            }
+            let bytes = std::fs::read(entry.path()).unwrap();
+            let staged: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+            if staged["state"]["revision"] == self.target_revision {
+                self.observed.fetch_add(1, Ordering::SeqCst);
+                self.time.advance_to(300);
+            }
+        }
+        healthmd_client::agent_planning::PlanningClock::now(self.time.as_ref())
+    }
+}
+
+#[tokio::test]
+async fn serialized_staged_plan_decision_and_approval_expiry_reject_before_publication() {
+    for target_revision in [2, 3, 4] {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let peer = peer(PeerPlatform::Apple);
+        let (store, _) = enroll(temporary.path(), &peer, &now()).await;
+        let clock = StagedExpiryClock {
+            private: temporary.path().join("agent-host-v1"),
+            time: Arc::new(AdvancingClock::new()),
+            target_revision,
+            observed: AtomicUsize::new(0),
+        };
+        let planner = HostPlanner::new(store.clone());
+        let mut source = NativeFake::new(peer.clone(), now());
+        let before = issuer_bytes(&temporary);
+        let issuance = planner.plan(&mut source, input(&peer), &clock).await;
+        if target_revision == 2 {
+            assert!(matches!(
+                issuance,
+                Err(ClientError::Agent(Error::PlanExpired))
+            ));
+            assert_eq!(issuer_bytes(&temporary), before);
+        } else {
+            let plan = issuance.unwrap();
+            let before = issuer_bytes(&temporary);
+            let decided = store
+                .record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
+                .await;
+            if target_revision == 3 {
+                assert!(matches!(
+                    decided,
+                    Err(ClientError::Agent(Error::PlanExpired))
+                ));
+                assert_eq!(issuer_bytes(&temporary), before);
+            } else {
+                decided.unwrap();
+                source.store_exact_native_decision();
+                let before = issuer_bytes(&temporary);
+                let approved = planner
+                    .relay_approval(&mut source, approval_request(&plan), &clock)
+                    .await;
+                assert!(matches!(
+                    approved,
+                    Err(ClientError::Agent(Error::PlanExpired))
+                ));
+                assert_eq!(issuer_bytes(&temporary), before);
+            }
+        }
+        assert!(clock.observed.load(Ordering::SeqCst) > 0);
+        assert_eq!(store.revision().await.unwrap(), target_revision - 1);
+        assert_eq!(
+            std::fs::read_dir(clock.private).unwrap().count(),
+            2,
+            "only published state/lock remain"
+        );
+        eprintln!(
+            "staged expiry callback executed; attempted revision={target_revision}; unpublished"
+        );
+    }
+}
+
+struct KeyArmingConsent {
+    key: Arc<DelayedProtectedKey>,
+    loads: usize,
+}
+#[async_trait]
+impl LocalHostConsent for KeyArmingConsent {
+    async fn enroll(&self, _: &LocalEnrollment) -> Result<(), ClientError> {
+        Err(ClientError::AgentAuthorityUnavailable)
+    }
+    async fn decide(&self, _: &ExportPlan) -> Result<(), ClientError> {
+        tokio::task::yield_now().await;
+        self.key.arm(self.loads, 300);
+        Ok(())
+    }
+}
+
+#[tokio::test]
+async fn delayed_decision_publication_key_and_postpublication_return_are_distinct() {
+    for loads in [1, 2] {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let peer = peer(PeerPlatform::Apple);
+        let clock = Arc::new(AdvancingClock::new());
+        let key = Arc::new(DelayedProtectedKey::new(clock.clone()));
+        let (store, _) = enroll_with_key(
+            temporary.path(),
+            &peer,
+            delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+            key.clone(),
+        )
+        .await;
+        let planner = HostPlanner::new(store.clone());
+        let mut source = NativeFake::new(peer.clone(), now());
+        let plan = planner
+            .plan(&mut source, input(&peer), clock.as_ref())
+            .await
+            .unwrap();
+        let before = issuer_bytes(&temporary);
+        let result = store
+            .record_local_decision(
+                2,
+                &plan.plan_id,
+                clock.as_ref(),
+                &KeyArmingConsent {
+                    key: key.clone(),
+                    loads,
+                },
+            )
+            .await;
+        assert!(matches!(
+            result,
+            Err(ClientError::Agent(Error::PlanExpired))
+        ));
+        assert_eq!(key.delays.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            store.revision().await.unwrap(),
+            if loads == 1 { 2 } else { 3 }
+        );
+        assert_eq!(issuer_bytes(&temporary) == before, loads == 1);
+        source.store_exact_native_decision();
+        assert!(
+            planner
+                .relay_approval(&mut source, approval_request(&plan), clock.as_ref())
+                .await
+                .is_err()
+        );
+        eprintln!(
+            "decision key expiry; postpublication={}; no approval authority",
+            loads == 2
+        );
+    }
+}
+
+#[tokio::test]
+async fn final_key_delay_rejects_postpublished_plan_or_approval_and_stale_cached_return() {
+    for approval_phase in [false, true] {
+        let temporary = tempfile::TempDir::new().unwrap();
+        let peer = peer(PeerPlatform::Android);
+        let clock = Arc::new(AdvancingClock::new());
+        let key = Arc::new(DelayedProtectedKey::new(clock.clone()));
+        let (store, _) = enroll_with_key(
+            temporary.path(),
+            &peer,
+            delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+            key.clone(),
+        )
+        .await;
+        let planner = HostPlanner::new(store.clone());
+        // The first two publication-phase reads stay live; the FINAL return key crosses expiry.
+        let mut source = KeyDelaySource {
+            native: NativeFake::new(peer.clone(), now()),
+            key: key.clone(),
+            on_plan: false,
+            on_approval: false,
+            seconds: 300,
+            loads: 2,
+        };
+        let result = if approval_phase {
+            let plan = planner
+                .plan(&mut source, input(&peer), clock.as_ref())
+                .await
+                .unwrap();
+            store
+                .record_local_decision(2, &plan.plan_id, clock.as_ref(), &ExplicitFakeLocalConsent)
+                .await
+                .unwrap();
+            source.native.store_exact_native_decision();
+            source.on_approval = true;
+            source.loads = 3;
+            planner
+                .relay_approval(&mut source, approval_request(&plan), clock.as_ref())
+                .await
+                .map(|_| ())
+        } else {
+            source.on_plan = true;
+            source.loads = 3;
+            planner
+                .plan(&mut source, input(&peer), clock.as_ref())
+                .await
+                .map(|_| ())
+        };
+        assert!(matches!(
+            result,
+            Err(ClientError::Agent(Error::PlanExpired))
+        ));
+        assert_eq!(key.delays.load(Ordering::SeqCst), 1);
+        assert_eq!(
+            store.revision().await.unwrap(),
+            if approval_phase { 4 } else { 2 }
+        );
+        let plan = source.native.issued.as_ref().unwrap().clone();
+        let before = issuer_bytes(&temporary);
+        source.native.store_exact_native_decision();
+        assert!(
+            planner
+                .relay_approval(&mut source, approval_request(&plan), clock.as_ref())
+                .await
+                .is_err()
+        );
+        assert_eq!(issuer_bytes(&temporary), before);
+        assert_eq!(plan.expires_at, later(&now(), 300), "expiry never renewed");
+        eprintln!(
+            "final key expiry; approval_phase={approval_phase}; explicitly postpublication; stale relay rejected"
+        );
+    }
+}
+
+#[tokio::test]
+async fn delayed_key_parent_expiry_is_checked_against_latest_host_grant() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let peer = peer(PeerPlatform::Apple);
+    let clock = Arc::new(AdvancingClock::new());
+    let key = Arc::new(DelayedProtectedKey::new(clock.clone()));
+    let (store, _) = enroll_with_key(
+        temporary.path(),
+        &peer,
+        delegation(&peer, AuthorityReferenceIssuer::AuthorizedHost, &now()),
+        key.clone(),
+    )
+    .await;
+    let before = issuer_bytes(&temporary);
+    let mut source = KeyDelaySource {
+        native: NativeFake::new(peer.clone(), now()),
+        key: key.clone(),
+        on_plan: true,
+        on_approval: false,
+        seconds: 1800,
+        loads: 2,
+    };
+    assert!(matches!(
+        HostPlanner::new(store.clone())
+            .plan(&mut source, input(&peer), clock.as_ref())
+            .await,
+        Err(ClientError::Agent(Error::ApprovalRequired))
+    ));
+    assert_eq!(key.delays.load(Ordering::SeqCst), 1);
+    assert_eq!(store.revision().await.unwrap(), 1);
+    assert_eq!(issuer_bytes(&temporary), before);
+    assert!(
+        store
+            .authority_references(&peer, &later(&now(), 1800))
+            .await
+            .unwrap()
+            .is_empty()
+    );
+}
+
+struct CachedReturnExpirySource {
+    native: NativeFake,
+    clock: Arc<AdvancingClock>,
+    after_discovery: std::sync::atomic::AtomicBool,
+    fired: AtomicUsize,
+}
+#[async_trait]
+impl healthmd_client::agent_planning::PlanningSource for CachedReturnExpirySource {
+    async fn require_current(&self) -> Result<(), ClientError> {
+        if self.after_discovery.swap(false, Ordering::SeqCst) {
+            tokio::task::yield_now().await;
+            self.clock.advance_to(300);
+            self.fired.fetch_add(1, Ordering::SeqCst);
+        }
+        Ok(())
+    }
+    fn peer(&self) -> &Peer {
+        &self.native.peer
+    }
+    async fn discover(&mut self) -> Result<Discovery, ClientError> {
+        self.after_discovery.store(true, Ordering::SeqCst);
+        healthmd_client::agent_planning::PlanningSource::discover(&mut self.native).await
+    }
+    async fn plan(&mut self, _: PlanRequest) -> Result<ExportPlan, ClientError> {
+        panic!("cached approval cannot issue a new plan")
+    }
+    async fn relay_approval(&mut self, _: ApprovalRequest) -> Result<Approval, ClientError> {
+        panic!("cached approval cannot issue/renew another decision")
+    }
+}
+
+#[tokio::test]
+async fn cached_approval_final_authentication_delay_rejects_without_renewal_or_writes() {
+    let temporary = tempfile::TempDir::new().unwrap();
+    let peer = peer(PeerPlatform::Android);
+    let (store, _) = enroll(temporary.path(), &peer, &now()).await;
+    let clock = Arc::new(AdvancingClock::new());
+    let planner = HostPlanner::new(store.clone());
+    let mut native = NativeFake::new(peer.clone(), now());
+    let plan = planner
+        .plan(&mut native, input(&peer), clock.as_ref())
+        .await
+        .unwrap();
+    store
+        .record_local_decision(2, &plan.plan_id, clock.as_ref(), &ExplicitFakeLocalConsent)
+        .await
+        .unwrap();
+    native.store_exact_native_decision();
+    let approval = planner
+        .relay_approval(&mut native, approval_request(&plan), clock.as_ref())
+        .await
+        .unwrap();
+    let before = issuer_bytes(&temporary);
+    let mut source = CachedReturnExpirySource {
+        native,
+        clock: clock.clone(),
+        after_discovery: std::sync::atomic::AtomicBool::new(false),
+        fired: AtomicUsize::new(0),
+    };
+    assert!(matches!(
+        planner
+            .relay_approval(&mut source, approval_request(&plan), clock.as_ref())
+            .await,
+        Err(ClientError::Agent(Error::PlanExpired))
+    ));
+    assert_eq!(source.fired.load(Ordering::SeqCst), 1);
+    assert_eq!(issuer_bytes(&temporary), before);
+    assert_eq!(store.revision().await.unwrap(), 4);
+    assert_eq!(approval.binding.expires_at, later(&now(), 300));
+    eprintln!(
+        "cached approval final authentication callback crossed expiry; stored expiry unchanged; no writes"
+    );
+}
 
 struct MissingKey;
 #[async_trait]
@@ -168,7 +766,12 @@ async fn approval_requires_separate_exact_host_and_native_decisions_and_survives
         Err(ClientError::Agent(Error::ApprovalRequired))
     ));
     store
-        .record_local_decision(2, &plan.plan_id, &now(), &ExplicitFakeLocalConsent)
+        .record_local_decision(
+            2,
+            &plan.plan_id,
+            &FixedClock(now()),
+            &ExplicitFakeLocalConsent,
+        )
         .await
         .unwrap();
     assert!(matches!(
@@ -323,10 +926,10 @@ async fn separate_decisions_use_cas_and_revocations_are_retained_after_restart()
         )
         .await
         .unwrap();
-    let time = now();
+    let clock = FixedClock(now());
     let (first, second) = tokio::join!(
-        store.record_local_decision(2, &plan.plan_id, &time, &ExplicitFakeLocalConsent),
-        store.record_local_decision(2, &plan.plan_id, &time, &ExplicitFakeLocalConsent)
+        store.record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent),
+        store.record_local_decision(2, &plan.plan_id, &clock, &ExplicitFakeLocalConsent)
     );
     assert_eq!(usize::from(first.is_ok()) + usize::from(second.is_ok()), 1);
     store.revoke_local(3, &id(5)).await.unwrap();

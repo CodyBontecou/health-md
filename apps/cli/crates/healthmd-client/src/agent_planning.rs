@@ -47,7 +47,8 @@ pub struct HostPlanInput {
     pub host_authority_reference: Option<AuthorityReference>,
 }
 
-/// Injected configuration clock, sampled again after each bounded network round-trip.
+/// Trusted non-wire live clock, sampled after awaited consent/key/authentication work and at
+/// transaction-publication/return boundaries. Never use caller JSON or one request-start sample.
 pub trait PlanningClock: Send + Sync {
     fn now(&self) -> UtcTimestamp;
 }
@@ -55,6 +56,15 @@ pub struct SystemPlanningClock;
 impl PlanningClock for SystemPlanningClock {
     fn now(&self) -> UtcTimestamp {
         UtcTimestamp(chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Secs, true))
+    }
+}
+
+// Legacy CLI preflights are advisory snapshots only, not permission to publish/return metadata.
+// Authoritative plan/approval/decision paths require the separately injected live clock.
+struct SnapshotClock<'a>(&'a UtcTimestamp);
+impl PlanningClock for SnapshotClock<'_> {
+    fn now(&self) -> UtcTimestamp {
+        self.0.clone()
     }
 }
 
@@ -75,7 +85,7 @@ impl HostPlanner {
         input: &HostPlanInput,
         now: &UtcTimestamp,
     ) -> Result<(), ClientError> {
-        self.prepare(peer, input, now).await?;
+        self.prepare(peer, input, &SnapshotClock(now)).await?;
         Ok(())
     }
 
@@ -83,10 +93,9 @@ impl HostPlanner {
         &self,
         peer: &Peer,
         input: &HostPlanInput,
-        now: &UtcTimestamp,
+        clock: &dyn PlanningClock,
     ) -> Result<(ExportIntent, HostAuthorization), ClientError> {
         peer.validate_shape()?;
-        now.validate_shape()?;
         input.destination_binding_id.validate_shape()?;
         if let Some(reference) = &input.native_authority_reference {
             reference.validate_shape()?;
@@ -100,7 +109,7 @@ impl HostPlanner {
                 peer,
                 &input.destination_binding_id,
                 input.host_authority_reference.as_ref(),
-                now,
+                clock,
             )
             .await?;
         let source = if peer.platform == PeerPlatform::Apple {
@@ -139,6 +148,8 @@ impl HostPlanner {
         let context = configuration.context();
         validate_export_intent(&intent, &context)?;
         validate_supported_settings(&input.settings)?;
+        let now = clock.now();
+        now.validate_shape()?;
         validate_issuer_plan_scope(
             &authorization.delegation,
             &authorization.reference,
@@ -147,7 +158,7 @@ impl HostPlanner {
             &ExportDelegationRightsItem::Plan,
             &IssuerScopeContext {
                 configuration: &context,
-                now,
+                now: &now,
                 issuer: AuthorityReferenceIssuer::AuthorizedHost,
             },
         )?;
@@ -165,7 +176,7 @@ impl HostPlanner {
     ) -> Result<ExportPlan, ClientError> {
         source.require_current().await?;
         let peer = source.peer().clone();
-        let (intent, host) = self.prepare(&peer, &input, &clock.now()).await?;
+        let (intent, host) = self.prepare(&peer, &input, clock).await?;
         let discovery = source.discover().await?;
         let configuration = reviewed_configuration();
         let context = configuration.context();
@@ -220,7 +231,7 @@ impl HostPlanner {
                 &peer,
                 &input.destination_binding_id,
                 Some(&host.reference),
-                &now,
+                clock,
             )
             .await?;
         if current.store_revision != host.store_revision || current.destination != host.destination
@@ -236,10 +247,20 @@ impl HostPlanner {
             DiscoveryEntitlement::Satisfied,
         )?;
         self.store
-            .persist_plan(host.store_revision, plan.clone(), discovery, host_authority)
+            .persist_plan(
+                host.store_revision,
+                plan.clone(),
+                discovery,
+                host_authority,
+                clock,
+                source,
+            )
             .await?;
-        source.require_current().await?;
-        require_live_plan(&plan, clock)?;
+        // Final rejection here is postpublication. Reopen current issuer state/key and keep the
+        // shared lock through the final authentication fence; retained metadata is not permission.
+        self.store
+            .require_issued_current(&plan, None, false, clock, Some(source))
+            .await?;
         Ok(plan)
     }
 
@@ -251,6 +272,15 @@ impl HostPlanner {
         request: &ApprovalRequest,
         now: &UtcTimestamp,
     ) -> Result<Peer, ClientError> {
+        self.preflight_approval_current(request, &SnapshotClock(now))
+            .await
+    }
+
+    async fn preflight_approval_current(
+        &self,
+        request: &ApprovalRequest,
+        clock: &dyn PlanningClock,
+    ) -> Result<Peer, ClientError> {
         request.validate_shape()?;
         let (_, plan, _, decision, _) = self.store.issued_plan(&request.plan_id).await?;
         let binding = approval_binding(&plan);
@@ -260,7 +290,7 @@ impl HostPlanner {
         if decision.as_ref() != Some(&binding) {
             return Err(Error::ApprovalRequired.into());
         }
-        if plan.expires_at <= *now {
+        if plan.expires_at <= clock.now() {
             return Err(Error::PlanExpired.into());
         }
         let host = self
@@ -269,12 +299,15 @@ impl HostPlanner {
                 &plan.intent.peer,
                 &plan.intent.destination.binding_id,
                 Some(&plan.authority_references.host),
-                now,
+                clock,
             )
             .await?;
-        if host.destination != plan.intent.destination {
-            return Err(Error::BindingChanged.into());
-        }
+        validate_host_plan_authorization(
+            &plan,
+            &host,
+            &ExportDelegationRightsItem::ExportExecute,
+            clock,
+        )?;
         Ok(plan.intent.peer)
     }
 
@@ -288,8 +321,7 @@ impl HostPlanner {
         clock: &dyn PlanningClock,
     ) -> Result<Approval, ClientError> {
         source.require_current().await?;
-        let now = clock.now();
-        self.preflight_approval(&request, &now).await?;
+        self.preflight_approval_current(&request, clock).await?;
         request.validate_shape()?;
         let (_, plan, issued_discovery, decision, previous) =
             self.store.issued_plan(&request.plan_id).await?;
@@ -300,16 +332,14 @@ impl HostPlanner {
         if decision.as_ref() != Some(&binding) {
             return Err(Error::ApprovalRequired.into());
         }
-        if plan.expires_at <= now {
-            return Err(Error::PlanExpired.into());
-        }
+        require_live_plan(&plan, clock)?;
         let host = self
             .store
             .authorization(
                 &plan.intent.peer,
                 &plan.intent.destination.binding_id,
                 Some(&plan.authority_references.host),
-                &now,
+                clock,
             )
             .await?;
         if host.destination != plan.intent.destination {
@@ -317,18 +347,11 @@ impl HostPlanner {
         }
         let configuration = reviewed_configuration();
         let context = configuration.context();
-        validate_export_plan(&plan, &context)?;
-        validate_issuer_plan_scope(
-            &host.delegation,
-            &host.reference,
-            &plan.intent,
-            &plan.effective_settings,
+        validate_host_plan_authorization(
+            &plan,
+            &host,
             &ExportDelegationRightsItem::ExportExecute,
-            &IssuerScopeContext {
-                configuration: &context,
-                now: &now,
-                issuer: AuthorityReferenceIssuer::AuthorizedHost,
-            },
+            clock,
         )?;
         let current = source.discover().await?;
         require_live_plan(&plan, clock)?;
@@ -343,8 +366,9 @@ impl HostPlanner {
         }
         check_capabilities(&plan.intent, &current)?;
         if let Some(approval) = previous {
-            source.require_current().await?;
-            require_live_plan(&plan, clock)?;
+            self.store
+                .require_issued_current(&plan, Some(&approval), true, clock, Some(source))
+                .await?;
             return Ok(approval);
         }
         let approval = source.relay_approval(request).await?;
@@ -366,7 +390,7 @@ impl HostPlanner {
                 &plan.intent.peer,
                 &plan.intent.destination.binding_id,
                 Some(&host.reference),
-                &now,
+                clock,
             )
             .await?;
         if rechecked.store_revision != host.store_revision
@@ -377,10 +401,11 @@ impl HostPlanner {
         source.require_current().await?;
         require_live_plan(&plan, clock)?;
         self.store
-            .persist_approval(host.store_revision, &plan, approval.clone())
+            .persist_approval(host.store_revision, &plan, approval.clone(), clock, source)
             .await?;
-        source.require_current().await?;
-        require_live_plan(&plan, clock)?;
+        self.store
+            .require_issued_current(&plan, Some(&approval), true, clock, Some(source))
+            .await?;
         Ok(approval)
     }
 
@@ -391,6 +416,53 @@ impl HostPlanner {
     pub fn execute(&self, _: &ExecuteRequest) -> Result<(), ClientError> {
         Err(Error::UnsupportedCapability.into())
     }
+}
+
+pub(crate) fn validate_host_plan_authorization(
+    plan: &ExportPlan,
+    host: &HostAuthorization,
+    right: &ExportDelegationRightsItem,
+    clock: &dyn PlanningClock,
+) -> Result<(), ClientError> {
+    let configuration = reviewed_configuration();
+    let context = configuration.context();
+    validate_export_plan(plan, &context)?;
+    validate_supported_settings(&plan.effective_settings)?;
+    if host.reference != plan.authority_references.host
+        || host.destination != plan.intent.destination
+    {
+        return Err(Error::BindingChanged.into());
+    }
+    let now = clock.now();
+    now.validate_shape()?;
+    if plan.issued_at > now || plan.expires_at <= now {
+        return Err(Error::PlanExpired.into());
+    }
+    if plan.expires_at > host.delegation.expires_at {
+        return Err(Error::ApprovalRequired.into());
+    }
+    validate_issuer_plan_scope(
+        &host.delegation,
+        &host.reference,
+        &plan.intent,
+        &plan.effective_settings,
+        right,
+        &IssuerScopeContext {
+            configuration: &context,
+            now: &now,
+            issuer: AuthorityReferenceIssuer::AuthorizedHost,
+        },
+    )?;
+    // Pure validation/serialization can consume time too. Sample last, not before that work.
+    let final_now = clock.now();
+    final_now.validate_shape()?;
+    if plan.expires_at <= final_now {
+        return Err(Error::PlanExpired.into());
+    }
+    if host.delegation.expires_at <= final_now {
+        return Err(Error::ApprovalRequired.into());
+    }
+    Ok(())
 }
 
 fn require_live_plan(plan: &ExportPlan, clock: &dyn PlanningClock) -> Result<(), ClientError> {
@@ -530,4 +602,140 @@ fn check_capabilities(intent: &ExportIntent, discovery: &Discovery) -> Result<()
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod native_discovery_trace {
+    use super::*;
+    use healthmd_protocol::v4::{self, Digest, ValidateShape};
+    use serde::{Deserialize, Serialize};
+    use std::collections::BTreeMap;
+
+    #[derive(Deserialize, Serialize)]
+    #[serde(deny_unknown_fields)]
+    struct NativeCandidate {
+        discovery: Discovery,
+        intent: ExportIntent,
+        plan: ExportPlan,
+        producer: String,
+        producer_source_sha256: BTreeMap<String, Digest>,
+        source_base: String,
+    }
+    impl ValidateShape for NativeCandidate {
+        fn validate_shape(&self) -> Result<(), Error> {
+            self.discovery.validate_shape()?;
+            self.intent.validate_shape()?;
+            self.plan.validate_shape()?;
+            if self.producer_source_sha256.is_empty()
+                || self.producer_source_sha256.len() > 32
+                || self.source_base != "3bc392c823193ab04aeea4bb71e7cbcb5747b403"
+                || !matches!(
+                    self.producer.as_str(),
+                    "kotlin_actual_service" | "swift_actual_service"
+                )
+            {
+                return Err(Error::InvalidRequest);
+            }
+            for digest in self.producer_source_sha256.values() {
+                digest.validate_shape()?;
+            }
+            Ok(())
+        }
+    }
+    fn load(variable: &str) -> NativeCandidate {
+        let path =
+            std::env::var(variable).expect("not-run: native candidate path must be explicit");
+        let bytes = std::fs::read(path)
+            .expect("not-run: actual native candidate missing; no fake substitution");
+        let value: NativeCandidate =
+            v4::decode_typed(&bytes).expect("strict native discovery candidate");
+        assert_eq!(
+            v4::canonical_json(&value).unwrap(),
+            bytes,
+            "native bytes must already be canonical"
+        );
+        assert_eq!(value.plan.intent, value.intent);
+        assert_eq!(
+            value.plan.capability_sha256,
+            value.discovery.capability_sha256
+        );
+        value
+    }
+    fn validate(candidate: &NativeCandidate) -> Result<(), ClientError> {
+        let configuration = reviewed_configuration();
+        let context = configuration.context();
+        validate_current_discovery(
+            &candidate.discovery,
+            &candidate.intent.peer,
+            &candidate.discovery.issued_at,
+            &context,
+        )?;
+        validate_export_intent(&candidate.intent, &context)?;
+        let Policy::Explicit { settings } = &candidate.intent.settings_policy else {
+            return Err(Error::UnsupportedCapability.into());
+        };
+        validate_supported_settings(settings)?;
+        check_capabilities(&candidate.intent, &candidate.discovery)
+    }
+
+    /// This is strict ACTUAL-SERVICE discovery-to-host semantics, not native permission, TCP,
+    /// installed app support or the full plan/approval journey. Run explicitly with native files.
+    #[test]
+    #[ignore = "requires independently generated native service candidates; missing input is not-run/fail"]
+    fn native_discovery_satisfies_exact_host_preset_and_tamper_guards() {
+        let mut candidate = load("HEALTHMD_AGENT_BRIDGE_NATIVE_DISCOVERY");
+        assert_eq!(candidate.discovery.peer, candidate.intent.peer);
+        let configuration = reviewed_configuration();
+        validate_export_plan(&candidate.plan, &configuration.context()).unwrap();
+        let Policy::Explicit { settings } = &candidate.intent.settings_policy else {
+            panic!("explicit native preset")
+        };
+        assert_eq!(settings.folder_template.0, "{year}");
+        assert_eq!(settings.filename_template.0, "{date}");
+        eprintln!(
+            "actual native producer={}; pointers={}; capability_sha256={}",
+            candidate.producer,
+            candidate.discovery.output_support.setting_pointers.len(),
+            candidate.discovery.capability_sha256.0
+        );
+        validate(&candidate)
+            .expect("actual native discovery rejected the host's full reviewed preset");
+
+        let baseline = load("HEALTHMD_AGENT_BRIDGE_NATIVE_BASELINE");
+        assert_eq!(baseline.producer, "kotlin_actual_service");
+        assert_eq!(baseline.discovery.output_support.setting_pointers.len(), 3);
+        assert!(matches!(
+            validate(&baseline),
+            Err(ClientError::Agent(Error::UnsupportedCapability))
+        ));
+
+        let original = candidate.discovery.clone();
+        candidate.discovery.capability_sha256 = Digest("0".repeat(64));
+        assert!(validate(&candidate).is_err());
+        candidate.discovery = original.clone();
+        candidate.discovery.capability_revision += 1; // Original digest must reject revision tampering.
+        assert!(validate(&candidate).is_err());
+        candidate.discovery = original.clone();
+        candidate
+            .discovery
+            .output_support
+            .setting_pointers
+            .retain(|p| p != "/formats");
+        // A self-consistent negative document is still unsupported, not a repaired positive peer.
+        candidate.discovery.capability_sha256 =
+            v4::capability_digest(&candidate.discovery).unwrap();
+        assert!(matches!(
+            validate(&candidate),
+            Err(ClientError::Agent(Error::UnsupportedCapability))
+        ));
+        candidate.discovery = original;
+        let Policy::Explicit { settings } = &mut candidate.intent.settings_policy else {
+            unreachable!()
+        };
+        settings.daily_notes.enabled = true;
+        assert!(matches!(
+            validate(&candidate),
+            Err(ClientError::Agent(Error::UnsupportedCapability))
+        ));
+    }
 }

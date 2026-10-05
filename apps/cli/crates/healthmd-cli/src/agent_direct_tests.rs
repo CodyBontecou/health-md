@@ -413,7 +413,7 @@ async fn actual_direct_backend_cli_mcp_plan_semantics_and_exact_approval_parity_
             .record_local_decision(
                 3,
                 &plan.plan_id,
-                &SystemPlanningClock.now(),
+                &SystemPlanningClock,
                 &ExplicitFakeLocalConsent,
             )
             .await

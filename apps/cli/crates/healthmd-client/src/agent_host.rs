@@ -8,9 +8,9 @@ use fs2::FileExt as _;
 use healthmd_protocol::v4::{
     self, Approval, Authority, AuthorityReference, AuthorityReferenceIssuer, Binding,
     ConfigurationContext, ControlUuid, Destination, Digest, Discovery, DiscoveryEntitlement, Error,
-    ExportDelegation, ExportDelegationBoundsDestinationPolicy, ExportPlan, Peer, UtcTimestamp,
-    ValidateShape, approval_binding, delegation_reference, derived_export_authority, plan_digest,
-    validate_export_delegation,
+    ExportDelegation, ExportDelegationBoundsDestinationPolicy, ExportDelegationRightsItem,
+    ExportPlan, Peer, UtcTimestamp, ValidateShape, approval_binding, delegation_reference,
+    derived_export_authority, plan_digest, validate_export_delegation,
 };
 use hmac::{Hmac, Mac as _};
 use secrecy::{ExposeSecret as _, SecretBox, SecretString};
@@ -20,6 +20,7 @@ use std::fmt::Write as _;
 
 use crate::{
     ClientError,
+    agent_planning::{PlanningClock, PlanningSource, validate_host_plan_authorization},
     agent_private_fs::{self as private, RootIdentity},
     credentials::CredentialStore,
 };
@@ -139,6 +140,35 @@ pub(crate) struct HostAuthorization {
     pub destination: Destination,
 }
 
+/// Current issuer checks run against the latest locked state, after every asynchronous native
+/// boundary and again after serialization/staging/fsync. No cross-issuer rights are manufactured.
+struct PlanBoundary<'a, 's> {
+    plan: &'a ExportPlan,
+    clock: &'a dyn PlanningClock,
+    right: ExportDelegationRightsItem,
+    source: Option<&'s mut dyn PlanningSource>,
+}
+impl PlanBoundary<'_, '_> {
+    async fn check(
+        &mut self,
+        store: &HostAuthorityStore,
+        state: &State,
+    ) -> Result<(), ClientError> {
+        if let Some(source) = self.source.as_mut() {
+            source.require_current().await?;
+        }
+        store.directory()?;
+        let host = store.authorization_locked(
+            state,
+            &self.plan.intent.peer,
+            &self.plan.intent.destination.binding_id,
+            Some(&self.plan.authority_references.host),
+            self.clock,
+        )?;
+        validate_host_plan_authorization(self.plan, &host, &self.right, self.clock)
+    }
+}
+
 impl HostAuthorityStore {
     /// Open only existing state. No directories, lockfiles, keys, grants or roots are created.
     /// # Errors
@@ -229,7 +259,10 @@ impl HostAuthorityStore {
             }],
             plans: vec![],
         };
-        private::publish(&dir, STATE, &encode(state, &key)?, true)?;
+        private::publish(&dir, STATE, &encode(&state, &key)?, true, || async {
+            Ok(())
+        })
+        .await?;
         Ok(Self {
             path,
             host,
@@ -272,9 +305,20 @@ impl HostAuthorityStore {
         peer: &Peer,
         binding: &ControlUuid,
         reference: Option<&AuthorityReference>,
-        now: &UtcTimestamp,
+        clock: &dyn PlanningClock,
     ) -> Result<HostAuthorization, ClientError> {
         let state = self.read().await?;
+        self.authorization_locked(&state, peer, binding, reference, clock)
+    }
+
+    fn authorization_locked(
+        &self,
+        state: &State,
+        peer: &Peer,
+        binding: &ControlUuid,
+        reference: Option<&AuthorityReference>,
+        clock: &dyn PlanningClock,
+    ) -> Result<HostAuthorization, ClientError> {
         let roots: Vec<_> = state
             .roots
             .iter()
@@ -289,7 +333,9 @@ impl HostAuthorityStore {
         {
             return Err(Error::BindingChanged.into());
         }
-        let grants: Vec<_> = state.grants.iter().filter(|g| !g.revoked && g.description.peer == *peer && g.description.expires_at > *now
+        let now = clock.now();
+        now.validate_shape()?;
+        let grants: Vec<_> = state.grants.iter().filter(|g| !g.revoked && g.description.peer == *peer && g.description.expires_at > now
             && reference.is_none_or(|reference| *reference == g.reference)
             && matches!(&g.description.bounds.destination_policy, ExportDelegationBoundsDestinationPolicy::RegisteredHostBindings { binding_ids } if binding_ids.contains(binding))).collect();
         if grants.len() != 1 {
@@ -310,25 +356,37 @@ impl HostAuthorityStore {
         plan: ExportPlan,
         discovery: Discovery,
         host_authority: Authority,
+        clock: &dyn PlanningClock,
+        source: &mut dyn PlanningSource,
     ) -> Result<(), ClientError> {
-        self.mutate(expected, |state| {
-            if state.plans.len() >= MAX_PLANS {
-                return Err(ClientError::AgentStoreFull);
-            }
-            if state.plans.iter().any(|p| {
-                p.plan.plan_id == plan.plan_id || p.plan.intent.intent_id == plan.intent.intent_id
-            }) {
-                return Err(Error::RevisionConflict.into());
-            }
-            state.plans.push(IssuedPlan {
-                plan,
-                discovery,
-                host_authority,
-                decision: None,
-                native_approval: None,
-            });
-            Ok(())
-        })
+        self.mutate(
+            expected,
+            Some(PlanBoundary {
+                plan: &plan,
+                clock,
+                right: ExportDelegationRightsItem::Plan,
+                source: Some(source),
+            }),
+            |state| {
+                if state.plans.len() >= MAX_PLANS {
+                    return Err(ClientError::AgentStoreFull);
+                }
+                if state.plans.iter().any(|p| {
+                    p.plan.plan_id == plan.plan_id
+                        || p.plan.intent.intent_id == plan.intent.intent_id
+                }) {
+                    return Err(Error::RevisionConflict.into());
+                }
+                state.plans.push(IssuedPlan {
+                    plan: plan.clone(),
+                    discovery: discovery.clone(),
+                    host_authority: host_authority.clone(),
+                    decision: None,
+                    native_approval: None,
+                });
+                Ok(())
+            },
+        )
         .await
     }
 
@@ -367,38 +425,43 @@ impl HostAuthorityStore {
         &self,
         expected_revision: u64,
         plan_id: &ControlUuid,
-        now: &UtcTimestamp,
+        clock: &dyn PlanningClock,
         consent: &dyn LocalHostConsent,
     ) -> Result<ControlUuid, ClientError> {
         let (_, plan, _, _, _) = self.issued_plan(plan_id).await?;
-        self.authorization(
-            &plan.intent.peer,
-            &plan.intent.destination.binding_id,
-            Some(&plan.authority_references.host),
-            now,
-        )
-        .await?;
-        if plan.expires_at <= *now {
-            return Err(Error::PlanExpired.into());
-        }
+        self.require_issued_current(&plan, None, false, clock, None)
+            .await?;
         consent.decide(&plan).await?;
         let decision_id = ControlUuid(uuid::Uuid::new_v4().to_string());
-        self.mutate(expected_revision, |state| {
-            let issued = state
-                .plans
-                .iter_mut()
-                .find(|p| p.plan == plan)
-                .ok_or(Error::BindingChanged)?;
-            if issued.decision.is_some() {
-                return Err(Error::RevisionConflict.into());
-            }
-            issued.decision = Some(Decision {
-                decision_id: decision_id.clone(),
-                binding: approval_binding(&plan),
-            });
-            Ok(())
-        })
+        self.mutate(
+            expected_revision,
+            Some(PlanBoundary {
+                plan: &plan,
+                clock,
+                right: ExportDelegationRightsItem::ExportExecute,
+                source: None,
+            }),
+            |state| {
+                let issued = state
+                    .plans
+                    .iter_mut()
+                    .find(|p| p.plan == plan)
+                    .ok_or(Error::BindingChanged)?;
+                if issued.decision.is_some() {
+                    return Err(Error::RevisionConflict.into());
+                }
+                issued.decision = Some(Decision {
+                    decision_id: decision_id.clone(),
+                    binding: approval_binding(&plan),
+                });
+                Ok(())
+            },
+        )
         .await?;
+        // A subsequent key/return delay can reject AFTER publication. The retained metadata is
+        // never sufficient authority: approval and every return independently recheck live state.
+        self.require_issued_current(&plan, None, true, clock, None)
+            .await?;
         Ok(decision_id)
     }
 
@@ -410,7 +473,7 @@ impl HostAuthorityStore {
         expected_revision: u64,
         authority: &ControlUuid,
     ) -> Result<(), ClientError> {
-        self.mutate(expected_revision, |state| {
+        self.mutate(expected_revision, None, |state| {
             let grant = state
                 .grants
                 .iter_mut()
@@ -427,30 +490,86 @@ impl HostAuthorityStore {
         expected: u64,
         plan: &ExportPlan,
         approval: Approval,
+        clock: &dyn PlanningClock,
+        source: &mut dyn PlanningSource,
     ) -> Result<(), ClientError> {
-        self.mutate(expected, |state| {
-            let issued = state
-                .plans
-                .iter_mut()
-                .find(|p| p.plan == *plan)
-                .ok_or(Error::BindingChanged)?;
-            if issued
+        self.mutate(
+            expected,
+            Some(PlanBoundary {
+                plan,
+                clock,
+                right: ExportDelegationRightsItem::ExportExecute,
+                source: Some(source),
+            }),
+            |state| {
+                let issued = state
+                    .plans
+                    .iter_mut()
+                    .find(|p| p.plan == *plan)
+                    .ok_or(Error::BindingChanged)?;
+                if issued
+                    .decision
+                    .as_ref()
+                    .is_none_or(|d| d.binding != approval.binding)
+                {
+                    return Err(Error::ApprovalRequired.into());
+                }
+                if issued
+                    .native_approval
+                    .as_ref()
+                    .is_some_and(|previous| *previous != approval)
+                {
+                    return Err(Error::BindingChanged.into());
+                }
+                issued.native_approval = Some(approval);
+                Ok(())
+            },
+        )
+        .await
+    }
+
+    /// Hold the private shared lock through the final authenticated-source fence, then check
+    /// current host grant/root/ref and time. Cached/retained metadata never authorizes a return.
+    pub(crate) async fn require_issued_current(
+        &self,
+        plan: &ExportPlan,
+        approval: Option<&Approval>,
+        require_decision: bool,
+        clock: &dyn PlanningClock,
+        source: Option<&mut dyn PlanningSource>,
+    ) -> Result<(), ClientError> {
+        let key = key_bytes(&self.protected_key.load_existing(&self.host).await?)?;
+        let dir = self.directory()?;
+        let lock = private::open_private(&dir, LOCK, false, false)?;
+        fs2::FileExt::try_lock_shared(&lock).map_err(|_| ClientError::AgentStoreBusy)?;
+        let state = self.read_locked(&dir, &key)?;
+        let issued = state
+            .plans
+            .iter()
+            .find(|p| p.plan == *plan)
+            .ok_or(Error::BindingChanged)?;
+        if require_decision
+            && issued
                 .decision
                 .as_ref()
-                .is_none_or(|d| d.binding != approval.binding)
-            {
-                return Err(Error::ApprovalRequired.into());
-            }
-            if issued
-                .native_approval
-                .as_ref()
-                .is_some_and(|previous| *previous != approval)
-            {
-                return Err(Error::BindingChanged.into());
-            }
-            issued.native_approval = Some(approval);
-            Ok(())
-        })
+                .is_none_or(|d| d.binding != approval_binding(plan))
+        {
+            return Err(Error::ApprovalRequired.into());
+        }
+        if approval.is_some_and(|a| issued.native_approval.as_ref() != Some(a)) {
+            return Err(Error::BindingChanged.into());
+        }
+        PlanBoundary {
+            plan,
+            clock,
+            right: if require_decision || source.is_none() {
+                ExportDelegationRightsItem::ExportExecute
+            } else {
+                ExportDelegationRightsItem::Plan
+            },
+            source,
+        }
+        .check(self, &state)
         .await
     }
 
@@ -501,6 +620,7 @@ impl HostAuthorityStore {
     async fn mutate(
         &self,
         expected: u64,
+        mut boundary: Option<PlanBoundary<'_, '_>>,
         change: impl FnOnce(&mut State) -> Result<(), ClientError>,
     ) -> Result<(), ClientError> {
         let key = key_bytes(&self.protected_key.load_existing(&self.host).await?)?;
@@ -512,17 +632,27 @@ impl HostAuthorityStore {
         if state.revision != expected {
             return Err(Error::RevisionConflict.into());
         }
+        if let Some(boundary) = boundary.as_mut() {
+            boundary.check(self, &state).await?;
+        }
         change(&mut state)?;
         state.revision = state
             .revision
             .checked_add(1)
             .ok_or(ClientError::AgentStoreFull)?;
         validate_state(&state)?;
-        let bytes = encode(state, &key)?;
+        let bytes = encode(&state, &key)?;
         if bytes.len() > MAX_BYTES {
             return Err(ClientError::AgentStoreFull);
         }
-        private::publish(&dir, STATE, &bytes, false)
+        private::publish(&dir, STATE, &bytes, false, || async {
+            self.directory()?;
+            if let Some(boundary) = boundary.as_mut() {
+                boundary.check(self, &state).await?;
+            }
+            Ok(())
+        })
+        .await
     }
 }
 
@@ -547,9 +677,14 @@ fn mac(state: &State, key: &SecretBox<[u8; 32]>) -> Result<Digest, ClientError> 
     }
     Ok(Digest(encoded))
 }
-fn encode(state: State, key: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, ClientError> {
-    let mac = mac(&state, key)?;
-    v4::canonical_json(&SignedState { state, mac }).map_err(Into::into)
+fn encode(state: &State, key: &SecretBox<[u8; 32]>) -> Result<Vec<u8>, ClientError> {
+    #[derive(Serialize)]
+    struct Signed<'a> {
+        state: &'a State,
+        mac: Digest,
+    }
+    let mac = mac(state, key)?;
+    v4::canonical_json(&Signed { state, mac }).map_err(Into::into)
 }
 fn validate_state(state: &State) -> Result<(), ClientError> {
     let mut grants = std::collections::BTreeSet::new();
