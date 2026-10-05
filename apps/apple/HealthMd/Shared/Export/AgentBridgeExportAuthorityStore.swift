@@ -116,7 +116,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
         let mac: Data
     }
 
-    init(existingDirectory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading,
+    init(existingDirectory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading = AgentBridgeExportProtectedKey(),
          publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws {
         directory = existingDirectory
         rootFD = try AgentBridgeExportPrivateFiles.openDirectory(existingDirectory, privateLeaf: true)
@@ -129,7 +129,7 @@ nonisolated final class AgentBridgeExportAuthorityStore: @unchecked Sendable {
 
     /// Explicit local-native bootstrap only. Keys must already exist under independent native
     /// protection. The remote service has no access to this method or an authorizing context.
-    static func createPrivateStore(at directory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading,
+    static func createPrivateStore(at directory: URL, protectedKeys: any AgentBridgeExportProtectedKeyReading = AgentBridgeExportProtectedKey(),
                                    authorization: any AgentBridgeExportNativeAuthorizing,
                                    publication: any AgentBridgeExportPublicationObserving = AgentBridgeExportUnobservedPublication()) throws -> AgentBridgeExportAuthorityStore {
         try authorization.requireNativeAuthorization(for: .createPrivateStore)
