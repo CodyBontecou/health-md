@@ -475,12 +475,13 @@ describe("AS06 wave2 selected CREATE retry", () => {
     expect((await inventory(ram)).find(r => r.session_id === s.session_id)?.revoked).toBe(true);
   });
 
-  it("denies missing/foreign/mismatch",async()=>{
+  it("review",async()=>{
     const off=await createProfileSyncV1Ram();expect(await off.selectRetry(request(mutatePath),encode(raw))).toEqual(unavailable);
     expect(off.observe().admittedPorts).toBe(0);
     const r=await createProfileSyncV1Ram({sentinel:"healthmd.profile-sync.v1.ram.synthetic-only"}),s=await issue(r),q=native(s),z=encode(raw);
     await select(r,s);const b=r.observe();
-    for(const h of [browserHeaders,{Cookie:"x",Authorization:`Bearer ${s.access_token}`},{Authorization:`Bearer ${s.refresh_token}`}])expect(await r.selectRetry(request(mutatePath,"POST",undefined,h),z)).toEqual(unavailable);
+    const hs:Record<string,string>[]=[browserHeaders,{Cookie:"x",Authorization:`Bearer ${s.access_token}`},{Authorization:`Bearer ${s.refresh_token}`}];
+    for(const h of hs)expect(await r.selectRetry(request(mutatePath,"POST",undefined,h),z)).toEqual(unavailable);
     for(const x of [q,native(s,readPath)])expect(await r.selectRetry(x,z)).toEqual(unavailable);
     expect(r.observe()).toEqual(b);requireSuccess(await r.mutate(q,z));const v=r.observe();
     for(const f of [r.mutate,r.selectRetry])expect(await f(q,encode(raw+" "))).toEqual({...unavailable,result:"idempotency_mismatch"});
@@ -499,7 +500,7 @@ describe("AS06 wave2 selected CREATE retry", () => {
     if(action==="revoke") expect((await inventory(r)).find(x=>x.session_id===s.session_id)?.revoked).toBe(true);
   });
 
-  it("keeps corrupt replay",async()=>{
+  it("corrupt",async()=>{
     const r=await createProfileSyncV1Ram({sentinel:"healthmd.profile-sync.v1.ram.synthetic-only"}),s=await issue(r),q=native(s),z=encode(raw);await select(r,s);
     const real=crypto.subtle.encrypt.bind(crypto.subtle),spy=vi.spyOn(crypto.subtle,"encrypt").mockImplementationOnce(async(...a)=>{const b=new Uint8Array(await real(...a));b[b.length-1]=b[b.length-1]!^1;return b.buffer;});
     const u={...unavailable,result:"verification_pending"};
