@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Rebuild/check the M3 registry from immutable pre-cutover native evidence.
 
-The two native snapshots and reviewed semantic crosswalk are independent migration fixtures.
+The native snapshots, semantic crosswalk, and frozen capability projection are independent
+migration fixtures. The evolving product capability ledger is not a registry-v1 input.
 The canonical output becomes the source of truth; generated adapters and normal builds read
 metric-registry-v1.json instead of parsing Swift, Kotlin, or generated documentation.
 """
@@ -21,8 +22,8 @@ APPLE_CATALOG = REPO / "apps/apple/docs/reference/generated/core/metric-catalog.
 ANDROID_METRICS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt"
 ANDROID_FIELDS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt"
 SEMANTIC_CROSSWALK = WORKSPACE / "crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json"
-CAPABILITY_MANIFEST = REPO / "packages/contracts/product-capabilities.json"
 REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
+CAPABILITY_BASELINE = REGISTRY_DIR / "native-baseline-capabilities-v1.json"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
 ANDROID_BASELINE = REGISTRY_DIR / "native-baseline-android-v4-v5.json"
@@ -591,22 +592,13 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                     }
                 )
 
-    capability_manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    capability_baseline = json.loads(CAPABILITY_BASELINE.read_text())
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
-        "known_capability_ids": [
-            capability["id"] for capability in capability_manifest["capabilities"]
-        ],
-        "available_capability_ids_by_platform": {
-            platform: [
-                capability["id"]
-                for capability in capability_manifest["capabilities"]
-                if capability["platforms"][platform]["state"] == "available"
-            ]
-            for platform in ("apple", "android")
-        },
+        "known_capability_ids": capability_baseline["known_capability_ids"],
+        "available_capability_ids_by_platform": capability_baseline["available_capability_ids_by_platform"],
         "categories": category_rows,
         "metrics": semantic_metrics,
         "profiles": profiles,

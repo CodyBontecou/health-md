@@ -18,6 +18,7 @@ import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.ExportAwakeCoordinator
 import com.healthmd.data.export.ExportOrchestrator
+import com.healthmd.data.export.RawSnapshotService
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.APIExportEndpoint
@@ -36,6 +37,7 @@ import com.healthmd.domain.repository.HealthRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.presentation.MainActivity
 import com.healthmd.presentation.navigation.NavDestination
+import com.healthmd.rawexport.ExportMode
 import com.healthmd.util.runCatchingCancellable
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
@@ -81,6 +83,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private val exportRepository: ExportRepository,
     private val exportHistoryRepository: ExportHistoryRepository,
     private val apiEndpointExportRunner: APIEndpointExportRunner,
+    private val rawSnapshotExportRunner: RawSnapshotService,
     private val profileRepository: ExportProfileRepository,
     private val entryStore: ScheduledProfileEntryStore,
     private val snapshotFactory: ScheduledProfileSnapshotFactory,
@@ -154,11 +157,16 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             Timber.i("Profile occurrence skipped: entry missing or disabled profileId=%s", profileId)
             return Result.success()
         }
+        // Existing pre-discard WorkManager requests default to generation zero. A late alarm
+        // or backoff from a discarded generation must not become a new capture.
+        if (inputData.getLong(INPUT_RECOVERY_GENERATION, 0L) != entry.recoveryGeneration) {
+            return Result.success()
+        }
         val storedProfile = profileRepository.profileById(profileId)
         if (storedProfile == null) {
             // Cross-platform rule: never run the wrong profile; disable the orphaned entry.
             Timber.w("Profile occurrence profile missing, disabling entry profileId=%s", profileId)
-            entryStore.update(profileId) { it.copy(isEnabled = false) }
+            entryStore.updateForGeneration(profileId, entry.recoveryGeneration) { it.copy(isEnabled = false) }
             return Result.success()
         }
         val blocked = runCatchingCancellable {
@@ -169,7 +177,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             true
         }
         if (blocked) {
-            entryStore.update(profileId) { it.copy(isEnabled = false) }
+            entryStore.updateForGeneration(profileId, entry.recoveryGeneration) { it.copy(isEnabled = false) }
             return Result.failure(
                 workDataOf(OUTPUT_PROFILE_ERROR to PROFILE_REBIND_REQUIRED),
             )
@@ -198,7 +206,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 warning = "profile_snapshot_invalid",
                 operationId = operationId(profileId, due),
             )
-            entryStore.update(profileId) { it.copy(isEnabled = false) }
+            entryStore.updateForGeneration(profileId, entry.recoveryGeneration) { it.copy(isEnabled = false) }
             showFailureNotification(profile.name)
             return Result.failure()
         }
@@ -270,6 +278,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 enginePin != null &&
                 com.healthmd.domain.exportengine.AndroidDailyAggregateExportPlanner
                     .supportsNonLegacy(settings.copy(exportTarget = ExportTarget.DEVICE_FOLDER))
+        // Permission/entitlement checks can suspend while recovery is discarded or disabled.
+        val latestEntry = entryStore.entry(profileId)
+        if (latestEntry?.isEnabled != true || latestEntry.recoveryGeneration != entry.recoveryGeneration) {
+            return Result.success()
+        }
         val result = try {
             ScheduledExportCancellationCoordinator.run(id) {
                 when (target) {
@@ -277,7 +290,14 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         // Per-profile folder: adopt the profile's binding around the run (the live
                         // folder URI is process-global plumbing; see ProfileFolderAdoptionScope).
                         folderAdoption.withProfileFolder(profile) {
-                            if (useDurableFolder) {
+                            if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                                rawSnapshotExportRunner.exportRange(
+                                    startDate = dates.first(),
+                                    endDate = dates.last(),
+                                    settings = settings,
+                                    target = target,
+                                )
+                            } else if (useDurableFolder) {
                                 ExportOrchestrator(healthRepository, exportRepository)
                                     .exportDatesDurably(
                                         dates = dates,
@@ -297,12 +317,23 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                         }
 
                     ExportTarget.API_ENDPOINT ->
-                        apiEndpointExportRunner.exportDates(
-                            dates = dates,
-                            settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
-                            durableOperationId = durableOperationId,
-                            durableSettingsSnapshotJson = snapshotJson,
-                        )
+                        if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+                            // Raw artifacts are not healthmd.api_export compatibility envelopes;
+                            // never resume a compatibility journal left by the old profile worker.
+                            rawSnapshotExportRunner.exportRange(
+                                startDate = dates.first(),
+                                endDate = dates.last(),
+                                settings = settings,
+                                target = target,
+                            )
+                        } else {
+                            apiEndpointExportRunner.exportDates(
+                                dates = dates,
+                                settings = settings.copy(exportTarget = ExportTarget.API_ENDPOINT),
+                                durableOperationId = durableOperationId,
+                                durableSettingsSnapshotJson = snapshotJson,
+                            )
+                        }
                 }
             }
         } catch (_: kotlinx.coroutines.CancellationException) {
@@ -314,6 +345,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 totalCount = dates.size,
                 wasCancelled = true,
                 target = target,
+                exportMode = settings.exportMode,
                 remainingDates = dates.toSet(),
             )
         } catch (error: Exception) {
@@ -322,11 +354,17 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 successCount = 0,
                 totalCount = dates.size,
                 failedDateDetails = dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN) },
+                target = target,
+                exportMode = settings.exportMode,
             )
         }
 
+        kotlin.coroutines.coroutineContext.ensureActive()
+        if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration) {
+            return Result.success()
+        }
         if (result.wasCancelled) {
-            val remainingDates = cancellationRemainingDates(dates, target, result)
+            val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
             val replacements = if (hasCompletedDayWork) {
                 residualPendingExports(
                     profile = profile,
@@ -344,8 +382,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 attemptedPendingID = due.pendingExport?.id,
                 replacements = replacements,
+                expectedRecoveryGeneration = entry.recoveryGeneration,
             )
             if (!cancellationPersisted) {
+                if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration) {
+                    return Result.success()
+                }
                 Timber.e(
                     "Profile cancellation residual checkpoint failed profileId=%s operationId=%s",
                     profileId,
@@ -356,7 +398,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
             if (refreshSlotMillis != null && refreshDate != null && refreshDate !in remainingDates) {
                 // Cancellation preserved exact unresolved dates; today's file already written
                 // before the stop satisfies its slot and must not re-run at the next one.
-                entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
+                entryStore.recordRefreshSuccess(profileId, refreshSlotMillis, entry.recoveryGeneration)
             }
             if (result.successCount > 0) {
                 recordHistory(
@@ -385,24 +427,32 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 profileId = profileId,
                 fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 completedPendingID = due.pendingExport?.id,
+                expectedRecoveryGeneration = entry.recoveryGeneration,
             )
         }
         val failedDates = result.failedDateDetails.mapTo(hashSetOf()) { it.date }
-        if (refreshSlotMillis != null && refreshDate != null && refreshDate !in failedDates) {
-            // Today's file exported (even in a partial run): the slot is satisfied. Remaining
-            // completed-day failures stay retryable through their own residual groups.
-            entryStore.recordRefreshSuccess(profileId, refreshSlotMillis)
+        val refreshSucceeded = if (settings.exportMode == ExportMode.RAW_SNAPSHOT) {
+            // Raw counts are provider artifacts, not successful owner dates. A partial provider
+            // result cannot satisfy today's slot just because it reported only the range start.
+            result.isFullSuccess
+        } else {
+            refreshDate !in failedDates
+        }
+        if (refreshSlotMillis != null && refreshDate != null && refreshSucceeded) {
+            entryStore.recordRefreshSuccess(profileId, refreshSlotMillis, entry.recoveryGeneration)
         }
 
         if (!result.isFullSuccess) {
-            val remainingDates = cancellationRemainingDates(dates, target, result)
+            val remainingDates = cancellationRemainingDates(dates, target, settings.exportMode, result)
             val replacements = if (hasCompletedDayWork) {
                 residualPendingExports(
                     profile = profile,
                     due = due,
                     remainingDates = remainingDates,
                     result = result,
-                    fallbackDurableOperationId = durableOperationId,
+                    fallbackDurableOperationId = durableOperationId.takeUnless {
+                        settings.exportMode == ExportMode.RAW_SNAPSHOT
+                    },
                 )
             } else {
                 emptyList()
@@ -412,8 +462,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 fireAtMillis = due.fireAtMillis.takeIf { hasCompletedDayWork },
                 attemptedPendingID = due.pendingExport?.id,
                 replacements = replacements,
+                expectedRecoveryGeneration = entry.recoveryGeneration,
             )
             if (!retryPersisted) {
+                if (entryStore.entry(profileId)?.recoveryGeneration != entry.recoveryGeneration) {
+                    return Result.success()
+                }
                 Timber.e(
                     "Profile retry checkpoint failed profileId=%s operationId=%s",
                     profileId,
@@ -436,7 +490,8 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private fun operationId(
         profileId: String,
         due: ScheduledProfileEntry.DueOccurrence,
-    ): String = "$profileId-${due.fireAtMillis}"
+    ): String = "$profileId-${due.fireAtMillis}" +
+        if (due.entry.recoveryGeneration == 0L) "" else "-g${due.entry.recoveryGeneration}"
 
     private fun ScheduledProfilePendingExport.asFrozenProfile(
         current: ExportProfile,
@@ -452,8 +507,12 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
     private fun cancellationRemainingDates(
         attemptedDates: List<LocalDate>,
         target: ExportTarget,
+        exportMode: ExportMode,
         result: ExportResult,
     ): Set<LocalDate> {
+        // One raw action spans the entire range for every selected provider. Provider success
+        // counts never identify which dates succeeded, even when they outnumber the dates.
+        if (exportMode == ExportMode.RAW_SNAPSHOT) return attemptedDates.toSet()
         val explicit = (
             result.remainingDates +
                 result.retryOperationIds.keys +
@@ -480,7 +539,17 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
         fallbackDurableOperationId: String? = null,
     ): List<ScheduledProfilePendingExport> {
         val operationByDate = result.retryOperationIds + result.retryFolderOperationIds
-        val groups = remainingDates.sorted().groupBy { date ->
+        val refreshDate = due.refreshSlotMillis?.let {
+            Instant.ofEpochMilli(it).atZone(due.entry.zone).toLocalDate()
+        }
+        // Raw refresh failures retry on the next slot, not through a compatibility journal.
+        // Keep compatibility journal date groups unchanged; their exact batch plan is durable.
+        val recoveryDates = if (result.exportMode == ExportMode.RAW_SNAPSHOT) {
+            remainingDates.filterNot { it == refreshDate }
+        } else {
+            remainingDates.toList()
+        }
+        val groups = recoveryDates.sorted().groupBy { date ->
             if (date in result.freshCaptureRetryDates) {
                 null
             } else {
@@ -582,6 +651,7 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
 
     companion object {
         const val INPUT_PROFILE_ID = "profile_id"
+        const val INPUT_RECOVERY_GENERATION = "recovery_generation"
         const val OUTPUT_PROFILE_ERROR = "profile_error"
         const val PROFILE_REBIND_REQUIRED = "profile_rebind_required"
         const val MAX_WORKER_ATTEMPTS = 3

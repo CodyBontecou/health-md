@@ -94,6 +94,7 @@
     vitals: "Vitals & metabolism",
     body: "Body composition",
     sleep: "Sleep",
+    whoop: "WHOOP",
     mental: "Mood & mind",
     medications: "Medications",
     mobility: "Mobility",
@@ -114,6 +115,7 @@
     vitals: "vitals-metabolism",
     body: "body-composition",
     sleep: "sleep-analysis",
+    whoop: "whoop",
     mental: "mindfulness-mood",
     medications: "medication-adherence",
     mobility: "mobility-gait",
@@ -263,6 +265,7 @@
     vitals: "Ordinary Blood Pressure, Blood Glucose, Blood Oxygen, Respiratory Rate, and related daily vital summaries where used.",
     body: "Body Mass, Height, BMI, Body Fat Percentage, Lean Body Mass, and Waist Circumference where used.",
     sleep: "Sleep Analysis, including sleep stage samples when available.",
+    whoop: "Requires a WHOOP-enabled Health.md build, a connection in Settings → Connected Apps, and Connected Apps included in the export. No HealthKit permission supplies WHOOP records.",
     mobility: "Walking Speed and Walking Asymmetry. Additional mobility exports may include Step Length, Double Support, Stair Speed, Six-Minute Walk, and Walking Steadiness.",
     mental: "State of Mind (iOS 18+) for mood entries. Context overlays may also need Sleep Analysis, Exercise Time / Workouts, and HRV.",
     workouts: "Workouts. Detailed workout charts may also need Heart Rate, Workout Routes, Active Energy, and distance types such as Walking + Running or Cycling.",
@@ -323,7 +326,18 @@
     "medication-adherence-trend": permissionGroups.medications,
     "medication-recent-dose-events": permissionGroups.medications,
     "medication-schedule-timeline": permissionGroups.medications,
-    "medication-skip-reasons": permissionGroups.medications
+    "medication-skip-reasons": permissionGroups.medications,
+    "whoop-recovery-strain": permissionGroups.whoop + " Relevant WHOOP scopes: read:cycles and read:recovery.",
+    "whoop-sleep-need": permissionGroups.whoop + " Relevant WHOOP scope: read:sleep.",
+    "whoop-sleep-trends": permissionGroups.whoop + " Relevant WHOOP scope: read:sleep.",
+    "whoop-workout-strain": permissionGroups.whoop + " Relevant WHOOP scope: read:workout."
+  };
+
+  var whoopDataNeeded = {
+    "whoop-recovery-strain": "WHOOP scored recovery and cycle strain linked by the same cycle ID. HRV context is RMSSD, not Apple SDNN.",
+    "whoop-sleep-need": "WHOOP sleep-session durations and four reported need components: baseline, debt, recent strain, and signed nap adjustment. JSON or structured CSV is required.",
+    "whoop-sleep-trends": "WHOOP-reported sleep performance, consistency, and efficiency percentages. Sessions and naps stay separate; missing scores are not zero.",
+    "whoop-workout-strain": "Individual WHOOP workout strain (0–21), reported zones 0–5, recording coverage, and elapsed timestamps. Zone shares use reported zone time, not elapsed time."
   };
 
   var parameterEditors = {
@@ -600,7 +614,8 @@
 
   function pageDescription(viz) {
     var themeDescription = state.colorScheme === "theme" ? "current theme" : "the " + colorSchemeLabel(state.colorScheme) + " theme";
-    return viz.description + " Copy the Obsidian health-viz block, inspect required Apple Health permissions, and share this exact " + (categoryLabels[state.dataFilter] || state.dataFilter) + " preview with " + themeDescription + ".";
+    var permissions = viz.category === "whoop" ? "WHOOP connection requirements" : "required Apple Health permissions";
+    return viz.description + " Copy the Obsidian health-viz block, inspect " + permissions + ", and share this exact " + (categoryLabels[state.dataFilter] || state.dataFilter) + " preview with " + themeDescription + ".";
   }
 
   function setMeta(selector, value) {
@@ -1039,12 +1054,13 @@
     var catalogOptions = viz.catalog ? (viz.catalog.params || []).map(catalogOption) : [];
     return doc(
       viz.description,
-      "Matching exported Health.md summary data for " + (categoryLabels[viz.category] || viz.category) + ".",
+      whoopDataNeeded[viz.id] || "Matching exported Health.md summary data for " + (categoryLabels[viz.category] || viz.category) + ".",
       catalogOptions
     );
   }
 
   function platformSupportForVisualization(viz) {
+    if (viz.category === "whoop") return "Apple v8 daily WHOOP exports (iPhone / Connected Mac). Android native Raw API Snapshots and provider sidecars are not read by these charts.";
     if (viz.category === "mental" || viz.category === "medications" || viz.category === "reproductive") return "iOS";
     return "iOS / Android";
   }
@@ -1357,7 +1373,7 @@
       "<p>" + escapeHtml(docs.description || viz.description) + "</p>" +
       "</div>" +
       "<div class=\"docs-meta\">" +
-      "<div><span>HealthKit permissions</span><strong>" + escapeHtml(permissions) + "</strong></div>" +
+      "<div><span>" + (viz.category === "whoop" ? "WHOOP connection & scopes" : "HealthKit permissions") + "</span><strong>" + escapeHtml(permissions) + "</strong></div>" +
       "<div><span>Category</span><strong>" + escapeHtml(categoryLabels[viz.category] || viz.category) + "</strong></div>" +
       "<div><span>Data needed</span><strong>" + escapeHtml(docs.dataNeeded) + "</strong></div>" +
       "<div><span>Works with exports</span><strong>" + escapeHtml(exportSourcesForVisualization(viz).map(function (id) { return exportSourceMeta[id].label; }).join(", ")) + "</strong></div>" +
@@ -1386,6 +1402,7 @@
     canvas.hidden = viz.renderer === "html";
     html.hidden = viz.renderer !== "html";
     stats.hidden = viz.renderer === "html";
+    stats.classList.toggle("health-md-whoop-stats", viz.category === "whoop");
     stats.empty();
     html.empty();
     html.className = "html-preview";
@@ -1431,6 +1448,7 @@
     app.querySelector("[data-current-category]").textContent = categoryLabels[viz.category] || viz.category;
     app.querySelector("[data-current-title]").textContent = viz.label;
     app.querySelector("[data-current-description]").textContent = viz.description;
+    app.querySelector("[data-whoop-preview-note]").hidden = viz.category !== "whoop";
     app.querySelector("[data-viz-color-scheme]").value = state.colorScheme;
     app.querySelector("[data-viz-data-filter]").value = state.dataFilter;
     renderColorSchemeButtons();

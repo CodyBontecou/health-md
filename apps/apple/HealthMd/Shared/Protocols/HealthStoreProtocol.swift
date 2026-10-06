@@ -770,8 +770,14 @@ protocol HealthStoreProviding: Sendable {
     var supportsVisionPrescriptionAuthorization: Bool { get }
     var supportsMedicationAuthorization: Bool { get }
     var supportsScheduledWorkoutPlans: Bool { get }
+    /// Whether this runtime exposes HealthKit's per-type limited-history boundary API.
+    var supportsHistoryAuthorizationBoundaries: Bool { get }
 
     func requestAuth(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws
+    /// Returns only types for which HealthKit reports a limited-history boundary.
+    /// An omitted type can be unrestricted or denied; callers must preserve that
+    /// privacy distinction instead of presenting omission as proof of read access.
+    func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date]
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus
 
     // Statistics queries — return extracted numeric values

@@ -21,9 +21,13 @@ Apple and Android should expose the same capability, terminology, settings seman
 - Use bundled Geist Sans for UI/copy and Geist Mono for code, paths, dates, and tabular data.
 - Update the governing documents first before intentionally deviating from a token.
 
+## Verification
+
+Follow the root [verification policy](../../AGENTS.md#verification-policy) and [test selection guide](../../docs/testing-strategy.md). Iterate with an owning JVM class, for example `./gradlew :app:testPlayDebugUnitTest --tests '<fully.qualified.TestClass>' --max-workers=2`, or the existing `:direct-protocol:test` / `:wearable-contract:test` modules when they own the behavior. Run the affected module regressions once at completion; root `make test-android` selects Play Debug and shared/Wear modules with bounded workers. Select F-Droid explicitly for channel-specific changes; `make test-android-all` retains all JVM variants. Full flavor/device matrices remain CI/qualification gates. Simulator/emulator/device QA requires explicit authorization for the current task.
+
 ## Local Build & Deploy
 
-When building locally, always target the Pixel 7 device:
+For explicitly requested physical-device deployment or QA, target the Pixel 7 device:
 
 - **Device serial:** `2C061FDH200CJN`
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`

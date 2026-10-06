@@ -32,7 +32,13 @@ Before changing export or protocol behavior:
 - No runtime downloads or unpinned code generation.
 - Generated Swift/Kotlin source is never edited by hand. Compiled native binaries are build artifacts, not source.
 
-## Required checks
+## Verification
+
+Follow the root [verification policy](../../AGENTS.md#verification-policy) and [test selection guide](../../docs/testing-strategy.md). During iteration use `cargo test -p <owning-crate> <test-filter> --locked` with relevant features, plus `cargo fmt --all --check`. At completion run affected crate/consumer regressions and Clippy once. Registry, protocol, FFI, and contract changes require their generators/vector/differential checks; unchanged native packaging is not an everyday feedback loop.
+
+### Component CI / extended qualification
+
+The full gates below remain required in CI/qualification. Run MSRV and native binding/package gates locally when changing their toolchain, generation, packaging, or compatibility surface, rather than repeating them after every edit.
 
 ```bash
 cargo fmt --all --check

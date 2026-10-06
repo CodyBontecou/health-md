@@ -1,6 +1,6 @@
 # Health.md
 
-Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, and website.
+Health.md is a local-first health data platform. This repository is the canonical source for the Apple apps, Android app, standalone CLI, notification-only wake service, practice boundary, and website. A separate opt-in, unbacked single-user Cloud pilot accepts owner-authorized exports through private tailnet or dedicated public write-only HTTPS ingress. No general-purpose cloud launch is approved.
 
 ## Agent skills
 
@@ -38,7 +38,7 @@ The [Health.md Obsidian plugin](https://github.com/CodyBontecou/health-md-visual
 
 ## Development
 
-Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling.
+Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling. `make` shows help; `make test COMPONENT=<owner>` selects one component. Use [focused test commands and escalation rules](docs/testing-strategy.md) during iteration; `make test-all` is an explicit broad smoke sweep, not release qualification. Apple `make test` runs macOS only; simulator/device QA requires explicit authorization for the current task.
 
 ```bash
 make test-contracts
@@ -53,7 +53,7 @@ make test-wake
 make test-website
 ```
 
-See each component's README and `AGENTS.md` for platform-specific setup and release instructions.
+See each component's README and `AGENTS.md` for platform-specific setup and release instructions. Current app releases send to user-selected destinations, not to a Health.md-operated cloud by default.
 
 ## Cross-platform product policy
 

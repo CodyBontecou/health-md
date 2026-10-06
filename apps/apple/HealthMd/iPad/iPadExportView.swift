@@ -32,6 +32,9 @@ struct iPadExportView: View {
     @State private var showPreview = false
     @State private var showFormatHelp = false
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var isResolvingAllTimeRange = false
+    @State private var resumeExportTapWhenAllTimeResolves = false
+    @State private var allTimeResolutionError: String?
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -107,20 +110,19 @@ struct iPadExportView: View {
     private func dataDetailPicker(
         _ presets: [AppleExportDetailPreset]
     ) -> some View {
-        Picker(
+        SecondaryPicker(
             "Data Detail",
+            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
                 set: { advancedSettings.detailPolicy = $0.policy }
-            )
+            ),
+            showsTitle: false
         ) {
             ForEach(presets) { preset in
                 Text(preset.localizedTitle).tag(preset)
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(Color.accent)
     }
 
     var body: some View {
@@ -286,6 +288,11 @@ struct iPadExportView: View {
                 // MARK: - Health Data
                 VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Health Data")
+
+                    HealthHistoryAuthorizationWarning(
+                        assessment: healthKitManager.historyAuthorizationAssessment,
+                        onReviewPermissions: { showHealthPermissionsGuide = true }
+                    )
 
                     HStack(spacing: Spacing.s3) {
                         Image(systemName: "list.bullet.rectangle")
@@ -496,43 +503,60 @@ struct iPadExportView: View {
                         Spacer()
                     }
 
-                    Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
+                    SecondaryPicker(
+                        "Date Format",
+                        selectedTitle: advancedSettings.formatCustomization.dateFormat.displayName,
+                        selection: $advancedSettings.formatCustomization.dateFormat
+                    ) {
                         ForEach(DateFormatPreference.allCases, id: \.self) { format in
                             Text(format.displayName).tag(format)
                         }
                     }
-                    .tint(Color.accent)
 
-                    Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
+                    SecondaryPicker(
+                        "Time Format",
+                        selectedTitle: advancedSettings.formatCustomization.timeFormat.displayName,
+                        selection: $advancedSettings.formatCustomization.timeFormat
+                    ) {
                         ForEach(TimeFormatPreference.allCases, id: \.self) { format in
                             Text(format.displayName).tag(format)
                         }
                     }
-                    .tint(Color.accent)
 
-                    Picker("Unit System", selection: $advancedSettings.formatCustomization.unitPreference) {
+                    SecondaryPicker(
+                        "Unit System",
+                        selectedTitle: advancedSettings.formatCustomization.unitPreference.displayName,
+                        selection: $advancedSettings.formatCustomization.unitPreference
+                    ) {
                         ForEach(UnitPreference.allCases, id: \.self) { unit in
                             Text(unit.displayName).tag(unit)
                         }
                     }
-                    .tint(Color.accent)
 
                     if advancedSettings.exportFormats.contains(.markdown) {
                         Divider().background(Color.borderSubtle)
 
-                        Picker("Markdown Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
+                        SecondaryPicker(
+                            "Markdown Style",
+                            selectedTitle: advancedSettings.formatCustomization.markdownTemplate.style.displayName,
+                            selection: $advancedSettings.formatCustomization.markdownTemplate.style
+                        ) {
                             ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
                                 Text(style.displayName).tag(style)
                             }
                         }
-                        .tint(Color.accent)
 
-                        Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
+                        SecondaryPicker(
+                            "Header Level",
+                            selectedTitle: [1: "# H1", 2: "## H2", 3: "### H3"][
+                                advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel
+                            ] ?? "",
+                            selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel
+                        ) {
                             Text("# H1").tag(1)
                             Text("## H2").tag(2)
                             Text("### H3").tag(3)
                         }
-                        .tint(Color.accent)
 
                         Toggle("Use Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
                             .tint(Color.accent)
@@ -702,6 +726,13 @@ struct iPadExportView: View {
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()
+        .task(id: historyAssessmentScopeID) {
+            guard healthKitManager.isAuthorized else { return }
+            _ = await healthKitManager.assessHistoryAuthorization(
+                forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+                publish: true
+            )
+        }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(
                 selectionState: advancedSettings.metricSelection,
@@ -778,6 +809,12 @@ struct iPadExportView: View {
             ]
         )
         .geistDialog(
+            isPresented: isPresentingAllTimeResolutionError,
+            title: Text("All Time Unavailable"),
+            message: Text(allTimeResolutionError ?? ""),
+            actions: [.action("Done", role: .secondary)]
+        )
+        .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
             message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
@@ -845,9 +882,17 @@ struct iPadExportView: View {
     /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
     /// through this handler.
     private func handleExportButtonTapped() {
+        if dateRangePreset == .allTime {
+            resolveAllTimeRange(exportWhenResolved: true)
+            return
+        }
+        confirmExportScale(for: ExportDateRange(startDate: startDate, endDate: endDate))
+    }
+
+    private func confirmExportScale(for range: ExportDateRange) {
         let verdict = ExportScaleGuard.verdict(
-            startDate: startDate,
-            endDate: endDate,
+            startDate: range.startDate,
+            endDate: range.endDate,
             granularDataEnabled: advancedSettings.effectiveDetailPolicy
                 .includesCanonicalArchive,
             formatCount: advancedSettings.exportFormats.count,
@@ -955,38 +1000,78 @@ struct iPadExportView: View {
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
+        resumeExportTapWhenAllTimeResolves = false
+        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            Task {
-                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
-                await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
-                    applyResolvedDateRange(
-                        for: .allTime,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
-                }
-            }
+            resolveAllTimeRange(exportWhenResolved: false)
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
     }
 
-    private func applyResolvedDateRange(
-        for preset: ExportDateRangePreset,
-        allTimeStartDate: Date? = nil,
-        allTimeEndDate: Date? = nil
-    ) {
+    private var historyAssessmentScopeID: String {
+        "\(healthKitManager.isAuthorized):" + advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
+    }
+
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func resolveAllTimeRange(exportWhenResolved: Bool) {
+        resumeExportTapWhenAllTimeResolves = resumeExportTapWhenAllTimeResolves || exportWhenResolved
+        guard !isResolvingAllTimeRange else { return }
+        isResolvingAllTimeRange = true
+        let request = nativeExportDateRangeRequest
+        Task { @MainActor in
+            defer {
+                isResolvingAllTimeRange = false
+                resumeExportTapWhenAllTimeResolves = false
+            }
+            do {
+                let range = try await NativeExportDateRangeResolver.resolve(
+                    request,
+                    using: healthKitManager,
+                    currentRequest: { nativeExportDateRangeRequest }
+                )
+                if !exportWhenResolved {
+                    guard configurationProtection.performConfigurationChange({
+                        startDate = range.startDate
+                        endDate = range.endDate
+                    }) else { return }
+                }
+                if resumeExportTapWhenAllTimeResolves {
+                    confirmExportScale(for: range)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard dateRangePreset == .allTime else { return }
+                allTimeResolutionError = error.localizedDescription
+            }
+        }
+    }
+
+    private var isPresentingAllTimeResolutionError: Binding<Bool> {
+        Binding(
+            get: { allTimeResolutionError != nil },
+            set: { if !$0 { allTimeResolutionError = nil } }
+        )
+    }
+
+    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
         let range = preset.resolvedRange(
-            currentStartDate: startDate,
-            currentEndDate: endDate,
-            allTimeStartDate: allTimeStartDate,
-            allTimeEndDate: allTimeEndDate
-        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )
@@ -1088,7 +1173,7 @@ struct iPadMetricSelectionView: View {
 
                 // Footer with actions
                 HStack {
-                    Menu("Actions") {
+                    Menu {
                         Button("Select All Standard Metrics") {
                             configurationProtection.performConfigurationChange {
                                 selectionState.selectAll()
@@ -1111,7 +1196,13 @@ struct iPadMetricSelectionView: View {
                                 Task { await requestVisionAuthorizationAndApply(nil) }
                             }
                         }
+                    } label: {
+                        SecondaryMenuLabel {
+                            Text("Actions")
+                        }
                     }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .accessibilityLabel("Metric actions")
 
                     Spacer()
 
@@ -1158,10 +1249,10 @@ struct iPadMetricSelectionView: View {
                 actions: [.action("OK", role: .secondary)]
             )
         }
-        .overlay(alignment: .top) {
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             ConfigurationProtectionToast(configurationProtection: configurationProtection)
                 .padding(.horizontal, Spacing.s4)
-                .padding(.top, Spacing.s2)
+                .padding(.bottom, Spacing.s2)
         }
         .onChange(of: configurationProtection.settingsNavigationRequestID) { _, requestID in
             if requestID != nil {

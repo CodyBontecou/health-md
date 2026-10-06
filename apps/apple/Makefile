@@ -1,7 +1,10 @@
 ## Health.md — developer commands
 ##
 ## Usage:
-##   make test              run tests on both iOS simulator and macOS
+##   make test              run macOS tests (no simulator)
+##   make test-platforms    run iOS simulator + macOS tests (explicit opt-in)
+##   make test-macos TEST_FILTER=HealthMdTests/<Class>[/<Method>]
+##                           run focused macOS tests during iteration
 ##   make test-ios          run tests on iOS simulator only
 ##   make test-macos        run tests on macOS only
 ##   make prepare-healthmd-core-rust
@@ -31,11 +34,16 @@
 ##   make cli                build the standalone healthmd CLI
 ##   make install-cli        install healthmd + healthmd-mcp to ~/.local/bin
 
+.DEFAULT_GOAL := help
 SHELL       := /bin/bash
 HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
+DERIVED_DATA_PATH ?= $(CURDIR)/build/DerivedData/macOS
+MACOS_CODE_COVERAGE ?= NO
+export DERIVED_DATA_PATH MACOS_DEST MACOS_CODE_COVERAGE
+XCODE_TEST_FILTER := $(if $(strip $(TEST_FILTER)),-only-testing:$(TEST_FILTER))
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
@@ -47,12 +55,17 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: help test test-platforms test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+
+help:
+	@awk '/^##/ { sub(/^## ?/, ""); print }' Makefile
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
 
-test: test-ios test-macos
+test: test-macos
+
+test-platforms: test-ios test-macos
 
 check-macos-localizations:
 	@python3 -m unittest discover -s scripts/tests -p 'test_validate_macos_localizations.py'
@@ -75,6 +88,7 @@ test-ios: prepare-healthmd-core-rust
 	  -configuration Debug-iOS \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
 	  -test-timeouts-enabled NO \
+	  $(XCODE_TEST_FILTER) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | tee "$(IOS_TEST_RAW_LOG)" | \
 	  if command -v xcpretty >/dev/null 2>&1; then \
@@ -90,6 +104,9 @@ test-macos: prepare-healthmd-core-rust
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  -derivedDataPath "$(DERIVED_DATA_PATH)" \
+	  -enableCodeCoverage $(MACOS_CODE_COVERAGE) \
+	  $(XCODE_TEST_FILTER) \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
 	  2>&1 | \
@@ -109,6 +126,8 @@ test-tsan: prepare-healthmd-core-rust
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  -derivedDataPath "$(DERIVED_DATA_PATH)" \
+	  $(XCODE_TEST_FILTER) \
 	  -enableThreadSanitizer YES \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
@@ -127,6 +146,7 @@ coverage: prepare-healthmd-core-rust
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
 	  -destination '$(MACOS_DEST)' \
+	  -derivedDataPath "$(DERIVED_DATA_PATH)" \
 	  -enableCodeCoverage YES \
 	  -resultBundlePath $(XCRESULT_PATH) \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \

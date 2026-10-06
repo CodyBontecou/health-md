@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | 让健康数据发挥价值",
-      "meta.description": "以本地优先的方式，将 Apple Health 和 Health Connect 连接到您选择的文件、脚本和智能体。Health.md 不存储您的健康数据。",
+      "meta.description": "以本地优先的方式，将 Apple Health 和 Health Connect 连接到您选择的文件、脚本和智能体。可选的 Health.md 云端仅保留您主动发送的导出内容。",
       "meta.ogTitle": "让健康数据发挥价值",
       "meta.twitterDescription": "将 Apple Health 和 Health Connect 私密地连接到您常用的工具。",
       "schema.description": "Health.md 是连接 Apple Health、Android Health Connect 与本地文件、自动化、CLI 工作流及本地智能体的私密桥梁。",
@@ -29,7 +29,7 @@
       "playStoreAlt": "在 Google Play 获取 Health.md",
       "fdroidAlt": "在 F-Droid 获取 Health.md",
       "fdroidBadgeKicker": "开源版本",
-      "trust": "Health.md 不存储您的健康数据。<br>每个导出目标均由您选择。",
+      "trust": "默认在本地处理。<br>可选的云端仅保留您主动发送的导出内容。",
       "exportsTitle": "将健康数据<br>变成普通文件。",
       "exportsLede": "选择指标，导出为 Markdown、JSON、CSV 或 Obsidian Bases。",
       "exportPhoneLabel": "白色 iPhone 17 Pro 上显示的 Apple Health 摘要",

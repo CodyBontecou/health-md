@@ -144,7 +144,7 @@ class ScheduledProfileScheduler @Inject constructor(
     }
 
     /** Called by the alarm receiver: enqueue this entry's durable export work immediately. */
-    suspend fun handleAlarm(profileId: String) {
+    suspend fun handleAlarm(profileId: String, recoveryGeneration: Long = 0L) {
         mutex.withLock {
             Timber.i("Profile schedule alarm delivered profileId=%s", profileId)
             val entry = entryStore.entry(profileId)
@@ -156,6 +156,8 @@ class ScheduledProfileScheduler @Inject constructor(
                 Timber.i("Profile schedule alarm entry disabled profileId=%s", profileId)
                 return@withLock
             }
+            // A delivered alarm/fallback may already be waiting on this mutex when discarded.
+            if (entry.recoveryGeneration != recoveryGeneration) return@withLock
             enqueueExportWork(entry, expedited = true)
         }
     }
@@ -186,6 +188,23 @@ class ScheduledProfileScheduler @Inject constructor(
         mutex.withLock { cancelEntryRuntimeLocked(profileId) }
     }
 
+    /**
+     * Explicitly abandons recovery for just this profile. Invalidate checkpoints before stopping
+     * runtime work: WorkManager cancellation acknowledges its DB update, not coroutine teardown.
+     * Leave the entry enabled/configured and re-arm its next ordinary occurrence, never an upload.
+     */
+    suspend fun discardPendingRecovery(profileId: String): Boolean = mutex.withLock {
+        if (!entryStore.discardPendingRecovery(profileId)) return@withLock false
+        cancelEntryRuntimeLocked(profileId)
+        val entry = entryStore.entry(profileId)
+        if (entry?.isEnabled == true) {
+            ScheduledProfileOccurrenceMath.nextOccurrence(entry, System.currentTimeMillis())?.let {
+                armEntry(entry, it, force = true)
+            }
+        }
+        true
+    }
+
     /** Cancels runtime work and removes the persisted row without an alarm-admission gap. */
     suspend fun removeEntry(profileId: String) {
         mutex.withLock {
@@ -200,7 +219,7 @@ class ScheduledProfileScheduler @Inject constructor(
         force: Boolean,
     ) {
         val pendingIntent = requireNotNull(
-            entryAlarmPendingIntent(entry.profileId, create = true),
+            entryAlarmPendingIntent(entry.profileId, create = true, recoveryGeneration = entry.recoveryGeneration),
         )
         val triggerAtMillis = next.toEpochMilli()
         val exactSet = canScheduleExactAlarms() && runCatching {
@@ -219,7 +238,12 @@ class ScheduledProfileScheduler @Inject constructor(
         val delay = (triggerAtMillis - System.currentTimeMillis()).coerceAtLeast(0)
         val request = OneTimeWorkRequestBuilder<ScheduledProfileTriggerWorker>()
             .setInitialDelay(delay, TimeUnit.MILLISECONDS)
-            .setInputData(workDataOf(ScheduledProfileTriggerWorker.INPUT_PROFILE_ID to entry.profileId))
+            .setInputData(
+                workDataOf(
+                    ScheduledProfileTriggerWorker.INPUT_PROFILE_ID to entry.profileId,
+                    ScheduledProfileTriggerWorker.INPUT_RECOVERY_GENERATION to entry.recoveryGeneration,
+                ),
+            )
             .addTag(fallbackTag(entry.profileId))
             .build()
         workManager.enqueueUniqueWork(
@@ -242,7 +266,12 @@ class ScheduledProfileScheduler @Inject constructor(
             setRequiredNetworkType(NetworkType.CONNECTED)
         }.build()
         val request = OneTimeWorkRequestBuilder<ScheduledProfileExportWorker>()
-            .setInputData(workDataOf(ScheduledProfileExportWorker.INPUT_PROFILE_ID to entry.profileId))
+            .setInputData(
+                workDataOf(
+                    ScheduledProfileExportWorker.INPUT_PROFILE_ID to entry.profileId,
+                    ScheduledProfileExportWorker.INPUT_RECOVERY_GENERATION to entry.recoveryGeneration,
+                ),
+            )
             .setConstraints(constraints)
             .setBackoffCriteria(androidx.work.BackoffPolicy.EXPONENTIAL, 30, TimeUnit.MINUTES)
             .addTag(EXPORT_WORK_TAG)
@@ -258,10 +287,15 @@ class ScheduledProfileScheduler @Inject constructor(
         ).await()
     }
 
-    private fun entryAlarmPendingIntent(profileId: String, create: Boolean): PendingIntent? {
+    private fun entryAlarmPendingIntent(
+        profileId: String,
+        create: Boolean,
+        recoveryGeneration: Long = 0L,
+    ): PendingIntent? {
         val intent = Intent(context, ScheduledProfileAlarmReceiver::class.java).apply {
             action = ACTION_PROFILE_SCHEDULE_ALARM
             putExtra(ScheduledProfileAlarmReceiver.EXTRA_PROFILE_ID, profileId)
+            putExtra(ScheduledProfileAlarmReceiver.EXTRA_RECOVERY_GENERATION, recoveryGeneration)
         }
         val flags = if (create) {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

@@ -262,6 +262,9 @@ jobs:
           retention-days: 14
 
   test-macos:
+    # Documentation checks reuse the coverage build's compilation profile.
+    env:
+      MACOS_CODE_COVERAGE: 'YES'
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
     # Keep the macOS suite on the same hosted Xcode 26 toolchain as the iOS job.

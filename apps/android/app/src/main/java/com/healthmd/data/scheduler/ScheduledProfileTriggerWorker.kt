@@ -24,7 +24,7 @@ class ScheduledProfileTriggerWorker @AssistedInject constructor(
         val profileId = inputData.getString(INPUT_PROFILE_ID)?.takeIf { it.isNotBlank() }
             ?: return Result.failure()
         return try {
-            profileScheduler.get().handleAlarm(profileId)
+            profileScheduler.get().handleAlarm(profileId, inputData.getLong(INPUT_RECOVERY_GENERATION, 0L))
             Result.success()
         } catch (_: Exception) {
             Result.retry()
@@ -33,5 +33,6 @@ class ScheduledProfileTriggerWorker @AssistedInject constructor(
 
     companion object {
         const val INPUT_PROFILE_ID = "profile_id"
+        const val INPUT_RECOVERY_GENERATION = "recovery_generation"
     }
 }
