@@ -849,7 +849,12 @@ struct ContentView: View {
 
     private var manualExportStatusCard: some View {
         let progress = isExporting && exportProgress > 0 ? exportProgress : nil
-        let dismissAction: (() -> Void)? = isExporting ? nil : dismissStatus
+        let dismissAction: (() -> Void)?
+        if isExporting {
+            dismissAction = nil
+        } else {
+            dismissAction = { dismissStatus() }
+        }
         return ExportActivityBanner(
             title: manualExportCardTitle,
             systemImage: manualExportCardIcon,
@@ -2349,7 +2354,7 @@ struct ContentView: View {
                   let journal = corpusRecoveryManager.journal(jobID: jobID),
                   journal.state.isTerminal else { return }
             finishCorpusRecoveryUI(
-                kind: manualExportStatusKind(for: journal.state),
+                kind: manualExportStatusKind(for: journal.progressSnapshot.state),
                 message: journal.statusMessage ?? "Connected Mac export finished."
             )
             return

@@ -542,7 +542,7 @@ struct HealthMdApp: App {
                 directCLIService.statusProvider = {
                     await PurchaseManager.shared.refreshStatus()
                     let historyAuthorization = await healthKitManager.assessHistoryAuthorization(
-                        forMetricIDs: advancedSettings.metricSelection.enabledMetricIDs,
+                        forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
                         publish: true
                     )
                     let historyStatus = DirectHistoryAuthorizationStatus(

@@ -847,7 +847,7 @@
       "id": "authorization.history-window-detection",
       "name": "Authorized history window detection",
       "classification": "apple_only",
-      "summary": "On OS 27+, report HealthKit's user-selected earliest readable sample date, treat earlier history as unknown, and reject unqualified full-history claims for limited, unknown, or unassessed scopes; older Apple runtimes report api_unavailable and require explicit ranges.",
+      "summary": "On OS 27+ with a supported HealthKit SDK build, report HealthKit's user-selected earliest readable sample date, treat earlier history as unknown, and reject unqualified full-history claims for limited, unknown, or unassessed scopes; older Apple runtimes, unsupported SDK builds, and local Mac queries report api_unavailable and require explicit ranges.",
       "profiles": [],
       "platforms": {
         "apple": {
@@ -861,6 +861,8 @@
       "evidence": [
         "apps/apple/HealthMd/Shared/Models/HealthHistoryAuthorization.swift",
         "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
+        "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
+        "apps/apple/HealthMd.xcodeproj/project.pbxproj",
         "apps/apple/docs/features/healthkit-permissions.md"
       ]
     },

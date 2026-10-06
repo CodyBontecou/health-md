@@ -9,6 +9,8 @@ final class RefreshMacContextIntentTests: XCTestCase {
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
         defaults.removePersistentDomain(forName: suite)
         let settings = AdvancedExportSettings(userDefaults: defaults)
+        let selectedMetricIDs: Set<String> = ["steps", "sleep_total"]
+        settings.metricSelection.enabledMetrics = selectedMetricIDs
         let now = Date(timeIntervalSince1970: 1_800_000_000)
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(secondsFromGMT: 0)!
@@ -28,7 +30,7 @@ final class RefreshMacContextIntentTests: XCTestCase {
             29
         )
         XCTAssertEqual(request.selection.sourceIDs, ["apple_health"])
-        XCTAssertFalse(request.selection.metricIDs.isEmpty)
+        XCTAssertEqual(Set(request.selection.metricIDs), selectedMetricIDs)
         XCTAssertTrue(request.selection.objectPaths.isEmpty)
         XCTAssertTrue(request.selection.fieldPointers.isEmpty)
     }

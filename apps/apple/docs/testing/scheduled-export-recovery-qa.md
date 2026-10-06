@@ -115,6 +115,19 @@ After the owner authenticates and a genuine signed app build is available, obtai
 4. Repeated app-open/re-arm and simultaneous profiles/legacy scheduling preserve pending identity and do not duplicate completed exports.
 5. Restore the original test configuration and confirm unrelated schedules, history, destinations and credentials remain intact.
 
+## Normal-build follow-up — 2026-10-06
+
+The compile blockers recorded above are now fixed in the production source; this supersedes the earlier blocked-build result, not its physical-device or release limitations.
+
+- Live `MetricSelectionState` callers in the refresh intent, Export tab and direct-status handler now use `enabledMetrics`; snapshot callers retain `enabledMetricIDs`. The intent regression checks that the exact selected metric subset is preserved.
+- Apple's public documentation confirms `earliestAuthorizedSampleDate(for:)` requires OS 27. The Xcode configurations enable `HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION` only for the reviewed SDK 27 major family; the adapter also checks runtime availability. An SDK 26 binary reports `api_unavailable` even on a newer runtime rather than pretending an empty boundary result proves full history. Mac-local checks remain unavailable. SDK-major flag expansion and preserved `DEBUG` were checked in all four configurations; this is not an actual SDK 27 build or device qualification.
+- `ContentView` now gives the optional dismiss callback an explicit closure and uses the journal's existing progress-state projection for terminal recovery. The layout and dismiss behavior are unchanged; partial-success acknowledgements retain their projected state after interactive progress is hidden, covered by a regression.
+- The normal `make test-ios` compiled the full app, including `ContentView`, without temporary adapters or source exclusions. Its result bundle reports **2,377 tests: 2,361 passed, 13 skipped, three failed tests**. The failures are unchanged plugin-resource pin drift, stale product-capability accounting and unclassified Shared Setup recovery fields. Capability IDs, classifications and platform states are unchanged by this SDK clarification; no fixture was rewritten to hide those failures.
+- Final focused iOS verification passed **168 tests, zero failures** across the six scheduling suites, `RefreshMacContextIntentTests`, `HealthStoreFacadeTests`, `HealthKitManagerObserverTests` and `ConnectedCorpusDurableSenderTests`. This includes the SDK-unavailable adapter, exact refresh scope and partial-result projection regressions.
+- The normal `make test-macos` also compiled and reached tests, but the full suite remains red: resource/capability/Shared Setup bookkeeping, generated automation-document drift and `MacExportJobExecutorTests` assertions remain outside this build-unblocking slice. Final focused Mac verification passed **44 tests, zero failures** for the health-store adapter, history assessment and durable sender.
+- `python3 packages/contracts/validate.py`, APNs scheduling preflight, and all 11 localization-validator unit tests pass. The capability description/evidence and its intentional manifest checksum were updated; public export schemas, wire fields, fixtures and Android implementation are unchanged.
+- Private local evidence is in ignored `apps/apple/build/logs/compile-blockers-*.log` and `apps/apple/build/test-results/compile-blockers-*.xcresult`. No patched app was installed on a physical phone, no native permission or live schedule was changed, and no release/deployment was performed. Full-suite failures and SDK 27/device checks remain required before release.
+
 ## GitHub Issue Response Checklist
 
 Posted response: https://github.com/CodyBontecou/health-md/issues/46#issuecomment-4479081773

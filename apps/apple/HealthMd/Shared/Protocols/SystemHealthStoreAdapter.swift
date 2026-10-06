@@ -345,15 +345,14 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsHistoryAuthorizationBoundaries: Bool {
-        #if os(macOS)
-        // The Mac companion receives HealthKit data from iPhone, not a local store.
-        return false
-        #else
+        // SDK presence and runtime availability are separate requirements. An
+        // older-SDK binary cannot assess history even when run on a newer OS.
+        #if !os(macOS) && HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             return true
         }
-        return false
         #endif
+        return false
     }
 
     func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws {
@@ -389,7 +388,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
             code: 27,
             userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries must be queried on the connected iPhone."]
         )
-        #else
+        #elseif HEALTHMD_HAS_HEALTHKIT_HISTORY_AUTHORIZATION
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
             throw NSError(
                 domain: "HealthMd.HealthKitCapability",
@@ -401,6 +400,12 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
             (type.identifier, date)
         })
+        #else
+        throw NSError(
+            domain: "HealthMd.HealthKitCapability",
+            code: 27,
+            userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries require a build made with a supported OS 27 HealthKit SDK."]
+        )
         #endif
     }
 

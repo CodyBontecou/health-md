@@ -633,7 +633,7 @@ final class HealthKitManager: ObservableObject {
                 state: .apiUnavailable,
                 assessedTypeIdentifiers: sampleTypes.map(\.identifier),
                 unassessedMetricIDs: Array(unassessedMetricIDs),
-                message: "This OS cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
+                message: "This app build or OS cannot report limited HealthKit history boundaries. Full-history completeness is unverified."
             )
         } else if sampleTypes.isEmpty {
             assessment = HealthHistoryAuthorizationAssessment(
