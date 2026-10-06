@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | Leve sua saúde mais longe",
-      "meta.description": "Uma ponte que prioriza o processamento local e conecta o Apple Health e o Health Connect aos arquivos, scripts e agentes que você escolher. O Health.md não armazena seus dados de saúde.",
+      "meta.description": "Uma ponte que prioriza o processamento local e conecta o Apple Health e o Health Connect aos arquivos, scripts e agentes que você escolher. A nuvem opcional do Health.md guarda apenas as exportações que você decidir enviar.",
       "meta.ogTitle": "Leve sua saúde mais longe",
       "meta.twitterDescription": "Uma ponte privada e local que conecta o Apple Health e o Health Connect às ferramentas que você já usa.",
       "schema.description": "O Health.md é uma ponte privada que conecta o Apple Health e o Health Connect no Android a arquivos locais, automações, fluxos de trabalho com CLI e agentes locais.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Baixar o Health.md no Google Play",
       "fdroidAlt": "Baixar o Health.md no F-Droid",
       "fdroidBadgeKicker": "VERSÃO DE CÓDIGO ABERTO",
-      "trust": "O Health.md não armazena seus dados de saúde.<br>Você escolhe cada destino de exportação.",
+      "trust": "Local por padrão.<br>A nuvem opcional guarda apenas as exportações que você decidir enviar.",
       "exportsTitle": "Seus dados de saúde<br>em arquivos comuns.",
       "exportsLede": "Escolha suas métricas. Exporte-as como Markdown, JSON, CSV ou Obsidian Bases.",
       "exportPhoneLabel": "Resumo do Apple Health exibido em um iPhone 17 Pro branco",

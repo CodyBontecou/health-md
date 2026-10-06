@@ -1,0 +1,45 @@
+name = "healthmd-cloud"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[triggers]
+crons = ["0 5 * * *"]
+
+# This configuration is intentionally non-deployable until the placeholders are
+# replaced with dedicated preview or production resources. Never share these
+# bindings with the website, Practice, wake, analytics, or OAuth Workers.
+[[d1_databases]]
+binding = "DB"
+database_name = "healthmd-cloud"
+database_id = "00000000-0000-0000-0000-000000000000"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "EXPORTS"
+bucket_name = "healthmd-cloud-placeholder-not-for-deployment"
+preview_bucket_name = "healthmd-cloud-preview-placeholder"
+
+[vars]
+ENVIRONMENT = "production"
+PUBLIC_ORIGIN = "https://cloud.health.md"
+AUTH_SIGNUP_MODE = "closed"
+AUTH_EMAIL_FROM = "Health.md Cloud <cloud@health.md>"
+CURRENT_EXPORT_KEY_ID = "v1"
+MAX_EXPORT_BYTES = "26214400"
+SESSION_TTL_DAYS = "30"
+MAGIC_LINK_TTL_MINUTES = "15"
+
+# Required Wrangler secrets (values must never be committed):
+#   IDENTITY_KEY_B64         32 random bytes, base64
+#   EXPORT_ENCRYPTION_KEYS_JSON  e.g. {"v1":"<32 random bytes, base64>"}
+#   RESEND_API_KEY           transactional email credential
+#   CLOUD_RUNTIME_APPROVED  manual post-review deployment acknowledgement
+# Optional Wrangler secret for AUTH_SIGNUP_MODE=invite:
+#   AUTH_INVITE_EMAILS       normalized comma-separated email allowlist

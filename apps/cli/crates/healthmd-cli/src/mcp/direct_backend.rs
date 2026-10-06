@@ -780,6 +780,22 @@ fn status_value(result: &StatusResult, wake: &Value) -> Value {
                 "active_job_id": source.active_job_id,
                 "active_query_request_id": source.active_query_request_id,
                 "query_capabilities": query,
+                "history_authorization": source.history_authorization,
+                "product_readiness": {
+                    "component": "standalone_cli_mcp",
+                    "version": env!("CARGO_PKG_VERSION"),
+                    "release_channel": if env!("CARGO_PKG_VERSION").contains('-') { "preview" } else { "stable" },
+                    "support_status": "preview_unqualified",
+                    "cli_1_0_qualified": false
+                },
+                "source_compatibility": {
+                    "platform": "ios",
+                    "app_version": source.app_version,
+                    "build_version": source.build_version,
+                    "operating_system_version": source.operating_system_version,
+                    "application_protocol_version": result.application_protocol_version,
+                    "query_protocol_negotiated": query.is_some()
+                },
                 "wake": wake.clone()
             })
         }

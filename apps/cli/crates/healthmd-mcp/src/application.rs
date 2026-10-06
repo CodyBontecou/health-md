@@ -694,6 +694,19 @@ fn capabilities_value(application: &HealthMdApplication, caller: &CallerIdentity
         "iphone_must_be_foreground": backend.requires_foreground_source,
         "requires_foreground_source": backend.requires_foreground_source,
         "supports_queries": backend.supports_queries,
+        "product_readiness": {
+            "component": "standalone_cli_mcp",
+            "version": env!("CARGO_PKG_VERSION"),
+            "release_channel": if env!("CARGO_PKG_VERSION").contains('-') { "preview" } else { "stable" },
+            "support_status": "preview_unqualified",
+            "cli_1_0_qualified": false,
+            "qualification_contract": "apps/cli/docs/production-readiness.md"
+        },
+        "history_scope": {
+            "all_available_means": "all_public_user_authorized",
+            "full_history_requires_source_confirmation": true,
+            "limited_history_is_not_absence": true
+        },
         "supports_local_pairing": supports_local_pairing,
         "supports_local_file_exports": supports_local_file_exports,
         "supports_local_raw_exports": supports_local_file_exports,

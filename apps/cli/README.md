@@ -7,7 +7,9 @@ or Android app.
 > protocol v1, Android application protocol v2, and capability-gated iPhone query protocol v3 are
 > implemented with automated Swift↔Rust and Kotlin↔Rust compatibility gates. The owner has
 > physically confirmed iPhone and Android direct pairing/connectivity; the complete retained
-> release matrix is still required before the first qualified stable release.
+> release matrix is still required before the first qualified stable release. The published alpha.7
+> MCP catalog has 19 tools. Current development source has 21 after adding full-corpus raw-artifact
+> tools; those two tools are unreleased until a later versioned CLI tag says otherwise.
 
 ## How it works
 
@@ -78,9 +80,9 @@ in-memory JSON validation is capped at 64 MiB.
 
 | Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust operations | Public status |
 |---|---|---|---|---|
-| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus 21-tool local MCP/query and full-corpus jobs | Connectivity confirmed; full qualification pending |
-| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (`versionCode 31`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
+| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
+| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.4.0 (build 202609032318) / iOS 3.0.3 | Alpha.7: 19-tool local MCP/query; current source: 21 tools with unreleased full-corpus jobs | Connectivity confirmed; full qualification pending |
+| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.9.0 (`versionCode 38`) / Android 1.5.4 (`versionCode 25`) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
 | Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
 
 Owner-confirmed physical pairing/connectivity is complete on iPhone and Android, but no public
@@ -407,9 +409,11 @@ cancel tools for approval. `healthmd-mcp` remains an installed compatibility lau
 replaces itself with the sibling `healthmd`; on Windows, which has no `exec(2)`, it serves in-process
 and supervises its own same-file helper against the same fixed Credential Manager service/account.
 
-The complete local server exposes 21 fixed operations for pairing, readiness, bounded typed
+Current development source exposes 21 fixed operations for pairing, readiness, bounded typed
 queries, charts, sleep, workouts, comparisons, coverage, evidence, durable generated-file exports,
-and durable full-corpus raw exports. `healthmd_export_raw` requests every public type supported by
+and durable full-corpus raw exports. The published `0.1.0-alpha.7` catalog has 19 and does not
+include `healthmd_export_raw` or `healthmd_raw_artifact_read`; always trust the installed server's
+`tools/list` and exact version. In development, `healthmd_export_raw` requests every public type supported by
 the selected mobile source and authorized by the user. The artifact remains in the private durable
 job spool; `healthmd_raw_artifact_read` can read only an exact job artifact in base64 chunks of at
 most 64 KiB. It has no shell, SQL, arbitrary URL, or arbitrary file-read tool. Approved generated
@@ -514,7 +518,7 @@ or export. Query pages preserve explicit coverage/truncation receipts; if one re
 366,000-day / 64 MiB compact-context guard, partition dates or metric IDs across calls rather than treating the
 logical corpus as unavailable.
 
-See [the architecture](docs/architecture.md), [CLI guidance/error contract](docs/command-guidance.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
+See [the architecture](docs/architecture.md), [production-readiness and 1.0 gates](docs/production-readiness.md), [CLI guidance/error contract](docs/command-guidance.md), [iOS export protocol v1](../../packages/contracts/direct-protocol/v1/protocol.md),
 [iPhone query protocol v3](../../packages/contracts/direct-protocol/v3/protocol.md),
 [Android protocol v2](../../packages/contracts/direct-protocol/v2/protocol.md), [release QA](docs/qa.md), and
 [release process](docs/releasing.md).

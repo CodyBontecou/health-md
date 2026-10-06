@@ -50,7 +50,8 @@ class OAuthAuthorizationManager(
 
     suspend fun buildAuthorizationUrl(providerId: String): String? {
         val config = configRegistry.get(providerId)?.takeIf { it.isConfigured } ?: return null
-        val state = randomUrlSafeString()
+        // WHOOP requires exactly eight characters; six random bytes encode to eight base64url characters.
+        val state = if (providerId == "whoop") randomUrlSafeString(byteCount = 6) else randomUrlSafeString()
         val verifier = randomUrlSafeString(byteCount = 64)
         tokenStore.savePendingAuthorization(
             PendingOAuthAuthorization(
@@ -163,6 +164,7 @@ class OAuthAuthorizationManager(
                     put("client_secret", config.clientSecret)
                 }
                 putAll(config.tokenExtraParams)
+                if (config.providerId == "whoop") put("scope", "offline")
             }
         )
         tokenStore.saveToken(token)
@@ -219,11 +221,18 @@ class OAuthAuthorizationManager(
                 reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
                 technicalMessage = "OAuth token response did not include access_token",
             )
+        val refreshToken = response.string("refresh_token")
+        if (config.providerId == "whoop" && refreshToken.isNullOrBlank()) {
+            throw OAuthAuthorizationException(
+                reason = OAuthFailureReason.INVALID_TOKEN_RESPONSE,
+                technicalMessage = "WHOOP token response did not include a rotated refresh_token",
+            )
+        }
         val expiresInSeconds = response.string("expires_in")?.toLongOrNull()
         OAuthToken(
             providerId = config.providerId,
             accessToken = accessToken,
-            refreshToken = response.string("refresh_token"),
+            refreshToken = refreshToken,
             tokenType = response.string("token_type") ?: "Bearer",
             scope = response.string("scope"),
             expiresAtEpochSeconds = expiresInSeconds?.let { (System.currentTimeMillis() / 1000) + it },

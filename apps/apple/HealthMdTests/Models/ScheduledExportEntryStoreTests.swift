@@ -142,6 +142,73 @@ final class ScheduledExportEntryStoreTests: XCTestCase {
         XCTAssertFalse(store.recordSuccess(profileID: profileID, kind: .completedDay, occurrenceDate: occurrence))
     }
 
+    func testStaleEditorSavePreservesRuntimeProgressAndOtherProfiles() throws {
+        let ui = makeStore()
+        let first = makeEntry { $0.enabledAt = makeDate(year: 2026, month: 8, day: 1) }
+        let other = makeEntry()
+        ui.upsert(first)
+        ui.upsert(other)
+        var draft = try XCTUnwrap(ui.entry(profileID: first.profileID))
+        let runtime = makeStore()
+        runtime.recordSuccess(profileID: first.profileID, kind: .completedDay, occurrenceDate: fixedNow)
+        runtime.recordSuccess(profileID: first.profileID, kind: .todayRefresh, occurrenceDate: fixedNow)
+        runtime.recordSuccess(profileID: other.profileID, kind: .completedDay, occurrenceDate: fixedNow)
+        draft.lookbackDays = 7
+        XCTAssertTrue(ui.upsert(draft))
+        let saved = try XCTUnwrap(runtime.entry(profileID: first.profileID))
+        XCTAssertEqual(saved.lookbackDays, 7)
+        XCTAssertEqual(saved.lastExportDate, fixedNow)
+        XCTAssertEqual(saved.lastTodayRefreshDate, fixedNow)
+        XCTAssertEqual(saved.enabledAt, first.enabledAt)
+        XCTAssertEqual(runtime.entry(profileID: other.profileID)?.lastExportDate, fixedNow)
+        draft.lastExportDate = fixedNow.addingTimeInterval(86_400)
+        draft.lastTodayRefreshDate = fixedNow.addingTimeInterval(86_400)
+        XCTAssertTrue(ui.upsert(draft))
+        XCTAssertEqual(runtime.entry(profileID: first.profileID)?.lastExportDate, fixedNow,
+                       "an editor cannot synthesize runtime success either")
+        XCTAssertEqual(runtime.entry(profileID: first.profileID)?.lastTodayRefreshDate, fixedNow)
+    }
+
+    func testDiscardFenceSurvivesStaleEditorAndRestartWithoutMovingSuccessMarkers() throws {
+        let ui = makeStore()
+        let entry = makeEntry {
+            $0.enabledAt = makeDate(year: 2026, month: 8, day: 1)
+            $0.lastExportDate = makeDate(year: 2026, month: 8, day: 9, hour: 8)
+        }
+        ui.upsert(entry)
+        var draft = try XCTUnwrap(ui.entry(profileID: entry.profileID))
+        let runtime = makeStore()
+        XCTAssertTrue(runtime.discardPendingRecovery(profileID: entry.profileID))
+        draft.lookbackDays = 14
+        XCTAssertTrue(ui.upsert(draft))
+        let restarted = makeStore()
+        let saved = try XCTUnwrap(restarted.entry(profileID: entry.profileID))
+        XCTAssertEqual(saved.recoveryGeneration, 1)
+        XCTAssertEqual(saved.recoveryDiscardedAt, fixedNow)
+        XCTAssertEqual(saved.lastExportDate, entry.lastExportDate)
+        XCTAssertEqual(saved.lastTodayRefreshDate, entry.lastTodayRefreshDate)
+        XCTAssertEqual(saved.enabledAt, entry.enabledAt)
+        XCTAssertFalse(restarted.recordSuccess(profileID: entry.profileID, kind: .completedDay,
+            occurrenceDate: fixedNow, expectedRecoveryGeneration: 0))
+        XCTAssertTrue(restarted.dueOccurrences(now: fixedNow, calendar: calendar).isEmpty)
+        let next = try XCTUnwrap(restarted.dueOccurrences(
+            now: makeDate(year: 2026, month: 8, day: 11, hour: 9), calendar: calendar).first)
+        XCTAssertEqual(next.recoveryGeneration, 1)
+        XCTAssertEqual(next.fireDate, makeDate(year: 2026, month: 8, day: 11, hour: 8))
+    }
+
+    func testLegacyEntryWithoutRecoveryFieldsDecodesInGenerationZero() throws {
+        let original = makeEntry()
+        let data = try JSONEncoder().encode(original)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+        object.removeValue(forKey: "recoveryGeneration")
+        object.removeValue(forKey: "recoveryDiscardedAt")
+        let decoded = try JSONDecoder().decode(ScheduledExportEntry.self,
+            from: JSONSerialization.data(withJSONObject: object))
+        XCTAssertEqual(decoded, original)
+        XCTAssertEqual(decoded.recoveryGeneration, 0)
+    }
+
     // MARK: - Legacy migration
 
     func testLegacyScheduleMigratesOnceIntoDefaultProfileEntry() {

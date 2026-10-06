@@ -19,6 +19,14 @@ offline read:recovery read:cycles read:sleep read:workout read:body_measurement
 
 `offline` is required for refresh tokens. Health.md does not request `read:profile` because it does not need the member's name or email.
 
+## Choose WHOOP data to export
+
+Open **Export → Health Metrics → WHOOP** to enable or disable **Cycles & Strain**, **Recovery**, **Sleep**, **Workouts**, and **Body Measurements**. **All WHOOP Data** changes all five. Each switch controls a whole native API resource, including its reviewed typed projections and provider-native sidecar pages; it is not a field-level redaction control. Apple Health selections remain independent.
+
+Choices are saved per export profile and frozen for schedules, API uploads, Connected Mac/CLI generated files, previews, and durable recovery. Unselected endpoints are not contacted or reported as missing-permission failures. Turning all groups off skips WHOOP fetching and token refresh while leaving the connection intact. Old configurations default to all groups enabled. Selection changes do not remove existing exported files or revoke OAuth access; use **Disconnect** to revoke access.
+
+Body data is still today-only, and WHOOP still supplements retained Apple Health days rather than creating WHOOP-only days. Selected recovery/sleep records retain relationship IDs even when related resources are not selected. Android's equivalent five-group settings/profile controls are planned separately; its existing Raw API Snapshot endpoint selection and daily compatibility profiles remain unchanged.
+
 ## OAuth and privacy model
 
 WHOOP requires the application client secret to remain server-side. Health.md uses a minimal Cloudflare Worker OAuth broker to:
@@ -35,7 +43,7 @@ WHOOP's documented redirect is registered exactly as:
 healthmd://oauth/callback
 ```
 
-The app validates the callback scheme, host, path, and OAuth state before exchanging the code. WHOOP currently documents an exactly eight-character state value, so the WHOOP flow uses a random eight-character value. Other future providers are not forced to use that provider-specific constraint.
+The app validates the callback scheme, host, path, and OAuth state before exchanging the code, and rejects duplicate or conflicting callback parameters. It uses S256 PKCE to bind the authorization code to a device-generated verifier; the broker still holds the client secret and forwards the verifier during code exchange. This matches Android's WHOOP authorization protection. Callback query values use form decoding (`+` for a space, `%2B` for a literal plus). WHOOP currently documents an exactly eight-character state value, so the WHOOP flow uses a random eight-character value. Other future providers are not forced to use that provider-specific constraint.
 
 The broker has its own exact redirect allowlist and a mobile client gate. The gate limits casual abuse but is not treated as a durable secret because values in a shipped mobile app can be inspected.
 
@@ -55,6 +63,20 @@ Daily collection queries use a half-open `[start, end)` window. Health.md conver
 Collection requests use WHOOP's maximum page size of 25. Pagination follows response `next_token` values via the request parameter `nextToken`, keeps the original day window fixed, rejects repeated cursors, and caps a single endpoint at 100 pages. Pagination cursors are redacted from exported endpoint URLs.
 
 WHOOP's body measurement resource is a current profile singleton with no measurement timestamp. Health.md includes it only for the current calendar day, as native `body_measurements_snapshot` data in the sidecar and as a typed `current_profile_snapshot` under `providers.whoop.body`. Historical and range exports do not repeat today's body profile for every requested day.
+
+### Public API coverage audit (2026-10-06)
+
+The [current WHOOP OpenAPI specification](https://api.prod.whoop.com/developer/doc/openapi.json) documents five health-resource groups available through ordinary user OAuth: cycles, recovery, sleep, workouts, and body measurements. Health.md connects to all five, subject to selection, granted scopes, retained Apple days, and capture limits. Fetch-by-ID and cycle-to-sleep/recovery lookup routes are alternate access to those resources, not additional health categories. Connecting every category does not mean the typed export projects every native field.
+
+The audit identified two field-level gaps, both addressed in current source:
+
+- **Cycle steps:** WHOOP [added `Cycle.step_count` on 2026-09-23](https://developer.whoop.com/docs/api-changelog#2026-09-23), using the existing `read:cycles` scope without new consent. Apple daily v10/WHOOP provider v2 retains the optional typed count as well as the selected native response. WHOOP's [cycle documentation](https://developer.whoop.com/docs/developing/user-data/cycle#step-count) explicitly defines this as a physiological-cycle total, not a midnight-to-midnight daily total; do not substitute it for Apple/Health Connect daily steps. Missing/null means unavailable, while zero is meaningful. Historical daily v8/WHOOP v1 remains unchanged.
+
+**Workout heart-rate zones are corrected:** the Apple normalizer reads the documented `score.zone_durations` from the [workout API](https://developer.whoop.com/docs/developing/user-data/workout). It accepts legacy `score.zone_duration` only when the canonical key is absent; canonical null, empty, malformed, or partial values never resurrect or blend legacy values. Explicit zero and integer millisecond precision survive normalization and JSON/CSV output. Native sidecars remain unchanged. This uses the existing typed zone fields without changing daily v8 or WHOOP v1 grammar. Verification uses synthetic API responses, not a member account.
+
+The other ordinary user read resource is the [basic profile](https://developer.whoop.com/docs/developing/user-data/user#basic-profile): name, email, and user ID under `read:profile`. Health.md intentionally excludes it; it adds identity information, not health measurements. The current public user API does not document separate endpoints for continuous raw heart-rate/sensor streams, journal entries, Stress Monitor, Healthspan/WHOOP Age, ECG, or Strength Trainer exercise/set/repetition detail. Workout summaries, including Strength Trainer activities, belong to the existing workout resource; their availability is noted in the [API changelog](https://developer.whoop.com/docs/api-changelog#2024-05-01).
+
+WHOOP also publishes a distinct [Healthcare Partner API](https://developer.whoop.com/docs/partner/overview) for lab requisitions, service requests, diagnostic-result submission, and clinical-report review. It is restricted to WHOOP-approved healthcare partners with separate server-to-server credentials; it cannot be enabled by adding a scope to the existing member connection. Standard [webhooks](https://developer.whoop.com/docs/developing/webhooks/) could improve update/deletion freshness for supported resources, but do not expose new data categories. Neither partner workflows nor webhook ingestion are implemented by this integration.
 
 ## Output shapes
 
@@ -101,16 +123,16 @@ Sidecar dates are validated before file writes. Authorization values, access/ref
 
 ### Typed daily section
 
-A retained Apple daily v8 record may also contain:
+A retained Apple daily v10 record may also contain (new captures use WHOOP v2; historical v1 remains readable):
 
 ```json
 {
   "schema": "healthmd.health_data",
-  "schema_version": 8,
+  "schema_version": 10,
   "providers": {
     "whoop": {
       "schema": "healthmd.provider.whoop_daily",
-      "schema_version": 1,
+      "schema_version": 2,
       "capture_status": "complete",
       "fetched_at": "2026-07-13T18:00:00Z",
       "resources": [
@@ -132,9 +154,11 @@ A retained Apple daily v8 record may also contain:
 }
 ```
 
+WHOOP public `Cycle.step_count` is retained as optional `cycles[].step_count` in provider v2. These are physiological-cycle counts, **not calendar-day steps**. Zero is meaningful; missing/null or invalid counts remain unavailable. Counts stay attached to cycle IDs and timestamps, including in-progress cycles. Scalar `whoop_cycle_step_count` appears only for a single cycle; repeated cycles remain structured. No summing, primary-step replacement, or roll-up is permitted. Existing `read:cycles` suffices. The **Cycles & Strain** resource switch controls these counts independently from Apple Health steps.
+
 The complete nested schema preserves string IDs, event relationships, exact integer millisecond durations, the signed recent-nap adjustment, `sport_name`, explicit missingness, and deterministic ordering. `fetched_at` is capture metadata, never a measurement timestamp. Partial captures retain successful resources with bounded safe errors and no URLs, headers, cursors, credentials, account identity, or raw response bodies.
 
-JSON keeps the nested model. Markdown renders WHOOP tables. Bases/frontmatter and CSV emit `whoop_*` scalars only when exactly one relevant record supplies them; repeated records remain structured Markdown/JSON/CSV rows. WHOOP fields have no period roll-ups and do not participate in Individual Entry Tracking. See [Export schema contract](./export-schema.md) and `packages/contracts/proposals/provider-sections-v1/contract.md` in the repository.
+JSON keeps the nested model. Markdown renders WHOOP tables. Bases/frontmatter and CSV emit `whoop_*` scalars only when exactly one relevant record supplies them; repeated records remain structured Markdown/JSON/CSV rows. WHOOP fields have no period roll-ups and do not participate in Individual Entry Tracking. See [Export schema contract](./export-schema.md) and `packages/contracts/provider-sections/v2/contract.md` in the repository; the v1 proposal/fixture remains frozen for historical reads.
 
 ## Export destinations
 
@@ -160,7 +184,7 @@ Provider records are intentionally supplemental. Health.md only fetches and atta
 - Provider response data is capped at 16 MiB per request and, separately, 16 MiB in aggregate for one provider/day fetch. This keeps paginated responses bounded; exceeding either limit produces a provider warning instead of retaining additional pages.
 - Disconnect calls WHOOP's revoke endpoint before deleting local credentials. Revocation is attempted even during a data cooldown for privacy; a revoke 429 extends the same cooldown. If revocation fails, credentials remain available so the user can retry.
 
-The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet.
+The Connected Apps screen explains missing permissions, revoked access, rate limiting, and days where WHOOP has not produced data or a score yet. Connection/disconnection feedback uses the same bottom-pinned activity/toast component as exports, inside the sheet so it remains visible while scrolling. Progress remains visible until the operation finishes. Success and cancellation notices dismiss after eight seconds; errors remain until dismissed or retried. OAuth callback errors show stable, actionable messages rather than raw provider descriptions or hints. A connection is reported successful only after credentials and account metadata have been saved.
 
 ## Rollout configuration
 
@@ -206,4 +230,4 @@ Register `healthmd://oauth/callback` exactly in the WHOOP Developer Dashboard an
 
 ## Schema policy
 
-Typed provider sections intentionally advance Apple `HealthMdExportSchema.version` from 7 to 8. The nested WHOOP contract is independently versioned as `healthmd.provider.whoop_daily` v1. The provider-native sidecar remains `healthmd.external_provider_daily` v1, and API Endpoint remains independently versioned at envelope v2 when Connected Apps is enabled. Android frozen v4 and analytical v5 are unchanged.
+Typed provider sections originally advanced Apple daily v7 to v8/WHOOP v1. Current source writers advance to Apple daily v10/WHOOP v2 for physiological-cycle steps; the primary metric catalog is unchanged and unified daily v9 remains reserved. The v8 signature and WHOOP-v1 schema/fixture remain frozen. Compatible consumers must be released before enabling these writer defaults against them; no deployment or live-provider qualification is implied. The provider-native sidecar remains `healthmd.external_provider_daily` v1, and API Endpoint remains independently versioned at envelope v2 when Connected Apps is enabled. Android frozen v4 and analytical v5 are unchanged.

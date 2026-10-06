@@ -1,6 +1,6 @@
 ---
 schema: healthmd.health_data
-schema_version: 8
+schema_version: 10
 time_context:
   calendar_timezone: UTC
   timestamp_timezone: UTC
@@ -12,6 +12,7 @@ raw_query_failure_count: 0
 raw_integrity_warning_count: 0
 whoop_capture_status: complete
 whoop_cycle_strain_score: 12.7
+whoop_cycle_step_count: 8234
 whoop_cycle_energy_kilojoules: 8420.0
 whoop_cycle_average_heart_rate_bpm: 68.0
 whoop_cycle_max_heart_rate_bpm: 174.0
@@ -54,6 +55,7 @@ units:
   whoop_cycle_average_heart_rate_bpm: bpm
   whoop_cycle_energy_kilojoules: kJ
   whoop_cycle_max_heart_rate_bpm: bpm
+  whoop_cycle_step_count: count
   whoop_cycle_strain_score: score
   whoop_hrv_rmssd_ms: ms
   whoop_light_sleep_milliseconds: ms
@@ -93,9 +95,11 @@ units:
 - **HRV (RMSSD):** 54.3 ms
 - **Resting heart rate:** 49.0 bpm
 
-| Cycle ID | Start | End | Strain | Energy (kJ) | Avg HR | Max HR |
-|---|---|---|---:|---:|---:|---:|
-| 101 | 2026-03-15T07:00:00.000000000Z | 2026-03-15T17:30:00.000000000Z | 12.7 | 8420.0 | 68.0 | 174.0 |
+WHOOP cycle steps cover physiological cycles, not calendar days; they do not replace daily steps.
+
+| Cycle ID | Start | End | Steps (cycle) | Strain | Energy (kJ) | Avg HR | Max HR |
+|---|---|---|---:|---:|---:|---:|---:|
+| 101 | 2026-03-15T07:00:00.000000000Z | 2026-03-15T17:30:00.000000000Z | 8234 | 12.7 | 8420.0 | 68.0 | 174.0 |
 
 | Cycle ID | Sleep ID | Recovery | HRV (RMSSD) | Resting HR | SpO₂ | Skin temp (°C) |
 |---|---|---:|---:|---:|---:|---:|

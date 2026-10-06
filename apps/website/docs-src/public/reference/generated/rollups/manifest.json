@@ -2,29 +2,29 @@
   "artifact_set" : "healthmd.generated_rollup_reference_docs",
   "artifacts" : [
     {
-      "bytes" : 104834,
+      "bytes" : 104835,
       "path" : "aggregation-behavior.md",
-      "sha256" : "22306a21388e4c6f75dc34128f817788bb96d9a6707e08e30b5f38e4e05c4e92"
+      "sha256" : "7bafb779daed325b4a71a6f394dcc7904319f2c1211fe3c21648fa2a92388937"
     },
     {
-      "bytes" : 11629,
+      "bytes" : 11631,
       "path" : "range-bases.md",
-      "sha256" : "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec"
+      "sha256" : "0067cc7cc82a3e9561710cc23f424327834089f986e7508c5c0de0a8496d3fe7"
     },
     {
-      "bytes" : 38202,
+      "bytes" : 38450,
       "path" : "range.csv",
-      "sha256" : "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7"
+      "sha256" : "eb523f58e4a96ea9df3fa3be9665dc53477c879b46029ebaa7c3cc6ad9a1997b"
     },
     {
-      "bytes" : 39662,
+      "bytes" : 39664,
       "path" : "range.json",
-      "sha256" : "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b"
+      "sha256" : "9b9e8f52cb373deeddf0e8a627e02c0e3401dccfddeacd29386769a656031556"
     },
     {
-      "bytes" : 9249,
+      "bytes" : 9252,
       "path" : "range.md",
-      "sha256" : "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4"
+      "sha256" : "c4e48a1110d8f4df6dd234d5c9be8932299a2b67336cded03a908f07a31675cc"
     },
     {
       "bytes" : 11564,
@@ -194,8 +194,8 @@
     "data_dictionary_entry_count" : 232,
     "rollup" : "healthmd.rollup_summary",
     "rollup_rules_version" : 8,
-    "rollup_version" : 9,
+    "rollup_version" : 10,
     "source" : "healthmd.health_data",
-    "source_version" : 8
+    "source_version" : 10
   }
 }

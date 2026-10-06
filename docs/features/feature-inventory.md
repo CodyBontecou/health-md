@@ -21,6 +21,7 @@
 | Contracts | `packages/contracts` | Language-neutral public + internal contracts |
 | Practice portal (synthetic) | `apps/practice` | Production-disabled clinician-portal foundation |
 | Direct CLI wake doorbell | `apps/wake` | Notification-only Cloudflare Worker + isolated D1; no health-data path |
+| Cloud export receiver (unbacked single-user VM pilot) | `apps/cloud` | Isolated opt-in API Endpoint receiver + account dashboard; upload-disabled synthetic preview, original tailnet-only VM writer, dedicated public write-only API ingress, and separately authenticated public read-only MCP; no general production approval |
 | Website + public docs | `apps/website` | Astro docs site, 10 locales, blog, visualizations |
 | Other Cloudflare workers | `apps/apple/worker/{oauth-broker,pricing-analytics}` | OAuth broker + coarse pricing analytics |
 
@@ -108,6 +109,7 @@
 | Vault / files folder destination | iOS, macOS, Android | Obsidian vault, iCloud Drive, Files, or any SAF provider (Drive/OneDrive/Syncthing/Obsidian Sync) | `VaultManager`, SAF storage | ✅ `vault-folder-selection.md`, android README |
 | Mac destination (iPhone → Mac) | iOS, macOS | Encrypted, bounded, checksum-validated transfer over Multipeer Connectivity; partitioned connected transfer; sync event history | `SyncService.swift`, `ConnectedTransfer`, `SyncStateMachine` | ✅ `mac-sync.md`; ref `connected-mac-iphone-protocol.md` |
 | API endpoint export | iOS, Android | POST Apple v8 JSON / `healthmd.api_export` envelope to user HTTP(S) endpoint; Android: encrypted Bearer/Basic + custom headers, EncryptedSharedPreferences, scheduled uploads, target-aware retries | `APIExportClient`, `APIEndpointExportRunner`; android `data/export/API*` | ✅ `api-endpoint-export.md` (both) |
+| Opt-in cloud API receiver and account dashboard (pilot) | Cloud; iOS/Android via existing API Endpoint | Upload-disabled synthetic preview, unbacked one-owner encrypted VM store with the original tailnet writer and independent public write-only HTTPS ingress for compatibility envelopes; read-only MCP uses separately consented scoped Muse credentials, with actual client connection unverified | `apps/cloud/src/`, `apps/cloud/vm/`, `apps/cloud/mcp/` | ✅ `apps/cloud/README.md`; ADR-0007 |
 | Raw snapshot streaming upload | Android | Separate HTTPS-only, no-redirect, header-validated streaming contract; temp artifact deleted after attempt | `RawSnapshotApiClient.kt`, `RawSnapshotExportRunner.kt` | ✅ raw docs |
 | CLI destination | iOS, Android | Production-generated files streamed to computer filesystem via direct protocol | CLI `export --destination` | ✅ CLI README + skill |
 | Connected corpus transfer | iOS, macOS | iPhone → Mac canonical raw corpus spool/transfer, recovery | `IPhoneConnectedCorpusProducer`, `ConnectedCorpus*` | 🟡 cli-mac-iphone-export.md |
@@ -211,7 +213,7 @@
 
 | Feature | Products | Description | Evidence | Docs |
 |---|---|---|---|---|
-| Local-first privacy model | all | No Health.md health-data cloud; every destination user-directed | `privacy-local-first.md`, READMEs | ✅ |
+| Local-first privacy model | all current releases | No default cloud collection; destinations remain user-directed. A separate unbacked opt-in VM pilot retains owner-uploaded exports and serves a consented token-authenticated MCP reader; the website's absolute no-storage privacy claim still requires correction. | `privacy-local-first.md`, `apps/cloud/README.md` | ✅ |
 | Encrypted direct transport | iOS, Android, CLI | ChaCha20-Poly1305 `HMDSC001` channels; X25519/HMAC transcript proofs; digest-chained partitions | `healthmd-protocol/src/crypto.rs`, `DirectCrypto.kt` | ✅ protocol docs |
 | Private spooling | CLI, Android | Health payloads assembled on private disk spools, never logged | client storage; android no-backup spools | ✅ durability docs |
 | Destination binding / path hardening | CLI | Immutable destinations, traversal/symlink rejection, Windows path hardening | `generated_path.rs` | ✅ |

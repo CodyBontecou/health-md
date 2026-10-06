@@ -31,12 +31,13 @@ async function jsonBody(response: Response): Promise<Record<string, unknown>> {
   return await response.json() as Record<string, unknown>;
 }
 
-test("WHOOP authorization URL uses exact endpoint, allowlisted redirect, scopes, and eight-character state", async () => {
+test("WHOOP PKCE authorization URL uses exact endpoint, allowlisted redirect, scopes, and eight-character state", async () => {
   const response = await brokerPost("/v1/oauth/authorize-url", {
     provider: "whoop",
     redirect_uri: redirectURI,
     state: "aB3dE6gH",
     scope: "offline read:cycles read:recovery read:sleep read:workout read:body_measurement",
+    code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
   });
 
   assert.equal(response.status, 200);
@@ -53,6 +54,8 @@ test("WHOOP authorization URL uses exact endpoint, allowlisted redirect, scopes,
     "offline read:cycles read:recovery read:sleep read:workout read:body_measurement",
   );
   assert.equal(authorizationURL.searchParams.has("client_secret"), false);
+  assert.equal(authorizationURL.searchParams.get("code_challenge"), "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM");
+  assert.equal(authorizationURL.searchParams.get("code_challenge_method"), "S256");
 });
 
 test("WHOOP authorization rejects invalid state, redirect, and scope", async (t) => {
@@ -110,6 +113,7 @@ test("WHOOP authorization code exchange sends form credentials and normalizes to
       grant_type: "authorization_code",
       code: "authorization-code",
       redirect_uri: redirectURI,
+      code_verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
     });
     assert.equal(response.status, 200);
     assert.equal(upstreamURL, "https://api.prod.whoop.com/oauth/oauth2/token");
@@ -120,6 +124,7 @@ test("WHOOP authorization code exchange sends form credentials and normalizes to
     assert.equal(form.get("redirect_uri"), redirectURI);
     assert.equal(form.get("client_id"), "whoop-client-id");
     assert.equal(form.get("client_secret"), "whoop-client-secret");
+    assert.equal(form.get("code_verifier"), "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk");
 
     const body = await jsonBody(response);
     assert.equal(body.access_token, "access-1");

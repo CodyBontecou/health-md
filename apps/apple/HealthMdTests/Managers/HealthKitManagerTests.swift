@@ -3089,7 +3089,66 @@ final class HealthKitManagerObserverTests: XCTestCase {
         XCTAssertTrue(called)
     }
 
-    // MARK: - Earliest Date Discovery
+    // MARK: - History Authorization and Earliest Date Discovery
+
+    @MainActor
+    func test_historyAuthorization_reportsLimitedBoundaryForSelectedType() async throws {
+        let store = FakeHealthStore()
+        let stepType = try XCTUnwrap(HKObjectType.quantityType(forIdentifier: .stepCount))
+        let boundary = Date(timeIntervalSince1970: 1_750_000_000)
+        store.authorizedHistoryBoundaries[stepType.identifier] = boundary
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(
+            forMetricIDs: ["steps"],
+            publish: true
+        )
+
+        XCTAssertEqual(assessment.state, .limitedHistory)
+        XCTAssertEqual(assessment.earliestAuthorizedSampleDate, boundary)
+        XCTAssertEqual(assessment.assessedTypeIdentifiers, [stepType.identifier])
+        XCTAssertEqual(store.historyAuthorizationReadTypes, [stepType])
+        XCTAssertEqual(sut.historyAuthorizationAssessment, assessment)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+    }
+
+    @MainActor
+    func test_historyAuthorization_emptyBoundaryPreservesHealthKitPrivacySemantics() async {
+        let store = FakeHealthStore()
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(forMetricIDs: ["steps"])
+
+        XCTAssertEqual(assessment.state, .fullHistory)
+        XCTAssertTrue(assessment.message.contains("denied read"))
+        XCTAssertTrue(assessment.supportsUnqualifiedFullHistoryClaim)
+    }
+
+    @MainActor
+    func test_historyAuthorization_reportsUnavailableOnOlderRuntimeAdapter() async {
+        let store = FakeHealthStore()
+        store.historyAuthorizationBoundariesSupported = false
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(forMetricIDs: ["steps"])
+
+        XCTAssertEqual(assessment.state, .apiUnavailable)
+        XCTAssertNil(assessment.checkedAt)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+        XCTAssertTrue(store.historyAuthorizationReadTypes.isEmpty)
+    }
+
+    @MainActor
+    func test_historyAuthorizationFailureIsUnknownRatherThanFull() async {
+        let store = FakeHealthStore()
+        store.errorForAuthorizedHistoryBoundaries = HealthKitFixtures.genericQueryError
+        let sut = makeSUT(store: store)
+
+        let assessment = await sut.assessHistoryAuthorization(forMetricIDs: ["steps"])
+
+        XCTAssertEqual(assessment.state, .unknown)
+        XCTAssertFalse(assessment.supportsUnqualifiedFullHistoryClaim)
+    }
 
     @MainActor
     func test_findEarliestDate_selectsMinimumAcrossTypes() async {
@@ -3126,6 +3185,21 @@ final class HealthKitManagerObserverTests: XCTestCase {
         XCTAssertTrue(discovery.isComplete)
         XCTAssertEqual(discovery.earliestDate, expected)
         XCTAssertTrue(discovery.queriedTypeIdentifiers.contains(sampleType.identifier))
+    }
+
+    @MainActor
+    func test_catalogBackedEarliestDiscoveryDoesNotQualifyAllAvailableWhenHistoryAPIIsUnavailable() async {
+        let store = FakeHealthStore()
+        store.historyAuthorizationBoundariesSupported = false
+        let stepType = HKObjectType.quantityType(forIdentifier: .stepCount)!
+        store.earliestSampleDates[stepType.identifier] = Date(timeIntervalSince1970: 1_500_000_000)
+        let sut = makeSUT(store: store)
+
+        let discovery = await sut.discoverEarliestHealthDataDate(enabledMetricIDs: ["steps"])
+
+        XCTAssertTrue(discovery.isComplete, "Earliest-date queries and authorization-boundary proof are separate gates")
+        XCTAssertEqual(discovery.historyAuthorization.state, .apiUnavailable)
+        XCTAssertFalse(discovery.supportsUnqualifiedFullHistoryClaim)
     }
 
     @MainActor

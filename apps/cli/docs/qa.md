@@ -76,10 +76,12 @@ additive `wake_window_seconds`, and verify MCP progress-token calls emit bounded
 `notifications/progress` before the final response. `healthmd cancel` persists its durable marker
 before the wake wait, so wake expiry or local interruption there reports `direct_cancellation_pending`
 (the truthful pending state) rather than a terminal cancellation. Feed the
-same bounded stdio initialize/tools calls to both serve modes: the complete mode must expose 19
-tools, while read-only mode must expose exactly 13 tools with `readOnlyHint`, no pairing resource,
-and no pairing/export-job declarations. Guess all six omitted tool names and require `Unknown tool`
-before command dispatch. Confirm that neither stdio mode starts an MCP HTTP listener, that the
+same bounded stdio initialize/tools calls to both serve modes: current development and the next
+candidate must expose 21 complete-mode tools, while read-only mode must expose exactly 13 tools with
+`readOnlyHint`, no pairing resource, and no pairing/export-job declarations. Guess all eight omitted
+tool names and require `Unknown tool` before command dispatch. The published alpha.7 remains a
+historical 19-tool preview and is checked against its own versioned asset, not the development count.
+Confirm that neither stdio mode starts an MCP HTTP listener, that the
 default release rejects `mcp serve-http`, and that every build rejects the removed
 `mcp serve-hosted` command. Separately run
 source builds with `cargo run --features streamable-http -- mcp serve-http --help` and

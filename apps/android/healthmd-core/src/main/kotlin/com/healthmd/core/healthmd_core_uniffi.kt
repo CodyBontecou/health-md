@@ -3832,7 +3832,11 @@ enum class CoreMetricRegistryProfile {
     /**
      * Android analytical v5.
      */
-    ANDROID_ANALYTICAL_V5;
+    ANDROID_ANALYTICAL_V5,
+    /**
+     * Apple v10, with provider-native WHOOP v2 supplementation.
+     */
+    APPLE_HEALTH_DATA_V10;
 
     
 

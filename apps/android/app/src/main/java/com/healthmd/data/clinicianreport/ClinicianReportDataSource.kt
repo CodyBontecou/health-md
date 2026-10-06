@@ -1,8 +1,8 @@
 package com.healthmd.data.clinicianreport
 
+import com.healthmd.data.health.HealthConnectDataProvider
 import com.healthmd.domain.clinicianreport.*
 import com.healthmd.domain.model.*
-import com.healthmd.domain.repository.HealthRepository
 import kotlinx.coroutines.CancellationException
 import java.time.Instant
 import java.time.LocalDate
@@ -23,7 +23,8 @@ class SystemClinicianReportDateProvider @Inject constructor() : ClinicianReportD
 }
 
 class DefaultClinicianReportDataSource @Inject constructor(
-    private val healthRepository: HealthRepository,
+    // Reports are local-only; ordinary exports may select network-backed providers.
+    private val healthConnect: HealthConnectDataProvider,
     private val sourceLabelResolver: ClinicianReportSourceLabelResolver,
     private val dateProvider: ClinicianReportDateProvider,
 ) : ClinicianReportDataSource {
@@ -51,7 +52,7 @@ class DefaultClinicianReportDataSource @Inject constructor(
             medicalResources = false,
         )
         return try {
-            val records = healthRepository.fetchHealthDataRange(
+            val records = healthConnect.fetchHealthDataRange(
                 dates = range.dates(),
                 dataTypes = dataTypes,
                 includeGranularData = true,

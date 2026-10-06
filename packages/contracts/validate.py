@@ -52,6 +52,7 @@ VALID_CAPABILITY_CLASSIFICATIONS = {
 VALID_PROFILE_COMPATIBILITY = {"shipped", "frozen", "additive"}
 REQUIRED_OUTPUT_PROFILES = {
     "apple-v8": ("apple", "healthmd.health_data.apple", 8),
+    "apple-v10": ("apple", "healthmd.health_data.apple_v10", 10),
     "android-frozen-v4": ("android", "healthmd.health_data.android", 4),
     "android-analytical-v5": (
         "android",
@@ -2740,8 +2741,8 @@ def validate_shared_setup_transaction_scenario_fixture(root: Path, path: Path) -
         )
 
 
-def validate_provider_sections_fixture(root: Path, path: Path) -> None:
-    context = "healthmd.provider_sections v1 fixture"
+def validate_provider_sections_fixture(root: Path, path: Path, version: int = 1) -> None:
+    context = f"healthmd.provider_sections v{version} fixture"
     payload = require_exact_keys(load_json(path, context), {"whoop"}, context)
     whoop = require_exact_keys(
         payload["whoop"],
@@ -2762,14 +2763,15 @@ def validate_provider_sections_fixture(root: Path, path: Path) -> None:
     )
     if (
         whoop["schema"] != "healthmd.provider.whoop_daily"
-        or whoop["schema_version"] != 1
+        or whoop["schema_version"] != version
         or whoop["capture_status"] != "complete"
     ):
         fail(f"{context}.whoop: schema or complete-capture discriminator mismatch")
 
     schema_path = repository_path(
         root,
-        "packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json",
+        ("packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json"
+         if version == 1 else "packages/contracts/provider-sections/v2/provider-sections-v2.schema.json"),
         f"{context}.schema",
     )
     schema = load_json(schema_path, f"{context}.schema")
@@ -2781,6 +2783,25 @@ def validate_provider_sections_fixture(root: Path, path: Path) -> None:
     ):
         fail(f"{context}: schema metadata or WHOOP definition is invalid")
     validate_json_schema_subset(payload, schema, context)
+    if version == 2:
+        if whoop["cycles"][0].get("step_count") != 8234:
+            fail(f"{context}: complete synthetic v2 fixture must evidence cycle steps")
+        for bad in (None, -1, 0.5, 2147483648, True, "0"):
+            invalid = copy.deepcopy(payload)
+            invalid["whoop"]["cycles"][0]["step_count"] = bad
+            try:
+                validate_json_schema_subset(invalid, schema, context)
+            except ContractValidationError:
+                pass
+            else:
+                fail(f"{context}: v2 schema accepts invalid typed cycle steps")
+        for good in (0, 1, 2147483647):
+            valid = copy.deepcopy(payload)
+            valid["whoop"]["cycles"][0]["step_count"] = good
+            validate_json_schema_subset(valid, schema, context)
+        missing = copy.deepcopy(payload)
+        del missing["whoop"]["cycles"][0]["step_count"]
+        validate_json_schema_subset(missing, schema, context)
 
     timestamp_re = re.compile(
         r"^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?Z$"
@@ -3170,6 +3191,26 @@ def validate_product_capabilities(
     return len(output_profiles), len(capabilities)
 
 
+def validate_apple_v10_profile_extension(root: Path, path: Path) -> None:
+    expected = {
+        "schema": "healthmd.metric_profile_extension", "schema_version": 1,
+        "base_profile_id": "apple_health_data_v8", "profile_id": "apple_health_data_v10",
+        "public_profile_id": "apple-v10", "public_schema": "healthmd.health_data",
+        "public_schema_version": 10, "profile_revision": 1, "core_api_version": 5,
+        "registry_version": 1, "whoop_schema_version": 2,
+        "registry_sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+    }
+    payload = load_json(path, "Apple v10 profile extension")
+    if payload != expected or path.read_bytes() != (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode():
+        fail("Apple v10 extension must preserve its independently versioned identity and base hash")
+    registry = root / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+    if hashlib.sha256(registry.read_bytes()).hexdigest() != expected["registry_sha256"]:
+        fail("Apple v10 cannot mutate its frozen base registry")
+    snapshot = load_json(registry, "frozen base registry")
+    if len(snapshot["profiles"]) != 3 or "apple_health_data_v10" in {p["id"] for p in snapshot["profiles"]}:
+        fail("Apple v10 is an extension, not a fourth frozen registry-v1 profile")
+
+
 def validate_metric_registry(
     root: Path,
     registry_path: Path,
@@ -3552,12 +3593,16 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
         "range-v9.md": "range.md",
         "range-v9-bases.md": "range-bases.md",
     }
-    production_name = production_names.get(path.name)
-    if production_name is None:
-        fail(f"{context}: unknown canonical range-v9 fixture")
-    generated = root / "apps/apple/docs/reference/generated/rollups" / production_name
-    if generated.read_bytes() != path.read_bytes():
-        fail(f"{context}: fixture must be copied byte-for-byte from the production Swift renderer")
+    version = path.parent.parent.name
+    expected_names = {name.replace("v9", version): value for name, value in production_names.items()}
+    production_name = expected_names.get(path.name)
+    if production_name is None or version not in {"v9", "v10"}:
+        fail(f"{context}: unknown canonical range fixture/version")
+    # Historical v9 bytes are pinned by manifest hashes, not today's v10 renderer.
+    if version == "v10":
+        generated = root / "apps/apple/docs/reference/generated/rollups" / production_name
+        if generated.read_bytes() != path.read_bytes():
+            fail(f"{context}: current fixture must equal the production Swift renderer")
 
     content = path.read_text()
     if path.suffix == ".csv":
@@ -3572,9 +3617,9 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
     elif path.suffix == ".md":
         if "\ncalendar_timezone: UTC\n" not in content:
             fail(f"{context}: Markdown/Bases frontmatter must carry calendar_timezone")
-        if path.name == "range-v9.md" and "## Roll-up notes" not in content:
+        if path.name == f"range-{version}.md" and "## Roll-up notes" not in content:
             fail(f"{context}: canonical Markdown fixture must include the production body")
-        if path.name == "range-v9-bases.md" and "rollup_metrics:" not in content:
+        if path.name == f"range-{version}-bases.md" and "rollup_metrics:" not in content:
             fail(f"{context}: canonical Bases fixture must include all metric projections")
 
 
@@ -3710,8 +3755,9 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
-            elif identifier == "healthmd.provider_sections":
-                validate_provider_sections_fixture(root, fixture_path)
+            elif identifier in {"healthmd.provider_sections", "healthmd.provider_sections.whoop_v2"}:
+                validate_provider_sections_fixture(root, fixture_path,
+                    2 if identifier.endswith("whoop_v2") else 1)
             elif identifier == SHARED_SETUP_SCHEMA:
                 if fixture_path.name == "transaction-scenarios-v1.json":
                     validate_shared_setup_transaction_scenario_fixture(root, fixture_path)
@@ -3719,7 +3765,7 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_shared_setup_writer_fixture(root, fixture_path)
             elif identifier == "healthmd.health_data.unified":
                 validate_unified_health_data_fixture(root, fixture_path)
-            elif identifier == "healthmd.rollup_summary":
+            elif identifier in {"healthmd.rollup_summary", "healthmd.rollup_summary.apple_v10"}:
                 validate_rollup_production_fixture(root, fixture_path)
                 if fixture_path.suffix == ".json":
                     validate_rollup_summary_fixture(root, fixture_path)
@@ -3802,6 +3848,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                 fail(f"{inventory_context}: metric registry inventory declared twice")
             found_metric_inventory = True
             validate_metric_registry(root, inventory_path, contract_versions)
+        elif identifier == "healthmd.metric_profile_extension":
+            validate_apple_v10_profile_extension(root, inventory_path)
         inventory_count += 1
 
     if not found_product_inventory:

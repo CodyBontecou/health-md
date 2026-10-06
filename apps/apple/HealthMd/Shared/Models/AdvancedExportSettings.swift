@@ -1107,6 +1107,8 @@ class AdvancedExportSettings: ObservableObject {
         let selection = MetricSelectionState()
         selection.enabledMetrics = snapshot.metricSelectionIDs
         selection.enabledCategories = [] // Categories are derived UI state, never import authority.
+        // Shared Setup carries Apple Health selections, not provider authority.
+        selection.enabledWHOOPResources = metricSelection.enabledWHOOPResources
         let customization = FormatCustomization()
         customization.dateFormat = snapshot.dateFormat
         customization.timeFormat = snapshot.timeFormat

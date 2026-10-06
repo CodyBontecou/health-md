@@ -71,7 +71,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
             let service = HealthMdCoreService()
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
-                registry: try service.metricRegistry(profile: .appleHealthDataV8)
+                registry: try service.metricRegistry(profile: .appleHealthDataV10)
             )
         }
     }
@@ -295,6 +295,26 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         operationIdentity suppliedOperationIdentity: AppleExportOperationIdentity? = nil
     ) async throws -> AppleLooseDailyPlanResolution {
+        // Validate persisted authority before legacy/empty exits. Unsupported pinned operations
+        // are rejected below without opening a core session or falling back to native bytes.
+        let suppliedPin = settingsSnapshot.appleExportEnginePin
+        let persistedContext: AppleLooseDailyCoreContext?
+        if let suppliedPin, records.isEmpty || suppliedPin.engine == .legacy {
+            do {
+                let context = try await coreExecutor.loadContext()
+                guard suppliedPin.calendarTimeZoneIdentifier == settingsSnapshot.calendarTimeZoneIdentifier,
+                      suppliedPin.isCompatible(buildInfo: context.buildInfo, registrySnapshot: context.registry) else {
+                    throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+                }
+                persistedContext = context
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+        } else {
+            persistedContext = nil
+        }
         guard !records.isEmpty else { return .legacy }
         let calendarTimeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier ?? ""
         let orderedRecords = records.sorted {
@@ -328,7 +348,6 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 || requestedRange?.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
-        let suppliedPin = settingsSnapshot.appleExportEnginePin
         let requestedMode: ExportEngineMode
         if let suppliedPin {
             requestedMode = suppliedPin.engine
@@ -340,7 +359,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             requestedMode = .legacy
         } else {
             requestedMode = policyResolver.requestedModeForNewOperation(
-                profile: .appleHealthDataV8
+                profile: .appleHealthDataV10
             )
         }
         guard requestedMode != .legacy else { return .legacy }
@@ -375,11 +394,15 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
         let context: AppleLooseDailyCoreContext
         do {
-            context = try await coreExecutor.loadContext()
+            if let persistedContext {
+                context = persistedContext
+            } else {
+                context = try await coreExecutor.loadContext()
+            }
         } catch is CancellationError {
             throw CancellationError()
         } catch {
-            if requestedMode == .shadow {
+            if requestedMode == .shadow, suppliedPin == nil {
                 await emitRustFailure(pin: nil)
                 return .legacy
             }
@@ -818,7 +841,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 id: NativeExportArtifactPlan.artifactID(
                     requestID: identity.requestID,
                     sessionID: identity.sessionID,
-                    profile: .appleHealthDataV8,
+                    profile: .appleHealthDataV10,
                     relativePath: output.relativePath,
                     mediaType: mediaType,
                     writeMode: writeMode,
@@ -836,7 +859,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

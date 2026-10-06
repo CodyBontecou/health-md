@@ -1,0 +1,20 @@
+[Unit]
+Description=Health.md owner-only account HTTPS proxy (loopback origin)
+After=network-online.target healthmd-cloud-account.service
+Requires=healthmd-cloud-account.service
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+ExecStart=/usr/sbin/nginx -c /etc/healthmd-cloud-account/proxy.conf -g 'daemon off;'
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+InaccessiblePaths=/etc/healthmd-cloud-mvp /etc/healthmd-cloud-mcp /var/lib/healthmd-cloud-mvp
+
+[Install]
+WantedBy=multi-user.target

@@ -104,8 +104,15 @@ enum HealthKitDailyCapture {
             if fetchExternalRecords,
                record.hasAnyData,
                let fetchExternalDailyRecords {
+                var providerCalendar = Calendar(identifier: .gregorian)
+                providerCalendar.timeZone = TimeZone(identifier: record.timeContext.calendarTimeZoneIdentifier) ?? .current
+                let whoopResources = metricSelection.enabledWHOOPResources
+                    .requested(for: date, calendar: providerCalendar)
                 let fetchedExternalRecords = await fetchExternalDailyRecords(date)
-                record.providers = HealthProviderSections.normalized(from: fetchedExternalRecords)
+                    .compactMap { $0.selectingWHOOPResources(whoopResources) }
+                record.providers = HealthProviderSections.normalized(
+                    from: fetchedExternalRecords, whoopResources: whoopResources
+                )
                 externalDailyRecords = filterExternalRecords
                     ? fetchedExternalRecords.filter(\.shouldExport)
                     : fetchedExternalRecords

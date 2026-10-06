@@ -25,10 +25,10 @@ units: imperial
 ## 現在の可視化対応範囲
 
 <div class="reference-stats">
-<div><strong>43</strong><span>現在利用できるプラグインレンダラー</span></div>
+<div><strong>62</strong><span>現在利用できるプラグインレンダラー</span></div>
 <div><strong>18</strong><span>エクスポートデータのカテゴリ</span></div>
 <div><strong>220+</strong><span>正規エクスポートキー</span></div>
-<div><strong>1</strong><span>今後必要な汎用指標レイヤー</span></div>
+<div><strong>4</strong><span>WHOOP専用ビュー</span></div>
 </div>
 
 ## エクスポーター別の対応プラットフォーム
@@ -161,6 +161,40 @@ Android Health Connectは、同等のHealthKit「心の状態」レコードや�
 - [ワークアウトのトレンド](/visualizations/workout-analytics/workout-trends/theme-colors/) — `workout-trends`
 - [ワークアウト区間](/visualizations/workout-analytics/workout-intervals/theme-colors/) — `workout-intervals`
 - [ワークアウトマップ](/visualizations/workout-analytics/workout-map/theme-colors/) — `workout-map`
+
+### WHOOP：プロバイダーのデータを分離
+
+WHOOPが有効なApple版では、設定 → 接続済みアプリでWHOOPを接続し、エクスポートに接続済みアプリを含めます。これらのグラフは、Appleの`healthmd.health_data` v8日次ファイル内の`providers.whoop`（`healthmd.provider.whoop_daily` v1）を読み込みます。WHOOPをAppleやHealth Connectの集計値と混合しません。WHOOPのHRVはRMSSDであり、AppleのSDNNとは異なります。
+
+- [回復度 × ストレイン](/visualizations/whoop/whoop-recovery-strain/theme-colors/)、`whoop-recovery-strain`：回復度（0–100%）とサイクルのストレイン（0–21）を比較し、完全なレコードでは同じサイクルIDで結び付けます。これは関連性を示すもので、トレーニングの推奨ではありません。
+- [実際の睡眠と必要睡眠](/visualizations/whoop/whoop-sleep-need/theme-colors/)、`whoop-sleep-need`：睡眠セッションと昼寝を別々に表示し、基本必要量、睡眠負債、最近のストレインによる必要量、符号付きの昼寝調整を示します。正味必要量のマーカーには報告された4成分すべてが必要です。負の昼寝調整は減算のまま扱います。
+- [睡眠評価の推移](/visualizations/whoop/whoop-sleep-trends/theme-colors/)、`whoop-sleep-trends`：WHOOPが報告したパフォーマンス、一貫性、効率の百分率であり、ローカルで計算したスコアではありません。
+- [ワークアウトのストレインとゾーン](/visualizations/whoop/whoop-workout-strain/theme-colors/)、`whoop-workout-strain`：各ワークアウトのストレインとWHOOPのゾーン0–5を表示します。ゾーン比率の分母は報告されたゾーン時間の合計で、経過時間やAppleから算出したゾーンではありません。記録率と経過時間は別の参考情報として保持します。
+
+完全なレコードと必要睡眠の成分にはJSONまたは構造化CSVを使ってください。Markdown/Basesでは、曖昧さのない単一レコードのスカラー投影のみを利用でき、昼寝の識別情報やワークアウトのゾーン詳細はありません。これらのグラフは、プロバイダー固有のサイドカーファイル、AndroidのRaw API Snapshots、ロールアップを読み込みません。欠損値や未採点の値はゼロではなく、部分的な取得状況も表示します。日付フィルターはイベント時刻ではなく、レコードが所属するエクスポート日を使います。ギャラリーのプレビューは合成データであり、実在する人の記録ではありません。
+
+```health-viz
+type: whoop-recovery-strain
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-need
+sleep: main
+last: 30
+```
+
+```health-viz
+type: whoop-sleep-trends
+sleep: all
+last: 30
+```
+
+```health-viz
+type: whoop-workout-strain
+limit: 12
+last: 30
+```
 
 ## 基盤ロードマップ
 

@@ -1,10 +1,10 @@
 ---
 title: "Health.md roll-up aggregation behavior matrix"
-description: "Generated deterministically from production HealthMetricDataDictionary.entries(using:) at schema v8."
+description: "Generated deterministically from production HealthMetricDataDictionary.entries(using:) at schema v10."
 editUrl: false
 ---
 
-Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v8.
+Generated deterministically from production `HealthMetricDataDictionary.entries(using:)` at schema v10.
 
 - Dictionary entries: 232
 - Distinct rule groups: 20

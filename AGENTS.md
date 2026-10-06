@@ -7,11 +7,22 @@
 - `apps/cli`: standalone Rust CLI and client crates.
 - `apps/practice`: separately governed clinician portal and future clinical service boundary.
 - `apps/wake`: notification-only Direct CLI wake Worker and isolated D1 service; never a health-data path.
+- `apps/cloud`: isolated opt-in health-data receiver and dashboard, with an upload-disabled synthetic preview, an unbacked single-user VM pilot, and a separately authenticated read-only MCP endpoint; read its `AGENTS.md` and ADR-0007 before changing or deploying.
 - `apps/website`: website and generated product documentation.
 - `packages/contracts`: language-neutral schemas and interoperability fixtures.
 - `packages/healthmd-core-rust`: shared Rust core, UniFFI tooling, and direct-protocol crate.
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
+
+## Verification policy
+
+- During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
+- Reuse passing results only while relevant source, dependencies, fixtures, toolchain, features, and configuration remain unchanged. Re-run after relevant edits; diagnose an unrelated baseline failure with its smallest failing command rather than repeating whole suites.
+- Full OS/flavor matrices, coverage collection, MSRV, binding/package qualification, and release smoke belong to CI/qualification or changes that affect those surfaces. Public-contract, security/authority, persistence/recovery, FFI, and uncertain-impact changes still require every affected producer/consumer check.
+- Before checks, declare a task-scoped verification plan and finish with its receipt, including unrun surfaces. Follow the [agent guard/workflow](docs/testing-strategy.md#agent-plan-guard-and-receipt-workflow); verify guard activation in Pi, or use the portable runner in another harness. Root `make test` requires `COMPONENT`; `make test-all` is an explicit broad smoke sweep, not complete release qualification.
+- Simulator/emulator QA, device/UI automation, and any Argent use require an explicit user request for the current task. A general request to implement, polish UI, fix a bug, or run tests does not authorize these workflows.
+- Apply this opt-in policy when following component documentation or referenced skills, even if they prescribe simulator or Argent QA. Do not boot simulators/emulators, install or launch apps for QA, or capture QA screenshots/recordings by default.
+- Report checks run and their results. If a relevant check requires an opt-in workflow, mark it not run and explain the verification gap; do not claim visual or device behavior was verified.
 
 ## Cross-platform product and contract policy
 
@@ -61,6 +72,7 @@ For Apple App Store releases, follow the complete synchronization contract in `a
 - Keep `apps/cli` and `packages/healthmd-core-rust` as independent Cargo workspaces with independent lockfiles and target directories.
 - Keep `apps/practice` isolated from the static website and existing non-PHI Workers; its lockfile, build, tests, deployment configuration, and clinical data boundary remain component-scoped.
 - Keep `apps/wake` notification-only, with its own lockfile, D1 migrations, secrets, CI, and deployment configuration; no health payload or request contents may enter the Worker.
+- Keep `apps/cloud` isolated from Practice, website, wake, and non-PHI Workers; it has its own lockfile, D1, private R2, secrets, and CI. The separately authorized unbacked single-user VM pilot is not a general production release; follow ADR-0007's security, privacy, deletion, and operations boundaries before any broader rollout.
 - Contract changes must trigger every affected component. Shared-core changes must trigger the core, Apple, Android, CLI, and website consumer gates.
 - Avoid introducing a repository-wide build framework unless it provides concrete value across Swift, Kotlin, Rust, and Node.js.
 

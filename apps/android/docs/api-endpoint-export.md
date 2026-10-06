@@ -1,6 +1,6 @@
 # API Endpoint Export
 
-Health.md can send compatibility exports or a Raw API Snapshot directly to an endpoint configured by the user. This is an explicit alternative to Device Folder export; Health.md does not proxy or retain completed requests.
+Health.md can send compatibility exports or a Raw API Snapshot directly to an endpoint configured by the user. This is an explicit alternative to Device Folder export. The configured receiver controls retention: the optional Health.md Cloud pilot deliberately retains compatibility exports sent to it, while other destinations have their own policies.
 
 ## Configure
 
@@ -10,6 +10,8 @@ Health.md can send compatibility exports or a Raw API Snapshot directly to an en
 4. Optionally enter a token or full `Bearer …` / `Basic …` Authorization value.
 5. Optionally add raw request headers, one `Name: value` per line—for example `X-API-Key`, `X-Client-ID`, or an `Authorization` value using a custom scheme.
 6. Choose **Compatibility Export** or **Raw API Snapshot**, then choose dates and metrics. Both products can be previewed before export. A raw preview performs the full provider-native read into private no-backup storage, retains only bounded preview text in memory, and deletes the temporary artifact without uploading it.
+
+For the **single-owner, unbacked Health.md Cloud pilot** only, the optional compatibility-export destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. The earlier tailnet-only `:18788` writer remains available for existing saved destinations; the app does not silently migrate endpoints or tokens. Do not send **Raw API Snapshot** NDJSON to this URL: it is not ingested. The public pilot retains accepted compatibility-export revisions without an off-host backup, so VM/disk/key loss can permanently destroy them. Configure this URL only after the public receiver is confirmed live; do not put the token in the URL.
 
 The URL is stored in private app preferences. Authorization and custom header values are stored separately with Android EncryptedSharedPreferences backed by Android Keystore. Export settings and encrypted secrets are excluded from Android backup/device transfer, UI labels, export history, logs, and WorkManager input. Because URL query parameters are part of the settings URL, put API keys and other secrets in encrypted request headers instead. Saved header values are not displayed again; entering new custom headers replaces the complete saved custom-header set.
 
@@ -76,6 +78,10 @@ The request body is streamed from installation-private no-backup storage and rem
 The Schedule screen has its own destination selection. API schedules require network connectivity and Full Access. When Android’s Alarms & reminders access is granted, Health.md uses a one-shot exact alarm for each intended occurrence and immediately dispatches expedited export work. A durable one-time WorkManager trigger remains as a delayed backup and becomes the primary scheduler when exact-alarm access is unavailable. Each occurrence carries its intended local date, so a delayed start or retry cannot accidentally export a different day after midnight. Alarms are restored after reboot, app update, clock/timezone changes, and exact-alarm access changes.
 
 Each new completed-day profile occurrence resends the full configured lookback, including overlapping dates uploaded by earlier occurrences. A 14-day daily profile therefore sends all 14 completed days each morning, ending the day before its scheduled fire date. Today Refresh adds only today's snapshot; retries preserve exact unresolved dates instead of expanding the window. Receivers should replace or upsert each daily snapshot by `records[].date`, not append duplicate copies. The API envelope and daily-record schemas are unchanged.
+
+Profile schedules honor the frozen export mode: Raw API Snapshot uses the raw range runner and raw headers/body, not `healthmd.api_export`. Raw retries start a fresh non-transactional capture and never resume a compatibility journal. Partial raw provider results retain all attempted completed days rather than interpreting artifact counts as day counts; Today Refresh succeeds only when every requested raw artifact succeeds.
+
+Frozen profile recovery takes priority over current lookback/time and survives schedule disable/re-enable. If that recovery is obsolete, use **Schedule → Profiles → Discard Pending Recovery** and confirm for the affected profile. This cancels only its pending scheduled work and clears the frozen retry groups, preserving the profile, encrypted credentials, history, and already exported data. The next ordinary scheduled occurrence uses the current profile/settings; discard does not upload immediately or remove anything from the receiver.
 
 Failed scheduled work records its destination type and a salted one-way fingerprint of the configured API URL plus encrypted request credentials/headers with each pending date. Changing the target cannot retry API data into a device folder, and changing the endpoint or routing/authentication headers cannot automatically send old pending records to a different service or tenant. Neither secrets nor unsalted secret hashes are written to WorkManager or DataStore. History retries are explicit user actions: they preserve the destination type but use the currently configured endpoint and headers, which may differ from the original request.
 

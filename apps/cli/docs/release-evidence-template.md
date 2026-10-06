@@ -90,7 +90,8 @@ Protocol numbers are not substitutes for exact mobile build IDs.
 - `healthmd-mcp --help`: pass/fail
 - `healthmd setup codex --skip-pairing` idempotent isolated run: pass/fail
 - MCP initialize/tools/resources: pass/fail
-- Fixed tool count (`19`): pass/fail
+- Fixed complete-mode tool count (`21` for current development; use the exact versioned catalog for historical releases): pass/fail
+- Fixed read-only tool count (`13`): pass/fail
 - Same-executable/Windows same-file helper path: pass/fail
 - `direct devices` or readiness result (code/count only):
 - UI resource and PNG dimensions/format: pass/fail

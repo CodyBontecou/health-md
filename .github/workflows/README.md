@@ -2,7 +2,7 @@
 
 ## Required pull-request gates
 
-Every pull request triggers the component CI workflows, and each reports one of seven stable final contexts suitable for branch protection:
+Every pull request triggers the component CI workflows, and each reports one of eight stable final contexts suitable for branch protection:
 
 - `Apple CI / Apple CI`
 - `Android CI / Android CI`
@@ -10,13 +10,22 @@ Every pull request triggers the component CI workflows, and each reports one of 
 - `Core Rust CI / Core Rust CI`
 - `Practice CI / Practice CI`
 - `Wake CI / Wake CI`
+- `Cloud CI / Cloud CI`
 - `Website CI / Website CI`
 
-Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+Inside each workflow except Wake CI and Cloud CI (whose single jobs stay always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
 
 Each workflow's path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
 
-The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+The final gate jobs fail unless every selected job succeeds. Android CI has an additional `native` decision: CLI changes outside `healthmd-client`, its workspace manifests/lockfile, and its toolchain retain live Rust/Kotlin interop without rebuilding the native/flavor/emulator matrix. Client changes retain native Direct CLI UI E2E; any Android, shared-core, contract, or Android-workflow change selects the full matrix. The Android final gate requires explicit `skipped` results for unselected jobs and rejects missing/malformed/inconsistent flags. Non-PR qualification still selects every job.
+
+Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+
+## Testing-tool feedback
+
+[`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
+
+Apple's macOS job reuses coverage-enabled DerivedData for documentation checks; normal `xcodebuild test` keeps source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
 
 ## Android release trigger
 
@@ -149,6 +158,10 @@ The live Worker remains an independently deployed, notification-only service wit
 APNs secrets. Deployment is not coupled to CLI artifact publication and must use committed, pushed
 `origin/main` source under `apps/wake`; see its component README and AGENTS file. No workflow in this
 repository routes health data through the Worker.
+
+## Opt-in cloud prototype CI (no deployment)
+
+`.github/workflows/cloud-ci.yml` runs locked Node/type/unit checks, a synthetic local Wrangler D1/R2 test of account/session, Apple v1/v2 and Android v4 ingestion, encrypted downloads, tenant isolation, and token revocation, plus a Wrangler dry-run and dependency audit. It does not deploy or receive production credentials. Main pushes are path-scoped; pull requests always report `Cloud CI / Cloud CI`. This CI never handles real health data or deploys either profile. A separately authorized unbacked, owner-operated VM pilot accepts real exports, but no general production release is approved. See [`apps/cloud/README.md`](../../apps/cloud/README.md) and [ADR-0007](../../docs/architecture/adr-0007-healthmd-cloud.md).
 
 ## Release steps
 

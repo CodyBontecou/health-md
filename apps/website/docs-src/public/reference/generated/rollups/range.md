@@ -1,6 +1,6 @@
 ---
 schema: healthmd.rollup_summary
-schema_version: 9
+schema_version: 10
 type: health_rollup
 rollup_period: range
 period_id: 2026-07-06_to_2026-07-11
@@ -11,7 +11,7 @@ days_expected: 6
 days_counted: 3
 coverage_percent: 50
 source_schema: healthmd.health_data
-source_schema_version: 8
+source_schema_version: 10
 rollup_rules_version: 8
 generated_at: 2026-07-13T12:00:00Z
 source_dates:
@@ -52,7 +52,7 @@ Generated from 3 HealthKit daily aggregate snapshots in this range period.
 - **Period:** 2026-07-06 → 2026-07-11
 - **Days counted:** 3 / 6 (50%)
 - **Missing days:** 3
-- **Rule source:** `_healthmd_data_dictionary.json` schema v8
+- **Rule source:** `_healthmd_data_dictionary.json` schema v10
 - **Source dates:** 2026-07-06, 2026-07-08, 2026-07-11
 
 ## Activity

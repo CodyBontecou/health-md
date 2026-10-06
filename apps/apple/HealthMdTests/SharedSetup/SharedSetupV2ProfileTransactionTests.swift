@@ -134,6 +134,37 @@ final class SharedSetupV2ProfileTransactionTests: XCTestCase {
         XCTAssertEqual(try storedBlockedIDs(), importedIDs)
     }
 
+    func testAddAndReplaceRetainReceiverWHOOPSelectionAndUndoRestoresIt() throws {
+        let selections: [Set<WHOOPResourceName>] = [[], [.recovery, .sleep]]
+        for mode in [SharedSetupV2TransactionMode.add, .replace] {
+            for resources in selections {
+                let existingID = uuid(1)
+                var snapshot = nativeSnapshot(filename: "local-{date}")
+                snapshot.metricSelection.enabledWHOOPResources = resources
+                let existing = ExportProfile(
+                    id: existingID,
+                    name: "Local",
+                    settings: snapshot,
+                    target: .connectedMac
+                )
+                seed(profiles: [existing], active: existingID, schedules: [])
+                let importedID = uuid(101)
+                let transaction = makeTransaction(profileIDs: [importedID], scheduleIDs: [])
+                _ = try transaction.apply(
+                    try applePlan(),
+                    selectedBundleIDs: ["profile-001"],
+                    mode: mode
+                )
+
+                let imported = try XCTUnwrap(storedProfiles().first { $0.id == importedID })
+                XCTAssertEqual(imported.settings.metricSelection.enabledWHOOPResources, resources)
+                _ = try transaction.undo()
+                XCTAssertEqual(try storedProfiles(), [existing])
+                XCTAssertEqual(storedActiveID(), existingID)
+            }
+        }
+    }
+
     func testForeignExtensionAndUnavailableMeaningRemainSidecarOnly() throws {
         var document = try fixtureDocument(named: "android-shared-setup-v2.json")
         document.profiles[1].presentation.markdown.originDialect = .android

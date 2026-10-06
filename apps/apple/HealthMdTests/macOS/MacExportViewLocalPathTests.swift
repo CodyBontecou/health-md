@@ -48,7 +48,7 @@ final class MacExportViewLocalPathTests: XCTestCase {
         )
     }
 
-    func testManualArchiveCommitContainsConfiguredDailyV8AndRangeV9Artifacts() async throws {
+    func testManualArchiveCommitContainsConfiguredDailyV10AndRangeV10Artifacts() async throws {
         let vaultURL = FileManager.default.temporaryDirectory
             .appendingPathComponent("MacManualArchiveTests-\(UUID().uuidString)", isDirectory: true)
         try FileManager.default.createDirectory(at: vaultURL, withIntermediateDirectories: true)
@@ -83,8 +83,8 @@ final class MacExportViewLocalPathTests: XCTestCase {
         XCTAssertTrue(listing.contains("\(rangeJSONPath)\n"), listing)
         let dailyJSON = try unzip(arguments: ["-p", archiveURL.path, "2026-03-15.json"])
         let rangeJSON = try unzip(arguments: ["-p", archiveURL.path, rangeJSONPath])
-        XCTAssertTrue(dailyJSON.contains("\"schema_version\" : 8") || dailyJSON.contains("\"schema_version\":8"), dailyJSON)
-        XCTAssertTrue(rangeJSON.contains("\"schema_version\" : 9") || rangeJSON.contains("\"schema_version\":9"), rangeJSON)
+        XCTAssertTrue(dailyJSON.contains("\"schema_version\" : 10") || dailyJSON.contains("\"schema_version\":10"), dailyJSON)
+        XCTAssertTrue(rangeJSON.contains("\"schema_version\" : 10") || rangeJSON.contains("\"schema_version\":10"), rangeJSON)
         XCTAssertFalse(FileManager.default.fileExists(
             atPath: vaultURL.appendingPathComponent("2026-03-15.json").path
         ))

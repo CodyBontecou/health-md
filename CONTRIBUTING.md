@@ -38,5 +38,5 @@ Exporter shapes and direct-device protocols have multiple producers and consumer
 
 - Keep structural migration, product behavior, and contract extraction in separate changes.
 - Include the component name in the title when practical.
-- Document tests run and any physical-device or deployment checks not run.
+- Include the [verification plan/receipt](docs/testing-strategy.md#agent-plan-guard-and-receipt-workflow): scope/tier and escalation reason, commands/results/durations, relevant inputs/toolchain/configuration, reused evidence, and unrun device/consumer/deployment surfaces. Guard activation is harness-specific; confirm it before agent verification.
 - Do not commit credentials, signing files, health data, local agent state, or generated build output.

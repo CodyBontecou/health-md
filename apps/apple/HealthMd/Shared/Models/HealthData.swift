@@ -1713,6 +1713,10 @@ extension HealthData {
 
     func filtered(by metricSelection: MetricSelectionState) -> HealthData {
         var filtered = self
+        if let providers = filtered.providers {
+            let whoop = providers.whoop?.selectingResources(metricSelection.enabledWHOOPResources)
+            filtered.providers = whoop.map { HealthProviderSections(whoop: $0) }
+        }
 
         let enabledKeys = HealthMetricExportMapping.enabledFrontmatterKeySet(in: metricSelection)
         let disabledKeys = HealthMetricExportMapping.allKnownFrontmatterKeys

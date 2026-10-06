@@ -4,6 +4,7 @@ import path from "node:path";
 import os from "node:os";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { withWhoopSamples } from "./whoop-visualization-samples.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const websiteRoot = path.resolve(__dirname, "..");
@@ -105,10 +106,12 @@ const historicalWeeklyFixture = path.join(
   "weekly.json"
 );
 const rangeFixture = path.join(pluginRepo, "tests", "fixtures", "rollup-summary-v9", "range-v9.json");
+const whoopFixture = path.join(repositoryRoot, "packages", "contracts", "proposals", "provider-sections-v1", "fixtures", "whoop-complete.providers.json");
 await Promise.all([
   fs.access(generator),
   fs.access(historicalWeeklyFixture),
   fs.access(rangeFixture),
+  fs.access(whoopFixture),
 ]);
 
 const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "healthmd-site-viz-data-"));
@@ -150,7 +153,8 @@ try {
     fs.mkdir(outputDirectory, { recursive: true }),
     fs.mkdir(appleOutputDirectory, { recursive: true }),
   ]);
-  const serializedDays = JSON.stringify(days);
+  const { whoop } = JSON.parse(await fs.readFile(whoopFixture, "utf8"));
+  const serializedDays = JSON.stringify(withWhoopSamples(days, whoop));
   const serializedRollups = JSON.stringify(rollups, null, 2);
   await Promise.all([
     fs.writeFile(dailyOutput, `${serializedDays}\n`, "utf8"),
@@ -158,7 +162,7 @@ try {
     fs.writeFile(appleDailyOutput, `window.HealthMdSampleData = ${serializedDays};\n`, "utf8"),
     fs.writeFile(appleRollupOutput, `window.HealthMdRollupSampleData = ${serializedRollups};\n`, "utf8"),
   ]);
-  console.log(`Wrote ${path.relative(websiteRoot, dailyOutput)} with ${days.length} privacy-safe plugin-generated days`);
+  console.log(`Wrote ${path.relative(websiteRoot, dailyOutput)} with ${days.length} privacy-safe plugin-generated days and synthetic WHOOP provider records`);
   console.log(`Wrote ${path.relative(websiteRoot, rollupOutput)} with historical v8 weekly and v9 range examples aligned to the sample window`);
   console.log(`Wrote matching Apple PluginVisualization daily and roll-up resources`);
 } finally {

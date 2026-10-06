@@ -67,6 +67,18 @@ nonisolated struct HealthContextRetentionPolicy: Sendable {
 /// Immutable metadata captured from one authenticated manifest. Holding a snapshot never loads a
 /// health-context day. Its revision changes on every committed manifest mutation because immutable
 /// generation identities are included in the digest.
+nonisolated struct HealthContextStoreStorageMetrics: Sendable, Equatable {
+    let ownerDateCount: Int
+    let encryptedByteCount: Int64
+    let manifestByteCount: Int64
+    let dayBlobByteCount: Int64
+
+    var averageEncryptedBytesPerOwnerDate: Int64? {
+        guard ownerDateCount > 0 else { return nil }
+        return dayBlobByteCount / Int64(ownerDateCount)
+    }
+}
+
 nonisolated struct HealthContextStoreSnapshot: Sendable, Equatable {
     nonisolated struct Entry: Sendable, Equatable {
         let ownerDate: String
@@ -353,6 +365,31 @@ actor EncryptedHealthContextStore {
         return try loadManifest(key: key).entries.map(\.ownerDate)
     }
 
+    /// Reports exact bytes for the authenticated manifest and its referenced
+    /// encrypted day blobs. Unreachable interrupted-write orphans are excluded.
+    func storageMetrics() throws -> HealthContextStoreStorageMetrics {
+        guard fileManager.fileExists(atPath: manifestURL.path) else {
+            return HealthContextStoreStorageMetrics(
+                ownerDateCount: 0,
+                encryptedByteCount: 0,
+                manifestByteCount: 0,
+                dayBlobByteCount: 0
+            )
+        }
+        let key = try encryptionKey(createIfMissing: false)
+        let manifest = try loadManifest(key: key)
+        let manifestBytes = try fileByteCount(at: manifestURL)
+        let dayBytes = try manifest.entries.reduce(Int64(0)) { partial, entry in
+            partial + (try fileByteCount(at: generationURL(entry.generation)))
+        }
+        return HealthContextStoreStorageMetrics(
+            ownerDateCount: manifest.entries.count,
+            encryptedByteCount: manifestBytes + dayBytes,
+            manifestByteCount: manifestBytes,
+            dayBlobByteCount: dayBytes
+        )
+    }
+
     /// Captures authenticated immutable manifest metadata without loading any day payload.
     func snapshot() throws -> HealthContextStoreSnapshot {
         try prepareRootDirectory()
@@ -487,6 +524,14 @@ actor EncryptedHealthContextStore {
 
     private func generationURL(_ generation: String) -> URL {
         rootURL.appendingPathComponent(generation, isDirectory: false)
+    }
+
+    private func fileByteCount(at url: URL) throws -> Int64 {
+        let attributes = try fileManager.attributesOfItem(atPath: url.path)
+        guard let value = attributes[.size] as? NSNumber else {
+            throw EncryptedHealthContextStoreError.corruptBlob
+        }
+        return value.int64Value
     }
 
     private func encryptionKey(createIfMissing: Bool) throws -> SymmetricKey {

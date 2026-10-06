@@ -4,10 +4,25 @@ import XCTest
 
 @MainActor
 final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
+    // The v2 baseline inventory is byte-frozen. Audit post-freeze, local-only
+    // native settings explicitly without changing portable authority or fixtures.
+    private static let nativeLocalOnlyAdditions: [CoverageLedger.Field] = [
+        .init(
+            sourceType: "MetricSelectionSnapshot",
+            field: "enabledWHOOPResources",
+            fieldKind: .stored,
+            serializedKey: "enabledWHOOPResources",
+            disposition: .localOnly,
+            contractPath: nil,
+            reason: "Provider-resource preferences are local export policy, not portable registry metric IDs; v2 mapping omits them and imports retain the receiver's local preference."
+        )
+    ]
+
     func testLedgerExactlyCoversCurrentStoredAndEncodedFields() throws {
         let ledger = try loadLedger()
+        let fields = ledger.fields + Self.nativeLocalOnlyAdditions
         let inventories = try makeNativeInventories()
-        let ledgerTypes = Set(ledger.fields.map(\.sourceType))
+        let ledgerTypes = Set(fields.map(\.sourceType))
         let inventoryTypes = Set(inventories.map(\.sourceType))
 
         XCTAssertEqual(
@@ -17,7 +32,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         )
 
         for inventory in inventories {
-            let rows = ledger.fields.filter { $0.sourceType == inventory.sourceType }
+            let rows = fields.filter { $0.sourceType == inventory.sourceType }
             let storedRows = rows.filter { $0.fieldKind == .stored }
             let expectedStoredFields = Set(storedRows.map(\.field))
             XCTAssertEqual(
@@ -51,6 +66,20 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         }
     }
 
+    func testWHOOPSelectionHasExactLocalOnlyNativeFieldCoverage() throws {
+        let ledger = try loadLedger()
+        let value = try makeSyntheticValues().metricSelection
+        let actual = try inventory(value, sourceType: "MetricSelectionSnapshot")
+        let fields = (ledger.fields + Self.nativeLocalOnlyAdditions).filter {
+            $0.sourceType == actual.sourceType
+        }
+        XCTAssertEqual(actual.storedFields, Set(fields.map(\.field)))
+        XCTAssertEqual(actual.encodedKeys, Set(fields.map(\.serializedKey)))
+        let selection = try XCTUnwrap(fields.first { $0.field == "enabledWHOOPResources" })
+        XCTAssertEqual(selection.disposition, .localOnly)
+        XCTAssertNil(selection.contractPath)
+    }
+
     func testLedgerEnforcesDispositionAndV2PathInvariants() throws {
         let ledger = try loadLedger()
 
@@ -61,14 +90,21 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
         XCTAssertEqual(Set(ledger.dispositions), Set(Disposition.allCases))
 
-        let identities = ledger.fields.map { "\($0.sourceType).\($0.field)" }
+        let fields = ledger.fields + Self.nativeLocalOnlyAdditions
+        let identities = fields.map { "\($0.sourceType).\($0.field)" }
         XCTAssertEqual(
             Set(identities).count,
             identities.count,
             "Each source type and exact field may appear only once."
         )
 
-        for row in ledger.fields {
+        for row in Self.nativeLocalOnlyAdditions {
+            XCTAssertEqual(row.disposition, .localOnly)
+            XCTAssertEqual(row.fieldKind, .stored)
+            XCTAssertNil(row.contractPath)
+        }
+
+        for row in fields {
             XCTAssertFalse(
                 row.reason.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 "\(row.sourceType).\(row.field) needs concise audit evidence."
@@ -254,7 +290,8 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         )
         let metricSelection = MetricSelectionSnapshot(
             enabledMetricIDs: ["steps"],
-            enabledCategoryIDs: ["activity"]
+            enabledCategoryIDs: ["activity"],
+            enabledWHOOPResources: [.sleep]
         )
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"

@@ -2194,7 +2194,7 @@ final class MacCorpusExportSessionManagerTests: XCTestCase {
             "schema_version" : 1
           },
           "schema" : "healthmd.health_data",
-          "schema_version" : 8,
+          "schema_version" : 10,
           "time_context" : {
             "calendar_timezone" : "UTC",
             "timestamp_timezone" : "UTC"

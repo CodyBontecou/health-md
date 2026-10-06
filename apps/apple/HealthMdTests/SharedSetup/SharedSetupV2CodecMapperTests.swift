@@ -124,6 +124,7 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         profile.settings.healthSubfolder = "private-file-provider-subfolder"
         profile.settings.calendarTimeZoneIdentifier = "America/Los_Angeles"
         profile.settings.metricSelection.enabledCategoryIDs = ["private_category"]
+        profile.settings.metricSelection.enabledWHOOPResources = [.sleep]
         let vault = SavedVaultDestination(
             id: vaultID,
             name: "Personal iCloud Vault",
@@ -182,9 +183,31 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
             "timestamp",
             "include_granular_data",
             "private_category",
-            "enabled_categories"
+            "enabled_categories",
+            "enabledwhoopresources"
         ] {
             XCTAssertFalse(encodedLower.contains(prohibited), "Unexpected output: \(prohibited)")
+        }
+    }
+
+    func testWHOOPResourcePreferencesNeverBecomePortableSetupAuthority() throws {
+        let nativeProfileID = profileID(1)
+        var profile = makeProfile(
+            id: nativeProfileID,
+            name: "Local provider preferences",
+            enabledNativeIDs: ["steps"],
+            target: .connectedMac
+        )
+        let baseline = try SharedSetupV2Codec.encode(map(
+            profiles: [profile], activeProfileID: nativeProfileID
+        ))
+        let selections: [Set<WHOOPResourceName>] = [[], [.recovery, .sleep]]
+        for resources in selections {
+            profile.settings.metricSelection.enabledWHOOPResources = resources
+            let selected = try SharedSetupV2Codec.encode(map(
+                profiles: [profile], activeProfileID: nativeProfileID
+            ))
+            XCTAssertEqual(selected, baseline)
         }
     }
 

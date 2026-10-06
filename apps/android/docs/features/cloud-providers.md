@@ -35,6 +35,16 @@ Health Connect is the default export source in both channels. The Google Play bu
 2. Complete the browser sign-in (PKCE OAuth; the app never holds client secrets).
 3. Select the provider as your export source, or use "All connected" for multi-provider merges in compatibility exports.
 
+## WHOOP physiological-cycle steps
+
+Apple daily v10/WHOOP provider v2 now retains optional `Cycle.step_count` with exact zero and cycle provenance. Matching typed Android projection is **planned** in a separately reviewed provider profile, together with the independent cycles resource control described below; frozen v4/v5 output is unchanged. Existing selected WHOOP raw snapshots preserve upstream `step_count` without claiming it is a Health Connect civil-day step total. Missing/null means unavailable, and multiple physiological cycles must not be summed or copied into primary daily steps. Existing `read:cycles` covers this field. F-Droid remains Health Connect-only.
+
+## WHOOP resource-selection parity
+
+The iPhone Health Metrics view now has five independent WHOOP API-resource switches with stable IDs `cycles`, `recovery`, `sleep`, `workouts`, and `body`. Matching Android Play controls are **planned**, not available in this screen yet. The concrete target is to persist the same all-on default and explicit all-off/partial choices in export profiles and frozen jobs, expose them in Health Metrics, and apply them before WHOOP compatibility reads and Raw API Snapshot endpoint planning. F-Droid remains cloud-provider-free. This setting must not relabel WHOOP RMSSD as HealthKit SDNN or change the frozen v4/v5 export grammar.
+
+Today, Raw API Snapshots already select WHOOP endpoints through their metric-to-endpoint plan (`WhoopCloudDataProvider.streamNativePages`); that is not equivalent to a separately saved WHOOP resource-selection control. Raw snapshots' explicitly unbounded body singleton and compatibility exports' today-only body policy remain distinct.
+
 ## Example output
 
 Compatibility exports map provider records into the same `HealthData` shape as Health Connect. Raw snapshots instead emit `provider_payload` records: the exact successful API page, with pagination and server-side aggregation disclosed in the manifest.

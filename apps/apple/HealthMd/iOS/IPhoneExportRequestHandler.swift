@@ -242,6 +242,22 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         )))
                         return
                     }
+                    guard discovery.historyAuthorization.state != .limitedHistory else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
+                        )))
+                        return
+                    }
+                    guard discovery.supportsUnqualifiedFullHistoryClaim else {
+                        syncService.send(.iphoneExportRejected(IPhoneExportFailure(
+                            jobID: request.jobID,
+                            reason: .healthKitFetchFailed,
+                            message: "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
+                        )))
+                        return
+                    }
                     if let earliestDate = discovery.earliestDate {
                         earliestCandidates.append(earliestDate)
                     }
@@ -256,7 +272,10 @@ final class IPhoneExportRequestHandler: ObservableObject {
                         return
                     }
                     let providerDiscovery = await externalIntegrations
-                        .discoverEarliestAvailableDate(providerIDs: selectedProviderIDs)
+                        .discoverEarliestAvailableDate(
+                            providerIDs: selectedProviderIDs,
+                            whoopResources: settings.metricSelection.enabledWHOOPResources
+                        )
                     guard providerDiscovery.isComplete else {
                         syncService.send(.iphoneExportRejected(IPhoneExportFailure(
                             jobID: request.jobID,
@@ -350,7 +369,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                     await enabledExternalIntegrations.fetchDailyRecords(
                         for: date,
                         providerIDs: selectedContextProviderIDs,
-                        calendar: sourceCalendar
+                        calendar: sourceCalendar,
+                        whoopResources: settings.metricSelection.enabledWHOOPResources
                     )
                 }
             } else {
@@ -361,7 +381,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
             externalRecordFetcher = { date in
                 await enabledExternalIntegrations.fetchDailyRecords(
                     for: date,
-                    calendar: sourceCalendar
+                    calendar: sourceCalendar,
+                    whoopResources: settings.metricSelection.enabledWHOOPResources
                 )
             }
         } else {
@@ -1567,7 +1588,8 @@ final class IPhoneExportRequestHandler: ObservableObject {
                 fetchExternalDailyRecords: { date in
                     await externalIntegrations?.fetchDailyRecords(
                         for: date,
-                        calendar: providerCalendar
+                        calendar: providerCalendar,
+                        whoopResources: settings.metricSelection.enabledWHOOPResources
                     ) ?? []
                 }
             )

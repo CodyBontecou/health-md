@@ -83,6 +83,8 @@ final class APNsSchedulingPreflightTests: XCTestCase {
             appDelegateSource,
             relativePath: "HealthMd/iOS/HealthMdApp.swift",
             contains: [
+                "if SchedulingManager.shared.isSchedulingActive",
+                "SchedulingManager.shared.refreshScheduledAutomation()",
                 "didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data",
                 "PushRegistrationManager.shared.submitDeviceToken(deviceToken)",
                 "didReceiveRemoteNotification userInfo: [AnyHashable: Any]",

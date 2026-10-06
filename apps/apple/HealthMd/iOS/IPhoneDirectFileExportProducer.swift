@@ -573,7 +573,8 @@ final class IPhoneDirectFileExportProducer {
                 externalFetcher = { date in
                     await externalIntegrations.fetchDailyRecords(
                         for: date,
-                        calendar: sourceCalendar
+                        calendar: sourceCalendar,
+                        whoopResources: settings.metricSelection.enabledWHOOPResources
                     )
                 }
             } else {
@@ -746,6 +747,14 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection
     ) async throws -> IPhoneDirectFileJournal {
         var journal = supplied
+        if let pin = journal.appleExportEnginePin {
+            let context = try await SystemAppleLooseDailyCoreExecutor().loadContext()
+            guard pin.calendarTimeZoneIdentifier == journal.originalCalendarTimeZoneIdentifier,
+                  pin.isCompatible(buildInfo: context.buildInfo, registrySnapshot: context.registry) else {
+                throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+            }
+        }
+        // Even an empty recovered spool must validate its pin before staging is replaced.
         let staging = try stagingDirectory(journal.request.jobID)
         if fileManager.fileExists(atPath: staging.path) { try fileManager.removeItem(at: staging) }
         try fileManager.createDirectory(
@@ -1428,6 +1437,16 @@ final class IPhoneDirectFileExportProducer {
             guard discovery.isComplete else {
                 throw IPhoneDirectFileProducerError.invalidRequest(
                     "The iPhone could not prove complete earliest-date coverage."
+                )
+            }
+            guard discovery.historyAuthorization.state != .limitedHistory else {
+                throw IPhoneDirectFileProducerError.invalidRequest(
+                    "Apple Health access is limited by date. Choose an explicit authorized range or grant full history access before requesting all available history."
+                )
+            }
+            guard discovery.supportsUnqualifiedFullHistoryClaim else {
+                throw IPhoneDirectFileProducerError.invalidRequest(
+                    "Apple Health full-history access could not be verified for this scope. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment before requesting all available history."
                 )
             }
             var calendar = Calendar(identifier: .gregorian)

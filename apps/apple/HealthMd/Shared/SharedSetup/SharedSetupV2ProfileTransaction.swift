@@ -147,7 +147,8 @@ enum SharedSetupV2AppleProfileMaterializer {
         plan: SharedSetupV2ProfileImportPlan,
         nativeID: UUID,
         name: String,
-        now: Date
+        now: Date,
+        enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
     ) -> ExportProfile {
         let apple = source.platformExtensions.apple
         let markdown: MarkdownTemplateConfig
@@ -241,7 +242,8 @@ enum SharedSetupV2AppleProfileMaterializer {
             generateRangeSummary: apple?.export.generateRangeSummary ?? false,
             metricSelection: MetricSelectionSnapshot(
                 enabledMetricIDs: Set(plan.supportedMetricSelectionIDs),
-                enabledCategoryIDs: []
+                enabledCategoryIDs: [],
+                enabledWHOOPResources: enabledWHOOPResources
             ),
             appleExportEnginePin: nil,
             appleExportEngineAuthorityIsFrozen: true,
@@ -525,6 +527,12 @@ final class SharedSetupV2ProfileTransaction {
             selectedBundleIDs: selectedBundleIDs
         )
         let prior = try readState()
+        // Shared Setup carries registry metric intent, not provider-resource
+        // authority. Seed fresh profiles from the receiver's active local
+        // preference, including all-off, instead of silently enabling WHOOP.
+        let localWHOOPResources = prior.profiles.first {
+            $0.id == prior.activeProfileID
+        }?.settings.metricSelection.enabledWHOOPResources ?? Set(WHOOPResourceName.allCases)
         let previousUndo = try rawDataOrAbsence(forKey: Self.undoKey)
         let sourceByID = Dictionary(
             uniqueKeysWithValues: plan.document.profiles.map { ($0.bundleID, $0) }
@@ -569,7 +577,8 @@ final class SharedSetupV2ProfileTransaction {
                 plan: selected,
                 nativeID: profileID,
                 name: importedName,
-                now: timestamp
+                now: timestamp,
+                enabledWHOOPResources: localWHOOPResources
             ))
 
             if source.schedule != nil, selected.scheduleCanApplyExactly {

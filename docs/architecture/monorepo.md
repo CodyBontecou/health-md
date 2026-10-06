@@ -4,7 +4,7 @@
 
 Implementation began on 2026-07-24. The existing `CodyBontecou/health-md` repository remains canonical. Apple, CLI, Android, and website histories have been imported on `chore/monorepo-foundation`; deployment and old-repository cutover remain pending.
 
-The monorepo contains six independently built product/service components:
+The monorepo contains six independently built released/current product and service components, plus a separate cloud export prototype with an unbacked single-user VM pilot:
 
 - Apple apps under `apps/apple`
 - Android app under `apps/android`
@@ -12,6 +12,7 @@ The monorepo contains six independently built product/service components:
 - Practice clinical portal and future service boundary under `apps/practice` (synthetic-only; not released)
 - Direct CLI notification-only wake Worker under `apps/wake`
 - Website under `apps/website`
+- Opt-in account dashboard and health-data receiver under `apps/cloud` (upload-disabled synthetic preview and separately authorized unbacked single-user VM writer/reader pilot; no general production approval; see [ADR-0007](adr-0007-healthmd-cloud.md))
 
 Shared implementation and contracts are separate from those product workspaces:
 
@@ -40,7 +41,7 @@ Source repositories are not force-pushed or rewritten. After validation and cuto
 
 ## Build organization
 
-The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata. Practice is independently locked and must not share runtime, storage, analytics, or deployment configuration with the static website or existing non-PHI Workers; see [ADR-0003](adr-0003-practice-clinical-boundary.md). The independently locked `apps/wake` Worker owns only RFC-0005 notification registration, replay/rate-limit state, and APNs delivery; it is never a health-data path.
+The root Makefile is a command router, not a replacement build system. Each component owns its dependencies, lockfiles, generated files, and release metadata. Practice is independently locked and must not share runtime, storage, analytics, or deployment configuration with the static website or existing non-PHI Workers; see [ADR-0003](adr-0003-practice-clinical-boundary.md). The separate `apps/cloud` health-data prototype must not share Practice, website, wake, or other Worker bindings, and must follow ADR-0007's single-user pilot boundary and requires separate approval and gates for any general production deployment. The independently locked `apps/wake` Worker owns only RFC-0005 notification registration, replay/rate-limit state, and APNs delivery; it is never a health-data path.
 
 `apps/cli` and `packages/healthmd-core-rust` are independent Cargo workspaces. Each keeps its own `Cargo.lock` and `target` directory; aggregate commands invoke them separately rather than creating a repository-wide Cargo workspace. The CLI consumes the shared `healthmd-protocol` crate by path during development and by exact crates.io version when packaged.
 

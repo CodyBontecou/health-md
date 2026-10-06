@@ -1,0 +1,40 @@
+# EXAMPLE ONLY — not installed or enabled. Review the public-origin and
+# dedicated-reader Unix group and filesystem migration before starting.
+# Disposable unbacked pilot: no recovery guarantee or external audit claim.
+[Unit]
+Description=Health.md read-only retained-export MCP (pending approval)
+After=network-online.target healthmd-cloud-personal-mvp.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=healthmd-mcp
+Group=healthmd-cloud-read
+WorkingDirectory=/var/lib/healthmd-cloud-mcp/source
+EnvironmentFile=/etc/healthmd-cloud-mcp/reader.env
+ExecStart=/opt/healthmd-cloud-mvp/bin/node /var/lib/healthmd-cloud-mcp/source/mcp-server.mjs
+Restart=on-failure
+RestartSec=10s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+ProtectSystem=strict
+ReadOnlyPaths=/var/lib/healthmd-cloud-mvp/data
+InaccessiblePaths=/etc/healthmd-cloud-mvp /var/lib/healthmd-cloud-mvp/source
+IPAddressDeny=any
+IPAddressAllow=localhost
+RestrictAddressFamilies=AF_UNIX AF_INET
+ProtectProc=invisible
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+MemoryMax=512M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

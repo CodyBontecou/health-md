@@ -1,0 +1,7 @@
+# Copy to .dev.vars (ignored by the repository) and use synthetic accounts/data only.
+IDENTITY_KEY_B64=REPLACE_WITH_32_RANDOM_BYTES_BASE64
+EXPORT_ENCRYPTION_KEYS_JSON={"v1":"REPLACE_WITH_32_RANDOM_BYTES_BASE64"}
+RESEND_API_KEY=REPLACE_WITH_TEST_EMAIL_PROVIDER_KEY
+AUTH_INVITE_EMAILS=developer@example.test
+# Local-only escape hatch. The Worker refuses this in production.
+DEV_SHOW_MAGIC_LINK=1

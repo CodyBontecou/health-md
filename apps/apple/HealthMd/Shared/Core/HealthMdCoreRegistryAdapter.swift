@@ -13,14 +13,14 @@ enum HealthMdCoreRegistryAdapter {
     static func appleSnapshot(
         service: HealthMdCoreService = HealthMdCoreService()
     ) throws -> CoreMetricRegistrySnapshot {
-        try service.metricRegistry(profile: .appleHealthDataV8)
+        try service.metricRegistry(profile: .appleHealthDataV10)
     }
 
     static func definitions(
         from snapshot: CoreMetricRegistrySnapshot
     ) throws -> [HealthMetricDefinition] {
-        guard snapshot.profileId == "apple_health_data_v8",
-              snapshot.publicProfileId == "apple-v8",
+        guard snapshot.profileId == AppleExportEnginePin.profileID,
+              snapshot.publicProfileId == AppleExportEnginePin.publicProfileID,
               snapshot.publicSchema == HealthMdExportSchema.identifier,
               snapshot.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
               snapshot.registryVersion == 1,
