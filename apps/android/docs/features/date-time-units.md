@@ -26,7 +26,7 @@ Choose how dates, times, and quantities are written in your exports: seven date 
 
 ## Prerequisites
 
-- None beyond a working export setup. Preferences apply to future exports; existing files are immutable historical output.
+- None beyond a working export setup. Preferences apply to future exports and do not automatically change existing files. Re-exporting can overwrite, append, or merge destination files according to the selected write mode.
 
 ## Setup
 
@@ -46,7 +46,7 @@ Choose how dates, times, and quantities are written in your exports: seven date 
 3. Under **Unit System**, pick **Metric** ("Kilometers, kilograms, Celsius") or **Imperial** ("Miles, pounds, Fahrenheit"). Metric is the default.
 4. Run a preview or export; the choices apply to all formats written in that run.
 
-Formatting preferences persist with your export settings and travel between devices inside a [Shared Setup](./share-my-setup.md) file (`presentation.dateFormat`, `presentation.timeFormat`, `presentation.units`).
+Formatting preferences persist with your export settings and travel between devices inside a [Shared Setup](./share-my-setup.md) file (`presentation.date_format`, `presentation.time_format`, `presentation.units`).
 
 ## Where each preference applies
 
@@ -101,7 +101,7 @@ The three settings are independent: the heading follows the date format, values 
 
 - Keep **ISO 8601** for daily notes you sort or link by date; `Friendly` reads best in journal prose.
 - JSON consumers should read numeric values, never parse `distanceFormatted` — the formatted string follows your display preference, the number does not.
-- CSV numbers are converted to your unit system and labeled in a unit column; check that column before charting.
+- CSV uses a mix of preference-converted and stable-unit rows; always check the `Unit` column before charting.
 - The [export preview](./export-preview.md) renders with your current preferences, so preview before re-exporting.
 
 ## Troubleshooting

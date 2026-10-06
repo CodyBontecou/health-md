@@ -1,13 +1,10 @@
 # Health.md iOS Feature Documentation Index
 
-This directory is the canonical inventory for documenting Health.md end-to-end. Each feature should eventually have:
+This directory indexes Apple workflow guides. Code, tests, and configuration establish implemented behavior; normative contracts and product policy define the requirements. The table is documentation navigation and editorial planning, not a separate capability or release-status database.
 
-1. a user-facing docs page for the docs site, and
-2. a video outline that can become one episode in the Health.md feature series.
+Update an existing guide when its user workflow changes. Create a new page only when a distinct audience or task needs information not already covered; link the canonical website guide or reference instead of copying it. Use [`_template.md`](./_template.md) when a new guide is warranted.
 
-Cross-platform pairings for every Apple/Android capability live in the repository-root [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md).
-
-Use [`_template.md`](./_template.md) for new feature pages. Use [`video-series.md`](./video-series.md) as the running episode roadmap.
+Cross-platform rationale lives in [`docs/features/feature-parity.md`](../../../../docs/features/feature-parity.md); machine-readable classifications live in [`product-capabilities.json`](../../../../packages/contracts/product-capabilities.json). Video work is optional and belongs in the explicitly commissioned [`video-series.md`](./video-series.md) roadmap.
 
 ## Technical reference
 
@@ -92,6 +89,6 @@ All feature pages in the inventory below now have first-pass drafts. The next ed
 - Prefer user-facing language first; put implementation details at the bottom.
 - Every feature page should include at least one concrete path/example output and link to a complete generated fixture for public data contracts.
 - Never hand-edit files under `docs/reference/generated/`; regenerate them from production definitions.
-- Every feature page should include a video outline, even if the video is low priority.
+- Add a video outline only for commissioned video work; a feature change does not require a new page or video.
 - Call out limitations honestly, especially iOS locked-device behavior and HealthKit permission constraints.
 - When screenshots are captured later, add a `Screenshots needed` checklist to each page.

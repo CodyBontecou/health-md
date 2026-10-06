@@ -10,7 +10,7 @@
 - Only an authorized human operator should choose or change system accessibility settings. Record previous settings and restore them afterward. Agents must not change device-wide settings on the user's behalf without approval.
 - Capture only synthetic app content. Do not capture the full device display, notifications, real values or personalized keyboard suggestions.
 
-Run the independent automated gate first when the Pixel is available:
+After explicit device-QA authorization for the current task, run the independent automated gate first when the Pixel is available:
 
 ```sh
 cd apps/android
@@ -19,7 +19,7 @@ ANDROID_SERIAL=2C061FDH200CJN scripts/run-accessibility-ui-tests.sh /tmp/healthm
 scripts/test-accessibility-ui-runner.sh
 ```
 
-The expected UI inventory is 402 cases, not a nonzero partial count. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
+The complete expected UI inventory is owned by `EXPECTED_TESTS` in `scripts/run-accessibility-ui-tests.sh`, not a nonzero partial count. Reconcile that expectation with current test declarations before another device run; this checklist is not an executed receipt. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
 
 ## TalkBack traversal and activation
 

@@ -8,6 +8,8 @@ Work within the smallest affected component:
 - `apps/android` — Kotlin/Gradle app
 - `apps/cli` — Rust CLI workspace
 - `apps/website` — website and documentation
+- `apps/practice` — synthetic-only clinician portal and clinical service boundary
+- `apps/wake` — notification-only Direct CLI wake Worker
 - `packages/contracts` — shared public schemas and interoperability fixtures
 - `packages/healthmd-core-rust` — shared Rust core, UniFFI tooling, and direct protocol
 
@@ -15,7 +17,7 @@ Read the repository-root and nearest component `AGENTS.md` files before making c
 
 ## Commands
 
-Use native component tooling or the repository-root convenience targets:
+Use the [test selection guide](docs/testing-strategy.md) for focused iteration and escalation. The native tools and root convenience targets below provide component regressions; simulator/device QA still requires explicit current-task authorization under the [verification policy](AGENTS.md#verification-policy):
 
 ```bash
 make test-contracts

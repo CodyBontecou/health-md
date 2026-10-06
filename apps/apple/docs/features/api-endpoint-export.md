@@ -23,7 +23,9 @@ Data Detail defaults to Summary for new installs; historical combined choices mi
 
 Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `Basic ` are sent as entered.
 
-## Payload shape (abridged)
+## Historical v7 payload illustration (abridged)
+
+This illustration is not the current v8 fixture; use the generated automation examples for current ingestion.
 
 Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generated/automation/`](../reference/generated/automation/).
 
@@ -107,7 +109,7 @@ Scheduled API exports use the same selected metrics and Data Detail setting. Eac
 
 ## Practical limits
 
-Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
+The default legacy pipeline captures one day at a time and builds the current HTTP batch. Gated nonlegacy preparation may retain multiple prepared batches before upload. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
 
 For large historical ranges, Health.md automatically splits selected dates into bounded, sequential batches instead of sending one oversized request. A batch is limited by both 7 calendar days and an 8 MiB encoded-body target by default. Health.md measures the exact JSON bytes that it then uploads. An indivisible single day may exceed the byte target and is sent alone so a record is never silently split or dropped.
 

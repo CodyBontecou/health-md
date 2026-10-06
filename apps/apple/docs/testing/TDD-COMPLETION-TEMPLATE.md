@@ -1,6 +1,6 @@
 # TDD Todo Completion Template
 
-Use this block when updating a testing todo before closing it.
+Use this block when updating a testing todo before closing it. Select checks using the root [test selection guide](../../../../docs/testing-strategy.md); reference an unchanged passing receipt where appropriate rather than rerunning a broad suite for every edit.
 
 ```md
 ## TDD Evidence
@@ -40,5 +40,10 @@ Use this block when updating a testing todo before closing it.
 ```
 
 ## Example command pattern
-- Focused test: `xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-iOS -only-testing:HealthMdTests/<TestClass>/<testMethod> -destination 'platform=iOS Simulator,name=iPhone 16 Pro'`
-- Broader suite: `make test`
+
+From `apps/apple`, for a macOS-compatible test:
+
+- Focused test: use the [macOS XCTest command](../../../../docs/testing-strategy.md#focused-feedback) with `-only-testing:HealthMdTests/<TestClass>/<testMethod>`.
+- Affected module: select the owning class with `-only-testing:HealthMdTests/<TestClass>`; `make test-macos` runs the macOS app suite.
+
+iOS-only and UI tests require the current task's explicit simulator/device authorization under the root [verification policy](../../../../AGENTS.md#verification-policy).

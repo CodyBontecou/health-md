@@ -39,7 +39,7 @@ First-run setup walks through a welcome, Health Connect access, an export folder
 
 ## Example output
 
-A completed onboarding ends on the Export tab with your folder shown under **Export Folder** and Health Connect granted. Your first export is one tap away (see ./manual-export.md).
+Completed onboarding opens the Export tab. If you granted Health Connect access and selected a folder, those settings are retained; skipped steps must be completed before a folder export (see ./manual-export.md).
 
 ## Tips
 

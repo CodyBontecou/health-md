@@ -1,6 +1,6 @@
 # Wear OS Play screenshot previews
 
-These 400×400 PNGs are review previews captured from the current Health.md Wear OS
+These 400×400 PNGs are historical review previews captured from Health.md Wear OS
 `1.8.1` debug build on the API 34 small-round Wear emulator. The dashboard uses the
 same synthetic aggregate values as the repository's Wear emulator smoke test. The
 Tile image is the installed Daily Activity Tile rendered by the Wear OS system host.

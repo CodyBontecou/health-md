@@ -28,7 +28,7 @@ Health.md will have one `distribution` product-flavor dimension with two support
 | Play Install Referrer | Yes | No |
 | First-party campaign attribution | Yes, when configured | No |
 | First-party onboarding/pricing analytics | Yes | No |
-| Phone-to-Wear Data Layer | Yes | No in the first release |
+| Phone-to-Wear Data Layer | Deferred in current phone releases; future Play-only qualification | No in the first release |
 | Direct vendor cloud imports | Yes when configured | Hidden in the first release |
 | Release signer | Play release/upload signing flow | F-Droid repository signer |
 
@@ -58,7 +58,9 @@ If product chooses different assumptions, update this plan and its acceptance cr
 - Do not make Play release validation infer success from F-Droid builds, or vice versa.
 - Keep all release versions sourced from the existing Android version fields and `android/v<version>` tags.
 
-## Target Gradle model
+## Implemented architecture reference
+
+The [Gradle configuration](../app/build.gradle.kts) owns flavors, signing, dependencies, and artifacts. Current channel guidance is [distribution-channels.md](distribution-channels.md); clean-build acceptance is [reproducibility.md](../fdroid/reproducibility.md). The implementation sketch below is historical, not a second configuration owner.
 
 Add a flavor dimension to `apps/android/app/build.gradle.kts`:
 

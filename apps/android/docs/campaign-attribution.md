@@ -1,8 +1,8 @@
 # First-party Android campaign attribution
 
-The Google Play build measures campaign installs without AppsFlyer, Firebase Analytics, Google Analytics, advertising identifiers, Android identifiers, or another analytics/attribution SDK. The only Play-specific dependency is Google's official Install Referrer library (`com.android.installreferrer:installreferrer:2.2`). The F-Droid build does not compile attribution/referrer code, create attribution identity or state, or send Health.md attribution telemetry.
+The Google Play build measures campaign installs without AppsFlyer, Firebase Analytics, Google Analytics, advertising identifiers, Android identifiers, or another analytics/attribution SDK. The campaign-attribution subsystem's only Play-specific dependency is Google's official Install Referrer library (`com.android.installreferrer:installreferrer:2.2`). The F-Droid build does not compile attribution/referrer code, create attribution identity or state, or send Health.md attribution telemetry.
 
-This repository implements the Android client. The companion Cloudflare Worker is maintained separately in the Health.md website repository under `cloudflare/attribution-worker` and is deployed at `https://healthmd.app/v1/installs`. It uses the existing `healthmd-campaigns` D1 database. Android builds still require explicit endpoint/token configuration; without it, a valid sanitized event remains pending on-device and startup continues normally.
+This repository implements the Android client. The companion Cloudflare Worker is maintained in this monorepo under `apps/website/cloudflare/attribution-worker` and is deployed at `https://healthmd.app/v1/installs`. It uses the existing `healthmd-campaigns` D1 database. Android builds still require explicit endpoint/token configuration; without it, a valid sanitized event remains pending on-device and startup continues normally.
 
 ## Data flow
 

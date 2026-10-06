@@ -11,7 +11,7 @@
 
 Metric Selection controls which Apple Health concepts appear in summaries and which source-record queries run when **Lossless Health Records** is on. Health permission and metric selection are separate: Apple controls what Health.md may read; Health.md controls what it requests/exports.
 
-The current catalog contains 225+ definitions across 21 categories, including ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies. The exact source-generated list is published in the [export reference metric catalog](../reference/data-dictionary-and-rollups.md#metric-catalog).
+The retained compatibility catalog includes ordinary quantities/categories, reproductive/pregnancy data, specialized records, clinical documents, vision, medications, workouts, and WorkoutKit plans. Runtime OS/API availability still applies. The exact source-generated list is published in the [export reference metric catalog](../reference/data-dictionary-and-rollups.md#metric-catalog).
 
 ## Setup
 
@@ -22,7 +22,7 @@ The current catalog contains 225+ definitions across 21 categories, including or
 
 ## Categories
 
-Sleep, Activity, Heart, Respiratory, Vitals, Body Measurements, Mobility, Cycling, Nutrition, Vitamins, Minerals, Hearing, Mindfulness, Reproductive Health, Symptoms, Clinical Records, Clinical Documents, Vision, Medications, Other, and Workouts.
+See the [source-generated metric catalog](../reference/data-dictionary-and-rollups.md#metric-catalog) for category membership. Clinical Records and Clinical Documents retain compatibility definitions, but default builds exclude them through `ClinicalHealthRecordsBuildConfiguration`. The catalog alone is not evidence of selectable or captured clinical data.
 
 Some definitions are **archive-only**: they produce exact canonical JSON/CSV records and diagnostics but may not add a daily summary field. Markdown/Bases can therefore show counts/status without displaying each selected source object.
 
@@ -43,7 +43,7 @@ Standard “select all” excludes separate-access categories:
 
 - Medications use Apple's per-medication selector (iOS 26+).
 - Vision prescriptions use Apple's per-object selector on supported runtimes.
-- CDA/verifiable clinical records use user-selection queries and may be cancelled.
+- CDA/verifiable clinical record variants remain in the contract, but default builds do not expose their access flows or capture. Restoring them requires the explicit clinical build gate plus managed entitlements/privacy qualification.
 - WorkoutKit schedules use a separate read-only capability path without ordinary HealthKit authorization.
 
 Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted special flows appear `skipped`. They are not reported as a false successful-empty query.
@@ -54,7 +54,7 @@ Unsupported APIs appear `unsupported`; intentionally unavailable/ungranted speci
 - Use archive-only metrics with JSON/CSV.
 - Keep the metric set small for Bases, while retaining JSON for source-complete history.
 - If a selected type returns no records, inspect query status; HealthKit read denial may look successfully empty.
-- Schema-v8 micronutrient units retain the v7 corrections come from production catalogs: summary/dictionary fields use `µg` versus `mg`, while canonical HealthKit quantity payloads preserve reviewed source units such as `mcg`.
+- Schema-v8 micronutrient units retain the v7 corrections from production catalogs: summary/dictionary fields use `µg` versus `mg`, while canonical HealthKit quantity payloads preserve reviewed source units such as `mcg`.
 
 ## Troubleshooting
 

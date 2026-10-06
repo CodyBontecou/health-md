@@ -30,7 +30,7 @@ The complete all-fields synthetic output is generated at [`docs/reference/genera
 ```json
 {
   "schema": "healthmd.health_data",
-  "schema_version": 7,
+  "schema_version": 8,
   "date": "2026-07-15",
   "type": "health-data",
   "raw_capture_status": "complete",
@@ -81,7 +81,8 @@ The archive can include:
 - blood-pressure and food correlations;
 - full workout graphs, routes, events, activities, statistics, associated samples, effort edges, and WorkoutKit plans;
 - ECG, audiogram, heartbeat, scored-assessment, State of Mind, medication, activity-summary, and characteristic records;
-- clinical/FHIR, CDA, verifiable, vision, and attachment data.
+- vision and attachment data;
+- historical or future-compatible clinical/FHIR, CDA, and verifiable variants. Default builds do not request or capture clinical data; the retained schema is not availability evidence.
 
 Public values without an `HKObject` UUID appear in `external_records`. They intentionally have no fabricated UUID, source revision, or device. Binary values use base64. Available attachments include SHA-256 checksums; unavailable bytes do not get a fake value. Source URLs are preserved but never fetched.
 
