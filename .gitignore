@@ -6,6 +6,12 @@
 
 # Local agent and browser state
 .pi/
+# Share only the reviewed Pi guard; plans, receipts and other agent state stay local.
+!/.pi/
+/.pi/*
+!/.pi/extensions/
+/.pi/extensions/*
+!/.pi/extensions/verification-guard.ts
 .pi-subagents/
 .codex/
 .playwright-cli/

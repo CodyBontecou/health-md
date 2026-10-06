@@ -4,7 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "npm run three:bundle && npm run i18n:check && npm run docs:install && npm run docs:build && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
+    "build": "npm run docs:install && npm run build:ci",
+    "build:ci": "npm run three:bundle && npm run i18n:check && npm run docs:check && node scripts/build-site.mjs && npm run visualizations:seo && npm run site:check",
     "blog:build": "node scripts/build-blog.mjs --output dist",
     "test": "node --test",
     "three:bundle": "node scripts/build-three-hero.mjs",

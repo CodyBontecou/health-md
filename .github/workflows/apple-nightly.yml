@@ -104,16 +104,13 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
-      - name: Run macOS unit tests
+      - name: Run macOS unit tests with coverage
+        # This single pass now includes the initial cold build, as in PR CI.
+        timeout-minutes: 45
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-macos 2>&1 | tee build/logs/build-macos.log
-
-      - name: Collect code coverage (macOS)
-        if: ${{ success() }}
-        timeout-minutes: 30
-        run: make coverage
+          make coverage CORE_RUST_PREPARE=: 2>&1 | tee build/logs/build-macos.log
 
       - name: Coverage summary
         if: ${{ !cancelled() }}

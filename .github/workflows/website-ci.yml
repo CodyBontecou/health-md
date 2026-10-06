@@ -130,19 +130,14 @@ jobs:
       - name: Check authoritative reference snapshot
         run: npm run reference:check -- --source "$GITHUB_WORKSPACE/apps/apple"
 
-      - name: Check website localization contracts
-        run: npm run i18n:check
-
-      - name: Build docs and validate links
-        run: npm run docs:check
-
       - name: Run website tests
         run: npm test
         env:
           HEALTHMD_OBSIDIAN_PLUGIN_REPO: ${{ github.workspace }}/.external/health-md-visualizations
 
-      - name: Build complete website
-        run: npm run build
+      - name: Build complete website and validate docs links
+        # Dependencies were installed above; build:ci builds/checks docs once.
+        run: npm run build:ci
 
   gate:
     name: Website CI

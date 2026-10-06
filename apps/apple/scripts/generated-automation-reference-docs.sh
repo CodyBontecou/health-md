@@ -39,7 +39,8 @@ schema_fixture_digest() {
 }
 
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/healthmd-generated-automation-docs.XXXXXX")"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$TMP_ROOT/DerivedData}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/build/DerivedData/macOS}"
+MACOS_DEST="${MACOS_DEST:-platform=macOS,arch=$(uname -m)}"
 trap 'rm -f "$UPDATE_MARKER"; rm -rf "$TMP_ROOT"' EXIT
 
 run_drift_test() {
@@ -51,7 +52,8 @@ run_drift_test() {
   xcodebuild test \
     -project HealthMd.xcodeproj \
     -scheme HealthMd-Tests-macOS \
-    -destination 'platform=macOS' \
+    -destination "$MACOS_DEST" \
+    -enableCodeCoverage "${MACOS_CODE_COVERAGE:-NO}" \
     -only-testing:HealthMdTests/GeneratedAutomationReferenceDocumentationTests/testGeneratedAutomationReferenceDocumentationHasNoDrift \
     -derivedDataPath "$DERIVED_DATA_PATH" \
     CODE_SIGNING_ALLOWED=NO \

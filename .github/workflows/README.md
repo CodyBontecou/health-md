@@ -17,7 +17,15 @@ Inside each workflow except Wake CI and Cloud CI (whose single jobs stay always-
 
 Each workflow's path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
 
-The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+The final gate jobs fail unless every selected job succeeds. Android CI has an additional `native` decision: CLI changes outside `healthmd-client`, its workspace manifests/lockfile, and its toolchain retain live Rust/Kotlin interop without rebuilding the native/flavor/emulator matrix. Client changes retain native Direct CLI UI E2E; any Android, shared-core, contract, or Android-workflow change selects the full matrix. The Android final gate requires explicit `skipped` results for unselected jobs and rejects missing/malformed/inconsistent flags. Non-PR qualification still selects every job.
+
+Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+
+## Testing-tool feedback
+
+[`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
+
+Apple's macOS job reuses coverage-enabled DerivedData for documentation checks; normal `xcodebuild test` keeps source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
 
 ## Android release trigger
 

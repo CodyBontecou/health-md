@@ -39,7 +39,7 @@ The [Health.md Obsidian plugin](https://github.com/CodyBontecou/health-md-visual
 
 ## Development
 
-Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling.
+Each product keeps its native build system and lockfiles. The root `Makefile` provides convenience commands without replacing component tooling. `make` shows help; `make test COMPONENT=<owner>` selects one component. Use [focused test commands and escalation rules](docs/testing-strategy.md) during iteration; `make test-all` is an explicit broad smoke sweep, not release qualification. Apple `make test` runs macOS only; simulator/device QA requires explicit authorization for the current task.
 
 ```bash
 make test-contracts

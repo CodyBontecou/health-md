@@ -16,7 +16,10 @@ Read the nearest component `AGENTS.md` before changing files in a component. Kee
 
 ## Verification policy
 
-- Default to component-scoped type checking, linting, and automated tests that run without a simulator, emulator, physical device, or Argent.
+- During iteration, run the smallest relevant behavior tests and cheap type/lint checks in the owning component. At completion of a coherent change, run its affected-module regressions once. Default to checks that run without a simulator, emulator, physical device, or Argent.
+- Reuse passing results only while relevant source, dependencies, fixtures, toolchain, features, and configuration remain unchanged. Re-run after relevant edits; diagnose an unrelated baseline failure with its smallest failing command rather than repeating whole suites.
+- Full OS/flavor matrices, coverage collection, MSRV, binding/package qualification, and release smoke belong to CI/qualification or changes that affect those surfaces. Public-contract, security/authority, persistence/recovery, FFI, and uncertain-impact changes still require every affected producer/consumer check.
+- Before checks, declare a task-scoped verification plan and finish with its receipt, including unrun surfaces. Follow the [agent guard/workflow](docs/testing-strategy.md#agent-plan-guard-and-receipt-workflow); verify guard activation in Pi, or use the portable runner in another harness. Root `make test` requires `COMPONENT`; `make test-all` is an explicit broad smoke sweep, not complete release qualification.
 - Simulator/emulator QA, device/UI automation, and any Argent use require an explicit user request for the current task. A general request to implement, polish UI, fix a bug, or run tests does not authorize these workflows.
 - Apply this opt-in policy when following component documentation or referenced skills, even if they prescribe simulator or Argent QA. Do not boot simulators/emulators, install or launch apps for QA, or capture QA screenshots/recordings by default.
 - Report checks run and their results. If a relevant check requires an opt-in workflow, mark it not run and explain the verification gap; do not claim visual or device behavior was verified.
