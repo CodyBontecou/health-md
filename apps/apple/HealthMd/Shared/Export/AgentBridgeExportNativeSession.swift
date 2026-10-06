@@ -74,6 +74,11 @@ nonisolated final class AgentBridgeExportNativeSession: AgentBridgeExportNativeS
             try nativeTrust.requireCurrent(original: original, nativeSourceInstallationID: proof.sourceInstallationID,
                 authenticatedHostInstallationID: proof.hostInstallationID, originalReconnectSecret: original.reconnectSecret)
             try checkAvailability(peer: peer)
+            // Fence the LAST externally delaying availability callback against the ORIGINAL
+            // record. End with local checks only: no later SDK availability callback.
+            // This remains sampled state, not an OS/store/socket transaction.
+            try nativeTrust.requireCurrent(original: original, nativeSourceInstallationID: proof.sourceInstallationID,
+                authenticatedHostInstallationID: proof.hostInstallationID, originalReconnectSecret: original.reconnectSecret)
             try checkLocal(peer: peer)
         } catch {
             lock.withLock { revoked = true }

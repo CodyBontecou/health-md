@@ -252,6 +252,54 @@ final class AgentBridgeExportNativeSessionTests: XCTestCase {
         }
     }
 
+    func testFinalAvailabilityCallbackTrustMutationRejectsAndRestorationCannotReviveHeldCopies() async throws {
+        let fixture = try await NativeSessionControllerFixture.make()
+        let held = try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: fixture.trust.reader)
+        let copy = held
+        let ownership = try XCTUnwrap(fixture.service.agentBridgeSession)
+        let sdk = fixture.trust, originalBytes = sdk.bytes
+        let reader = sdk.reader
+        let original = try XCTUnwrap(reader.loadExistingTrust(ownerInstallationID: fixture.handshake.source))
+        let availability = UIApplication.shared.availability
+        let fired = NativeSessionSDKCallbackWitness()
+        let changed = originalBytes + Data("\n".utf8) // Valid record, distinct FULL raw bytes.
+        sdk.captureBeforeCallback = true
+        // First held-use lookup arms the second. The SECOND returns captured original bytes
+        // while arming the following LAST availability callback, not an earlier callback.
+        sdk.observeNext {
+            sdk.observeNext {
+                availability.observeNext { sdk.replace(changed); fired.record() }
+            }
+        }
+        XCTAssertThrowsError(try held.requireCurrent()) { error in
+            XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired)
+            XCTAssertEqual(String(describing: error), "permission_required")
+        }
+        XCTAssertEqual(fired.calls, 1) // No vacuous green from removing/skipping the callback.
+        XCTAssertEqual(sdk.bytes, changed)
+        XCTAssertNoThrow(try ownership.requireCurrent())
+        XCTAssertTrue(ownership.currentOwnerIsAvailable())
+        XCTAssertTrue(UIApplication.shared.applicationState == .active)
+        XCTAssertTrue(availability.read())
+        let proof = try XCTUnwrap(fixture.channel.clientAuthenticatedContext)
+        XCTAssertNoThrow(try proof.requireCurrent(on: fixture.channel))
+        // Independent unchanged-reader control: restoration is real and matching, but the
+        // ORIGINAL checker/copies stay revoked; no repeated lazy getter or renewed snapshot.
+        sdk.replace(originalBytes)
+        XCTAssertNotNil(try reader.loadExistingTrust(ownerInstallationID: fixture.handshake.source))
+        XCTAssertNoThrow(try reader.requireCurrent(original: original,
+            nativeSourceInstallationID: fixture.handshake.source,
+            authenticatedHostInstallationID: fixture.handshake.host,
+            originalReconnectSecret: original.reconnectSecret))
+        XCTAssertThrowsError(try held.requireCurrent())
+        XCTAssertThrowsError(try copy.requireCurrent())
+        XCTAssertEqual(fired.calls, 1)
+        XCTAssertEqual(fixture.handshake.store.saves, 1)
+        let defaults = fixture.defaults as! NativeSessionEnabledDefaults
+        XCTAssertEqual(defaults.exportReads, 0)
+        XCTAssertEqual(defaults.exportWrites, 0)
+    }
+
     func testProtectedDataChangeDuringTrustLookupIsRecheckedAfterSDKReturns() async throws {
         let fixture = try await NativeSessionControllerFixture.make()
         let held = try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: fixture.trust.reader)
@@ -458,6 +506,13 @@ nonisolated private final class NativeSessionEnabledDefaults: UserDefaults, @unc
     override func removeObject(forKey defaultName: String) { lock.withLock { writes += 1 }; XCTFail("Unexpected settings SDK mutation.") }
     override func bool(forKey defaultName: String) -> Bool { lock.withLock { defaultName == "directCLIEnabled" && enabled } }
     func setEnabled(_ value: Bool) { lock.withLock { enabled = value } }
+}
+
+nonisolated private final class NativeSessionSDKCallbackWitness: @unchecked Sendable {
+    private let lock = NSLock()
+    private var count = 0
+    var calls: Int { lock.withLock { count } }
+    func record() { lock.withLock { count += 1 } }
 }
 
 nonisolated private final class NativeSessionTrustSDK: @unchecked Sendable {
