@@ -520,6 +520,11 @@
     <string name="profile_schedule_refresh_interval">Refresh interval</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Refreshes today every %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Discard Pending Recovery</string>
+    <string name="profile_schedule_discard_recovery_named">Discard pending recovery for %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Discard Pending Recovery for %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Stop this profile’s scheduled retry and forget its pending dates and frozen export settings. The next scheduled run uses the current profile and schedule. Your profile, API credentials, export history, and already exported data are kept. This cannot undo an upload or file already written.</string>
+    <string name="profile_schedule_discard_recovery_failed">Pending recovery could not be fully discarded. Check the profile and try again.</string>
     <string name="schedule_next_export_at_datetime">Next export: %1$s</string>
     <string name="notifications_needed_title">Notifications are off</string>
     <string name="notifications_needed_body">Scheduled exports are still running, but you won’t get notified when they complete until notifications are enabled.</string>

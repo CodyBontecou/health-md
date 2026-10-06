@@ -80,6 +80,7 @@ class ScheduledProfileEntryStore @Inject constructor(
                 // A configuration draft may predate a worker's cancellation checkpoint. Preserve
                 // exact residual groups until the worker clears them individually.
                 pendingExports = previous?.pendingExports ?: entry.pendingExports,
+                recoveryGeneration = previous?.recoveryGeneration ?: entry.recoveryGeneration,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
             prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
@@ -91,12 +92,28 @@ class ScheduledProfileEntryStore @Inject constructor(
     suspend fun update(
         profileId: String,
         change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
+    ): Boolean = updateIfCurrent(profileId, null, change)
+
+    /** Worker-owned configuration changes must also be inert after recovery is discarded. */
+    suspend fun updateForGeneration(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
+    ): Boolean = updateIfCurrent(profileId, expectedRecoveryGeneration, change)
+
+    private suspend fun updateIfCurrent(
+        profileId: String,
+        expectedRecoveryGeneration: Long?,
+        change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
     ): Boolean {
         var persisted = false
         dataStore.edit { prefs ->
             val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
             val index = existing.indexOfFirst { it.profileId == profileId }
             if (index < 0) return@edit
+            if (expectedRecoveryGeneration != null &&
+                existing[index].recoveryGeneration != expectedRecoveryGeneration
+            ) return@edit
             val changed = change(existing[index])
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
             if (
@@ -110,6 +127,18 @@ class ScheduledProfileEntryStore @Inject constructor(
             persisted = true
         }
         return persisted
+    }
+
+    /**
+     * Abandons frozen retry groups without changing configuration, credentials, history, or
+     * completed/refresh frontiers. The atomic generation bump fences late worker checkpoints;
+     * cancelling WorkManager alone does not wait for the worker coroutine to finish.
+     */
+    suspend fun discardPendingRecovery(profileId: String): Boolean = update(profileId) { current ->
+        current.copy(
+            pendingExports = emptyList(),
+            recoveryGeneration = Math.addExact(current.recoveryGeneration, 1L),
+        )
     }
 
     suspend fun delete(profileId: String) {
@@ -131,8 +160,9 @@ class ScheduledProfileEntryStore @Inject constructor(
         profileId: String,
         fireAtMillis: Long?,
         completedPendingID: String? = null,
+        expectedRecoveryGeneration: Long? = null,
     ) {
-        update(profileId) { current ->
+        updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
             current.copy(
                 lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
                     ?: current.lastSuccessEpochMillis,
@@ -148,8 +178,12 @@ class ScheduledProfileEntryStore @Inject constructor(
      * success is independent of the completed-day frontier: a merged run may satisfy its slot
      * while other dates still fail and stay retryable.
      */
-    suspend fun recordRefreshSuccess(profileId: String, slotMillis: Long) {
-        update(profileId) { current ->
+    suspend fun recordRefreshSuccess(
+        profileId: String,
+        slotMillis: Long,
+        expectedRecoveryGeneration: Long? = null,
+    ) {
+        updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
             current.copy(
                 lastRefreshSuccessEpochMillis = latest(
                     current.lastRefreshSuccessEpochMillis,
@@ -169,11 +203,13 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
+        expectedRecoveryGeneration: Long? = null,
     ): Boolean = recordResiduals(
         profileId = profileId,
         fireAtMillis = fireAtMillis,
         attemptedPendingID = attemptedPendingID,
         replacements = replacements,
+        expectedRecoveryGeneration = expectedRecoveryGeneration,
     )
 
     /** Freezes unresolved work before a WorkManager backoff retry can observe profile edits. */
@@ -182,11 +218,13 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
+        expectedRecoveryGeneration: Long? = null,
     ): Boolean = recordResiduals(
         profileId = profileId,
         fireAtMillis = fireAtMillis,
         attemptedPendingID = attemptedPendingID,
         replacements = replacements,
+        expectedRecoveryGeneration = expectedRecoveryGeneration,
     )
 
     private suspend fun recordResiduals(
@@ -194,7 +232,8 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
-    ): Boolean = update(profileId) { current ->
+        expectedRecoveryGeneration: Long?,
+    ): Boolean = updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
         val retained = attemptedPendingID?.let { attemptedID ->
             current.pendingExports.filterNot { it.id == attemptedID }
         } ?: current.pendingExports

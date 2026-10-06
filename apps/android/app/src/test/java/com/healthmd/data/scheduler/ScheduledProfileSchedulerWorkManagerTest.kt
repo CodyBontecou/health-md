@@ -231,6 +231,99 @@ class ScheduledProfileSchedulerWorkManagerTest {
         }
     }
 
+    @Test
+    fun `discard fences checkpoints before cancellation and rearms without immediately exporting`() = runTest {
+        val events = mutableListOf<String>()
+        val requests = mutableListOf<OneTimeWorkRequest>()
+        val manager = workManager()
+        every { manager.cancelUniqueWork(any()) } answers {
+            events += "cancel:${firstArg<String>()}"
+            successfulOperation()
+        }
+        every { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) } answers {
+            events += "enqueue:${firstArg<String>()}"
+            requests += thirdArg<OneTimeWorkRequest>()
+            successfulOperation()
+        }
+        val cleared = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val entryStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { entryStore.discardPendingRecovery("alpha") } answers { events += "discard"; true }
+        coEvery { entryStore.entry("alpha") } returns cleared
+        val scheduler = scheduler(manager, listOf(cleared), listOf(profile("alpha")), entryStore)
+
+        assertThat(scheduler.discardPendingRecovery("alpha")).isTrue()
+
+        assertThat(events).containsExactly(
+            "discard", "cancel:profile-export-alpha", "cancel:scheduled_profile_trigger_work_alpha",
+            "enqueue:scheduled_profile_trigger_work_alpha",
+        ).inOrder()
+        assertThat(requests).hasSize(1)
+        assertThat(requests.single().workSpec.input.getLong(ScheduledProfileTriggerWorker.INPUT_RECOVERY_GENERATION, -1L))
+            .isEqualTo(1L)
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>())
+        }
+
+        scheduler.handleAlarm("alpha", cleared.recoveryGeneration)
+
+        assertThat(requests.last().workSpec.input.getLong(ScheduledProfileExportWorker.INPUT_RECOVERY_GENERATION, -1L))
+            .isEqualTo(1L)
+        assertThat(requests.last().workSpec.input.getString(ScheduledProfileExportWorker.INPUT_PROFILE_ID))
+            .isEqualTo("alpha")
+    }
+
+    @Test
+    fun `delivered alarm or fallback from a discarded generation cannot admit fresh work`() = runTest {
+        val manager = workManager()
+        val cleared = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(cleared), listOf(profile("alpha")))
+
+        scheduler.handleAlarm("alpha", recoveryGeneration = 0L)
+
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) }
+        scheduler.handleAlarm("alpha", recoveryGeneration = 1L)
+        verify(exactly = 1) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), ExistingWorkPolicy.KEEP, any<OneTimeWorkRequest>())
+        }
+    }
+
+    @Test
+    fun `failed discard neither acknowledges success nor cancels runtime`() = runTest {
+        val manager = workManager()
+        val entryStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { entryStore.discardPendingRecovery("alpha") } returns false
+        val scheduler = scheduler(manager, emptyList(), emptyList(), entryStore)
+
+        assertThat(scheduler.discardPendingRecovery("alpha")).isFalse()
+
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) }
+    }
+
+    @Test
+    fun `discard keeps a disabled profile disabled without arming work`() = runTest {
+        val manager = workManager()
+        val entryStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { entryStore.discardPendingRecovery("alpha") } returns true
+        coEvery { entryStore.entry("alpha") } returns ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = false, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, emptyList(), emptyList(), entryStore)
+
+        assertThat(scheduler.discardPendingRecovery("alpha")).isTrue()
+
+        verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha")) }
+        verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.fallbackName("alpha")) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) }
+    }
+
     private fun scheduler(
         workManager: WorkManager,
         entries: List<ScheduledProfileEntry>,

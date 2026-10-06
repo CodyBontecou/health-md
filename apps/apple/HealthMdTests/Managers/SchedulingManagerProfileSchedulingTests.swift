@@ -62,6 +62,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         var runnerDates: [[Date]] = []
         var runnerTargets: [ExportTargetSelection] = []
         var adoptedProfiles: [String?] = []
+        var apiDestination: APIExportDestinationSnapshot? = syntheticScheduledAPIDestination()
+        var onAdopt: ((ExportProfile?) -> Void)?
         /// Optional per-run result override; nil returns full success. Used to
         /// simulate device-locked or partial outcomes (and suspend a run).
         var resultProvider: (@MainActor ([Date], ExportTargetSelection) async -> ExportOrchestrator.ExportResult)?
@@ -73,12 +75,13 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             schedule: ExportSchedule? = nil,
             systemSideEffectsEnabled: Bool = false,
             pendingStoreOverride: PendingExportStoring? = nil,
+            notificationSchedulerOverride: ExportNotificationScheduling? = nil,
             isProfileBlocked: @escaping @MainActor (UUID) -> Bool = { _ in false }
         ) -> SchedulingManager {
             let harness = self
             let manager = SchedulingManager(
                 pendingExportStore: pendingStoreOverride ?? pendingStore,
-                exportNotificationScheduler: notificationScheduler,
+                exportNotificationScheduler: notificationSchedulerOverride ?? notificationScheduler,
                 initialSchedule: schedule ?? ExportSchedule(isEnabled: false),
                 persistScheduleChanges: false,
                 systemSideEffectsEnabled: systemSideEffectsEnabled,
@@ -111,8 +114,10 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 ),
                 scheduledProfileDestinationAdopter: { profile in
                     harness.adoptedProfiles.append(profile?.name)
+                    harness.onAdopt?(profile)
                 },
-                isSharedSetupV2ProfileBlocked: isProfileBlocked
+                isSharedSetupV2ProfileBlocked: isProfileBlocked,
+                scheduledAPIDestinationResolver: { _ in harness.apiDestination }
             )
             SchedulingManagerProfileSchedulingTests.retainedInstances.append(manager)
             return manager
@@ -585,7 +590,8 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 AdvancedExportSettings(userDefaults: defaults)
             ),
             profileID: profileID,
-            profileName: "Daily"
+            profileName: "Daily",
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil)
         )
         Self.retainedSettings.append(AdvancedExportSettings(userDefaults: defaults))
         try harness.pendingStore.upsert(request)
@@ -1055,6 +1061,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             exportTarget: .apiEndpoint,
             profileID: profileID,
             profileName: "Daily",
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
             calendar: calendar
         )
         try harness.pendingStore.upsert(staleRetry)
@@ -1115,6 +1122,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 exportTarget: .apiEndpoint,
                 profileID: profileID,
                 profileName: profileID == firstProfileID ? "First" : "Second",
+                apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
                 calendar: calendar
             )
         }
@@ -1168,6 +1176,298 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
         await secondTask.value
         XCTAssertEqual(harness.runnerDates.count, 2)
         XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty, "both retries completed and cleared")
+    }
+
+    func testHistoricalOrDisabledTodayRefreshRecoveryIsDiscardedWithoutExport() async throws {
+        for historical in [true, false] {
+            let harness = ProfileSchedulingHarness()
+            let now = date(year: 2026, month: 8, day: 10, hour: 12)
+            let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+                $0.todayRefreshEnabled = historical
+            }
+            let fire = historical ? date(year: 2026, month: 8, day: 9, hour: 11)
+                : date(year: 2026, month: 8, day: 10, hour: 11)
+            let request = PendingExportRequest(
+                dates: [fire], source: .scheduled, scheduledFireDate: fire,
+                scheduledKind: .todayRefresh, exportTarget: .apiEndpoint, profileID: profileID,
+                apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
+                calendar: calendar
+            )
+            try harness.pendingStore.upsert(request)
+            let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+            await manager.drainPendingExportsIfNeeded()
+            XCTAssertTrue(harness.runnerDates.isEmpty)
+            XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+            XCTAssertTrue(harness.notificationScheduler.canceledRequestIDs.contains(request.id))
+        }
+    }
+
+    func testAPIRecoveryBlocksChangedURLCredentialMissingDestinationAndLegacyIdentity() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        let original = syntheticScheduledAPIDestination()
+        let request = PendingExportRequest(
+            dates: [date(year: 2026, month: 8, day: 9)], source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
+            exportTarget: .apiEndpoint, profileID: profileID,
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: original, bindingID: nil)
+        )
+        try harness.pendingStore.upsert(request)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        for destination in [syntheticScheduledAPIDestination(url: "https://other.example.com/ingest"),
+                            syntheticScheduledAPIDestination(authorization: "Bearer rotated-synthetic"), nil] {
+            harness.apiDestination = destination
+            await manager.performPendingExport(requestId: request.id)
+            XCTAssertTrue(harness.runnerDates.isEmpty)
+            XCTAssertEqual(try harness.pendingStore.loadAll(), [request], "retain blocked recovery, do not reinterpret it")
+            guard case .failure(let message) = manager.notificationExportResult?.status else {
+                return XCTFail("Expected destination-verification failure")
+            }
+            XCTAssertTrue(message.contains("Discard Pending Recovery"))
+        }
+        harness.apiDestination = original
+        let legacy = PendingExportRequest(
+            dates: request.dates, source: .scheduled, scheduledFireDate: request.scheduledFireDate,
+            exportTarget: .apiEndpoint, profileID: profileID
+        )
+        try harness.pendingStore.remove(id: request.id)
+        try harness.pendingStore.upsert(legacy)
+        await manager.performPendingExport(requestId: legacy.id)
+        XCTAssertTrue(harness.runnerDates.isEmpty, "old API work must not acquire current authority on resume")
+    }
+
+    func testAPIRecoveryBlocksProfileRetargetAndBindingChange() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        harness.resultProvider = { dates, _ in
+            ExportOrchestrator.ExportResult(successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) })
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        await manager.runDueProfileOccurrences()
+        let request = try XCTUnwrap(try harness.pendingStore.loadAll().first)
+        let store = ExportProfileStore(userDefaults: defaults)
+        XCTAssertTrue(store.setAPIEndpointBinding(profileID: profileID, endpointID: UUID()))
+        await manager.performPendingExport(requestId: request.id)
+        XCTAssertEqual(harness.runnerDates.count, 1)
+        XCTAssertTrue(store.updateTarget(id: profileID, target: .localIPhoneFolder))
+        await manager.performPendingExport(requestId: request.id)
+        XCTAssertEqual(harness.runnerDates.count, 1, "a removed API binding must not fall through to global settings")
+    }
+
+    func testDisableOrReenableWhilePreparingPreventsQueuedOccurrenceStarting() async throws {
+        for reenable in [false, true] {
+            let harness = ProfileSchedulingHarness()
+            let now = date(year: 2026, month: 8, day: 10, hour: 12)
+            let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+            let scheduler = SuspendingRecoveryNotificationScheduler()
+            let store = ScheduledExportEntryStore(userDefaults: defaults, now: { now })
+            scheduler.afterSchedule = { _ in
+                store.update(profileID: profileID) { $0.isEnabled = false }
+                if reenable { store.update(profileID: profileID) { $0.isEnabled = true } }
+            }
+            let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now },
+                notificationSchedulerOverride: scheduler)
+            await manager.runDueProfileOccurrences()
+            XCTAssertTrue(harness.runnerDates.isEmpty)
+            XCTAssertNil(store.entry(profileID: profileID)?.lastExportDate)
+        }
+    }
+
+    func testDiscardDuringPreparationDoesNotRearmOrExportOldRequest() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        let scheduler = SuspendingRecoveryNotificationScheduler()
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now },
+            notificationSchedulerOverride: scheduler)
+        scheduler.afterSchedule = { _ in try manager.discardPendingRecovery(profileID: profileID) }
+        await manager.runDueProfileOccurrences()
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+        XCTAssertTrue(scheduler.base.scheduledRequests.isEmpty)
+        XCTAssertFalse(manager.pendingRecoveryProfileIDs.contains(profileID))
+    }
+
+    func testDiscardFencesLatePartialAndSuccessfulCheckpoints() async throws {
+        for succeeds in [false, true] {
+            let harness = ProfileSchedulingHarness()
+            let now = date(year: 2026, month: 8, day: 10, hour: 12)
+            let previous = date(year: 2026, month: 8, day: 9, hour: 8)
+            let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+                $0.lastExportDate = previous
+            }
+            let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+            var release: CheckedContinuation<Void, Never>?
+            harness.resultProvider = { dates, _ in
+                await withCheckedContinuation { release = $0 }
+                // Deliberately non-cooperative producer: fencing, not cancellation, must win.
+                return ExportOrchestrator.ExportResult(successCount: succeeds ? dates.count : 0,
+                    totalCount: dates.count, failedDateDetails: succeeds ? [] : dates.map {
+                        FailedDateDetail(date: $0, reason: .fileWriteError)
+                    }, completedDates: succeeds ? dates : [])
+            }
+            let task = Task { @MainActor in await manager.runDueProfileOccurrences() }
+            for _ in 0..<100 where release == nil { await Task.yield() }
+            guard let release else { return XCTFail("Export did not reach suspension") }
+            try manager.discardPendingRecovery(profileID: profileID)
+            release.resume()
+            await task.value
+            let entry = try XCTUnwrap(ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID))
+            XCTAssertEqual(entry.lastExportDate, previous)
+            XCTAssertEqual(entry.recoveryGeneration, 1)
+            XCTAssertTrue(entry.isEnabled)
+            XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+            XCTAssertTrue(harness.notificationScheduler.immediateRequests.isEmpty)
+            await manager.runDueProfileOccurrences()
+            XCTAssertEqual(harness.runnerDates.count, 1, "discard must not replay the current occurrence")
+            harness.resultProvider = nil
+            let tomorrow = date(year: 2026, month: 8, day: 11, hour: 9)
+            let next = harness.makeManager(defaults: defaults, keychain: keychain, now: { tomorrow })
+            await next.runDueProfileOccurrences()
+            XCTAssertEqual(harness.runnerDates.count, 2)
+            XCTAssertEqual(harness.notificationScheduler.allScheduledRequests.last?.recoveryGeneration, 1)
+        }
+    }
+
+    func testDiscardIsProfileScopedAndPreservesCredentialsConfigurationAndHistory() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let first = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        let second = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now, profileName: "Other")
+        let destinations = ProfileDestinationStore(userDefaults: defaults, keychain: keychain)
+        let endpoint = destinations.upsertAPIEndpoint(name: "Synthetic", endpointURLString: "https://api.example.com/ingest",
+            bearerToken: "synthetic-preserved-credential")
+        let profiles = ExportProfileStore(userDefaults: defaults)
+        XCTAssertTrue(profiles.setAPIEndpointBinding(profileID: first, endpointID: endpoint.id))
+        let profile = try XCTUnwrap(profiles.profile(id: first))
+        let originalEntries = ScheduledExportEntryStore(userDefaults: defaults).allEntries()
+        let originalHistory = ExportHistoryManager.shared.history
+        let firstRequest = PendingExportRequest(dates: [now], source: .scheduled, profileID: first, attemptedAt: now)
+        let secondRequest = PendingExportRequest(dates: [now], source: .scheduled, profileID: second, attemptedAt: now)
+        let shortcut = PendingExportRequest(dates: [now], source: .shortcut)
+        for request in [firstRequest, secondRequest, shortcut] { try harness.pendingStore.upsert(request) }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        XCTAssertEqual(manager.pendingRecoveryProfileIDs, Set([first, second]))
+        try manager.discardPendingRecovery(profileID: first)
+        XCTAssertEqual(Set(try harness.pendingStore.loadAll().map(\.id)), Set([secondRequest.id, shortcut.id]))
+        XCTAssertEqual(profiles.profile(id: first), profile)
+        XCTAssertEqual(destinations.token(for: endpoint.id), "synthetic-preserved-credential")
+        XCTAssertEqual(ExportHistoryManager.shared.history.map(\.id), originalHistory.map(\.id))
+        XCTAssertEqual(ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: second), originalEntries.first { $0.profileID == second })
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertEqual(manager.pendingRecoveryProfileIDs, Set([second]))
+    }
+
+    func testFolderWaiterRechecksDisabledScheduleAfterAcquiringPermit() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let first = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now,
+            profileName: "First Folder", target: .localIPhoneFolder)
+        let second = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now,
+            profileName: "Waiting Folder", target: .localIPhoneFolder)
+        func request(_ profileID: UUID) -> PendingExportRequest {
+            PendingExportRequest(dates: [date(year: 2026, month: 8, day: 9)], source: .scheduled,
+                scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
+                exportTarget: .localIPhoneFolder, profileID: profileID)
+        }
+        let running = request(first)
+        let waiting = request(second)
+        try harness.pendingStore.upsert(running)
+        try harness.pendingStore.upsert(waiting)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        let entered = expectation(description: "first folder holds permit")
+        var release: CheckedContinuation<Void, Never>?
+        harness.resultProvider = { dates, _ in
+            await withCheckedContinuation {
+                release = $0
+                entered.fulfill()
+            }
+            return ExportOrchestrator.ExportResult(successCount: dates.count, totalCount: dates.count,
+                failedDateDetails: [], completedDates: dates)
+        }
+        let firstTask = Task { @MainActor in await manager.performPendingExport(requestId: running.id) }
+        await fulfillment(of: [entered], timeout: 5)
+        let waitingTask = Task { @MainActor in await manager.performPendingExport(requestId: waiting.id) }
+        for _ in 0..<100 where !harness.notificationScheduler.armedCanceledRequestIDs.contains(waiting.id) {
+            await Task.yield()
+        }
+        XCTAssertTrue(harness.notificationScheduler.armedCanceledRequestIDs.contains(waiting.id), "second request reached its folder wait")
+        ScheduledExportEntryStore(userDefaults: defaults).update(profileID: second) { $0.isEnabled = false }
+        manager.refreshScheduledAutomation()
+        release?.resume()
+        await firstTask.value
+        await waitingTask.value
+        XCTAssertEqual(harness.runnerDates.count, 1)
+        XCTAssertFalse(harness.adoptedProfiles.contains("Waiting Folder"))
+        XCTAssertNil(ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: second)?.lastExportDate)
+    }
+
+    func testDiscardDisabledProfilePreservesOtherArmedFallbackDuringRearm() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let disabled = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now,
+            profileName: "Disabled") { $0.isEnabled = false }
+        let other = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now,
+            profileName: "Enabled")
+        let recovery = PendingExportRequest(dates: [now], source: .scheduled,
+            exportTarget: .apiEndpoint, profileID: disabled, attemptedAt: now)
+        let future = PendingExportRequest(dates: [now], source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 8, day: 11, hour: 8),
+            exportTarget: .apiEndpoint, profileID: other,
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil))
+        try harness.pendingStore.upsert(recovery)
+        try harness.pendingStore.upsert(future)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        XCTAssertEqual(manager.pendingRecoveryProfileIDs, Set([disabled]), "future fallbacks are not recovery UI")
+        try manager.discardPendingRecovery(profileID: disabled)
+        manager.scheduleBackgroundTask(cancelPendingFallbacks: false)
+        for _ in 0..<100 where harness.notificationScheduler.allScheduledRequests.isEmpty { await Task.yield() }
+        XCTAssertTrue(try harness.pendingStore.loadAll().contains(future))
+        XCTAssertFalse(harness.notificationScheduler.canceledRequestIDs.contains(future.id))
+        XCTAssertFalse(ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: disabled)?.isEnabled ?? true)
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+    }
+
+    func testRemovedProfileRequestCannotFallBackToActiveAPIDestination() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        harness.onAdopt = { _ in
+            for request in (try? harness.pendingStore.loadAll()) ?? [] {
+                try? harness.pendingStore.remove(id: request.id)
+            }
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        await manager.runDueProfileOccurrences()
+        XCTAssertTrue(harness.runnerDates.isEmpty, "missing durable authority must not select the global endpoint")
+        XCTAssertNil(ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID)?.lastExportDate)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+    }
+
+    func testTodayRefreshEligibilityUsesFrozenOwnerTimezone() async throws {
+        calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 5)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+            $0.todayRefreshEnabled = true
+        }
+        var ownerCalendar = calendar!
+        ownerCalendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Pacific/Honolulu"))
+        let fire = date(year: 2026, month: 8, day: 9, hour: 22)
+        let request = PendingExportRequest(dates: [fire], source: .scheduled,
+            scheduledFireDate: fire, scheduledKind: .todayRefresh,
+            exportTarget: .apiEndpoint, profileID: profileID,
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil),
+            calendar: ownerCalendar)
+        try harness.pendingStore.upsert(request)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+        await manager.drainPendingExportsIfNeeded()
+        XCTAssertEqual(harness.runnerDates, [request.dates], "UTC midnight must not expire the owner's still-current day")
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
     }
 }
 #endif
