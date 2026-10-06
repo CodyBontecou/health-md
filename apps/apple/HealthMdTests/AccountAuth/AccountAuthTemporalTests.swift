@@ -116,7 +116,7 @@ nonisolated enum AccountAuthTemporalChecks {
     }
 }
 #if !ACCOUNT_AUTH_SOURCE_HOST
-final class AccountAuthTemporalTests: XCTestCase {
+nonisolated final class AccountAuthTemporalTests: XCTestCase {
     func testConservativeLeaseAtResponseCommitReadbackAndVisibility() async throws {
         _ = try await AccountAuthTemporalChecks.run(root: AccountAuthTestCheck.root())
     }

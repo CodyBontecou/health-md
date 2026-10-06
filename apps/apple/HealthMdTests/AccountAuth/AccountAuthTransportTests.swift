@@ -5,7 +5,9 @@ import XCTest
 #endif
 
 nonisolated enum AccountAuthTransportChecks {
-    static let replyHeaders = ["Content-Type": "application/json", "Cache-Control": "no-store", "Referrer-Policy": "no-referrer"]
+    static let replyHeaders = [AccountAuthReplyHeader(name: "Content-Type", value: "application/json"),
+        AccountAuthReplyHeader(name: "Cache-Control", value: "no-store"),
+        AccountAuthReplyHeader(name: "Referrer-Policy", value: "no-referrer")]
     static func run(root: URL) throws -> String {
         let corpus = try AccountAuthTestCheck.corpus(root: root)
         let row = (corpus["response_cases"] as! [[String: Any]])[0]
@@ -40,12 +42,12 @@ nonisolated enum AccountAuthTransportChecks {
             let good = AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint,
                 redirectHistory: [], status: 200, headers: replyHeaders, body: body)
             try AccountAuthTestCheck.require(try good.validatedBody(for: plan) == body, "correlated-response-bytes")
-            var proxy = replyHeaders; proxy["Proxy-Authorization"] = "synthetic-no-authority"
+            var proxy = replyHeaders; proxy.append(AccountAuthReplyHeader(name: "Proxy-Authorization", value: "synthetic-no-authority"))
             let unsafe = AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint,
                 redirectHistory: [], status: 200, headers: proxy, body: body)
             try AccountAuthTestCheck.denies("proxy-authorization-must-not-return-body") { _ = try unsafe.validatedBody(for: plan) }
-            var badHeaders = replyHeaders; badHeaders["Set-Cookie"] = "synthetic"
-            var duplicate = replyHeaders; duplicate["content-type"] = "application/json"
+            var badHeaders = replyHeaders; badHeaders.append(AccountAuthReplyHeader(name: "Set-Cookie", value: "synthetic"))
+            var duplicate = replyHeaders; duplicate.append(AccountAuthReplyHeader(name: "content-type", value: "application/json"))
             let negatives = [
                 AccountAuthTransportReply(requestID: plan.requestID + 1, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: replyHeaders, body: body),
                 AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint + "/", redirectHistory: [], status: 200, headers: replyHeaders, body: body),
@@ -53,7 +55,7 @@ nonisolated enum AccountAuthTransportChecks {
                 AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 302, headers: replyHeaders, body: body),
                 AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: badHeaders, body: body),
                 AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: duplicate, body: body),
-                AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: [:], body: body),
+                AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: [], body: body),
                 AccountAuthTransportReply(requestID: plan.requestID, effectiveEndpoint: plan.endpoint, redirectHistory: [], status: 200, headers: replyHeaders, body: Data(repeating: 32, count: 8193))]
             for bad in negatives { try AccountAuthTestCheck.denies("transport-negative") { _ = try bad.validatedBody(for: plan) } }
         }
@@ -64,11 +66,11 @@ nonisolated enum AccountAuthTransportChecks {
                     "{\"revoked\":true,\"\\u0072evoked\":true}", "{\"error\":\"verification_pending\"}"] {
             try AccountAuthTestCheck.denies("revoke-not-acknowledged") { try AccountAuthWire.decodeRevokeAcknowledgement(Data(raw.utf8)) }
         }
-        return "transport-plan=3 reply-negative=24 kind-negative=2 revoke-negative=6"
+        return "transport-plan=3 reply-negative=24 kind-negative=2 revoke-negative=6 proxy-negative=3"
     }
 }
 #if !ACCOUNT_AUTH_SOURCE_HOST
-final class AccountAuthTransportTests: XCTestCase {
+nonisolated final class AccountAuthTransportTests: XCTestCase {
     func testClosedSyntheticTransportPlans() throws { _ = try AccountAuthTransportChecks.run(root: AccountAuthTestCheck.root()) }
 }
 #endif

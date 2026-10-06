@@ -588,7 +588,7 @@ nonisolated enum AccountAuthLifecycleChecks {
     }
 }
 #if !ACCOUNT_AUTH_SOURCE_HOST
-final class AccountAuthLifecycleTests: XCTestCase {
+nonisolated final class AccountAuthLifecycleTests: XCTestCase {
     func testActualSyntheticCoordinatorFaultsAndRaces() async throws {
         _ = try await AccountAuthLifecycleChecks.run(root: AccountAuthTestCheck.root())
     }

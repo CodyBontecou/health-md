@@ -47,25 +47,55 @@ nonisolated struct AccountAuthTransportPlan: Sendable, CustomStringConvertible, 
     var customMirror: Mirror { Mirror(self, children: [:]) }
 }
 
+/// Original decoded pair, not a raw HTTP stream or credential/provenance claim.
+nonisolated struct AccountAuthReplyHeader: Sendable, Equatable, CustomStringConvertible, CustomReflectable {
+    let name: String
+    let value: String
+    var description: String { "[synthetic account-auth header redacted]" }
+    var customMirror: Mirror { Mirror(self, children: [:]) }
+}
+
 /// Fake-transport receipt only. Echoed JSON or this DTO cannot certify real TLS/provenance.
 nonisolated struct AccountAuthTransportReply: Sendable, CustomStringConvertible, CustomReflectable {
     let requestID: UInt64
     let effectiveEndpoint: String
     let redirectHistory: [String]
     let status: Int
-    let headers: [String: String]
+    let headers: [AccountAuthReplyHeader]
     let body: Data
+    init(requestID: UInt64, effectiveEndpoint: String, redirectHistory: [String], status: Int,
+         headers: [AccountAuthReplyHeader], body: Data) {
+        self.requestID = requestID; self.effectiveEndpoint = effectiveEndpoint
+        self.redirectHistory = Array(redirectHistory); self.status = status
+        self.headers = headers.map { AccountAuthReplyHeader(name: $0.name, value: $0.value) }
+        self.body = body
+    }
     var description: String { "[synthetic account-auth transport reply redacted]" }
     var customMirror: Mirror { Mirror(self, children: [:]) }
 
     func validatedBody(for plan: AccountAuthTransportPlan) throws -> Data {
-        let keys = headers.keys.map { $0.lowercased() }
         guard requestID == plan.requestID, effectiveEndpoint == plan.endpoint, redirectHistory.isEmpty,
-              body.count > 0, body.count <= plan.responseByteLimit, Set(keys).count == keys.count,
-              !keys.contains("set-cookie"), !keys.contains("cookie"), !keys.contains("authorization") else {
+              body.count > 0, body.count <= plan.responseByteLimit, headers.count <= 16 else {
             throw AccountAuthSourceError.malformed
         }
-        let h = Dictionary(uniqueKeysWithValues: headers.map { ($0.key.lowercased(), $0.value) })
+        // Inactive source profile v1: decoded pair bytes only, NOT HTTP framing/stream bounds.
+        // ASCII grammar/budgets precede folding and insertion; original pairs are never rewritten.
+        var h: [String: String] = [:]
+        var total = 0
+        for pair in headers {
+            let name = pair.name.utf8, value = pair.value.utf8
+            guard (1...64).contains(name.count), value.count <= 1024,
+                  name.allSatisfy({ (65...90).contains($0) || (97...122).contains($0) ||
+                      (48...57).contains($0) || $0 == 45 }),
+                  value.allSatisfy({ (32...126).contains($0) }) else { throw AccountAuthSourceError.malformed }
+            total += name.count + value.count
+            let folded = pair.name.lowercased()
+            guard total <= 4096, h[folded] == nil,
+                  !["cookie", "set-cookie", "authorization", "proxy-authorization"].contains(folded) else {
+                throw AccountAuthSourceError.malformed
+            }
+            h[folded] = pair.value
+        }
         guard ["application/json", "application/json; charset=utf-8"].contains(h["content-type"] ?? ""),
               h["cache-control"] == "no-store", h["referrer-policy"] == "no-referrer" else {
             throw AccountAuthSourceError.malformed

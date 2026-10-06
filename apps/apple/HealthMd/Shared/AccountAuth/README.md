@@ -37,6 +37,14 @@ cancel, timeout, switch and signout invalidate it. Installation identity is proc
 and stays stable across signout/re-auth; state/verifier are freshly generated for each attempt.
 Entropy failure never falls back. SHA-256 is actual CryptoKit S256.
 
+Synthetic reply headers retain immutable copied ordered String pairs, never map-first input.
+Inactive reply-header source profile v1 bounds sixteen pairs, ASCII names1–64 bytes, printable
+ASCII values0–1024 bytes and4096 aggregate name+value bytes. Identical/folded duplicates and
+Cookie/Set-Cookie/Authorization/Proxy-Authorization reject before lookup insertion. Required
+JSON (or exact UTF8 JSON), no-store and no-referrer values stay exact; safe unique extras are
+inert and retain original order/case/value bytes. These decoded DTO bounds do not bound a real
+HTTP stream or prove TLS/provenance. Receipts, header descriptions and errors remain nonreflecting.
+
 ## Custody, concurrency and ambiguity
 
 `AccountAuthVault` requires a synchronous linearizable commit **under the commit fence** and fresh
@@ -61,7 +69,8 @@ in-process re-authentications preserve queued obligations (bounded to twenty).
 There is **no restoration API**. Fresh preparation clears stale normal custody only after an
 explicit operation and verified postcondition; observing a stale populated row records an
 unknown remote obligation without adopting its account or proof. Unreadable prior custody is
-also unknown, not proof of absence. Process recreation loses unsecured attempts and in-memory
+also unknown, not proof of absence. Nil-row custody with an install receipt is likewise unknown;
+only coherent bootstrap/prepare/erase absence avoids inventing an obligation. Process recreation loses unsecured attempts and in-memory
 revocation material and requires fresh authentication. A stale row alone cannot prove earlier
 signout intent if the durable fence failed. The recreated hint can conservatively report unknown,
 but is not durable evidence. No encrypted retention/deletion/backup policy is implemented here.
@@ -72,7 +81,17 @@ Invoke `apps/apple/scripts/test-account-auth-source.sh` **via bash under the unc
 heavy-slot guard**, using a new AS03 evidence directory each time. It preserves artifacts and
 compiles the actual selected source/tests: Swift 6 complete strict concurrency, then Swift 5
 MainActor/approachable settings comparable to the project. It also typechecks the conditional
-XCTest imports against a selected-source testable module, not the full app.
+XCTest imports against a selected-source testable module, not the full app. The optional second
+runner argument supplies ONLY the read-only reply-header fixture root; original native/security
+fixtures remain in the own source tree. Conditional imports require explicit already-installed
+`ACCOUNT_AUTH_SELECTED_SDK`, `ACCOUNT_AUTH_DEVELOPER_FRAMEWORKS` and
+`ACCOUNT_AUTH_DEVELOPER_USR_LIB` paths obtained by the admitted guarded metadata check. The
+runner never searches/installs/stubs/skips XCTest. Source and fixture hashes are checked before/after.
+
+The literal99 header fixture contributes86 representable String-pair rows (9positive/77negative)
+per exchange/refresh/revoke. Its thirteen malformed shape/type rows cannot construct this typed
+DTO and remain explicitly unrepresentable/unexecuted, not native rejection passes. No untyped
+network interface or reference-parser verdict is supplied to inflate coverage.
 
 The harness consumes the shared 73 response / 15 error / 3 PKCE / 32 callback corpus and executes
 actual coordinator/memory-vault faults and deterministic actor races for all 22 lifecycle seams.

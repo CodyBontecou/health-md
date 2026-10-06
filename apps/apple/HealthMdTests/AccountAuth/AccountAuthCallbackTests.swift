@@ -66,7 +66,7 @@ nonisolated enum AccountAuthCallbackChecks {
     }
 }
 #if !ACCOUNT_AUTH_SOURCE_HOST
-final class AccountAuthCallbackTests: XCTestCase {
+nonisolated final class AccountAuthCallbackTests: XCTestCase {
     func testSharedRawCallbacks() throws { _ = try AccountAuthCallbackChecks.run(root: AccountAuthTestCheck.root()) }
 }
 #endif

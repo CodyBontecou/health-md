@@ -135,7 +135,7 @@ nonisolated enum AccountAuthWireChecks {
 }
 
 #if !ACCOUNT_AUTH_SOURCE_HOST
-final class AccountAuthWireTests: XCTestCase {
+nonisolated final class AccountAuthWireTests: XCTestCase {
     func testSharedRawCorpus() throws { _ = try AccountAuthWireChecks.run(root: AccountAuthTestCheck.root()) }
 }
 #endif
