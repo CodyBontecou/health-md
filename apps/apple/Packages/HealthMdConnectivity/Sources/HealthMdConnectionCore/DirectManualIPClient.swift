@@ -2,6 +2,42 @@ import CryptoKit
 import Foundation
 import Network
 
+/// Closed native client-handshake provenance, never a grant/token or serialized metadata.
+/// Its initializer is confined to this file's actual successful authentication path.
+public final class DirectClientAuthenticatedContext: @unchecked Sendable, CustomStringConvertible, CustomDebugStringConvertible, CustomReflectable {
+    public let sourceInstallationID: UUID
+    public let hostInstallationID: UUID
+    private weak var acceptedChannel: DirectSecureChannel?
+    private let credentialFingerprint: Data
+
+    fileprivate init(channel: DirectSecureChannel, sourceInstallationID: UUID, hostInstallationID: UUID, reconnectSecret: Data) {
+        acceptedChannel = channel
+        self.sourceInstallationID = sourceInstallationID
+        self.hostInstallationID = hostInstallationID
+        credentialFingerprint = Data(SHA256.hash(data: reconnectSecret))
+    }
+
+    public func requireCurrent(on channel: DirectSecureChannel) throws {
+        guard acceptedChannel === channel, !channel.isLocallyTerminal else {
+            throw DirectChannelError.authenticationFailed("Native authentication is unavailable.")
+        }
+    }
+
+    public func requireCurrent(on channel: DirectSecureChannel, sourceInstallationID: UUID,
+                               hostInstallationID: UUID, reconnectSecret: Data) throws {
+        try requireCurrent(on: channel)
+        guard self.sourceInstallationID == sourceInstallationID, self.hostInstallationID == hostInstallationID,
+              reconnectSecret.count == DirectPairingSecurity.reconnectSecretByteCount,
+              ManualIPSyncSecurity.timingSafeCompare(credentialFingerprint, Data(SHA256.hash(data: reconnectSecret))) else {
+            throw DirectChannelError.authenticationFailed("Native authentication is unavailable.")
+        }
+    }
+
+    public var description: String { "native_client_authentication" }
+    public var debugDescription: String { description }
+    public var customMirror: Mirror { Mirror(self, children: EmptyCollection<Mirror.Child>()) }
+}
+
 public final class DirectManualIPClient: @unchecked Sendable {
     public let installationID: UUID
     public let displayName: String
@@ -278,12 +314,22 @@ public final class DirectManualIPClient: @unchecked Sendable {
             try trustStore.saveState(state)
             throw CancellationError()
         }
-        return DirectSecureChannel(
+        let channel = DirectSecureChannel(
             packetConnection: packetConnection,
             sessionKey: sessionKey,
             peerInstallationID: serverInstallationID,
             peerDisplayName: response.macName,
             messageCanonicalizer: messageCanonicalizer
         )
+        // Provenance is additive/non-wire. Preserve legacy acceptance and saves, but never
+        // attest malformed reconnect material, even if a legacy pairing peer supplied it.
+        if reconnectSecret.count == DirectPairingSecurity.reconnectSecretByteCount {
+            // Late local teardown may suppress NEW provenance, never change the legacy result.
+            try? channel.attachClientAuthenticatedContext(DirectClientAuthenticatedContext(
+                channel: channel, sourceInstallationID: installationID,
+                hostInstallationID: serverInstallationID, reconnectSecret: reconnectSecret
+            ))
+        }
+        return channel
     }
 }

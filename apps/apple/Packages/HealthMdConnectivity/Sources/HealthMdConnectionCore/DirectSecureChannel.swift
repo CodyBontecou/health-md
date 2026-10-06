@@ -193,6 +193,43 @@ public final class DirectSecureChannel: @unchecked Sendable {
     public let peerInstallationID: UUID
     public let peerDisplayName: String
 
+    /// Ordinary construction is deliberately unproven; only the native client's verified
+    /// handshake can mint this non-wire context.
+    public var clientAuthenticatedContext: DirectClientAuthenticatedContext? {
+        authenticationLock.withLock { authenticatedContext }
+    }
+    private let authenticationLock = NSLock()
+    private var authenticatedContext: DirectClientAuthenticatedContext?
+    private var observedTerminal = false
+
+    /// Sampled local state only: an unobserved remote half-close is NOT immediately detectable.
+    /// Once cancel or a channel/transport failure is observed, provenance cannot revive.
+    public var isLocallyTerminal: Bool {
+        if let native = packetConnection as? DirectPacketConnection {
+            switch native.connection.state {
+            case .failed, .cancelled: recordTerminal()
+            default: break
+            }
+        }
+        return authenticationLock.withLock { observedTerminal }
+    }
+
+    private func recordTerminal() {
+        authenticationLock.withLock { observedTerminal = true }
+    }
+
+    // Only a capsule minted in DirectManualIPClient's verification file can enter here.
+    // It already names this exact channel; no rebind/second attachment is possible.
+    func attachClientAuthenticatedContext(_ context: DirectClientAuthenticatedContext) throws {
+        try context.requireCurrent(on: self)
+        try authenticationLock.withLock {
+            guard authenticatedContext == nil else {
+                throw DirectChannelError.authenticationFailed("Native authentication is unavailable.")
+            }
+            authenticatedContext = context
+        }
+    }
+
     private let encoder: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -239,38 +276,49 @@ public final class DirectSecureChannel: @unchecked Sendable {
     }
 
     public func receive() async throws -> DirectSecurePayload {
-        try await receiveGate.perform { [self] in
-            guard case .encrypted(let frame) = try await packetConnection.receive() else {
-                throw DirectChannelError.expectedEncryptedPacket
+        do {
+            return try await receiveGate.perform { [self] in
+                guard case .encrypted(let frame) = try await packetConnection.receive() else {
+                    throw DirectChannelError.expectedEncryptedPacket
+                }
+                let sealedPlaintext = try ManualIPSyncSecurity.open(frame, using: sessionKey)
+                let plaintext = try openSequencedEnvelope(sealedPlaintext)
+                if DirectTransferBinaryFrame.isBinaryFrame(plaintext) {
+                    return .binaryTransferFrame(plaintext)
+                }
+                do {
+                    let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
+                    return .message(try decoder.decode(DirectMessage.self, from: canonical))
+                } catch {
+                    throw DirectChannelError.decodeFailed
+                }
             }
-            let sealedPlaintext = try ManualIPSyncSecurity.open(frame, using: sessionKey)
-            let plaintext = try openSequencedEnvelope(sealedPlaintext)
-            if DirectTransferBinaryFrame.isBinaryFrame(plaintext) {
-                return .binaryTransferFrame(plaintext)
-            }
-            do {
-                let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
-                return .message(try decoder.decode(DirectMessage.self, from: canonical))
-            } catch {
-                throw DirectChannelError.decodeFailed
-            }
+        } catch {
+            recordTerminal()
+            throw error
         }
     }
 
     public func cancel() {
+        recordTerminal()
         packetConnection.cancel()
     }
 
     private func sendEncrypted(_ plaintext: Data) async throws {
-        try await sendGate.perform { [self] in
-            let sequence = try allocateSendSequence()
+        do {
+            try await sendGate.perform { [self] in
+                let sequence = try allocateSendSequence()
 
-            var envelope = Self.envelopeMagic
-            var bigEndianSequence = sequence.bigEndian
-            withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
-            envelope.append(plaintext)
-            let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
-            try await packetConnection.send(.encrypted(sealed))
+                var envelope = Self.envelopeMagic
+                var bigEndianSequence = sequence.bigEndian
+                withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
+                envelope.append(plaintext)
+                let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
+                try await packetConnection.send(.encrypted(sealed))
+            }
+        } catch {
+            recordTerminal()
+            throw error
         }
     }
 

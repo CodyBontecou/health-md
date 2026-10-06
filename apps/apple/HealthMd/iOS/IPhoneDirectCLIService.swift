@@ -1,6 +1,46 @@
+import Foundation
+import HealthMdConnectionCore
+
+/// Closed, ephemeral owner epoch. Only this controller file can mint it after a matching
+/// authenticated base hello. Copies/peers retain the SAME revocation, never a new owner.
+nonisolated final class IPhoneDirectCLIAuthenticatedSession: @unchecked Sendable {
+    let sourceInstallationID: UUID
+    let sessionID: UUID
+    let channel: DirectSecureChannel
+    private weak var owner: AnyObject?
+    private let defaults: UserDefaults
+    private let enabledKey: String
+    private let currentOwner: @MainActor @Sendable () -> Bool
+    private let lock = NSLock()
+    private var revoked = false
+
+    fileprivate init(owner: AnyObject, defaults: UserDefaults, enabledKey: String,
+                     sourceInstallationID: UUID, sessionID: UUID, channel: DirectSecureChannel,
+                     currentOwner: @escaping @MainActor @Sendable () -> Bool) {
+        self.owner = owner
+        self.defaults = defaults
+        self.enabledKey = enabledKey
+        self.sourceInstallationID = sourceInstallationID
+        self.sessionID = sessionID
+        self.channel = channel
+        self.currentOwner = currentOwner
+    }
+
+    @MainActor func currentOwnerIsAvailable() -> Bool { currentOwner() }
+
+    func requireCurrent() throws {
+        guard lock.withLock({ !revoked && owner != nil }), defaults.bool(forKey: enabledKey),
+              !channel.isLocallyTerminal else { throw AgentBridgeValidationError.permissionRequired }
+        // Foreground loss/source replacement/teardown revoke this epoch in the MainActor owner.
+        // This is a sampled local fence, not a transaction with defaults/SDK/socket state.
+        guard lock.withLock({ !revoked && owner != nil }) else { throw AgentBridgeValidationError.permissionRequired }
+    }
+
+    func revoke() { lock.withLock { revoked = true } }
+}
+
 #if os(iOS)
 import Combine
-import HealthMdConnectionCore
 import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
@@ -327,6 +367,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var reconnectTask: Task<Void, Never>?
     private var sessionTask: Task<Void, Never>?
     private var activeSessionID: UUID?
+    private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
     private var activeExportJobID: UUID?
@@ -385,6 +426,64 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     var isEnabled: Bool {
         defaults.bool(forKey: Self.enabledKey)
+    }
+
+    /// LAZY native-only identity/liveness factory, never called by legacy hello/dispatch.
+    /// No issuer/consent/configuration/health work or creating trust getter is performed.
+    func agentBridgeAuthenticatedPeer(
+        nativeTrust: AgentBridgeExportNativeTrust = AgentBridgeExportNativeTrust()
+    ) throws -> AgentBridgeExportAuthenticatedPeer {
+        do {
+            guard isEnabled, appIsActive, UIApplication.shared.applicationState == .active,
+                  let sessionID = activeSessionID, let channel, let ownership = agentBridgeSession,
+                  ownership.sessionID == sessionID, ownership.channel === channel,
+                  ownership.sourceInstallationID == installationID,
+                  channel.clientAuthenticatedContext != nil else { throw AgentBridgeValidationError.permissionRequired }
+            // Obtain UIKit's actor-isolated singleton here. Its protected-data getter is SDK-
+            // declared nonisolated, so held peers can sample it without assuming an executor.
+            let application = UIApplication.shared
+            let peer = try AgentBridgeExportNativeSession.authenticatedPeer(
+                ownership: ownership, nativeTrust: nativeTrust,
+                protectedData: { application.isProtectedDataAvailable },
+                foreground: { application.applicationState == .active }
+            )
+            try peer.requireCurrent()
+            guard isEnabled, appIsActive, UIApplication.shared.applicationState == .active,
+                  activeSessionID == sessionID, self.channel === channel,
+                  agentBridgeSession === ownership else { throw AgentBridgeValidationError.permissionRequired }
+            return peer
+        } catch {
+            agentBridgeSession?.revoke()
+            throw AgentBridgeValidationError.permissionRequired
+        }
+    }
+
+    private func recordAgentBridgeBaseHello(
+        _ capabilities: DirectPeerCapabilities, on channel: DirectSecureChannel, sessionID: UUID
+    ) {
+        invalidateAgentBridgeSession()
+        guard isEnabled, appIsActive, activeSessionID == sessionID, self.channel === channel,
+              capabilities.platform == .macOSCLI,
+              capabilities.protocolVersions.contains(HealthMdDirectProtocol.currentVersion),
+              capabilities.installationID == channel.peerInstallationID,
+              let context = channel.clientAuthenticatedContext,
+              context.sourceInstallationID == installationID,
+              context.hostInstallationID == channel.peerInstallationID,
+              (try? context.requireCurrent(on: channel)) != nil else { return }
+        agentBridgeSession = IPhoneDirectCLIAuthenticatedSession(
+            owner: self, defaults: defaults, enabledKey: Self.enabledKey,
+            sourceInstallationID: installationID, sessionID: sessionID, channel: channel,
+            currentOwner: { [weak self, weak channel] in
+                guard let self, let channel else { return false }
+                return self.activeSessionID == sessionID && self.channel === channel
+                    && self.appIsActive && self.isEnabled
+            }
+        )
+    }
+
+    private func invalidateAgentBridgeSession() {
+        agentBridgeSession?.revoke()
+        agentBridgeSession = nil
     }
 
     var pairedCLIName: String? {
@@ -666,11 +765,13 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     func applicationWillResignActive() {
+        invalidateAgentBridgeSession()
         appIsActive = false
         updateIdleTimer()
     }
 
     func applicationDidEnterBackground() {
+        invalidateAgentBridgeSession()
         appIsActive = false
         updateIdleTimer()
         if queryTask != nil {
@@ -956,6 +1057,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         pairingTrustWasWritten: Bool,
         previousServer: ManualIPTrustedMac?
     ) {
+        invalidateAgentBridgeSession()
         let sessionID = UUID()
         activeSessionID = sessionID
         lastInboundActivityAt = heartbeatClock.now
@@ -1001,6 +1103,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             await exportConnection.finish()
             self.protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID else { return }
+            self.invalidateAgentBridgeSession()
             let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
             let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
                 for: sessionID
@@ -1060,6 +1163,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             remoteCapabilities = capabilities
             protocolAuthority.beginBootstrap()
             try commitProvisionalPairingTrustIfNeeded(for: sessionID)
+            recordAgentBridgeBaseHello(capabilities, on: channel, sessionID: sessionID)
             // RFC-0005 P2: only a CLI that advertised wake support reads the enrollment, and
             // only a phone with valid material sends it — the deterministic handshake keeps
             // older CLIs (no wake advertisement) byte-compatible and fail-closed.
@@ -1284,6 +1388,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     }
 
     private func disconnect(clearError: Bool) {
+        invalidateAgentBridgeSession()
         let pairingTrustWasRestored = rollbackProvisionalPairingTrustIfNeeded()
         restorePairingConfigurationIfNeeded()
         stopReconnectLoop()
