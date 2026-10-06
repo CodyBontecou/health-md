@@ -107,20 +107,19 @@ struct iPadExportView: View {
     private func dataDetailPicker(
         _ presets: [AppleExportDetailPreset]
     ) -> some View {
-        Picker(
+        SecondaryPicker(
             "Data Detail",
+            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
                 set: { advancedSettings.detailPolicy = $0.policy }
-            )
+            ),
+            showsTitle: false
         ) {
             ForEach(presets) { preset in
                 Text(preset.localizedTitle).tag(preset)
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(Color.accent)
     }
 
     var body: some View {
@@ -496,43 +495,60 @@ struct iPadExportView: View {
                         Spacer()
                     }
 
-                    Picker("Date Format", selection: $advancedSettings.formatCustomization.dateFormat) {
+                    SecondaryPicker(
+                        "Date Format",
+                        selectedTitle: advancedSettings.formatCustomization.dateFormat.displayName,
+                        selection: $advancedSettings.formatCustomization.dateFormat
+                    ) {
                         ForEach(DateFormatPreference.allCases, id: \.self) { format in
                             Text(format.displayName).tag(format)
                         }
                     }
-                    .tint(Color.accent)
 
-                    Picker("Time Format", selection: $advancedSettings.formatCustomization.timeFormat) {
+                    SecondaryPicker(
+                        "Time Format",
+                        selectedTitle: advancedSettings.formatCustomization.timeFormat.displayName,
+                        selection: $advancedSettings.formatCustomization.timeFormat
+                    ) {
                         ForEach(TimeFormatPreference.allCases, id: \.self) { format in
                             Text(format.displayName).tag(format)
                         }
                     }
-                    .tint(Color.accent)
 
-                    Picker("Unit System", selection: $advancedSettings.formatCustomization.unitPreference) {
+                    SecondaryPicker(
+                        "Unit System",
+                        selectedTitle: advancedSettings.formatCustomization.unitPreference.displayName,
+                        selection: $advancedSettings.formatCustomization.unitPreference
+                    ) {
                         ForEach(UnitPreference.allCases, id: \.self) { unit in
                             Text(unit.displayName).tag(unit)
                         }
                     }
-                    .tint(Color.accent)
 
                     if advancedSettings.exportFormats.contains(.markdown) {
                         Divider().background(Color.borderSubtle)
 
-                        Picker("Markdown Style", selection: $advancedSettings.formatCustomization.markdownTemplate.style) {
+                        SecondaryPicker(
+                            "Markdown Style",
+                            selectedTitle: advancedSettings.formatCustomization.markdownTemplate.style.displayName,
+                            selection: $advancedSettings.formatCustomization.markdownTemplate.style
+                        ) {
                             ForEach(MarkdownTemplateStyle.allCases, id: \.self) { style in
                                 Text(style.displayName).tag(style)
                             }
                         }
-                        .tint(Color.accent)
 
-                        Picker("Header Level", selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel) {
+                        SecondaryPicker(
+                            "Header Level",
+                            selectedTitle: [1: "# H1", 2: "## H2", 3: "### H3"][
+                                advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel
+                            ] ?? "",
+                            selection: $advancedSettings.formatCustomization.markdownTemplate.sectionHeaderLevel
+                        ) {
                             Text("# H1").tag(1)
                             Text("## H2").tag(2)
                             Text("### H3").tag(3)
                         }
-                        .tint(Color.accent)
 
                         Toggle("Use Emoji in Headers", isOn: $advancedSettings.formatCustomization.markdownTemplate.useEmoji)
                             .tint(Color.accent)
@@ -1088,7 +1104,7 @@ struct iPadMetricSelectionView: View {
 
                 // Footer with actions
                 HStack {
-                    Menu("Actions") {
+                    Menu {
                         Button("Select All Standard Metrics") {
                             configurationProtection.performConfigurationChange {
                                 selectionState.selectAll()
@@ -1111,7 +1127,13 @@ struct iPadMetricSelectionView: View {
                                 Task { await requestVisionAuthorizationAndApply(nil) }
                             }
                         }
+                    } label: {
+                        SecondaryMenuLabel {
+                            Text("Actions")
+                        }
                     }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .accessibilityLabel("Metric actions")
 
                     Spacer()
 

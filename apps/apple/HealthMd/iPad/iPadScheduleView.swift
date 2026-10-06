@@ -176,7 +176,13 @@ struct iPadScheduleView: View {
                                     )
                                     .fixedSize()
 
-                                    Picker("Unit", selection: customUnitBinding) {
+                                    SecondaryPicker(
+                                        "Unit",
+                                        selectedTitle: schedulingManager.schedule.customUnit
+                                            .label(for: schedulingManager.schedule.customInterval).capitalized,
+                                        selection: customUnitBinding,
+                                        showsTitle: false
+                                    ) {
                                         ForEach(ScheduleIntervalUnit.allCases, id: \.self) { unit in
                                             Text(unit.label(for: schedulingManager.schedule.customInterval).capitalized)
                                                 .tag(unit)

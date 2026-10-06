@@ -1100,8 +1100,11 @@ struct ExportProfileEditorSheet: View {
 
             switch target {
             case .localIPhoneFolder:
-                Picker(
+                SecondaryPicker(
                     String(localized: "Folder", comment: "Profile editor folder picker label"),
+                    selectedTitle: folderVaultID == nil
+                        ? String(localized: "Current folder (from Export tab)", comment: "Editor option using the live shared vault")
+                        : destinationStore.vault(id: folderVaultID)?.name ?? "",
                     selection: $folderVaultID
                 ) {
                     Text(String(
@@ -1125,8 +1128,11 @@ struct ExportProfileEditorSheet: View {
                 }
                 .accessibilityIdentifier("export.profiles.editor.chooseFolder")
             case .apiEndpoint:
-                Picker(
+                SecondaryPicker(
                     String(localized: "Endpoint", comment: "Profile editor endpoint picker label"),
+                    selectedTitle: apiEndpointID == nil
+                        ? String(localized: "Current endpoint (from Export tab)", comment: "Editor option using the live API endpoint")
+                        : destinationStore.apiEndpoint(id: apiEndpointID)?.name ?? "",
                     selection: $apiEndpointID
                 ) {
                     Text(String(
@@ -1176,8 +1182,9 @@ struct ExportProfileEditorSheet: View {
                 .disabled(draft.dailyNoteInjection.dailyNotesOnly)
             }
 
-            Picker(
+            SecondaryPicker(
                 String(localized: "When file exists", comment: "Profile editor write mode picker label"),
+                selectedTitle: draft.writeMode.localizedDisplayName,
                 selection: $draft.writeMode
             ) {
                 ForEach(WriteMode.allCases, id: \.rawValue) { mode in
@@ -1213,8 +1220,9 @@ struct ExportProfileEditorSheet: View {
                 String(localized: "Data dictionary", comment: "Profile editor data dictionary toggle"),
                 isOn: $draft.includeDataDictionary
             )
-            Picker(
+            SecondaryPicker(
                 String(localized: "Data Detail", comment: "Profile editor data-detail picker"),
+                selectedTitle: AppleExportDetailPreset(policy: draft.detailPolicy).localizedTitle,
                 selection: Binding(
                     get: { AppleExportDetailPreset(policy: draft.detailPolicy) },
                     set: { draft.detailPolicy = $0.policy }

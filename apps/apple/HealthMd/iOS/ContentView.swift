@@ -3240,8 +3240,6 @@ struct SettingsTabView: View {
                 icon: "link.circle.fill",
                 title: "Third-Party Integrations",
                 subtitle: "Fitbit, Oura, WHOOP, Withings, and Strava",
-                status: externalIntegrationManager.connectedProviderCount == 0 ? "None" : "\(externalIntegrationManager.connectedProviderCount)",
-                statusTone: externalIntegrationManager.connectedProviderCount == 0 ? .muted : .success,
                 isActive: externalIntegrationManager.connectedProviderCount > 0,
                 accessibilityHint: "Double tap to connect or disconnect third-party health providers",
                 action: { showExternalIntegrations = true }

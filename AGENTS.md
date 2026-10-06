@@ -14,6 +14,13 @@
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
+## Verification policy
+
+- Default to component-scoped type checking, linting, and automated tests that run without a simulator, emulator, physical device, or Argent.
+- Simulator/emulator QA, device/UI automation, and any Argent use require an explicit user request for the current task. A general request to implement, polish UI, fix a bug, or run tests does not authorize these workflows.
+- Apply this opt-in policy when following component documentation or referenced skills, even if they prescribe simulator or Argent QA. Do not boot simulators/emulators, install or launch apps for QA, or capture QA screenshots/recordings by default.
+- Report checks run and their results. If a relevant check requires an opt-in workflow, mark it not run and explain the verification gap; do not claim visual or device behavior was verified.
+
 ## Cross-platform product and contract policy
 
 Apple and Android should remain unified whenever their operating systems expose semantically compatible capabilities. Read `docs/architecture/cross-platform-unification-policy.md` before changing a mobile feature, metric, setting, export, API behavior, automation surface, or public terminology.
