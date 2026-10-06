@@ -83,6 +83,38 @@ Result: passed on 2026-05-18. `xcresulttool` summary reported `result: Passed`, 
 
 Worker tests were not run for ISO-307 because this ticket did not change worker code.
 
+## Profile-only schedule restoration diagnosis — 2026-10-05
+
+This is a source-fix diagnosis receipt, not an App Store release or proof that every reported delivery failure has the same cause.
+
+### Reproduced behavior and fix
+
+With the legacy schedule disabled and one enabled profile schedule restored from storage, the app-active drain/catch-up sequence neither armed a local fallback before the first occurrence nor ran an unqueued due occurrence. The minimized first case failed twice with `opening a restored profile schedule must re-arm its local notification`.
+
+`performCatchUpExportIfNeeded` now evaluates enabled profiles as well as the legacy schedule. Profile evaluation re-arms its next wake-up even when no occurrence is due. App launch uses the profile-aware automation refresh, restoring the HealthKit delivery callback, local fallback, and APNs bridge instead of enabling HealthKit only behind the legacy flag. Queued profile recovery is not retried a second time immediately after the app-active drain, and one profile's pending request cannot suppress legacy catch-up at the same fire time.
+
+The platform-neutral outcome is restoring enabled automation after app launch without requiring another schedule edit or exporting future work. Android already reconciles both legacy and profile scheduling in `presentation/MainActivity.kt` and `data/scheduler/BootReceiver.kt`; no Android change is needed for this Apple lifecycle defect. Public health exports, direct protocols, API envelopes, shared-core, CLI, website and external-consumer contracts are unchanged. The frozen receipt-verifier worker was not modified or deployed.
+
+### Verification and limitations
+
+- New runtime regressions cover pre-occurrence fallback restoration, repeated re-arm identity, all scheduling disabled, due profile catch-up, retained drain recovery without a second attempt, and simultaneous legacy/profile recovery.
+- Six focused suites passed twice on the iOS 26.5 simulator: `SchedulingManagerProfileSchedulingTests`, `SchedulingManagerPendingExportsTests`, `ScheduledExportCoordinatorTests`, `ExportNotificationSchedulerTests`, `ScheduledExportEntryStoreTests`, and `APNsSchedulingPreflightTests`: **112 tests, zero failures**.
+- This was an **isolated diagnostic build** of the real scheduler: unrelated existing compilation errors required temporary adapters for `MetricSelectionState.enabledMetricIDs` and the unavailable HealthKit boundary API, plus an empty view in place of excluded `ContentView.swift`. Those adapters were removed after testing and must never be installed on a user's phone. This result is not a normal full-app build pass.
+- A normal `build-for-testing` was rerun after removing the adapters and still fails in `iOS/AppIntents/RefreshMacContextIntent.swift:114` because `MetricSelectionState` has no `enabledMetricIDs`. The prior full-build attempts also found the unavailable `HKHealthStore.earliestAuthorizedSampleDate` API and unrelated `ContentView.swift` compilation/type errors. Resolve the full-build blockers and rerun `make -C apps/apple test-ios` before release or device installation.
+- `make -C apps/apple check-apns-scheduling` passes, including new launch-restoration guards. This validates source/config wiring, not APNs delivery.
+- Private local evidence is in `apps/apple/build/logs/scheduled-notifications-*.log` (ignored build artifacts), including red, guard-only probe, green, repeated regression, and normal-build-blocker logs.
+- Argent reached the connected physical iPhone 17 Pro running iOS 27. Its read-only Settings inspection was blocked by a Face ID prompt before notification permission could be observed. No notification permissions or schedules were changed, no health export was initiated, and the patched app was not installed. The incomplete private flow under `/tmp/healthmd-notification-qa/` is diagnostic evidence, not a passing replay.
+
+### Remaining physical-device checks
+
+After the owner authenticates and a genuine signed app build is available, obtain permission to use a temporary test schedule/destination, preserve the existing configuration, and verify:
+
+1. A profile-only schedule survives relaunch before its first fire time; no export starts early.
+2. With notifications allowed, the fallback appears near fire time +60 seconds when background execution does not complete the export. Include locked-device and denied-permission cases; silent pushes remain best-effort.
+3. Opening after a missed occurrence runs its frozen dates once; a failed drain preserves its recovery notification without an immediate second attempt.
+4. Repeated app-open/re-arm and simultaneous profiles/legacy scheduling preserve pending identity and do not duplicate completed exports.
+5. Restore the original test configuration and confirm unrelated schedules, history, destinations and credentials remain intact.
+
 ## GitHub Issue Response Checklist
 
 Posted response: https://github.com/CodyBontecou/health-md/issues/46#issuecomment-4479081773
