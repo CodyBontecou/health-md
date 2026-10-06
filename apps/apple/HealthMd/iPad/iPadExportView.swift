@@ -32,6 +32,9 @@ struct iPadExportView: View {
     @State private var showPreview = false
     @State private var showFormatHelp = false
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
+    @State private var isResolvingAllTimeRange = false
+    @State private var resumeExportTapWhenAllTimeResolves = false
+    @State private var allTimeResolutionError: String?
 
     private var headerActions: some View {
         HStack(spacing: Spacing.s2) {
@@ -285,6 +288,11 @@ struct iPadExportView: View {
                 // MARK: - Health Data
                 VStack(alignment: .leading, spacing: Spacing.s3) {
                     iPadBrandLabel("Health Data")
+
+                    HealthHistoryAuthorizationWarning(
+                        assessment: healthKitManager.historyAuthorizationAssessment,
+                        onReviewPermissions: { showHealthPermissionsGuide = true }
+                    )
 
                     HStack(spacing: Spacing.s3) {
                         Image(systemName: "list.bullet.rectangle")
@@ -718,6 +726,13 @@ struct iPadExportView: View {
         .iPadPageBackground()
         .navigationTitle("Export")
         .iPadHiddenSystemNavigationTitle()
+        .task(id: historyAssessmentScopeID) {
+            guard healthKitManager.isAuthorized else { return }
+            _ = await healthKitManager.assessHistoryAuthorization(
+                forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+                publish: true
+            )
+        }
         .sheet(isPresented: $showMetricSelection) {
             iPadMetricSelectionView(
                 selectionState: advancedSettings.metricSelection,
@@ -794,6 +809,12 @@ struct iPadExportView: View {
             ]
         )
         .geistDialog(
+            isPresented: isPresentingAllTimeResolutionError,
+            title: Text("All Time Unavailable"),
+            message: Text(allTimeResolutionError ?? ""),
+            actions: [.action("Done", role: .secondary)]
+        )
+        .geistDialog(
             isPresented: $showHealthPermissionsGuide,
             title: Text("Adjust Health Permissions"),
             message: Text("To change which health data Health.md can access:\n\n1. Tap \"Open Health App\"\n2. Tap your profile icon (top right)\n3. Tap \"Apps\"\n4. Select \"Health.md\"\n5. Toggle permissions on or off"),
@@ -861,9 +882,17 @@ struct iPadExportView: View {
     /// Scheduled, shortcut, CLI, preview, and programmatic paths never pass
     /// through this handler.
     private func handleExportButtonTapped() {
+        if dateRangePreset == .allTime {
+            resolveAllTimeRange(exportWhenResolved: true)
+            return
+        }
+        confirmExportScale(for: ExportDateRange(startDate: startDate, endDate: endDate))
+    }
+
+    private func confirmExportScale(for range: ExportDateRange) {
         let verdict = ExportScaleGuard.verdict(
-            startDate: startDate,
-            endDate: endDate,
+            startDate: range.startDate,
+            endDate: range.endDate,
             granularDataEnabled: advancedSettings.effectiveDetailPolicy
                 .includesCanonicalArchive,
             formatCount: advancedSettings.exportFormats.count,
@@ -971,38 +1000,78 @@ struct iPadExportView: View {
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
+        resumeExportTapWhenAllTimeResolves = false
+        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            Task {
-                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
-                await MainActor.run {
-                    guard dateRangePreset == .allTime else { return }
-                    applyResolvedDateRange(
-                        for: .allTime,
-                        allTimeStartDate: earliestDate,
-                        allTimeEndDate: Date()
-                    )
-                }
-            }
+            resolveAllTimeRange(exportWhenResolved: false)
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
     }
 
-    private func applyResolvedDateRange(
-        for preset: ExportDateRangePreset,
-        allTimeStartDate: Date? = nil,
-        allTimeEndDate: Date? = nil
-    ) {
+    private var historyAssessmentScopeID: String {
+        "\(healthKitManager.isAuthorized):" + advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
+    }
+
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func resolveAllTimeRange(exportWhenResolved: Bool) {
+        resumeExportTapWhenAllTimeResolves = resumeExportTapWhenAllTimeResolves || exportWhenResolved
+        guard !isResolvingAllTimeRange else { return }
+        isResolvingAllTimeRange = true
+        let request = nativeExportDateRangeRequest
+        Task { @MainActor in
+            defer {
+                isResolvingAllTimeRange = false
+                resumeExportTapWhenAllTimeResolves = false
+            }
+            do {
+                let range = try await NativeExportDateRangeResolver.resolve(
+                    request,
+                    using: healthKitManager,
+                    currentRequest: { nativeExportDateRangeRequest }
+                )
+                if !exportWhenResolved {
+                    guard configurationProtection.performConfigurationChange({
+                        startDate = range.startDate
+                        endDate = range.endDate
+                    }) else { return }
+                }
+                if resumeExportTapWhenAllTimeResolves {
+                    confirmExportScale(for: range)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard dateRangePreset == .allTime else { return }
+                allTimeResolutionError = error.localizedDescription
+            }
+        }
+    }
+
+    private var isPresentingAllTimeResolutionError: Binding<Bool> {
+        Binding(
+            get: { allTimeResolutionError != nil },
+            set: { if !$0 { allTimeResolutionError = nil } }
+        )
+    }
+
+    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
         let range = preset.resolvedRange(
-            currentStartDate: startDate,
-            currentEndDate: endDate,
-            allTimeStartDate: allTimeStartDate,
-            allTimeEndDate: allTimeEndDate
-        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )

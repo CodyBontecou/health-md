@@ -385,7 +385,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         assertEquals(sampleEntry(), state.value.rows.single().entry)
 
         compose.runOnIdle { protected.value = true }
-        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        // Protected content is hidden from merged accessibility semantics; use
+        // the child's geometry to exercise the production pointer-blocking overlay.
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true)
+            .scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
+            .performTouchInput { click() }
         compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertDoesNotExist()
         assertEquals(listOf("blocked"), actions)
         compose.runOnIdle { protected.value = false }

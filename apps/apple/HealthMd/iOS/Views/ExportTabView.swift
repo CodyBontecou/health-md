@@ -61,6 +61,7 @@ struct ExportTabView: View {
     @State private var pendingLargeExportConfirmation: ExportScaleGuard.Scale?
     @State private var isResolvingAllTimeRange = false
     @State private var resumeExportTapWhenAllTimeResolves = false
+    @State private var allTimeResolutionError: String?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -183,6 +184,12 @@ struct ExportTabView: View {
                     onExportTapped()
                 }
             ]
+        )
+        .geistDialog(
+            isPresented: isPresentingAllTimeResolutionError,
+            title: Text("All Time Unavailable"),
+            message: Text(allTimeResolutionError ?? ""),
+            actions: [.action("Done", role: .secondary)]
         )
         .geistDialog(
             isPresented: $showRollupHelp,
@@ -483,54 +490,76 @@ struct ExportTabView: View {
 
     private func selectDateRangePreset(_ preset: ExportDateRangePreset) {
         dateRangePreset = preset
+        resumeExportTapWhenAllTimeResolves = false
+        allTimeResolutionError = nil
 
         switch preset {
         case .custom:
             return
         case .allTime:
-            Task {
-                isResolvingAllTimeRange = true
-                let earliestDate = await healthKitManager.findEarliestHealthDataDate()
-                await MainActor.run {
-                    isResolvingAllTimeRange = false
-                    // A tap deferred while this resolution was in flight must be
-                    // judged against the resolved range, whether or not the user
-                    // has since switched presets.
-                    let resumeExportTap = resumeExportTapWhenAllTimeResolves
-                    resumeExportTapWhenAllTimeResolves = false
-                    guard dateRangePreset == .allTime else {
-                        if resumeExportTap { handleExportButtonTapped() }
-                        return
-                    }
-                    configurationProtection.performConfigurationChange {
-                        guard dateRangePreset == .allTime else { return }
-                        applyResolvedDateRange(
-                            for: .allTime,
-                            allTimeStartDate: earliestDate,
-                            allTimeEndDate: Date()
-                        )
-                    }
-                    if resumeExportTap {
-                        handleExportButtonTapped()
-                    }
-                }
-            }
+            resolveAllTimeRange(exportWhenResolved: false)
         case .today, .yesterday:
             applyResolvedDateRange(for: preset)
         }
     }
 
-    private func applyResolvedDateRange(
-        for preset: ExportDateRangePreset,
-        allTimeStartDate: Date? = nil,
-        allTimeEndDate: Date? = nil
-    ) {
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func resolveAllTimeRange(exportWhenResolved: Bool) {
+        resumeExportTapWhenAllTimeResolves = resumeExportTapWhenAllTimeResolves || exportWhenResolved
+        guard !isResolvingAllTimeRange else { return }
+        // Set before launching the task so an immediate Export tap cannot use
+        // the previous dates. Every tap rechecks permissions and selected scope.
+        isResolvingAllTimeRange = true
+        let request = nativeExportDateRangeRequest
+        Task { @MainActor in
+            defer {
+                isResolvingAllTimeRange = false
+                resumeExportTapWhenAllTimeResolves = false
+            }
+            do {
+                let range = try await NativeExportDateRangeResolver.resolve(
+                    request,
+                    using: healthKitManager,
+                    currentRequest: { nativeExportDateRangeRequest }
+                )
+                if !exportWhenResolved {
+                    guard configurationProtection.performConfigurationChange({
+                        startDate = range.startDate
+                        endDate = range.endDate
+                    }) else { return }
+                }
+                if resumeExportTapWhenAllTimeResolves {
+                    confirmExportScale(for: range)
+                }
+            } catch is CancellationError {
+                return
+            } catch {
+                guard dateRangePreset == .allTime else { return }
+                allTimeResolutionError = error.localizedDescription
+            }
+        }
+    }
+
+    private var isPresentingAllTimeResolutionError: Binding<Bool> {
+        Binding(
+            get: { allTimeResolutionError != nil },
+            set: { if !$0 { allTimeResolutionError = nil } }
+        )
+    }
+
+    private func applyResolvedDateRange(for preset: ExportDateRangePreset) {
         let range = preset.resolvedRange(
-            currentStartDate: startDate,
-            currentEndDate: endDate,
-            allTimeStartDate: allTimeStartDate,
-            allTimeEndDate: allTimeEndDate
-        ) ?? ExportDateRangePreset.today.resolvedRange(
             currentStartDate: startDate,
             currentEndDate: endDate
         )
@@ -556,36 +585,14 @@ struct ExportTabView: View {
     // MARK: - Health Data
 
     private var historyAssessmentScopeID: String {
-        advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
+        "\(healthKitManager.isAuthorized):" + advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
     }
 
-    @ViewBuilder
     private var historyAuthorizationWarning: some View {
-        let assessment = healthKitManager.historyAuthorizationAssessment
-        if !assessment.supportsUnqualifiedFullHistoryClaim {
-            let isLimited = assessment.state == .limitedHistory
-            HStack(alignment: .top, spacing: Spacing.s3) {
-                Image(systemName: "calendar.badge.exclamationmark")
-                    .foregroundStyle(Color.warning)
-                    .accessibilityHidden(true)
-                VStack(alignment: .leading, spacing: Spacing.s1) {
-                    Text(isLimited ? "Apple Health history is limited" : "Full Apple Health history is unverified")
-                        .font(.subheadline.weight(.semibold))
-                    Text(isLimited
-                         ? "Earlier data is unknown, not absent. All Time and all-available automation require full history access."
-                         : "All Time and all-available automation require an OS 27+ assessment that covers every selected metric. Use an explicit date range until then.")
-                        .font(.footnote)
-                        .foregroundStyle(Color.textSecondary)
-                    Button("Review Health permissions") {
-                        showHealthPermissionsGuide = true
-                    }
-                    .font(.footnote.weight(.semibold))
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, Spacing.s3)
-            .accessibilityElement(children: .combine)
-        }
+        HealthHistoryAuthorizationWarning(
+            assessment: healthKitManager.historyAuthorizationAssessment,
+            onReviewPermissions: { showHealthPermissionsGuide = true }
+        )
     }
 
     private var healthDataSection: some View {
@@ -1133,17 +1140,17 @@ struct ExportTabView: View {
     /// could start it unconfirmed. Scheduled, shortcut, CLI, preview, and
     /// programmatic export paths never pass through this handler.
     private func handleExportButtonTapped() {
-        // All Time resolution updates startDate/endDate asynchronously; a tap
-        // during that window is judged against the resolved range, never the
-        // stale one it is about to replace.
-        if isResolvingAllTimeRange {
-            resumeExportTapWhenAllTimeResolves = true
+        if dateRangePreset == .allTime {
+            resolveAllTimeRange(exportWhenResolved: true)
             return
         }
+        confirmExportScale(for: ExportDateRange(startDate: startDate, endDate: endDate))
+    }
 
+    private func confirmExportScale(for range: ExportDateRange) {
         let verdict = ExportScaleGuard.verdict(
-            startDate: startDate,
-            endDate: endDate,
+            startDate: range.startDate,
+            endDate: range.endDate,
             granularDataEnabled: advancedSettings.effectiveDetailPolicy
                 .includesCanonicalArchive,
             formatCount: advancedSettings.exportFormats.count,

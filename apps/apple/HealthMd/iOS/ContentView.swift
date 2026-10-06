@@ -762,17 +762,11 @@ struct ContentView: View {
 
         hasResolvedAllTimeRangeThisLaunch = true
 
-        guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
-            return
-        }
-
-        guard dateRangePreset == .allTime,
-              let range = ExportDateRangePreset.allTime.resolvedRange(
-                currentStartDate: startDate,
-                currentEndDate: endDate,
-                allTimeStartDate: earliestDate,
-                allTimeEndDate: Date()
-              ) else {
+        guard let range = try? await NativeExportDateRangeResolver.resolve(
+            nativeExportDateRangeRequest,
+            using: healthKitManager,
+            currentRequest: { nativeExportDateRangeRequest }
+        ) else {
             return
         }
 
@@ -1364,6 +1358,7 @@ struct ContentView: View {
         // Durable work outlives this view and even the app process. Repeated
         // taps should focus that immutable export, not create a competing job.
         if restoreInteractiveCorpusExportIfNeeded() { return }
+        guard !isExporting else { return }
 
         dismissStatus()
 
@@ -1522,7 +1517,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
+            guard let dateRange = await effectiveExportDateRange() else { return }
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1672,7 +1667,7 @@ struct ContentView: View {
                 exportTask = nil
             }
 
-            let dateRange = effectiveExportDateRange()
+            guard let dateRange = await effectiveExportDateRange() else { return }
             startDate = dateRange.startDate
             endDate = dateRange.endDate
             let frozenTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
@@ -1806,6 +1801,16 @@ struct ContentView: View {
         statusDismissTimer?.invalidate()
 
         exportTask = Task {
+            guard let dateRange = await effectiveExportDateRange() else {
+                if Task.isCancelled {
+                    finishMacExportPreparationStopped(jobID: jobID, message: exportStatusMessage)
+                } else {
+                    finishMacExportPreparationFailed(jobID: jobID, message: exportStatusMessage)
+                }
+                return
+            }
+            startDate = dateRange.startDate
+            endDate = dateRange.endDate
             externalIntegrationManager.beginExportAction()
             defer { externalIntegrationManager.endExportAction() }
             do {
@@ -2839,8 +2844,32 @@ struct ContentView: View {
         }
     }
 
-    private func effectiveExportDateRange() -> (startDate: Date, endDate: Date) {
-        (startDate, endDate)
+    private var nativeExportDateRangeRequest: NativeExportDateRangeResolver.Request {
+        NativeExportDateRangeResolver.Request(
+            selection: ExportDateRangeSelection(
+                preset: dateRangePreset,
+                startDate: startDate,
+                endDate: endDate
+            ),
+            enabledMetricIDs: advancedSettings.metricSelection.enabledMetrics,
+            timeZone: advancedSettings.exportTimeZoneOverride ?? .current
+        )
+    }
+
+    private func effectiveExportDateRange() async -> ExportDateRange? {
+        do {
+            return try await NativeExportDateRangeResolver.resolve(
+                nativeExportDateRangeRequest,
+                using: healthKitManager,
+                currentRequest: { nativeExportDateRangeRequest }
+            )
+        } catch is CancellationError {
+            exportStatusMessage = String(localized: "Export cancelled")
+            recordManualExportStatus(exportStatusMessage, kind: .cancelled)
+        } catch {
+            presentExportConfigurationError(error.localizedDescription)
+        }
+        return nil
     }
 }
 
