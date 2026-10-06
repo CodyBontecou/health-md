@@ -297,11 +297,7 @@ object DirectClient {
         val packet = DirectPacketConnection.connect(host, port, timeoutMillis)
         try {
             val normalizedCode = pairingCode.orEmpty().filter { it in '0'..'9' }
-            // Sample caller-owned credential defensively BEFORE delaying transport/crypto work.
-            // Stable deployed inputs/transcripts are unchanged; later caller mutation cannot retarget it.
-            val reconnect = if (normalizedCode.isEmpty()) trustedListener?.let {
-                it.copy(reconnectSecret = it.reconnectSecret.copyOf())
-            } else null
+            val reconnect = if (normalizedCode.isEmpty()) trustedListener else null
             require(normalizedCode.length == 20 || reconnect != null) {
                 "Enter the shared 20-digit pairing code shown by the healthmd CLI."
             }
@@ -426,6 +422,8 @@ object DirectClient {
                 ).also { channel ->
                     // All original selector2/3, identity, sealed32byte credential, reconnect
                     // equality and server-proof checks above succeeded on this exact packet path.
+                    // Fingerprint the privately decoded VERIFIED response, not caller-owned bytes;
+                    // preserve all legacy caller-input reads and acceptance/rejection behavior.
                     synchronized(authentications) {
                         authentications[channel] = VerifiedSession(channel, installationId,
                             listener.installationId, reconnectSecret)

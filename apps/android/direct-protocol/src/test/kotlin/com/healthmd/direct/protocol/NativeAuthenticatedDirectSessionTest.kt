@@ -21,11 +21,11 @@ class NativeAuthenticatedDirectSessionTest {
             val client = server.connect()
             client.channel.use { channel ->
                 val proof = requireNotNull(channel.nativeAuthenticatedSession())
+                client.listener.reconnectSecret.fill(0) // Caller receives no mutable backing fingerprint.
                 assertTrue(proof.matches(channel, SOURCE, HOST, SECRET))
                 channel.sendNegotiationHello(SOURCE)
                 assertEquals(HOST, channel.receiveNegotiationHello().installationId)
                 assertEquals("NativeAuthenticatedDirectSession(redacted)", proof.toString())
-                assertFalse(proof is java.io.Serializable)
                 assertFalse(proof is java.io.Serializable)
             }
             server.await()
@@ -60,16 +60,14 @@ class NativeAuthenticatedDirectSessionTest {
     }
 
     @Test
-    fun callerCredentialMutationDuringHandshakeCannotRetargetVerifiedOriginal() {
+    fun callerCredentialMutationPreservesLegacyHandshakeRejectionAndCannotEmitProvenance() {
         val callerSecret = SECRET.copyOf()
-        SyntheticSessionListener(beforeResponse = { callerSecret.fill(0) }).use { server ->
-            val client = server.connect(trustedSecret = callerSecret)
-            client.channel.use { channel ->
-                val proof = requireNotNull(channel.nativeAuthenticatedSession())
-                assertTrue(proof.matches(channel, SOURCE, HOST, SECRET))
-                assertFalse(proof.matches(channel, SOURCE, HOST, callerSecret))
-                channel.sendNegotiationHello(SOURCE); channel.receiveNegotiationHello()
-            }
+        SyntheticSessionListener(fault = "caller-mutated", beforeResponse = { callerSecret.fill(0) }).use { server ->
+            val result = runCatching { server.connect(trustedSecret = callerSecret) }
+            result.getOrNull()?.channel?.close() // Control cleanup only, never a new production close.
+            val failure = result.exceptionOrNull()
+            assertTrue(failure is IllegalArgumentException)
+            assertEquals("The paired CLI credential changed.", failure?.message)
             server.await()
         }
     }
