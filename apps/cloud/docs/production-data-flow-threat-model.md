@@ -1,6 +1,8 @@
 # Multi-user production data flow and threat model
 
-Status: proposed review artifact; no production resources or approvals. Scope: the future service in ADR-0008, excluding the isolated VM pilot and deferred production MCP.
+Status: proposed review artifact; no production resources or approvals. Scope: the original future-service proposal in ADR-0008, excluding the isolated VM pilot and then-deferred production MCP.
+
+**Scope review required:** the [design interview](production-design-interview.md) selects public self-service, essential MCP/backend decryption, shared until-revoked/future-upload All grants with grandfathered limits, three factual tasks, consumer Muse/adapters, passkeys/recovery codes, self-attestation, proven typed semantics, conditional provider consent and owner operations. Q35–Q56 add decimal monthly/annual **1 GB/50 GB/100 GB/1 TB** tiers, original-byte accounting, **10 GB lifetime-linked capacity/no general free tier**, required native checkout/optional-web launch, paid Cloud exports without a second lifetime purchase and iOS/Play enrollment. Generic authorized F-Droid API access is permitted without first-class integration. Q48–Q53 select verified paid-expiry clock, 30-day archive-grace downloads/existing MCP, days 0/7/21/29 email plus persistent warnings, service-warning-failure holds and archive-only primary erasure with old grants revoked/minimal account state retained. Q50 requires prior deliberate reduction, not still-paid automatic retirement; Q46–Q47 require bounded within-allowance JSON-only large exports, with schema families pending. Eligibility/binding/stacking/continuation, trials/prices and external-store/deletion details remain open. **Q56 removes the $100 spending envelope; assumed profitability does not waive finite-resource safeguards or authorize spending.** Extend review to forged/replayed lifetime proofs, legitimate family-member distinction, duplicate claims, external tier changes, free-benefit loss/uncertainty, deliberate reduction/quota release, stale billing erasure, warning/renewal/read races, retained-copy resurrection, chunk tamper/quota bypass, whole-artifact memory, frozen-account binding and cross-channel double charges. [Checked facts](native-subscription-and-large-export-research.md) are not approval. D1 history is acceptable subject to US/copy/deletion review; **no Health.md backups or archive/key-recovery promise** is selected. Keep platform restrictions, future-secret leak risk, tenant/read-only isolation, permanent loss and verified US boundaries. Earlier flows do not cover this MVP; reconcile after overall design confirmation with no deployment/recovery/zero-knowledge/security approval. External agent/model providers remain separately disclosed.
 
 ## Data classes
 
@@ -118,7 +120,7 @@ No analytics, session replay, advertising, third-party browser asset, public obj
 
 ## Cost and capacity model
 
-Use current provider quotes at approval time; do not copy volatile prices into architecture. For cohort `A` accounts:
+This model belongs to the earlier proposal; its fixed-budget recommendations are not a current MVP ceiling. Q56 withdraws Q29/Q37's $100 spending envelope. Monitor actual finite resources/usage, store fees and service obligations without treating the owner's profitability assumption as proof or permission to spend. Use current provider quotes at approval time; do not copy volatile prices into architecture. For cohort `A` accounts:
 
 - retained object bytes = `A × average retained bytes/account` (bounded by quota, not assumed fully used);
 - monthly R2 writes = uploads + deletion/reconciliation/rotation object operations;
