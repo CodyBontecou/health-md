@@ -33,9 +33,6 @@ Play listing manually in Play Console under Monetize → Products → In-app
 products, and update the documented price in
 `app/src/play/java/com/healthmd/data/billing/BillingRepositoryImpl.kt`.
 
-Pending as of 2026-09-17: raise `health_md_premium_lifetime` from USD 9.99 to
-USD 19.99 to match the iOS change made the same day.
-
 Completed 2026-09-17: `health_md_premium_lifetime` raised from USD 9.99 to
 USD 19.99 in Play Console, matching the iOS individual lifetime price.
 

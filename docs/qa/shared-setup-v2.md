@@ -5,7 +5,11 @@
 - Worktree: `/private/tmp/healthmd-c3-contract-manifest`
 - Reconciled: 2026-09-05 from `shared-setup-v2/c4-docs-capability-ci` (worktree `/private/tmp/healthmd-c4-docs-capability-ci`) after cycle 3 landed the native scenario suites and the production seams on main; see the [cycle-4 amendment](#cycle-4-amendment-2026-09-05) below. The original receipt tables above are retained unchanged as dated history.
 
-## Status: deferred — not default
+## Current status and historical receipts
+
+Current contract/writer state is v2-only under [ADR-0006](../architecture/adr-0006-shared-setup-v2-only-contract.md), as recorded in the [cycle-10 amendment](#cycle-10-amendment-2026-09-05). Availability remains deferred/planned, and the physical-device matrix remains unexecuted. The following status and receipt sections describe their dated pre-sunset trees, not current default writers or release qualification.
+
+## Historical status before the cycle-10 sunset: deferred — not default
 
 `healthmd.shared_setup` remains **version 2, status `deferred`**. This record makes **no enablement and no default-writer claims**:
 

@@ -1,6 +1,6 @@
 # APNs Scheduling Preflight
 
-Health.md scheduled exports depend on production APNs silent pushes. ISO-154 adds a repo-level guard so iOS releases fail before App Store submission if the APNs entitlement or scheduling bridge is misconfigured.
+Scheduled exports use a production APNs silent-push bridge alongside local recovery paths. The repo-level guard blocks iOS release submission when its entitlement or scheduling bridge is misconfigured; it does not prove push delivery. Run local commands from `apps/apple`.
 
 ## Local commands
 
@@ -19,12 +19,12 @@ make check-apns-scheduling
 Run the focused XCTest source/config guard:
 
 ```bash
-xcodebuild test \
-  -project HealthMd.xcodeproj \
-  -scheme HealthMd-Tests-macOS \
-  -destination 'platform=macOS,arch=$(uname -m)' \
+make prepare-healthmd-core-rust
+xcodebuild test -project HealthMd.xcodeproj -scheme HealthMd-Tests-macOS \
+  -destination "platform=macOS,arch=$(uname -m)" \
   -only-testing:HealthMdTests/APNsSchedulingPreflightTests \
-  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
+  CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
+  DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 ```
 
 ## What the guard checks
@@ -52,4 +52,4 @@ The command above should fail before any release upload or App Store Connect sub
 
 ## Release wiring
 
-`.github/workflows/release-ios.yml` runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc review submit`, so GitHub Release-triggered iOS deployments are blocked if the repo configuration regresses.
+[The iOS release workflow](../../../../.github/workflows/release-ios.yml) runs `scripts/check-apns-scheduling-preflight.sh` before archiving and before `asc review submissions-submit`, so release submission is blocked if the repo configuration regresses.

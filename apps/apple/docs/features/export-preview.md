@@ -25,14 +25,14 @@ Preview is for shape and diagnostics, not a completeness census. Lossless JSON/C
 1. Open Health.md.
 2. Go to **Export**.
 3. Configure date range, metrics, formats, Lossless Health Records, and output settings.
-4. Choose **iPhone Folder** or **Connected Mac** as the target.
+4. Choose **iPhone Folder**, **Connected Mac**, or **API Endpoint** as the target. API preview prepares payloads without uploading them.
 5. Tap **Preview** in the bottom export bar.
 5. Tap a listed file to inspect its rendered contents.
 
 ## Prerequisites
 
 - HealthKit permission granted.
-- At least one export format selected.
+- At least one export format selected, unless using Daily Notes Only with a file destination.
 - Health data available for at least one date in the selected range.
 - A folder selection is useful for local iPhone path preview; Connected Mac preview can still show the Mac destination when the Mac reports readiness. Preview itself does not write files.
 
@@ -77,18 +77,18 @@ If both Markdown and Obsidian Bases are enabled, the Bases file uses a suffix to
 
 Export Preview currently:
 
-- renders up to 5 dates;
+- renders up to 5 dates without canonical archive capture, or 1 date with Lossless Health Records on;
 - attempts to fetch up to 14 recent dates from the selected range;
 - walks newest to oldest;
 - skips dates with no health data;
 - does not write files or send Mac export jobs;
-- renders weekly/monthly/yearly roll-up summary files for the previewed days when roll-up periods are enabled; full exports refresh the complete touched roll-up windows;
+- renders enabled calendar and Range summaries from sampled daily snapshots when supplemental preview is available; a Range summary retains its requested bounds, and sampled coverage is not final-export coverage;
 - in summary-only mode, shows the roll-up summary files without daily file rows;
-- hints at daily-note injection and individual entry tracking instead of rendering every side-effect file;
+- renders daily-note injection and individual-entry content in standard preview; Connected Mac daily-note preview starts from an empty document because existing remote note bytes are unavailable;
 - may truncate the middle of very large lossless content while preserving a head/tail preview and original/omitted byte counts;
 - applies a rough text-heavy DEFLATE projection when **Zip Export Files** is on; per-entry ZIP overhead and incompressible expansion mean the displayed size is not exact.
 
-The full export still runs on every selected date and queries the complete touched roll-up windows when roll-up summaries are enabled. In summary-only mode, the daily records are used as source snapshots only and are not written.
+The full export processes selected dates and the complete touched calendar roll-up windows. A Range summary uses the frozen requested bounds, with failed dates reducing coverage rather than shrinking the range. In summary-only mode, the daily records are used as source snapshots only and are not written.
 
 ## Tips
 

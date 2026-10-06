@@ -55,6 +55,8 @@ make test-website
 
 See each component's README and `AGENTS.md` for platform-specific setup and release instructions.
 
+For a read-only Markdown inventory, run `python3 scripts/audit-markdown.py`. JSON/CSV reports go to ignored `.pi/markdown-audit/` and include ownership categories, inferred backlinks, identical files, and missing local links. These are investigation signals, not deletion recommendations. The scanner's tests run with `python3 -m unittest discover -s scripts/tests -p 'test_audit_markdown.py'`.
+
 ## Cross-platform product policy
 
 Health.md keeps Apple and Android unified whenever their operating systems expose semantically compatible capabilities. Shared features should align user outcomes, terminology, settings semantics, public IDs, units, reducers, missingness, provenance, completeness, and automation behavior. Native UI and implementation may follow platform conventions.
@@ -63,7 +65,7 @@ When the operating systems differ, Health.md represents that difference explicit
 
 The governing workflow and definition of done are in [`docs/architecture/cross-platform-unification-policy.md`](docs/architecture/cross-platform-unification-policy.md).
 
-The product-wide feature baseline lives in [`docs/features/feature-inventory.md`](docs/features/feature-inventory.md): every feature across Apple, Android, CLI, core, contracts, practice, wake, and website surfaces, with source evidence, per-feature documentation status, and the gap list used to manage documentation. Update it when adding a feature. Per-capability Apple↔Android pairings and honest parity classifications live in [`docs/features/feature-parity.md`](docs/features/feature-parity.md).
+The [`documentation map`](docs/features/feature-inventory.md) points to canonical guides, contracts, and source owners rather than maintaining a second feature/status database. Per-capability Apple↔Android rationale and pairings live in [`docs/features/feature-parity.md`](docs/features/feature-parity.md); machine-readable capability classifications live in [`packages/contracts/product-capabilities.json`](packages/contracts/product-capabilities.json).
 
 ## Public contracts
 

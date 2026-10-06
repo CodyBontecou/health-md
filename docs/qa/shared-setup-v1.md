@@ -1,5 +1,7 @@
 # Share My Setup v1 QA record
 
+Historical evidence only: [ADR-0006](../architecture/adr-0006-shared-setup-v2-only-contract.md) removed the unreleased v1 contract and readers. These receipts do not qualify current behavior or authorize execution of the old matrix. Current acceptance work belongs to the [v2 QA record](shared-setup-v2.md).
+
 Date: 2026-08-14  
 Branch: `feature/shared-setup-v1`  
 Worktree: `/Users/codybontecou/dev/health-md-shared-setup`

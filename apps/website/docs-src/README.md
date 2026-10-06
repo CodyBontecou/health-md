@@ -21,25 +21,27 @@ are mapped in `../i18n/locales.mjs`. A translated guide must use those configure
 onboarding fallback must be declared explicitly. The authentic onboarding foreground and the shared
 setup-required reference remain English in the current app; their translated captions say so.
 
-The complete Apple Health export reference is owned by the app repository at `../app/docs/reference/`. Do not hand-edit the synchronized files under:
+The complete Apple Health export reference is owned by [`apps/apple/docs/reference/`](../../apple/docs/reference/index.md) in this monorepo. Do not hand-edit the synchronized files under:
 
 - `src/content/docs/reference/`
 - `public/reference/generated/`
 - `reference-source.json`
 
-Update that publication snapshot from the website repository root:
+Update that publication snapshot from `apps/website`. Source discovery defaults to the sibling `apps/apple` component:
 
 ```bash
-npm run reference:sync -- --source /absolute/path/to/health-md/app
-npm run reference:check -- --source /absolute/path/to/health-md/app
+npm run reference:sync
+npm run reference:check
 npm run reference:verify
 ```
+
+Use `-- --source /absolute/path/to/health-md/apps/apple` with the sync/check commands, or set `HEALTHMD_APP_ROOT`, only when checking another source checkout.
 
 The sync script transforms reference prose into Starlight pages, copies all generated fixtures byte-for-byte, verifies JSON and generator manifests, rewrites local links, and records source provenance and SHA-256 hashes. Production builds run `reference:verify`; they never fetch or silently import a newer app contract.
 
 ## Commands
 
-From `website/`:
+From `apps/website`:
 
 ```bash
 npm run docs:install

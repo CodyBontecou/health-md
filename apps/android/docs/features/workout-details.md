@@ -1,6 +1,6 @@
 # Android Workout Detail Exports
 
-Android enriches `WorkoutData` from Health Connect exercise sessions instead of exporting only type/start/duration. The JSON schema remains additive/backward-compatible: older consumers can ignore the newer keys.
+Android enriches `WorkoutData` from Health Connect exercise sessions instead of exporting only type/start/duration. Optional workout details preserve sparse-data compatibility. Shipped Android frozen v4 and analytical v5 profile bytes must not be changed in place; future contract changes require review and versioning rather than assuming every consumer ignores new keys.
 
 ## Exported when Health Connect provides matching data
 
@@ -15,7 +15,7 @@ Android enriches `WorkoutData` from Health Connect exercise sessions instead of 
 - Laps from `ExerciseSessionRecord.laps`, including duration and distance when available.
 - Splits derived from route distance when route points are available; otherwise lap-backed splits are emitted from Health Connect laps.
 - Segments/repetitions from `ExerciseSessionRecord.segments`.
-- Route access status (`data`, `consent_required`, or `no_data`) for every workout. Route points are exported only with granular data enabled.
+- Route access status (`data`, `consent_required`, or `no_data`) is tracked for every workout; JSON emits `routeAccess` when Android-native fields are enabled. Route points are exported only with granular data enabled.
 - Routes granted through Health Connect's per-session consent flow during an interactive export run: a session reported `ConsentRequired` whose route the user granted is exported with route access `data` and its full route points, splits, and elevation fallbacks exactly like a natively returned route. Denied or skipped sessions keep `consent_required`.
 - Stable metadata from `ExerciseSessionRecord.metadata` such as Health Connect id, data-origin package, client record id/version, recording method, device manufacturer/model, title, notes, and planned exercise session id.
 - Granular workout samples in JSON/CSV/individual workout Markdown when granular export is enabled.

@@ -13,11 +13,11 @@ This workspace owns deterministic post-capture semantics and the transport-indep
 
 Apple v8, Android frozen v4, Android analytical v5, and direct protocol v1/v2 are independent shipped contracts. Moving code into this workspace is not permission to alter bytes, schemas, units, meanings, profiles, canonicalization, crypto transcripts, or frames.
 
-The shared core should implement common Apple/Android semantics whenever equivalence is proven, following `docs/architecture/cross-platform-unification-policy.md`. Shared code is not evidence of semantic equivalence: OS-specific and related-but-distinct data keeps explicit profiles, platform extensions, or distinct semantic IDs.
+The shared core should implement common Apple/Android semantics whenever equivalence is proven, following [`docs/architecture/cross-platform-unification-policy.md`](../../docs/architecture/cross-platform-unification-policy.md). Shared code is not evidence of semantic equivalence: OS-specific and related-but-distinct data keeps explicit profiles, platform extensions, or distinct semantic IDs.
 
 Before changing export or protocol behavior:
 
-1. Read `docs/architecture/cross-platform-unification-policy.md`, `apps/apple/docs/features/export-schema.md`, the Android contract docs, and the relevant `packages/contracts` specification.
+1. Read the [unification policy](../../docs/architecture/cross-platform-unification-policy.md), [Apple export schema](../../apps/apple/docs/features/export-schema.md), [Android contract docs](../../apps/android/docs/export-contract/migration-plan.md), and the relevant [shared contract](../contracts/README.md).
 2. Identify all Apple, Android, CLI, website, and external Obsidian consumers.
 3. Classify mappings using the registry's exact equivalence values and decide whether a common schema, platform profile/extension, or protocol version changes.
 4. Preserve historical fixtures; never regenerate them merely to silence a test.

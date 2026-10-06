@@ -162,7 +162,7 @@ Frontmatter key names respect **Format Customization → Frontmatter Fields**, s
 | Daily note not found | Folder or filename pattern does not match your Obsidian daily notes | Check the path preview and align folder/filename settings. |
 | Health.md created a note in the wrong place | Daily Note Injection folder or filename pattern does not match your vault's daily-note setup | Daily Note Injection folder is vault/root-relative; include only the daily-note folder path you want, such as `Daily`. |
 | A metric is missing | Metric disabled or no HealthKit sample exists for that date | Enable it in **Health Metrics** and verify Apple Health has data. |
-| Existing writing disappeared | This should not happen; injection is designed to merge frontmatter/managed sections | Stop exporting and open a GitHub issue with before/after file examples. |
+| Existing writing disappeared | This should not happen; injection is designed to merge frontmatter/managed sections | Stop exporting and open a GitHub issue with synthetic or carefully redacted before/after examples; do not post private daily notes or health exports. |
 | Export reports a Daily Note Injection conflict | The aggregate export path and daily note target are the same `.md` file | Change Output folder/filename or Daily Note Injection folder/filename. Health.md blocks the aggregate write so the daily note is not overwritten. |
 
 ## Video outline

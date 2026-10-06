@@ -20,19 +20,15 @@ applicable shared fixtures before advertising a protocol version.
 
 A mobile device running Health.md is always required to acquire source health data. Local and
 feature-enabled Streamable HTTP typed MCP queries contact a foreground iPhone; complete local MCP can
-also run durable provider-native raw jobs against iPhone or Android. Health.md does not retain a
-remote query corpus. Windows accepts existing local drive-root and UNC destinations, but rejects
+also run durable provider-native raw jobs against iPhone or Android. The portable CLI has no remote typed-query corpus; private durable export/job artifacts have their own retention. Windows accepts existing local drive-root and UNC destinations, but rejects
 verbatim/device namespaces, traversal,
 reserved aliases, alternate data streams, symlinks, junctions, reparse points, and root replacement.
 
 ## Mobile protocol compatibility
 
-| Mobile source | Protocol | Exact tag-SHA counterpart / unqualified compatibility floor | Portable Rust behavior | Public status |
-|---|---|---|---|---|
-| Export-capable iPhone | pairing selector 3 current (1 legacy) / application v1 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | Status, raw, extract, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Query-capable iPhone | pairing selector 3 current (1 legacy) / application v1 + query v3 | iOS 3.3.0 (build 202609032317) / iOS 3.0.3 | V1 plus bounded MCP queries | Connectivity confirmed; full qualification pending |
-| Android | pairing selector 3 current (2 legacy) / application v2 | Android 1.8.2 (31) / Android 1.5.4 (25) | Status, native raw, files, resume, cancel | Connectivity confirmed; full qualification pending |
-| Android typed MCP query | N/A | Not implemented | Query tools require iPhone v3 | Unsupported |
+The [machine-consumed compatibility ledger and its guide](mobile-compatibility.md) own exact mobile builds, unqualified floors, counterpart SHAs, and release evidence; this architecture does not maintain a second build table.
+
+Apple exports use application v1 and optional query v3; Android uses application v2 and does not expose typed queries. Shared pairing selector 3 is separate from those application/query versions. Preserve legacy pairing selectors and frozen transport fixtures.
 
 Physical pairing/connectivity has been owner-confirmed for both mobile sources, but no public
 CLI/mobile pair has completed the full retained qualification matrix yet. Shared pairing selector 3

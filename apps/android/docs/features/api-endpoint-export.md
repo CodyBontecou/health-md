@@ -9,7 +9,7 @@
 
 ## What it does
 
-Instead of (or besides) writing files, Health.md can POST your export to an HTTP(S) endpoint you control. Compatibility mode sends one `healthmd.api_export` JSON envelope; raw mode streams an immutable Raw API Snapshot artifact with checksum headers.
+Instead of writing files to a folder, Health.md can POST your export to an HTTP(S) endpoint you control. Compatibility mode sends `healthmd.api_export` JSON envelopes, potentially in multiple batches; raw mode streams an immutable Raw API Snapshot artifact per provider with checksum headers.
 
 ## Who it is for
 
@@ -42,10 +42,11 @@ Instead of (or besides) writing files, Health.md can POST your export to an HTTP
   "schema": "healthmd.api_export",
   "schema_version": 1,
   "daily_record_schema": "healthmd.health_data",
+  "daily_record_schema_version": 4,
   "exported_at": "2026-07-13T12:00:00Z",
   "source": "android",
   "date_range": { "start": "2026-07-12", "end": "2026-07-13" },
-  "record_count": 1,
+  "record_count": 0,
   "records": [],
   "failed_date_details": []
 }
@@ -55,7 +56,7 @@ Any final `2xx` is success. Raw mode adds `X-HealthMD-Schema`, export-ID, checks
 
 ## Tips
 
-- Put secrets in encrypted request headers, not URL query parameters — the URL is stored in plain app preferences.
+- Put secrets in request headers encrypted at rest, not URL query parameters — the URL is stored in plain app preferences. Prefer HTTPS and trust the entire compatibility-mode redirect chain; custom headers can be forwarded.
 - Credentials live in Android Keystore-backed `EncryptedSharedPreferences`, excluded from backup, logs, history, and WorkManager input; saved header values are never displayed again.
 - Network failures, HTTP 408/429, and `5xx` retry with bounded WorkManager backoff; configuration errors and other `4xx` do not.
 

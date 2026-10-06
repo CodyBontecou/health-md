@@ -1,6 +1,6 @@
 # Physical export performance lab
 
-The physical export lab is a supervised Debug-only environment for repeatedly measuring the production Apple export paths on a real iPhone and Mac. It covers:
+The physical export lab is a supervised Debug-only environment for repeatedly measuring the production Apple export paths on a real iPhone and Mac. Follow the root [verification policy](../../../../AGENTS.md#verification-policy): this runbook requires the current task's explicit physical-device/health-data authorization, even when a private installation enables autonomous mode. It covers:
 
 - standalone Rust CLI strict raw and generated-file exports;
 - local iPhone Files exports;

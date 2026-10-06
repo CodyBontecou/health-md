@@ -23,7 +23,7 @@ Apple and Android should expose the same capability, terminology, settings seman
 
 ## Local Build & Deploy
 
-When building locally, always target the Pixel 7 device:
+For explicitly requested physical-device deployment or QA, target the Pixel 7 device. Follow the root [verification policy](../../AGENTS.md#verification-policy); ordinary builds and host tests do not authorize installation or launch:
 
 - **Device serial:** `2C061FDH200CJN`
 - **ADB path:** `~/Library/Android/sdk/platform-tools/adb`

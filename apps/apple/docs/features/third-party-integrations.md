@@ -164,7 +164,7 @@ The Connected Apps screen explains missing permissions, revoked access, rate lim
 
 ## Rollout configuration
 
-The app callback scheme and broker placeholders are committed, but secrets are not. For a beta/release machine:
+The app callback scheme and broker placeholders are committed, but secrets are not. For a beta/release machine, run the following commands from `apps/apple`:
 
 ```bash
 bash scripts/set-oauth-broker-config.sh \
@@ -201,7 +201,7 @@ Register `healthmd://oauth/callback` exactly in the WHOOP Developer Dashboard an
 5. Force an expired access token, confirm one refresh/retry, and relaunch again to verify the rotated refresh token persisted.
 6. Repeat through Connected Mac file-writing, streaming/corpus recovery, a legacy Mac raw request without `raw_profile`, scheduled export, and API Endpoint v2; typed daily data and sidecars are expected on each supported provider path.
 7. Run strict CLI `--raw` separately and confirm the result contains canonical Apple Health data but no typed or native provider data.
-8. Inspect every typed daily section and sidecar for tokens, URLs, cursors, account identity, or raw error bodies.
+8. Confirm typed daily sections contain no tokens, URLs, cursors, account identity, or raw error bodies. Confirm native sidecars exclude credentials and sensitive cursor parameters while retaining their documented, redacted provider endpoint URLs.
 9. Disconnect, verify WHOOP access revocation, reconnect, and export again.
 
 ## Schema policy

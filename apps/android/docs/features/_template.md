@@ -1,72 +1,25 @@
-# Feature Name
+# Workflow name
 
-## Status
+Use this template only when an existing guide or reference does not cover the audience's task. Keep the useful sections; omit the rest. Link authoritative contracts and generated examples instead of copying catalogs, constants, or field lists. Video planning is optional commissioned work.
 
-- **Docs status:** draft | ready | needs screenshots | needs QA
-- **Video priority:** high | medium | low
-- **Primary screen:** Export | Schedule | History | Settings | Onboarding | Wear OS
-- **Source files:** `app/src/main/java/com/healthmd/...`
+## Purpose and evidence
+
+- **Audience and task:** Who needs this guide and why?
+- **Canonical location:** Is this the guide's owner, or should it link to a public website guide?
+- **Source and tests:** Link the owning implementation and relevant automated coverage. Record any unverified device behavior explicitly.
 
 ## What it does
 
-Describe the feature in one paragraph from the user's point of view.
+Explain the user-visible outcome and any important platform differences. Preserve distinct Health Connect and HealthKit meanings rather than implying parity from similar labels.
 
-## Who it is for
+## Setup and use
 
-- Primary user type
-- Obsidian/health workflow this unlocks
-- When not to use it
+Describe the shortest useful path, prerequisites, permissions, and destination requirements. Include a synthetic usage example or link to the relevant [export contract and fixtures](../export-contract/).
 
-## Where to find it
+## Limitations and troubleshooting
 
-1. Open Health.md.
-2. Go to ...
-3. Configure ...
+Record practical caveats and failure recovery that are not readily apparent from source, including relevant Health Connect, Storage Access Framework, or WorkManager constraints.
 
-## Prerequisites
+## Maintainer rationale
 
-- Health Connect permission granted for the relevant categories
-- Folder/destination selected through the Android folder picker
-- Required export format enabled
-- Any device/OS caveats (Android 9 / API 28 floor)
-
-## Setup
-
-1. Step one.
-2. Step two.
-3. Step three.
-
-## Example output
-
-```markdown
----
-date: 2026-05-12
-steps: 8432
----
-```
-
-## Tips
-
-- Tip 1
-- Tip 2
-
-## Troubleshooting
-
-| Problem | Likely cause | Fix |
-|---|---|---|
-| Example | Cause | Fix |
-
-## Video outline
-
-- **Suggested title:**
-- **Hook:**
-- **Demo flow:**
-  1.
-  2.
-  3.
-- **Key screenshot/recording moments:**
-- **CTA / next video:**
-
-## Implementation notes
-
-Maintainer-only details: source files, known limitations, and test coverage. Note Health Connect / Storage Access Framework / WorkManager specifics here, and any deliberate cross-platform differences from the Apple implementation (never fabricate parity).
+Include only durable decisions, invariants, or gotchas not already owned by a contract or ADR. Keep task progress, test-count snapshots, and session summaries in the tracker or ignored agent state.

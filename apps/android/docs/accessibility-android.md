@@ -65,7 +65,7 @@ The matrix covers 411×720 dp at 100%, 320×480 dp at 130% and 200%, 320×640 dp
 
 Earlier validation on 2026-09-07, **before the selector/editor integration**: Pixel 7 (Android 17), 82/82 instrumentation checks passed (80 matrix checks plus 2 protection regressions); Play debug unit suite, 1,314 passed and 1 skipped; lint passed. Those device results are not a pass for the newer layouts.
 
-The shared `AccessibilityTestHarness` supports five additional production-composable suites. The compiled inventory is:
+The shared `AccessibilityTestHarness` supports five additional production-composable suites. The reported 2026-09-07 compiled inventory was (historical, not an executed result):
 
 | Suite | Methods × displays | Declared cases |
 | --- | --- | --- |
@@ -84,7 +84,7 @@ Current integration validation on 2026-09-07: Play debug app and instrumentation
 
 Local receipts: `/tmp/health-md-fleet-loop/cycle-1/integrated-build-unit-lint.log`, `runner-safety.log` and `device-validation.log`. These temporary files are operator receipts, not permanent CI artifacts.
 
-Run on the local Pixel 7, optionally saving screenshots:
+With explicit device-QA authorization for the current task, run on the local Pixel 7, optionally saving screenshots. First reconcile the runner's case-count expectation with current test declarations:
 
 ```sh
 cd apps/android
@@ -96,7 +96,7 @@ The local runner verifies the selected device before building, assembles app/tes
 
 ### Remaining usability opportunities
 
-- **Device gate:** reconnect the Pixel, run the complete compiled 402-case matrix, investigate failures, and inspect new synthetic 200% captures in both themes before accepting the new layouts.
+- **Device gate:** reconcile the runner and current test inventory, reconnect the Pixel with explicit QA authorization, then run the complete selected matrix, investigate failures, and inspect new synthetic 200% captures in both themes before accepting the new layouts.
 - **Screen reader and keyboard:** follow the [manual QA checklist](accessibility-manual-qa.md) for actual TalkBack traversal, focus, native IME resizing and magnification. Automated semantics/geometry is not a substitute.
 - **Reading pace and discovery:** validate auto-advance timing, scroll discovery and text-only navigation with users. No subjective comfort or reading-pace result is claimed.
 

@@ -9,7 +9,7 @@
 
 ## What it does
 
-Clinician Report turns a date range of your health data into a single, accessible PDF you can hand to a clinician — previewed in-app, rendered on-device, and shared only when you explicitly choose to. It summarizes 11 commonly discussed metrics (blood pressure, heart rates, weight, glucose, oxygen saturation, respiratory rate, body temperature, sleep, steps, and workouts) with honest coverage and missingness disclosure, so "no data" never claims an event did not occur.
+Clinician Report turns a date range of your health data into a single tagged PDF you can hand to a clinician — previewed in-app, rendered on-device, and shared only when you explicitly choose to. It summarizes 11 commonly discussed metrics (blood pressure, heart rates, weight, glucose, oxygen saturation, respiratory rate, body temperature, sleep, steps, and workouts) with honest coverage and missingness disclosure, so "no data" never claims an event did not occur.
 
 ## Who it is for
 
@@ -69,4 +69,4 @@ A multi-page tagged PDF: title/date range, per-metric sections with summary fact
 
 ## Implementation notes
 
-Four-layer architecture (configuration → report data source → normalized model/generator → native PDF renderer); renderer knows nothing about HealthKit. Apple uses Core Graphics tagged-PDF APIs; Android uses PDFBox-Android logical structure. Local-only: no report networking, analytics, export-history entry, or Practice protocol involvement — the footer `healthmd.app/practice` link is informational. Public export schemas are untouched (no version bump). Known V1 limits: glucose is `mg/dL` only; pulse is not joined to blood pressure; Apple denied-read vs empty-query is indistinguishable, so copy says "unavailable to Health.md". Full boundaries, metric rules, and validation status: repository-root `docs/features/clinician-report-v1.md`.
+Four-layer architecture (configuration → report data source → normalized model/generator → native PDF renderer); renderer knows nothing about HealthKit. Apple uses Core Graphics tagged-PDF APIs; Android uses PDFBox-Android logical structure. Accessibility remains a qualification requirement: neither platform claims PDF/UA conformance, and native reading-order and assistive-technology qualification remain pending. Local-only: no report networking, analytics, export-history entry, or Practice protocol involvement — the footer `healthmd.app/practice` link is informational. Public export schemas are untouched (no version bump). Known V1 limits: glucose is `mg/dL` only; pulse is not joined to blood pressure; Apple denied-read vs empty-query is indistinguishable, so copy says "unavailable to Health.md". Full boundaries, metric rules, and validation status: repository-root `docs/features/clinician-report-v1.md`.

@@ -7,7 +7,7 @@ This directory is the upstream review copy for `com.healthmd.android`. The canon
 - [`dependency-license-audit.md`](dependency-license-audit.md) records the production source/dependency and bundled-asset licensing boundary.
 - [`reproducibility.md`](reproducibility.md) documents clean fdroidserver recipe validation and two-build comparison.
 
-The initial recipe targets the next annotated Android release tag, `android/v1.8.1`. It cannot be submitted or called build-proven until that tag exists and points to the committed implementation. Before opening the fdroiddata merge request:
+The initial proposed recipe is pinned to `android/v1.8.1` (version code 30), not necessarily the current app release. The F-Droid owner must decide whether to submit that historical recipe or retarget it; do not substitute current HEAD values. It cannot be submitted or called build-proven until that tag exists and points to the committed implementation. Before opening the fdroiddata merge request:
 
 1. verify that the tag's version name/code equal the recipe;
 2. run the clean F-Droid CI gate and `scripts/verify-fdroid-artifact.sh`;

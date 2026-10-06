@@ -107,7 +107,7 @@ OG images are generated from the real bundled plugin renderer in a headless Chro
 Generate one sample image for review:
 
 ```bash
-cd website
+cd apps/website
 npm run visualizations:og:sample
 ```
 
