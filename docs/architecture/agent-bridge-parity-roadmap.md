@@ -82,6 +82,29 @@ all864 prior entries intact. Observed2026-10-05T15:21:28Z4,809,232KiB/no warning
 no compiler/admission/cleanup/bypass/new lane/build or native/user action. Detailed skill/iPhone
 workflow and other native/client/website mirrors remain separately reviewable; B21in_progress/B22open.
 
+## Single-worktree native-session follow-up (2026-10-06)
+
+The user authorized history/storage consolidation at `e93e48cb`, then confirmed implementation in
+`/Users/codybontecou/dev/health-md-agent-bridge`, branch `work/agent-bridge-consolidated`, without a
+fleet/goal restart. All23 bridge heads remain ancestors; consolidation was not qualification.
+Source `deb4283bcbb3d668338817575a461bf8d3e14742` now pins the first successfully captured Swift peer
+for each accepted native owner. Repeated getters retain the original reader/full pairing snapshot
+and shared terminal checker; observed denial/restoration cannot renew it. Existing invalidation
+clears the cache, and genuinely new authenticated/admitted owners can capture fresh peers.
+Kotlin already implements this policy and remains unchanged.
+
+The preserved actual-handshake/controller-body/reader regression executed a genuine3-assertion red
+at unchanged e93e48cb and passes unchanged after the one-file fix. Clean committed source passes
+121 identical native XCTest methods in each isolation mode, Connectivity85 and contract60/validator;
+repeats are nonadditive, effective SwiftPMdrivers≤2, compilerwarnings0. The final-SDK callback fence
+and all earlier tests remain unchanged. New809-file source evidence index/report and scope audit
+are linked from the [implementation ledger](../qa/agent-bridge-implementation.md#current-consolidated-native-session-increment-2026-10-06).
+These synthetic source seams do not qualify whole services, installed apps, native OS protection or
+rights. Kotlin final lint/APK/bindings remain NOT RUN after historical admission/preparation failures.
+Extension4 remains unwired/unadvertised; native provisioning/consent/configuration/routes/bound
+execution/receipts/recipes/resume and full four-way/physical acceptance remain incomplete.
+B19/B20 remain approval-blocked; no task/capability/release/goal completion is inferred.
+
 ## Product outcome
 
 After initial native permission and pairing setup, a user can ask an authorized agent to select data, plan an export, choose formats and computer paths, execute it, inspect the receipt, change future output settings, and recover interrupted work without routinely navigating mobile settings.
