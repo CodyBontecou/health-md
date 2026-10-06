@@ -169,6 +169,49 @@ class DirectCliCoordinator @Inject constructor(
     private val protocolJson = Json { encodeDefaults = true; explicitNulls = false }
     private val sessionMutex = Mutex()
     @Volatile private var activeChannel: DirectSecureChannel? = null
+    @Volatile private var activeServingScope: ServingScope? = null
+    @Volatile private var acceptedNativeOwner: NativeSessionOwner? = null
+
+    private class ServingScope(val epoch: AgentBridgeExportServingEpoch, val operation: kotlinx.coroutines.Job) {
+        @Volatile var revoked = false
+    }
+    private inner class NativeSessionOwner(override val channel: DirectSecureChannel,
+        override val sourceInstallationId: String, override val hostInstallationId: String,
+        private val serving: ServingScope) : AgentBridgeExportNativeSessionOwner {
+        @Volatile private var revoked = false
+        private var nativePeer: AgentBridgeExportNativeSession? = null
+        private var nativeContext: android.content.Context? = null
+        @Synchronized fun peer(context: android.content.Context): AgentBridgeExportNativeSession {
+            requireCurrent()
+            if (nativePeer == null) {
+                nativePeer = AgentBridgeExportNativeSession.capture(context, this)
+                nativeContext = context
+            }
+            if (nativeContext !== context) throw com.healthmd.direct.protocol.AgentBridgeException(
+                com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            return requireNotNull(nativePeer).also { it.requireCurrent() }.copy()
+        }
+        override fun requireCurrent() {
+            try {
+                check(!revoked && !serving.revoked && serving.operation.isActive &&
+                    activeServingScope === serving && activeChannel === channel && acceptedNativeOwner === this)
+                serving.epoch.requireCurrent(this@DirectCliCoordinator)
+            } catch (_: Exception) {
+                revoked = true
+                throw com.healthmd.direct.protocol.AgentBridgeException(com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+            }
+        }
+        override fun toString() = "AgentBridgeExportNativeSessionOwner(redacted)"
+    }
+
+    /** Lazy identity/liveness adapter only. No lookup for absent/ordinary/pairing-only owners, no
+     * creating legacy-store API, v4 probe/advertisement, service restart or grant issuance. */
+    internal fun agentBridgeExportNativeSession(context: android.content.Context): AgentBridgeExportNativeSession {
+        val owner = acceptedNativeOwner ?: throw com.healthmd.direct.protocol.AgentBridgeException(
+            com.healthmd.direct.protocol.AgentBridgeErrorCode.PERMISSION_REQUIRED)
+        owner.requireCurrent()
+        return owner.peer(context)
+    }
 
     suspend fun pair(host: String, port: Int, pairingCode: String) = sessionMutex.withLock {
         require(pairingCode.count { it in '0'..'9' } == 20) {
@@ -228,7 +271,17 @@ class DirectCliCoordinator @Inject constructor(
      * disconnect, forgetting the pairing, and the system foreground-service timeout still cancel
      * the session immediately.
      */
-    suspend fun connectAndServe() = sessionMutex.withLock {
+    // Legacy callers still serve exactly as before, but cannot establish a bridge FGS epoch.
+    suspend fun connectAndServe() = serveSession(null)
+    internal suspend fun connectAndServe(epoch: AgentBridgeExportServingEpoch) = serveSession(epoch)
+
+    private suspend fun serveSession(epoch: AgentBridgeExportServingEpoch?) = sessionMutex.withLock {
+        val serving = epoch?.let { ServingScope(it, currentCoroutineContext().job).apply {
+            // Invalid new-only provenance never changes legacy serving/negotiation behavior.
+            revoked = !runCatching { it.requireCurrent(this@DirectCliCoordinator) }.isSuccess
+        } }
+        activeServingScope = serving
+        try {
         val trust = requireNotNull(trustStore.load()) { "Pair with a CLI before connecting." }
         protocolAuthority.assertCompatible()
         var backoffMillis = RECONNECT_INITIAL_BACKOFF_MILLIS
@@ -263,6 +316,7 @@ class DirectCliCoordinator @Inject constructor(
                         serve(channel, transferNegotiation)
                     } finally {
                         protocolAuthority.endOperation()
+                        acceptedNativeOwner = null
                         activeChannel = null
                     }
                 }
@@ -292,9 +346,16 @@ class DirectCliCoordinator @Inject constructor(
                 }
             }
         }
+        } finally {
+            serving?.revoked = true
+            acceptedNativeOwner = null
+            activeServingScope = null
+        }
     }
 
     fun cancelActive() {
+        activeServingScope?.revoked = true
+        acceptedNativeOwner = null
         runCatching { activeChannel?.close() }
     }
 
@@ -312,6 +373,8 @@ class DirectCliCoordinator @Inject constructor(
     }
 
     fun resetSession() {
+        activeServingScope?.revoked = true
+        acceptedNativeOwner = null
         _state.value = DirectCliConnectionState.Idle
     }
 
@@ -324,7 +387,8 @@ class DirectCliCoordinator @Inject constructor(
     }
 
     private suspend fun negotiate(channel: DirectSecureChannel): TransferNegotiation {
-        channel.sendNegotiationHello(trustStore.installationId())
+        val sourceInstallationId = trustStore.installationId()
+        channel.sendNegotiationHello(sourceInstallationId)
         val listener = channel.receiveNegotiationHello()
         require(listener.platform == "macos_cli") { "The peer is not a Health.md CLI." }
         require(ANDROID_APPLICATION_PROTOCOL_VERSION in listener.protocolVersions) {
@@ -337,6 +401,12 @@ class DirectCliCoordinator @Inject constructor(
             protocolAuthority.negotiateTransfer(listener.transfer),
         ) { "The CLI transfer capabilities are incompatible." }
         channel.sendV2("source_hello", SourceHello.serializer(), sourceHello())
+        // Mint only after the existing encrypted base2 role/identity/transfer admission succeeds,
+        // bound to this exact channel and the original serving coroutine/lease, never UI labels.
+        activeServingScope?.let { serving ->
+            val owner = NativeSessionOwner(channel, sourceInstallationId, listener.installationId, serving)
+            acceptedNativeOwner = owner
+        }
         return transferNegotiation
     }
 
