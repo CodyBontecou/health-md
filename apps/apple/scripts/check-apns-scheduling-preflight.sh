@@ -120,6 +120,8 @@ source_contains "${IOS_SCHEDULING_MANAGER}" "await PushRegistrationManager.share
 source_contains "${IOS_SCHEDULING_MANAGER}" "func refreshScheduledAutomation()" "SchedulingManager re-arms automation for schedule and profile-entry changes"
 source_contains "${IOS_SCHEDULING_MANAGER}" "PushRegistrationManager.shared.syncSchedules(" "SchedulingManager mirrors schedule changes to the worker"
 source_contains "${IOS_SCHEDULING_MANAGER}" "schedule.frequency == .custom, kind == .completedDay, fireDate == nil" "Custom completed-day pushes require an explicit fire date"
+source_contains "${IOS_APP_DELEGATE}" "if SchedulingManager.shared.isSchedulingActive" "App launch restores both legacy and profile scheduling"
+source_contains "${IOS_APP_DELEGATE}" "SchedulingManager.shared.refreshScheduledAutomation()" "App launch restores local fallbacks, HealthKit delivery, and the APNs bridge"
 source_contains "${IOS_APP_DELEGATE}" "didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data" "AppDelegate receives APNs tokens"
 source_contains "${IOS_APP_DELEGATE}" "PushRegistrationManager.shared.submitDeviceToken(deviceToken)" "AppDelegate forwards APNs tokens to PushRegistrationManager"
 source_contains "${IOS_APP_DELEGATE}" "didReceiveRemoteNotification userInfo: [AnyHashable: Any]" "AppDelegate handles silent remote notifications"
