@@ -15,16 +15,17 @@ struct ExportActivityBannerAction {
     let perform: () -> Void
 }
 
-/// Shared visual shell for export activity presented at the top of the iOS app.
+/// Shared visual shell for export activity and Connected Apps status feedback.
 /// Lifecycle ownership stays with each caller so manual exports do not affect
 /// CLI tracking or Live Activities.
 struct ExportActivityBanner: View {
     let title: String
     let systemImage: String
     let tint: Color
-    let sourceLabel: String
-    let targetLabel: String
+    let sourceLabel: String?
+    let targetLabel: String?
     let message: String
+    let messageLineLimit: Int?
     let progress: Double?
     let showsIndeterminateProgress: Bool
     let progressAccessibilityLabel: String
@@ -32,22 +33,25 @@ struct ExportActivityBanner: View {
     let trailingText: String?
     let accessibilityIdentifier: String
     let action: ExportActivityBannerAction?
+    let onDismiss: (() -> Void)?
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     init(
         title: String,
         systemImage: String,
         tint: Color,
-        sourceLabel: String,
-        targetLabel: String,
+        sourceLabel: String? = nil,
+        targetLabel: String? = nil,
         message: String,
+        messageLineLimit: Int? = 2,
         progress: Double?,
         showsIndeterminateProgress: Bool,
         progressAccessibilityLabel: String,
         details: [ExportActivityBannerDetail],
         trailingText: String?,
         accessibilityIdentifier: String,
-        action: ExportActivityBannerAction? = nil
+        action: ExportActivityBannerAction? = nil,
+        onDismiss: (() -> Void)? = nil
     ) {
         self.title = title
         self.systemImage = systemImage
@@ -55,6 +59,7 @@ struct ExportActivityBanner: View {
         self.sourceLabel = sourceLabel
         self.targetLabel = targetLabel
         self.message = message
+        self.messageLineLimit = messageLineLimit
         self.progress = progress
         self.showsIndeterminateProgress = showsIndeterminateProgress
         self.progressAccessibilityLabel = progressAccessibilityLabel
@@ -62,6 +67,7 @@ struct ExportActivityBanner: View {
         self.trailingText = trailingText
         self.accessibilityIdentifier = accessibilityIdentifier
         self.action = action
+        self.onDismiss = onDismiss
     }
 
     var body: some View {
@@ -79,24 +85,42 @@ struct ExportActivityBanner: View {
 
                 Spacer(minLength: Spacing.s2)
 
-                VStack(alignment: .trailing, spacing: 1) {
-                    Text(sourceLabel)
-                        .font(.caption2.weight(.semibold))
-                    Text(targetLabel)
-                        .font(.caption2)
-                        .lineLimit(1)
+                if sourceLabel != nil || targetLabel != nil {
+                    VStack(alignment: .trailing, spacing: 1) {
+                        if let sourceLabel {
+                            Text(sourceLabel)
+                                .font(.caption2.weight(.semibold))
+                        }
+                        if let targetLabel {
+                            Text(targetLabel)
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                    }
+                    .foregroundStyle(Color.textSecondary)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Color.bgSecondary))
+                    .privacySensitive()
                 }
-                .foregroundStyle(Color.textSecondary)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 3)
-                .background(Capsule().fill(Color.bgSecondary))
-                .privacySensitive()
+
+                if let onDismiss {
+                    Button(action: onDismiss) {
+                        Image(systemName: "xmark")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(Color.textSecondary)
+                            .frame(minWidth: 44, minHeight: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Dismiss")
+                }
             }
 
             Text(message)
                 .font(.caption)
                 .foregroundStyle(Color.textSecondary)
-                .lineLimit(2)
+                .lineLimit(messageLineLimit)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let progress {
