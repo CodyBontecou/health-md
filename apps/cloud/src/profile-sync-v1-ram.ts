@@ -1,6 +1,6 @@
 // Inactive synthetic SOURCE only. Imported by tests, never by a router/app factory.
 // ONE RAM aggregate; no durable/privacy/retention/region/key-custody approval.
-// Only selected create + exact immutable read are in scope. No CRUD/CAS/replay,
+// Only selected create/exact retry + immutable read. No general CRUD/CAS/replay,
 // feeds/tombstones/reset/deletion/rotation/browser configuration or native apply.
 import { SyntheticNativeAuthority } from "./account-auth-v1/authority";
 import { purposeRateKey } from "./account-auth-v1/crypto";
@@ -18,52 +18,42 @@ export interface SyntheticRamInjection {
    * The module separately awaits its OWN real crypto result even if this returns early. */
   readonly waitForCrypto?: (phase: "prepare" | "readback", completion: Promise<void>) => Promise<void>;
 }
-type Fixed = Readonly<{ schema: "healthmd.profile_sync"; schema_version: 1; result: ProfileSyncV1ErrorResult }>;
-type Success = Readonly<{ ok: true; record: ValidatedProfileSyncV1Record }>;
-type Control = Readonly<{ ok: true }>;
-type Namespace = { issuer: string; environment: string; accountId: string };
-type KeyReference = { id: string; version: number; epoch: number };
-type Intent = {
-  epoch: number; consentEpoch: number; keyEpoch: number; keyVersion: number;
-  mutationId: string; requestHash: string; contentHash: string; requestBytes: number; contentBytes: number;
-  sessionId: string; sessionGeneration: number; requiresAction: string[]; publishedProfileId: string | null;
-};
-type Head = {
-  profileId: string; objectRevision: number; eventSequence: number; orderKey: number;
-  contentRevision: number; contentHash: string; revisionSlot: string;
-};
-type Correlation = {
-  namespace: Namespace; head: Head; mutationId: string; requestHash: string; requestBytes: number;
-  contentBytes: number; intentEpoch: number; consentEpoch: number; key: KeyReference;
-  sessionId: string; sessionGeneration: number; requiresAction: string[];
-};
+type Fixed=Readonly<{schema:"healthmd.profile_sync";schema_version:1;result:ProfileSyncV1ErrorResult}>;
+type Success=Readonly<{ok:true;record:ValidatedProfileSyncV1Record}>;
+type Control=Readonly<{ok:true}>;
+type Namespace={issuer:string;environment:string;accountId:string};
+type D<T>=Record<string,T>;
+type KeyReference={id:string;version:number;epoch:number};
+type Intent={epoch:number;consentEpoch:number;keyEpoch:number;keyVersion:number;
+  mutationId:string;requestHash:string;contentHash:string;requestBytes:number;contentBytes:number;
+  sessionId:string;sessionGeneration:number;requiresAction:string[];publishedProfileId:string|null};
+type Head={profileId:string;objectRevision:number;eventSequence:number;orderKey:number;
+  contentRevision:number;contentHash:string;revisionSlot:string};
+type Correlation={namespace:Namespace;head:Head;mutationId:string;requestHash:string;requestBytes:number;
+  contentBytes:number;intentEpoch:number;consentEpoch:number;key:KeyReference;
+  sessionId:string;sessionGeneration:number;requiresAction:string[]};
 // Binary extent is HPCR + version byte + 96-bit nonce + GCM ciphertext/tag.
 // Format/version labels are diagnostic metadata, not serialized plaintext content.
-type Envelope = { format: "healthmd.profile-sync.ram.config"; version: 1; header: number[]; nonce: number[]; ciphertext: number[] };
-type Revision = { correlation: Correlation; cipherSlot: string };
-type Partition = {
-  heads: Record<string, Head>; revisions: Record<string, Revision>; cipherSlots: Record<string, Envelope>;
-  events: Correlation[]; receipts: Record<string, Correlation>; evidence: Record<string, Correlation>;
-  idempotencyIndex: Record<string, string>; revisionIndex: Record<string, string[]>;
-  issuedIds: string[]; nonceIndex: Record<string, string>; sequence: number;
-  usage: { plaintextBytes: number; encryptedBytes: number; profiles: number; revisions: number; events: number; receipts: number };
-  reservations: Record<string, never>; retainedStaging: Record<string, never>;
-};
-type Controls = { consent: { optedIn: boolean; epoch: number }; selectionEpoch: number; intent: Intent | null };
-type Aggregate = { auth: AuthState; controls: Controls; key: KeyReference & { handle: CryptoKey }; profile: Partition };
-export type SyntheticRamObservation = Readonly<{
-  admittedPorts: number;
-  controls: readonly { namespace: Namespace; consent: Controls["consent"]; selectionEpoch: number;
-    intent: Intent | null; key: KeyReference }[];
-  partitions: readonly { namespace: Namespace; values: Partition }[];
-}>;
+type Envelope={format:"healthmd.profile-sync.ram.config";version:1;header:number[];nonce:number[];ciphertext:number[]};
+type Revision={correlation:Correlation;cipherSlot:string};
+type Partition={heads:D<Head>;revisions:D<Revision>;cipherSlots:D<Envelope>;
+  events:Correlation[];receipts:D<Correlation>;evidence:D<Correlation>;
+  idempotencyIndex:D<string>;revisionIndex:D<string[]>;issuedIds:string[];nonceIndex:D<string>;sequence:number;
+  usage:{plaintextBytes:number;encryptedBytes:number;profiles:number;revisions:number;events:number;receipts:number};
+  reservations:D<never>;retainedStaging:D<never>};
+type Controls={consent:{optedIn:boolean;epoch:number};selectionEpoch:number;intent:Intent|null};
+type Aggregate={auth:AuthState;controls:Controls;key:KeyReference&{handle:CryptoKey};profile:Partition};
+export type SyntheticRamObservation=Readonly<{admittedPorts:number;
+  controls:readonly{namespace:Namespace;consent:Controls["consent"];selectionEpoch:number;intent:Intent|null;key:KeyReference}[];
+  partitions:readonly{namespace:Namespace;values:Partition}[]}>;
 export interface ProfileSyncV1Ram {
-  auth(request: Request): Promise<Response>;
-  optIn(request: Request): Promise<Control | Fixed>;
-  withdraw(request: Request): Promise<Control | Fixed>;
-  selectCreate(request: Request, originalBytes: Uint8Array): Promise<Control | Fixed>;
-  mutate(request: Request, originalBytes: Uint8Array): Promise<Success | Fixed>;
-  read(request: Request, originalBytes: Uint8Array): Promise<Success | Fixed>;
+  auth(request:Request):Promise<Response>;
+  optIn(request:Request):Promise<Control|Fixed>;
+  withdraw(request:Request):Promise<Control|Fixed>;
+  selectCreate(request:Request,originalBytes:Uint8Array):Promise<Control|Fixed>;
+  selectRetry(request:Request,originalBytes:Uint8Array):Promise<Control|Fixed>;
+  mutate(request:Request,originalBytes:Uint8Array):Promise<Success|Fixed>;
+  read(request:Request,originalBytes:Uint8Array):Promise<Success|Fixed>;
   /** Complete, detached synthetic diagnostic. Not a credential or permission input. */
   observe(): SyntheticRamObservation;
 }
@@ -84,15 +74,14 @@ function freeze<T>(value: T): T {
   if (value && typeof value === "object") { for (const child of Object.values(value)) freeze(child); Object.freeze(value); }
   return value;
 }
-function emptyPartition(): Partition {
-  return { heads: {}, revisions: {}, cipherSlots: {}, events: [], receipts: {}, evidence: {}, idempotencyIndex: {},
-    revisionIndex: {}, issuedIds: [], nonceIndex: {}, sequence: 0,
-    usage: { plaintextBytes: 0, encryptedBytes: 0, profiles: 0, revisions: 0, events: 0, receipts: 0 },
-    reservations: {}, retainedStaging: {} };
+function emptyPartition():Partition{
+  return{heads:{},revisions:{},cipherSlots:{},events:[],receipts:{},evidence:{},idempotencyIndex:{},
+    revisionIndex:{},issuedIds:[],nonceIndex:{},sequence:0,
+    usage:{plaintextBytes:0,encryptedBytes:0,profiles:0,revisions:0,events:0,receipts:0},reservations:{},retainedStaging:{}};
 }
 function clone(a: Aggregate): Aggregate {
   // CryptoKey is an immutable, private, nonextractable handle, NOT a returned data alias.
-  return { auth: structuredClone(a.auth), controls: structuredClone(a.controls), key: { ...a.key }, profile: structuredClone(a.profile) };
+  return{auth:structuredClone(a.auth),controls:structuredClone(a.controls),key:{...a.key},profile:structuredClone(a.profile)};
 }
 function synchronous(value: unknown): void {
   if (value && (typeof value === "object" || typeof value === "function") && "then" in value) deny();
@@ -104,8 +93,8 @@ function createMutation(m: ProfileSyncV1Mutation): asserts m is ProfileSyncV1Mut
   if (m.operation !== "create" || m.baseRevision !== 0 || m.profileId !== null || m.orderKey !== null ||
     !ValidatedProfileSyncV1Content.isValidated(m.content)) deny();
 }
-function same(a: unknown, b: unknown): boolean { return JSON.stringify(a) === JSON.stringify(b); }
-function next(n: number): number { if (!Number.isSafeInteger(n) || n < 0 || n === Number.MAX_SAFE_INTEGER) deny(); return n + 1; }
+function same(a:unknown,b:unknown):boolean{return JSON.stringify(a)===JSON.stringify(b);}
+function next(n:number):number{if(!Number.isSafeInteger(n)||n<0||n===Number.MAX_SAFE_INTEGER)deny();return n+1;}
 class Unverified extends Error { constructor() { super("Synthetic immutable proof unavailable."); } }
 function proofCheck(value: unknown): asserts value { if (!value) throw new Unverified(); }
 const HEADER = Object.freeze([72, 80, 67, 82, 1]); // HPCR v1, configuration-only synthetic envelope
@@ -129,15 +118,15 @@ function aad(c: Correlation): Uint8Array<ArrayBuffer> {
   for (const p of parts) { view.setUint32(pos, p.length, false); pos += 4; bytes.set(p, pos); pos += p.length; }
   return bytes;
 }
-type Capture = { principal: ConfigPrincipal; controls: Controls; key: Aggregate["key"] };
-type Proof = { correlation: Correlation; envelope: Envelope };
+type Capture={principal:ConfigPrincipal;controls:Controls;key:Aggregate["key"]};
+type Proof={correlation:Correlation;envelope:Envelope};
 
 export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection): Promise<ProfileSyncV1Ram> {
   if (!injection) {
     // No authority, aggregate, browser adapter or key is constructed/admitted by default.
     const unavailable = async () => fixed();
     return Object.freeze({ auth: createNativeAuthHttp(), optIn: unavailable, withdraw: unavailable,
-      selectCreate: unavailable, mutate: unavailable, read: unavailable,
+      selectCreate: unavailable, selectRetry: unavailable, mutate: unavailable, read: unavailable,
       observe: () => freeze({ admittedPorts: 0, controls: [], partitions: [] }) });
   }
   if (injection.sentinel !== SENTINEL) deny();
@@ -222,8 +211,8 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
   const inspectProof = (c: Capture, correlation: Correlation, path: string): Proof => {
     gate(current, c, path);
     const p = current.profile, h = correlation.head, slot = h.revisionSlot;
-    // READ admission and every fresh proof/return bind selection to THIS original profile, not some pending intent.
-    if (path === READ && current.controls.intent?.publishedProfileId !== h.profileId) deny();
+    // Every proof/return binds selection to THIS original profile, never a pending create.
+    if (current.controls.intent?.publishedProfileId !== h.profileId) deny();
     const revision = p.revisions[slot], envelope = p.cipherSlots[slot];
     proofCheck(revision && envelope && same(revision.correlation, correlation) && revision.cipherSlot === slot &&
       same(p.heads[h.profileId], h) && same(p.receipts[correlation.mutationId], correlation) &&
@@ -273,6 +262,13 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
       return frame(() => { assert(current, p, MUTATE); if (current.controls.consent.optedIn !== optedIn) deny(); return ok; });
     } catch { return fixed(); }
   };
+  const setIntent=(a:Aggregate,p:ConfigPrincipal,m:ProfileSyncV1Mutation,bytes:number,id:string|null)=>{
+    createMutation(m);const epoch=next(a.controls.selectionEpoch);a.controls.selectionEpoch=epoch;
+    a.controls.intent={epoch,consentEpoch:a.controls.consent.epoch,keyEpoch:a.key.epoch,keyVersion:a.key.version,
+      mutationId:m.mutationId,requestHash:m.requestHash,contentHash:m.content.hash,requestBytes:bytes,
+      contentBytes:encoder.encode(m.content.contentJson).length,sessionId:p.sessionId,sessionGeneration:p.sessionGeneration,
+      requiresAction:[...m.content.requiresAction],publishedProfileId:id};
+  };
   return Object.freeze({
     async auth(request: Request) { entry(); return await http(request); },
     optIn: (request: Request) => consent(request, true), withdraw: (request: Request) => consent(request, false),
@@ -280,13 +276,21 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
       try { entry(); const bytes = ownBytes(originalBytes), bearer = token(request, MUTATE);
         const p = await authority.authorizeConfig(bearer, "POST", MUTATE), c = capture(p, MUTATE, false);
         const m = await parseProfileSyncV1Mutation(bytes); createMutation(m);
-        publish(a => { gate(a, c, MUTATE); const epoch = next(a.controls.selectionEpoch); a.controls.selectionEpoch = epoch;
-          a.controls.intent = { epoch, consentEpoch: a.controls.consent.epoch, keyEpoch: a.key.epoch, keyVersion: a.key.version,
-            mutationId: m.mutationId, requestHash: m.requestHash, contentHash: m.content.hash, requestBytes: bytes.length,
-            contentBytes: encoder.encode(m.content.contentJson).length, sessionId: p.sessionId, sessionGeneration: p.sessionGeneration,
-            requiresAction: [...m.content.requiresAction], publishedProfileId: null }; });
+        publish(a=>{gate(a,c,MUTATE);setIntent(a,p,m,bytes.length,null);});
         return frame(() => { assert(current, p, MUTATE); if (current.controls.intent?.requestHash !== m.requestHash) deny(); return ok; });
       } catch { return fixed(); }
+    },
+    async selectRetry(request:Request,originalBytes:Uint8Array):Promise<Control|Fixed>{
+      try{entry();const bytes=ownBytes(originalBytes),bearer=token(request,MUTATE);
+        const p=await authority.authorizeConfig(bearer,"POST",MUTATE),c=capture(p,MUTATE,false);
+        const m=await parseProfileSyncV1Mutation(bytes);createMutation(m);
+        const selected={...c,controls:structuredClone(c.controls)};
+        publish(a=>{gate(a,c,MUTATE);const r=a.profile.receipts[m.mutationId];if(!r)deny();
+          if(r.requestHash!==m.requestHash)throw new ProfileSyncV1Error("idempotency_mismatch");
+          if(!same(r.namespace,namespace)||!same(r.key,keyRef(a))||r.head.contentHash!==m.content.hash)deny();
+          setIntent(a,p,m,bytes.length,r.head.profileId);selected.controls=structuredClone(a.controls);});
+        return frame(()=>{gate(current,selected,MUTATE);return ok;});
+      }catch(e){return fixed(e instanceof ProfileSyncV1Error&&e.category==="idempotency_mismatch"?"idempotency_mismatch":"unavailable");}
     },
     async mutate(request: Request, originalBytes: Uint8Array): Promise<Success | Fixed> {
       let published = false;
@@ -294,8 +298,16 @@ export async function createProfileSyncV1Ram(injection?: SyntheticRamInjection):
         const p = await authority.authorizeConfig(bearer, "POST", MUTATE), c = capture(p, MUTATE);
         const m = await parseProfileSyncV1Mutation(bytes); createMutation(m);
         const intent = c.controls.intent;
-        if (!intent || intent.publishedProfileId || intent.requestHash !== m.requestHash || intent.mutationId !== m.mutationId ||
-          intent.contentHash !== m.content.hash || intent.sessionId !== p.sessionId || intent.sessionGeneration !== p.sessionGeneration) deny();
+        if (!intent || intent.mutationId !== m.mutationId || intent.sessionId !== p.sessionId || intent.sessionGeneration !== p.sessionGeneration) deny();
+        const r=frame(()=>{gate(current,c,MUTATE);return structuredClone(current.profile.receipts[m.mutationId]??null);});
+        if(r){
+          if(r.requestHash!==m.requestHash)return fixed("idempotency_mismatch");
+          if(intent.publishedProfileId!==r.head.profileId||intent.requestHash!==m.requestHash||intent.contentHash!==m.content.hash)deny();
+          published=true; // Original receipt, never new entropy/encrypt/publication.
+          const owned=proof(c,r,MUTATE),record=await decrypt(c,owned,m.content.contentJson);
+          return final(c,owned,MUTATE,record);
+        }
+        if (intent.publishedProfileId || intent.requestHash !== m.requestHash || intent.contentHash !== m.content.hash) deny();
         const random = frame(() => ({ id: crypto.getRandomValues(new Uint8Array(16)), nonce: crypto.getRandomValues(new Uint8Array(12)) }));
         const profileId = "psp_" + Array.from(random.id, b => b.toString(16).padStart(2, "0")).join("");
         const head: Head = frame(() => { gate(current, c, MUTATE); return {

@@ -428,3 +428,83 @@ describe("inactive AS06 compound RAM public authority", () => {
     expect(parseProfileSyncV1Error(wire(unavailable))).toEqual({ result: "unavailable" });
   });
 });
+
+describe("AS06 wave2 selected CREATE retry", () => {
+  it("recovers original committed CREATE after real decrypt boundary fault", async () => {
+    expect(process.versions.node).toBe("24.19.0");
+    const ram = await createProfileSyncV1Ram({ sentinel: "healthmd.profile-sync.v1.ram.synthetic-only" });
+    const s = await issue(ram); await select(ram, s);
+    const real = crypto.subtle.decrypt.bind(crypto.subtle);
+    const fault = vi.spyOn(crypto.subtle, "decrypt").mockImplementationOnce(async (...args) => {
+      await real(...args); throw new Error("synthetic lost readback");
+    });
+    try { expect(await ram.mutate(native(s), encode(raw))).toEqual({ ...unavailable, result: "verification_pending" }); }
+    finally { fault.mockRestore(); }
+    const saved = ram.observe(), id = saved.controls[0]!.intent!.publishedProfileId;
+    expect(id).toMatch(/^psp_[0-9a-f]{32}$/u);
+    expect(saved.partitions[0]!.values.receipts["psm_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]?.head.profileId).toBe(id);
+    const record = requireSuccess(await ram.mutate(native(s), encode(raw)));
+    expect(record.profileId).toBe(id);
+    expect(ValidatedProfileSyncV1Record.isValidated(record)).toBe(true);
+    expect(record).toMatchObject({ objectRevision: 1, contentRevision: 1, eventSequence: 1, orderKey: 0 });
+    expect(encode(record.content!.contentJson)).toEqual(encode(expectedContent));
+    expect(record.content?.hash).toBe(CONTENT_HASH); expect(record.content?.requiresAction).toEqual(flags);
+    expect(ram.observe()).toEqual(saved); // ALL cipher/nonce/event/receipt/index/usage/control values, not counts
+  });
+
+  it("explicitly reviews the original receipt across refresh and a NEW family without rewriting original evidence", async () => {
+    const latch = pause("readback", false);
+    const ram = await createProfileSyncV1Ram({ sentinel: "healthmd.profile-sync.v1.ram.synthetic-only", waitForCrypto: latch.wait });
+    const s = await issue(ram); await select(ram, s);
+    const record = requireSuccess(await ram.mutate(native(s), encode(raw))), original = ram.observe().partitions;
+    latch.arm(); const old = ram.mutate(native(s), encode(raw)); await latch.entered;
+    const fresh = await refresh(ram, s); latch.release();
+    expect(await old).toEqual(unavailable); expect(ram.observe().partitions).toEqual(original);
+    expect(await ram.mutate(native(fresh), encode(raw))).toEqual(unavailable); // no generation inheritance
+    expect(await ram.optIn(native(fresh))).toEqual({ ok: true });
+    const bytes = encode(raw), reviewing = ram.selectRetry(native(fresh), bytes); bytes.fill(32);
+    expect(await reviewing).toEqual({ ok: true });
+    const selected = ram.observe(); expect(selected.controls[0]?.intent?.sessionGeneration).toBe(1);
+    expect(requireSuccess(await ram.mutate(native(fresh), encode(raw)))).toEqual(record); expect(ram.observe()).toEqual(selected);
+    await revoke(ram, s); const next = await issue(ram);
+    expect(await ram.mutate(native(next), encode(raw))).toEqual(unavailable); // no family inheritance
+    await ram.optIn(native(next)); expect(await ram.selectRetry(native(next), encode(raw))).toEqual({ ok: true });
+    const reviewed = ram.observe(), retry = encode(raw), recovering = ram.mutate(native(next), retry); retry.fill(32);
+    expect(requireSuccess(await recovering)).toEqual(record); expect(ram.observe()).toEqual(reviewed);
+    expect(reviewed.partitions).toEqual(original); // ALL original session/gen0/cipher/event/receipt values
+    expect((await inventory(ram)).find(r => r.session_id === s.session_id)?.revoked).toBe(true);
+  });
+
+  it("review",async()=>{
+    const off=await createProfileSyncV1Ram();expect(await off.selectRetry(request(mutatePath),encode(raw))).toEqual(unavailable);
+    expect(off.observe().admittedPorts).toBe(0);
+    const r=await createProfileSyncV1Ram({sentinel:"healthmd.profile-sync.v1.ram.synthetic-only"}),s=await issue(r),q=native(s),z=encode(raw);
+    await select(r,s);const b=r.observe();
+    const hs:Record<string,string>[]=[browserHeaders,{Cookie:"x",Authorization:`Bearer ${s.access_token}`},{Authorization:`Bearer ${s.refresh_token}`}];
+    for(const h of hs)expect(await r.selectRetry(request(mutatePath,"POST",undefined,h),z)).toEqual(unavailable);
+    for(const x of [q,native(s,readPath)])expect(await r.selectRetry(x,z)).toEqual(unavailable);
+    expect(r.observe()).toEqual(b);requireSuccess(await r.mutate(q,z));const v=r.observe();
+    for(const f of [r.mutate,r.selectRetry])expect(await f(q,encode(raw+" "))).toEqual({...unavailable,result:"idempotency_mismatch"});
+    expect(r.observe()).toEqual(v);
+  });
+
+  it.each(["withdraw","reopt","pending","revoke"])("fences captured replay through %s",async action=>{
+    const l=pause("readback",false),r=await createProfileSyncV1Ram({sentinel:"healthmd.profile-sync.v1.ram.synthetic-only",waitForCrypto:l.wait}),s=await issue(r),q=native(s),z=encode(raw);
+    await select(r,s);const rec=requireSuccess(await r.mutate(q,z)),b=r.observe().partitions;
+    l.arm();const p=r.mutate(q,z);await l.entered;
+    if(action==="revoke")await revoke(r,s);
+    else if(action==="pending")await r.selectCreate(q,z);
+    else{await r.withdraw(q);if(action==="reopt"){await r.optIn(q);expect(await r.selectRetry(q,z)).toEqual({ok:true});}}
+    const v=r.observe();l.release();expect(await p).toEqual(unavailable);expect(r.observe()).toEqual(v);expect(v.partitions).toEqual(b);
+    if(action==="reopt")expect(requireSuccess(await r.mutate(q,z))).toEqual(rec);
+    if(action==="revoke") expect((await inventory(r)).find(x=>x.session_id===s.session_id)?.revoked).toBe(true);
+  });
+
+  it("corrupt",async()=>{
+    const r=await createProfileSyncV1Ram({sentinel:"healthmd.profile-sync.v1.ram.synthetic-only"}),s=await issue(r),q=native(s),z=encode(raw);await select(r,s);
+    const real=crypto.subtle.encrypt.bind(crypto.subtle),spy=vi.spyOn(crypto.subtle,"encrypt").mockImplementationOnce(async(...a)=>{const b=new Uint8Array(await real(...a));b[b.length-1]=b[b.length-1]!^1;return b.buffer;});
+    const u={...unavailable,result:"verification_pending"};
+    try{expect(await r.mutate(q,z)).toEqual(u);}finally{spy.mockRestore();}
+    const v=r.observe();expect(await r.mutate(q,z)).toEqual(u);expect(r.observe()).toEqual(v);
+  });
+});
