@@ -351,7 +351,7 @@ internal class AgentBridgeExportAuthorityStore private constructor(
          * getNoBackupFilesDir/getFilesDir can mkdir/chmod mode0771, so neither getter is called here.
          * OS-native 0771 is accepted ONLY for this fixed Context-derived UID/GID-owned parent;
          * it never weakens the issuer leaf0700/files0600 or arbitrary test-root injection. */
-        fun forNoBackup(context: Context, keys: AgentBridgeExportProtectedKeyProvider): AgentBridgeExportAuthorityStore = safe {
+        fun forNoBackup(context: Context, keys: AgentBridgeExportProtectedKeyProvider = AgentBridgeExportProtectedKey(context)): AgentBridgeExportAuthorityStore = safe {
             demand(!context.isDeviceProtectedStorage)
             val uid = Process.myUid()
             val gid = Os.getgid()
