@@ -127,6 +127,13 @@ object NativeDirectProtocolDeterministicCore : DirectProtocolDeterministicCore {
     ): ByteArray = nativeFrame
 }
 
+/** Opaque, ephemeral native handshake provenance. Not a wire document or permission.
+ * Only DirectClient's private implementation is minted after actual cryptographic verification. */
+sealed interface NativeAuthenticatedDirectSession {
+    fun matches(channel: DirectSecureChannel, sourceInstallationId: String,
+        hostInstallationId: String, reconnectSecret: ByteArray): Boolean
+}
+
 class DirectSecureChannel internal constructor(
     private val packet: DirectPacketConnection,
     private val sessionKey: ByteArray,
@@ -137,6 +144,10 @@ class DirectSecureChannel internal constructor(
 ) : Closeable {
     private var nextSendSequence = 0L
     private var nextReceiveSequence = 0L
+
+    /** Ordinary channel construction carries no authenticated provenance. A close or observed
+     * transport/integrity failure revokes it permanently; unobserved remote closure is not detected. */
+    fun nativeAuthenticatedSession(): NativeAuthenticatedDirectSession? = DirectClient.authenticationFor(this)
 
     fun sendNegotiationHello(installationId: String) {
         val hello = NegotiationHello(
@@ -151,10 +162,10 @@ class DirectSecureChannel internal constructor(
         sendControl(LegacyCodec.hello(hello))
     }
 
-    fun receiveNegotiationHello(): NegotiationHello {
+    fun receiveNegotiationHello(): NegotiationHello = observingFailure {
         val payload = receive()
         require(payload is ReceivedSecurePayload.Control) { "Expected a negotiation message." }
-        return LegacyCodec.parseHello(payload.bytes)
+        LegacyCodec.parseHello(payload.bytes)
     }
 
     fun <T> sendV2(type: String, serializer: SerializationStrategy<T>, payload: T) {
@@ -162,17 +173,17 @@ class DirectSecureChannel internal constructor(
         sendControl(deterministicCore.canonicalizeV2Envelope(nativeBytes))
     }
 
-    fun receiveV2(): ReceivedEnvelope {
+    fun receiveV2(): ReceivedEnvelope = observingFailure {
         val payload = receive()
         require(payload is ReceivedSecurePayload.Control) { "Expected a control message." }
-        return V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
+        V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
     }
 
-    fun pollV2(timeoutMillis: Int): ReceivedEnvelope? {
-        val frame = packet.receiveOrNull(timeoutMillis) ?: return null
+    fun pollV2(timeoutMillis: Int): ReceivedEnvelope? = observingFailure {
+        val frame = packet.receiveOrNull(timeoutMillis) ?: return@observingFailure null
         val payload = receiveEncryptedFrame(frame)
         require(payload is ReceivedSecurePayload.Control) { "Expected a control message." }
-        return V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
+        V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
     }
 
     fun sendTransferChunk(transferId: String, sequence: Int, data: ByteArray) {
@@ -192,7 +203,7 @@ class DirectSecureChannel internal constructor(
         sendEncrypted(frame)
     }
 
-    fun receive(): ReceivedSecurePayload = receiveEncryptedFrame(packet.receive())
+    fun receive(): ReceivedSecurePayload = observingFailure { receiveEncryptedFrame(packet.receive()) }
 
     private fun receiveEncryptedFrame(packetBytes: ByteArray): ReceivedSecurePayload {
         val frame = LegacyCodec.encryptedFrame(packetBytes)
@@ -213,7 +224,17 @@ class DirectSecureChannel internal constructor(
     }
 
     override fun close() {
+        DirectClient.revokeAuthentication(this)
         packet.close()
+    }
+
+    private inline fun <T> observingFailure(block: () -> T): T {
+        return try { block() } catch (error: Throwable) {
+            // Revoke NEW provenance only. Preserve the deployed socket, sequence allocation and
+            // exact failure, including recoverable/local errors; no early guards/close/repair.
+            DirectClient.revokeAuthentication(this)
+            throw error
+        }
     }
 
     private fun sendControl(bytes: ByteArray) {
@@ -221,7 +242,7 @@ class DirectSecureChannel internal constructor(
     }
 
     @Synchronized
-    private fun sendEncrypted(plaintext: ByteArray) {
+    private fun sendEncrypted(plaintext: ByteArray) = observingFailure {
         check(nextSendSequence != Long.MAX_VALUE) { "Direct send sequence exhausted." }
         val envelope = ByteBuffer.allocate(SECURE_MAGIC.size + Long.SIZE_BYTES + plaintext.size)
             .put(SECURE_MAGIC)
@@ -239,6 +260,28 @@ data class ConnectedDirectClient(
 )
 
 object DirectClient {
+    // Private exact-instance association, never an attachment API or serialized token. Entries
+    // exist only for returned live native clients and are removed on close/observed failure.
+    private val authentications = java.util.IdentityHashMap<DirectSecureChannel, VerifiedSession>()
+    internal fun authenticationFor(channel: DirectSecureChannel): NativeAuthenticatedDirectSession? =
+        synchronized(authentications) { authentications[channel] }
+    internal fun revokeAuthentication(channel: DirectSecureChannel) {
+        synchronized(authentications) { authentications.remove(channel) }
+    }
+    private class VerifiedSession(private val channel: DirectSecureChannel, source: String, host: String,
+        credential: ByteArray) : NativeAuthenticatedDirectSession {
+        private val sourceId = source.lowercase()
+        private val hostId = host.lowercase()
+        private val credentialDigest = MessageDigest.getInstance("SHA-256").digest(credential)
+        override fun matches(channel: DirectSecureChannel, sourceInstallationId: String,
+            hostInstallationId: String, reconnectSecret: ByteArray): Boolean =
+            channel === this.channel && authenticationFor(channel) === this &&
+                sourceInstallationId == sourceId && hostInstallationId == hostId && reconnectSecret.size == 32 &&
+                MessageDigest.isEqual(credentialDigest, MessageDigest.getInstance("SHA-256").digest(reconnectSecret)) &&
+                authenticationFor(channel) === this // Revocation may occur during bounded digest work.
+        override fun toString() = "NativeAuthenticatedDirectSession(redacted)"
+    }
+
     fun connect(
         host: String,
         port: Int = DIRECT_PORT,
@@ -254,7 +297,11 @@ object DirectClient {
         val packet = DirectPacketConnection.connect(host, port, timeoutMillis)
         try {
             val normalizedCode = pairingCode.orEmpty().filter { it in '0'..'9' }
-            val reconnect = if (normalizedCode.isEmpty()) trustedListener else null
+            // Sample caller-owned credential defensively BEFORE delaying transport/crypto work.
+            // Stable deployed inputs/transcripts are unchanged; later caller mutation cannot retarget it.
+            val reconnect = if (normalizedCode.isEmpty()) trustedListener?.let {
+                it.copy(reconnectSecret = it.reconnectSecret.copyOf())
+            } else null
             require(normalizedCode.length == 20 || reconnect != null) {
                 "Enter the shared 20-digit pairing code shown by the healthmd CLI."
             }
@@ -376,7 +423,14 @@ object DirectClient {
                     listenerInstallationId = listener.installationId,
                     listenerDisplayName = listener.displayName,
                     deterministicCore = deterministicCore,
-                ),
+                ).also { channel ->
+                    // All original selector2/3, identity, sealed32byte credential, reconnect
+                    // equality and server-proof checks above succeeded on this exact packet path.
+                    synchronized(authentications) {
+                        authentications[channel] = VerifiedSession(channel, installationId,
+                            listener.installationId, reconnectSecret)
+                    }
+                },
                 listener = listener,
             )
         } catch (error: Throwable) {

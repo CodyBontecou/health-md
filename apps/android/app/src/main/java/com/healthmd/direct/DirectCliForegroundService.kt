@@ -34,6 +34,7 @@ class DirectCliForegroundService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var operation: Job? = null
     @Volatile private var stopRequested = false
+    private val servingLifecycle by lazy { AgentBridgeExportServingLifecycle(coordinator) }
 
     override fun onCreate() {
         super.onCreate()
@@ -45,6 +46,8 @@ class DirectCliForegroundService : Service() {
                 indeterminate = true,
             ),
         )
+        // Successful native foreground admission is a prerequisite, not an active Boolean.
+        servingLifecycle.foregroundAdmitted()
         scope.launch {
             coordinator.state.collectLatest(::updateNotification)
         }
@@ -52,6 +55,7 @@ class DirectCliForegroundService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            servingLifecycle.stopped()
             stopRequested = true
             coordinator.cancelActive()
             operation?.cancel()
@@ -62,6 +66,7 @@ class DirectCliForegroundService : Service() {
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_FORGET) {
+            servingLifecycle.stopped()
             stopRequested = true
             coordinator.cancelActive()
             operation?.cancel()
@@ -83,6 +88,10 @@ class DirectCliForegroundService : Service() {
             }
         }
         stopRequested = false
+        val servingEpoch = when (intent?.action) {
+            ACTION_CONNECT -> servingLifecycle.beginConnectOperation()
+            else -> { servingLifecycle.revokeOperation(); null } // Pair/null/recreated/wake never open one.
+        }
         operation = scope.launch {
             try {
                 when (intent?.action) {
@@ -91,7 +100,8 @@ class DirectCliForegroundService : Service() {
                         port = intent.getIntExtra(EXTRA_PORT, com.healthmd.direct.protocol.DIRECT_PORT),
                         pairingCode = intent.getStringExtra(EXTRA_PAIRING_CODE).orEmpty(),
                     )
-                    ACTION_CONNECT -> coordinator.connectAndServe()
+                    ACTION_CONNECT -> if (servingEpoch != null) coordinator.connectAndServe(servingEpoch)
+                        else coordinator.connectAndServe() // Preserve legacy serving; no bridge peer without an epoch.
                 }
             } catch (error: CancellationException) {
                 if (!stopRequested) throw error
@@ -109,6 +119,7 @@ class DirectCliForegroundService : Service() {
                     updateNotification(DirectCliConnectionState.Failed(failure))
                 }
             } finally {
+                servingEpoch?.let(servingLifecycle::operationEnded)
                 stopSelf(startId)
             }
         }
@@ -116,6 +127,7 @@ class DirectCliForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        servingLifecycle.stopped()
         coordinator.cancelActive()
         operation?.cancel()
         coordinator.reportDisconnected()
@@ -132,6 +144,7 @@ class DirectCliForegroundService : Service() {
     }
 
     override fun onTimeout(startId: Int, fgsType: Int) {
+        servingLifecycle.stopped()
         coordinator.cancelActive()
         operation?.cancel()
         coordinator.reportFailure(DirectCliFailure.SESSION_TIMEOUT)
