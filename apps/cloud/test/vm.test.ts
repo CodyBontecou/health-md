@@ -274,6 +274,8 @@ describe("isolated VM-native single-user backend (synthetic fixtures only)", () 
       const summary = JSON.parse(readFileSync(resolve(sourceDirectory,
         "../apple/docs/reference/generated/core/summary-day.json"), "utf8"));
       summary.date = fixture.records[0].date;
+      fixture.daily_record_schema_version = 10;
+      summary.schema_version = 10;
       fixture.records = [summary];
       const upload = await worker.fetch(new Request(`${fakeOrigin}/api/v1/exports`, {
         method: "POST", headers: { Authorization: `Bearer ${bearer}`, "Content-Type": "application/json" },

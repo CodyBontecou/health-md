@@ -41,9 +41,17 @@ it("reads scoped current Apple summaries without mixing unsupported profiles, wi
     day.date = date;
     day.schema_version = dailyVersion;
     day.activity = { ...(day.activity as Record<string, unknown>), steps };
+    if (source === "ios" && dailyVersion === 10) {
+      const providers = JSON.parse(readFileSync(resolve(sourceDirectory,
+        "../../packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json"), "utf8"));
+      providers.whoop.cycles[0].step_count = 0;
+      day.providers = providers;
+    }
     const envelope = { schema: "healthmd.api_export", schema_version: envelopeVersion,
       daily_record_schema: "healthmd.health_data", daily_record_schema_version: dailyVersion,
       source, exported_at: "2026-03-17T12:00:00Z",
+      ...(envelopeVersion === 2 ? { external_record_schema: "healthmd.external_provider_daily",
+        external_record_schema_version: 1, external_record_count: 0, external_records: [] } : {}),
       date_range: { start: date, end: date }, record_count: 1, records: [day], failed_date_details: [] };
     const bytes = new TextEncoder().encode(JSON.stringify(envelope));
     const exportId = randomUUID();
@@ -64,7 +72,7 @@ it("reads scoped current Apple summaries without mixing unsupported profiles, wi
   }
   try {
     await addDay(userA.id, "2026-03-15", 12345);
-    const appleLatestId = await addDay(userA.id, "2026-03-16", 9999);
+    const appleLatestId = await addDay(userA.id, "2026-03-16", 9999, "ios", 10, 2);
     await addDay(userB, "2026-03-15", 777777);
     const unsupportedIds = [
       await addDay(userA.id, "2026-03-17", 888888, "android", 4),
@@ -77,6 +85,7 @@ it("reads scoped current Apple summaries without mixing unsupported profiles, wi
     // full-export discovery must still expose its v2 sidecar and exact bytes.
     const archived = structuredClone(template);
     archived.date = "2026-03-15";
+    archived.schema_version = 8;
     archived["a/b~c"] = "synthetic pointer";
     archived.healthkit_record_archive = { schema: "healthmd.healthkit_records", schema_version: 1,
       records: [{ original_uuid: "00000000-0000-0000-0000-000000000001",
@@ -123,7 +132,12 @@ it("reads scoped current Apple summaries without mixing unsupported profiles, wi
         value: 7.75, unit: "hours",
       });
       expect(JSON.stringify(daily)).not.toContain("healthkit_record_archive");
+      expect((await reader.getDailySummary(a, "2026-03-16")).metrics
+        .find((metric) => metric.metric === "steps")?.value).toBe(9999);
+      expect(metrics.some((metric) => metric.metric === "whoop_cycle_step_count")).toBe(false);
       const full = { ...a, scope: "full_export" as const };
+      expect((await reader.readExportNode(full, appleLatestId,
+        "/records/0/providers/whoop/cycles/0/step_count", 0, 10)).value).toBe(0);
       await expect(reader.listExports(a, "", 10)).rejects.toMatchObject({ code: "forbidden" });
       const first = await reader.listExports(full, "", 1);
       expect((first.exports as unknown[])).toHaveLength(1);
@@ -200,7 +214,7 @@ it("reads scoped current Apple summaries without mixing unsupported profiles, wi
         .rejects.toMatchObject({ code: "unavailable_data" });
       expect(await reader.findExportForDate(full, "2026-03-16"))
         .toMatchObject({ source: "android", dailyRecordSchemaVersion: 4 });
-      db.connection.prepare(`UPDATE daily_records SET export_id = ?, schema_version = 8
+      db.connection.prepare(`UPDATE daily_records SET export_id = ?, schema_version = 10
         WHERE user_id = ? AND owner_date = '2026-03-16'`).run(appleLatestId, userA.id);
     } finally { reader.close(); }
     // Integrate the actual SDK transport, token lookup, SQLite reader and AES

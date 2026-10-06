@@ -17,8 +17,9 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// Immutable provenance required to resume an Apple export with the exact renderer contract that
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
-    static let profileID = "apple_health_data_v8"
-    private static let supportedCoreAPIVersion: UInt32 = 4
+    static let profileID = "apple_health_data_v10"
+    static let publicProfileID = "apple-v10"
+    private static let supportedCoreAPIVersion: UInt32 = 5
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
     private static let supportedSemanticProfileRevision: UInt32 = 1
@@ -85,7 +86,8 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     }
 
     /// Validates both the persisted values and agreement between the packaged build and the
-    /// adapter-provided registry snapshot. Callers must resolve any failure to legacy authority.
+    /// adapter-provided registry snapshot. New-operation eligibility may resolve to legacy;
+    /// a present incompatible durable pin must fail closed, never be silently re-rendered.
     func validateCompatibility(
         buildInfo: CoreBuildInfo,
         registrySnapshot: CoreMetricRegistrySnapshot
@@ -95,7 +97,7 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         }
         guard profile == Self.profileID,
               registrySnapshot.profileId == Self.profileID,
-              registrySnapshot.publicProfileId == "apple-v8" else {
+              registrySnapshot.publicProfileId == Self.publicProfileID else {
             throw CompatibilityError.invalidProfile
         }
         guard publicSchema == HealthMdExportSchema.identifier,

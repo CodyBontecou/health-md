@@ -209,6 +209,40 @@ final class HealthKitDailyCaptureTests: XCTestCase {
         XCTAssertEqual(outcome.record?.providers?.whoop?.resources.map(\.recordCount), [0, 0, 0, 0])
     }
 
+    func testCaptureScopesBothTypedAndNativeWHOOPOutput() async throws {
+        let selection = MetricSelectionState()
+        let source = ExternalDailyRecord(
+            provider: .whoop, date: "2026-05-10",
+            payloads: [ExternalProviderPayload(
+                name: "recovery", endpoint: "https://redacted.invalid", statusCode: 200,
+                data: .object(["records": .array([.object(["cycle_id": .number(101)])])])
+            ), ExternalProviderPayload(
+                name: "sleep", endpoint: "https://redacted.invalid", statusCode: 200,
+                data: .object(["records": .array([])])
+            )]
+        )
+        let selections: [Set<WHOOPResourceName>] = [[.recovery], []]
+        for resources in selections {
+            selection.enabledWHOOPResources = resources
+            let outcome = try await HealthKitDailyCapture.capture(
+                date: day(10), detailPolicy: .summary, metricSelection: selection,
+                transform: .none, emptyRecordPolicy: .retain, fetchExternalRecords: true,
+                failurePolicy: .apiEndpoint,
+                fetchHealthData: { date, _, _ in HealthData(date: date, activity: ActivityData(steps: 1)) },
+                fetchExternalDailyRecords: { _ in [source] }
+            )
+            XCTAssertEqual(outcome.record?.activity.steps, 1)
+            if resources.isEmpty {
+                XCTAssertNil(outcome.record?.providers)
+                XCTAssertTrue(outcome.externalDailyRecords.isEmpty)
+            } else {
+                XCTAssertEqual(outcome.record?.providers?.whoop?.captureStatus, .complete)
+                XCTAssertEqual(outcome.record?.providers?.whoop?.resources.map(\.resource), [.recovery])
+                XCTAssertEqual(outcome.externalDailyRecords.first?.payloads.map(\.name), ["recovery"])
+            }
+        }
+    }
+
     func testFailurePoliciesKeepEstablishedAuthorizationSemanticsExplicit() async throws {
         let api = try await captureFailure(.notAuthorized, policy: .apiEndpoint)
         let connected = try await captureFailure(.notAuthorized, policy: .connectedMac)

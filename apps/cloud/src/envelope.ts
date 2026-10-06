@@ -3,7 +3,7 @@ import type { DailyRecordInfo, EnvelopeInfo } from "./types";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/u;
 const TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
 const CAPTURE_STATUSES = new Set(["complete", "partial", "not_requested", "legacy_unavailable"]);
-const SUPPORTED_DAILY_VERSIONS = new Set([4, 5, 6, 7, 8]);
+const SUPPORTED_DAILY_VERSIONS = new Set([4, 5, 6, 7, 8, 10]);
 
 export class EnvelopeValidationError extends Error {
   constructor(message: string) {
@@ -93,6 +93,9 @@ export function parseAndValidateEnvelope(bytes: Uint8Array): EnvelopeInfo {
   const source = string(root.source, "source");
   if (source !== "ios" && source !== "android") {
     throw new EnvelopeValidationError("Unsupported export source");
+  }
+  if (dailyRecordSchemaVersion === 10 && source !== "ios") {
+    throw new EnvelopeValidationError("Unsupported daily record profile for this source");
   }
   const exportedAt = canonicalTimestamp(root.exported_at, "exported_at");
   const dateRange = object(root.date_range, "date_range");

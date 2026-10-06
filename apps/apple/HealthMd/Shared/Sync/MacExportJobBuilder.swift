@@ -219,8 +219,13 @@ struct MacExportJobBuilder {
                requestedDays.contains(day),
                settings.writesExternalProviderSidecars,
                let fetchExternalDailyRecords {
+                let whoopResources = settingsSnapshot.metricSelection.enabledWHOOPResources
+                    .requested(for: date, calendar: sourceCalendar)
                 let providerRecords = await fetchExternalDailyRecords(date)
-                record.providers = HealthProviderSections.normalized(from: providerRecords)
+                    .compactMap { $0.selectingWHOOPResources(whoopResources) }
+                record.providers = HealthProviderSections.normalized(
+                    from: providerRecords, whoopResources: whoopResources
+                )
                 externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
             }
             records.append(record)

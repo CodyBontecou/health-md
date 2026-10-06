@@ -162,7 +162,7 @@ class HealthMdCoreService internal constructor(
         }
 
     companion object {
-        const val EXPECTED_CORE_API_VERSION: UInt = 4u
+        const val EXPECTED_CORE_API_VERSION: UInt = 5u
         const val EXPECTED_SEMANTIC_INPUT_VERSION: UInt = 1u
         const val EXPECTED_CANONICAL_MODEL_VERSION: UInt = 1u
         const val EXPECTED_REGISTRY_VERSION: UInt = 1u

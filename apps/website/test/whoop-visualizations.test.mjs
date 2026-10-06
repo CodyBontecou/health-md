@@ -36,10 +36,20 @@ test("WHOOP gallery samples are reproducible, synthetic, and never alter canonic
   assert.deepEqual(generated, days);
   assert.deepEqual(generated.map(withoutWhoop), base);
   assert.equal(JSON.stringify({ base, template }), before, "generation must not mutate inputs");
-  assert.throws(() => withWhoopSamples(base, { ...template.whoop, schema_version: 2 }), /WHOOP daily v1/);
+  assert.throws(() => withWhoopSamples(base, { ...template.whoop, schema_version: 3 }), /WHOOP daily v1\/v2/);
   const moved = withWhoopSamples([{ ...base[0], date: "2027-01-05" }], template.whoop)[0];
   assert.match(moved.providers.whoop.cycles[0].id, /synthetic-20270105$/);
   assert.equal(moved.providers.whoop.fetched_at.slice(0, 10), moved.date);
+});
+
+test("WHOOP v2 samples preserve physiological-cycle steps without altering daily Apple steps", async () => {
+  const current = await json("../../../packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json");
+  const base = days.slice(0, 2).map((day) => ({ ...withoutWhoop(day), schema_version: 10 }));
+  const generated = withWhoopSamples(base, current.whoop);
+  assert.deepEqual(generated.map(withoutWhoop), base);
+  assert.ok(generated.every((day) => day.providers.whoop.schema_version === 2));
+  assert.ok(generated.every((day) => day.providers.whoop.cycles[0].step_count === 8234));
+  assert.throws(() => withWhoopSamples(days, current.whoop), /daily v10/);
 });
 
 test("WHOOP demo records preserve IDs, millisecond precision, relationships, missingness, and capture counts", () => {
@@ -117,6 +127,12 @@ test("the actual shipped browser bundle parses and renders all four WHOOP previe
   const sandbox = { window, document, navigator, console };
   vm.runInNewContext(await read("../assets/healthmd-plugin-visualizations.js"), sandbox);
   const api = sandbox.window.HealthMdPluginVisualizations;
+  const current = await json("../../../packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json");
+  current.whoop.cycles[0].step_count = 0;
+  const v10 = { ...withoutWhoop(days[0]), schema_version: 10, providers: current };
+  const migrated = api.parseHealthDay(v10);
+  assert.equal(migrated.whoop.cycles[0].step_count, 0);
+  assert.equal(migrated.steps, api.parseHealthDay(withoutWhoop(v10)).steps);
   const parsed = days.map(api.parseHealthDay);
   assert.ok(parsed.every((day) => day.whoop?.source === "typed"));
   for (const [index, day] of parsed.entries()) {

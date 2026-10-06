@@ -665,7 +665,12 @@ final class IPhoneExportPerformanceLabCoordinator: ObservableObject {
         if let externalIntegrations,
            externalIntegrations.connectedProviderCount > 0 {
             externalFetcher = { date in
-                await externalIntegrations.fetchDailyRecords(for: date)
+                var calendar = Calendar(identifier: .gregorian)
+                calendar.timeZone = settings.exportTimeZoneOverride ?? .current
+                return await externalIntegrations.fetchDailyRecords(
+                    for: date, calendar: calendar,
+                    whoopResources: settings.metricSelection.enabledWHOOPResources
+                )
             }
         } else {
             externalFetcher = nil

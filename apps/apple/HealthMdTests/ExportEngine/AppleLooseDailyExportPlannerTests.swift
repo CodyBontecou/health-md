@@ -11,6 +11,42 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     private static var retainedSettings: [AdvancedExportSettings] = []
     private static var retainedManagers: [VaultManager] = []
 
+    func testHistoricalPinsFailClosedBeforeLegacyEmptyOrProviderFallback() async throws {
+        let service = HealthMdCoreService()
+        let registry = try service.metricRegistry(profile: .appleHealthDataV10)
+        for engine in [ExportEngineMode.legacy, .shadow, .rust] {
+            let current = try AppleExportEnginePin(engine: engine, calendarTimeZoneIdentifier: "UTC",
+                buildInfo: service.buildInfo(), registrySnapshot: registry)
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(current)) as? [String: Any])
+            object["profile"] = "apple_health_data_v8"
+            object["public_schema_version"] = 8
+            object["core_api_version"] = 4
+            let bytes = try JSONSerialization.data(withJSONObject: object)
+            if engine == .legacy {
+                XCTAssertThrowsError(try JSONDecoder().decode(AppleExportEnginePin.self, from: bytes))
+                continue // Persisted explicit legacy pins are structurally forbidden.
+            }
+            let pin = try JSONDecoder().decode(AppleExportEnginePin.self, from: bytes)
+            XCTAssertEqual(pin.profile, "apple_health_data_v8")
+            XCTAssertEqual(pin.publicSchemaVersion, 8)
+            let planner = AppleLooseDailyExportPlanner(nativeRendererPreflight: {
+                XCTFail("Incompatible authority must not open a renderer")
+            })
+            var snapshot = ExportSettingsSnapshot.from(makeSimpleSettings(), healthSubfolder: "Health",
+                calendarTimeZoneIdentifier: "UTC")
+            snapshot.appleExportEnginePin = pin
+            for records in [[], [ExportFixtures.partialDay], [ExportFixtures.whoopDay]] {
+                do {
+                    _ = try await planner.planRange(healthData: records, settingsSnapshot: snapshot,
+                        surface: .connectedReceivedFilesWithoutSideEffects)
+                    XCTFail("Historical pin must fail closed for \(engine)")
+                } catch {
+                    XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
+                }
+            }
+        }
+    }
+
     func testConcreteShadowPlanAndAsyncPreviewAreTheExactNativeOraclePlan() async throws {
         let diagnostics = M6DiagnosticRecorder()
         let planner = AppleLooseDailyExportPlanner(
@@ -334,7 +370,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
         let service = HealthMdCoreService()
         XCTAssertTrue(capturedPin.isCompatible(
             buildInfo: try service.buildInfo(),
-            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV8)
+            registrySnapshot: try service.metricRegistry(profile: .appleHealthDataV10)
         ))
         XCTAssertTrue(AppleLooseDailyExportPlanner.supports(
             healthData: [record],
@@ -921,7 +957,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
     ) throws -> AppleLooseDailyPlannedOperation {
         let service = HealthMdCoreService()
         let buildInfo = try service.buildInfo()
-        let registry = try service.metricRegistry(profile: .appleHealthDataV8)
+        let registry = try service.metricRegistry(profile: .appleHealthDataV10)
         let pin = try AppleExportEnginePin(
             engine: authority,
             calendarTimeZoneIdentifier: "UTC",
@@ -973,7 +1009,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             id: NativeExportArtifactPlan.artifactID(
                 requestID: identity.requestID,
                 sessionID: identity.sessionID,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 relativePath: path,
                 mediaType: "application/json",
                 writeMode: .overwrite,
@@ -990,7 +1026,7 @@ final class AppleLooseDailyExportPlannerTests: XCTestCase {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: identity.requestID,
             sessionID: identity.sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: [artifact],
             totalByteCount: artifact.byteCount,
             pin: pin

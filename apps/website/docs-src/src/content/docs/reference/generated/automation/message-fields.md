@@ -324,6 +324,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.hello._0.supportsDurableConnectedExportRecovery` | boolean |
 | `$.hello._0.supportsGranularPayloads` | boolean |
 | `$.hello._0.supportsIPhoneExportRequests` | boolean |
+| `$.hello._0.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.hello._0.supportsJobCancellation` | boolean |
 | `$.hello._0.supportsMacDestinationStatus` | boolean |
 | `$.hello._0.supportsMacExportJobs` | boolean |
@@ -1095,6 +1096,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.macStatus._0.capabilities.supportsDurableConnectedExportRecovery` | boolean |
 | `$.macStatus._0.capabilities.supportsGranularPayloads` | boolean |
 | `$.macStatus._0.capabilities.supportsIPhoneExportRequests` | boolean |
+| `$.macStatus._0.capabilities.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.macStatus._0.capabilities.supportsJobCancellation` | boolean |
 | `$.macStatus._0.capabilities.supportsMacDestinationStatus` | boolean |
 | `$.macStatus._0.capabilities.supportsMacExportJobs` | boolean |
@@ -1589,6 +1591,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.records[].providers.whoop.cycles[].max_heart_rate_bpm` | integer |
 | `$.records[].providers.whoop.cycles[].score_state` | string |
 | `$.records[].providers.whoop.cycles[].start_time` | string |
+| `$.records[].providers.whoop.cycles[].step_count` | integer |
 | `$.records[].providers.whoop.cycles[].strain_score` | number |
 | `$.records[].providers.whoop.cycles[].timezone_offset` | string |
 | `$.records[].providers.whoop.fetched_at` | string |
@@ -2141,6 +2144,7 @@ This inventory is generated from production API/control serialization and every 
 | `$.supportsDurableConnectedExportRecovery` | boolean |
 | `$.supportsGranularPayloads` | boolean |
 | `$.supportsIPhoneExportRequests` | boolean |
+| `$.supportsIPhoneInitiatedContextRefresh` | boolean |
 | `$.supportsJobCancellation` | boolean |
 | `$.supportsMacDestinationStatus` | boolean |
 | `$.supportsMacExportJobs` | boolean |

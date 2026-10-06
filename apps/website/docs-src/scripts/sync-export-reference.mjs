@@ -511,11 +511,11 @@ function assertCurrentSchemaContracts(parsedJSON) {
   const required = new Map([
     ['healthmd.api_export', [1, 2]],
     ['healthmd.external_provider_daily', [1]],
-    ['healthmd.health_data', [8]],
+    ['healthmd.health_data', [10]],
     ['healthmd.healthkit_records', [1]],
-    ['healthmd.provider.whoop_daily', [1]],
+    ['healthmd.provider.whoop_daily', [2]],
     ['healthmd.raw_result', [1]],
-    ['healthmd.rollup_summary', [8, 9]],
+    ['healthmd.rollup_summary', [8, 10]],
   ]);
   for (const [identifier, expectedVersions] of required) {
     const actualVersions = versionsByIdentifier.get(identifier);
@@ -529,8 +529,8 @@ function assertCurrentSchemaContracts(parsedJSON) {
     fail('generated/core/data-dictionary.json must be a non-empty array.');
   }
   const dictionaryVersions = [...new Set(dictionary.map((entry) => entry?.schemaVersion))];
-  if (canonicalJSON(dictionaryVersions) !== canonicalJSON([8])) {
-    fail(`The generated data dictionary must contain schemaVersion 8 only; found ${dictionaryVersions.join(', ')}.`);
+  if (canonicalJSON(dictionaryVersions) !== canonicalJSON([10])) {
+    fail(`The generated data dictionary must contain schemaVersion 10 only; found ${dictionaryVersions.join(', ')}.`);
   }
 }
 

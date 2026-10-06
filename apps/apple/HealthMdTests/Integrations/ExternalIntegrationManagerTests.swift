@@ -398,6 +398,50 @@ final class ExternalIntegrationManagerTests: XCTestCase {
         XCTAssertEqual(requestCount, 0)
     }
 
+    func testAllOffSelectionSkipsExpiredTokenRefreshAndHistoryThroughProtocol() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(
+            accessToken: "expired", refreshToken: "rotating-refresh",
+            scope: "offline read:cycles read:recovery read:sleep read:workout",
+            expiresAt: Date().addingTimeInterval(-60)
+        ), provider: .whoop)
+        let manager: any ExternalIntegrationDailyRecordProviding = makeManager()
+        var requestCount = 0
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            requestCount += 1
+            return Self.response(request, status: 500, json: [:])
+        }
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12), calendar: .current, whoopResources: []
+        )
+        let discovery = await manager.discoverEarliestAvailableDate(
+            providerIDs: ["whoop"], whoopResources: []
+        )
+        XCTAssertTrue(records.isEmpty)
+        XCTAssertTrue(discovery.isComplete)
+        XCTAssertNil(discovery.earliestDate)
+        XCTAssertEqual(requestCount, 0, "Neither the WHOOP API nor the OAuth broker may be contacted")
+        XCTAssertNil(tokenStore.accounts[.whoop]?.lastSuccessfulExportAt)
+    }
+
+    func testResourceSelectionIsHonoredThroughProtocol() async throws {
+        try tokenStore.save(token: ExternalIntegrationToken(
+            accessToken: "access", refreshToken: "refresh", scope: "offline read:recovery",
+            expiresAt: Date().addingTimeInterval(3_600)
+        ), provider: .whoop)
+        var paths: [String] = []
+        ExternalIntegrationURLProtocolStub.setHandler { request in
+            paths.append(try XCTUnwrap(request.url?.path))
+            return Self.response(request, status: 200, json: ["records": []])
+        }
+        let manager: any ExternalIntegrationDailyRecordProviding = makeManager()
+        let records = await manager.fetchDailyRecords(
+            for: Self.day(2026, 7, 12), providerIDs: ["whoop"],
+            calendar: .current, whoopResources: [.recovery]
+        )
+        XCTAssertEqual(paths, ["/developer/v2/recovery"])
+        XCTAssertEqual(records.first?.payloads.map(\.name), ["recovery"])
+    }
+
     func testScopedFetchAndHistoryReportRequestedDisconnectedProvider() async throws {
         var requestCount = 0
         ExternalIntegrationURLProtocolStub.setHandler { request in

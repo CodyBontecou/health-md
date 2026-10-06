@@ -72,6 +72,8 @@ The `providers` key is omitted when the export contains no provider section. Onc
 | `partial` | At least one planned resource failed, was cancelled, skipped, or was unsupported. Successful sibling resources remain valid. |
 | `not_requested` | Provider capture was deliberately not requested for this daily record. No typed provider values may be present. |
 
+An export preference may narrow the resource plan using the existing resource IDs `cycles`, `recovery`, `sleep`, `workouts`, and `body`. Disabled resources are not fetched, have empty typed collections (or omitted body), and do not acquire failure/skipped rows merely because they were unselected. `complete` describes the selected plan, not unrequested provider coverage. All-off may omit the provider namespace entirely. Selected records retain their native relationship IDs without fetching an unselected related resource. This uses the existing v1 subset/missingness grammar; resource selection does not change daily v8 or provider v1 schema identity.
+
 Every planned resource has exactly one `resources[]` row. Resource names must be unique, and each `record_count` must equal the number of retained typed records for that resource (or `1`/`0` for the body singleton):
 
 ```json
@@ -116,6 +118,8 @@ Field names carry units or semantics when ambiguity would otherwise be possible:
 - WHOOP strain uses the provider-defined dimensionless `strain_score`;
 - height and weight use meters and kilograms;
 - `recent_nap_adjustment_milliseconds` preserves WHOOP's signed `need_from_recent_nap_milli` value exactly; it is negative or zero and is not sign-inverted into a positive “credit.”
+
+The native workout adapter reads WHOOP's documented `score.zone_durations`. It accepts the legacy `score.zone_duration` spelling only when the canonical key is absent, never merging aliases or substituting legacy values for an explicit canonical null/empty value. Both map to the existing typed `workouts[].zone_durations` millisecond fields; this input-compatibility correction does not change the v1 output grammar.
 
 Unknown or unavailable values are omitted. Explicit zero is retained only when WHOOP returned zero or the documented typed derivation produced zero; producers must not use zero as a missing-value placeholder. `cycles[].end_time: null` is reserved for an in-progress cycle whose provider response explicitly has no end. Physiologically nonzero measurements such as heart rate and SpO₂ must be positive when present.
 

@@ -699,7 +699,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                     externalFetcher = { date in
                         await integrations.fetchDailyRecords(
                             for: date,
-                            calendar: sourceCalendar
+                            calendar: sourceCalendar,
+                            whoopResources: settings.metricSelection.enabledWHOOPResources
                         )
                     }
                 } else {
@@ -749,7 +750,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                         await integrations.fetchDailyRecords(
                             for: date,
                             providerIDs: allowedProviderIDs,
-                            calendar: sourceCalendar
+                            calendar: sourceCalendar,
+                            whoopResources: settings.metricSelection.enabledWHOOPResources
                         )
                     }
                 } else {

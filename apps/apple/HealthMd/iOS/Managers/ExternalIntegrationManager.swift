@@ -255,12 +255,40 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
         providerIDs: Set<String>,
         calendar: Calendar
     ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(
+            for: date, providerIDs: providerIDs, calendar: calendar,
+            whoopResources: Set(WHOOPResourceName.allCases)
+        )
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        calendar: Calendar,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> [ExternalDailyRecord] {
+        await fetchDailyRecords(
+            for: date, providerIDs: Set(accounts.keys.map(\.id)),
+            calendar: calendar, whoopResources: whoopResources
+        )
+    }
+
+    func fetchDailyRecords(
+        for date: Date,
+        providerIDs: Set<String>,
+        calendar: Calendar,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> [ExternalDailyRecord] {
         guard !providerIDs.isEmpty, !enabledProviders.isEmpty else { return [] }
         var records: [ExternalDailyRecord] = []
         let dateString = ExternalProviderAPIClient.dayString(date, calendar: calendar)
         for provider in enabledProviders
             .filter({ providerIDs.contains($0.id) })
             .sorted(by: { $0.displayName < $1.displayName }) {
+            // Skip before reading credentials or refreshing a rotating token.
+            if provider == .whoop {
+                let planned = whoopResources.requested(for: date, calendar: calendar)
+                guard !planned.isEmpty else { continue }
+            }
             guard accounts[provider] != nil, isDisconnectingProvider != provider else {
                 records.append(ExternalDailyRecord(
                     provider: provider,
@@ -292,7 +320,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: whoopResources
                     )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
@@ -306,7 +335,8 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                         provider: provider,
                         date: date,
                         token: token,
-                        calendar: calendar
+                        calendar: calendar,
+                        whoopResources: whoopResources
                     )
                     guard shouldKeepFetchResult(for: provider) else { continue }
                     records.append(record)
@@ -327,6 +357,17 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
     func discoverEarliestAvailableDate(
         providerIDs: Set<String>
     ) async -> ExternalProviderHistoryDiscovery {
+        await discoverEarliestAvailableDate(
+            providerIDs: providerIDs, whoopResources: Set(WHOOPResourceName.allCases)
+        )
+    }
+
+    func discoverEarliestAvailableDate(
+        providerIDs: Set<String>,
+        whoopResources: Set<WHOOPResourceName>
+    ) async -> ExternalProviderHistoryDiscovery {
+        let providerIDs = whoopResources.subtracting([.body]).isEmpty
+            ? providerIDs.subtracting(["whoop"]) : providerIDs
         let requestedProviders = Set(accounts.keys.filter {
             providerIDs.contains($0.id)
                 && enabledProviders.contains($0)
@@ -350,13 +391,15 @@ final class ExternalIntegrationManager: NSObject, ObservableObject, ExternalInte
                 do {
                     candidate = try await apiClient.discoverEarliestAvailableDate(
                         provider: provider,
-                        token: token
+                        token: token,
+                        whoopResources: whoopResources
                     )
                 } catch ExternalProviderAPIError.unauthorized where token.refreshToken != nil {
                     token = try await refreshToken(for: provider, replacing: token)
                     candidate = try await apiClient.discoverEarliestAvailableDate(
                         provider: provider,
-                        token: token
+                        token: token,
+                        whoopResources: whoopResources
                     )
                 }
                 if let candidate, earliest == nil || candidate < earliest! {

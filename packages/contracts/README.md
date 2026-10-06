@@ -23,7 +23,10 @@ The package is licensed under the [GNU Affero General Public License v3.0 only](
 
 | Path | Purpose |
 |---|---|
-| [`proposals/provider-sections-v1`](proposals/provider-sections-v1/contract.md) | Canonical typed, namespaced WHOOP provider section for Apple `healthmd.health_data` v8; the historical proposal path is retained for stable links |
+| [`apple-export/v10`](apple-export/v10/contract.md) | Current Apple daily v10 profile, unchanged primary metric registry, consumer and durable-pin migration |
+| [`provider-sections/v2`](provider-sections/v2/contract.md) | Typed WHOOP v2 physiological-cycle steps, distinct from civil-day primary steps |
+| [`rollup-summary/v10`](rollup-summary/v10/contract.md) | Range summaries sourced from daily v10, with unchanged rules v8 |
+| [`proposals/provider-sections-v1`](proposals/provider-sections-v1/contract.md) | Frozen historical typed WHOOP v1 section for Apple daily v8; path/fixtures remain unchanged |
 | [`proposals/unified-health-data-v9`](proposals/unified-health-data-v9/contract.md) | Proposed unified Apple/Android daily contract with exact typed metrics, provenance, capture completeness, platform sections, mapping ledger, schema, and synthetic fixtures; no production writer is approved yet |
 
 Run the package checks from the repository root:
@@ -49,7 +52,7 @@ The manifest distinguishes three states:
 
 `healthmd.render_input` v1 is a separate internal boundary from one completed semantic result to exact profile artifacts. Its fixtures include reviewed Rust plans plus independently frozen bytes from the pre-cutover Swift and Kotlin renderers. It does not grant Rust access to destinations, HTTP, HealthKit, Health Connect, ZIP containers, or credentials.
 
-The current Apple daily export contract is version 8. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
+The current Apple daily source contract is version 10, with WHOOP provider v2 for new captures. Historical v8/WHOOP-v1 signatures and fixtures remain frozen; v10 primary metric definitions are inherited through an independently versioned extension without mutating registry-v1. Release compatible cloud/plugin/connected-app readers before enabling v10 writers against them. Source qualification is not deployment or live-account evidence. Android's compatibility exporter remains frozen at version 4, while Android's additive local analytical profile is version 5. They are deliberately separate shipped inventory entries: moving them into one package without reconciling their semantics would hide real version and unit differences. Apple v8 adds the reviewed `providers.whoop` section and provider-prefixed Markdown, Bases/frontmatter, CSV, and data-dictionary projections. Android v4/v5 contracts remain unchanged.
 
 `healthmd.shared_setup` v2 is a separate pre-canonical public configuration contract candidate, deferred pending physical-device interoperability and accessibility QA. It is the one and only version of the contract family: the pre-canonical version 1 was removed by deliberate owner decision on 2026-09-05 with no in-the-wild consumers, and version 1 input fails closed as unsupported. The v2 contract carries only explicitly allowlisted portable preferences, exact registry semantic metric IDs, typed native extensions, and disabled schedule/API intent. It never carries health data, credentials, folder grants, purchases, or runtime state and does not bump any health export schema or direct protocol.
 
@@ -63,7 +66,7 @@ A unified cross-platform successor is now specified as a **deferred `healthmd.he
 
 `product-capabilities.json` records output profiles and product-level capabilities. Each capability is classified as `shared`, `apple_only`, `android_only`, `unavailable`, or `planned`. Platform entries use `available`, `unavailable`, or `planned`; every unavailable entry must carry a non-empty reason, and every planned entry must name its target. Platform-only data remains a supported product capability rather than a parity defect.
 
-The contract manifest pins both inventories by SHA-256. Update a hash only after reviewing its semantic diff and evidence. `make test-product-parity` checks capability classifications, profile/contract references, registry identity/order/availability/output invariants, evidence paths, canonical bytes, and pinned hashes.
+The contract manifest pins product capabilities, the immutable metric-registry-v1, and the independently versioned Apple-v10 profile extension by SHA-256. Update a hash only after reviewing its semantic diff and evidence. `make test-product-parity` checks capability classifications, profile/contract references, registry identity/order/availability/output invariants, evidence paths, canonical bytes, and pinned hashes.
 
 ## Fixture policy
 

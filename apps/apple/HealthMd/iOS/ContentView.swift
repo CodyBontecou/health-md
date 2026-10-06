@@ -1817,12 +1817,14 @@ struct ContentView: View {
                 let providerTimeZone = advancedSettings.exportTimeZoneOverride ?? .current
                 var providerCalendar = Calendar(identifier: .gregorian)
                 providerCalendar.timeZone = providerTimeZone
+                let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
                 let externalRecordFetcher: MacExportJobBuilder.ExternalDailyRecordFetcher?
                 if ConnectedAppsFeature.isEnabled, externalIntegrationManager.connectedProviderCount > 0 {
                     externalRecordFetcher = { date in
                         await externalIntegrationManager.fetchDailyRecords(
                             for: date,
-                            calendar: providerCalendar
+                            calendar: providerCalendar,
+                            whoopResources: whoopResources
                         )
                     }
                 } else {
@@ -2138,8 +2140,13 @@ struct ContentView: View {
                        metadata.requestedDays.contains(day),
                        advancedSettings.writesExternalProviderSidecars,
                        let externalRecordFetcher {
+                        let whoopResources = metadata.settingsSnapshot.metricSelection.enabledWHOOPResources
+                            .requested(for: date, calendar: sourceCalendar)
                         let providerRecords = await externalRecordFetcher(date)
-                        record.providers = HealthProviderSections.normalized(from: providerRecords)
+                            .compactMap { $0.selectingWHOOPResources(whoopResources) }
+                        record.providers = HealthProviderSections.normalized(
+                            from: providerRecords, whoopResources: whoopResources
+                        )
                         externalDailyRecords.append(contentsOf: providerRecords.filter(\.shouldExport))
                     }
                     records.append(record)

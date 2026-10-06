@@ -35,6 +35,16 @@
       "public_schema_version": 5,
       "compatibility": "additive",
       "comparison": "byte_for_byte"
+    },
+    {
+      "id": "apple-v10",
+      "name": "Apple v10",
+      "platform": "apple",
+      "contract_id": "healthmd.health_data.apple_v10",
+      "public_schema": "healthmd.health_data",
+      "public_schema_version": 10,
+      "compatibility": "additive",
+      "comparison": "byte_for_byte"
     }
   ],
   "capabilities": [
@@ -121,7 +131,8 @@
       "classification": "planned",
       "summary": "Write one independently versioned aggregate for immutable requested owner-date bounds, with explicit coverage and canonical units, while preserving daily export output.",
       "profiles": [
-        "apple-v8"
+        "apple-v8",
+        "apple-v10"
       ],
       "platforms": {
         "apple": {
@@ -720,9 +731,10 @@
       "id": "apple.typed-whoop-provider-section",
       "name": "Typed WHOOP daily provider section",
       "classification": "apple_only",
-      "summary": "Embed reviewed WHOOP cycle, recovery, sleep, workout, and current-day body snapshot data in Apple v8 while retaining provider-native sidecars.",
+      "summary": "Embed reviewed WHOOP cycle, recovery, sleep, workout, and current-day body snapshot data in historical Apple v8/WHOOP v1 and current Apple v10/WHOOP v2 while retaining provider-native sidecars. Physiological-cycle steps are distinct from primary civil-day steps.",
       "profiles": [
-        "apple-v8"
+        "apple-v8",
+        "apple-v10"
       ],
       "platforms": {
         "apple": {
@@ -736,6 +748,45 @@
       "evidence": [
         "packages/contracts/proposals/provider-sections-v1/contract.md",
         "apps/apple/docs/features/third-party-integrations.md"
+      ]
+    },
+    {
+      "id": "export.whoop-physiological-cycle-steps",
+      "name": "WHOOP physiological-cycle steps",
+      "classification": "planned",
+      "summary": "Retain bounded exact cycle step counts with provider IDs and cycle timestamps in Apple daily v10/WHOOP v2; never alias, sum or prorate them into primary civil-day steps or roll-ups. Missing/null is unavailable and explicit zero is meaningful. Existing read:cycles scope suffices.",
+      "profiles": ["apple-v10"],
+      "platforms": {
+        "apple": {"state": "available"},
+        "android": {
+          "state": "planned",
+          "target": "Add independently versioned typed WHOOP provider-cycle counts and the same per-profile/per-job cycles resource control to Android Play using public Cycle.step_count and read:cycles; preserve frozen v4/v5 primary steps and selected native Raw API Snapshots. F-Droid remains Health Connect-only."
+        }
+      },
+      "evidence": [
+        "packages/contracts/provider-sections/v2/contract.md",
+        "apps/apple/HealthMd/Shared/Integrations/WHOOPProviderSections.swift",
+        "apps/android/docs/features/cloud-providers.md"
+      ]
+    },
+    {
+      "id": "export.whoop-resource-selection",
+      "name": "WHOOP export data selection",
+      "classification": "planned",
+      "summary": "Choose WHOOP cycles, recovery, sleep, workouts, and body resources independently from platform health metrics; persist and freeze selections per export profile/job and enforce them before provider reads and native/typed output. iPhone controls are available when Connected Apps is enabled; Android Play controls are staged.",
+      "profiles": ["apple-v8", "apple-v10"],
+      "platforms": {
+        "apple": { "state": "available" },
+        "android": {
+          "state": "planned",
+          "target": "Add the same cycles/recovery/sleep/workouts/body Health Metrics controls to Android Play, persist all-on/partial/all-off selections per profile and frozen job, and apply them before WHOOP compatibility reads and Raw API Snapshot endpoint planning while preserving frozen v4/v5 grammar and the cloud-free F-Droid channel."
+        }
+      },
+      "evidence": [
+        "apps/apple/docs/features/metric-selection.md",
+        "apps/apple/HealthMd/Shared/Integrations/WHOOPDataSelection.swift",
+        "apps/android/docs/features/cloud-providers.md",
+        "apps/android/app/src/play/java/com/healthmd/data/health/providers/cloud/WhoopCloudDataProvider.kt"
       ]
     },
     {

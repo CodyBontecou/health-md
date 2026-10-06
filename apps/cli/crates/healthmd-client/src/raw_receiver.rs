@@ -935,7 +935,7 @@ fn validate_complete_corpus(
             .end()
             .map_err(|_| invalid("logical day has trailing JSON"))?;
         if identity.schema != "healthmd.health_data"
-            || !matches!(identity.schema_version, 7 | 8)
+            || !matches!(identity.schema_version, 7 | 8 | 10)
             || identity.date != manifest.date
         {
             return Err(invalid("logical day identity does not match its manifest"));
@@ -2229,8 +2229,8 @@ mod tests {
     }
 
     #[test]
-    fn homogeneous_v7_and_v8_corpora_report_evidenced_versions_in_json_and_jsonl() {
-        for source_schema_version in [7, 8] {
+    fn homogeneous_v7_v8_and_v10_corpora_report_evidenced_versions_in_json_and_jsonl() {
+        for source_schema_version in [7, 8, 10] {
             let corpus = test_corpus(&[Some(source_schema_version), Some(source_schema_version)]);
             let json_artifact = corpus.receiver.extraction(corpus.job_id, &[]).unwrap();
             let json: Value =

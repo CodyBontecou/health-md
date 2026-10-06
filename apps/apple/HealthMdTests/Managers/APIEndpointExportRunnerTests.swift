@@ -557,6 +557,50 @@ final class APIEndpointExportRunnerTests: XCTestCase {
         XCTAssertTrue(result.hasAuthoritativeFileCount)
     }
 
+    func testAPIBatchesUseWHOOPSelectionForTypedAndNativeRecords() async {
+        let exportDate = date(year: 2026, month: 6, day: 1)
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        Self.retainedSettings.append(settings)
+        let apiSettings = APIExportSettings(userDefaults: defaults, keychain: FakeKeychainStore())
+        apiSettings.endpointURLString = "https://api.example.com/healthmd"
+        let selections: [Set<WHOOPResourceName>] = [[.recovery], []]
+        for resources in selections {
+            settings.metricSelection.enabledWHOOPResources = resources
+            var uploadedRecords: [HealthData] = []
+            var uploadedExternal: [ExternalDailyRecord] = []
+            let result = await APIEndpointExportRunner.export(
+                dates: [exportDate], settings: settings, apiSettings: apiSettings,
+                fetchHealthData: { date, _, _ in HealthData(date: date, activity: ActivityData(steps: 1)) },
+                fetchExternalDailyRecords: { _ in
+                    [ExternalDailyRecord(
+                        provider: .whoop, date: "2026-06-01",
+                        payloads: [ExternalProviderPayload(
+                            name: "recovery", endpoint: "https://redacted.invalid", statusCode: 200,
+                            data: .object(["records": .array([.object(["cycle_id": .number(101)])])])
+                        ), ExternalProviderPayload(
+                            name: "workouts", endpoint: "https://redacted.invalid", statusCode: 403,
+                            error: "Synthetic unselected error"
+                        )]
+                    )]
+                },
+                upload: { records, _, externalRecords, _, _, _, _ in
+                    uploadedRecords = records
+                    uploadedExternal = externalRecords
+                    return APIExportUploadResult(statusCode: 202, responseBodyPreview: nil)
+                }
+            )
+            XCTAssertTrue(result.isFullSuccess)
+            if resources.isEmpty {
+                XCTAssertNil(uploadedRecords.first?.providers)
+                XCTAssertTrue(uploadedExternal.isEmpty)
+            } else {
+                XCTAssertEqual(uploadedRecords.first?.providers?.whoop?.captureStatus, .complete)
+                XCTAssertEqual(uploadedRecords.first?.providers?.whoop?.resources.map(\.resource), [.recovery])
+                XCTAssertEqual(uploadedExternal.first?.payloads.map(\.name), ["recovery"])
+            }
+        }
+    }
+
     func testCompatibilityUploaderRetainsEmptyRecordsButPayloadCountExcludesThem() async {
         let exportDate = date(year: 2026, month: 6, day: 1)
         let settings = AdvancedExportSettings(userDefaults: defaults)

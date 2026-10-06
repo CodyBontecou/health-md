@@ -823,16 +823,56 @@ struct DailyNoteInjectionSnapshot: Codable, Equatable {
 struct MetricSelectionSnapshot: Codable, Equatable {
     var enabledMetricIDs: Set<String>
     var enabledCategoryIDs: Set<String>
+    var enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
+
+    enum CodingKeys: String, CodingKey {
+        case enabledMetricIDs, enabledCategoryIDs, enabledWHOOPResources
+    }
+
+    init(
+        enabledMetricIDs: Set<String>,
+        enabledCategoryIDs: Set<String>,
+        enabledWHOOPResources: Set<WHOOPResourceName> = Set(WHOOPResourceName.allCases)
+    ) {
+        self.enabledMetricIDs = enabledMetricIDs
+        self.enabledCategoryIDs = enabledCategoryIDs
+        self.enabledWHOOPResources = enabledWHOOPResources
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        enabledMetricIDs = try container.decode(Set<String>.self, forKey: .enabledMetricIDs)
+        enabledCategoryIDs = try container.decode(Set<String>.self, forKey: .enabledCategoryIDs)
+        enabledWHOOPResources = try container.decodeIfPresent(
+            Set<WHOOPResourceName>.self, forKey: .enabledWHOOPResources
+        ) ?? Set(WHOOPResourceName.allCases)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(enabledMetricIDs, forKey: .enabledMetricIDs)
+        try container.encode(enabledCategoryIDs, forKey: .enabledCategoryIDs)
+        // Preserve legacy/default snapshot bytes and consumer fixtures. An explicit
+        // empty set is different from an omitted key (the legacy all-on default).
+        if enabledWHOOPResources != Set(WHOOPResourceName.allCases) {
+            try container.encode(
+                enabledWHOOPResources.sorted { $0.rawValue < $1.rawValue },
+                forKey: .enabledWHOOPResources
+            )
+        }
+    }
 
     static func from(_ selection: MetricSelectionState) -> MetricSelectionSnapshot {
         MetricSelectionSnapshot(
             enabledMetricIDs: selection.enabledMetrics,
-            enabledCategoryIDs: selection.enabledCategories
+            enabledCategoryIDs: selection.enabledCategories,
+            enabledWHOOPResources: selection.enabledWHOOPResources
         )
     }
 
     func apply(to selection: MetricSelectionState) {
         selection.enabledMetrics = enabledMetricIDs
         selection.enabledCategories = enabledCategoryIDs
+        selection.enabledWHOOPResources = enabledWHOOPResources
     }
 }

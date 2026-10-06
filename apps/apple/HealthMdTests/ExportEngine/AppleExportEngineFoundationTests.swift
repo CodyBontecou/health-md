@@ -51,7 +51,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         XCTAssertEqual(
             resolver.modeForPersistedOperation(
                 pin: nil,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: context.buildInfo,
                 registrySnapshot: context.registry
             ),
@@ -59,7 +59,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         )
         XCTAssertEqual(
             resolver.modeForNewOperation(
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: context.buildInfo,
                 registrySnapshot: context.registry
             ),
@@ -69,7 +69,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         incompatibleBuild.coreApiVersion += 1
         XCTAssertEqual(
             resolver.modeForNewOperation(
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: incompatibleBuild,
                 registrySnapshot: context.registry
             ),
@@ -78,7 +78,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         XCTAssertEqual(
             resolver.modeForPersistedOperation(
                 pin: context.pin,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: incompatibleBuild,
                 registrySnapshot: context.registry
             ),
@@ -92,7 +92,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         )
         XCTAssertEqual(
             unknownResolver.modeForNewOperation(
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: context.buildInfo,
                 registrySnapshot: context.registry
             ),
@@ -109,7 +109,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         )
         XCTAssertEqual(
             defaultsResolver.modeForNewOperation(
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: context.buildInfo,
                 registrySnapshot: context.registry
             ),
@@ -122,7 +122,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
         )
         XCTAssertEqual(
             environmentResolver.modeForNewOperation(
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 buildInfo: context.buildInfo,
                 registrySnapshot: context.registry
             ),
@@ -227,7 +227,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: context.pin.artifactPlanVersion,
             requestId: "request",
             sessionId: "session",
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             items: [first, second],
             totalByteCount: UInt64(firstData.count + secondData.count)
         )
@@ -244,7 +244,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifact: CoreStreamArtifactConfig(
                 requestId: "stream-request",
                 sessionId: "stream-session",
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 relativePath: "Health/stream.bin",
                 mediaType: "application/octet-stream",
                 writeMode: .overwrite
@@ -259,7 +259,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: context.pin.artifactPlanVersion,
             requestId: "stream-request",
             sessionId: "stream-session",
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             items: [CoreArtifactPlanItem(
                 artifactId: streamedDescriptor.artifactId,
                 relativePath: streamedDescriptor.relativePath,
@@ -284,7 +284,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: context.pin.artifactPlanVersion,
             requestId: "request",
             sessionId: "session",
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             items: [invalidDigest],
             totalByteCount: invalidDigest.byteCount
         )
@@ -302,7 +302,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: context.pin.artifactPlanVersion,
             requestId: "request",
             sessionId: "session",
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             items: [invalidPath],
             totalByteCount: invalidPath.byteCount
         )
@@ -317,7 +317,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: context.pin.artifactPlanVersion,
             requestId: "request",
             sessionId: "session",
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             items: [invalidID],
             totalByteCount: invalidID.byteCount
         )
@@ -705,7 +705,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactId: NativeExportArtifactPlan.artifactID(
                 requestID: requestID,
                 sessionID: sessionID,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 relativePath: path,
                 mediaType: mediaType,
                 writeMode: writeMode,
@@ -734,7 +734,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             id: NativeExportArtifactPlan.artifactID(
                 requestID: requestID,
                 sessionID: sessionID,
-                profile: .appleHealthDataV8,
+                profile: .appleHealthDataV10,
                 relativePath: path,
                 mediaType: mediaType,
                 writeMode: writeMode,
@@ -759,7 +759,7 @@ final class AppleExportEngineFoundationTests: XCTestCase {
             artifactPlanVersion: pin.artifactPlanVersion,
             requestID: requestID,
             sessionID: sessionID,
-            profile: .appleHealthDataV8,
+            profile: .appleHealthDataV10,
             artifacts: artifacts,
             totalByteCount: artifacts.reduce(0) { $0 + $1.byteCount },
             pin: pin

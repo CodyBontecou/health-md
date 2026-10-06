@@ -147,6 +147,7 @@ fn render(
             .then(left.presentation.key.cmp(&right.presentation.key))
     });
     let context = Context {
+        daily_schema_version: config.profile.public_schema_version(),
         rollup,
         period_id,
         days_expected,
@@ -164,6 +165,7 @@ fn render(
 }
 
 struct Context<'a> {
+    daily_schema_version: u32,
     rollup: &'a SemanticRollupResult,
     period_id: String,
     days_expected: u32,
@@ -198,7 +200,10 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "schema".to_owned(),
             Value::String("healthmd.rollup_summary".to_owned()),
         ),
-        ("schema_version".to_owned(), Value::from(8)),
+        (
+            "schema_version".to_owned(),
+            Value::from(context.daily_schema_version),
+        ),
         ("type".to_owned(), Value::String("health_rollup".to_owned())),
         (
             "rollup_period".to_owned(),
@@ -229,7 +234,10 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "source_schema".to_owned(),
             Value::String("healthmd.health_data".to_owned()),
         ),
-        ("source_schema_version".to_owned(), Value::from(8)),
+        (
+            "source_schema_version".to_owned(),
+            Value::from(context.daily_schema_version),
+        ),
         ("rollup_rules_version".to_owned(), Value::from(8)),
         (
             "generated_at".to_owned(),
@@ -350,7 +358,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        format!("schema_version: {}", context.daily_schema_version),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", context.period_id),
@@ -360,7 +368,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
+        format!("source_schema_version: {}", context.daily_schema_version),
         "rollup_rules_version: 8".to_owned(),
         format!("generated_at: {}", context.generated_at),
     ];
@@ -402,7 +410,10 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
             "- **Missing days:** {}",
             context.days_expected.saturating_sub(context.days_counted)
         ),
-        "- **Rule source:** `_healthmd_data_dictionary.json` schema v8".to_owned(),
+        format!(
+            "- **Rule source:** `_healthmd_data_dictionary.json` schema v{}",
+            context.daily_schema_version
+        ),
     ]);
     if !dates.is_empty() {
         lines.push(format!("- **Source dates:** {}", dates.join(", ")));
@@ -494,7 +505,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 8".to_owned(),
+        format!("schema_version: {}", context.daily_schema_version),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", yaml_quoted(&context.period_id)),
@@ -505,7 +516,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
+        format!("source_schema_version: {}", context.daily_schema_version),
         "rollup_rules_version: 8".to_owned(),
         format!("generated_at: {}", context.generated_at),
     ];

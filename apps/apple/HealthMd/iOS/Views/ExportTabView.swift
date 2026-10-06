@@ -11,6 +11,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let target: ExportTargetSelection
     let formats: Set<ExportFormat>
     let metricIDs: Set<String>
+    let whoopResources: Set<WHOOPResourceName>
     let formatCustomization: FormatCustomizationSnapshot
     let includesLosslessRecords: Bool
     let includesIndividualEntries: Bool
@@ -74,8 +75,13 @@ struct ExportTabView: View {
               externalIntegrations.connectedProviderCount > 0 else {
             return nil
         }
+        let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return { date in
-            await externalIntegrations.fetchDailyRecords(for: date)
+            await externalIntegrations.fetchDailyRecords(
+                for: date, calendar: calendar, whoopResources: whoopResources
+            )
         }
     }
 
@@ -1062,6 +1068,7 @@ struct ExportTabView: View {
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            whoopResources: advancedSettings.metricSelection.enabledWHOOPResources,
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),

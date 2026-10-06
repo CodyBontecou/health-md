@@ -48,6 +48,8 @@ async function owner(test: TestEnv) {
 }
 function envelope(day = date, steps = 500) {
   const summary = JSON.parse(readFileSync(resolve(root, "../apple/docs/reference/generated/core/summary-day.json"), "utf8"));
+  // This independently versioned repair scope remains Apple v8, not current generic v10 ingestion.
+  summary.schema_version = 8;
   summary.date = day; summary.activity.steps = steps;
   return { schema: "healthmd.api_export", schema_version: 1,
     daily_record_schema: "healthmd.health_data", daily_record_schema_version: 8,

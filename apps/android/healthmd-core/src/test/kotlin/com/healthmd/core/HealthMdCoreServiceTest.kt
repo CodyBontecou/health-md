@@ -97,7 +97,7 @@ class HealthMdCoreServiceTest {
 
     @Test
     fun readinessFailsClosedOnBindingVersionDrift() {
-        val nativeInfo = compatibleBuildInfo().copy(coreApiVersion = 5u)
+        val nativeInfo = compatibleBuildInfo().copy(coreApiVersion = HealthMdCoreService.EXPECTED_CORE_API_VERSION + 1u)
         val service = HealthMdCoreService(
             lazyOf(
                 FakeBindings(

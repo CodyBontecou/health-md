@@ -612,6 +612,7 @@ Summary rows emitted by legacy direct interpolation intentionally retain five fi
 | WHOOP provider | WHOOP Cycle | Cycle Maximum Heart Rate | 6 | bpm | yes | yes | 1 |
 | WHOOP provider | WHOOP Cycle | Cycle Record | 6 | json | yes | yes | 1 |
 | WHOOP provider | WHOOP Cycle | Cycle Strain Score | 6 | score | yes | yes | 1 |
+| WHOOP provider | WHOOP Cycle | Physiological-Cycle Steps | 6 | count | yes | yes | 1 |
 | WHOOP provider | WHOOP Recovery | HRV (RMSSD) | 6 | ms | yes | no | 1 |
 | WHOOP provider | WHOOP Recovery | Recovery Record | 6 | json | yes | no | 1 |
 | WHOOP provider | WHOOP Recovery | Recovery Score | 6 | percent | yes | no | 1 |

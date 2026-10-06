@@ -85,6 +85,7 @@ it("keeps exploration session-only, bounded, source-aware and able to navigate o
     summary.raw_capture_status = "complete";
     summary.healthkit_record_archive = { schema: "healthmd.healthkit_records", schema_version: 1,
       records: Array.from({ length: 25 }, (_, i) => ({ original_uuid: `fictional-${i}` })) };
+    summary.schema_version = 8; // Preserve this exact historical-profile filter regression.
     summary["sensitive/x~y"] = "<img src=x onerror=alert(1)>";
     summary.long_text = "A".repeat(900);
     summary.large_integer = 18446744073709551615;

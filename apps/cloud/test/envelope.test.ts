@@ -38,6 +38,31 @@ describe("API Endpoint compatibility boundary", () => {
     expect(payload.records[0]!.healthkit_record_archive.schema).toBe("healthmd.healthkit_records");
   });
 
+  it.each([1, 2])("accepts Apple v10 with WHOOP v2 in envelope v%s without rewriting bytes", (version) => {
+    const base = envelope();
+    const payload = {
+      ...base, schema_version: version, daily_record_schema_version: 10,
+      records: [{ ...base.records[0], schema_version: 10,
+        providers: { whoop: { schema: "healthmd.provider.whoop_daily", schema_version: 2,
+          cycles: [{ id: "synthetic-cycle", step_count: 0 }] } } }],
+      ...(version === 2 ? { external_record_schema: "healthmd.external_provider_daily",
+        external_record_schema_version: 1, external_record_count: 0, external_records: [] } : {}),
+    };
+    const bytes = encode(payload);
+    expect(parseAndValidateEnvelope(bytes).dailyRecordSchemaVersion).toBe(10);
+    expect(bytes).toEqual(encode(payload));
+    expect(payload.records[0]!.providers.whoop.cycles[0]!.step_count).toBe(0);
+  });
+
+  it("rejects reserved unified daily v9 and does not call Android v10 equivalent", () => {
+    for (const [source, version] of [["ios", 9], ["android", 10]] as const) {
+      const base = envelope();
+      const payload = { ...base, source, daily_record_schema_version: version,
+        records: [{ ...base.records[0], schema_version: version }] };
+      expect(() => parseAndValidateEnvelope(encode(payload))).toThrow();
+    }
+  });
+
   it("accepts an Android v4 day and an Apple v2 provider sidecar", () => {
     const android = envelope();
     android.source = "android";
