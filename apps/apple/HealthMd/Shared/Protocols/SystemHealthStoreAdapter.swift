@@ -345,10 +345,15 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     var supportsHistoryAuthorizationBoundaries: Bool {
+        #if os(macOS)
+        // The Mac companion receives HealthKit data from iPhone, not a local store.
+        return false
+        #else
         if #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) {
             return true
         }
         return false
+        #endif
     }
 
     func requestVisionPrescriptionAuthorization(predicate: NSPredicate?) async throws {
@@ -378,6 +383,13 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
     }
 
     func earliestAuthorizedSampleDates(for types: Set<HKObjectType>) async throws -> [String: Date] {
+        #if os(macOS)
+        throw NSError(
+            domain: "HealthMd.HealthKitCapability",
+            code: 27,
+            userInfo: [NSLocalizedDescriptionKey: "Health history authorization boundaries must be queried on the connected iPhone."]
+        )
+        #else
         guard #available(iOS 27.0, macOS 27.0, macCatalyst 27.0, watchOS 27.0, visionOS 27.0, *) else {
             throw NSError(
                 domain: "HealthMd.HealthKitCapability",
@@ -389,6 +401,7 @@ final class SystemHealthStoreAdapter: HealthStoreProviding, @unchecked Sendable 
         return Dictionary(uniqueKeysWithValues: boundaries.map { type, date in
             (type.identifier, date)
         })
+        #endif
     }
 
     func authorizationRequestStatus(toShare: Set<HKSampleType>, read: Set<HKObjectType>) async throws -> HKAuthorizationRequestStatus {

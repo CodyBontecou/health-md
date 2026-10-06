@@ -171,4 +171,21 @@ final class HealthStoreFacadeTests: XCTestCase {
     func testSystemHealthStore_conformsToProtocol() {
         let _: HealthStoreProviding = SystemHealthStoreAdapter()
     }
+
+    #if os(macOS)
+    @MainActor
+    func testSystemHealthStore_historyAuthorizationIsUnavailableOnMacOS() async {
+        let store = SystemHealthStoreAdapter()
+        XCTAssertFalse(store.supportsHistoryAuthorizationBoundaries)
+
+        do {
+            _ = try await store.earliestAuthorizedSampleDates(for: [])
+            XCTFail("The Mac companion must query HealthKit history boundaries on iPhone.")
+        } catch {
+            let error = error as NSError
+            XCTAssertEqual(error.domain, "HealthMd.HealthKitCapability")
+            XCTAssertEqual(error.code, 27)
+        }
+    }
+    #endif
 }
