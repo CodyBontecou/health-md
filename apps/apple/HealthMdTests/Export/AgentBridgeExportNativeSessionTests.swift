@@ -24,6 +24,72 @@ final class AgentBridgeExportNativeSessionTests: XCTestCase {
         XCTAssertEqual(fixture.handshake.store.saves, 1)
     }
 
+    func testSameOwnerRepeatedGetterCannotRenewOriginalSnapshotOrRevokedCopies() async throws {
+        let fixture = try await NativeSessionControllerFixture.make()
+        let held = try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: fixture.trust.reader)
+        let copy = held
+        let ownership = try XCTUnwrap(fixture.service.agentBridgeSession)
+        let proof = try XCTUnwrap(fixture.channel.clientAuthenticatedContext)
+        let sdk = fixture.trust, reader = sdk.reader, originalBytes = sdk.bytes
+        let original = try XCTUnwrap(reader.loadExistingTrust(ownerInstallationID: fixture.handshake.source))
+        let repeated = try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: sdk.reader)
+        XCTAssertEqual(repeated.peer, held.peer)
+        XCTAssertNoThrow(try repeated.requireCurrent())
+        XCTAssertNoThrow(try copy.requireCurrent())
+        XCTAssertTrue(fixture.service.agentBridgeSession === ownership)
+
+        let changedBytes = originalBytes + Data("\n".utf8) // VALID full record, same authenticated credential.
+        sdk.replace(changedBytes)
+        XCTAssertNotEqual(sdk.bytes, originalBytes)
+        let changed = try XCTUnwrap(reader.loadExistingTrust(ownerInstallationID: fixture.handshake.source))
+        XCTAssertNoThrow(try proof.requireCurrent(on: fixture.channel,
+            sourceInstallationID: changed.ownerInstallationID,
+            hostInstallationID: changed.trustedMacInstallationID, reconnectSecret: changed.reconnectSecret))
+        XCTAssertNoThrow(try ownership.requireCurrent())
+        XCTAssertTrue(ownership.currentOwnerIsAvailable())
+        XCTAssertTrue(UIApplication.shared.applicationState == .active)
+        XCTAssertTrue(UIApplication.shared.availability.read())
+        // Re-enter the ACTUAL same-owner factory BEFORE any held checker observes the change.
+        XCTAssertThrowsError(try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: sdk.reader)) { error in
+            XCTAssertEqual(error as? AgentBridgeValidationError, .permissionRequired)
+            XCTAssertEqual(String(describing: error), "permission_required")
+        }
+        XCTAssertThrowsError(try held.requireCurrent())
+        sdk.replace(originalBytes)
+        XCTAssertNotNil(try reader.loadExistingTrust(ownerInstallationID: fixture.handshake.source))
+        XCTAssertNoThrow(try reader.requireCurrent(original: original,
+            nativeSourceInstallationID: fixture.handshake.source,
+            authenticatedHostInstallationID: fixture.handshake.host,
+            originalReconnectSecret: original.reconnectSecret))
+        XCTAssertThrowsError(try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: sdk.reader))
+        XCTAssertThrowsError(try held.requireCurrent())
+        XCTAssertThrowsError(try copy.requireCurrent())
+        XCTAssertThrowsError(try repeated.requireCurrent())
+        XCTAssertNoThrow(try proof.requireCurrent(on: fixture.channel)) // No new network close/reconnect.
+
+        // A genuinely NEW cryptographic handshake and admitted owner, not a marker/ID reset,
+        // can capture current matching metadata; old held contexts never rebind to it.
+        let nextHandshake = NativeSessionHandshakeFixture()
+        let nextChannel = try await nextHandshake.authenticate()
+        XCTAssertFalse(nextChannel === fixture.channel)
+        sdk.replace(changedBytes)
+        fixture.service.fixtureInstall(channel: nextChannel, sessionID: UUID())
+        fixture.service.fixtureHello(.init(platform: .macOSCLI, installationID: nextHandshake.host))
+        XCTAssertFalse(fixture.service.agentBridgeSession === ownership)
+        let fresh = try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: sdk.reader)
+        XCTAssertEqual(fresh.peer, held.peer) // Same identities are NOT the proof of a new owner.
+        XCTAssertNoThrow(try fresh.requireCurrent())
+        XCTAssertNoThrow(try fixture.service.agentBridgeAuthenticatedPeer(nativeTrust: sdk.reader).requireCurrent())
+        XCTAssertThrowsError(try held.requireCurrent())
+        XCTAssertThrowsError(try copy.requireCurrent())
+        XCTAssertThrowsError(try repeated.requireCurrent())
+        XCTAssertEqual(fixture.handshake.store.saves, 1)
+        XCTAssertEqual(nextHandshake.store.saves, 1)
+        let defaults = fixture.defaults as! NativeSessionEnabledDefaults
+        XCTAssertEqual(defaults.exportReads, 0)
+        XCTAssertEqual(defaults.exportWrites, 0)
+    }
+
     func testOrdinaryChannelPairingOnlyAndWrongBaseHelloRejectBeforeTrustLookup() async throws {
         for kind in 0..<5 {
             let fixture = try await NativeSessionControllerFixture.make()
