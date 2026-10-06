@@ -35,11 +35,49 @@ serialized6GiB/all3-no-warning admission and fresh targets used, no cleanup/stal
 Evidence: `.pi/agent-bridge-archive/evidence/consolidated-swift-owner-lifetime/`,809-file index
 `985c6d63453a6c42507a248623a476b67510ea93ead7c2173d77b4ed0e434d82` and archived report
 `reports/consolidated-swift-owner-lifetime.md`. Ignored evidence is not Git-backed up.
-Kotlin efe1d159 final31/32 tests remain historical; its final lint/APK/bindings still NOT RUN after
-old admission refusal and later pre-Gradle metadata failure. Prior2271 artifacts are not promoted.
+Kotlin efe1d159 final31/32 tests remain historical. The separately authorized current-root artifact
+gates now pass at e96408ab, as recorded below; old refused/failed attempts and prior2271 artifacts
+are not promoted.
 Native provisioning/consent/configuration/routes/sends/bound execution/receipts/recipes/resume,
 full four-way/installed/physical qualification and B19/B20 approvals remain incomplete/blocked.
 No task/capability/release/goal completion or live/native/user action is inferred.
+
+## Current consolidated Kotlin final artifacts (2026-10-06)
+
+The user explicitly requested Kotlin final artifact qualification in the same consolidated worktree.
+At clean source **`e96408ab4bf62ea16ff45499a40c39a1c31d8cf5`**, all five tasks completed0:
+`:app:lintPlayDebug`, `:app:lintFdroidDebug`, `:app:assemblePlayDebug`, `:app:assembleFdroidDebug`,
+`:healthmd-core:checkHealthMdCoreKotlinBindings`. No product edit;5,585tracked files and canonical22/P2
+hashes frozen through the gates. Android bytes equal final efe1d159; compilation used the present root.
+
+Gradle8.11.1/JDK21.0.12 completed6m34s,172actionable tasks executed;188observed outcomes include
+16skips/10overlapping no-source,0up-to-date. **Zero new JVM tests**, no Test task in graph, no install
+or app/Service/device/test-host launch. Play lint72issues(70warnings/2information) and F-Droid62
+(60warnings/2information),0errors/fatal. The scoped SDK_INT<O guard remains unchanged; warning-free
+or improvement-vs-historical claims are not made. Source APKs are1.9.1/code39, uninstalled.
+
+Fresh four-ABI generated==merged-unstripped and stripped==APK member checks, DEX descriptors,
+actual compiler source inputs, class ZIP/dependency/runtime hashes and exact committed/generated
+binding equality independently pass. Debug Rust host/Android symbols and incremental compilation
+are explicitly disabled; these are bounded debug artifacts, not default full-symbol/release/native
+execution qualification. Offline/JDK21/no-daemon/worker1/no-parallel/in-process Kotlin/Xmx1536m,
+Rust1.88/jobs2/fresh current-root generator and10GiB/all3-no-warning inside-lock gates retained.
+Read-only preinstalled aids and same-root failed-configuration cache are not clean-room builds.
+
+New tooling fixes explicit NULL-manifest handling, contradictory SDK preference roots, and the
+inherited late signing-DSL setter. Distinct metadata/configuration/auditor failures remain retained;
+only03c completed Gradle and05b the independent artifact audit. Historical final33 stays refused70/
+unrun;1819captured reference files and7original helpers compare unchanged, not an all-history audit
+or repair of older36missing links. Contracts60/validator/source audit0. Task states/owners unchanged.
+
+Evidence: `.pi/agent-bridge-archive/evidence/consolidated-kotlin-final-artifacts/`;28,566-file retained
+index `23073cd8749547556674d52a04a5871bfcd15a05b29ad3027aa3f7cec6848ace`, report
+`reports/consolidated-kotlin-final-artifacts.md` SHA256
+`936429d1c566e2bab0e4efad2ac05bd8a48673bc0d3101fd41ae2d2dafe175f7`.
+APKs: `artifacts/app-{play,fdroid}-debug.apk`. Ignored evidence is not backed up by Git.
+This closes only the named final artifact gap: extension4/native rights/consent/configuration/routes/
+approved execution/receipts/recipes/resume/full four-way/physical acceptance remain incomplete.
+No capability/task/release/goal completion; B19/B20 remain separately approval-blocked.
 
 ## Execution provenance
 
@@ -58,7 +96,7 @@ Every row requires the linked todo's individual acceptance items, implementation
 
 | Requirement | Artifact/test surface to inspect | Integrated evidence / remaining work |
 |---|---|---|
-| B01 contracts: precedence, scope, output, plan, approvals, revisions, authority, versions | New bounded contract/schema/fixtures; source resolvers; cross-language conformance | Deferred specification/codecs, private issuer stores and callable planning through `cccbb13de`, including exercised live consent/publication/return fences. Merged CLI/core and Swift package/harness gates pass at ba6f5d1a; actual Kotlin-after/strict host tracer and merged native JVM/build-only surfaces run at cbd8990a. Dedicated native load-only protected-key readers/default store providers integrate as `df939d054`. Pairing-trust dependencies now integrate as `2d148abda`: exact lane Swift88/mode and Kotlin104/flavor gates, fresh original raw-record/identity/credential matching, no routes. Intercepted-SDK results qualify those sources, not OS protection or live session authority. Swift native-session source now qualifies121/mode+Connectivity85 at deb4283b (see current increment); Kotlin final artifacts remain unrun. Xcode internal Swift jobs<=2 remains unproven; native provisioning/consent/config/setup/dispatch/execution/full conformance remain missing. Historical preservation has36 missing symlink entries; no installed promotion |
+| B01 contracts: precedence, scope, output, plan, approvals, revisions, authority, versions | New bounded contract/schema/fixtures; source resolvers; cross-language conformance | Deferred specification/codecs, private issuer stores and callable planning through `cccbb13de`, including exercised live consent/publication/return fences. Merged CLI/core and Swift package/harness gates pass at ba6f5d1a; actual Kotlin-after/strict host tracer and merged native JVM/build-only surfaces run at cbd8990a. Dedicated native load-only protected-key readers/default store providers integrate as `df939d054`. Pairing-trust dependencies now integrate as `2d148abda`: exact lane Swift88/mode and Kotlin104/flavor gates, fresh original raw-record/identity/credential matching, no routes. Intercepted-SDK results qualify those sources, not OS protection or live session authority. Swift native-session source now qualifies121/mode+Connectivity85 at deb4283b (see current increment); Kotlin final lint/APK/bindings now pass at e96408ab (see current artifact increment), not native execution. Xcode internal Swift jobs<=2 remains unproven; native provisioning/consent/config/setup/dispatch/execution/full conformance remain missing. Historical preservation has36 missing symlink entries; no installed promotion |
 | B02 source-aware generated MCP dispatch and durable receipts | CLI/client shared dispatcher; MCP adapter; both-source fake peers; filesystem/digest/cancel regressions | `14ac445a2`, merge `b9392ef74`: source-bound iOS-v1/Android-v2 dispatcher and validated host commit receipts; hermetic tests pass; four-way v4 journey remains pending |
 | B03 mobile MCP/host pairing, approval, single credential identity | Pairing coordinator/client, onboarding, image/App privacy tests, transcript preservation | `14ac445a2`, merge `b9392ef74`: first-mobile pairing/onboarding and both-source fake peers; no transcript rewrite or physical pairing performed |
 | B04 advertised profile grammar/policy matches parsing and negotiation | Operations registry/normalizer, CLI guidance, generated schemas, old-peer/profile conflict tests | `14ac445a2`: portable grammar agrees, Android gated. `9a55c696f` repairs authoritative Apple ID lookup; explicit iOS policy discovery/Apple MCP mirrors and enabled transport remain pending/fail-closed |
@@ -67,7 +105,7 @@ Every row requires the linked todo's individual acceptance items, implementation
 | B07 source-neutral CLI/MCP query/catalog/chart routing | Client/operations/MCP; old-peer/multiple-device/unit-safe PNG/App tests | Pending |
 | B08 Android request-local daily extraction | New versioned native product/envelope and Rust validator; selectors/completeness/resume tests | Pending |
 | B09 explicit generated settings on both sources | Protocol/client/Swift/Kotlin production resolvers and durable journals; unchanged-preferences/path/crash tests | `9a55c696f` detached resolvers feed real bounded native stored planning through `cccbb13de`; reviewed summary/JSON subset only. Kotlin31-leaf discovery remains fixed/default support, not wider customization. Dispatch/capture/journals and runtime success/failure/cancel/resume preference invariance remain pending |
-| B10 zero-health plan and bound execution | CLI/MCP plan API; read/write/quota counters; expired/stale/peer/scope/root/approval rejection tests | In progress: callable source services, shared host relay and exercised consent/key/configuration/publication/return fences. Host encrypted write/readiness/current-trust and dropped-mid-send fences now pass three synthetic-peer methods at `2d0aab99`. Actual Swift-complete/Kotlin-after capability tracers and native source gates remain separately qualified at cbd8990a. Native load-only key readers/default providers integrate as `df939d054`; original-snapshot pairing-trust readers integrate as `2d148abda`, still unwired. Swift same-owner native-session source qualifies at deb4283b; Kotlin final artifacts remain unrun (see current increment). Native provisioning/consent/config/routes/send qualification, bound execution and four-way acceptance remain missing. Xcode internal Swift concurrency and36 missing historical links stay explicit |
+| B10 zero-health plan and bound execution | CLI/MCP plan API; read/write/quota counters; expired/stale/peer/scope/root/approval rejection tests | In progress: callable source services, shared host relay and exercised consent/key/configuration/publication/return fences. Host encrypted write/readiness/current-trust and dropped-mid-send fences now pass three synthetic-peer methods at `2d0aab99`. Actual Swift-complete/Kotlin-after capability tracers and native source gates remain separately qualified at cbd8990a. Native load-only key readers/default providers integrate as `df939d054`; original-snapshot pairing-trust readers integrate as `2d148abda`, still unwired. Swift same-owner native-session source qualifies at deb4283b; Kotlin final lint/APK/bindings qualify at e96408ab without new JVM or native execution (see current increments). Native provisioning/consent/config/routes/send qualification, bound execution and four-way acceptance remain missing. Xcode internal Swift concurrency and36 missing historical links stay explicit |
 | B11 host recipe CRUD/run | Private atomic bounded store, CAS/idempotency, CLI/MCP parity, corruption/concurrent/stale/run-freeze tests | Pending |
 | B12 native profile CRUD/activation with separate approval | Both native stores and shared controls; protection/import/last-profile/revision/rollback/schedule tests | Pending |
 | B13 bounded host scheduler and exact-job recovery | Typed portable scheduler and private state; DST/catch-up/concurrency/unknown-outcome/headless tests | Pending |
@@ -79,7 +117,7 @@ Every row requires the linked todo's individual acceptance items, implementation
 | B19 range summaries | Approved unified-v9/consumer evidence required | Blocked; no approval granted |
 | B20 typed WHOOP profile | Approved new profile/provider/consumer evidence required | Blocked; no approval granted |
 | B21 truthful capability/docs/schema reconciliation | Capability JSON, feature tables, native/CLI/support/website/locales/skills; source ≠ installed ≠ qualified | All new bridge capabilities remain planned. SDK/CLI/root/native/consumer and bounded QA+development core-MSRV/current-profile/source-matrix seams corrected through `8b8cbf794`; sixteen cumulative static public-doc methods/static37+contract60 pass. Source/tag/command/copy checks are not installed/native qualification. Earlier website-row checks stay read-only; other native/client/parity/support/website/locales and detailed iPhone workflow/skill mirrors remain separately reviewable |
-| B22 four-way no-settings journey and physical qualification | CLI+MCP × iOS+Android synthetic peers; explicit negative matrix; exact candidate/mobile/desktop records | Latest host send source `2d0aab99`: CLI259/3ignored/0filtered, no-default client124/3ignored (overlapping), three new encrypted-relay methods; protocol70/fmt/clippy/MSRV compilation/assets pass. Core169/Swift74+harness54/archive/binding evidence at ba6f5d1a and Kotlin-after/native JVM/Apple build-only gates at cbd8990a remain separate. Separate native key-reader lane evidence adds Swift66/mode (12new) and Kotlin78/flavor (16new), full Play1474/F-Droid1313 totals/one skip each, lint/APK/binding/protocol39/one skip; exact six-path union `df939d054` is byte-equal, not a merged-native rerun. New pairing-trust lanes qualify Swift88/mode (22new) and Kotlin104/flavor (26new), full Play1500/F-Droid1339 totals/one existing skip each, protocol39/one live skip, lint/APK/current-root binding gates0. Their exact four-new-path union `2d148abda` is likewise source-equal, not merged-native or installed qualification. Xcode internal Swift jobs<=2 unproven and36 historical links missing. Swift native-session source now passes121/mode+Connectivity85 at deb4283b; Kotlin final artifacts remain unrun (see current increment). Native provisioning/consent/config/transport/execution/receipts/recipes/resume/full journey and physical qualification remain absent |
+| B22 four-way no-settings journey and physical qualification | CLI+MCP × iOS+Android synthetic peers; explicit negative matrix; exact candidate/mobile/desktop records | Latest host send source `2d0aab99`: CLI259/3ignored/0filtered, no-default client124/3ignored (overlapping), three new encrypted-relay methods; protocol70/fmt/clippy/MSRV compilation/assets pass. Core169/Swift74+harness54/archive/binding evidence at ba6f5d1a and Kotlin-after/native JVM/Apple build-only gates at cbd8990a remain separate. Separate native key-reader lane evidence adds Swift66/mode (12new) and Kotlin78/flavor (16new), full Play1474/F-Droid1313 totals/one skip each, lint/APK/binding/protocol39/one skip; exact six-path union `df939d054` is byte-equal, not a merged-native rerun. New pairing-trust lanes qualify Swift88/mode (22new) and Kotlin104/flavor (26new), full Play1500/F-Droid1339 totals/one existing skip each, protocol39/one live skip, lint/APK/current-root binding gates0. Their exact four-new-path union `2d148abda` is likewise source-equal, not merged-native or installed qualification. Xcode internal Swift jobs<=2 unproven and36 historical links missing. Swift native-session source now passes121/mode+Connectivity85 at deb4283b; Kotlin final lint/APK/bindings pass at e96408ab, with no new JVM/native execution (see current increments). Native provisioning/consent/config/transport/execution/receipts/recipes/resume/full journey and physical qualification remain absent |
 
 ## Cross-cutting audit checklist
 

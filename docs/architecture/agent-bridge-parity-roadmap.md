@@ -100,8 +100,16 @@ repeats are nonadditive, effective SwiftPMdrivers≤2, compilerwarnings0. The fi
 and all earlier tests remain unchanged. New809-file source evidence index/report and scope audit
 are linked from the [implementation ledger](../qa/agent-bridge-implementation.md#current-consolidated-native-session-increment-2026-10-06).
 These synthetic source seams do not qualify whole services, installed apps, native OS protection or
-rights. Kotlin final lint/APK/bindings remain NOT RUN after historical admission/preparation failures.
-Extension4 remains unwired/unadvertised; native provisioning/consent/configuration/routes/bound
+rights. The user subsequently requested the Kotlin final artifact: clean consolidated e96408ab
+now passes both lint/APK builds and the binding check in6m34s, with188observed build tasks/
+172executed/0up-to-date and **zero new JVM tests**. Play72/F-Droid62lint issues,0errors/fatal;
+APKs remain uninstalled. Fresh current-root generator, four-ABI stage/packaging equality and exact
+binding bytes independently audited;5,585tracked sources/canonical22/P2 frozen, no product edit.
+Bounded debug-symbol flags/read-only tooling aids do not qualify default-symbol/release/native
+execution. New28,566-file index/report and preserved failed/refused attempts are recorded in the
+[artifact increment](../qa/agent-bridge-implementation.md#current-consolidated-kotlin-final-artifacts-2026-10-06).
+Historical final33 stays refused/unrun;1819captured references and7helpers compare unchanged,
+not a full historical audit or repair of36missing links. Extension4 remains unwired/unadvertised; native provisioning/consent/configuration/routes/bound
 execution/receipts/recipes/resume and full four-way/physical acceptance remain incomplete.
 B19/B20 remain approval-blocked; no task/capability/release/goal completion is inferred.
 
