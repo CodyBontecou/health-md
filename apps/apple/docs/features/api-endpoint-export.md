@@ -23,6 +23,8 @@ Data Detail defaults to Summary for new installs; historical combined choices mi
 
 Plain tokens are sent as `Bearer <token>`. Values beginning with `Bearer ` or `Basic ` are sent as entered.
 
+For the **single-owner, unbacked Health.md Cloud pilot** only, the optional destination is `https://api.healthmd.app/api/v1/exports` with a separate write-only `hmd_ing_…` token from the owner's account dashboard. This is a public HTTPS upload route, not the dashboard (`account.healthmd.app`), the read-only MCP (`mcp.healthmd.app`), or the earlier tailnet-only `:18788` address (which remains available for saved destinations). It accepts compatibility JSON v1/v2 and retains accepted revisions without an off-host backup; the VM or encryption key could be lost permanently. The app does not default or silently migrate existing API targets to this pilot. Enter the endpoint only when the public ingest service is confirmed live, and never put the token in the URL.
+
 ## Payload shape (abridged)
 
 Complete v1 and provider-sidecar v2 envelopes are under [`docs/reference/generated/automation/`](../reference/generated/automation/).
@@ -105,6 +107,8 @@ Health.md preserves source URLs as data but never fetches them. Your receiver sh
 
 Scheduled API exports use the same selected metrics and Data Detail setting. Each new completed-day profile occurrence resends the full configured lookback ending the day before its scheduled fire date, even when earlier runs already exported overlapping dates. For example, a daily 08:00 profile with a 14-day lookback resends all 14 completed days every morning, across the usual bounded HTTP batches. Optional Today Refresh runs independently re-fetch and resend only the current day's complete snapshot. Both preserve pending work when HealthKit is locked or upload fails; retries keep only exact unresolved dates, even if the lookback is edited before retrying.
 
+Pending API recovery also retains local identity evidence for its original endpoint, credential and profile binding. A changed URL/token, deleted binding, retargeted profile, or older retry without that evidence is blocked **before capture/upload**; it never silently sends frozen health data to the currently active endpoint. Use **Schedule → Profile Schedules → Discard Pending Recovery** to abandon that profile's old retry and wait for its next ordinary occurrence with the new configuration. For pre-profile legacy recovery, disable/re-enable the legacy schedule. Profiles, credentials, history and already accepted uploads remain intact. Today Refresh recovery expires after its frozen owner day or when refresh is turned off; completed-day residual recovery remains exact.
+
 ## Practical limits
 
 Health.md captures one day at a time and builds only the current HTTP batch. Dense routes, ECGs, WorkoutKit data, or attachments can still make an individual day large and require substantial memory while that day is captured and encoded.
@@ -135,4 +139,4 @@ If a single-day payload is larger than your endpoint accepts, reducing the selec
 - `APIEndpointExportRunner` tracks partial failures and splits normalized dates into sequential batches bounded by `defaultMaxBatchDaySpan` (7 days) and `defaultMaxBatchPayloadBytes` (8 MiB). It stops on the first failed batch and preserves exact completed dates from earlier batches.
 - `APIExportClient` wraps public v8 daily JSON, stores the optional token in Keychain-backed settings, and uploads the exact prepared body that the runner measured. The immutable destination is snapshotted once per action.
 - `JSONExporter` and `HealthKitRecordArchiveSerializer` own the daily/archive contracts.
-- API output is direct iPhone → configured endpoint; Health.md does not proxy it through its servers.
+- API output is direct iPhone → configured endpoint; when the user explicitly chooses Health.md Cloud, that endpoint is the retained-export receiver rather than a transparent intermediary for another destination.

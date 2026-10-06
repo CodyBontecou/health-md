@@ -297,6 +297,71 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(scheduler.scheduledRequests[second.id], second)
     }
 
+    @MainActor
+    func testRemovedRequestCannotBeRecreatedByLateCompletion() async throws {
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let fire = date(year: 2026, month: 5, day: 18, hour: 8)
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fire)
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: ExportSchedule(isEnabled: true), fireDate: fire)
+        try store.remove(id: request.id)
+        let completion = try await coordinator.completePendingScheduledExport(request,
+            result: ExportOrchestrator.ExportResult(successCount: 0, totalCount: 1,
+                failedDateDetails: [FailedDateDetail(date: request.dates[0], reason: .deviceLocked)]))
+        XCTAssertEqual(completion, .discarded)
+        XCTAssertTrue(try store.loadAll().isEmpty)
+        XCTAssertTrue(scheduler.immediateRequests.isEmpty)
+    }
+
+    @MainActor
+    func testInvalidationDuringImmediateNotificationCancelsLateRecovery() async throws {
+        let store = InMemoryPendingExportStore()
+        let scheduler = SuspendingRecoveryNotificationScheduler()
+        let fire = date(year: 2026, month: 5, day: 18, hour: 8)
+        let coordinator = ScheduledExportCoordinator(pendingExportStore: store,
+            exportNotificationScheduler: scheduler, now: { fire })
+        var isCurrent = true
+        coordinator.shouldRetainRequest = { _ in isCurrent }
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: ExportSchedule(isEnabled: true), fireDate: fire)
+        scheduler.afterImmediate = { _ in isCurrent = false }
+        let completion = try await coordinator.completePendingScheduledExport(request,
+            result: ExportOrchestrator.ExportResult(successCount: 0, totalCount: 1,
+                failedDateDetails: [FailedDateDetail(date: request.dates[0], reason: .deviceLocked)]))
+        XCTAssertEqual(completion, .discarded)
+        XCTAssertTrue(try store.loadAll().isEmpty)
+        XCTAssertTrue(scheduler.base.scheduledRequests.isEmpty)
+        XCTAssertTrue(scheduler.base.immediateRequests.isEmpty)
+    }
+
+    @MainActor
+    func testResidualRequestKeepsGenerationEnabledPeriodAndAPIDestinationEvidence() async throws {
+        let store = InMemoryPendingExportStore()
+        let scheduler = InspectableExportNotificationScheduler()
+        let fire = date(year: 2026, month: 5, day: 18, hour: 8)
+        let coordinator = makeCoordinator(store: store, scheduler: scheduler, now: fire)
+        let enabledAt = date(year: 2026, month: 5, day: 1)
+        let identity = ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: UUID())
+        let context = ScheduledExportCoordinator.ScheduledProfileRequestContext(
+            profileID: UUID(), profileName: "Synthetic", target: .apiEndpoint,
+            settings: makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin()),
+            recoveryGeneration: 4, enabledAt: enabledAt, apiDestinationIdentity: identity)
+        let request = try await coordinator.preparePendingScheduledExport(
+            schedule: ExportSchedule(isEnabled: true, lookbackDays: 2), fireDate: fire, profile: context)
+        _ = try await coordinator.completePendingScheduledExport(request,
+            result: ExportOrchestrator.ExportResult(successCount: 1, totalCount: 2,
+                failedDateDetails: [FailedDateDetail(date: request.dates[1], reason: .fileWriteError)],
+                completedDates: [request.dates[0]]))
+        let retry = try XCTUnwrap(try store.loadAll().first)
+        let restarted = try JSONDecoder().decode(PendingExportRequest.self, from: JSONEncoder().encode(retry))
+        XCTAssertEqual(restarted.dates, [request.dates[1]])
+        XCTAssertEqual(restarted.originalRequestedDates, request.originalRequestedDates)
+        XCTAssertEqual(restarted.recoveryGeneration, 4)
+        XCTAssertEqual(restarted.scheduleEnabledAt, enabledAt)
+        XCTAssertEqual(restarted.apiDestinationIdentity, identity)
+    }
+
     private func makeCoordinator(
         store: InMemoryPendingExportStore,
         scheduler: InspectableExportNotificationScheduler,

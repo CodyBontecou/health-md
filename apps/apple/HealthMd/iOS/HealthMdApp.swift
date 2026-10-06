@@ -255,11 +255,11 @@ struct HealthMdApp: App {
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
 
-            // If scheduling is enabled, set up HealthKit background delivery.
-            // Notification permission is requested when the user enables a schedule.
-            if SchedulingManager.shared.schedule.isEnabled {
-                await HealthKitManager.shared.enableBackgroundDelivery()
-                HealthKitManager.shared.setupObserverQueries()
+            // Restored profile schedules also need local fallbacks, the
+            // HealthKit delivery callback, and APNs registration/schedule sync.
+            // The legacy schedule is disabled after profile migration.
+            if SchedulingManager.shared.isSchedulingActive {
+                SchedulingManager.shared.refreshScheduledAutomation()
             }
         }
     }
@@ -387,6 +387,36 @@ struct HealthMdApp: App {
         }
     }
 
+    /// Keep the status subtree independently type-checked from the root scene.
+    @ViewBuilder
+    private var iPadBottomStatus: some View {
+        if UIDevice.current.userInterfaceIdiom == .pad,
+           (configurationProtection.blockedChangeToastID != nil
+            || notificationExportActivity.snapshot != nil
+            || cliExportActivity.snapshot != nil) {
+            VStack(spacing: Spacing.s2) {
+                ConfigurationProtectionToast(configurationProtection: configurationProtection)
+
+                Group {
+                    if let snapshot = notificationExportActivity.snapshot {
+                        NotificationExportActivityBanner(
+                            snapshot: snapshot,
+                            onCancel: snapshot.phase.allowsCancellation
+                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
+                                : nil
+                        )
+                    } else if let snapshot = cliExportActivity.snapshot {
+                        CLIExportActivityBanner(snapshot: snapshot)
+                    }
+                }
+            }
+            .padding(.horizontal, Spacing.md)
+            .padding(.top, Spacing.s2)
+            .padding(.bottom, Spacing.s2)
+            .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -417,27 +447,12 @@ struct HealthMdApp: App {
             } message: {
                 Text(sharedSetupCoordinator.errorMessage ?? "")
             }
-                        .environmentObject(configurationProtection)
+            .environmentObject(configurationProtection)
             // Keep native bordered controls aligned with the 6px Geist control radius
             // instead of SwiftUI's default capsule shape.
             .buttonBorderShape(.roundedRectangle(radius: GeistRadius.sm))
-            .safeAreaInset(edge: .top, spacing: 0) {
-                Group {
-                    if let snapshot = notificationExportActivity.snapshot {
-                        NotificationExportActivityBanner(
-                            snapshot: snapshot,
-                            onCancel: snapshot.phase.allowsCancellation
-                                ? { schedulingManager.cancelNotificationExport(operationID: snapshot.operationID) }
-                                : nil
-                        )
-                    } else if let snapshot = cliExportActivity.snapshot {
-                        CLIExportActivityBanner(snapshot: snapshot)
-                    }
-                }
-                .padding(.horizontal, Spacing.md)
-                .padding(.top, Spacing.s2)
-                .padding(.bottom, Spacing.s1)
-                .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                iPadBottomStatus
             }
             .animation(
                 reduceMotion ? nil : AnimationTimings.standard,
@@ -447,16 +462,10 @@ struct HealthMdApp: App {
                 reduceMotion ? nil : AnimationTimings.standard,
                 value: cliExportActivity.snapshot?.jobID
             )
-            .overlay(alignment: .top) {
-                ConfigurationProtectionToast(configurationProtection: configurationProtection)
-                    .padding(.horizontal, Spacing.md)
-                    .padding(.top, Spacing.s2)
-                    .animation(
-                        reduceMotion ? nil : AnimationTimings.standard,
-                        value: configurationProtection.blockedChangeToastID
-                    )
-            }
-            .zIndex(configurationProtection.blockedChangeToastID == nil ? 0 : 1)
+            .animation(
+                reduceMotion ? nil : AnimationTimings.standard,
+                value: configurationProtection.blockedChangeToastID
+            )
             #if DEBUG
             .sheet(isPresented: $exportPerformanceLab.isConfirmationPresented) {
                 IPhoneExportPerformanceLabConfirmationView(
@@ -881,6 +890,20 @@ struct HealthMdApp: App {
     /// Handle a request for ALL available health data.
     /// Discovers the earliest HealthKit data date and sends data in batches with progress updates.
     private func handleAllDataRequest() async {
+        let historyAuthorization = await healthKitManager.refreshHistoryAuthorizationAssessment()
+        guard historyAuthorization.supportsUnqualifiedFullHistoryClaim else {
+            let message = historyAuthorization.state == .limitedHistory
+                ? "All-time sync stopped because Apple Health history is limited by date. Earlier data is unknown."
+                : "All-time sync stopped because full-history access could not be verified. Choose an explicit date range, or use OS 27 or later and complete a full-history authorization assessment."
+            syncService.send(.syncProgress(SyncProgressInfo(
+                totalDays: 0,
+                processedDays: 0,
+                recordsInBatch: 0,
+                isComplete: true,
+                message: message
+            )))
+            return
+        }
         // Find the earliest date with health data
         guard let earliestDate = await healthKitManager.findEarliestHealthDataDate() else {
             // No data found — send a completion progress message

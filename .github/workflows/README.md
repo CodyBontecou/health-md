@@ -12,11 +12,19 @@ Every pull request triggers the component CI workflows, and each reports one of 
 - `Wake CI / Wake CI`
 - `Website CI / Website CI`
 
-Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+Inside each workflow except Wake CI (whose single job stays always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
 
 Each workflow's path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
 
-The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+The final gate jobs fail unless every selected job succeeds. Android CI has an additional `native` decision: CLI changes outside `healthmd-client`, its workspace manifests/lockfile, and its toolchain retain live Rust/Kotlin interop without rebuilding the native/flavor/emulator matrix. Client changes retain native Direct CLI UI E2E; any Android, shared-core, contract, or Android-workflow change selects the full matrix. The Android final gate requires explicit `skipped` results for unselected jobs and rejects missing/malformed/inconsistent flags. Non-PR qualification still selects every job.
+
+Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+
+## Testing-tool feedback
+
+[`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
+
+Apple's macOS job reuses coverage-enabled DerivedData for documentation checks; normal `xcodebuild test` keeps source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
 
 ## Android release trigger
 

@@ -17,6 +17,7 @@ import {
 } from '../i18n/routes.mjs';
 import { assertCatalogParity, loadCatalog, renderLanding } from '../scripts/build-localized-pages.mjs';
 import { renderLegalPage } from '../scripts/build-localized-legal-pages.mjs';
+import { expectedVercelConfig } from '../scripts/build-vercel-config.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const landingLocales = publishedLocales('landing');
@@ -62,11 +63,20 @@ for (const [index, locale] of translatedLocales.entries()) {
   });
 }
 
-test('every published landing locale publishes localized legal routes', () => {
-  assert.deepEqual(
-    publishedLocales('legal').map(({ code }) => code),
-    publishedLocales('landing').map(({ code }) => code),
-  );
+test('unreviewed legal translations are unpublished and redirect to the updated English terms', async () => {
+  assert.deepEqual(publishedLocales('legal').map(({ code }) => code), [defaultLocale]);
+  const config = JSON.parse(await expectedVercelConfig());
+  for (const locale of publishedLocales('landing').filter(({ surfaces }) => !surfaces.legal)) {
+    for (const routeId of ['privacy', 'terms']) {
+      const localized = routePath(routeId, locale.code);
+      const cleanPath = localized.replace(/\.html$/, '');
+      for (const source of [localized, cleanPath, `${cleanPath}/`]) {
+        assert.deepEqual(config.redirects.find((entry) => entry.source === source), {
+          source, destination: routePath(routeId, defaultLocale), permanent: false,
+        });
+      }
+    }
+  }
 });
 
 test('published legal pages derive reciprocal metadata and language navigation from the manifest', async () => {
@@ -97,7 +107,7 @@ test('published legal pages derive reciprocal metadata and language navigation f
   }
 });
 
-test('published Spanish legal pages preserve controlling notices and current product clauses', async () => {
+test('unpublished Spanish legal review drafts preserve their prior source text for later revision', async () => {
   const [privacy, terms] = await Promise.all([
     readFile(path.join(ROOT, 'es/privacy-policy.html'), 'utf8'),
     readFile(path.join(ROOT, 'es/terms-of-service.html'), 'utf8'),

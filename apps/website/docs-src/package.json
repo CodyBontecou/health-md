@@ -17,7 +17,7 @@
   "dependencies": {
     "@astrojs/sitemap": "3.7.3",
     "@astrojs/starlight": "0.41.5",
-    "astro": "7.1.5"
+    "astro": "7.3.5"
   },
   "overrides": {
     "esbuild": "0.28.1"

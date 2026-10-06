@@ -3,7 +3,7 @@
   "landing": {
     "static": {
       "meta.title": "Health.md | 건강 데이터를 더 유용하게",
-      "meta.description": "Apple Health와 Health Connect의 데이터를 원하는 파일, 스크립트, 에이전트로 연결하는 로컬 우선 브리지입니다. Health.md는 건강 데이터를 저장하지 않습니다.",
+      "meta.description": "Apple Health와 Health Connect의 데이터를 원하는 파일, 스크립트, 에이전트로 연결하는 로컬 우선 브리지입니다. 선택형 Health.md 클라우드는 사용자가 직접 보낸 내보내기만 보관합니다.",
       "meta.ogTitle": "건강 데이터를 더 유용하게",
       "meta.twitterDescription": "Apple Health와 Health Connect를 이미 사용하는 도구에 연결하는 개인정보 보호 중심의 로컬 브리지입니다.",
       "schema.description": "Health.md는 Apple Health와 Android Health Connect를 로컬 파일, 자동화, CLI 워크플로 및 로컬 에이전트에 연결하는 개인정보 보호 중심의 브리지입니다.",
@@ -29,7 +29,7 @@
       "playStoreAlt": "Google Play에서 Health.md 다운로드",
       "fdroidAlt": "F-Droid에서 Health.md 다운로드",
       "fdroidBadgeKicker": "오픈 소스 빌드",
-      "trust": "Health.md는 건강 데이터를 저장하지 않습니다.<br>모든 내보내기 대상을 직접 선택할 수 있습니다.",
+      "trust": "기본적으로 로컬에서 처리합니다.<br>선택형 클라우드는 직접 보낸 내보내기만 보관합니다.",
       "exportsTitle": "건강 데이터를<br>일반 파일로.",
       "exportsLede": "측정 항목을 선택해 Markdown, JSON, CSV 또는 Obsidian Bases로 내보내세요.",
       "exportPhoneLabel": "흰색 iPhone 17 Pro에 표시된 Apple Health 요약",

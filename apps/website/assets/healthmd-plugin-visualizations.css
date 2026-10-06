@@ -1,5 +1,7 @@
 /* Generated from health-md-visualizations/styles.css. Do not edit directly. */
-.html-preview {
+.html-preview,
+.health-md-viz-stats {
+  --font-smallest: 12px;
   --background-modifier-border: var(--color-gray-alpha-300);
   --interactive-accent: var(--color-tertiary);
   --text-muted: var(--color-secondary);
@@ -133,4 +135,12 @@
 	height: 100%;
 	border-radius: inherit;
 	background: var(--interactive-accent);
+}
+.health-md-whoop-note {
+	width: 100%;
+	margin-top: 8px;
+	font-size: var(--font-smallest);
+	line-height: 1.5;
+	color: var(--text-muted);
+	overflow-wrap: anywhere;
 }
