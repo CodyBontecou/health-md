@@ -368,6 +368,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private var sessionTask: Task<Void, Never>?
     private var activeSessionID: UUID?
     private var agentBridgeSession: IPhoneDirectCLIAuthenticatedSession?
+    private var agentBridgePeer: AgentBridgeExportAuthenticatedPeer?
     private var exportTask: Task<Void, Never>?
     private var activeExportOperationID: UUID?
     private var activeExportJobID: UUID?
@@ -439,18 +440,26 @@ final class IPhoneDirectCLIService: ObservableObject {
                   ownership.sessionID == sessionID, ownership.channel === channel,
                   ownership.sourceInstallationID == installationID,
                   channel.clientAuthenticatedContext != nil else { throw AgentBridgeValidationError.permissionRequired }
-            // Obtain UIKit's actor-isolated singleton here. Its protected-data getter is SDK-
-            // declared nonisolated, so held peers can sample it without assuming an executor.
-            let application = UIApplication.shared
-            let peer = try AgentBridgeExportNativeSession.authenticatedPeer(
-                ownership: ownership, nativeTrust: nativeTrust,
-                protectedData: { application.isProtectedDataAvailable },
-                foreground: { application.applicationState == .active }
-            )
+            let peer: AgentBridgeExportAuthenticatedPeer
+            if let original = agentBridgePeer {
+                // SAME owner: retain its original reader/snapshot and shared terminal checker.
+                // Fresh current checks must reject changes, never recapture them as renewal.
+                peer = original
+            } else {
+                // Obtain UIKit's actor-isolated singleton here. Its protected-data getter is SDK-
+                // declared nonisolated, so held peers can sample it without assuming an executor.
+                let application = UIApplication.shared
+                peer = try AgentBridgeExportNativeSession.authenticatedPeer(
+                    ownership: ownership, nativeTrust: nativeTrust,
+                    protectedData: { application.isProtectedDataAvailable },
+                    foreground: { application.applicationState == .active }
+                )
+            }
             try peer.requireCurrent()
             guard isEnabled, appIsActive, UIApplication.shared.applicationState == .active,
                   activeSessionID == sessionID, self.channel === channel,
                   agentBridgeSession === ownership else { throw AgentBridgeValidationError.permissionRequired }
+            agentBridgePeer = peer // Pin only the first successful capture for this accepted owner.
             return peer
         } catch {
             agentBridgeSession?.revoke()
@@ -484,6 +493,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private func invalidateAgentBridgeSession() {
         agentBridgeSession?.revoke()
         agentBridgeSession = nil
+        agentBridgePeer = nil
     }
 
     var pairedCLIName: String? {
