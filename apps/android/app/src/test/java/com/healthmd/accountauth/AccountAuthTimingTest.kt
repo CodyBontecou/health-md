@@ -30,6 +30,34 @@ class AccountAuthTimingTest {
         return SyntheticReply(request, request.url, 200, patched(issued.bytes(), mapOf("expires_in" to JsonPrimitive(ttl))))
     }
 
+    @Test fun actualBlockedExclusiveAcquisitionPastTtlCannotInstallCandidateOrReceipt() {
+        val rig = AuthRig()
+        val callback = rig.begin()
+        checkSource(rig.vault.readNormal() == null, "initial authoritative custody absent")
+        rig.transport.handler = { request -> response(rig, request, 1) }
+        val prepared = DeferredPoint()
+        val held = DeferredPoint()
+        rig.vault.beforeCommit.set { prepared.pause() }
+        val operation = RunningAction { rig.owner.acceptCallback(callback) }
+        var holder: RunningAction? = null
+        try {
+            prepared.awaitReached() // parsed candidate; transaction preparation, before gate/acquisition
+            holder = RunningAction { rig.vault.holdExclusiveForSyntheticContention(held); AuthAction.FENCED }
+            held.awaitReached() // the supplied store monitor is actually held
+            prepared.release()
+            operation.awaitMonitorBlocked() // no sleep hook after the gate; genuine monitor contention
+            rig.clock.value.set(101)
+        } finally { prepared.release(); held.release() }
+        val outcome = operation.finish()
+        checkSource(holder?.finish() == AuthAction.FENCED, "actual monitor holder released")
+        val current = rig.vault.readNormal() // fresh authoritative row AND receipt, not status-only visibility
+        println("EXCLUSIVE TTL1 exchange action=$outcome authoritative-row-absent=${current == null}")
+        checkSource(outcome == AuthAction.UNCERTAIN, "expired exclusive wait must quarantine public exchange")
+        checkSource(current == null, "exclusive wait past TTL1 must not install authoritative candidate or receipt")
+        checkSource(rig.owner.status().namespace == null && !rig.owner.status().accountOperationsAllowed,
+            "expired exclusive wait cannot expose normal authority")
+    }
+
     @Test fun closedFiniteWindowAndStartBoundedTtlRejectUnsafeStartAndExhaustion() {
         val window = AuthRequestWindow.capture(100)
         checkSource(window.timeoutSeconds == 5L && window.deadlineAtSeconds == 105L &&

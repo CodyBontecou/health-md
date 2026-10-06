@@ -108,8 +108,10 @@ internal class FaultVault : SyntheticAccountVault {
         writes.incrementAndGet()
         beforeCommit.getAndSet(null)?.invoke() // actual deferred preparation, outside authoritative gate
         if (fault == VaultFault.BEFORE_COMMIT) throw IllegalStateException("synthetic rollback")
-        gate.commit {
-            synchronized(lock) {
+        synchronized(lock) {
+            // Store -> source owner. Owner paths release ownerLock BEFORE read/transact; no inverse wait.
+            // All blocking preparation/acquisition precedes the fresh one-use gate, then only CAS/mutation.
+            gate.commit {
                 val candidate = change(image)
                 previous = image
                 val record = candidate.normal
@@ -131,6 +133,8 @@ internal class FaultVault : SyntheticAccountVault {
         afterCommit.getAndSet(null)?.invoke() // real committed row, prior to owner readback/visibility
         if (fault in setOf(VaultFault.LOST_REPLY, VaultFault.LOST_REPLY_AND_UNREADABLE)) throw IllegalStateException("synthetic lost reply")
     }
+    /** Hold the SAME authoritative store monitor; no replacement adapter or post-gate delay. */
+    fun holdExclusiveForSyntheticContention(point: DeferredPoint) { synchronized(lock) { point.pause() } }
     fun inject(value: VaultImage?) { synchronized(lock) { image = value } }
     fun inspect(): VaultImage? = synchronized(lock) { image }
 }
@@ -202,6 +206,11 @@ internal class RunningAction(action: () -> AuthAction) {
         val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
         while (thread.state != Thread.State.WAITING && System.nanoTime() < end) Thread.sleep(1)
         checkSource(thread.state == Thread.State.WAITING, "second actual refresh waiting on lock")
+    }
+    fun awaitMonitorBlocked() {
+        val end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5)
+        while (thread.state != Thread.State.BLOCKED && thread.isAlive && System.nanoTime() < end) Thread.yield()
+        checkSource(thread.state == Thread.State.BLOCKED, "actual contender blocked acquiring supplied store monitor")
     }
     fun finish(): AuthAction {
         thread.join(5000)
