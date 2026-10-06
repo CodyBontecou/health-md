@@ -18,6 +18,8 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     static let profileID = "apple_health_data_v8"
+    static let wakeDateProfileID = "apple_health_data_v10"
+    static let wakeDateHandoffVersion: UInt32 = 2
     private static let supportedCoreAPIVersion: UInt32 = 4
     private static let supportedRenderInputVersion: UInt32 = 1
     private static let supportedArtifactPlanVersion: UInt32 = 1
@@ -70,10 +72,12 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         publicSchema = registrySnapshot.publicSchema
         publicSchemaVersion = registrySnapshot.publicSchemaVersion
         coreAPIVersion = buildInfo.coreApiVersion
-        semanticInputVersion = buildInfo.semanticInputVersion
-        canonicalModelVersion = buildInfo.canonicalModelVersion
-        renderInputVersion = buildInfo.renderInputVersion
-        artifactPlanVersion = buildInfo.artifactPlanVersion
+        let wakeDate = registrySnapshot.profileId == Self.wakeDateProfileID
+        // Build-info advertises historical defaults, not the explicitly requested successor.
+        semanticInputVersion = wakeDate ? Self.wakeDateHandoffVersion : buildInfo.semanticInputVersion
+        canonicalModelVersion = wakeDate ? Self.wakeDateHandoffVersion : buildInfo.canonicalModelVersion
+        renderInputVersion = wakeDate ? Self.wakeDateHandoffVersion : buildInfo.renderInputVersion
+        artifactPlanVersion = wakeDate ? Self.wakeDateHandoffVersion : buildInfo.artifactPlanVersion
         registryVersion = registrySnapshot.registryVersion
         registrySHA256 = registrySnapshot.registrySha256
         semanticProfileRevision = registrySnapshot.profileRevision
@@ -84,14 +88,18 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         try validateCompatibility(buildInfo: buildInfo, registrySnapshot: registrySnapshot)
     }
 
-    /// Validates both the persisted values and agreement between the packaged build and the
-    /// adapter-provided registry snapshot. Callers must resolve any failure to legacy authority.
+    /// Validates immutable values against the packaged core and explicitly selected registry.
+    /// Persisted/successor incompatibility must fail closed, never become legacy authority.
     func validateCompatibility(
         buildInfo: CoreBuildInfo,
         registrySnapshot: CoreMetricRegistrySnapshot
     ) throws {
         guard Self.isIANAIdentifier(calendarTimeZoneIdentifier) else {
             throw CompatibilityError.invalidCalendarTimeZone
+        }
+        if profile == Self.wakeDateProfileID {
+            try validateWakeDateCompatibility(buildInfo: buildInfo, registrySnapshot: registrySnapshot)
+            return
         }
         guard profile == Self.profileID,
               registrySnapshot.profileId == Self.profileID,
@@ -151,8 +159,47 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
         }
     }
 
+    var isWakeDate: Bool { profile == Self.wakeDateProfileID }
+
+    var hasExplicitWakeDateContracts: Bool {
+        isWakeDate && engine == .rust
+            && publicSchema == HealthMdExportSchema.identifier && publicSchemaVersion == 10
+            && coreAPIVersion == Self.supportedCoreAPIVersion
+            && semanticInputVersion == Self.wakeDateHandoffVersion
+            && canonicalModelVersion == Self.wakeDateHandoffVersion
+            && renderInputVersion == Self.wakeDateHandoffVersion
+            && artifactPlanVersion == Self.wakeDateHandoffVersion
+            && registryVersion == HealthMdSleepProfileContract.registryVersion
+            && registrySHA256 == HealthMdSleepProfileContract.registrySHA256
+            && semanticProfileRevision == Self.supportedSemanticProfileRevision
+            && renderProfileRevision == Self.supportedRenderProfileRevision
+    }
+
+    private func validateWakeDateCompatibility(
+        buildInfo: CoreBuildInfo,
+        registrySnapshot: CoreMetricRegistrySnapshot
+    ) throws {
+        guard hasExplicitWakeDateContracts,
+              registrySnapshot.profileId == Self.wakeDateProfileID,
+              registrySnapshot.publicProfileId == "apple-v10",
+              registrySnapshot.publicSchema == publicSchema,
+              registrySnapshot.publicSchemaVersion == publicSchemaVersion,
+              registrySnapshot.registryVersion == registryVersion,
+              registrySnapshot.registrySha256 == registrySHA256,
+              registrySnapshot.profileRevision == semanticProfileRevision,
+              buildInfo.coreApiVersion == coreAPIVersion,
+              buildInfo.renderProfileRevision == renderProfileRevision else {
+            throw CompatibilityError.invalidProfile
+        }
+        guard Self.isBoundedIdentifier(coreSourceRevision, maximumUTF8Count: 256),
+              Self.isBoundedIdentifier(buildInfo.coreSourceRevision, maximumUTF8Count: 256) else {
+            throw CompatibilityError.incompatibleCoreSource
+        }
+    }
+
     func validateRangeCompatibility(buildInfo: CoreBuildInfo) throws {
-        guard coreAPIVersion >= Self.rangeCoreAPIVersion,
+        guard profile == Self.profileID,
+              coreAPIVersion >= Self.rangeCoreAPIVersion,
               buildInfo.coreApiVersion >= Self.rangeCoreAPIVersion,
               semanticInputVersion == HealthMdSemanticInputAdapter.semanticInputVersion,
               buildInfo.semanticInputVersion == semanticInputVersion else {

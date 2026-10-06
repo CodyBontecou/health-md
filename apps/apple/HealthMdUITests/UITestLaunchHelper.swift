@@ -35,6 +35,7 @@ enum UITestLaunchHelper {
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+        static let sleepDayAttributionPicker = "export.sleepDayAttribution.picker"
     }
 
     enum Notification {

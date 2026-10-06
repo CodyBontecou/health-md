@@ -301,13 +301,13 @@ class APIEndpointExportRunner private constructor(
         val snapshot = OperationSnapshot(
             mode = resolvedMode,
             settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
+            calendarTimeZone = operationCalendarZone(frozenSettings),
             exportedAt = clock(),
             ids = idSource.next(),
         )
         val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
         val captureContext = try {
-            operationSource?.resolveCaptureContext(ZoneId.of(snapshot.calendarTimeZone))?.also { it.requireShippedProfile() }
+            resolveOperationCaptureContext(snapshot.settings, ZoneId.of(snapshot.calendarTimeZone))
         } catch (error: SleepAttributionUnavailableException) {
             return ExportResult(successCount = 0, totalCount = normalizedDates.size,
                 failedDateDetails = normalizedDates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) })
@@ -436,7 +436,7 @@ class APIEndpointExportRunner private constructor(
         val snapshot = OperationSnapshot(
             mode = mode,
             settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
+            calendarTimeZone = operationCalendarZone(frozenSettings),
             exportedAt = clock(),
             ids = idSource.next(),
         )
@@ -546,6 +546,19 @@ class APIEndpointExportRunner private constructor(
         return policy.mode
     }
 
+    private fun operationCalendarZone(settings: ExportSettings): String =
+        settings.executionSleepCaptureContext?.zoneId?.id
+            ?: settings.executionEnginePin?.ianaTimeZone
+            ?: zoneIdProvider().id
+
+    private suspend fun resolveOperationCaptureContext(settings: ExportSettings, zoneId: ZoneId): AndroidCaptureContext? =
+        if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else {
+            (captureSource as? OperationScopedAPIExportCaptureSource)?.resolveCaptureContext(zoneId)
+                ?.also { it.requireShippedProfile() }
+        }
+
     private suspend fun captureDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
@@ -556,7 +569,7 @@ class APIEndpointExportRunner private constructor(
     ): CaptureResult {
         val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
         val resolvedCaptureContext = try {
-            (captureContext ?: operationSource?.resolveCaptureContext(zoneId))?.also { it.requireShippedProfile() }
+            (captureContext ?: resolveOperationCaptureContext(settings, zoneId))?.also { it.requireShippedProfile() }
         } catch (error: SleepAttributionUnavailableException) {
             return CaptureResult(emptyList(), dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) }, dates, wasCancelled = false)
         }

@@ -614,6 +614,9 @@ final class ExportOrchestratorTests: XCTestCase {
         )
         let settings = makeExportSettings(formats: [.json], rollupPeriods: [])
         settings.includeGranularData = false
+        // This is fresh foreground work, not the helper's accepted UTC job.
+        // A supplied immutable capture context correctly outranks this override.
+        settings.executionSleepCaptureContext = nil
         settings.exportTimeZoneOverride = TimeZone(identifier: "America/Los_Angeles")!
 
         let result = await ExportOrchestrator.exportDates(

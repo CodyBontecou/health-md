@@ -175,6 +175,10 @@ pub enum CoreMetricRegistryProfile {
     AndroidFrozenV4,
     /// Android analytical v5.
     AndroidAnalyticalV5,
+    /// Apple wake-date daily v10, selected explicitly from registry v2.
+    AppleHealthDataV10,
+    /// Android wake-date daily v6, selected explicitly from registry v2.
+    AndroidSleepV6,
 }
 
 /// One ordered native category.
@@ -1046,6 +1050,12 @@ const fn semantic_profile(
         CoreMetricRegistryProfile::AndroidAnalyticalV5 => {
             healthmd_core::semantic::SemanticProfile::AndroidAnalyticalV5
         }
+        CoreMetricRegistryProfile::AppleHealthDataV10 => {
+            healthmd_core::semantic::SemanticProfile::AppleHealthDataV10
+        }
+        CoreMetricRegistryProfile::AndroidSleepV6 => {
+            healthmd_core::semantic::SemanticProfile::AndroidSleepV6
+        }
     }
 }
 
@@ -1062,6 +1072,12 @@ const fn core_profile(
         healthmd_core::semantic::SemanticProfile::AndroidAnalyticalV5 => {
             CoreMetricRegistryProfile::AndroidAnalyticalV5
         }
+        healthmd_core::semantic::SemanticProfile::AppleHealthDataV10 => {
+            CoreMetricRegistryProfile::AppleHealthDataV10
+        }
+        healthmd_core::semantic::SemanticProfile::AndroidSleepV6 => {
+            CoreMetricRegistryProfile::AndroidSleepV6
+        }
     }
 }
 
@@ -1071,6 +1087,8 @@ impl From<CoreMetricRegistryProfile> for healthmd_core::registry::MetricRegistry
             CoreMetricRegistryProfile::AppleHealthDataV8 => Self::AppleHealthDataV8,
             CoreMetricRegistryProfile::AndroidFrozenV4 => Self::AndroidFrozenV4,
             CoreMetricRegistryProfile::AndroidAnalyticalV5 => Self::AndroidAnalyticalV5,
+            CoreMetricRegistryProfile::AppleHealthDataV10 => Self::AppleHealthDataV10,
+            CoreMetricRegistryProfile::AndroidSleepV6 => Self::AndroidSleepV6,
         }
     }
 }

@@ -603,6 +603,7 @@ struct ExportTabView: View {
                 }
                 .pickerStyle(.menu)
                 .font(.body.weight(.semibold))
+                .accessibilityIdentifier(AccessibilityID.Export.sleepDayAttributionPicker)
                 .accessibilityHint(healthKitManager.sleepDayAttribution.localizedDescription)
 
                 Text(healthKitManager.sleepDayAttribution.localizedDescription)

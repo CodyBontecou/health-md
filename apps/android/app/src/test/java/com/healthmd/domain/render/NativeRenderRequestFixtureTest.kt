@@ -155,7 +155,11 @@ class NativeRenderRequestFixtureTest {
         return (Json.encodeToString(JsonObject.serializer(), fixture) + "\n").encodeToByteArray()
     }
 
-    private fun registry(root: JsonObject, profileId: String): CoreMetricRegistrySnapshot {
+    internal fun registry(
+        root: JsonObject,
+        profileId: String,
+        registrySha256: String = com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256,
+    ): CoreMetricRegistrySnapshot {
         val profile = root.getValue("profiles").jsonArray
             .map(JsonElement::jsonObject)
             .single { it.getValue("id").jsonPrimitive.content == profileId }
@@ -206,7 +210,7 @@ class NativeRenderRequestFixtureTest {
         }
         return CoreMetricRegistrySnapshot(
             registryVersion = root.getValue("registry_version").jsonPrimitive.content.toUInt(),
-            registrySha256 = com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256,
+            registrySha256 = registrySha256,
             profileId = profileId,
             publicProfileId = profile.getValue("public_profile_id").jsonPrimitive.content,
             publicSchema = profile.getValue("public_schema").jsonPrimitive.content,

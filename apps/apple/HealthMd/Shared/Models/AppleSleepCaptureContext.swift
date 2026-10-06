@@ -1,16 +1,21 @@
 import Foundation
 
-/// Internal acquisition authority, independent of portable setup and public
-/// export profiles. One value belongs to the entire operation, not one day.
+/// Internal acquisition authority, excluded from portable setup. The explicit
+/// successor discriminator prevents draft jobs from gaining approval on upgrade.
+/// One value belongs to the entire operation, not one day.
 nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
     static let pinned = TaskLocal<AppleSleepCaptureContext?>(wrappedValue: nil)
 
     let calendarTimeZoneIdentifier: String
     let sleepDayAttribution: SleepDayAttribution
+    /// Explicit authority for new wake-date operations. Historical night contexts
+    /// omit this field; decoding a draft-era morning context must not invent it.
+    let exportProfileID: String?
 
     init(timeZone: TimeZone, sleepDayAttribution: SleepDayAttribution) {
         self.calendarTimeZoneIdentifier = timeZone.identifier
         self.sleepDayAttribution = sleepDayAttribution
+        self.exportProfileID = sleepDayAttribution == .morningEnds ? "apple-v10" : nil
     }
 
     var timeZone: TimeZone { TimeZone(identifier: calendarTimeZoneIdentifier)! }
@@ -29,6 +34,9 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
     }
 
     func requireShippedProfile() throws {
+        if sleepDayAttribution == .morningEnds && exportProfileID != "apple-v10" {
+            throw AvailabilityError.unversionedAttribution
+        }
         guard sleepDayAttribution.isAvailableForShippedProfiles else { throw AvailabilityError.unapprovedAttribution }
     }
 
@@ -39,17 +47,29 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
             throw DecodingError.dataCorruptedError(forKey: .calendarTimeZoneIdentifier, in: container,
                                                    debugDescription: "Invalid capture timezone")
         }
-        self.init(timeZone: zone, sleepDayAttribution: try container.decode(SleepDayAttribution.self, forKey: .sleepDayAttribution))
+        self.calendarTimeZoneIdentifier = zone.identifier
+        self.sleepDayAttribution = try container.decode(SleepDayAttribution.self, forKey: .sleepDayAttribution)
+        self.exportProfileID = try container.decodeIfPresent(String.self, forKey: .exportProfileID)
+        if let profile = exportProfileID {
+            let expected = sleepDayAttribution == .morningEnds ? "apple-v10" : "apple-v8"
+            guard profile == expected else {
+                throw DecodingError.dataCorruptedError(forKey: .exportProfileID, in: container,
+                                                       debugDescription: "Invalid capture export profile")
+            }
+        }
     }
 
     enum AvailabilityError: Error, LocalizedError, Equatable {
         case unapprovedAttribution
+        case unversionedAttribution
         case missingDurableAttribution
 
         var errorDescription: String? {
             switch self {
             case .unapprovedAttribution:
                 return String(localized: "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.")
+            case .unversionedAttribution:
+                return String(localized: "This saved sleep attribution has no supported export profile. It cannot resume; start a new export without changing the saved job.")
             case .missingDurableAttribution:
                 return String(localized: "This pending export has no immutable sleep attribution context. It cannot resume; start a new export without changing the saved job.")
             }

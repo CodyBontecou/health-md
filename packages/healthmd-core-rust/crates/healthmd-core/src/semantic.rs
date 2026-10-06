@@ -11,8 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 use crate::{
-    CANONICAL_MODEL_VERSION, CoreError, REGISTRY_SHA256, REGISTRY_VERSION, SEMANTIC_INPUT_VERSION,
-    SEMANTIC_RESULT_CORE_API_VERSION,
+    CANONICAL_MODEL_VERSION, CORE_API_VERSION, CoreError, REGISTRY_SHA256, REGISTRY_VERSION,
+    SEMANTIC_INPUT_VERSION, SEMANTIC_RESULT_CORE_API_VERSION, SLEEP_CANONICAL_MODEL_VERSION,
+    SLEEP_REGISTRY_SHA256, SLEEP_REGISTRY_VERSION, SLEEP_SEMANTIC_INPUT_VERSION,
 };
 
 /// Maximum semantic-session configuration size.
@@ -37,6 +38,7 @@ pub const MAX_EXTENSIONS_PER_RECORD: usize = 32;
 pub const MAX_EXTENSION_TOKEN_BYTES: usize = 128;
 
 const REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v1.json");
+const SLEEP_REGISTRY_BYTES: &[u8] = include_bytes!("../registry/metric-registry-v2.json");
 
 /// Closed output profiles. Profiles are never inferred from platform or app version.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -45,6 +47,8 @@ pub enum SemanticProfile {
     AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
+    AppleHealthDataV10,
+    AndroidSleepV6,
 }
 
 impl SemanticProfile {
@@ -53,13 +57,72 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
+            Self::AppleHealthDataV10 => "apple_health_data_v10",
+            Self::AndroidSleepV6 => "android_sleep_v6",
         }
     }
 
     fn platform(self) -> &'static str {
+        if self.is_apple() { "apple" } else { "android" }
+    }
+
+    pub(crate) const fn is_apple(self) -> bool {
+        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV10)
+    }
+
+    pub(crate) const fn is_wake_date(self) -> bool {
+        matches!(self, Self::AppleHealthDataV10 | Self::AndroidSleepV6)
+    }
+
+    pub(crate) const fn public_schema_version(self) -> u32 {
         match self {
-            Self::AppleHealthDataV8 => "apple",
-            Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => "android",
+            Self::AppleHealthDataV8 => 8,
+            Self::AndroidFrozenV4 => 4,
+            Self::AndroidAnalyticalV5 => 5,
+            Self::AppleHealthDataV10 => 10,
+            Self::AndroidSleepV6 => 6,
+        }
+    }
+
+    pub(crate) const fn public_profile_id(self) -> &'static str {
+        match self {
+            Self::AppleHealthDataV8 => "apple-v8",
+            Self::AndroidFrozenV4 => "android-frozen-v4",
+            Self::AndroidAnalyticalV5 => "android-analytical-v5",
+            Self::AppleHealthDataV10 => "apple-v10",
+            Self::AndroidSleepV6 => "android-sleep-v6",
+        }
+    }
+
+    pub(crate) const fn semantic_input_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_SEMANTIC_INPUT_VERSION
+        } else {
+            SEMANTIC_INPUT_VERSION
+        }
+    }
+
+    pub(crate) const fn canonical_model_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_CANONICAL_MODEL_VERSION
+        } else {
+            CANONICAL_MODEL_VERSION
+        }
+    }
+
+    pub(crate) const fn registry_version(self) -> u32 {
+        if self.is_wake_date() {
+            SLEEP_REGISTRY_VERSION
+        } else {
+            REGISTRY_VERSION
+        }
+    }
+
+    pub(crate) const fn registry_sha256(self) -> &'static str {
+        if self.is_wake_date() {
+            SLEEP_REGISTRY_SHA256
+        } else {
+            REGISTRY_SHA256
         }
     }
 }
@@ -293,6 +356,33 @@ pub struct RetainedSemanticExtension {
     pub extension: SemanticExtensionRef,
 }
 
+/// Frozen owner-date authority carried only by successor semantic results.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct SemanticSleepCaptureContext {
+    pub schema_profile: String,
+    pub calendar_timezone: String,
+    pub sleep_day_attribution: String,
+    pub sleep_owner_day_rule: String,
+    pub sleep_interval_clipping: String,
+}
+
+impl SemanticSleepCaptureContext {
+    pub(crate) fn for_profile(profile: SemanticProfile, timezone: &str) -> Option<Self> {
+        if !profile.is_wake_date() {
+            return None;
+        }
+        let schema_profile = profile.public_profile_id();
+        Some(Self {
+            schema_profile: schema_profile.to_owned(),
+            calendar_timezone: timezone.to_owned(),
+            sleep_day_attribution: "morning_ends".to_owned(),
+            sleep_owner_day_rule: "session_end_date".to_owned(),
+            sleep_interval_clipping: "none".to_owned(),
+        })
+    }
+}
+
 /// Canonical, health-data-bearing internal result. Production diagnostics use hashes/counts only.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -309,6 +399,9 @@ pub struct SemanticResult {
     pub next_batch_index: u32,
     pub records_accepted: u64,
     pub records_filtered: u64,
+    /// Absent from historical results; mandatory for successor owner-date authority.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub sleep_capture_context: Option<SemanticSleepCaptureContext>,
     pub days: Vec<SemanticDayResult>,
     pub rollups: Vec<SemanticRollupResult>,
     pub retained_extensions: Vec<RetainedSemanticExtension>,
@@ -540,7 +633,7 @@ impl SemanticSession {
 
     fn validate_batch_header(&self, batch: &SemanticBatch) -> Result<(), CoreError> {
         if batch.schema != "healthmd.semantic_input"
-            || batch.semantic_input_version != SEMANTIC_INPUT_VERSION
+            || batch.semantic_input_version != self.config.profile.semantic_input_version()
             || batch.session_id != self.config.session_id
         {
             return Err(CoreError::InvalidSemanticBatch);
@@ -1017,10 +1110,14 @@ impl SemanticSession {
     ) -> SemanticResult {
         SemanticResult {
             schema: "healthmd.semantic_result".to_owned(),
-            semantic_input_version: SEMANTIC_INPUT_VERSION,
-            canonical_model_version: CANONICAL_MODEL_VERSION,
-            core_api_version: SEMANTIC_RESULT_CORE_API_VERSION,
-            registry_sha256: REGISTRY_SHA256.to_owned(),
+            semantic_input_version: self.config.profile.semantic_input_version(),
+            canonical_model_version: self.config.profile.canonical_model_version(),
+            core_api_version: if self.config.profile.is_wake_date() {
+                CORE_API_VERSION
+            } else {
+                SEMANTIC_RESULT_CORE_API_VERSION
+            },
+            registry_sha256: self.config.registry_sha256.clone(),
             profile_revision: self.config.profile_revision,
             session_id: self.config.session_id.clone(),
             profile: self.config.profile,
@@ -1028,6 +1125,10 @@ impl SemanticSession {
             next_batch_index: self.next_batch_index,
             records_accepted: u64::try_from(self.records.len()).unwrap_or(u64::MAX),
             records_filtered: self.records_filtered,
+            sleep_capture_context: SemanticSleepCaptureContext::for_profile(
+                self.config.profile,
+                &self.config.calendar_time_zone,
+            ),
             days,
             rollups,
             retained_extensions,
@@ -1044,10 +1145,10 @@ impl SemanticSession {
 
 fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     if config.schema != "healthmd.semantic_session_config"
-        || config.semantic_input_version != SEMANTIC_INPUT_VERSION
-        || config.canonical_model_version != CANONICAL_MODEL_VERSION
-        || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
+        || config.semantic_input_version != config.profile.semantic_input_version()
+        || config.canonical_model_version != config.profile.canonical_model_version()
+        || config.registry_version != config.profile.registry_version()
+        || config.registry_sha256 != config.profile.registry_sha256()
         || !matches!(config.profile_revision, 1 | 2)
         || !valid_identifier(&config.session_id, 128)
         || config.calendar_time_zone.len() > 64
@@ -1106,8 +1207,13 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
 }
 
 fn build_profile_index(profile: SemanticProfile) -> Result<ProfileIndex, CoreError> {
+    let bytes = if profile.registry_version() == SLEEP_REGISTRY_VERSION {
+        SLEEP_REGISTRY_BYTES
+    } else {
+        REGISTRY_BYTES
+    };
     let registry: RawRegistry =
-        serde_json::from_slice(REGISTRY_BYTES).map_err(|_| CoreError::InvalidRegistry)?;
+        serde_json::from_slice(bytes).map_err(|_| CoreError::InvalidRegistry)?;
     let mut semantic_to_selection = HashMap::new();
     let mut valid_selections = HashSet::new();
     let mut aggregation_by_selection = HashMap::new();
@@ -1652,7 +1758,7 @@ fn normalized_value(value: &SemanticValue, target_unit: &str) -> Result<Semantic
     binary_value(number_f64(number)? * factor, expected_unit)
 }
 
-fn target_internal_unit(target: &str) -> Option<&'static str> {
+pub(crate) fn target_internal_unit(target: &str) -> Option<&'static str> {
     match target {
         "unitless" | "kg/m²" => Some(if target == "kg/m²" {
             "kilogram_per_square_meter"

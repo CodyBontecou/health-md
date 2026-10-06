@@ -186,6 +186,14 @@
     },
     {
       "source_type": "AndroidExportSettingsSnapshot",
+      "serialized_field": "sleepCaptureContext",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Accepted operation attribution, profile discriminator and capture timezone must remain immutable local authority, never portable setup."
+    },
+    {
+      "source_type": "AndroidExportSettingsSnapshot",
       "serialized_field": "subfolder",
       "coverage_kind": "descriptor",
       "disposition": "platform_extension",
@@ -639,6 +647,22 @@
       "disposition": "prohibited",
       "contract_path": null,
       "evidence": "Transient renderer authority remains prohibited even though kotlinx serialization omits it."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionSleepCaptureAuthorityIsFrozen",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Transient immutable capture authority cannot become a portable setting or a live preference fallback."
+    },
+    {
+      "source_type": "ExportSettings",
+      "serialized_field": "executionSleepCaptureContext",
+      "coverage_kind": "supplemental",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Operation capture profile, timezone and attribution remain device-local durable authority, excluded from setup sharing."
     },
     {
       "source_type": "ExportSettings",

@@ -39,17 +39,51 @@ sealed interface SleepDayAttributionOverride {
     data class Value(val attribution: SleepDayAttribution) : SleepDayAttributionOverride
 }
 
-class SleepAttributionUnavailableException : IllegalStateException(
-    "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.",
+enum class SleepCaptureAuthorityError {
+    PROFILE_UNAVAILABLE,
+    UNVERSIONED_ATTRIBUTION,
+    MISSING_DURABLE_ATTRIBUTION,
+}
+
+class SleepAttributionUnavailableException(
+    val reason: SleepCaptureAuthorityError = SleepCaptureAuthorityError.PROFILE_UNAVAILABLE,
+) : IllegalStateException(
+    when (reason) {
+        SleepCaptureAuthorityError.PROFILE_UNAVAILABLE ->
+            "Morning ends is unavailable for current export profiles. Choose Night begins for a new export."
+        SleepCaptureAuthorityError.UNVERSIONED_ATTRIBUTION ->
+            "This saved sleep attribution has no supported export profile. It cannot resume; start a new export without changing the saved job."
+        SleepCaptureAuthorityError.MISSING_DURABLE_ATTRIBUTION ->
+            "This pending export has no immutable sleep attribution context. It cannot resume; start a new export without changing the saved job."
+    },
 )
 
 /** Immutable timezone and sleep-owner policy for one Android capture operation. */
+@kotlinx.serialization.Serializable(with = AndroidCaptureContextSerializer::class)
 data class AndroidCaptureContext(
     val zoneId: java.time.ZoneId,
     val sleepDayAttribution: SleepDayAttribution,
+    /** Fresh successor authority only. The durable decoder must preserve an absent draft marker. */
+    val exportProfileID: String? = if (sleepDayAttribution == SleepDayAttribution.MORNING_ENDS) "android-sleep-v6" else null,
 ) {
+    init {
+        require(exportProfileID == null || when (sleepDayAttribution) {
+            SleepDayAttribution.MORNING_ENDS -> exportProfileID == "android-sleep-v6"
+            SleepDayAttribution.NIGHT_BEGINS -> exportProfileID in setOf("android-frozen-v4", "android-analytical-v5")
+        }) { "Invalid capture export profile" }
+    }
+
     fun requireShippedProfile() {
+        if (sleepDayAttribution == SleepDayAttribution.MORNING_ENDS && exportProfileID != "android-sleep-v6") {
+            throw SleepAttributionUnavailableException(SleepCaptureAuthorityError.UNVERSIONED_ATTRIBUTION)
+        }
         if (!sleepDayAttribution.isAvailableForShippedProfiles) throw SleepAttributionUnavailableException()
+    }
+
+    companion object {
+        fun recovered(context: AndroidCaptureContext?): AndroidCaptureContext =
+            (context ?: throw SleepAttributionUnavailableException(SleepCaptureAuthorityError.MISSING_DURABLE_ATTRIBUTION))
+                .also { it.requireShippedProfile() }
     }
 
     val explicitSleepDayAttributionOverride: SleepDayAttributionOverride

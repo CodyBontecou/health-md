@@ -57,6 +57,7 @@ nonisolated struct AppleLooseDailyCoreContext: Sendable {
 /// buffers cross into semantic/render workers.
 nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
     func loadContext() async throws -> AppleLooseDailyCoreContext
+    func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext
     func processSemantic(configuration: Data, batches: [Data]) async throws -> Data
     func render(
         configuration: Data,
@@ -65,13 +66,31 @@ nonisolated protocol AppleLooseDailyCoreExecuting: Sendable {
     ) async throws -> CoreArtifactPlan
 }
 
+extension AppleLooseDailyCoreExecuting {
+    nonisolated func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
+        guard profile == .appleHealthDataV8 else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return try await loadContext()
+    }
+}
+
 nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuting, Sendable {
     func loadContext() async throws -> AppleLooseDailyCoreContext {
-        try await runDetached {
+        try await loadContext(profile: .appleHealthDataV8)
+    }
+
+    func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
+        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV10 else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return try await runDetached {
             let service = HealthMdCoreService()
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
-                registry: try service.metricRegistry(profile: .appleHealthDataV8)
+                registry: try service.metricRegistry(profile: profile,
+                    expectedRegistryVersion: profile == .appleHealthDataV10
+                        ? HealthMdSleepProfileContract.registryVersion : 1)
             )
         }
     }
@@ -295,7 +314,15 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         surface: AppleExportOperationSurface,
         operationIdentity suppliedOperationIdentity: AppleExportOperationIdentity? = nil
     ) async throws -> AppleLooseDailyPlanResolution {
-        guard !records.isEmpty else { return .legacy }
+        let wakeDateContext = try Self.wakeDateCaptureContext(records: records, settings: settingsSnapshot)
+        if wakeDateContext != nil, settingsSnapshot.appleExportEnginePin?.hasExplicitWakeDateContracts != true {
+            // Fresh production selection stays gated. A successor never borrows legacy policy.
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        guard !records.isEmpty else {
+            if wakeDateContext != nil { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
+            return .legacy
+        }
         let calendarTimeZoneIdentifier = settingsSnapshot.calendarTimeZoneIdentifier ?? ""
         let orderedRecords = records.sorted {
             HealthKitDailyOwnershipMetadata.ownerDate(
@@ -348,11 +375,13 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             healthData: orderedRecords,
             settingsSnapshot: settingsSnapshot,
             surface: surface
+        ), wakeDateContext == nil || Self.supportsWakeDate(
+            records: orderedRecords, settings: settingsSnapshot, surface: surface
         ) else {
             if suppliedPin != nil { throw AppleLooseDailyExportPlannerError.rustPlanningFailed }
             return .legacy
         }
-        if requestedMode == .rust,
+        if requestedMode == .rust, wakeDateContext == nil,
            !ApplePureRustAuthorityAdmission.supports(
                settings: settingsSnapshot,
                surface: surface
@@ -375,7 +404,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
 
         let context: AppleLooseDailyCoreContext
         do {
-            context = try await coreExecutor.loadContext()
+            context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
+                ? .appleHealthDataV8 : .appleHealthDataV10)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -480,14 +510,16 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 retainPlatformExtensions: false,
                 rollupPeriods: frozenSettings.enabledRollupPeriods,
-                requestedRange: requestedRange
+                requestedRange: requestedRange,
+                captureContext: wakeDateContext
             )
             let semanticBatches = try HealthMdSemanticInputAdapter.boundedBatches(
                 sessionID: identity.sessionID,
                 healthData: orderedRecords,
                 registry: context.registry,
                 customization: frozenSettings.formatCustomization,
-                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier
+                calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+                captureContext: wakeDateContext
             )
             let semanticResult = try await coreExecutor.processSemantic(
                 configuration: semanticConfiguration,
@@ -534,7 +566,8 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             }
 
             let presentationByOwnerDate: [String: HealthData]
-            if requestedMode == .shadow {
+            if requestedMode == .shadow || wakeDateContext != nil {
+                // Successor JSON preparation is explicit, not a call to a historical writer.
                 presentationByOwnerDate = Dictionary(
                     uniqueKeysWithValues: zip(ownerDates, preparedExports.map(\.filteredData))
                 )
@@ -549,8 +582,9 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
                 options: renderOptions,
                 presentationByOwnerDate: presentationByOwnerDate,
-                allowNativeProfileDocuments: requestedMode == .shadow,
-                presentationCustomization: frozenSettings.formatCustomization
+                allowNativeProfileDocuments: requestedMode == .shadow || wakeDateContext != nil,
+                presentationCustomization: frozenSettings.formatCustomization,
+                captureContext: wakeDateContext
             )
             let corePlan = try await coreExecutor.render(
                 configuration: renderInput.configuration,
@@ -649,6 +683,40 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         case .legacy:
             return .legacy
         }
+    }
+
+    private static func wakeDateCaptureContext(
+        records: [HealthData], settings: ExportSettingsSnapshot
+    ) throws -> AppleSleepCaptureContext? {
+        let context = settings.sleepCaptureContext
+        let requestsWakeDate = context?.sleepDayAttribution == .morningEnds
+            || settings.appleExportEnginePin?.isWakeDate == true
+            || records.contains { $0.timeContext.sleepDayAttribution == .morningEnds }
+        guard requestsWakeDate else { return nil }
+        guard let context, context.sleepDayAttribution == .morningEnds,
+              context.exportProfileID == "apple-v10",
+              let identifier = settings.calendarTimeZoneIdentifier,
+              TimeZone(identifier: identifier)?.identifier == context.calendarTimeZoneIdentifier,
+              settings.appleExportEnginePin?.calendarTimeZoneIdentifier == identifier,
+              records.allSatisfy({
+                  $0.timeContext.sleepDayAttribution == .morningEnds
+                      && TimeZone(identifier: $0.timeContext.calendarTimeZoneIdentifier)?.identifier
+                          == context.calendarTimeZoneIdentifier
+              }) else {
+            throw AppleLooseDailyExportPlannerError.rustPlanningFailed
+        }
+        return context
+    }
+
+    private static func supportsWakeDate(
+        records: [HealthData], settings: ExportSettingsSnapshot,
+        surface: AppleExportOperationSurface
+    ) -> Bool {
+        (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
+            && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
+            && settings.formatCustomization.unitPreference == .metric
+            && !settings.generateRangeSummary && !settings.summaryOnlyExport
+            && records.allSatisfy { $0.workouts.isEmpty && $0.providers?.isEmpty != false }
     }
 
     static func supports(

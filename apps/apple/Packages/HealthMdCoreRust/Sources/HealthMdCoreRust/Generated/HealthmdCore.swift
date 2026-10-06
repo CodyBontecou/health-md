@@ -3003,6 +3003,14 @@ public enum CoreMetricRegistryProfile: Equatable, Hashable {
      * Android analytical v5.
      */
     case androidAnalyticalV5
+    /**
+     * Apple wake-date daily v10, selected explicitly from registry v2.
+     */
+    case appleHealthDataV10
+    /**
+     * Android wake-date daily v6, selected explicitly from registry v2.
+     */
+    case androidSleepV6
 
 
 
@@ -3030,6 +3038,10 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case 3: return .androidAnalyticalV5
         
+        case 4: return .appleHealthDataV10
+        
+        case 5: return .androidSleepV6
+        
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
@@ -3048,6 +3060,14 @@ public struct FfiConverterTypeCoreMetricRegistryProfile: FfiConverterRustBuffer 
         
         case .androidAnalyticalV5:
             writeInt(&buf, Int32(3))
+        
+        
+        case .appleHealthDataV10:
+            writeInt(&buf, Int32(4))
+        
+        
+        case .androidSleepV6:
+            writeInt(&buf, Int32(5))
         
         }
     }

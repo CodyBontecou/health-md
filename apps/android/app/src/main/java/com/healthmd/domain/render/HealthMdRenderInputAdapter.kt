@@ -4,6 +4,10 @@ import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
+import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
@@ -109,6 +113,7 @@ object HealthMdRenderInputAdapter {
         extensionPayloadsByOwnerDate: Map<String, List<JsonObject>> = emptyMap(),
         individualEntriesByOwnerDate: Map<String, List<JsonObject>> = emptyMap(),
         dailyNotesByOwnerDate: Map<String, JsonObject> = emptyMap(),
+        captureContext: AndroidCaptureContext? = null,
     ): EncodedInput {
         runCatching { ZoneId.of(calendarTimeZone) }
             .getOrElse { throw AdapterException("calendar timezone is invalid") }
@@ -118,11 +123,39 @@ object HealthMdRenderInputAdapter {
         requireValue(root, "state", "completed")
         requireValue(root, "registry_sha256", registry.registrySha256)
         requireValue(root, "profile", registry.profileId)
+        val handoffVersion = requireContractAuthority(root, registry, calendarTimeZone)
+        if (captureContext != null && (captureContext.zoneId.id != calendarTimeZone ||
+            (handoffVersion == 2 && (captureContext.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
+                captureContext.exportProfileID != "android-sleep-v6")) ||
+            (handoffVersion == 1 && (captureContext.sleepDayAttribution != SleepDayAttribution.NIGHT_BEGINS ||
+                (captureContext.exportProfileID != null && captureContext.exportProfileID != registry.publicProfileId))))) {
+            throw AdapterException("capture and completed semantic authority are incompatible")
+        }
+        val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
+            if ("json" !in options.formats || options.api != null || options.includeGranularData) {
+                throw AdapterException("wake-date native profile documents are not qualified")
+            }
+            if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
+                captureContext.exportProfileID != "android-sleep-v6" || captureContext.zoneId.id != calendarTimeZone) {
+                throw AdapterException("wake-date native capture authority is incompatible")
+            }
+            captureContext
+        } else null
         val revision = root["profile_revision"]?.jsonPrimitive?.content?.toUIntOrNull()
         if (revision != registry.profileRevision) throw AdapterException("semantic result is invalid")
         val sessionId = root["session_id"]?.jsonPrimitive?.contentOrNull
             ?: throw AdapterException("semantic result is invalid")
         val days = root["days"]?.jsonArray ?: throw AdapterException("semantic result is invalid")
+        if (handoffVersion == 2 && captureContext != null && "json" in options.formats) {
+            val owners = days.map { day ->
+                day.jsonObject["owner_date"]?.jsonPrimitive?.content
+                    ?: throw AdapterException("semantic day is invalid")
+            }
+            if (owners.size != owners.toSet().size || presentationByOwnerDate.keys != owners.toSet() ||
+                presentationByOwnerDate.any { (owner, data) -> data.date.toString() != owner }) {
+                throw AdapterException("wake-date native days are incompatible")
+            }
+        }
         val effectiveOptions = if (presentationByOwnerDate.isEmpty()) options else options.copy(
             includeDate = presentationCustomization.frontmatterConfig.includeDate,
             dateKey = presentationCustomization.frontmatterConfig.customDateKey,
@@ -135,7 +168,7 @@ object HealthMdRenderInputAdapter {
                 output.key.takeIf { presentationCustomization.frontmatterConfig.outputKey(it) == null }
             },
         )
-        val configuration = configuration(registry, sessionId, calendarTimeZone, effectiveOptions)
+        val configuration = configuration(registry, sessionId, calendarTimeZone, effectiveOptions, handoffVersion)
         val renderDays = days.map { value ->
             val day = value.jsonObject
             val ownerDate = day["owner_date"]?.jsonPrimitive?.content
@@ -149,9 +182,54 @@ object HealthMdRenderInputAdapter {
                 extensionPayloadsByOwnerDate[ownerDate].orEmpty(),
                 individualEntriesByOwnerDate[ownerDate].orEmpty(),
                 dailyNotesByOwnerDate[ownerDate],
+                nativeWakeDateContext,
             )
         }
-        return EncodedInput(configuration, boundedBatches(renderDays, sessionId))
+        return EncodedInput(configuration, boundedBatches(renderDays, sessionId, handoffVersion))
+    }
+
+    private fun requireContractAuthority(
+        root: JsonObject,
+        registry: CoreMetricRegistrySnapshot,
+        timeZone: String,
+    ): Int {
+        val version = when (registry.profileId) {
+            "android_frozen_v4", "android_analytical_v5" -> 1
+            "android_sleep_v6" -> 2
+            else -> throw AdapterException("registry profile is incompatible")
+        }
+        val expectedHash = if (version == 2) HEALTHMD_SLEEP_REGISTRY_SHA256 else HEALTHMD_CORE_REGISTRY_SHA256
+        val expectedPublicProfile = when (registry.profileId) {
+            "android_frozen_v4" -> "android-frozen-v4"
+            "android_analytical_v5" -> "android-analytical-v5"
+            else -> "android-sleep-v6"
+        }
+        val expectedPublicVersion = when (registry.profileId) {
+            "android_frozen_v4" -> 4u
+            "android_analytical_v5" -> 5u
+            else -> 6u
+        }
+        if (registry.registryVersion != version.toUInt() || registry.registrySha256 != expectedHash ||
+            registry.publicSchema != "healthmd.health_data" || registry.publicProfileId != expectedPublicProfile ||
+            registry.publicSchemaVersion != expectedPublicVersion || registry.profileRevision != 1u
+        ) {
+            throw AdapterException("registry authority is incompatible")
+        }
+        requireValue(root, "semantic_input_version", version.toString())
+        requireValue(root, "canonical_model_version", version.toString())
+        requireValue(root, "core_api_version", if (version == 2) "4" else "3")
+        if (version == 2) {
+            val context = root["sleep_capture_context"] as? JsonObject
+                ?: throw AdapterException("wake-date completed capture authority is missing")
+            requireValue(context, "schema_profile", "android-sleep-v6")
+            requireValue(context, "calendar_timezone", timeZone)
+            requireValue(context, "sleep_day_attribution", "morning_ends")
+            requireValue(context, "sleep_owner_day_rule", "session_end_date")
+            requireValue(context, "sleep_interval_clipping", "none")
+        } else if (root["sleep_capture_context"] != null && root["sleep_capture_context"] != JsonNull) {
+            throw AdapterException("historical completed capture authority is incompatible")
+        }
+        return version
     }
 
     private fun configuration(
@@ -159,11 +237,12 @@ object HealthMdRenderInputAdapter {
         sessionId: String,
         timeZone: String,
         options: Options,
+        handoffVersion: Int,
     ): ByteArray = encodeJson(buildJsonObject {
         put("schema", "healthmd.render_session_config")
-        put("render_input_version", 1)
-        put("artifact_plan_version", 1)
-        put("canonical_model_version", 1)
+        put("render_input_version", handoffVersion)
+        put("artifact_plan_version", handoffVersion)
+        put("canonical_model_version", handoffVersion)
         put("registry_version", registry.registryVersion.toInt())
         put("registry_sha256", registry.registrySha256)
         put("profile_revision", registry.profileRevision.toInt())
@@ -254,6 +333,7 @@ object HealthMdRenderInputAdapter {
         extensionPayloads: List<JsonObject>,
         individualEntries: List<JsonObject>,
         dailyNote: JsonObject?,
+        nativeWakeDateContext: AndroidCaptureContext?,
     ): JsonObject {
         val ownerDate = day.getValue("owner_date").jsonPrimitive.content
         val outputs = registry.outputs.associateBy { it.key }
@@ -261,13 +341,16 @@ object HealthMdRenderInputAdapter {
         val selectedOutputKeys = day.getValue("values").jsonArray
             .map { it.jsonObject.getValue("output_key").jsonPrimitive.content }
         val presentationFields = presentationData?.let { data ->
-            HealthDataFields.extract(
+            val fields = if (nativeWakeDateContext != null) {
+                HealthDataFields.extractForWakeDate(data, presentationCustomization.unitConverter, presentationCustomization.timeFormat)
+            } else HealthDataFields.extract(
                 data,
                 presentationCustomization.unitConverter,
                 presentationCustomization.timeFormat,
                 presentationCustomization.includeLegacyAndroidAliases,
                 presentationCustomization.includeAndroidNativeFields,
-            ).associateBy { it.key }
+            )
+            fields.associateBy { it.key }
         }.orEmpty()
         val metrics = day.getValue("values").jsonArray.mapIndexed { ordinal, element ->
             val value = element.jsonObject
@@ -314,6 +397,7 @@ object HealthMdRenderInputAdapter {
                     presentationCustomization,
                     options,
                     selectedOutputKeys,
+                    nativeWakeDateContext,
                 ),
             )
         }
@@ -324,6 +408,7 @@ object HealthMdRenderInputAdapter {
         customization: FormatCustomization,
         options: Options,
         semanticOutputKeys: List<String>,
+        nativeWakeDateContext: AndroidCaptureContext?,
     ): JsonObject {
         if (data == null) {
             return buildJsonObject {
@@ -333,7 +418,9 @@ object HealthMdRenderInputAdapter {
                 put("json_root", JsonNull)
             }
         }
-        val markdown = if ("markdown" in options.formats) {
+        // A successor JSON document does not authorize historical Markdown/CSV bodies.
+        // Completed semantic projections still own those surfaces; full native adoption is gated.
+        val markdown = if (nativeWakeDateContext == null && "markdown" in options.formats) {
             val rendered = MarkdownExporter().export(
                 data = data,
                 includeMetadata = options.includeMetadata,
@@ -352,7 +439,7 @@ object HealthMdRenderInputAdapter {
         } else {
             JsonNull
         }
-        val rows = if ("csv" in options.formats) {
+        val rows = if (nativeWakeDateContext == null && "csv" in options.formats) {
             val parsed = parseCsv(CsvExporter().export(data, customization, options.includeGranularData))
             if (parsed.firstOrNull() != listOf("Date", "Category", "Metric", "Value", "Unit", "Timestamp")) {
                 throw AdapterException("CSV presentation is invalid")
@@ -368,7 +455,7 @@ object HealthMdRenderInputAdapter {
             JsonNull
         }
         val jsonRoot = if ("json" in options.formats || options.api != null) {
-            val rendered = JsonExporter().export(data, customization, options.includeGranularData)
+            val rendered = JsonExporter().export(data, customization, options.includeGranularData, captureContext = nativeWakeDateContext)
             orderedJson(json.parseToJsonElement(rendered))
         } else {
             JsonNull
@@ -523,7 +610,7 @@ object HealthMdRenderInputAdapter {
         else -> value.toString()
     }
 
-    private fun boundedBatches(days: List<JsonObject>, sessionId: String): List<ByteArray> {
+    private fun boundedBatches(days: List<JsonObject>, sessionId: String, handoffVersion: Int): List<ByteArray> {
         val partitions = mutableListOf<List<JsonObject>>()
         var current = mutableListOf<JsonObject>()
         for (day in days) {
@@ -531,27 +618,27 @@ object HealthMdRenderInputAdapter {
             if (facts > MAX_FACTS_PER_BATCH) throw AdapterException("render input exceeds a limit")
             val candidate = current + day
             val candidateFacts = candidate.sumOf { it.getValue("metrics").jsonArray.size + it.getValue("extensions").jsonArray.size }
-            if (current.isNotEmpty() && (candidateFacts > MAX_FACTS_PER_BATCH || batch(candidate, sessionId, partitions.size, false).size > MAX_BATCH_BYTES)) {
+            if (current.isNotEmpty() && (candidateFacts > MAX_FACTS_PER_BATCH || batch(candidate, sessionId, partitions.size, false, handoffVersion).size > MAX_BATCH_BYTES)) {
                 partitions += current.toList()
                 current = mutableListOf(day)
             } else {
                 current = candidate.toMutableList()
             }
-            if (batch(current, sessionId, partitions.size, false).size > MAX_BATCH_BYTES) throw AdapterException("render input exceeds a limit")
+            if (batch(current, sessionId, partitions.size, false, handoffVersion).size > MAX_BATCH_BYTES) throw AdapterException("render input exceeds a limit")
         }
         if (current.isNotEmpty() || days.isEmpty()) partitions += current.toList()
         var totalBytes = 0
         return partitions.mapIndexed { index, partition ->
-            val bytes = batch(partition, sessionId, index, index == partitions.lastIndex)
+            val bytes = batch(partition, sessionId, index, index == partitions.lastIndex, handoffVersion)
             totalBytes += bytes.size
             if (totalBytes > MAX_SESSION_BYTES) throw AdapterException("render input exceeds a limit")
             bytes
         }
     }
 
-    private fun batch(days: List<JsonObject>, sessionId: String, index: Int, final: Boolean): ByteArray = encodeJson(buildJsonObject {
+    private fun batch(days: List<JsonObject>, sessionId: String, index: Int, final: Boolean, handoffVersion: Int): ByteArray = encodeJson(buildJsonObject {
         put("schema", "healthmd.render_input")
-        put("render_input_version", 1)
+        put("render_input_version", handoffVersion)
         put("session_id", sessionId)
         put("batch_index", index)
         put("final_batch", final)
@@ -561,7 +648,7 @@ object HealthMdRenderInputAdapter {
     private fun encodeJson(value: JsonObject): ByteArray = json.encodeToString(JsonObject.serializer(), value).encodeToByteArray()
 
     private fun requireValue(root: JsonObject, key: String, expected: String) {
-        if (root[key]?.jsonPrimitive?.contentOrNull != expected) throw AdapterException("semantic result is invalid")
+        if ((root[key] as? JsonPrimitive)?.contentOrNull != expected) throw AdapterException("semantic result is invalid")
     }
 
     private fun categoryIdentifier(value: String): String = when (value) {

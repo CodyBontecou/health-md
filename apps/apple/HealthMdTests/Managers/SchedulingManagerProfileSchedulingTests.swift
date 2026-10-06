@@ -584,6 +584,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             settingsSnapshot: ExportSettingsSnapshot.from(
                 AdvancedExportSettings(userDefaults: defaults)
             ),
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             profileID: profileID,
             profileName: "Daily"
         )
@@ -1053,6 +1054,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             scheduledKind: .completedDay,
             createdAt: date(year: 2026, month: 8, day: 10, hour: 9),
             exportTarget: .apiEndpoint,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             profileID: profileID,
             profileName: "Daily",
             calendar: calendar
@@ -1113,6 +1115,7 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
                 scheduledKind: .completedDay,
                 createdAt: date(year: 2026, month: 8, day: 10, hour: 8, minute: 30),
                 exportTarget: .apiEndpoint,
+                sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
                 profileID: profileID,
                 profileName: profileID == firstProfileID ? "First" : "Second",
                 calendar: calendar

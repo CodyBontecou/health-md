@@ -540,6 +540,55 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(paywallTitle.waitForExistence(timeout: 5), "Quota gate should beat Mac payload preparation with analytics offline")
     }
 
+    // MARK: - Sleep Day Attribution
+
+    func testSleepAttribution_morningEndsDisabledForShippedProfiles() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        // The argument domain isolates the starting preference from earlier journeys.
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "night_begins"]
+        app.launch()
+
+        let picker = sleepDayAttributionPicker(in: app)
+        XCTAssertTrue(accessibilityText(of: picker).contains("Night begins"))
+        picker.tap()
+
+        let morningEnds = app.buttons["Morning ends"]
+        XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
+        XCTAssertFalse(morningEnds.isEnabled, "Unapproved attribution must be a disabled native menu option")
+        XCTAssertTrue(app.buttons["Night begins"].isEnabled)
+        XCTAssertTrue(app.buttons["Night begins"].isSelected)
+    }
+
+    func testSleepAttribution_storedMorningEndsRemainsVisibleAndCanChangeToNightBegins() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launchArguments += ["-healthKit.sleepDayAttribution", "morning_ends"]
+        app.launch()
+
+        let picker = sleepDayAttributionPicker(in: app)
+        XCTAssertTrue(
+            accessibilityText(of: picker).contains("Morning ends"),
+            "An unavailable preexisting preference must not be silently replaced"
+        )
+        let unavailableExplanation = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "Morning ends is unavailable for current export profiles")
+        ).firstMatch
+        XCTAssertTrue(unavailableExplanation.exists)
+        picker.tap()
+
+        let morningEnds = app.buttons["Morning ends"]
+        XCTAssertTrue(morningEnds.waitForExistence(timeout: 3))
+        XCTAssertFalse(morningEnds.isEnabled)
+        XCTAssertTrue(morningEnds.isSelected, "The unavailable stored choice should still be identified as selected")
+        let nightBegins = app.buttons["Night begins"]
+        XCTAssertTrue(nightBegins.isEnabled)
+        nightBegins.tap()
+
+        XCTAssertTrue(waitForAccessibilityText(of: picker, containing: "Night begins").contains("Night begins"))
+        XCTAssertTrue(app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS %@", "noon-to-noon window")
+        ).firstMatch.exists)
+    }
+
     // MARK: - Date Range Presets
 
     func testDateRangePresets_visibleAndCustomPickersHiddenByDefault() throws {
@@ -630,6 +679,16 @@ final class ExportJourneyUITests: XCTestCase {
         let identified = app.buttons[identifier]
         if identified.exists { return identified }
         return app.buttons[label]
+    }
+
+    private func sleepDayAttributionPicker(in app: XCUIApplication) -> XCUIElement {
+        // Reveal an anchor below the picker so it clears the sticky export action bar.
+        scrollUntilHittable(app.buttons["How export formats work"], in: app, swipingUp: true)
+        let picker = app.buttons[UITestLaunchHelper.Export.sleepDayAttributionPicker]
+        XCTAssertTrue(picker.waitForExistence(timeout: 5))
+        XCTAssertTrue(picker.isHittable)
+        XCTAssertLessThan(picker.frame.maxY, app.buttons[UITestLaunchHelper.Export.exportButton].frame.minY)
+        return picker
     }
 
     private func accessibilityText(of element: XCUIElement) -> String {

@@ -10,6 +10,8 @@ use unicode_normalization::UnicodeNormalization;
 use super::RenderError;
 use crate::semantic::SemanticProfile;
 
+mod wake_date;
+
 const MAX_MERGE_BYTES: usize = 8 * 1024 * 1024;
 
 /// Merge one generated Markdown document using the deployed profile behavior.
@@ -30,6 +32,9 @@ pub fn merge_profile_markdown(
         SemanticProfile::AppleHealthDataV8 => apple_merge(existing, generated, preserve_preamble),
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
             Ok(android_merge(existing, generated))
+        }
+        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+            wake_date::merge(profile, existing, generated, preserve_preamble)
         }
     }
 }
@@ -95,11 +100,22 @@ fn apple_merge(
     generated: &str,
     preserve_preamble: bool,
 ) -> Result<String, RenderError> {
+    merge_with_parser(existing, generated, preserve_preamble, |content| {
+        apple_parse(content, apple_section_level(content))
+    })
+}
+
+fn merge_with_parser(
+    existing: &str,
+    generated: &str,
+    preserve_preamble: bool,
+    parse: impl Fn(&str) -> AppleDocument,
+) -> Result<String, RenderError> {
     let boundary_line_ending = first_line_ending(existing)
         .or_else(|| first_line_ending(generated))
         .unwrap_or("\n");
-    let existing = apple_parse(existing, apple_section_level(existing));
-    let generated = apple_parse(generated, apple_section_level(generated));
+    let existing = parse(existing);
+    let generated = parse(generated);
     let mut generated_by_name = HashMap::new();
     let mut generated_order = Vec::new();
     for section in &generated.sections {

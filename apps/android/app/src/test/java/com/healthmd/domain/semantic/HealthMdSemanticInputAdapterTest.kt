@@ -4,6 +4,9 @@ import com.google.common.truth.Truth.assertThat
 import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.core.CoreRegistryMetric
 import com.healthmd.core.CoreRegistryOutput
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
+import java.time.ZoneId
 import com.healthmd.domain.model.ActivityData
 import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.ExactSourceIdentity
@@ -187,6 +190,29 @@ class HealthMdSemanticInputAdapterTest {
                 ).isEqualTo(batch)
             }
         }
+    }
+
+    @Test
+    fun wakeDateConfigurationSelectsV2OnlyWithExplicitCapturedAuthority() {
+        val context = AndroidCaptureContext(ZoneId.of("Asia/Kathmandu"), SleepDayAttribution.MORNING_ENDS)
+        val successor = registry("android_sleep_v6", 6u).copy(
+            registryVersion = 2u,
+            registrySha256 = "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073",
+            publicProfileId = "android-sleep-v6",
+        )
+        val configuration = HealthMdSemanticInputAdapter.sessionConfiguration(
+            sessionId = "native-wake-date",
+            profile = HealthMdSemanticInputAdapter.Profile.SLEEP_V6,
+            selection = MetricSelectionState(),
+            registry = successor,
+            calendarTimeZone = "Asia/Kathmandu",
+            captureContext = context,
+        )
+        val root = Json.parseToJsonElement(configuration.decodeToString()).jsonObject
+        assertThat(root.getValue("semantic_input_version").toString()).isEqualTo("2")
+        assertThat(root.getValue("canonical_model_version").toString()).isEqualTo("2")
+        assertThat(root.getValue("registry_version").toString()).isEqualTo("2")
+        assertThat(root.getValue("profile").toString()).isEqualTo("\"android_sleep_v6\"")
     }
 
     @Test

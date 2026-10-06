@@ -40,6 +40,43 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         XCTAssertEqual(manager.notificationExportResult?.status, .success(daysExported: 2))
     }
 
+    func testMissingDurableCaptureAuthorityPreservesRequestsWithoutInvokingRunner() async throws {
+        for source in [PendingExportSource.scheduled, .shortcut] {
+            let request = PendingExportRequest(
+                dates: [date(year: 2026, month: 5, day: 12)],
+                source: source,
+                scheduledFireDate: date(year: 2026, month: 5, day: 18, hour: 8),
+                calendar: Self.calendar
+            )
+            let store = TestPendingExportStore(requests: [request])
+            let notifications = InspectableExportNotificationScheduler()
+            var runs = 0
+            let manager = makeManager(store: store, notificationScheduler: notifications) { dates, _ in
+                runs += 1
+                return ExportOrchestrator.ExportResult(
+                    successCount: dates.count,
+                    totalCount: dates.count,
+                    failedDateDetails: []
+                )
+            }
+
+            await manager.performPendingExport(requestId: request.id, source: source)
+
+            XCTAssertEqual(runs, 0)
+            let retained = try XCTUnwrap(store.loadAll().first)
+            XCTAssertEqual(retained.id, request.id)
+            XCTAssertEqual(retained.dates, request.dates)
+            XCTAssertEqual(retained.originalRequestedDates, request.originalRequestedDates)
+            XCTAssertEqual(retained.originalCalendarTimeZoneIdentifier, request.originalCalendarTimeZoneIdentifier)
+            XCTAssertNil(retained.sleepCaptureContext)
+            XCTAssertNil(retained.settingsSnapshot)
+            XCTAssertNil(manager.schedule.lastExportDate)
+            guard let result = manager.notificationExportResult, case .failure = result.status else {
+                return XCTFail("Missing durable capture authority must remain unavailable")
+            }
+        }
+    }
+
     func testNotificationTriggeredPendingExportShowsActivityBeforeRunnerStarts() async throws {
         let request = pendingRequest(
             id: "12121212-1212-1212-1212-121212121212",
@@ -1494,7 +1531,9 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
         exportTarget: ExportTargetSelection? = nil,
         requestCalendar: Calendar? = nil
     ) -> PendingExportRequest {
-        PendingExportRequest(
+        let calendar = requestCalendar ?? Self.calendar
+        // These fixtures represent accepted jobs, not legacy requests with absent authority.
+        return PendingExportRequest(
             id: UUID(uuidString: id)!,
             dates: dates,
             source: source,
@@ -1502,7 +1541,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             createdAt: createdAt ?? date(year: 2026, month: 5, day: 18, hour: 9),
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: exportTarget,
-            calendar: requestCalendar ?? Self.calendar
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
+            calendar: calendar
         )
     }
 

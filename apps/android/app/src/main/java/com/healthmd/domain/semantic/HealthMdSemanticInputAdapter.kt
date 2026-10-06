@@ -2,6 +2,9 @@ package com.healthmd.domain.semantic
 
 import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.core.HealthMdCoreService
+import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExactSourceIdentity
 import com.healthmd.domain.model.ExactSourceTimestamp
 import com.healthmd.domain.model.HealthData
@@ -32,7 +35,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 /**
- * Deterministic Android post-capture adapter for `healthmd.semantic_input` v1.
+ * Deterministic Android post-capture adapter for historical v1 and explicit wake-date v2.
  *
  * This adapter never calls Health Connect. One already-captured [HealthData] tree is represented as
  * SDK aggregate facts and passed in coarse batches. Rust performs selection filtering; existing
@@ -50,6 +53,13 @@ object HealthMdSemanticInputAdapter {
     ) {
         FROZEN_V4("android_frozen_v4", "android_frozen_v4", false),
         ANALYTICAL_V5("android_analytical_v5", "android_analytical_v5", true),
+        SLEEP_V6("android_sleep_v6", "android_sleep_v6", true);
+
+        val semanticInputVersion: Int get() = if (this == SLEEP_V6) 2 else SEMANTIC_INPUT_VERSION
+        val canonicalModelVersion: Int get() = if (this == SLEEP_V6) 2 else CANONICAL_MODEL_VERSION
+        val registryVersion: Int get() = if (this == SLEEP_V6) 2 else REGISTRY_VERSION
+        val registrySha256: String
+            get() = if (this == SLEEP_V6) HEALTHMD_SLEEP_REGISTRY_SHA256 else HEALTHMD_CORE_REGISTRY_SHA256
     }
 
     data class ExtensionLocation(
@@ -76,9 +86,11 @@ object HealthMdSemanticInputAdapter {
         calendarTimeZone: String,
         disabledOutputKeys: Set<String> = emptySet(),
         retainPlatformExtensions: Boolean = false,
+        captureContext: AndroidCaptureContext? = null,
     ): ByteArray {
         requireRegistry(profile, registry)
         validateTimeZone(calendarTimeZone)
+        requireCapturedAuthority(profile, calendarTimeZone, captureContext)
         val selected = registry.metrics
             .filter { selection.isEnabled(it.selectionId) }
             .map { JsonPrimitive(it.selectionId) }
@@ -89,9 +101,9 @@ object HealthMdSemanticInputAdapter {
         return canonicalBytes(
             buildJsonObject {
                 put("schema", "healthmd.semantic_session_config")
-                put("semantic_input_version", SEMANTIC_INPUT_VERSION)
-                put("canonical_model_version", CANONICAL_MODEL_VERSION)
-                put("registry_version", REGISTRY_VERSION)
+                put("semantic_input_version", profile.semanticInputVersion)
+                put("canonical_model_version", profile.canonicalModelVersion)
+                put("registry_version", profile.registryVersion)
                 put("registry_sha256", registry.registrySha256)
                 put("profile_revision", registry.profileRevision.toLong())
                 put("session_id", sessionId)
@@ -118,9 +130,14 @@ object HealthMdSemanticInputAdapter {
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
         includeLegacyAndroidAliases: Boolean = false,
         startingSourceOrdinal: ULong = 0u,
+        captureContext: AndroidCaptureContext? = null,
     ): EncodedBatch {
         requireRegistry(profile, registry)
         validateTimeZone(calendarTimeZone)
+        requireCapturedAuthority(profile, calendarTimeZone, captureContext)
+        if (profile == Profile.SLEEP_V6 && includeLegacyAndroidAliases) {
+            throw AdapterException("wake-date profile cannot use legacy Android aliases")
+        }
         val metricBySelection = registry.metrics.associateBy { it.selectionId }
         val outputByKey = registry.outputs.associateBy { it.key }
         val bloodPressureSelectionIds = registry.metrics.map { it.selectionId }.filter {
@@ -143,13 +160,18 @@ object HealthMdSemanticInputAdapter {
             capturedDays.forEach { capturedDay ->
                 val dayIndex = capturedDay.index
                 val day = capturedDay.value
-                val fields = HealthDataFields.extract(
-                    data = day,
-                    converter = converter,
-                    timeFormat = timeFormat,
-                    includeLegacyAndroidAliases = includeLegacyAndroidAliases,
-                    includeAndroidNativeFields = profile.includeAndroidNativeFields,
-                )
+                val fields = if (profile == Profile.SLEEP_V6) {
+                    HealthDataFields.extractForWakeDate(day, converter, timeFormat)
+                } else {
+                    HealthDataFields.extract(
+                        data = day,
+                        converter = converter,
+                        timeFormat = timeFormat,
+                        includeLegacyAndroidAliases = includeLegacyAndroidAliases,
+                        includeAndroidNativeFields = profile.includeAndroidNativeFields,
+                    )
+                }
+                val sdkQuantities = if (profile == Profile.SLEEP_V6) WakeDateSdkQuantities.capture(day) else emptyMap()
                 fields.forEach { field ->
                     val value = field.value ?: return@forEach
                     val output = outputByKey[field.key] ?: return@forEach
@@ -178,7 +200,7 @@ object HealthMdSemanticInputAdapter {
                             put("aggregation", "pass_through")
                             put("start", JsonNull)
                             put("end", JsonNull)
-                            put("value", semanticValue(day, field.key, value, field.unit))
+                            put("value", semanticValue(day, field.key, value, field.unit, profile, sdkQuantities[field.key]))
                             put("weight", JsonNull)
                             put("attributes", JsonObject(emptyMap()))
                             put("extensions", JsonArray(emptyList()))
@@ -266,7 +288,13 @@ object HealthMdSemanticInputAdapter {
                     val selection = when (stage.stage.lowercase()) {
                         "deep" -> "sleep_deep"
                         "rem" -> "sleep_rem"
-                        "light", "core", "sleeping" -> "sleep_light"
+                        "light" -> "sleep_light"
+                        "core" -> if (profile == Profile.SLEEP_V6) {
+                            throw AdapterException("wake-date native sleep stage identity is incompatible")
+                        } else {
+                            "sleep_light"
+                        }
+                        "sleeping" -> if (profile == Profile.SLEEP_V6) "sleep_total" else "sleep_light"
                         "awake", "wake" -> "sleep_awake"
                         else -> "sleep_total"
                     }
@@ -304,7 +332,7 @@ object HealthMdSemanticInputAdapter {
         val bytes = canonicalBytes(
             buildJsonObject {
                 put("schema", "healthmd.semantic_input")
-                put("semantic_input_version", SEMANTIC_INPUT_VERSION)
+                put("semantic_input_version", profile.semanticInputVersion)
                 put("session_id", sessionId)
                 put("batch_index", batchIndex.toLong())
                 put("final_batch", finalBatch)
@@ -338,6 +366,7 @@ object HealthMdSemanticInputAdapter {
         timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
         includeLegacyAndroidAliases: Boolean = false,
         startingSourceOrdinal: ULong = 0u,
+        captureContext: AndroidCaptureContext? = null,
     ): List<EncodedBatch> {
         val complete = batch(
             sessionId = sessionId,
@@ -351,6 +380,7 @@ object HealthMdSemanticInputAdapter {
             timeFormat = timeFormat,
             includeLegacyAndroidAliases = includeLegacyAndroidAliases,
             startingSourceOrdinal = startingSourceOrdinal,
+            captureContext = captureContext,
         )
         val root = Json.parseToJsonElement(complete.bytes.decodeToString()).jsonObject
         val records = root.getValue("records").jsonArray.map { it.jsonObject }
@@ -380,7 +410,7 @@ object HealthMdSemanticInputAdapter {
                     val candidate = chunk + record
                     if (chunk.isNotEmpty() &&
                         (candidate.size > 4_096 || canonicalBytes(
-                            batchElement(sessionId, 0u, false, listOf(ownerDate), candidate),
+                            batchElement(profile, sessionId, 0u, false, listOf(ownerDate), candidate),
                         ).size > 1_048_576)
                     ) {
                         payloads += Payload(listOf(ownerDate), chunk)
@@ -390,7 +420,7 @@ object HealthMdSemanticInputAdapter {
                     }
                 }
                 if (canonicalBytes(
-                        batchElement(sessionId, 0u, false, listOf(ownerDate), chunk),
+                        batchElement(profile, sessionId, 0u, false, listOf(ownerDate), chunk),
                     ).size > 1_048_576
                 ) {
                     throw AdapterException("semantic batch exceeds size limit")
@@ -415,6 +445,7 @@ object HealthMdSemanticInputAdapter {
             } ?: startingSourceOrdinal
             val bytes = canonicalBytes(
                 batchElement(
+                    profile,
                     sessionId,
                     index.toUInt(),
                     offset == payloads.lastIndex,
@@ -439,6 +470,7 @@ object HealthMdSemanticInputAdapter {
     }
 
     private fun batchElement(
+        profile: Profile,
         sessionId: String,
         batchIndex: UInt,
         finalBatch: Boolean,
@@ -446,7 +478,7 @@ object HealthMdSemanticInputAdapter {
         records: List<JsonObject>,
     ): JsonObject = buildJsonObject {
         put("schema", "healthmd.semantic_input")
-        put("semantic_input_version", SEMANTIC_INPUT_VERSION)
+        put("semantic_input_version", profile.semanticInputVersion)
         put("session_id", sessionId)
         put("batch_index", batchIndex.toLong())
         put("final_batch", finalBatch)
@@ -493,28 +525,72 @@ object HealthMdSemanticInputAdapter {
         }
     }
 
+    private fun requireCapturedAuthority(
+        profile: Profile,
+        timeZone: String,
+        context: AndroidCaptureContext?,
+    ) {
+        if (profile == Profile.SLEEP_V6) {
+            if (context == null ||
+                context.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
+                context.exportProfileID != "android-sleep-v6" ||
+                context.zoneId.id != timeZone
+            ) {
+                throw AdapterException("wake-date capture authority is incompatible")
+            }
+        } else if (context != null && (
+                context.sleepDayAttribution != SleepDayAttribution.NIGHT_BEGINS ||
+                    context.zoneId.id != timeZone ||
+                    (context.exportProfileID != null && context.exportProfileID != when (profile) {
+                        Profile.FROZEN_V4 -> "android-frozen-v4"
+                        Profile.ANALYTICAL_V5 -> "android-analytical-v5"
+                        Profile.SLEEP_V6 -> "android-sleep-v6"
+                    })
+                )
+        ) {
+            throw AdapterException("historical capture authority is incompatible")
+        }
+    }
+
     private fun requireRegistry(profile: Profile, registry: CoreMetricRegistrySnapshot) {
         val expectedPublicProfile = when (profile) {
             Profile.FROZEN_V4 -> "android-frozen-v4"
             Profile.ANALYTICAL_V5 -> "android-analytical-v5"
+            Profile.SLEEP_V6 -> "android-sleep-v6"
         }
         val expectedSchemaVersion = when (profile) {
             Profile.FROZEN_V4 -> 4u
             Profile.ANALYTICAL_V5 -> 5u
+            Profile.SLEEP_V6 -> 6u
         }
         if (registry.profileId != profile.registryId ||
             registry.publicProfileId != expectedPublicProfile ||
             registry.publicSchemaVersion != expectedSchemaVersion ||
             registry.profileRevision != 1u ||
-            registry.registryVersion != REGISTRY_VERSION.toUInt() ||
-            registry.registrySha256 != HEALTHMD_CORE_REGISTRY_SHA256 ||
+            registry.registryVersion != profile.registryVersion.toUInt() ||
+            registry.registrySha256 != profile.registrySha256 ||
             registry.publicSchema != "healthmd.health_data"
         ) {
             throw AdapterException("shared-core registry metadata is incompatible")
         }
     }
 
-    private fun semanticValue(day: HealthData, key: String, value: Any, unit: String): JsonElement {
+    private fun semanticValue(
+        day: HealthData, key: String, value: Any, unit: String, profile: Profile,
+        sdkQuantity: WakeDateSdkQuantities.Quantity?,
+    ): JsonElement {
+        if (profile == Profile.SLEEP_V6 && sdkQuantity != null) {
+            val sourceUnit = if (sdkQuantity.unit == "ratio_0_1") "ratio_0_1" else internalUnitId(sdkQuantity.unit)
+            return when (val source = sdkQuantity.value) {
+                is Int -> integerValue(source.toLong(), sourceUnit)
+                is Long -> integerValue(source, sourceUnit)
+                is Double -> binary64(source, sourceUnit)
+                else -> throw AdapterException("wake-date SDK quantity is incompatible")
+            }
+        }
+        if (profile == Profile.SLEEP_V6 && (value is Number || (value is String && value.toDoubleOrNull() != null))) {
+            throw AdapterException("wake-date SDK quantity is unavailable")
+        }
         val sourceTime = when (key) {
             "sleep_bedtime" -> day.sleep.sessionStart
                 ?: day.sleep.stages.minByOrNull { it.startTime }?.startTime

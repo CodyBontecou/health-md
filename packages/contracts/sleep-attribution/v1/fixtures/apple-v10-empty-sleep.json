@@ -1,0 +1,20 @@
+{
+  "schema": "healthmd.health_data",
+  "schema_version": 10,
+  "schema_profile": "apple-v10",
+  "date": "2026-01-02",
+  "type": "health-data",
+  "time_context": {
+    "calendar_timezone": "America/Los_Angeles",
+    "timestamp_timezone": "UTC",
+    "sleep_day_attribution": "morning_ends",
+    "sleep_owner_day_rule": "session_end_date",
+    "sleep_interval_clipping": "none"
+  },
+  "unit_system": "metric",
+  "units": {},
+  "raw_capture_status": "not_requested",
+  "heart": {
+    "averageHeartRate": 70
+  }
+}

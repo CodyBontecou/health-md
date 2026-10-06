@@ -29,10 +29,10 @@ import kotlin.time.Duration.Companion.milliseconds
  * unchanged because Health Connect interval reads are overlap-based; its prior-day
  * noon start already covers overnight sessions ending on the first requested date.
  *
- * Frozen Android v4/v5 aggregation remains additive in both modes: every valid owned
- * source session and stage contributes independently. This object deliberately does not
- * choose a principal cluster or de-duplicate provider records because doing so would
- * change the meaning of shipped summary fields and require a new public schema profile.
+ * Aggregation remains additive: valid owned source sessions and recognized stages contribute
+ * independently, without principal-cluster selection or provider de-duplication. Historical
+ * Night begins retains the frozen v4/v5 Light aliases; Morning ends counts native Light only,
+ * never treating an unclassified sleeping stage as Light.
  */
 internal object SleepJournalSummary {
     const val WINDOW_RULE_ID = "noon-to-noon-sleep-window-v1"
@@ -115,7 +115,7 @@ internal object SleepJournalSummary {
                 end = slices.maxOf { it.end },
             )
         }
-        val stageDurations = additiveStageDurations(slices, stageClipWindow)
+        val stageDurations = additiveStageDurations(slices, stageClipWindow, attribution)
 
         return SleepData(
             totalDuration = totalMilliseconds.milliseconds,
@@ -135,6 +135,7 @@ internal object SleepJournalSummary {
     private fun additiveStageDurations(
         slices: List<SessionSlice>,
         window: InstantInterval,
+        attribution: SleepDayAttribution,
     ): Map<StageBucket, Long> {
         val totals = mutableMapOf<StageBucket, Long>()
         for (slice in slices) {
@@ -143,7 +144,7 @@ internal object SleepJournalSummary {
                 val start = maxOf(stage.start, slice.start, window.start)
                 val end = minOf(stage.end, slice.end, window.end)
                 if (!start.isBefore(end)) continue
-                val bucket = stageBucket(stage.entry.stage) ?: continue
+                val bucket = stageBucket(stage.entry.stage, attribution) ?: continue
                 totals[bucket] = totals.getOrDefault(bucket, 0L) +
                     Duration.between(start, end).toMillis()
             }
@@ -199,10 +200,13 @@ internal object SleepJournalSummary {
         return SessionSlice(this, start, end)
     }
 
-    private fun stageBucket(stageName: String): StageBucket? = when (stageName.lowercase()) {
+    private fun stageBucket(stageName: String, attribution: SleepDayAttribution): StageBucket? = when (stageName.lowercase()) {
         "deep" -> StageBucket.DEEP
         "rem" -> StageBucket.REM
-        "light", "core", "sleeping" -> StageBucket.LIGHT
+        "light" -> StageBucket.LIGHT
+        // Retain the shipped v4/v5 alias calculation, never invent Light in the successor.
+        // Unclassified sleeping still contributes to its whole session's total duration.
+        "core", "sleeping" -> if (attribution == SleepDayAttribution.NIGHT_BEGINS) StageBucket.LIGHT else null
         "awake", "wake" -> StageBucket.AWAKE
         else -> null
     }

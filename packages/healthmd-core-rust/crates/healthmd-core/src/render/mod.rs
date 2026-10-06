@@ -11,12 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::{
-    CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
-    semantic::{
-        ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
-        SemanticValue,
-    },
+use crate::semantic::{
+    ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
+    SemanticSleepCaptureContext, SemanticValue,
 };
 
 mod android_analytical_v5;
@@ -27,6 +24,7 @@ mod apple_v8;
 pub mod artifact_plan;
 mod format;
 mod markdown_merge;
+mod sleep_profiles;
 pub mod stream;
 
 pub use artifact_plan::{ArtifactPlan, ArtifactPlanItem, validate_relative_path};
@@ -41,6 +39,10 @@ pub use stream::{
 pub const RENDER_INPUT_VERSION: u32 = 1;
 /// Version of the destination-neutral artifact plan.
 pub const ARTIFACT_PLAN_VERSION: u32 = 1;
+/// Successor render handoff; historical render input v1 remains closed and immutable.
+pub const SLEEP_RENDER_INPUT_VERSION: u32 = 2;
+/// Successor plan profile set; old plans and artifact identities remain independently v1.
+pub const SLEEP_ARTIFACT_PLAN_VERSION: u32 = 2;
 /// Revision of all three profile renderers, including managed-Markdown merge behavior.
 pub const RENDER_PROFILE_REVISION: u32 = 2;
 /// Maximum render configuration bytes.
@@ -694,10 +696,10 @@ impl RenderSession {
         if batch_bytes.len() > MAX_RENDER_BATCH_BYTES {
             return Err(RenderError::BatchTooLarge);
         }
-        let batch: RenderBatch =
+        let mut batch: RenderBatch =
             serde_json::from_slice(batch_bytes).map_err(|_| RenderError::InvalidBatch)?;
         if batch.schema != "healthmd.render_input"
-            || batch.render_input_version != RENDER_INPUT_VERSION
+            || batch.render_input_version != self.config.render_input_version
             || batch.session_id != self.config.session_id
             || batch.batch_index != self.next_batch_index
             || self.final_batch_seen
@@ -716,6 +718,9 @@ impl RenderSession {
             .ok_or(RenderError::LimitExceeded)?;
         if fact_count > MAX_RENDER_FACTS_PER_BATCH {
             return Err(RenderError::LimitExceeded);
+        }
+        if self.config.render_input_version == SLEEP_RENDER_INPUT_VERSION {
+            sleep_profiles::public_numbers::parse_exact_public_numbers(batch_bytes, &mut batch)?;
         }
         let next_bytes = self
             .bytes_accepted
@@ -811,9 +816,14 @@ fn profile_presentation_categories(
         SemanticProfile::AndroidAnalyticalV5 => {
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
         }
+        SemanticProfile::AppleHealthDataV10 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV10
+        }
+        SemanticProfile::AndroidSleepV6 => crate::registry::MetricRegistryProfile::AndroidSleepV6,
     };
-    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, REGISTRY_VERSION)
-        .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot =
+        crate::registry::metric_registry_snapshot(registry_profile, profile.registry_version())
+            .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -870,10 +880,20 @@ fn validate_config(
     config: &RenderSessionConfig,
     semantic: &SemanticResult,
 ) -> Result<(), RenderError> {
-    if config.render_input_version != RENDER_INPUT_VERSION {
+    let render_version = if config.profile.is_wake_date() {
+        SLEEP_RENDER_INPUT_VERSION
+    } else {
+        RENDER_INPUT_VERSION
+    };
+    let plan_version = if config.profile.is_wake_date() {
+        SLEEP_ARTIFACT_PLAN_VERSION
+    } else {
+        ARTIFACT_PLAN_VERSION
+    };
+    if config.render_input_version != render_version {
         return Err(RenderError::UnsupportedRenderInputVersion);
     }
-    if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
+    if config.artifact_plan_version != plan_version {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
     if config.render_profile_revision != RENDER_PROFILE_REVISION
@@ -882,16 +902,19 @@ fn validate_config(
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
-        || config.canonical_model_version != CANONICAL_MODEL_VERSION
-        || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
+        || config.canonical_model_version != config.profile.canonical_model_version()
+        || config.registry_version != config.profile.registry_version()
+        || config.registry_sha256 != config.profile.registry_sha256()
         || semantic.schema != "healthmd.semantic_result"
-        || semantic.canonical_model_version != CANONICAL_MODEL_VERSION
-        || semantic.registry_sha256 != REGISTRY_SHA256
+        || semantic.canonical_model_version != config.canonical_model_version
+        || semantic.semantic_input_version != config.profile.semantic_input_version()
+        || semantic.registry_sha256 != config.registry_sha256
         || semantic.profile_revision != config.profile_revision
         || semantic.session_id != config.session_id
         || semantic.profile != config.profile
         || semantic.state != SemanticResultState::Completed
+        || semantic.sleep_capture_context
+            != SemanticSleepCaptureContext::for_profile(config.profile, &config.calendar_time_zone)
         || config.locale != "en-US"
         || validate_identifier(&config.request_id).is_err()
         || validate_identifier(&config.session_id).is_err()
@@ -1026,12 +1049,14 @@ fn validate_config(
             validate_public_value(&external.value, 0)?;
         }
         if config.profile == SemanticProfile::AndroidAnalyticalV5
-            || (config.profile == SemanticProfile::AndroidFrozenV4
-                && (!api.external_records.is_empty()
-                    || api.external_record_schema.is_some()
-                    || api.envelope_version != 1
-                    || api.source != "android"))
-            || (config.profile == SemanticProfile::AppleHealthDataV8
+            || (matches!(
+                config.profile,
+                SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidSleepV6
+            ) && (!api.external_records.is_empty()
+                || api.external_record_schema.is_some()
+                || api.envelope_version != 1
+                || api.source != "android"))
+            || (config.profile.is_apple()
                 && ((api.envelope_version == 1
                     && (!api.external_records.is_empty() || api.external_record_schema.is_some()))
                     || (api.envelope_version == 2 && api.external_record_schema.is_none())
@@ -1044,7 +1069,17 @@ fn validate_config(
     if formats.len() != config.formats.len() {
         return Err(RenderError::InvalidConfig);
     }
-    let reserved_frontmatter = reserved_frontmatter_keys();
+    let reserved_frontmatter = reserved_frontmatter_keys(config.profile);
+    if config.profile.is_wake_date()
+        && [&config.frontmatter.date_key, &config.frontmatter.type_key]
+            .iter()
+            .any(|key| {
+                reserved_frontmatter.contains(key.as_str())
+                    && !matches!(key.as_str(), "date" | "type")
+            })
+    {
+        return Err(RenderError::InvalidConfig);
+    }
     let mut configured_frontmatter = HashSet::new();
     for text in config
         .custom_frontmatter
@@ -1110,7 +1145,10 @@ fn validate_day(
         return Err(RenderError::LimitExceeded);
     }
     match (config.profile, &day.archive_diagnostics) {
-        (SemanticProfile::AppleHealthDataV8, Some(diagnostics)) => {
+        (
+            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10,
+            Some(diagnostics),
+        ) => {
             if !matches!(
                 diagnostics.capture_status.as_str(),
                 "complete" | "partial" | "not_requested" | "legacy_unavailable"
@@ -1130,8 +1168,8 @@ fn validate_day(
     let mut ordinals = HashSet::new();
     let mut frontmatter_keys = HashSet::new();
     let mut json_top_level = HashSet::new();
-    let reserved_frontmatter = reserved_frontmatter_keys();
-    let reserved_json = reserved_json_keys();
+    let reserved_frontmatter = reserved_frontmatter_keys(config.profile);
+    let reserved_json = reserved_json_keys(config.profile);
     for metric in &day.metrics {
         let semantic_value = accepted
             .get(&metric.output_key)
@@ -1329,8 +1367,16 @@ fn validate_day(
             }
         }
     }
+    if config.profile.is_wake_date() {
+        if let Some(rows) = &day.profile_documents.csv_rows {
+            sleep_profiles::validate_native_csv(config, rows)?;
+        }
+    }
     if let Some(root) = &day.profile_documents.json_root {
         validate_ordered_json(root, 0)?;
+        if config.profile.is_wake_date() {
+            sleep_profiles::validate_native_json(config, root)?;
+        }
     }
     if let Some(note) = &day.daily_note {
         validate_relative_path(&note.relative_path)?;
@@ -1502,8 +1548,8 @@ fn validate_optional_small_text(value: &str) -> Result<(), RenderError> {
     }
 }
 
-fn reserved_frontmatter_keys() -> BTreeSet<&'static str> {
-    [
+fn reserved_frontmatter_keys(profile: SemanticProfile) -> BTreeSet<&'static str> {
+    let mut keys: BTreeSet<_> = [
         "schema",
         "schema_version",
         "healthmd_schema_profile",
@@ -1515,11 +1561,15 @@ fn reserved_frontmatter_keys() -> BTreeSet<&'static str> {
         "units",
     ]
     .into_iter()
-    .collect()
+    .collect();
+    if profile.is_wake_date() {
+        keys.extend(successor_authority_keys());
+    }
+    keys
 }
 
-fn reserved_json_keys() -> BTreeSet<&'static str> {
-    [
+fn reserved_json_keys(profile: SemanticProfile) -> BTreeSet<&'static str> {
+    let mut keys: BTreeSet<_> = [
         "schema",
         "schema_version",
         "schemaProfile",
@@ -1532,7 +1582,20 @@ fn reserved_json_keys() -> BTreeSet<&'static str> {
         "raw_capture_status",
     ]
     .into_iter()
-    .collect()
+    .collect();
+    if profile.is_wake_date() {
+        keys.extend(successor_authority_keys());
+    }
+    keys
+}
+
+fn successor_authority_keys() -> [&'static str; 4] {
+    [
+        "schema_profile",
+        "sleep_day_attribution",
+        "sleep_owner_day_rule",
+        "sleep_interval_clipping",
+    ]
 }
 
 fn validate_date_template(value: &str, allow_path: bool) -> Result<(), RenderError> {
@@ -1591,7 +1654,10 @@ fn render_plan(
             )?;
         }
         if config.api.as_ref().is_some_and(|api| api.enabled) {
-            daily_json.push((day.owner_date.clone(), render_api_record(config, day)?));
+            daily_json.push((
+                day.owner_date.clone(),
+                render_api_record(config, day, semantic)?,
+            ));
         }
         add_entries_and_note(&mut builder, config, day)?;
         for extension in &day.extensions {
@@ -1634,20 +1700,26 @@ fn render_day(
         SemanticProfile::AndroidAnalyticalV5 => {
             android_analytical_v5::render_day(config, day, format)
         }
+        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_day(config, day, format)
+        }
     }
 }
 
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => formats.sort_by_key(|format| format.id()),
-        SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => formats
-            .sort_by_key(|format| match format {
-                RenderFormat::Markdown => 0,
-                RenderFormat::ObsidianBases => 1,
-                RenderFormat::Json => 2,
-                RenderFormat::Csv => 3,
-            }),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+            formats.sort_by_key(|format| format.id());
+        }
+        SemanticProfile::AndroidFrozenV4
+        | SemanticProfile::AndroidAnalyticalV5
+        | SemanticProfile::AndroidSleepV6 => formats.sort_by_key(|format| match format {
+            RenderFormat::Markdown => 0,
+            RenderFormat::ObsidianBases => 1,
+            RenderFormat::Json => 2,
+            RenderFormat::Csv => 3,
+        }),
     }
     formats
 }
@@ -1907,11 +1979,15 @@ fn scoped_api_batch(
 fn render_api_record(
     config: &RenderSessionConfig,
     day: &RenderDay,
+    semantic: &SemanticResult,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
+        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_api_record(config, day, semantic)
+        }
     }
 }
 
@@ -1924,6 +2000,9 @@ fn render_api_envelope(
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
+        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_api_envelope(config, api, records)
+        }
     }
 }
 
@@ -1932,11 +2011,14 @@ pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
+        SemanticProfile::AppleHealthDataV10 => "apple_health_data_v10",
+        SemanticProfile::AndroidSleepV6 => "android_sleep_v6",
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::REGISTRY_SHA256;
     use serde_json::json;
 
     use super::*;
@@ -2039,6 +2121,9 @@ mod tests {
                 SemanticProfile::AndroidAnalyticalV5 => {
                     assert!(text.contains("\"schemaProfile\": \"android-analytical-v5\""));
                     assert!(text.contains("\"schemaVersion\": 5"));
+                }
+                SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+                    unreachable!("successors have separate contract cases")
                 }
             }
         }

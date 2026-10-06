@@ -104,7 +104,10 @@ final class SleepExportAvailabilityTests: XCTestCase {
         encoder.outputFormatting = [.sortedKeys]
         let bytes = try encoder.encode(snapshot)
         let restored = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: bytes)
-        XCTAssertEqual(try encoder.encode(restored), bytes)
+        // sortedKeys does not order Set-backed JSON arrays. Decoding must
+        // preserve the full typed authority; re-encoding is not a byte oracle.
+        // The pending-store test separately checks original stored bytes.
+        XCTAssertEqual(restored, snapshot)
         let manager = HealthKitManager(store: FakeHealthStore(), userDefaults: UserDefaults(suiteName: "SleepRecoveryTests.\(UUID())")!)
         manager.setSleepDayAttribution(.nightBegins)
         XCTAssertThrowsError(try manager.resolveSleepCaptureContext(settings: restored.makeAdvancedExportSettings())) {
@@ -118,7 +121,7 @@ final class SleepExportAvailabilityTests: XCTestCase {
         XCTAssertThrowsError(try manager.resolveSleepCaptureContext(settings: recoveredLegacy.makeAdvancedExportSettings())) {
             XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .missingDurableAttribution)
         }
-        XCTAssertEqual(try encoder.encode(recoveredLegacy), legacyBytes)
+        XCTAssertEqual(recoveredLegacy, legacy)
     }
 }
 

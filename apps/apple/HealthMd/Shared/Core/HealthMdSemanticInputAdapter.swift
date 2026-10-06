@@ -2,7 +2,7 @@ import CryptoKit
 import Foundation
 import HealthMdCoreRust
 
-/// Deterministic Apple post-capture adapter for `healthmd.semantic_input` v1.
+/// Deterministic Apple post-capture adapter for historical v1 and explicit wake-date v2.
 ///
 /// HealthKit is never queried here. Existing `HealthData` values are frozen once, represented as
 /// SDK aggregate facts, and sent in coarse batches. Public rendering remains native through M4.
@@ -20,6 +20,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
         case limitExceeded
         case invalidSessionResult
         case serializationFailed
+        case invalidCaptureAuthority
+        case unavailableWakeDateQuantity
     }
 
     struct ExtensionLocation: Sendable, Equatable {
@@ -51,16 +53,14 @@ nonisolated enum HealthMdSemanticInputAdapter {
         calendarTimeZoneIdentifier: String,
         retainPlatformExtensions: Bool,
         rollupPeriods: [HealthRollupPeriod],
-        requestedRange: HealthRollupRangeRequest? = nil
+        requestedRange: HealthRollupRangeRequest? = nil,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> Data {
-        guard registry.profileId == "apple_health_data_v8",
-              registry.publicProfileId == "apple-v8",
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256
-        else { throw AdapterError.invalidRegistry }
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
+        guard inputVersion == semanticInputVersion || (rollupPeriods.isEmpty && requestedRange == nil) else {
+            throw AdapterError.invalidSessionResult
+        }
         guard calendarTimeZoneIdentifier == "UTC"
                 || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)
         else { throw AdapterError.invalidTimeZone }
@@ -92,13 +92,13 @@ nonisolated enum HealthMdSemanticInputAdapter {
         let semanticProfileRevision: UInt32 = containsRange ? 2 : 1
         var payload: [String: Any] = [
             "schema": "healthmd.semantic_session_config",
-            "semantic_input_version": semanticInputVersion,
-            "canonical_model_version": canonicalModelVersion,
-            "registry_version": registryVersion,
+            "semantic_input_version": inputVersion,
+            "canonical_model_version": inputVersion,
+            "registry_version": registry.registryVersion,
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
             "session_id": sessionID,
-            "profile": "apple_health_data_v8",
+            "profile": registry.profileId,
             "calendar_time_zone": calendarTimeZoneIdentifier,
             "selected_selection_ids": selected,
             "disabled_output_keys": disabledOutputKeys,
@@ -131,17 +131,15 @@ nonisolated enum HealthMdSemanticInputAdapter {
         registry: CoreMetricRegistrySnapshot,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
-        startingSourceOrdinal: UInt64 = 0
+        startingSourceOrdinal: UInt64 = 0,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> EncodedBatch {
-        guard registry.profileId == "apple_health_data_v8",
-              registry.publicProfileId == "apple-v8",
-              registry.publicSchema == HealthMdExportSchema.identifier,
-              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
-              registry.profileRevision == 1,
-              registry.registryVersion == registryVersion,
-              registry.registrySha256 == HealthMetrics.registrySHA256 else {
-            throw AdapterError.invalidRegistry
-        }
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
+        guard healthData.allSatisfy({
+            ($0.timeContext.sleepDayAttribution ?? .nightBegins)
+                == (inputVersion == semanticInputVersion ? .nightBegins : .morningEnds)
+        }) else { throw AdapterError.invalidCaptureAuthority }
         guard (calendarTimeZoneIdentifier == "UTC"
                 || TimeZone.knownTimeZoneIdentifiers.contains(calendarTimeZoneIdentifier)),
               let calendarTimeZone = TimeZone(identifier: calendarTimeZoneIdentifier),
@@ -182,6 +180,13 @@ nonisolated enum HealthMdSemanticInputAdapter {
             let day = capturedDay.day
             let snapshot = day.exportSnapshot(customization: customization)
             let ownerDate = capturedDay.ownerDate
+            if inputVersion != semanticInputVersion, day.sleep.hasData || !day.sleep.stages.isEmpty {
+                guard let start = day.sleep.sessionStart, let end = day.sleep.sessionEnd,
+                      start.timeIntervalSince1970.isFinite, end.timeIntervalSince1970.isFinite,
+                      start < end, ownerDateString(end, timeZone: calendarTimeZone) == ownerDate else {
+                    throw AdapterError.invalidCaptureAuthority
+                }
+            }
             let exactDay = try exactTimestamp(day.date, calendarTimeZone: calendarTimeZone)
             for output in registry.outputs {
                 guard output.surface == "flat",
@@ -207,13 +212,14 @@ nonisolated enum HealthMdSemanticInputAdapter {
                     "aggregation": "pass_through",
                     "start": exactDay,
                     "end": NSNull(),
-                    "value": try semanticValue(
+                    "value": try inputVersion == semanticInputVersion ? semanticValue(
                         raw,
                         unit: output.unit,
                         outputKey: output.key,
                         day: day,
                         calendarTimeZone: calendarTimeZone
-                    ),
+                    ) : wakeDateValue(outputKey: output.key, unit: output.unit,
+                        day: day, calendarTimeZone: calendarTimeZone),
                     "weight": NSNull(),
                     "attributes": [:],
                     "extensions": [],
@@ -276,7 +282,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
 
         let data = try canonicalJSON([
             "schema": "healthmd.semantic_input",
-            "semantic_input_version": semanticInputVersion,
+            "semantic_input_version": inputVersion,
             "session_id": sessionID,
             "batch_index": batchIndex,
             "final_batch": finalBatch,
@@ -300,8 +306,11 @@ nonisolated enum HealthMdSemanticInputAdapter {
         registry: CoreMetricRegistrySnapshot,
         customization: FormatCustomization,
         calendarTimeZoneIdentifier: String,
-        startingSourceOrdinal: UInt64 = 0
+        startingSourceOrdinal: UInt64 = 0,
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> [EncodedBatch] {
+        let inputVersion = try validatedInputVersion(registry: registry,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
         guard healthData.count <= HealthRollupRangeRequest.maximumDays else {
             throw AdapterError.limitExceeded
         }
@@ -336,7 +345,8 @@ nonisolated enum HealthMdSemanticInputAdapter {
                 registry: registry,
                 customization: customization,
                 calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
-                startingSourceOrdinal: sourceOrdinal
+                startingSourceOrdinal: sourceOrdinal,
+                captureContext: captureContext
             )
             guard let object = try JSONSerialization.jsonObject(with: encodedDay.data) as? [String: Any],
                   let records = object["records"] as? [[String: Any]],
@@ -428,6 +438,7 @@ nonisolated enum HealthMdSemanticInputAdapter {
 
         let batches = try payloads.enumerated().map { offset, payload in
             var object = payload.0
+            object["semantic_input_version"] = inputVersion
             let (batchIndex, overflow) = firstBatchIndex.addingReportingOverflow(UInt32(offset))
             guard !overflow else { throw AdapterError.limitExceeded }
             object["batch_index"] = batchIndex
@@ -502,6 +513,79 @@ nonisolated enum HealthMdSemanticInputAdapter {
         } catch {
             throw AdapterError.serializationFailed
         }
+    }
+
+    @MainActor
+    private static func validatedInputVersion(
+        registry: CoreMetricRegistrySnapshot,
+        calendarTimeZoneIdentifier: String,
+        captureContext: AppleSleepCaptureContext?
+    ) throws -> UInt32 {
+        if registry.profileId == AppleExportEnginePin.wakeDateProfileID {
+            guard registry.publicProfileId == "apple-v10",
+                  registry.publicSchema == HealthMdExportSchema.identifier,
+                  registry.publicSchemaVersion == 10, registry.profileRevision == 1,
+                  registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
+                  registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256 else {
+                throw AdapterError.invalidRegistry
+            }
+            guard let captureContext, captureContext.sleepDayAttribution == .morningEnds,
+                  captureContext.exportProfileID == "apple-v10",
+                  TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
+                      == captureContext.calendarTimeZoneIdentifier else {
+                throw AdapterError.invalidCaptureAuthority
+            }
+            return AppleExportEnginePin.wakeDateHandoffVersion
+        }
+        guard registry.profileId == AppleExportEnginePin.profileID,
+              registry.publicProfileId == "apple-v8",
+              registry.publicSchema == HealthMdExportSchema.identifier,
+              registry.publicSchemaVersion == UInt32(HealthMdExportSchema.version),
+              registry.profileRevision == 1, registry.registryVersion == registryVersion,
+              registry.registrySha256 == HealthMetrics.registrySHA256 else {
+            throw AdapterError.invalidRegistry
+        }
+        guard captureContext == nil || (captureContext?.sleepDayAttribution == .nightBegins
+            && TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
+                == captureContext?.calendarTimeZoneIdentifier) else {
+            throw AdapterError.invalidCaptureAuthority
+        }
+        return semanticInputVersion
+    }
+
+    /// Typed source quantities for the admitted successor sleep/activity slice. Display strings
+    /// only decide historical field presence; they never supply successor numerical facts.
+    private static func wakeDateValue(
+        outputKey: String, unit: String, day: HealthData, calendarTimeZone: TimeZone
+    ) throws -> [String: Any] {
+        let quantity: Double?
+        switch outputKey {
+        case "sleep_total_hours": quantity = day.sleep.totalDuration / 3_600
+        case "sleep_deep_hours": quantity = day.sleep.deepSleep / 3_600
+        case "sleep_rem_hours": quantity = day.sleep.remSleep / 3_600
+        case "sleep_core_hours": quantity = day.sleep.coreSleep / 3_600
+        case "sleep_awake_hours": quantity = day.sleep.awakeTime / 3_600
+        case "sleep_in_bed_hours": quantity = day.sleep.inBedTime / 3_600
+        case "active_calories": quantity = day.activity.activeCalories
+        case "steps":
+            guard let steps = day.activity.steps else { throw AdapterError.unavailableWakeDateQuantity }
+            return ["value_type": "number", "number": ["representation": "signed_integer", "decimal": String(steps)],
+                "unit": ["id": "count"]]
+        case "sleep_bedtime", "sleep_wake":
+            guard let instant = outputKey == "sleep_bedtime" ? day.sleep.sessionStart : day.sleep.sessionEnd else {
+                throw AdapterError.unavailableWakeDateQuantity
+            }
+            var calendar = Calendar(identifier: .gregorian)
+            calendar.timeZone = calendarTimeZone
+            let parts = calendar.dateComponents([.hour, .minute], from: instant)
+            guard let hour = parts.hour, let minute = parts.minute else {
+                throw AdapterError.unavailableWakeDateQuantity
+            }
+            return try binary64(Double(hour * 60 + minute), unitID: "time_of_day_minute")
+        default: throw AdapterError.unavailableWakeDateQuantity
+        }
+        guard let quantity else { throw AdapterError.unavailableWakeDateQuantity }
+        return try binary64(quantity, unitID: internalUnitID(unit))
     }
 
     private static func semanticValue(

@@ -93,7 +93,8 @@ enum HealthMdRenderInputAdapter {
         presentationCustomization: FormatCustomization = FormatCustomization(),
         extensionPayloadsByOwnerDate: [String: [[String: Any]]] = [:],
         individualEntriesByOwnerDate: [String: [[String: Any]]] = [:],
-        dailyNotesByOwnerDate: [String: [String: Any]] = [:]
+        dailyNotesByOwnerDate: [String: [String: Any]] = [:],
+        captureContext: AppleSleepCaptureContext? = nil
     ) throws -> EncodedInput {
         guard let root = try JSONSerialization.jsonObject(with: semanticResult) as? [String: Any],
               root["schema"] as? String == "healthmd.semantic_result",
@@ -117,6 +118,39 @@ enum HealthMdRenderInputAdapter {
             throw AdapterError.invalidPresentation
         }
 
+        let wakeDate = registry.profileId == AppleExportEnginePin.wakeDateProfileID
+        if wakeDate {
+            guard registry.publicProfileId == "apple-v10", registry.publicSchemaVersion == 10,
+                  registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
+                  registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256,
+                  semanticProfileRevision == 1,
+                  root["semantic_input_version"] as? Int == 2,
+                  root["canonical_model_version"] as? Int == 2,
+                  root["core_api_version"] as? Int == 4,
+                  semanticRollups.isEmpty, options.api == nil, !options.formats.isEmpty,
+                  Set(options.formats).isSubset(of: ["json", "markdown", "obsidian_bases", "csv"]),
+                  let captureContext, captureContext.sleepDayAttribution == .morningEnds,
+                  captureContext.exportProfileID == "apple-v10",
+                  TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
+                      == captureContext.calendarTimeZoneIdentifier,
+                  root["sleep_capture_context"] as? [String: String] == [
+                      "schema_profile": "apple-v10", "calendar_timezone": calendarTimeZoneIdentifier,
+                      "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
+                      "sleep_interval_clipping": "none",
+                  ] else { throw AdapterError.invalidSemanticResult }
+            let owners = days.compactMap { $0["owner_date"] as? String }
+            guard owners.count == days.count, Set(owners).count == owners.count,
+                  Set(presentationByOwnerDate.keys) == Set(owners),
+                  presentationByOwnerDate.allSatisfy({ owner, data in
+                      HealthKitDailyOwnershipMetadata.ownerDate(for: data.date,
+                          calendarTimeZoneIdentifier: calendarTimeZoneIdentifier) == owner
+                          && data.timeContext.sleepDayAttribution == .morningEnds
+                          && data.timeContext.calendarTimeZoneIdentifier == calendarTimeZoneIdentifier
+                  }) else { throw AdapterError.invalidPresentation }
+        } else if captureContext?.sleepDayAttribution == .morningEnds
+                    || presentationByOwnerDate.values.contains(where: { $0.timeContext.sleepDayAttribution == .morningEnds }) {
+            throw AdapterError.invalidPresentation
+        }
         var effectiveOptions = options
         if !presentationByOwnerDate.isEmpty {
             effectiveOptions.includeDate = presentationCustomization.frontmatterConfig.includeDate
@@ -161,10 +195,11 @@ enum HealthMdRenderInputAdapter {
                 options: effectiveOptions,
                 extensionPayloads: extensionPayloadsByOwnerDate[day["owner_date"] as? String ?? ""] ?? [],
                 individualEntries: individualEntriesByOwnerDate[day["owner_date"] as? String ?? ""] ?? [],
-                dailyNote: dailyNotesByOwnerDate[day["owner_date"] as? String ?? ""]
+                dailyNote: dailyNotesByOwnerDate[day["owner_date"] as? String ?? ""],
+                captureContext: captureContext
             )
         }
-        let batches = try boundedBatches(renderDays, sessionID: sessionID)
+        let batches = try boundedBatches(renderDays, sessionID: sessionID, version: wakeDate ? 2 : 1)
         return EncodedInput(configuration: configuration, batches: batches)
     }
 
@@ -240,9 +275,9 @@ enum HealthMdRenderInputAdapter {
         }
         return [
             "schema": "healthmd.render_session_config",
-            "render_input_version": 1,
-            "artifact_plan_version": 1,
-            "canonical_model_version": 1,
+            "render_input_version": profile == AppleExportEnginePin.wakeDateProfileID ? 2 : 1,
+            "artifact_plan_version": profile == AppleExportEnginePin.wakeDateProfileID ? 2 : 1,
+            "canonical_model_version": profile == AppleExportEnginePin.wakeDateProfileID ? 2 : 1,
             "registry_version": Int(registry.registryVersion),
             "registry_sha256": registry.registrySha256,
             "profile_revision": semanticProfileRevision,
@@ -302,7 +337,8 @@ enum HealthMdRenderInputAdapter {
         options: Options,
         extensionPayloads: [[String: Any]],
         individualEntries: [[String: Any]],
-        dailyNote: [String: Any]?
+        dailyNote: [String: Any]?,
+        captureContext: AppleSleepCaptureContext?
     ) throws -> [String: Any] {
         guard let ownerDate = day["owner_date"] as? String,
               let values = day["values"] as? [[String: Any]]
@@ -323,7 +359,15 @@ enum HealthMdRenderInputAdapter {
                   let semanticValue = value["value"] as? [String: Any]
             else { throw AdapterError.invalidRegistry }
             let publicValue = try publicValue(semanticValue)
-            let display = presentationSnapshot?.frontmatterMetrics[outputKey] ?? displayValue(publicValue)
+            let display: String
+            if captureContext?.sleepDayAttribution == .morningEnds,
+               semanticValue["value_type"] as? String == "number", output.unit.lowercased() != "time" {
+                guard let number = publicValue as? NSNumber else { throw AdapterError.invalidPresentation }
+                // CSV/frontmatter are machine surfaces too: do not reuse rounded historical display facts.
+                display = number.stringValue
+            } else {
+                display = presentationSnapshot?.frontmatterMetrics[outputKey] ?? displayValue(publicValue)
+            }
             let frontmatterKey = presentationCustomization.frontmatterConfig.outputKey(for: outputKey) ?? outputKey
             let publicUnit: String
             if let snapshot = presentationSnapshot {
@@ -387,7 +431,8 @@ enum HealthMdRenderInputAdapter {
                 data: presentationData,
                 customization: presentationCustomization,
                 options: options,
-                semanticOutputKeys: selectedOutputKeys
+                semanticOutputKeys: selectedOutputKeys,
+                captureContext: captureContext
             ),
         ]
     }
@@ -396,7 +441,8 @@ enum HealthMdRenderInputAdapter {
         data: HealthData?,
         customization: FormatCustomization,
         options: Options,
-        semanticOutputKeys: [String]
+        semanticOutputKeys: [String],
+        captureContext: AppleSleepCaptureContext?
     ) throws -> [String: Any] {
         guard let data else {
             return [
@@ -407,6 +453,21 @@ enum HealthMdRenderInputAdapter {
             ]
         }
         let requested = Set(options.formats)
+        if let captureContext, captureContext.sleepDayAttribution == .morningEnds {
+            guard options.api == nil else { throw AdapterError.invalidPresentation }
+            let json: Any
+            if requested.contains("json") {
+                let bytes = try data.toJSONDataThrowing(customization: customization, captureContext: captureContext)
+                json = try orderedJSON(JSONSerialization.jsonObject(with: bytes))
+            } else {
+                json = NSNull()
+            }
+            // Other formats use completed successor projections, never historical native bodies.
+            return [
+                "semantic_output_keys": semanticOutputKeys.sorted(), "markdown_body": NSNull(),
+                "csv_rows": NSNull(), "json_root": json,
+            ]
+        }
         let markdown: Any
         if requested.contains("markdown") {
             let rendered = data.toMarkdown(
@@ -576,7 +637,7 @@ enum HealthMdRenderInputAdapter {
         return ""
     }
 
-    private static func boundedBatches(_ days: [[String: Any]], sessionID: String) throws -> [Data] {
+    private static func boundedBatches(_ days: [[String: Any]], sessionID: String, version: Int) throws -> [Data] {
         var partitions: [[[String: Any]]] = []
         var current: [[String: Any]] = []
         var totalBytes = 0
@@ -584,21 +645,21 @@ enum HealthMdRenderInputAdapter {
             let facts = (day["metrics"] as? [Any])?.count ?? 0 + ((day["extensions"] as? [Any])?.count ?? 0)
             guard facts <= maxFactsPerBatch else { throw AdapterError.limitExceeded }
             let candidate = current + [day]
-            let placeholder = try batchData(days: candidate, sessionID: sessionID, index: partitions.count, final: false)
+            let placeholder = try batchData(days: candidate, sessionID: sessionID, index: partitions.count, final: false, version: version)
             if !current.isEmpty && (placeholder.count > maxBatchBytes || candidate.reduce(0, { $0 + (((($1["metrics"] as? [Any])?.count) ?? 0) + ((($1["extensions"] as? [Any])?.count) ?? 0)) }) > maxFactsPerBatch) {
                 partitions.append(current)
                 current = [day]
             } else {
                 current = candidate
             }
-            guard try batchData(days: current, sessionID: sessionID, index: partitions.count, final: false).count <= maxBatchBytes else {
+            guard try batchData(days: current, sessionID: sessionID, index: partitions.count, final: false, version: version).count <= maxBatchBytes else {
                 throw AdapterError.limitExceeded
             }
         }
         if !current.isEmpty || days.isEmpty { partitions.append(current) }
         var result: [Data] = []
         for (index, partition) in partitions.enumerated() {
-            let data = try batchData(days: partition, sessionID: sessionID, index: index, final: index + 1 == partitions.count)
+            let data = try batchData(days: partition, sessionID: sessionID, index: index, final: index + 1 == partitions.count, version: version)
             totalBytes += data.count
             guard data.count <= maxBatchBytes, totalBytes <= maxSessionBytes else { throw AdapterError.limitExceeded }
             result.append(data)
@@ -606,11 +667,11 @@ enum HealthMdRenderInputAdapter {
         return result
     }
 
-    private static func batchData(days: [[String: Any]], sessionID: String, index: Int, final: Bool) throws -> Data {
+    private static func batchData(days: [[String: Any]], sessionID: String, index: Int, final: Bool, version: Int) throws -> Data {
         guard index <= Int(UInt32.max) else { throw AdapterError.limitExceeded }
         return try canonicalJSON([
             "schema": "healthmd.render_input",
-            "render_input_version": 1,
+            "render_input_version": version,
             "session_id": sessionID,
             "batch_index": index,
             "final_batch": final,

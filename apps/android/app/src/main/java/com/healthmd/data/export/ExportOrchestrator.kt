@@ -106,7 +106,7 @@ class ExportOrchestrator(
         }
 
         val captureContext = try {
-            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+            resolveOperationCaptureContext(settings)
         } catch (_: CancellationException) {
             return cancelledResult()
         } catch (error: Exception) {
@@ -121,6 +121,8 @@ class ExportOrchestrator(
                 ),
             )
         }
+
+        val operationSettings = settings.withCaptureAuthority(captureContext)
 
         // Manual interactive runs select route-consent candidates across the complete date scope
         // before canonical chunk capture. The repository is a no-op for every noninteractive path.
@@ -245,12 +247,12 @@ class ExportOrchestrator(
                 }
 
                 val success = if (durableFolderOperationId == null) {
-                    exportRepository.exportHealthData(filteredData, settings)
+                    exportRepository.exportHealthData(filteredData, operationSettings)
                 } else {
                     exportRepository.stageDurableScheduledFolderDay(
                         operationId = durableFolderOperationId,
                         data = filteredData,
-                        settings = settings,
+                        settings = operationSettings,
                     )
                 }
                 if (success) {
@@ -284,11 +286,13 @@ class ExportOrchestrator(
         val days = mutableListOf<ExportPreviewDay>()
         var attemptedDateCount = 0
         val captureContext = try {
-            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+            resolveOperationCaptureContext(settings)
         } catch (_: SleepAttributionUnavailableException) {
             return ExportPreview(requestedDateCount = normalizedDates.size, previewedDateCount = 0,
                 isTruncated = false, days = previewCandidates.map { ExportPreviewDay(it, failureReason = ExportFailureReason.UNKNOWN) })
         }
+
+        val operationSettings = settings.withCaptureAuthority(captureContext)
 
         // Match iOS: show the most recent days with data, rendering at most five while
         // checking a wider window so an empty today does not make the preview look empty.
@@ -315,7 +319,7 @@ class ExportOrchestrator(
                     if (!filteredData.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)
                     } else {
-                        exportRepository.previewHealthData(filteredData, settings)
+                        exportRepository.previewHealthData(filteredData, operationSettings)
                     }
                 } catch (e: CancellationException) {
                     throw e
@@ -345,6 +349,18 @@ class ExportOrchestrator(
             days = days,
         )
     }
+
+    private fun ExportSettings.withCaptureAuthority(context: AndroidCaptureContext): ExportSettings = copy(
+        executionSleepCaptureContext = context,
+        executionSleepCaptureAuthorityIsFrozen = true,
+    )
+
+    private suspend fun resolveOperationCaptureContext(settings: ExportSettings): AndroidCaptureContext =
+        if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else {
+            healthRepository.resolveCaptureContext().also { it.requireShippedProfile() }
+        }
 
     private fun folderFailure(
         dates: List<LocalDate>,

@@ -5,7 +5,9 @@ import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
 import com.healthmd.data.export.ObsidianBasesExporter
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
@@ -69,6 +71,7 @@ class FrozenDailyAggregateExportRequest private constructor(
     val metricSelection: MetricSelectionState,
     val includeGranularData: Boolean,
     val suppliedPin: ExportEnginePin?,
+    val captureContext: AndroidCaptureContext?,
 ) {
     val formats: List<ExportFormat> = Collections.unmodifiableList(formats.toList())
     private val storedRelativePaths: Map<ExportFormat, String> =
@@ -85,7 +88,34 @@ class FrozenDailyAggregateExportRequest private constructor(
             mode: ExportEngineMode,
             ids: DailyAggregateExportIds,
         ): FrozenDailyAggregateExportRequest {
+            val context = settings.executionSleepCaptureContext?.copy()
             val formats = settings.selectedExportFormats.sortedBy(ExportFormat::ordinal)
+            require(!settings.executionSleepCaptureAuthorityIsFrozen || context != null) {
+                "immutable capture authority is missing"
+            }
+            if (profile == AndroidExportProfile.android_sleep_v6) {
+                require(mode == ExportEngineMode.rust) { "wake-date export requires the Rust engine" }
+                require(context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
+                    context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
+                // Exact native sleep clocks can enter the prepared JSON-only handoff. Other
+                // native presentation surfaces remain gated rather than losing source data.
+                require(settings.formatCustomization.unitPreference == UnitPreference.METRIC &&
+                    !settings.includeGranularData && !settings.formatCustomization.includeLegacyAndroidAliases &&
+                    (formats == listOf(ExportFormat.JSON) || (data.sleep.sessionStart == null && data.sleep.sessionEnd == null)) &&
+                    data.compatibilityProvenance == null && data.workouts.isEmpty() &&
+                    data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
+                    "wake-date native presentation is not qualified"
+                }
+            } else if (context != null) {
+                require(context.sleepDayAttribution == SleepDayAttribution.NIGHT_BEGINS &&
+                    (context.exportProfileID == null || context.exportProfileID == profile.publicProfileId)) {
+                    "historical capture authority is incompatible"
+                }
+            }
+            require(context == null || settings.executionEnginePin == null ||
+                context.zoneId.id == settings.executionEnginePin.ianaTimeZone) {
+                "capture and engine clock authority disagree"
+            }
             val customization = settings.formatCustomization.frozenCopy()
             return FrozenDailyAggregateExportRequest(
                 data = data,
@@ -106,6 +136,7 @@ class FrozenDailyAggregateExportRequest private constructor(
                 ),
                 includeGranularData = settings.includeGranularData,
                 suppliedPin = settings.executionEnginePin,
+                captureContext = context,
             )
         }
     }
@@ -123,6 +154,9 @@ class ProductionDailyAggregateNativePlanBuilder(
     private val obsidianBasesExporter: ObsidianBasesExporter,
 ) : DailyAggregateNativePlanBuilder {
     override fun plan(request: FrozenDailyAggregateExportRequest): ExportArtifactPlan {
+        require(request.profile != AndroidExportProfile.android_sleep_v6) {
+            "wake-date profile cannot invoke historical native exporters"
+        }
         val items = request.formats.map { format ->
             val content = when (format) {
                 ExportFormat.MARKDOWN -> markdownExporter.export(
@@ -201,9 +235,12 @@ class HealthMdRustDailyAggregatePlanner(
     override suspend fun plan(
         request: FrozenDailyAggregateExportRequest,
     ): DailyAggregateRustPlan = withContext(defaultDispatcher) {
-        val timeZone = request.suppliedPin?.ianaTimeZone ?: zoneIdProvider().id
+        val timeZone = request.captureContext?.zoneId?.id ?: request.suppliedPin?.ianaTimeZone ?: zoneIdProvider().id
         val readiness = coreService.checkReadiness()
-        val registry = coreService.getMetricRegistry(request.profile.coreProfile)
+        val registry = coreService.getMetricRegistry(
+            request.profile.coreProfile,
+            request.profile.contractVersions.registry,
+        )
         val pin = request.suppliedPin?.also { persisted ->
             val compatibility = ExportEnginePinValidator().validate(persisted, readiness, registry)
             if (!compatibility.isCompatible || persisted.engine != request.mode || persisted.profile != request.profile) {
@@ -219,6 +256,7 @@ class HealthMdRustDailyAggregatePlanner(
         val semanticProfile = when (request.profile) {
             AndroidExportProfile.android_frozen_v4 -> HealthMdSemanticInputAdapter.Profile.FROZEN_V4
             AndroidExportProfile.android_analytical_v5 -> HealthMdSemanticInputAdapter.Profile.ANALYTICAL_V5
+            AndroidExportProfile.android_sleep_v6 -> HealthMdSemanticInputAdapter.Profile.SLEEP_V6
         }
         val semanticConfiguration = HealthMdSemanticInputAdapter.sessionConfiguration(
             sessionId = request.ids.sessionId,
@@ -227,6 +265,7 @@ class HealthMdRustDailyAggregatePlanner(
             registry = registry,
             calendarTimeZone = timeZone,
             retainPlatformExtensions = false,
+            captureContext = request.captureContext,
         )
         val semanticBatches = HealthMdSemanticInputAdapter.boundedBatches(
             sessionId = request.ids.sessionId,
@@ -237,6 +276,7 @@ class HealthMdRustDailyAggregatePlanner(
             calendarTimeZone = timeZone,
             timeFormat = request.customization.timeFormat,
             includeLegacyAndroidAliases = request.customization.includeLegacyAndroidAliases,
+            captureContext = request.captureContext,
         ).map { it.bytes }
         val semanticResult = HealthMdSemanticSessionRunner.process(
             configurationBytes = semanticConfiguration,
@@ -244,6 +284,8 @@ class HealthMdRustDailyAggregatePlanner(
             service = coreService,
         )
         val markdown = request.customization.markdownTemplate
+        val nativeWakeDateJson = request.profile == AndroidExportProfile.android_sleep_v6 &&
+            ExportFormat.JSON in request.formats
         val renderInput = HealthMdRenderInputAdapter.encode(
             semanticResult = semanticResult,
             registry = registry,
@@ -275,6 +317,11 @@ class HealthMdRustDailyAggregatePlanner(
                 typeValue = request.customization.frontmatterConfig.customTypeValue,
                 customFrontmatter = request.customization.frontmatterConfig.customFields,
                 placeholderFrontmatter = request.customization.frontmatterConfig.placeholderFields,
+                disabledFrontmatterKeys = if (request.profile == AndroidExportProfile.android_sleep_v6) {
+                    registry.outputs.mapNotNull { output ->
+                        output.key.takeIf { request.customization.frontmatterConfig.outputKey(it) == null }
+                    }
+                } else emptyList(),
                 baseDirectory = request.aggregateSubfolder.orEmpty(),
                 filenameTemplate = request.baseName,
                 folderTemplate = "",
@@ -286,8 +333,11 @@ class HealthMdRustDailyAggregatePlanner(
                 basesSuffix = "-bases",
                 api = null,
             ),
-            presentationByOwnerDate = mapOf(request.data.date.toString() to request.data),
+            presentationByOwnerDate = if (request.profile == AndroidExportProfile.android_sleep_v6 && !nativeWakeDateJson) {
+                emptyMap()
+            } else mapOf(request.data.date.toString() to request.data),
             presentationCustomization = request.customization,
+            captureContext = request.captureContext,
         )
         val input = ExportRenderInput(
             pin = pin,
@@ -353,36 +403,49 @@ class AndroidDailyAggregateExportPlanner(
         data: HealthData,
         settings: ExportSettings,
     ): LocalDailyAggregatePlanningResult {
-        val selectedProfile = settings.formatCustomization.compatibilitySchemaProfile.toExportProfile()
         val suppliedPin = settings.executionEnginePin
+        val context = settings.executionSleepCaptureContext
+        val isWakeDate = context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS ||
+            suppliedPin?.profile == AndroidExportProfile.android_sleep_v6
+        val selectedProfile = if (isWakeDate) {
+            if (context?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
+                context.exportProfileID != AndroidExportProfile.android_sleep_v6.publicProfileId) {
+                return LocalDailyAggregatePlanningResult.Failed(ExportEngineMode.rust)
+            }
+            AndroidExportProfile.android_sleep_v6
+        } else settings.formatCustomization.compatibilitySchemaProfile.toExportProfile()
         if (suppliedPin != null && suppliedPin.profile != selectedProfile) {
             return LocalDailyAggregatePlanningResult.Failed(suppliedPin.engine)
         }
         val expectedTarget = when (selectedProfile) {
-            AndroidExportProfile.android_frozen_v4 ->
-                ExportEnginePolicyTarget.ANDROID_FROZEN_V4
-            AndroidExportProfile.android_analytical_v5 ->
-                ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5
+            AndroidExportProfile.android_frozen_v4 -> ExportEnginePolicyTarget.ANDROID_FROZEN_V4
+            AndroidExportProfile.android_analytical_v5 -> ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5
+            AndroidExportProfile.android_sleep_v6 -> ExportEnginePolicyTarget.ANDROID_SLEEP_V6
         }
         val policy = if (suppliedPin != null) {
             ResolvedExportEnginePolicy(suppliedPin.engine, suppliedPin.profile, expectedTarget)
         } else if (settings.executionEngineAuthorityIsFrozen) {
+            if (isWakeDate) return LocalDailyAggregatePlanningResult.Failed(ExportEngineMode.rust)
             ResolvedExportEnginePolicy(ExportEngineMode.legacy, selectedProfile, expectedTarget)
         } else {
             try {
                 policyResolver.resolve(selectedProfile)
             } catch (error: Throwable) {
                 rethrowCancellationOrFatal(error)
-                return LocalDailyAggregatePlanningResult.Legacy
+                return if (isWakeDate) LocalDailyAggregatePlanningResult.Failed(ExportEngineMode.rust)
+                else LocalDailyAggregatePlanningResult.Legacy
             }
         }
+        if (isWakeDate && policy.mode != ExportEngineMode.rust) {
+            return LocalDailyAggregatePlanningResult.Failed(ExportEngineMode.rust)
+        }
         if (policy.profile != selectedProfile || policy.target != expectedTarget) {
-            return if (suppliedPin == null) LocalDailyAggregatePlanningResult.Legacy
+            return if (suppliedPin == null && !isWakeDate) LocalDailyAggregatePlanningResult.Legacy
             else LocalDailyAggregatePlanningResult.Failed(policy.mode)
         }
         if (policy.mode == ExportEngineMode.legacy) return LocalDailyAggregatePlanningResult.Legacy
         if (!supportsNonLegacy(settings)) {
-            return if (suppliedPin == null) LocalDailyAggregatePlanningResult.Legacy
+            return if (suppliedPin == null && !isWakeDate) LocalDailyAggregatePlanningResult.Legacy
             else LocalDailyAggregatePlanningResult.Failed(policy.mode)
         }
 
@@ -411,7 +474,8 @@ class AndroidDailyAggregateExportPlanner(
 
         val rust = try {
             rustPlanner.plan(request).also { result ->
-                if (result.pin.engine != policy.mode || result.pin.profile != selectedProfile) {
+                if (result.pin.engine != policy.mode || result.pin.profile != selectedProfile ||
+                    (request.captureContext != null && result.pin.ianaTimeZone != request.captureContext.zoneId.id)) {
                     throw ExportArtifactPlanValidationException(
                         ExportArtifactPlanValidationIssue.PROFILE,
                     )
