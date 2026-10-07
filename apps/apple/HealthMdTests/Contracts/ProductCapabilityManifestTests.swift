@@ -98,6 +98,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
+        "direct.full_public_authorized_corpus",
         "direct-cli.shared-qr-pairing",
         "direct.cli_agent_wake",
     ]
