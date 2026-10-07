@@ -5283,7 +5283,7 @@
           "introduced_by": "PORTABLE-CI"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted PORTABLE-CI workflow/router source and baseline replay /private/tmp/healthmd-portable-ci-replay.py (read-only supplemental), accepted UI-FOUNDATION exact pins/source/build/check interface. Preserve stable Core TypeScript CI / Core TypeScript CI and7 existing consumer contexts,26 older workflow bytes/22 old router targets. Extend push+local component detector path maps packages/healthmd-ui/**, independently scoped install/cache/artifact/lock/runtime/check per component. Exercise actual expanded failclosed gate outputs incl UI failure/cancel/skipped/missing decisions; UI-only and core-only paths plus contracts/pins/root workflow and exact-SHA full qualifications. Real remote GitHub/Linux/admin integration remains open.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -5295,18 +5295,33 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PORTABLE-CI-UI.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 64,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "f8081f86944287b466ae40e7e2cea8d94088026b",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          ".github/workflows/core-typescript-ci.yml",
+          "Makefile",
+          "docs/migration/effect-refactor/receipts/PORTABLE-CI-UI.json"
+        ],
+        "reserved_resources": [
+          "root-makefile",
+          "portable-ci-workflow"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "f8081f86944287b466ae40e7e2cea8d94088026b+97dce97b499c2fea0caffb7f5160a5e989ced4d216ae93c8e70c01ce38ecf011"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PORTABLE-CI-UI.json"
+        ]
       }
     },
     {

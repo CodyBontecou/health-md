@@ -1,0 +1,763 @@
+{
+  "schema_version": 1,
+  "task_id": "PORTABLE-CI-UI",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "f8081f86944287b466ae40e7e2cea8d94088026b",
+  "patch_digest": "97dce97b499c2fea0caffb7f5160a5e989ced4d216ae93c8e70c01ce38ecf011",
+  "patch_digest_method": "SHA256 over lexically sorted two claimed non-receipt paths, each UTF-8 repository-relative path + NUL + exact raw file bytes + NUL. Excludes receipt/coordinator state and other workers core changes/ignored outputs. Individual raw file hashes in inputs.artifact_and_native_interface.patch_files.",
+  "changed_paths": [
+    ".github/workflows/core-typescript-ci.yml",
+    "Makefile",
+    "docs/migration/effect-refactor/receipts/PORTABLE-CI-UI.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "docs/migration/effect-refactor/receipts/PORTABLE-CI.json": "42c4713bc1f9ead814f09b8c99e2388294035c3abfce9ee7bb6fe300c2e2018f",
+      "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json": "cdccd30e7535d34dd179546539b41fa89d9d17379675d373a0612de5dfb0656f",
+      "docs/migration/effect-refactor/inventories/ci.json": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+      "docs/migration/effect-refactor/inventories/portable-ci-result.json": "eaee7dccebaad04bc5f6a135b730e379c92f6f234685b27db0df8d92fd3ea43f",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      ".github/actions/component-changes/action.yml": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5"
+    },
+    "current_contract_snapshot": {
+      "packages/contracts/LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "packages/contracts/README.md": "49f745976ed606266ad5d35b6de742af9c3fef3b3e13eaacc42cc76e00256015",
+      "packages/contracts/direct-protocol/README.md": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+      "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/contracts/direct-protocol/pairing-v3/protocol.md": "2d7b7458895343caec94a843ce7df80bd4667639e8794a02aaffd975ff72ecf3",
+      "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/contracts/direct-protocol/v1/protocol.md": "3cde3d6c5f5bef03b057c6a836eab29cdaf30f575ad2a697bf4111384193d050",
+      "packages/contracts/direct-protocol/v2/fixtures/interop.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/contracts/direct-protocol/v2/protocol.md": "4333e4180247e9bbb0601b2f8ed452351fc773c3ad987aebbed6e46dca581e7c",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/contracts/direct-protocol/v3/protocol.md": "c2878bd91dd1bc6badc16f3946baba186969c2bbb4bdbfdf32baca2eb6c3bd65",
+      "packages/contracts/health-corpus/v1/contract.md": "b4f7d3d08d22d4207727474d02b7b986ce2247de8fe123ce1d8cab2f6c6f8be4",
+      "packages/contracts/manifest.json": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/contracts/proposals/provider-sections-v1/contract.md": "0ebdc66559518581b513b136d7508abd1c180b61e89d69e87acde0da149b0395",
+      "packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json": "acd89611db846010dd8613d0afb79ccdb10995b45e12fc7a7c804d6dbc8ddd82",
+      "packages/contracts/proposals/provider-sections-v1/provider-sections-v1.schema.json": "c80720c977e62f17924f2d72b45f692ba3be897ddce9014b06405394d03c3c2c",
+      "packages/contracts/proposals/unified-health-data-v9/contract.md": "10e5905c980a583256e1eae222dd6fec49933b60b6976d08590573fe3af5b07a",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/android-minimal.json": "ad5c60141fc1d6ae3bb3cb3ef0c9874316b705effb6f1d47513d016286c577e8",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/android-not-requested.json": "086c900836619a6bd621476f5083fb6f341a2e024da01c19fe0d8b2eb97b0ab1",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-minimal.json": "b754fcbaed0568d972f4807798b9833730312f7300e52625d84095f5f06fff95",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-partial.json": "d9a495d1bdbea58f33b92b780ff7f3166ffca562a09e59a617e2fa381c46c09a",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-whoop.json": "f1076949ab39f0bebefaecf000bf54b84c8ddf2dc4def09dde785edef6910f9e",
+      "packages/contracts/proposals/unified-health-data-v9/mapping-ledger.md": "84d8ca25f96dedf16c9d4f193a019d064cef4c83d0cbb2ab959f95aa06c18669",
+      "packages/contracts/proposals/unified-health-data-v9/unified-health-data-v9.schema.json": "b832efbb9b82df001014a7a42fadc48d086985fda66d34ca285184eb393e35af",
+      "packages/contracts/render-input/v1/artifact-plan.schema.json": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+      "packages/contracts/render-input/v1/contract.md": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+      "packages/contracts/render-input/v1/fixtures/differential-v1.json": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+      "packages/contracts/render-input/v1/fixtures/native-apple-v7.json": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+      "packages/contracts/render-input/v1/render-input.schema.json": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+      "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+      "packages/contracts/rollup-summary/v9/contract.md": "4571efb35d26898702d34972764775c105beccc47cd26cafbb84aa62fcc87962",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.json": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.md": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+      "packages/contracts/rollup-summary/v9/rollup-summary.schema.json": "a8a29c50a33c1878eb6b764950d43074dc726d9413b6997827525e36d0eda621",
+      "packages/contracts/semantic-input/v1/contract.md": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "packages/contracts/semantic-input/v1/semantic-input.schema.json": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+      "packages/contracts/semantic-input/v1/semantic-result.schema.json": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+      "packages/contracts/shared-setup/v2/android-profile-field-coverage.json": "4a539e7e22006bd0f06e63c3dda7a82f41c6fac0d536249573a37eccec8ae789",
+      "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json": "2636449ec9303886a27ccfd5e8fce9c1e4355b6cc92b102219eb5b8f8a37d1d9",
+      "packages/contracts/shared-setup/v2/contract.md": "01ae4bfe354851cb6ee95ddfec1894f3898c19a5bd6102b20ac8e2b2d49c32ca",
+      "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+      "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+      "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+      "packages/contracts/shared-setup/v2/shared-setup.schema.json": "39e56dc54dfb56c556e2c71c734c00da4f02305a2a9b98ad795486c3e9c81f45",
+      "packages/contracts/test_validate_shared_setup.py": "ff1ba89d96422d80187637704c65fce98f00f7644c0cb921a7231cca657432e3",
+      "packages/contracts/validate.py": "ca1f6fde2899e1ffac236bfea747e5e9a798a506c919edfb093d2eb34a58c23f"
+    },
+    "locks_and_runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_executable_sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "install": "Fresh independently locked npm ci with exact preflight; retained scoped offline download cache /private/tmp/healthmd-effect-npm-cache; no policy/global installs. Workflow caches independently scoped per component.",
+      "core_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "UI_lock_sha256": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+      "warning": "npm skips unapproved esbuild postinstall; installed optional platform binary completed real build. No approval/policy change."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        ".github/workflows/core-typescript-ci.yml": "9f42caa97f00432366a46ea2b8e3bba0b5caf91456e34a76fb3a22d7bf77eb9a",
+        "Makefile": "c949ed00319c0bd569a4cb01d4c190924147d826c23d98bf4c6293c87b6a7b15"
+      },
+      "built_artifact_digests": {
+        "packages/healthmd-core-ts/dist/neutral-metafile.json": "34908db6cd8e7e5cbe4b2850e17df6d811380d2e524afd3fd29ff329f22bbaaf",
+        "packages/healthmd-core-ts/dist/test-metafile.json": "81cf4ac59385425cb005144003a6dd766a5910eb08592f2f770a333201137302",
+        "packages/healthmd-core-ts/dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "packages/healthmd-core-ts/dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "packages/healthmd-core-ts/dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "packages/healthmd-core-ts/dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "packages/healthmd-core-ts/dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "packages/healthmd-core-ts/dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "packages/healthmd-core-ts/dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "packages/healthmd-core-ts/dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "packages/healthmd-core-ts/dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "packages/healthmd-core-ts/dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "packages/healthmd-core-ts/dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "packages/healthmd-core-ts/dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "packages/healthmd-core-ts/dist/tests/query-traversal.test.js": "4b7c0fc2023cf12782b4063c2d825732d6050b55617163581785103126b83171",
+        "packages/healthmd-core-ts/dist/tests/registry.test.js": "b658b988e46ed6185ade3b90ae4405c8da91f02fad2730cfd1bff87e4ceff3ec",
+        "packages/healthmd-core-ts/dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46",
+        "packages/healthmd-core-ts/dist/tests/catalog.test.js": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653",
+        "packages/healthmd-core-ts/dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "packages/healthmd-ui/dist/test-metafile.json": "5a8c83dbd94ac54fbff53618e2eb73e00952242fe7515c3430e835ec64e66f7b",
+        "packages/healthmd-ui/dist/model-metafile.json": "c114fae73a3d859995ce640117417604636fa4af59dbc31b6a5d6ab7399717fb",
+        "packages/healthmd-ui/dist/model.bundle.js": "66ca058af12d1c00811f1a2daf6ee2a9caca2b920c7f5b75c7d438fc7fa17870",
+        "packages/healthmd-ui/dist/tests/foundation.test.js": "6b2cfd7b151526933d56bdf9e8e0f1ec29a69b9b7614fb00a9de9e5282dda0f8",
+        "packages/healthmd-ui/dist/model/index.js": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "packages/healthmd-ui/dist/model/index.d.ts": "237b829c85532ece48d90c1fba1b784f998c8f7bf3e02ee400f041321a5bed28"
+      },
+      "current_candidate_package_inputs": {
+        "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+        "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5",
+        "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+        "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+        "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0",
+        "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+        "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+        "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+        "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+        "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+        "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+        "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+        "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+        "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+        "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe"
+      },
+      "package_input_stability": "All non-output core/UI source/config/readme/lock inputs hash-equal immediately before/after final make; newly introduced registry candidate source included, independently reviewed fixture does not establish implementation admission.",
+      "candidate_source_scope": "CI patch based on assigned commit plus current shared candidate source snapshot. No assertion that another worker registry patch is accepted or that this is final common committed qualification.",
+      "replay_script": "/private/tmp/healthmd-portable-ci-ui-replay.py",
+      "replay_script_sha256": "d25fb4bb93a847e0c0d4bdf6bbd63a098d433a8fc17e724afb063cfe1aa5de49",
+      "replay_result": "/private/tmp/healthmd-portable-ci-ui-replay-result.json",
+      "replay_result_sha256": "581669238ade40a236f8073f798581ed752c183a8a25a665e982a94525ed6879",
+      "baseline_supplemental_replay_sha256": "0eecd217ed36f8eaaec80e51fbdbde2b0a7207bcd5dab7e7f62b95145f7d4e5d",
+      "final_check_output": "/private/tmp/healthmd-portable-ci-ui-final-check.log",
+      "final_check_output_sha256": "6dbee3a6a905c9126c20dabbba662d6cdbd10f511017d4edbcc8e6850df61e5b",
+      "native_interfaces_invoked": []
+    },
+    "policy_migration_key_versions": {
+      "none_changed": true,
+      "production_credentials_or_state_read": false
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Add the component's verified check script and relevant source/lock/contract path inputs to the portable router.",
+      "result": "passed",
+      "evidence": "Makefile test-portable now preflights/installs/checks independently locked core and UI; push map includes UI and both local detectors share contract/pins/root/action/workflow inputs. Per-component cache lockkeys/artifacts and exact Node/npm/source checks retained."
+    },
+    {
+      "criterion": "Exercise the expanded router without a native toolchain, preserving stable aggregate/existing consumer contexts.",
+      "result": "passed",
+      "evidence": "Actual final make:189 core tests/19 negatives/8modules/oneEffect and14 UI tests/22 negatives, no native/Rust builds; actionlint passed. Actual expanded extracted gate7776 cases;18 matcher cases;15 source guards;8 runtime guards;26 unchanged older workflows and22 old router recipes. Stable aggregate Core TypeScript CI / Core TypeScript CI plus7 older contexts retained."
+    },
+    {
+      "criterion": "Record any remaining exact-SHA/remote CI/admin integration qualification separately.",
+      "result": "passed",
+      "evidence": "Explicit40SHA workflow_call/dispatch forces both outputs and each checkout matches exact HEAD locally; real GitHub events/Linux/cache/upload/admin/actionSHA/push/deploy and final common committed-source qualification remain open."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 3.466098208,
+      "evidence": "Root final sole integrated run after registry lazy/Unicode fixes; exact retained Node24.21.0/npm11.19.0 fresh locked installs;191core/14UI tests passed,0failures/cancellations/skips,19/22 boundary negatives; logSHA25651a7b343e130a4a8ab98067e882baa3931e7587ac2bb758e7d1f709324afd217. Current pinned source/artifact hashes in inputs; registry implementation independently reviewed separately."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/opt/homebrew/bin/actionlint",
+        ".github/workflows/core-typescript-ci.yml"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no diagnostics; expanded workflow only."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-portable-ci-ui-replay.py"
+      ],
+      "result": "passed",
+      "evidence": "Independent supplemental script adapted from old3-job replay to actual4-job YAML;7776 gate outcome combinations,18 local matcher vectors,15 exact-head/source guards,8 Node/npm vectors; explicit full shell produces bothtrue. Gate matrix SHA256 46aa481bff8af490ddae5a569d75804cdb8ca512160245b843965c9e98533e57. No old output treated as proof of new graph."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "-n",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Only two component runtime preflights/npm ci/npm check; no native/Cargo dependencies."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "check-ignore",
+        "packages/healthmd-core-ts/build/npm-cache",
+        "packages/healthmd-core-ts/dist",
+        "packages/healthmd-ui/build/npm-cache",
+        "packages/healthmd-ui/dist"
+      ],
+      "result": "passed",
+      "evidence": "All four component output/cache paths ignored."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actual source instructions/receipts/design rows inspected. Final version/count/hash/input stability assertions and source/artifact/receipt fingerprint extraction executed;26 older workflows raw bytes preserved and22 production router recipes preserved against original accepted baseline."
+    }
+  ],
+  "inspection_summary": "Root/entrypoint/cloud-release/templates, scoped C01/C11/H09/F08/F09 and accepted PORTABLE-CI/UI-FOUNDATION source receipts read. UI currently imports no core operation; separate leaf filters appropriate, common contract/pins/router/actions/workflow affects both. Push/non-PR unchanged detector executes full checks; every PR always reaches stable failclosed aggregate after both decisions. Exact explicit source admission forces both and verifies checkedoutHEAD. Production tests/contexts/26 workflows/22 targets preserved. No remote/native/Rust toolchain or service actions.",
+  "observations": [
+    {
+      "case_id": "portable-ui-current-router",
+      "procedure": "Coordinated root make test-portable on admitted temporary exact runtime with offline retained cache.",
+      "expected": "Both independently locked candidates pass, no native/Rust toolchain.",
+      "observed": "Root final exit0;191/14tests,19/22negativeguards; final current source and artifact hashes pinned after registry lazy/Unicode fixes.",
+      "evidence": "Final output/inputs hashes in artifact_and_native_interface.",
+      "result": "passed"
+    },
+    {
+      "case_id": "expanded-failclosed-gate",
+      "procedure": "Parse actual YAML and run its gate shell across all6 detector results/6 core decisions/6 core results/6 UI decisions/6 UI results.",
+      "expected": "Only successful detector with each explicittrue+success or explicitfalse+skipped passes.",
+      "observed": "7776 vectors pass; failures/cancellation/timeouts/skips/missing/malformed decisions cannot bypass required checks.",
+      "evidence": "Pinned replay script/result and matrix digest.",
+      "result": "passed"
+    },
+    {
+      "case_id": "candidate-path-source-runtime",
+      "procedure": "Use actual unchanged action matcher against both maps; run extracted full/source/runtime scripts.",
+      "expected": "UI/core leaf distinctions/common fanout, bothtrue explicit SHA, exact HEAD/versions failclosed.",
+      "observed": "18 paths/15 source/8 runtime vectors pass; both full outputs generated.",
+      "evidence": "Pinned replay result.",
+      "result": "passed"
+    },
+    {
+      "case_id": "retained-production-ci",
+      "procedure": "Compare26 earlier workflow bytes and22 old router recipes to pinned originals.",
+      "expected": "Existing context/router behavior retained.",
+      "observed": "All identical;7 contexts preserved; no production tests executed or removed.",
+      "evidence": "unchanged_workflows and unchanged_make_targets in pinned replay result.",
+      "result": "passed"
+    }
+  ],
+  "configuration_replay": {
+    "result": "passed",
+    "gate_cases": 7776,
+    "gate_matrix_sha256": "46aa481bff8af490ddae5a569d75804cdb8ca512160245b843965c9e98533e57",
+    "path_cases": [
+      {
+        "path": "packages/healthmd-core-ts/src/index.ts",
+        "expected": [
+          true,
+          false
+        ],
+        "observed": [
+          true,
+          false
+        ]
+      },
+      {
+        "path": "packages/healthmd-core-ts/package-lock.json",
+        "expected": [
+          true,
+          false
+        ],
+        "observed": [
+          true,
+          false
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/src/index.ts",
+        "expected": [
+          false,
+          true
+        ],
+        "observed": [
+          false,
+          true
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/package-lock.json",
+        "expected": [
+          false,
+          true
+        ],
+        "observed": [
+          false,
+          true
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/.node-version",
+        "expected": [
+          false,
+          true
+        ],
+        "observed": [
+          false,
+          true
+        ]
+      },
+      {
+        "path": "packages/contracts/product-capabilities.json",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": "packages/contracts/fixtures/health-query.json",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": "AGENTS.md",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": "Makefile",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": ".github/actions/component-changes/action.yml",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": ".github/workflows/core-typescript-ci.yml",
+        "expected": [
+          true,
+          true
+        ],
+        "observed": [
+          true,
+          true
+        ]
+      },
+      {
+        "path": "apps/apple/HealthMd/Example.swift",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      },
+      {
+        "path": "apps/android/build.gradle.kts",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      },
+      {
+        "path": "apps/cli/Cargo.lock",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      },
+      {
+        "path": "docs/unrelated.md",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui-adjacent/index.ts",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      },
+      {
+        "path": "packages/healthmd-core-ts-adjacent/index.ts",
+        "expected": [
+          false,
+          false
+        ],
+        "observed": [
+          false,
+          false
+        ]
+      }
+    ],
+    "source_cases": [
+      [
+        "changes",
+        "f8081f86944287b466ae40e7e2cea8d94088026b",
+        true,
+        0
+      ],
+      [
+        "changes",
+        "",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "main",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "F8081F86944287B466AE40E7E2CEA8D94088026B",
+        false,
+        1
+      ],
+      [
+        "check",
+        "f8081f86944287b466ae40e7e2cea8d94088026b",
+        true,
+        0
+      ],
+      [
+        "check",
+        "",
+        false,
+        1
+      ],
+      [
+        "check",
+        "main",
+        false,
+        1
+      ],
+      [
+        "check",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "check",
+        "F8081F86944287B466AE40E7E2CEA8D94088026B",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "f8081f86944287b466ae40e7e2cea8d94088026b",
+        true,
+        0
+      ],
+      [
+        "ui-check",
+        "",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "main",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "F8081F86944287B466AE40E7E2CEA8D94088026B",
+        false,
+        1
+      ]
+    ],
+    "runtime_cases": [
+      [
+        "check",
+        "v24.21.0",
+        "11.19.0",
+        true,
+        0
+      ],
+      [
+        "check",
+        "v24.20.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v24.21.0",
+        "11.18.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v22.0.0",
+        "10.0.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "11.19.0",
+        true,
+        0
+      ],
+      [
+        "ui-check",
+        "v24.20.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "11.18.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v22.0.0",
+        "10.0.0",
+        false,
+        1
+      ]
+    ],
+    "unchanged_workflows": {
+      ".github/workflows/android-announce.yml": "ff43a2bd458678f5db9bacec9b912d654a032292f20a4f062061899704cfb0ee",
+      ".github/workflows/android-ci.yml": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+      ".github/workflows/android-google-play-access-audit.yml": "001712d2875c739233f14a12dd2b1fb3af1f71706ce6f1d864a8149f7d4e437b",
+      ".github/workflows/android-promote-production-recover.yml": "b07edc41845cca78ca42d88c680a57d183bfc04b75bfdf41ef232951934afe38",
+      ".github/workflows/android-promote-production.yml": "337d15f9ec1f3d8d36f0411c5ac0dbac25a4ee82107a28334b5813919996d4a7",
+      ".github/workflows/android-release.yml": "b37c468f5ff225cebaff365c78c6a904a3369d5abbbbd2960bb2ee02c177fa27",
+      ".github/workflows/android-wear-evidence-submit.yml": "035b82a9adb9f143ee636251e957b921765e7da5aa4217a302bf14e43377c30f",
+      ".github/workflows/android-wear-evidence.yml": "3edfca72c5a5845ff1383c943706ca8b32f84311f8344756eb201837d7392650",
+      ".github/workflows/android-wear-screenshots.yml": "10ae659d28a029c7dd09dac7bce8dcf43d68e0b8e5396e15ddb349b70c406c3b",
+      ".github/workflows/apple-announce.yml": "806e72c1309cff4965fb82957260400cda78fec2519b81112a5aa80ab6b96460",
+      ".github/workflows/apple-cancel-review-submission.yml": "a9809688fdccb63b34edbb7dadaefba92339cf2c6ff42fc5a2ac1b7c32152dd3",
+      ".github/workflows/apple-ci.yml": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+      ".github/workflows/apple-nightly.yml": "989f496524b59ff6d582232934d84ede4e4eb0f76623a6eb473eb13013ff6bde",
+      ".github/workflows/apple-review-state.yml": "3f44dbec7fc4e8051f9156e4d6b01548f70cb6536e9a0c55d8efa51dd682addd",
+      ".github/workflows/apple-review-status.yml": "97efa23cc30c52fc0d1c4c7a0b55af8e83dcb27c9fef6b117b208489f2cffdbe",
+      ".github/workflows/apple-submit-version.yml": "07427a47022a18d4b051724b611e21868cc6cbd5810188612ee1c5bc381cb34c",
+      ".github/workflows/cli-ci.yml": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+      ".github/workflows/cli-publish-crates.yml": "c206798617f42e7d9021bfb0518f6c26b7cfd6adb9a527ba7fdc4780b5766d79",
+      ".github/workflows/cli-release.yml": "c22fdfabb2f6c052e6ab0ef8176f8ef98c6f084405af7e717ca20a028474900b",
+      ".github/workflows/cli-sbom.yml": "927daad16dd0c0f3397520a7ae780a35641299209657cafcd53ba6462547f178",
+      ".github/workflows/core-rust-ci.yml": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+      ".github/workflows/practice-ci.yml": "3d3121fcb6f7664424478112f36f497c0da46c6bb88a9c17a799bbae32ee0923",
+      ".github/workflows/release-ios.yml": "96489fa745a3128a7752d5490d62ade62bfd137a0b0c81467f65dbbea0030e9b",
+      ".github/workflows/release-macos.yml": "78931cc58aae4b4fa724b4daf1d7e779fd4b065cdd7142915544548ceab3b823",
+      ".github/workflows/wake-ci.yml": "65f18d3d1d48c8c3fc321f4d0966750aee51400a568fd7137f305ba29b61b6c0",
+      ".github/workflows/website-ci.yml": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a"
+    },
+    "unchanged_make_targets": 22,
+    "stable_context": "Core TypeScript CI / Core TypeScript CI",
+    "explicit_full_output": [
+      "run=true",
+      "ui_run=true"
+    ],
+    "limits": "Local extracted shell and matcher simulation only; no actual GitHub events/Linux/cache/upload/admin/API."
+  },
+  "preserved_contexts": [
+    "Apple CI / Apple CI",
+    "Android CI / Android CI",
+    "Core Rust CI / Core Rust CI",
+    "CLI CI / CLI CI",
+    "Website CI / Website CI",
+    "Practice CI / Practice CI",
+    "Wake CI / Wake CI"
+  ],
+  "limitations": [
+    "Real GitHub PR/push/reusable/manual events, Linux exact runtime/install/platform binaries, cache restoration/uploaded exact artifacts and admin/ruleset required-context reconciliation remain unqualified.",
+    "Action @v4 references retained; remote mutable actionSHA provenance/qualification not proved here.",
+    "Current shared registry candidate source included in passing local run but its implementation review remains separate; this patch receipt is not final common committed-source qualification.",
+    "Current UI leaf uses no core operation; later real UI/core operation wiring must update affected-consumer path map.",
+    "No native/headless UI renderer/SDK/physical/signed/native security/Rust retirement/deployed/consumer/family gate closes. No push/deploy/release actions."
+  ],
+  "remaining_qualification": [
+    "Independent review of this exact two-file fingerprint.",
+    "Coordinator integration at committed common source with affected candidate evidence.",
+    "Real GitHub/Linux/event/cache/artifact/actionSHA/admin qualifications and full C01/C11/H09/F08/F09 family matrices remain open."
+  ],
+  "rollback": "Revert the two workflow/router changes to assigned f8081f86944287b466ae40e7e2cea8d94088026b and remove this receipt; original core-only portable check and all production/native/Rust contexts/router paths remain available. No data/public launcher/state authority changed.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "f8081f86944287b466ae40e7e2cea8d94088026b+97dce97b499c2fea0caffb7f5160a5e989ced4d216ae93c8e70c01ce38ecf011"
+  },
+  "historical_before_final_registry_fixes": {
+    "tests": {
+      "core": 189,
+      "ui": 14
+    },
+    "changed_input_or_artifact_hashes": {
+      "current_candidate_package_inputs": {
+        "packages/healthmd-core-ts/tests/registry.test.ts": "40bc4e463ab04b66f6236b3942d1317fd9bd00df63cd45a5297d5cf8a2cba55e",
+        "packages/healthmd-core-ts/src/contracts/registry.ts": "3eee13986667c6ea9dbf6d6695b2ae1bb4652e6b9c3b2c4c5340edb8c7ea32e8"
+      },
+      "built_artifact_digests": {
+        "packages/healthmd-core-ts/dist/neutral-metafile.json": "36b43716c9cc99274b2fd263a6b2ced3d085255bd5e115cb79e1df0d0f569319",
+        "packages/healthmd-core-ts/dist/test-metafile.json": "3bce1767fdba8b5aad84d5768fa12a6b28bdf744b886cfec154b16031a4baec2",
+        "packages/healthmd-core-ts/dist/core/contracts/registry.js": "c6f8c1f2a0daf55eb03acad39d09d6b24be62fdd73bb682b86b989ac9215b1c1",
+        "packages/healthmd-core-ts/dist/tests/registry.test.js": "9ebc6e7fbaac231a7b78eed66df551c0055731d6350daf6fda215fedaa9fb654"
+      }
+    },
+    "note": "Prior run passed before lazy profile projection/Unicode fixes; root reran the required router on final current source. Historical hashes retained for the original execution."
+  },
+  "independent_review": {
+    "result": "passed",
+    "reviewer": "/root",
+    "fingerprint": "f8081f86944287b466ae40e7e2cea8d94088026b+97dce97b499c2fea0caffb7f5160a5e989ced4d216ae93c8e70c01ce38ecf011",
+    "evidence": "Root reviewed full workflow/router diff, independent41 extracted failclosed gate shell vectors and actionlint passed. Final actual make test-portable191core14UI plus19/22negativeguards passed; current inputs/artifacts independently rehashed, old changed hash records preserved. Stable aggregate and existing contexts/router retained; actual remote CI/native/admission/family gates open."
+  }
+}

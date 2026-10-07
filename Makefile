@@ -3,6 +3,7 @@
 ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_TS_DIR := packages/healthmd-core-ts
+UI_TS_DIR := packages/healthmd-ui
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-portable test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
@@ -12,11 +13,14 @@ CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 test: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website
 
-# Independently locked candidate only; the full production/native router stays above.
+# Independently locked portable candidates only; the full production/native router stays above.
 test-portable:
 	cd $(CORE_TS_DIR) && test "$$(node --version)" = v24.21.0 && test "$$(npm --version)" = 11.19.0
 	cd $(CORE_TS_DIR) && npm ci --engine-strict --no-audit --no-fund
 	cd $(CORE_TS_DIR) && npm run check
+	cd $(UI_TS_DIR) && test "$$(node --version)" = v24.21.0 && test "$$(npm --version)" = 11.19.0
+	cd $(UI_TS_DIR) && npm ci --engine-strict --no-audit --no-fund
+	cd $(UI_TS_DIR) && npm run check
 
 test-contracts:
 	python3 packages/contracts/validate.py
