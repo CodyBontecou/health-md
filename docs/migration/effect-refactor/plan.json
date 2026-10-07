@@ -4850,7 +4850,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 62,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/personal_codecs",
         "base_revision": "780a391041b31a5847865bfd0b62e391e0f8590f",
@@ -4868,17 +4868,27 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "780a391041b31a5847865bfd0b62e391e0f8590f+6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json"
+        ]
       },
       "fixture_preimplementation_policy": "Read accepted44draft+37resolution cases and immutable rawcontracts. Freeze new literalvector/interface FIRST; independentlyreview grammarlicable expectations and map every81case to applicablecodec or separate projection/query/store/native gate. No fixture regeneration from implementation. Scope encode/decode strictboundedhealth/location/device_usage records; currenttrustedgrant/catalog authority separate from callerJSON.",
-      "source_reconciliation": "Claimcurrent780a391 source after acceptedNUMBERSandCORE-COHORT-REFRESH;31/18sourcecohortverified377rootportabletests. Newprivatepersonal module/test/vector inputs intentionally staleCLIcohort until its own reviewed accepted source delta; do not widen guards/exports or runCLI/make. Corebuildexclusive for this task afterfixtureapproval. NativeAndroid ownbundle alreadyfrozen and no commonreads/checks; locationplanningdocsdisjoint."
+      "source_reconciliation": "Claimcurrent780a391 source after acceptedNUMBERSandCORE-COHORT-REFRESH;31/18sourcecohortverified377rootportabletests. Newprivatepersonal module/test/vector inputs intentionally staleCLIcohort until its own reviewed accepted source delta; do not widen guards/exports or runCLI/make. Corebuildexclusive for this task afterfixtureapproval. NativeAndroid ownbundle alreadyfrozen and no commonreads/checks; locationplanningdocsdisjoint.",
+      "preimplementation_review": {
+        "status": "accepted fixture/interface only",
+        "reviewer": "/root/donor_mac_review",
+        "source_revision": "780a391041b31a5847865bfd0b62e391e0f8590f",
+        "vector_sha256": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "root_validation": "Actual independently parsed81exactacceptedcases/4records+compactencodings/12rawnumericzero-callbacknegatives; Fraction3601rejectionvs3600positive. No code/build/runtime qualification.",
+        "coding_clearance": "Implement exact4claimedpaths on core-only exclusivebuilder; preserve approvedvectors and all18priorpackedoutputs; no exports/locks/CLI/make/native adoption until separate reviewedcohortdelta. Unknown primitive args and foreignWeakSet input must produce no Proxy/reflection/coercion."
+      }
     },
     {
       "id": "COMBINED-SYNTHETIC",
@@ -6416,8 +6426,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-USAGE-DESKTOP.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-USAGE-DESKTOP.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -6429,7 +6448,8 @@
         "status": "pending",
         "receipts": []
       },
-      "max_children": 6
+      "max_children": 6,
+      "source_reconciliation": "Bounded accepted donor source/contract locator planning only; no repeated whole source audit, donor dirty/code/live-state adoption, native capture or permission. Personal codec author owns common source/build; Android owns nativebuild/privatefrozenasset. Plan at most6 exact4-file children with independent fixtures/interfaces beforecode, current title classification/grants beforeobservation and full observed short/long history; all remaining native/physical/archive/query/export/admission scope named."
     },
     {
       "id": "SPLIT-USAGE-MOBILE",
@@ -7359,41 +7379,64 @@
         {
           "cwd": "apps/android/effect-host-candidate",
           "argv": [
-            "npm",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
             "ci",
+            "--ignore-scripts",
             "--engine-strict",
             "--no-audit",
-            "--no-fund"
+            "--no-fund",
+            "--offline",
+            "--cache",
+            "/private/tmp/healthmd-effect-npm-cache"
           ],
           "purpose": "Candidate-only exact lock/no-Rust/license graph",
           "availability": "created_by_this_task",
           "status": "not_run_by_packet",
-          "proof_class": "portable_synthetic"
+          "proof_class": "portable_synthetic",
+          "source_reconciliation": "Actual performed scoped offline ci with ignore-scripts and sharedcache; npm11.19.0 source identity independently rehashed. No lifecycle-script allowance or invented log."
         },
         {
           "cwd": "apps/android/effect-host-candidate",
           "argv": [
-            "npm",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
             "run",
             "check"
           ],
           "purpose": "Candidate model/probe/bundle identity cases",
           "availability": "created_by_this_task",
           "status": "not_run_by_packet",
-          "proof_class": "portable_synthetic"
+          "proof_class": "portable_synthetic",
+          "source_reconciliation": "Actual performed physical Node24/npm11 invocation; frozen10syntheticcases only."
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./scripts/prepare-test-signing.sh"
+          ],
+          "purpose": "Create retained isolated private test identity only before native candidate build; distribution signing unqualified.",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
         },
         {
           "cwd": "apps/android/effect-host-candidate",
           "argv": [
             "./gradlew",
             "--no-daemon",
+            "--offline",
+            "--max-workers=2",
+            "--dependency-verification=strict",
             ":app:assemblePlayRelease",
-            ":app:testPlayReleaseUnitTest"
+            ":app:testPlayReleaseUnitTest",
+            ":app:assemblePlayReleaseAndroidTest"
           ],
           "purpose": "Build isolated Release/JVM probe; new wrapper copied from pinned current metadata, actual compatible candidate toolchain selected",
           "availability": "created_by_this_task",
           "status": "not_run_by_packet",
-          "proof_class": "host_integration"
+          "proof_class": "host_integration",
+          "source_reconciliation": "Independent source/graph/provenance prebuildreview accepted. Root approves bounded private offline Release/JVM/instrumentationAPKbuild with exactactualGradle9.4.1/JDK17.0.20/AGP9.2.1/Kotlin2.2.10; allruntimeproofpending."
         },
         {
           "cwd": "apps/android/effect-host-candidate",
@@ -7536,6 +7579,24 @@
         "reviewer": "/root",
         "lock_sha256": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499",
         "evidence": "Root parsed all341 transitive entries plusroot, eachprimaryregistry SHA512 tarball; inspected exactmanifesttuple and onephysicalReact/Effect map, license histogram allowlisted MIT286/ISC17/BSD3 3/Apache29/CCBY1/dualMITApache1/0BSD1/BSD2 2/dualMITCC01; only esbuilddeclaresinstallscript. No detectedRustnative/toolpackages. Postinstallphysicalgraph and transitive native Gradle/C++ provenance still require independentreview; blockedscript policy retained."
+      },
+      "native_prebuild_review": {
+        "reviewer": "/root/donor_mac_review",
+        "status": "accepted bounded preflight only",
+        "native_module_sha256": "8bb8fb775f43b4c8ee647c4f4bd9f3b0b5aaf0b0a96ae93a5f5709beddcff2ec",
+        "jvm_test_sha256": "c8970b436acdac8a47197c040b826e696df848607366253f1b895aecabecef90",
+        "run_harness_sha256": "f0e77ef639ed398f0f8367096ad2ce1ee9763e201760e16646b9178305d6069a",
+        "metadata": "Actual192artifactrows/96coordinates98POMs/verificationXML/tooling448andcombined450POMs/17nativefiles independentlyvalidated. Parsercanonical1/0linearUTF8guard andsamplerlock plus finiteownappharness accepted. No nativebuild/JVM/deviceproof inferred.",
+        "next": "240second isolated processgroup nativebuild; finiteoutput20MiB; no commonreads/JSbundle because PERSONAL owns core. Requiredphysicaltargetpending."
+      },
+      "native_annotation_delta_review": {
+        "reviewer": "/root",
+        "status": "accepted prebuild delta only",
+        "cause": "First actual build produced ReleaseAPK+5passedJVMmethods; instrumentationR8 missingtwoannotationclasses. Retain first37.978s/9100bytefailedlog24cf3fa7a2b52a5c5a00626bdbb1c604dc55b0309608627a7f0501e6c8d6bf21.",
+        "delta": "Only androidTestImplementation error_prone_annotations2.28.0. Rootactualjarf3fc8a.../primaryApache2POM0ce909.../twoactualclassbytes verified, all97currentuniqueactualartifacthashes and old192complete rowmultiset retainedplusoneAndroidTestrow; JSONroworderchangedexplicitly, beforetablefe8 rawverified. Correctlockinverse removesonly4addedappconfigurationbindings fromexisting2.28toolingline; exactoldf329reproduced and recoveredbeforelockequal. Emptyconfigurationline unchanged. XMLdd5unchanged; no productiondependency/commonasset/fixture change or blanketR8suppression.",
+        "current_license_audit_sha256": "fac2e1b0633ec2e8eee61e6062f591e7ee2661c84c529d2f554f81823bf642d3",
+        "lock_sha256": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438",
+        "next": "Same bounded240s/20MiBownprocessgroup strict offlinebuild; separate retrylog. Device/runtimequalificationpending."
       }
     },
     {
@@ -15475,6 +15536,114 @@
         "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
         "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
         "child_pointer": "#/children/5"
+      }
+    },
+    {
+      "id": "CORE-COHORT-PERSONAL",
+      "title": "Bind CLI checks to the reviewed personal codec cohort",
+      "stream": "core_cli",
+      "phase": "M01",
+      "kind": "implementation",
+      "outcome": "Admit only the independently accepted personal codec module/test/vector delta to the fixed complete CLI core source/packed artifact cohort, preserving historical byte authority and fail-closed drift checks.",
+      "prerequisites": [
+        "CORE-COHORT-REFRESH",
+        "PERSONAL-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C01",
+        "C11"
+      ],
+      "risk_ids": [],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/cli/docs/typescript-candidate.md"
+      ],
+      "allowed_paths": [
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "acceptance": [
+        "The personal delta is independently accepted and committed before dispatch; freeze and independently review the new complete fixed source/output maps and current exact runtime/locks/accepted raw receipt fingerprints before guard edits. No discovery-generated acceptance or mutable historical receipt.",
+        "Retain all31 exact-number cohort inputs and all18 prior packed artifact bytes plus historical REGISTRY-READER, CORE-CANDIDATE-API, SERIALIZE-EXACT-NUMBERS and accepted CORE-COHORT-REFRESH authority. Only personal-slice.ts, personal-codecs.test.ts, personal-codecs-vectors.ts and the corresponding emitted module/declaration may extend that set; confirm exact34inputs/20outputs from committed tree and freshly built bytes before accepting the count.",
+        "Hard-pin the reviewed new cohort digest and complete source/packed file sets and contents. Preserve physical one-Effect identity, package/runtime/lock/public export/no-Rust checks and all16 existing actual disposable filesystem negatives; add actual missing/edited/symlinked personal source and missing/stale/extra/symlinked personal output plus absent/tampered cohort and unreviewed personal receipt negatives.",
+        "No guard or cohort reverse-pin of its own refresh receipt, automatic broadening, package/index exports, dependency, serializer/operation semantics, public/native authority, or source-purpose admission changes.",
+        "With core/CLI builders and qualified input resources exclusively reserved after source freeze, run the common component check, exact CLI install-links refresh and affected CLI/MCP tests sequentially, then record actual integration/source/vector/artifact/check proof and limitations. Later common input changes require a new independently reviewed delta."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        }
+      ],
+      "fixture_inputs": "Accepted exact-number cohort docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json raw157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7 and existing fixed31/18 guard at780a391041b31a5847865bfd0b62e391e0f8590f. Preserve all historical source/patch/raw accepted receipt pins including immutable numeric receipt9100d985d40af66c026624c4050713477127f195dc9f20f45bbb20047f9d1f3e. At dispatch inspect accepted PERSONAL-CODECS current committed source/3file patch/vector274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a/receipt and complete tree; no invented future artifact hashes. Independent complete cohort review mandatory BEFORE guard edits.",
+      "consumers": "Portable core and packed CLI/MCP candidate package/checks only; common business module was separately reviewed. Preserve historical native/common export bytes and all production consumers; this is a bounded cohort binding, not complete semantic/public/native qualification.",
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "candidate personal codec cohort only"
+      },
+      "rollback": "Restore prior committed31-input/18-output guard/cohort and packed candidate package together; unexported personal codec remains independently revertible. No public launcher or installed user state changes.",
+      "deletion_gate": "No public promotion, source-domain admission, Rust/reference/fixture/state deletion or family retirement.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json",
+      "reviewer_role": "independent portable build and core provenance reviewer",
+      "priority": 76,
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "future_scope": "This authorizes only the accepted personal codec delta. Existing exact-number cohort/receipts remain immutable; native host assets independently frozen, complete domain/source/repository/native/export/cloud qualification still open.",
+      "card_review": {
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "0ecc4d94f18a2e0c054f8c6616e524f908a789f802db59d071a8fd5917823c67",
+        "fingerprint_method": "SHA256 canonical task JSON excluding only card_review; sort_keys=True,separators=(comma,colon),ensure_ascii=False,UTF8. Card only; accepted committed personal delta and separately reviewed fixed maps required before guard editing."
       }
     }
   ]
