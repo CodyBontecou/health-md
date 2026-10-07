@@ -270,4 +270,13 @@ The [transaction scenario fixture](fixtures/transaction-scenarios-v1.json) is de
 
 Validation recursively proves selection normalization, active-profile fallbacks, collision suffixing, nil imported bindings, disabled imported schedules, per-generated-profile foreign/unsupported preservation, exact rollback, Undo consumption, and unchanged destination/secure-store markers. It also recursively rejects native IDs, credentials, grants, native paths/URIs, runtime timestamps/history, health data, and operation identity in the embedded or canonical public artifacts.
 
-The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`, and its schema, canonical fixtures, transaction scenario, and field-coverage inventories remain byte-frozen.
+The canonical [Apple-origin](fixtures/apple-shared-setup-v2.json) and [Android-origin](fixtures/android-shared-setup-v2.json) fixtures remain one-line UTF-8 synthetic public documents. They contain no production health data, user/account/device identity, credential, grant, pairing, native ID, or runtime state. The Apple fixture covers all four data-detail/archive combinations; the Android fixture covers compatibility and raw-snapshot modes. V2 status remains `deferred`, and its schema, canonical fixtures, transaction scenario, and original field-coverage inventories remain byte-frozen.
+
+The additive [Apple source-field audit revision 2](apple-profile-field-coverage-v2.json)
+tracks the subsequently introduced local workout table presentation preference without
+rewriting the original [revision 1 audit](apple-profile-field-coverage.json). Revision 2
+still targets the unchanged `healthmd.shared_setup` v2 wire allowlist: the new field is
+`local_only`, persists in native profiles/frozen Mac jobs, and defaults enabled when
+materializing a setup file that cannot represent it. Portable adoption requires a
+separate Android convergence and contract review. Audit revisions do not change the
+public Shared Setup grammar or its frozen artifact fixtures.

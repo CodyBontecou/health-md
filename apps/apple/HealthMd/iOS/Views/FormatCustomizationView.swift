@@ -774,6 +774,12 @@ struct MarkdownTemplateView: View {
                 isOn: $config.includeSummary,
                 accessibilityLabel: "Include summary at top of document"
             )
+
+            FormatDivider()
+
+            FormatWorkoutTableToggleControl(
+                isOn: configurationProtection.protecting($config.includeWorkoutDetailsAndMetadata)
+            )
         }
     }
 

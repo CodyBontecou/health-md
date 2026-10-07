@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+@testable import HealthMd
 
 /// Keeps Apple product capability decisions aligned with the language-neutral
 /// Apple/Android parity inventory. The inventory is product governance rather
@@ -59,6 +60,24 @@ final class ProductCapabilityManifestTests: XCTestCase {
         }
     }
 
+    func testWorkoutPresentationParityRecordIsExplicitlyStagedWithoutChangingMetricCapabilities() throws {
+        let rootURL = try Self.manifestURL()
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let url = rootURL.appendingPathComponent("apps/apple/docs/features/workout-presentation-parity-v1.json")
+        let record = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        XCTAssertEqual(record["schema_version"] as? Int, 1)
+        XCTAssertEqual(record["classification"] as? String, "planned")
+        XCTAssertEqual(record["parent_capability_id"] as? String, "export.completed-workouts")
+        XCTAssertEqual(record["setting"] as? String, "markdownTemplate.includeWorkoutDetailsAndMetadata")
+        XCTAssertEqual(record["default"] as? Bool, MarkdownTemplateConfig().includeWorkoutDetailsAndMetadata)
+        let platforms = try XCTUnwrap(record["platforms"] as? [String: [String: Any]])
+        XCTAssertEqual(platforms["apple"]?["state"] as? String, "available")
+        XCTAssertEqual(platforms["android"]?["state"] as? String, "planned")
+        XCTAssertTrue((platforms["android"]?["target"] as? String)?.contains("unified-v9") == true)
+        let inventory = try Self.loadInventory()
+        XCTAssertEqual(inventory.capabilities.first { $0.id == "export.completed-workouts" }?.classification, "shared")
+    }
+
     private static func ids(
         with state: CapabilityInventory.Availability.State,
         in states: [String: CapabilityInventory.Availability.State]
@@ -99,6 +118,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
         "direct-cli.shared-qr-pairing",
+        "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
     ]
 

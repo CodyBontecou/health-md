@@ -491,7 +491,41 @@ struct MarkdownTemplateConfig: Codable, Equatable {
     var useEmoji: Bool
     var includeSummary: Bool
     var bulletStyle: BulletStyle
-    
+    /// Presentation only: never changes workout selection, frontmatter, or source capture.
+    var includeWorkoutDetailsAndMetadata: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case style, customTemplate, sectionHeaderLevel, useEmoji, includeSummary, bulletStyle
+        case includeWorkoutDetailsAndMetadata
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        style = try container.decode(MarkdownTemplateStyle.self, forKey: .style)
+        customTemplate = try container.decode(String.self, forKey: .customTemplate)
+        sectionHeaderLevel = try container.decode(Int.self, forKey: .sectionHeaderLevel)
+        useEmoji = try container.decode(Bool.self, forKey: .useEmoji)
+        includeSummary = try container.decode(Bool.self, forKey: .includeSummary)
+        bulletStyle = try container.decode(BulletStyle.self, forKey: .bulletStyle)
+        includeWorkoutDetailsAndMetadata = try container.decodeIfPresent(
+            Bool.self, forKey: .includeWorkoutDetailsAndMetadata
+        ) ?? true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(style, forKey: .style)
+        try container.encode(customTemplate, forKey: .customTemplate)
+        try container.encode(sectionHeaderLevel, forKey: .sectionHeaderLevel)
+        try container.encode(useEmoji, forKey: .useEmoji)
+        try container.encode(includeSummary, forKey: .includeSummary)
+        try container.encode(bulletStyle, forKey: .bulletStyle)
+        // Preserve the canonical bytes/fingerprints of default-on durable snapshots.
+        if !includeWorkoutDetailsAndMetadata {
+            try container.encode(false, forKey: .includeWorkoutDetailsAndMetadata)
+        }
+    }
+
     enum BulletStyle: String, CaseIterable, Codable {
         case dash = "-"
         case asterisk = "*"
@@ -572,6 +606,7 @@ struct MarkdownTemplateConfig: Codable, Equatable {
         self.useEmoji = false
         self.includeSummary = true
         self.bulletStyle = .dash
+        self.includeWorkoutDetailsAndMetadata = true
     }
 }
 

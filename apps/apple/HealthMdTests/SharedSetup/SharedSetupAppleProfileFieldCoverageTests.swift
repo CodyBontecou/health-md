@@ -55,7 +55,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let ledger = try loadLedger()
 
         XCTAssertEqual(ledger.schema, "healthmd.shared_setup.apple_profile_field_coverage")
-        XCTAssertEqual(ledger.schemaVersion, 1)
+        XCTAssertEqual(ledger.schemaVersion, 2)
         XCTAssertEqual(ledger.targetContract.schema, "healthmd.shared_setup")
         XCTAssertEqual(ledger.targetContract.schemaVersion, 2)
         XCTAssertEqual(Set(ledger.fieldKinds), Set(FieldKind.allCases))
@@ -164,7 +164,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         var directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
         while directory.path != "/" {
             let candidate = directory.appendingPathComponent(
-                "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+                "packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
             )
             if FileManager.default.fileExists(atPath: candidate.path) {
                 return candidate
@@ -224,6 +224,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         markdown.sectionHeaderLevel = 3
         markdown.useEmoji = true
         markdown.includeSummary = false
+        markdown.includeWorkoutDetailsAndMetadata = false
         markdown.bulletStyle = .plus
 
         let formatCustomization = FormatCustomizationSnapshot(
@@ -577,6 +578,6 @@ private enum CoverageTestError: LocalizedError {
     case ledgerNotFound
 
     var errorDescription: String? {
-        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage.json"
+        "Could not locate packages/contracts/shared-setup/v2/apple-profile-field-coverage-v2.json"
     }
 }

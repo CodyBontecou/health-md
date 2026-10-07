@@ -243,7 +243,7 @@
       "id": "export.completed-workouts",
       "name": "Completed workouts",
       "classification": "shared",
-      "summary": "Export completed workout sessions and detail time series exposed by each source API.",
+      "summary": "Export completed workout sessions and detail time series exposed by each source API. Optional Details/Metadata table presentation is staged separately: Apple is available; Android is planned for its first unified-v9 Markdown presentation-settings/profile writer (current v4/v5 renderers already use bullets without these tables). See the independently versioned workout-presentation parity record.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -258,7 +258,9 @@
         }
       },
       "evidence": [
-        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "apps/apple/docs/features/workout-presentation.md",
+        "apps/apple/docs/features/workout-presentation-parity-v1.json"
       ]
     },
     {
