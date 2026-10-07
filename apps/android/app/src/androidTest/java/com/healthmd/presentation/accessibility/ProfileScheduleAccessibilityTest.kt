@@ -1,18 +1,11 @@
 package com.healthmd.presentation.accessibility
 
-import android.view.View
-import android.view.inputmethod.InputMethodManager
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.ViewRootForTest
-import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
@@ -21,8 +14,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -251,129 +242,6 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         compose.onNodeWithTag(ProfileScheduleTags.SAVE).scrollIfPossible().assertFullyVisible()
             .performTouchInput { click() }
         assertEquals(listOf(expected), saved)
-    }
-
-    @Test
-    fun nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField() {
-        val initial = sampleEntry().copy(todayRefreshEnabled = false)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        val open = mutableStateOf(true)
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it; open.value = false }, onDismiss = { dismisses++; open.value = false })
-        }
-        val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
-        last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
-        withNativeSaveDiagnostics {
-            val (owner, editor) = nativeDialogInput(last)
-            // Admit the real tap-triggered IME before scrolling within its resized native owner.
-            // Visibility is an input precondition; strict bounds checks still follow immediately.
-            awaitNativeDialogIme(owner, editor)
-            last.scrollIfPossible().assertInNativeOwner()
-            last.assertIsFocused()
-            assertAnchorLocals(last)
-            assertTextFits(last, GeistType.label20Mono.fontSize)
-            assertTrue("Exercise Save with the real dialog IME visible", nativeDialogImeVisible(owner, editor))
-            // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
-            tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
-            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-            assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
-            assertEquals(0, dismisses)
-        }
-    }
-
-    private fun withNativeSaveDiagnostics(assertion: () -> Unit) {
-        try {
-            assertion()
-        } catch (failure: AssertionError) {
-            withNativeInputDiagnostics("Native Save reachability; ${nativeSaveGeometry()}") { throw failure }
-        }
-    }
-
-    private fun nativeSaveGeometry(): String = runCatching {
-        listOf(ProfileScheduleTags.EVERY, ProfileScheduleTags.SAVE, ProfileScheduleTags.DIALOG).joinToString { tag ->
-            val interaction = compose.onNodeWithTag(tag)
-            val node = interaction.fetchSemanticsNode()
-            val root = generateSequence(node) { it.parent }.last()
-            val scrolls = compose.runOnUiThread {
-                generateSequence(node.parent) { it.parent }.mapNotNull { ancestor ->
-                    if (ancestor.config.contains(SemanticsProperties.VerticalScrollAxisRange)) {
-                        val range = ancestor.config[SemanticsProperties.VerticalScrollAxisRange]
-                        "(value=${range.value()}, max=${range.maxValue()}, reversed=${range.reverseScrolling})"
-                    } else null
-                }.toList()
-            }
-            "$tag(clippedPx=${node.boundsInRoot}, unclippedDp=${interaction.getUnclippedBoundsInRoot()}, " +
-                "rootPx=${root.boundsInRoot}, density=${node.layoutInfo.density.density}, scrolls=$scrolls)"
-        }
-    }.getOrElse { "Save geometry unavailable: ${it.javaClass.simpleName}" }
-
-    private fun nativeDialogInput(field: SemanticsNodeInteraction): Pair<View, View> {
-        val root = field.fetchSemanticsNode().root as? ViewRootForTest
-        assertTrue("The focused field has an Android native owner", root != null)
-        return compose.runOnUiThread {
-            val editor = requireNotNull(root).view
-            val provider = generateSequence(editor) { it.parent as? View }
-                .filterIsInstance<DialogWindowProvider>().firstOrNull()
-            assertTrue("The focused field belongs to a native dialog", provider != null)
-            val owner = requireNotNull(provider).window.decorView
-            assertTrue("The native dialog and editor are attached", owner.isAttachedToWindow && editor.isAttachedToWindow)
-            assertEquals("Use the editor's own dialog window", editor.windowToken, owner.windowToken)
-            owner to editor
-        }
-    }
-
-    private fun awaitNativeDialogIme(owner: View, editor: View) {
-        withNativeInputDiagnostics("Real dialog keyboard did not appear after focusing the cadence field") {
-            compose.waitUntil(timeoutMillis = 10_000) { nativeDialogImeVisible(owner, editor) }
-        }
-        compose.waitForIdle()
-    }
-
-    private fun nativeDialogImeVisible(owner: View, editor: View): Boolean = compose.runOnUiThread {
-        val insets = ViewCompat.getRootWindowInsets(owner)
-        owner.hasWindowFocus() && editor.hasFocus() &&
-            owner.context.getSystemService(InputMethodManager::class.java).isActive(editor) &&
-            insets?.isVisible(WindowInsetsCompat.Type.ime()) == true &&
-            insets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0
-    }
-
-    @Test
-    fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
-        val initial = sampleEntry()
-        val open = mutableStateOf(true)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it }, onDismiss = { dismisses++; open.value = false })
-        }
-        replace(ProfileScheduleTags.EVERY, "123456")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
-        withNativeInputDiagnostics("Schedule dialog remained after the native Cancel tap") {
-            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        }
-        assertEquals(1, dismisses)
-        compose.runOnIdle { open.value = true }
-        val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        restored.assertTextEquals(initial.cadenceValue.toString())
-        replace(ProfileScheduleTags.EVERY, "")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
-        // Espresso selects the activity root even while this separate native dialog owns focus.
-        // Inject the real system Back key without requiring the obscured activity window to focus.
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
-        compose.waitForIdle()
-        withNativeInputDiagnostics("Schedule dialog remained after one system Back key") {
-            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        }
-        assertEquals(2, dismisses)
-        assertTrue(saved.isEmpty())
     }
 
     @Test

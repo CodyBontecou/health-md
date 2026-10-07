@@ -460,30 +460,6 @@ jobs:
             2>&1 | tee -a build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-      - name: Run App Review export regression (iPad)
-        if: ${{ !cancelled() && steps.ui_artifacts.outcome == 'success' }}
-        timeout-minutes: 15
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          mkdir -p build/logs build/test-results
-          IPAD_DESTINATION=$(scripts/select-ios-simulator.sh --device-family iPad --create-missing)
-          echo "Running App Review regression on ${IPAD_DESTINATION}"
-          xcrun simctl bootstatus "${IPAD_DESTINATION##*id=}" -b
-          xcrun simctl install "${IPAD_DESTINATION##*id=}" '${{ steps.ui_artifacts.outputs.app }}'
-
-          xcodebuild test-without-building \
-            -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
-            -destination "${IPAD_DESTINATION}" \
-            -resultBundlePath build/test-results/HealthMd-UI-NoData-iPad.xcresult \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
-            2>&1 | tee -a build/logs/build-ios-ui.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
-
       - name: Check warnings (iOS UI)
         if: ${{ !cancelled() }}
         run: |

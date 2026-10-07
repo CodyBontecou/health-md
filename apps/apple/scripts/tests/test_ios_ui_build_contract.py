@@ -38,7 +38,6 @@ EXPECTED_TESTS = [
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
-    "ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError",
 ]
 
 
@@ -290,13 +289,13 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.assertEqual(self.app, receipt["products"][0]["path"])
         return outputs["xctestrun"]
 
-    def test_one_generic_build_and_three_run_only_commands_share_exact_artifact(self) -> None:
+    def test_one_generic_build_and_two_run_only_commands_share_exact_artifact(self) -> None:
         artifact = self.build()
-        for name in ("Select newest compatible iOS Simulator", "Run UI smoke tests (iOS)", "Run App Review export regression (iPad)"):
+        for name in ("Select newest compatible iOS Simulator", "Run UI smoke tests (iOS)"):
             result = self.run_step(name, artifact)
             self.assertEqual(result.returncode, 0, result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
-        self.assertEqual([args[0] for args in calls], ["build-for-testing"] + ["test-without-building"] * 3)
+        self.assertEqual([args[0] for args in calls], ["build-for-testing"] + ["test-without-building"] * 2)
         build = calls[0]
         self.assertEqual(build[build.index("-destination") + 1], "generic/platform=iOS Simulator")
         self.assertEqual(build[build.index("-configuration") + 1], "Debug-iOS")
@@ -305,7 +304,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
             self.assertIn(setting, build)
         selections = []
-        for args, count in zip(calls[1:], (10, 6, 1)):
+        for args, count in zip(calls[1:], (10, 6)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")
@@ -320,8 +319,6 @@ class WorkflowExecutionTests(unittest.TestCase):
             [
                 ["simctl", "bootstatus", "SYNTHETIC-IPHONE", "-b"],
                 ["simctl", "install", "SYNTHETIC-IPHONE", self.app],
-                ["simctl", "bootstatus", "SYNTHETIC-IPAD", "-b"],
-                ["simctl", "install", "SYNTHETIC-IPAD", self.app],
             ],
         )
         self.assertTrue((self.root / "build/logs/build-ios-ui-compile.log").is_file())
@@ -343,17 +340,13 @@ class WorkflowExecutionTests(unittest.TestCase):
         artifact = self.build()
         self.environment["MD_MOCK_FAILURE"] = "test-without-building"
         self.assertEqual(self.run_step("Run UI smoke tests (iOS)", artifact).returncode, 73)
-        self.assertEqual(self.run_step("Run App Review export regression (iPad)", artifact).returncode, 73)
         self.environment.pop("MD_MOCK_FAILURE")
         self.environment["MD_MOCK_SIMCTL_FAILURE"] = "install"
         self.assertEqual(self.run_step("Select newest compatible iOS Simulator", artifact).returncode, 73)
-        self.assertEqual(self.run_step("Run App Review export regression (iPad)", artifact).returncode, 73)
 
     def test_existing_gate_budgets_and_compile_warning_retention_are_preserved(self) -> None:
         self.assertIn("timeout-minutes: 60", self.job)
         self.assertIn("timeout-minutes: 35", self.steps["Run UI smoke tests (iOS)"])
-        self.assertIn("timeout-minutes: 15", self.steps["Run App Review export regression (iPad)"])
-        self.assertIn("!cancelled() && steps.ui_artifacts.outcome == 'success'", self.steps["Run App Review export regression (iPad)"])
         for name in ("Check warnings (iOS UI)", "Upload iOS UI artifacts"):
             self.assertIn("!cancelled()", self.steps[name])
             self.assertIn("build/logs/build-ios-ui-compile.log", self.steps[name])

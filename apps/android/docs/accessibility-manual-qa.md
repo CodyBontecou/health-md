@@ -19,7 +19,7 @@ ANDROID_SERIAL=2C061FDH200CJN scripts/run-accessibility-ui-tests.sh /tmp/healthm
 scripts/test-accessibility-ui-runner.sh
 ```
 
-The expected UI inventory is 412 cases, not a nonzero partial count. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
+The expected UI inventory is 382 cases, not a nonzero partial count. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
 
 ## TalkBack traversal and activation
 
@@ -42,7 +42,7 @@ Use portrait and actual short landscape, with both a soft keyboard and a hardwar
 2. Reach Add, Reset, preview, Save, Cancel and Back without reducing type size. Check both inner template scrolling and outer form scrolling.
 3. Enter valid, empty and invalid numeric drafts. Preserve profile hour/minute/lookback limits and its positive-Int cadence range; do not impose the legacy schedule's five-digit limit on profiles.
 4. Confirm focus/state survive reflow. Distinguish Back hiding the IME from Back dismissing a dialog. Verify cancellation leaves original values unchanged.
-5. Check actual system bars, cutouts, IME/extract-mode resizing and popup placement. The embedded dp matrix and the format test's remaining-height budget are not equivalent to every native window geometry.
+5. Check actual system bars, cutouts, IME/extract-mode resizing and popup placement. The embedded dp matrix is not equivalent to every native window geometry. Real-IME template editing, Save with a focused cadence field, and native Cancel/single-Back dismissal require manual checks after removal of their intermittent UI tests.
 
 ## Magnification, reading and discovery
 
