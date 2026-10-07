@@ -5542,7 +5542,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
@@ -5555,14 +5555,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "a6f9f77754561e1f8a092161df134a828c3074e5+6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json"
+        ]
       },
       "max_children": 6
     },
@@ -8241,6 +8243,1113 @@
           "duplicate_request_no_double_acquire"
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      }
+    },
+    {
+      "id": "CODEC-SEMANTIC-INPUT",
+      "title": "Decode strict semantic config/batch/record v1 and measure source record bytes",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Decode strict semantic config/batch/record v1 and measure source record bytes",
+      "prerequisites": [
+        "CODEC-VALUES",
+        "BASE-CORE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/contracts/semantic-input.ts",
+        "packages/healthmd-core-ts/tests/semantic-input.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-input-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-INPUT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticSessionConfig",
+        "#/source_symbols/SemanticBatch",
+        "#/source_symbols/SemanticRecord",
+        "#/source_symbols/ExactTimestamp",
+        "#/source_symbols/ExactNumber",
+        "#/source_symbols/SemanticValue",
+        "#/source_symbols/validate_value",
+        "#/source_symbols/validate_extension"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-input-vectors.ts",
+        "introduced_case_ids": [
+          "strict_unknown_fields_each_struct",
+          "duplicate_decoded_key",
+          "optional_null_and_defaults",
+          "primitive_integer_lexeme",
+          "invalid_utf8_surrogate",
+          "i128_u128_u64_i64_edges",
+          "finite_negative_zero_exact_time",
+          "record_serialized_utf8_escapes_null_defaults",
+          "record65536_vs65537",
+          "config262144_vs262145",
+          "batch1048576_vs1048577"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Reject unknown/tag/version/default/null/duplicate/UTF-8/primitive numeric token violations under exact serde struct policy; preserve big integers, finite raw bits/negative zero and timestamp tuple without Date/Number coercion.",
+        "Return immutable owned models and bounded sanitized fixed errors; input arrays/objects cannot mutate decoded state.",
+        "Independently match record-only serde compact serialized byte count; raw record slice or fake supplied encodedBytes cannot qualify record limit. Config/batch raw-byte admission uses original bytes, not reserialization.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Raw byte envelope -> strict owned syntax model plus exact record serialized byte size; semantic profile membership/order/selection is next task.",
+        "bounds": "Raw config262144/batch1048576; parse bounded by those inputs and recorded stack/node limits with explicit candidate guards; additional candidate depth guards are not claimed native-source equivalence until reviewed.",
+        "whole_lexemes": "Relevant semantic primitive fields covered here; arbitrary JSON numerical lexemes/general serializer deferred."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-INPUT.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 220,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "CODEC-SEMANTIC-RESULT",
+      "title": "Validate immutable semantic-result v1 structure without claiming serialized bytes",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Validate immutable semantic-result v1 structure without claiming serialized bytes",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "CODEC-VALUES"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/contracts/semantic-result.ts",
+        "packages/healthmd-core-ts/tests/semantic-result.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-result-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-RESULT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticResult",
+        "#/source_symbols/result_with_extensions",
+        "#/source_symbols/canonical_result_bytes"
+      ],
+      "source_test_case_refs": [],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-result-vectors.ts",
+        "introduced_case_ids": [
+          "embedded_core_api3_not4",
+          "strict_result_day_rollup_value_extension",
+          "processing_cancelled_no_deliverables",
+          "u64_counter_strings_in_private_model",
+          "unknown_version_and_profile",
+          "immutable_result_no_alias"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Mirror strict SemanticResult and nested struct shape/default/null/enum/version constraints against source and schemas; preserve embedded semantic-result core_api_version3.",
+        "Keep u64 counts exact in internal model; do not pass through lossy native JSON numbers as exact decoded integers. Relevant raw integer lexeme admission is inherited; serializer not implemented.",
+        "Validate protocol state invariants separately from serde structural acceptance: processing/cancelled deliver no days/rollups/extensions; keep stricter candidate invariants labeled, not retroactively attributed to serde.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Decoded semantic-result structure -> immutable typed result; parser reuse accepted input codec.",
+        "encoding": "No canonical byte encoder/hash parity/JSON.stringify roundtrip claim. Pending canonical serializer must independently match recursive UTF-8 key sorting/escaping and full integer lexemes before public/native byte comparison."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-RESULT.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 221,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "SEMANTIC-RECORD-ADMISSION",
+      "title": "Resolve one profile and validate record retention attribution",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Resolve one profile and validate record retention attribution",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "REGISTRY-READER",
+        "BASE-CORE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/record-admission.ts",
+        "packages/healthmd-core-ts/tests/record-admission.test.ts",
+        "packages/healthmd-core-ts/tests/record-admission-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-RECORD-ADMISSION.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/RawRegistry",
+        "#/source_symbols/RawMetric",
+        "#/source_symbols/RawBinding",
+        "#/source_symbols/RawProfile",
+        "#/source_symbols/RawOutput",
+        "#/source_symbols/validate_config",
+        "#/source_symbols/build_profile_index",
+        "#/source_symbols/validate_record",
+        "#/source_symbols/should_retain",
+        "#/source_symbols/extension_is_selected"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/empty_selection_filters_every_record_without_leaking_zeroes",
+        "#/source_test_cases/disabled_outputs_and_extension_retention_policy_fail_closed",
+        "#/source_test_cases/selection_dependencies_and_blood_pressure_pair_fail_closed",
+        "#/source_test_cases/semantic_output_and_extension_attribution_cannot_cross_metric_boundaries",
+        "#/source_test_cases/android_observations_must_use_rust_profile_aggregation_rules"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/record-admission-vectors.ts",
+        "introduced_case_ids": [
+          "semantic_raw_view_lenient_distinct_strict_registry",
+          "exact_static_registry_binding_precondition",
+          "profile_explicit_revision1_range2",
+          "timezone_evidence_not_inferred",
+          "direct_dependency_no_expansion",
+          "bmi_dependency_retained_output_suppressed",
+          "bp_pair_both_selected",
+          "extension_subset_unknownnamespace",
+          "android_reducer_inference",
+          "invalid_filtered_record_still_reject"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Build source semantic Raw-view index with defaults/inference/order and explicit backed selection IDs from reviewed canonical bytes, preserving distinction from strict RegistryDocument. No runtime fs/network/hash discovery.",
+        "Validate semantic/output/native selector attribution, source-compatible reducer/kind/value/unit rules and all selection/disabled/BMI/BP/extension retention branches; do not expand caller selectors.",
+        "Validate configured version/revision/range profile constraints; native timezone evidence explicitly trusted until IANA binding proof. Android rollup unsupported stays actual source UnsupportedSemanticOperation; unfinished reducer integration is private not_implemented.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Immutable decoded config/record plus accepted index/evidence -> validated retention decision, not daily result.",
+        "native_sdk": "SDK aggregate semantics/provider dedup/source choice stay native; valid SDK input is not raw sample reconstruction.",
+        "stateful": "ID/ordinal/date tracking and declared-date checks belong transaction task; admission exposes pure checks with transactional proposed deltas."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-RECORD-ADMISSION.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 222,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "SEMANTIC-SCALAR-GROUP",
+      "title": "Reduce one ordered numeric output group with reviewed unit conversion",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Reduce one ordered numeric output group with reviewed unit conversion",
+      "prerequisites": [
+        "SEMANTIC-RECORD-ADMISSION",
+        "CODEC-VALUES",
+        "CODEC-SEMANTIC-RESULT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/scalar-group.ts",
+        "packages/healthmd-core-ts/tests/scalar-group.test.ts",
+        "packages/healthmd-core-ts/tests/scalar-group-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-SCALAR-GROUP.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/normalized_value",
+        "#/source_symbols/reduce_record_group",
+        "#/source_symbols/reduce_values",
+        "#/source_symbols/reduce_exact_integers"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/reviewed_unit_normalization_handles_fraction_and_imperial_inputs",
+        "#/source_test_cases/duplicate_sdk_aggregate_facts_fail_instead_of_being_recombined",
+        "#/source_test_cases/latest_ties_use_nanoseconds_then_source_ordinal"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/scalar-group-vectors.ts",
+        "introduced_case_ids": [
+          "sdk_single_no_recombine",
+          "sdk_mixed_duplicate_reject",
+          "sum_duration_sum_signed_unsigned_overflow",
+          "signed_then_unsigned_checked_order",
+          "binary64_source_order_negative_zero",
+          "average_binary64_no_exact_sum_shortcut",
+          "minmax_f64_signed_zero_ties",
+          "latest_end_start_no_time_ordinal",
+          "count_without_numeric_normalization",
+          "ratio_percent_imperial_fraction_conversion",
+          "source_record_ids_sorted_rechunk_stable",
+          "unsupported_complex_rule_private_status"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Implement only numeric/pass-through SDK group boundary: Sum,DurationSum,Average,Minimum,Maximum,Latest,Count. WeightedAverage/Union/Histogram/TimeOfDay and full daily orchestration remain separate.",
+        "Match source normalization and f64 operation order; all-integer Sum/Min/Max use checked u128/i128 and source signed-first then unsigned conversion/order; mixed Binary64 takes source f64 path. Average remains f64 sum/count.",
+        "SDK aggregate must be singular and passed through after source unit normalization; reject mixed/duplicate SDK groups and heterogeneous rules. Latest uses end-or-start seconds/nanoseconds/ordinal and source missing-time tuple; source IDs sorted independent of batching.",
+        "Return no incomplete public completed result; group field-value parity only until accepted serializer/integration.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "One already validated retained day/output group -> one typed SemanticDailyValue; no profile population/BMI/pair/workout/SOM/rollup engine.",
+        "count": "Count follows source bypass of normalization; typed admission still validates source value.",
+        "numeric_mixed": "Source integer conversion to f64 may round above2^53; preserve exact payload until explicitly selected arithmetic path, do not invent arbitrary precision results."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-SCALAR-GROUP.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 223,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "SEMANTIC-BATCH-TRANSACTION",
+      "title": "Stage and atomically commit one ordered semantic batch/session transition",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Stage and atomically commit one ordered semantic batch/session transition",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "CODEC-SEMANTIC-RESULT",
+        "SEMANTIC-RECORD-ADMISSION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/batch-transaction.ts",
+        "packages/healthmd-core-ts/tests/batch-transaction.test.ts",
+        "packages/healthmd-core-ts/tests/batch-transaction-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-BATCH-TRANSACTION.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticSession",
+        "#/source_symbols/from_json",
+        "#/source_symbols/process_batch",
+        "#/source_symbols/process_batch_inner",
+        "#/source_symbols/validate_batch_header",
+        "#/source_symbols/register_owner_dates",
+        "#/source_symbols/validate_record",
+        "#/source_symbols/should_retain",
+        "#/source_symbols/cancel_result",
+        "#/source_symbols/retained_extensions"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/semantic_sessions_enforce_configuration_batch_and_sequence_bounds",
+        "#/source_test_cases/invalid_batch_is_transactional_and_can_be_retried",
+        "#/source_test_cases/cancellation_is_terminal_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/batch-transaction-vectors.ts",
+        "introduced_case_ids": [
+          "invalid_late_record_retry_same_index",
+          "owner_boundary_repeat_not_duplicate_within_batch",
+          "ordinal_u64_record_id_global_unique",
+          "raw_bytes_success_only",
+          "4096_batch_100000_retained_plus_whole_batch",
+          "33554432_session_10000_dates",
+          "filtered_record_validation_before_discard",
+          "processing_no_deliverables",
+          "final_fake_port_failure_atomic",
+          "rechunk_stable_ids_no_new_capture",
+          "terminal_precedes_cancel_parse",
+          "cancel_clear_records_ids_keep_source_counters"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Stage working state and publish only successful transition; invalid header/record/size/date/final port failure cannot consume bytes/index/ID/date/ordinal/retained state. Replaying corrected same-index batch succeeds.",
+        "Preserve source raw config/batch/accepted session bytes and record serialized byte bounds; record session guard is retained-record count plus whole incoming batch, not invented lifetime total accepted-record limit. No unbounded aliases/transaction copies; report measured max temporary state under candidate bounds.",
+        "Preserve ordering across batches, allowed boundary date repeat vs within-batch duplicate, strictly increasing canonical u64 ordinal, global IDs even filtered, and source saturating counters/index.",
+        "Non-final processing has no deliverables. Final fake-port success commits terminal typed result; actual full engine completion remains blocked until BMI/daily/rollup/serializer integration. Cancellation clears retained records and record IDs as source, terminal with no deliverables; preserve other source counters/date state unless independently justified.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Private session state + decoded/raw-sized batch + deterministic finalization port -> atomic next-state and typed processing/completed/cancelled or stable error.",
+        "reduce_port": "Declared synchronous/checkpoint-capable owned immutable input contract reviewed before code. Fixture fake port tests orchestration only; no scalar reducer dependency/cycle, no public final API wiring. Full engine binding next packet.",
+        "cancellation_hooks": "Before parse, each64record including0, before final reduce and source day/rollup checkpoints exposed for later cooperative Effect adapter. Source terminal check precedes cancel probe; no result emitted after terminal."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-BATCH-TRANSACTION.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 224,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "SEMANTIC-SESSION-CANCEL",
+      "title": "Interrupt one owned session operation and await terminal cleanup acknowledgment",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Interrupt one owned session operation and await terminal cleanup acknowledgment",
+      "prerequisites": [
+        "SEMANTIC-BATCH-TRANSACTION",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/operations/semantic-session-cancel.ts",
+        "packages/healthmd-core-ts/tests/semantic-session-cancel.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-session-cancel-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-SESSION-CANCEL.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/process_batch_inner",
+        "#/source_symbols/reduce_days",
+        "#/source_symbols/cancel_result"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/cancellation_is_checked_during_day_reduction",
+        "#/source_test_cases/cancellation_is_terminal_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-session-cancel-vectors.ts",
+        "introduced_case_ids": [
+          "cancel_before_parse",
+          "cancel_record0_64_128",
+          "cancel_before_day_and_rollup_reduce",
+          "deferred_reduction_ack_before_fiber_done",
+          "completed_allocation_finalizer_registered",
+          "no_read_after_scope_cancel",
+          "terminal_no_deliverables_no_ids",
+          "repeat_cancel_no_double_cleanup",
+          "concurrent_session_no_cross_cancel",
+          "safe_mixed_interrupt_cleanup_defect"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Use actual Effect4 APIs and owned scopes; allocation/finalizer registration atomic even on completed acquisition handoff, preparation interruptible, interrupted operation never reads unregistered owned resource.",
+        "Bounded JS yields permit interruption at record64 checkpoints and day/rollup/final boundaries; synchronous callback alone does not prove cooperative host cancellation. Observe cancellation terminal transition and clear state before interruption/failure acknowledgment.",
+        "Await reducer/native-like fake port finalizer acknowledgment; no success or deliverables on cancelled scope and no false successful cancellation while owned work continues. Distinguish pure source cancellation response from Effect Fiber interruption while preserving safe fixed cause.",
+        "Test actual Deferred/Fiber interruption races against emitted code; mask only registration/sanitized result final publication, not entire long acquisition/parse/reduction; no raw provider/error/cause or retained personal values.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "One Effect-owned private session operation -> acknowledged termination/no stale result.",
+        "scope": "No real native port/grant/physical proof; async fake acknowledgment establishes common ownership contract only. Source synchronous Rust probe cadence is not a native runtime cancel-latency promise.",
+        "script_policy": "Existing Effect/Effect exposes required APIs; any additional import/guard/dependency/public interface needs coordinator scope amendment before edits."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-SESSION-CANCEL.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "not_started",
+      "priority": 225,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-SEMANTICS",
+        "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+        "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
       }
     }
   ]

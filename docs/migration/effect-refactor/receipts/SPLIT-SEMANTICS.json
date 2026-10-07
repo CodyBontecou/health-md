@@ -1,0 +1,202 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-SEMANTICS",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "a6f9f77754561e1f8a092161df134a828c3074e5",
+  "patch_digest": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+  "patch_digest_method": "SHA-256 raw UTF-8 expansions/split-semantics.json bytes including final newline; excludes receipt/plan/code/build output.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-semantics.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/receipts/BASE-CORE.json": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+      "docs/migration/effect-refactor/receipts/CODEC-VALUES.json": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "docs/migration/effect-refactor/receipts/PORTABLE-CI.json": "42c4713bc1f9ead814f09b8c99e2388294035c3abfce9ee7bb6fe300c2e2018f",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt": "db84cd10a6f24fc459adae6e0c7d9101588bb8fb660273bdfef4a8a24de70931",
+      "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt": "03c929d1218e222ae35e46289faab3ab09e5776df8599e19b384c490406a6d44",
+      "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt": "daabc0d1755f5e1f9f9dbf7e35aad46ede778af9fe51b7f8270cc5747d6593e3",
+      "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift": "fa1e62802f3339bea7a09e8351da6c3181d1ae0d2a5efbef3853a985ecf8903b",
+      "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift": "f73b48092c6b2e6b153f1779c8da5651800f7e245c5d16523830e6566c920db5",
+      "packages/contracts/semantic-input/v1/contract.md": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "packages/contracts/semantic-input/v1/semantic-input.schema.json": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+      "packages/contracts/semantic-input/v1/semantic-result.schema.json": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs": "1de7a1413a700e318372f3bc4fd91afc9efe09bbcbce3c342c1f13c2c4232982",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+    },
+    "locks_and_runtime": {
+      "policy": "Existing Node24.21.0/npm11.19.0/Effect4.0.1 TypeScript7.0.2/esbuild0.28.2 pinned component; no installs/build/runtime proof by planning task.",
+      "core_inventory_raw_sha": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    "artifact_and_native_interface": {
+      "packet": "docs/migration/effect-refactor/expansions/split-semantics.json",
+      "counts": {
+        "pinned_inputs": 37,
+        "source_symbols": 41,
+        "literal_rust_tests": 17,
+        "children": 6,
+        "dependency_edges": 8,
+        "remaining_groups": 6
+      },
+      "native_authority": "Swift/Kotlin actual SDK/source captured model and Rust evaluator remain current production authority."
+    },
+    "policy_migration_key_versions": {
+      "semantic_input": 1,
+      "canonical_model": 1,
+      "embedded_semantic_result_core_api": 3,
+      "coarse_core_api": 4,
+      "registry": 1,
+      "profile_revision": "1 calendar/current;2 gated Apple range",
+      "design_row_pins": [
+        {
+          "id": "C02",
+          "literal_reference": "| C02 | Semantic input/result v1 and profile revisions | Strict bounded decoding, exact numbers/timestamps/owner dates, native SDK aggregate retention, selection/units/reducers/BMI, ordered batches, cancellation, rollup revision admission. |",
+          "row_sha256": "1d2ed98c82b5efd7b4274a6493f4739cf56eb0c31764876b458382a3bcf72a3c"
+        },
+        {
+          "id": "K02",
+          "literal_reference": "### K02: deterministic semantic engine\n\nPort the semantic session as a bounded state machine rather than a convenience reducer over unbounded arrays. Preserve explicit owner dates, epoch-seconds/nanoseconds ordering, source ordinals, stable record identity across rechunking, profile selection, direct/dependency attribution, unit normalization, reducer dispatch, BMI dependency retention, paired blood-pressure selection, workout duration weights, platform extension retention, empty captured dates, and Apple period/range roll-ups. Native acquisition still supplies SDK aggregation, deduplication, calendar offset resolution, permissions, and provider evidence. Sources: [semantic implementation](../../packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs) and [semantic-input normative contract](../../packages/contracts/semantic-input/v1/contract.md).\n\nThe input/output representation retains finite binary64 bits including negative zero, canonical signed/unsigned decimal integers beyond JavaScript's safe range, and exact time tuples. Decode binary64 explicitly for reviewed arithmetic with the original reduction order; retain integer strings/`bigint` and seconds/nanoseconds rather than rounding them through `number` or `Date`. Exact rendering remains its own codec. Preserve configured bounds and transactional batch advancement. Cancellation is idempotent, checked before parsing, every 64 records, and before reduction; observed cancellation clears retained records and returns a terminal cancelled result with no days. Effect interruption must connect to this state transition, with bounded JS yields to let interruption be observed.\n\nExit evidence: the shared semantic differential fixture and profile-revision fixture pass without fixture edits; invalid batches do not advance indexes; rechunking preserves identity/output; sequential ordering, empty-day coverage, missing/zero, dependencies, cancellation, session bounds, and terminal calls match current behavior. Compare outputs with current Rust and relevant Swift/Kotlin reference paths while both implementations remain available.",
+          "row_sha256": "14f1ad3cda13aa931d7bbb3699ff8986425769c0e6f240abbe24347f92644c08"
+        },
+        {
+          "id": "F05",
+          "literal_reference": "| F05 | Exact binary64/integer/time/Unicode/serializer behavior | M03 passes frozen positive/negative vectors in every deployed engine; resolve codecs rather than changing historical files. |",
+          "row_sha256": "93998b7a5de6ab8bb198f608c0c5222437ffcd067fc12399c8763982426e9edc"
+        }
+      ]
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/children"
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/children"
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/selected_outcome_map/remaining_family_work/qualification"
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/selected_outcome_map/remaining_family_work/qualification"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-split-semantics-author.py"
+      ],
+      "result": "passed",
+      "evidence": "Source-only assigned-base Git blobs, source symbols/literal tests, pointer/schema/card/path/existing prerequisites/acyclic DAG/raw-newline SHA verified: {\"children\": 6, \"dependency_edges\": 8, \"literal_rust_tests\": 17, \"pinned_inputs\": 37, \"remaining_groups\": 6, \"source_symbols\": 41}"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "PASS:58atomic tasks,86families,16choices; existing graph/pointers/state/evidence/claims structurally valid. Packet not merged; no family/implementation qualification."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator verifies37assigned/current raw input pins and immutable newline packet hash, merges6bounded cards into graph. Independentreview41symbols17testlocators118pointers3designrows8acyclic edges passed; no implementation or family gate qualification."
+    }
+  ],
+  "inspection_summary": "Source-only six-boundary decomposition. Exact targeted accepted input/source/fixture bytes and literal symbols/tests checked; strict semantic codecs, profile attribution, scalar group, transactional state and acknowledged cancellation are separate. Complete result serializer/full engine/native/public/host/retirement remains explicit owner+packet+trigger.",
+  "observations": [
+    {
+      "case_id": "semantic-planning-pins",
+      "procedure": "Read exact assigned-source Git blobs; compute raw SHA and exact source literal line pins.",
+      "expected": "All referenced assigned-source bytes and lines resolve.",
+      "observed": "{\"children\": 6, \"dependency_edges\": 8, \"literal_rust_tests\": 17, \"pinned_inputs\": 37, \"remaining_groups\": 6, \"source_symbols\": 41}",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/source_pins/source_symbols/source_test_cases"
+    },
+    {
+      "case_id": "semantic-planning-dag",
+      "procedure": "Resolve child/existing prerequisites and depth-first traverse six child DAG; validate proposed checks status.",
+      "expected": "At most6 unique acyclic children and explicit unrun implementation checks.",
+      "observed": "6 unique children, 8 acyclic child edges, six remaining owner/next-packet/trigger groups; candidate commands unrun.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-semantics.json#/dependency_edges/remaining_family_work"
+    },
+    {
+      "case_id": "coordinator-merge-six-semantic-cards",
+      "procedure": "Read reviewed six cards and remainder groups, compare37raw assigned/current Git source inputs, merge exact card scopes and verify complete plan DAG with manage.py.",
+      "expected": "Six executable one-boundary cards with independent expected vectors beforecode; no family/serializer/native/retirement closure.",
+      "observed": "Six cards merged; strict relevant lexemes/recordbyte meter/resulttyped/admission/scalargroup/transaction/cancel separated. Fakefinalport and six remainingowner/nextpacket/trigger groups retain complete scope.",
+      "evidence": "Independentreview a6f9f77754561e1f8a092161df134a828c3074e5+6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e;37rawpins matched by coordinator.",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Planning only; no candidate/native/source/data/build/install/consumer execution or semantic result-byte parity.",
+    "Proposed interface fixtures/modules do not yet exist; independent literal fixture review precedes implementation.",
+    "Record-only serde meter required before session record limit claim; general canonical result serializer and full numerical JSON lexemes remain future.",
+    "Trusted reviewed static registry binding and native IANA timezone evidence are explicit candidate preconditions, not string authentication/native admission.",
+    "Fake finalization port qualifies state boundary only, not full daily/BMI/workout/SOM/civil rollup outputs."
+  ],
+  "remaining_qualification": [
+    "Independent packet review/coordinator merge; all six implementation receipts.",
+    "#/remaining_family_work/0 SPLIT-SEMANTICS daily-engine follow-on",
+    "#/remaining_family_work/1 SPLIT-SEMANTICS civil-rollup packet",
+    "#/remaining_family_work/2 SPLIT-RENDER codec/serializer follow-on",
+    "#/remaining_family_work/3 SPLIT-NATIVE-FEATURES semantic shadow/capture",
+    "#/remaining_family_work/4 SPLIT-RENDER + semantic integration packet",
+    "#/remaining_family_work/5 SPLIT-NATIVE-HOSTS + SPLIT-RELEASE/retirement packet"
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_cli",
+    "fingerprint": "a6f9f77754561e1f8a092161df134a828c3074e5+6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+  }
+}

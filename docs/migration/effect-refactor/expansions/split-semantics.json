@@ -1,0 +1,1967 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-SEMANTICS",
+  "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
+  "proof_class": "planning",
+  "outcome": "Produce one reviewed expansion packet of at most six atomic children for bounded session/batch/cancel and initial scalar reducers.",
+  "max_children": 6,
+  "selected_design_ids": [
+    "C02",
+    "K02",
+    "F05"
+  ],
+  "accepted_input_pins": [
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+      "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+      "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
+      "sha256": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+      "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/PORTABLE-CI.json",
+      "sha256": "42c4713bc1f9ead814f09b8c99e2388294035c3abfce9ee7bb6fe300c2e2018f",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+      "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+      "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/contracts/registry.ts",
+      "sha256": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+      "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/package.json",
+      "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/package-lock.json",
+      "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/tsconfig.json",
+      "sha256": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    }
+  ],
+  "required_read_pins": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/core-cli.md",
+      "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/AGENTS.md",
+      "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-ts/README.md",
+      "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    }
+  ],
+  "source_pins": [
+    {
+      "path": "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt",
+      "sha256": "db84cd10a6f24fc459adae6e0c7d9101588bb8fb660273bdfef4a8a24de70931",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt",
+      "sha256": "03c929d1218e222ae35e46289faab3ab09e5776df8599e19b384c490406a6d44",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt",
+      "sha256": "daabc0d1755f5e1f9f9dbf7e35aad46ede778af9fe51b7f8270cc5747d6593e3",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift",
+      "sha256": "fa1e62802f3339bea7a09e8351da6c3181d1ae0d2a5efbef3853a985ecf8903b",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift",
+      "sha256": "f73b48092c6b2e6b153f1779c8da5651800f7e245c5d16523830e6566c920db5",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/contract.md",
+      "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+      "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+      "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/Cargo.lock",
+      "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json",
+      "sha256": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs",
+      "sha256": "1de7a1413a700e318372f3bc4fd91afc9efe09bbcbce3c342c1f13c2c4232982",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+      "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+      "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+      "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json",
+      "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+    }
+  ],
+  "selected_design_row_pins": [
+    {
+      "id": "C02",
+      "literal_reference": "| C02 | Semantic input/result v1 and profile revisions | Strict bounded decoding, exact numbers/timestamps/owner dates, native SDK aggregate retention, selection/units/reducers/BMI, ordered batches, cancellation, rollup revision admission. |",
+      "row_sha256": "1d2ed98c82b5efd7b4274a6493f4739cf56eb0c31764876b458382a3bcf72a3c"
+    },
+    {
+      "id": "K02",
+      "literal_reference": "### K02: deterministic semantic engine\n\nPort the semantic session as a bounded state machine rather than a convenience reducer over unbounded arrays. Preserve explicit owner dates, epoch-seconds/nanoseconds ordering, source ordinals, stable record identity across rechunking, profile selection, direct/dependency attribution, unit normalization, reducer dispatch, BMI dependency retention, paired blood-pressure selection, workout duration weights, platform extension retention, empty captured dates, and Apple period/range roll-ups. Native acquisition still supplies SDK aggregation, deduplication, calendar offset resolution, permissions, and provider evidence. Sources: [semantic implementation](../../packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs) and [semantic-input normative contract](../../packages/contracts/semantic-input/v1/contract.md).\n\nThe input/output representation retains finite binary64 bits including negative zero, canonical signed/unsigned decimal integers beyond JavaScript's safe range, and exact time tuples. Decode binary64 explicitly for reviewed arithmetic with the original reduction order; retain integer strings/`bigint` and seconds/nanoseconds rather than rounding them through `number` or `Date`. Exact rendering remains its own codec. Preserve configured bounds and transactional batch advancement. Cancellation is idempotent, checked before parsing, every 64 records, and before reduction; observed cancellation clears retained records and returns a terminal cancelled result with no days. Effect interruption must connect to this state transition, with bounded JS yields to let interruption be observed.\n\nExit evidence: the shared semantic differential fixture and profile-revision fixture pass without fixture edits; invalid batches do not advance indexes; rechunking preserves identity/output; sequential ordering, empty-day coverage, missing/zero, dependencies, cancellation, session bounds, and terminal calls match current behavior. Compare outputs with current Rust and relevant Swift/Kotlin reference paths while both implementations remain available.",
+      "row_sha256": "14f1ad3cda13aa931d7bbb3699ff8986425769c0e6f240abbe24347f92644c08"
+    },
+    {
+      "id": "F05",
+      "literal_reference": "| F05 | Exact binary64/integer/time/Unicode/serializer behavior | M03 passes frozen positive/negative vectors in every deployed engine; resolve codecs rather than changing historical files. |",
+      "row_sha256": "93998b7a5de6ab8bb198f608c0c5222437ffcd067fc12399c8763982426e9edc"
+    }
+  ],
+  "accepted_prerequisite_reviews": {
+    "BASE-CORE": {
+      "status": "accepted",
+      "reviewer": "/root/effect_baseline_review",
+      "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    "CODEC-VALUES": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "fingerprint": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93+0ef4466305be5d34130f09a049709b7f6b236760f5599479d656212a8b68ea5f"
+    },
+    "REGISTRY-READER": {
+      "status": "accepted",
+      "reviewer": "/root/donor_mac_review",
+      "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4"
+    },
+    "TS-FOUNDATION": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+a13e671fe90311be29d4c1e5c70588ab0d754d4f69dd6e9959ef9c6204777dff"
+    },
+    "PORTABLE-CI": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "fingerprint": "2771704da48fd0fbeb12cafdbc9adbd27f08343f+b721b746427de81c1242316cf69dc5e902f731e2b239c9cf81086617bb624783"
+    }
+  },
+  "source_symbols": {
+    "SemanticSessionConfig": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticSessionConfig",
+      "line": 89,
+      "literal_line": "pub struct SemanticSessionConfig {",
+      "line_sha256": "d23c1fb9e6ed09928a467d5dd993e22903fa8dba3f7a51246d3a55ede0140949",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "SemanticBatch": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticBatch",
+      "line": 110,
+      "literal_line": "pub struct SemanticBatch {",
+      "line_sha256": "fc46a6f79570ef12fc02f0e1f9f39e1a945ae3de8cc095f70d0e0458562cf947",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "ExactTimestamp": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "ExactTimestamp",
+      "line": 123,
+      "literal_line": "pub struct ExactTimestamp {",
+      "line_sha256": "c2e93004e5aa80fcda1ad5fb0747a69a5faf6223b605acd8bd428d897aee0750",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "ExactNumber": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "ExactNumber",
+      "line": 133,
+      "literal_line": "pub enum ExactNumber {",
+      "line_sha256": "eb1bd670fa6117522350632d1fc300dcc869481dfe719dc59abe486d868be7ff",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "SemanticValue": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticValue",
+      "line": 149,
+      "literal_line": "pub enum SemanticValue {",
+      "line_sha256": "9e24e67eb727e0d7e71ff9bdd561aa773ce2ec965fa14cf88a92a892348e5441",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "SemanticRecord": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticRecord",
+      "line": 216,
+      "literal_line": "pub struct SemanticRecord {",
+      "line_sha256": "4f76a0d3d113e2bc6c48dfc73faacd24f00ae8621a0086cbc72a903f863d8646",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "SemanticResult": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticResult",
+      "line": 299,
+      "literal_line": "pub struct SemanticResult {",
+      "line_sha256": "719ae3a404a51fc99ca8209279a14c74bb736ca4c0d11b9b268802b6c4462355",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "RawRegistry": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "RawRegistry",
+      "line": 341,
+      "literal_line": "struct RawRegistry {",
+      "line_sha256": "7952ec5dcd4a26a732e86ddf4a006ad9f13115d056e0273fc8f9bbb82edb37d9",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "RawMetric": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "RawMetric",
+      "line": 347,
+      "literal_line": "struct RawMetric {",
+      "line_sha256": "2030e9e5fbdf8587007affcb08d34d5c8012e93d502c55c193c31a0ce9071c91",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "RawBinding": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "RawBinding",
+      "line": 354,
+      "literal_line": "struct RawBinding {",
+      "line_sha256": "46b915c5f4f43d15db8f54bc8f72f8fcb8ed22ba8e6c30a065bc863664c55988",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "RawProfile": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "RawProfile",
+      "line": 362,
+      "literal_line": "struct RawProfile {",
+      "line_sha256": "79aaea88d34b864663d0b30c850049acc2da6a92426b97cd0117f274504a2bcf",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "RawOutput": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "RawOutput",
+      "line": 368,
+      "literal_line": "struct RawOutput {",
+      "line_sha256": "b2de756b3edbf00bd57640ee9b27c7d847177a5404a51ee1b986d6453c2e0d35",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "SemanticSession": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "SemanticSession",
+      "line": 384,
+      "literal_line": "pub struct SemanticSession {",
+      "line_sha256": "92d60b483ee1b6e5ec389a3a5f6583fe0e40076e308007266f5faa9b6f831995",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "from_json": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "from_json",
+      "line": 404,
+      "literal_line": "    pub fn from_json(config_bytes: &[u8]) -> Result<Self, CoreError> {",
+      "line_sha256": "94caa9ae758b2f2a24b088ca6556fe6f636a64cf1e2698320b7479f69c4286bd",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "process_batch": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "process_batch",
+      "line": 450,
+      "literal_line": "    pub fn process_batch(",
+      "line_sha256": "0175e55a55f73de60596d2b8c72edcbf6887f84c959a8db6a27787273fc682cf",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "process_batch_inner": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "process_batch_inner",
+      "line": 463,
+      "literal_line": "    fn process_batch_inner(",
+      "line_sha256": "3aa94a86a955eaca3b7d12def02d5ed94f82cc0729a95a961e6bdefeb144e0fd",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_batch_header": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_batch_header",
+      "line": 541,
+      "literal_line": "    fn validate_batch_header(&self, batch: &SemanticBatch) -> Result<(), CoreError> {",
+      "line_sha256": "86f31dd43ab0bb1dc22838eec62f443fdcede95bc90dad77af11a7891b016cae",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "register_owner_dates": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "register_owner_dates",
+      "line": 554,
+      "literal_line": "    fn register_owner_dates(",
+      "line_sha256": "dbd9f6bef7d754d4b7354654d49c5424ff137ce6c2c0843f351fd3e0c9ace22c",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_record": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_record",
+      "line": 586,
+      "literal_line": "    fn validate_record(",
+      "line_sha256": "df0fd829d31121b67b6424ae73037d94d5c95e4a3dd8465b9cbed8edad144e75",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "should_retain": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "should_retain",
+      "line": 713,
+      "literal_line": "    fn should_retain(&self, record: &SemanticRecord) -> bool {",
+      "line_sha256": "fa31b40f9849b8ebbc0d9fb4dca1203ca7d7ea34936b36bbb7c4be1fcdfb367b",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "reduce_days": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "reduce_days",
+      "line": 766,
+      "literal_line": "    fn reduce_days(",
+      "line_sha256": "42a2527209495737a8e51e68ab16ebc361c6b9b3e1966355a432d8ad0dc87b12",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "retained_extensions": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "retained_extensions",
+      "line": 966,
+      "literal_line": "    fn retained_extensions(&self) -> Vec<RetainedSemanticExtension> {",
+      "line_sha256": "a2d67873932ac82b73d0481ef2f8e49bafe8dc04d322e59b5042c75518cea97e",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "result_with_extensions": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "result_with_extensions",
+      "line": 1011,
+      "literal_line": "    fn result_with_extensions(",
+      "line_sha256": "e53c98c785c5fc0df48a0854c25bdad321c1f904296938aba571ab6f052b9e70",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "cancel_result": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "cancel_result",
+      "line": 1037,
+      "literal_line": "    fn cancel_result(&mut self) -> Result<Vec<u8>, CoreError> {",
+      "line_sha256": "4309f7badba839d7b7702ca46d4b66cd4aef8037947b82d20459fbd2fe8b6aa5",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_config": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_config",
+      "line": 1045,
+      "literal_line": "fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {",
+      "line_sha256": "7b1d328a24d09bfccfe7280f430edb72f9ad3b2428630686ce213775040b8075",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "build_profile_index": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "build_profile_index",
+      "line": 1108,
+      "literal_line": "fn build_profile_index(profile: SemanticProfile) -> Result<ProfileIndex, CoreError> {",
+      "line_sha256": "37c0a1d261232f414b354bbc9f94b11850fc894cd358a6635da2b92361532ddb",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "inferred_android_daily_aggregation": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "inferred_android_daily_aggregation",
+      "line": 1200,
+      "literal_line": "fn inferred_android_daily_aggregation(",
+      "line_sha256": "ad91f132d062f530b0699c33f70658bc59607e15c6bebc6f2bc445cb68285944",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "inferred_android_output_unit": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "inferred_android_output_unit",
+      "line": 1262,
+      "literal_line": "fn inferred_android_output_unit(key: &str) -> &'static str {",
+      "line_sha256": "3ba0565977295c0a86212e6627c4a0914a6ae002c302b91a47eb4dacf64b5c28",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_aggregation_compatibility": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_aggregation_compatibility",
+      "line": 1314,
+      "literal_line": "fn validate_aggregation_compatibility(",
+      "line_sha256": "e85bbb1620cc43051504713b6a24aa49f648853a35a3eaf2231b5172a5472987",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_timestamp": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_timestamp",
+      "line": 1351,
+      "literal_line": "fn validate_timestamp(timestamp: &ExactTimestamp) -> Result<(), CoreError> {",
+      "line_sha256": "a0942e40fc7fec192556798ff02ae8f4721da00dd249be9ec31cdf373e2119e8",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_number": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_number",
+      "line": 1373,
+      "literal_line": "fn validate_number(number: &ExactNumber) -> Result<(), CoreError> {",
+      "line_sha256": "8389bf648b66ff010d2cc711a1f6ec57d0aad4b01451a0a9229176bce44f85cd",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_value": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_value",
+      "line": 1398,
+      "literal_line": "fn validate_value(value: &SemanticValue) -> Result<(), CoreError> {",
+      "line_sha256": "22ccf6be75c2f6af60044488b3f4849bf6025b7e4337ef1bcaed66d28f6a870d",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "validate_extension": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "validate_extension",
+      "line": 1424,
+      "literal_line": "fn validate_extension(extension: &SemanticExtensionRef) -> Result<(), CoreError> {",
+      "line_sha256": "62db9f4ad95a48bdcdc3aa6933c45ff4465c82b1b9460b7069e16689c7ebf770",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "extension_is_selected": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "extension_is_selected",
+      "line": 1443,
+      "literal_line": "fn extension_is_selected(extension: &SemanticExtensionRef, selected: &HashSet<&str>) -> bool {",
+      "line_sha256": "7ed0b2cecea5d7c2ab3713d47cbf4c4c54fe3446d6e2aaf9eada26c8935e7930",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "valid_unit": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "valid_unit",
+      "line": 1464,
+      "literal_line": "fn valid_unit(unit: &str) -> bool {",
+      "line_sha256": "67f0d084b326c8d2d5072ed3cfb3f2b16f19e6d4d825dda8990badc1fd525021",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "normalized_value": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "normalized_value",
+      "line": 1618,
+      "literal_line": "fn normalized_value(value: &SemanticValue, target_unit: &str) -> Result<SemanticValue, CoreError> {",
+      "line_sha256": "a812dc764176a687a14e7040b23fc8cf68214e4cb8c825562680c9ef7780012e",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "reduce_record_group": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "reduce_record_group",
+      "line": 1699,
+      "literal_line": "fn reduce_record_group(",
+      "line_sha256": "8844d1aa207fc44d7bc0a3ed0ce7608f300db1273d067a4380d1430df8b6866f",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "reduce_values": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "reduce_values",
+      "line": 1770,
+      "literal_line": "fn reduce_values(",
+      "line_sha256": "f38b60f8744bb61d96d206dfe8530feaa7796eadfb81e506bf9cbd57306b5c28",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "reduce_exact_integers": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "reduce_exact_integers",
+      "line": 1914,
+      "literal_line": "fn reduce_exact_integers(",
+      "line_sha256": "c15b7afabb6cd74ae8dcc7a7437eb883e26f23e9c60cbd75b795cf7b8e1fd50f",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "canonical_result_bytes": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "canonical_result_bytes",
+      "line": 2255,
+      "literal_line": "fn canonical_result_bytes(result: &SemanticResult) -> Result<Vec<u8>, CoreError> {",
+      "line_sha256": "922f5386f979e91245bafefbe12569d3363dccf71c15a27cf33f9a0dcd839bce",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "canonicalize_value": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "canonicalize_value",
+      "line": 2261,
+      "literal_line": "fn canonicalize_value(value: Value) -> Value {",
+      "line_sha256": "44dc7f34ae873380856330cf5ac2c9061dda954c3e1e30aee69e210aef2a48f6",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    }
+  },
+  "source_test_cases": {
+    "exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits",
+      "line": 2357,
+      "literal_line": "    fn exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits() {",
+      "line_sha256": "b8168e52d153c8e83276ad5eccf80f849d981d419d8388f8f230359d134149d6",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "reviewed_unit_normalization_handles_fraction_and_imperial_inputs": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "reviewed_unit_normalization_handles_fraction_and_imperial_inputs",
+      "line": 2383,
+      "literal_line": "    fn reviewed_unit_normalization_handles_fraction_and_imperial_inputs() {",
+      "line_sha256": "bae8d384cbb97842b3d43eee0a3f32bc2adc2d1d35467a11ed2959c21243490c",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "filters_missing_without_turning_it_into_zero_and_derives_bmi": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "filters_missing_without_turning_it_into_zero_and_derives_bmi",
+      "line": 2414,
+      "literal_line": "    fn filters_missing_without_turning_it_into_zero_and_derives_bmi() {",
+      "line_sha256": "80cd0e7964ea868affbbb07331bc51cdb7e8e515e7d579fae73b0f0d44536769",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "empty_selection_filters_every_record_without_leaking_zeroes": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "empty_selection_filters_every_record_without_leaking_zeroes",
+      "line": 2478,
+      "literal_line": "    fn empty_selection_filters_every_record_without_leaking_zeroes() {",
+      "line_sha256": "c8d557218a91938f0a0040bb2f5521bdd4a5e946539428592bc008cf1927c935",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "disabled_outputs_and_extension_retention_policy_fail_closed": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "disabled_outputs_and_extension_retention_policy_fail_closed",
+      "line": 2498,
+      "literal_line": "    fn disabled_outputs_and_extension_retention_policy_fail_closed() {",
+      "line_sha256": "9e04cf417125f519fcb8c38fafaede6dcd2c8d04f958c8666ea32d1d1110d060",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "selection_dependencies_and_blood_pressure_pair_fail_closed": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "selection_dependencies_and_blood_pressure_pair_fail_closed",
+      "line": 2543,
+      "literal_line": "    fn selection_dependencies_and_blood_pressure_pair_fail_closed() {",
+      "line_sha256": "cf69f0b920748596bde2bc24b7fd6d1e9b53cbd32fb393e3251ec50031178447",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "semantic_output_and_extension_attribution_cannot_cross_metric_boundaries": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "semantic_output_and_extension_attribution_cannot_cross_metric_boundaries",
+      "line": 2564,
+      "literal_line": "    fn semantic_output_and_extension_attribution_cannot_cross_metric_boundaries() {",
+      "line_sha256": "58ff46da561cfb31bccdf692ef9621dc80f34a23fab098a1c9029dfa6dad07a9",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "android_observations_must_use_rust_profile_aggregation_rules": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "android_observations_must_use_rust_profile_aggregation_rules",
+      "line": 2665,
+      "literal_line": "    fn android_observations_must_use_rust_profile_aggregation_rules() {",
+      "line_sha256": "31961c7d3979254e876b572b5dd14a60ea354e6f60e6f0d851a60d1316e62e21",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "duplicate_sdk_aggregate_facts_fail_instead_of_being_recombined": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "duplicate_sdk_aggregate_facts_fail_instead_of_being_recombined",
+      "line": 2696,
+      "literal_line": "    fn duplicate_sdk_aggregate_facts_fail_instead_of_being_recombined() {",
+      "line_sha256": "350d3c2447f663738808b50ff8f91bcca9fd66966fee2a3426d9b28bb6abe825",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "latest_ties_use_nanoseconds_then_source_ordinal": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "latest_ties_use_nanoseconds_then_source_ordinal",
+      "line": 2739,
+      "literal_line": "    fn latest_ties_use_nanoseconds_then_source_ordinal() {",
+      "line_sha256": "79dbb58c074c021f342905a173c8372c88376ee33641dace7b755e6130527fe4",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "range_rejects_revision_one_while_calendar_revision_one_remains_valid": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "range_rejects_revision_one_while_calendar_revision_one_remains_valid",
+      "line": 2870,
+      "literal_line": "    fn range_rejects_revision_one_while_calendar_revision_one_remains_valid() {",
+      "line_sha256": "3822d1632ea2cf6bd81941cdef806829318a64da7d44736fbc5fd9f44e62d8e6",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds",
+      "line": 2890,
+      "literal_line": "    fn range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds() {",
+      "line_sha256": "7b9ecbb1872f518be2972c7e5152faf880ff78840de129491b1bb4f227d69e13",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "closed_reducers_cover_minimum_maximum_union_histogram_and_time_of_day": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "closed_reducers_cover_minimum_maximum_union_histogram_and_time_of_day",
+      "line": 3009,
+      "literal_line": "    fn closed_reducers_cover_minimum_maximum_union_histogram_and_time_of_day() {",
+      "line_sha256": "4139109ee0b95205185b68a83548f298e002e22363350d9c2c9c53db596cf339",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "semantic_sessions_enforce_configuration_batch_and_sequence_bounds": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "semantic_sessions_enforce_configuration_batch_and_sequence_bounds",
+      "line": 3107,
+      "literal_line": "    fn semantic_sessions_enforce_configuration_batch_and_sequence_bounds() {",
+      "line_sha256": "2b7fbfd3e84ada35386d7d2e67e60b9b616d50b3b16561fbd310a50af87cd832",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "invalid_batch_is_transactional_and_can_be_retried": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "invalid_batch_is_transactional_and_can_be_retried",
+      "line": 3171,
+      "literal_line": "    fn invalid_batch_is_transactional_and_can_be_retried() {",
+      "line_sha256": "c0cae66fdea4a3f0f606ba1e6174062da71e479f10c1e9f9bae7321d4afb75e3",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "cancellation_is_checked_during_day_reduction": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "cancellation_is_checked_during_day_reduction",
+      "line": 3199,
+      "literal_line": "    fn cancellation_is_checked_during_day_reduction() {",
+      "line_sha256": "3d8535cf6afe6d912b80f827b1f4aac2aefe01b3b40ec7cc5ba4eba1c215cfd5",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    "cancellation_is_terminal_and_health_free": {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "symbol": "cancellation_is_terminal_and_health_free",
+      "line": 3240,
+      "literal_line": "    fn cancellation_is_terminal_and_health_free() {",
+      "line_sha256": "7ef46faca5bcfe375aed2e904ee7d82f538c03d4e1eea318fbf613073d1cd24d",
+      "file_sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    }
+  },
+  "fixture_catalog": {
+    "differential": {
+      "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+      "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
+      "bytes": 16053,
+      "use": "Source-pinned existing expectations retained, not generated or executed by packet. Complex whole-case results remain integration obligations; initial children cite only specified input/behavior subcases.",
+      "case_ids": [
+        "apple-required-differentials",
+        "android-fraction-and-exact-time",
+        "android-analytical-native-field"
+      ],
+      "rejection_case_ids": [
+        "nonfinite-binary64",
+        "sequence-and-limit-contract",
+        "cancellation-terminal"
+      ],
+      "range_limit_case_ids": [],
+      "json_top_level_keys": [
+        "canonical_model_version",
+        "cases",
+        "fixture_version",
+        "registry_sha256",
+        "rejection_cases",
+        "schema",
+        "semantic_input_version"
+      ]
+    },
+    "range_revision": {
+      "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+      "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
+      "bytes": 1015,
+      "use": "Source-pinned existing expectations retained, not generated or executed by packet. Complex whole-case results remain integration obligations; initial children cite only specified input/behavior subcases.",
+      "case_ids": [],
+      "rejection_case_ids": [],
+      "range_limit_case_ids": [
+        "exact-10000-accepted",
+        "10001-rejected",
+        "reversed-rejected"
+      ],
+      "json_top_level_keys": [
+        "schema",
+        "schema_version",
+        "calendar_v1",
+        "range_v2",
+        "revision_one_range_rejected",
+        "range_limit_cases"
+      ]
+    }
+  },
+  "status": "proposed_pending_independent_review_and_coordinator_merge",
+  "candidate_interfaces": {
+    "visibility": "Private candidate modules imported directly by tests; no src/index.ts/package exports, public launchers, native adapters, frozen fixtures, authority assets, schemas or dependency edits.",
+    "review_before_code": "Each child first writes its literal expectation/interface fixture and obtains independent raw-digest review against pinned source, then implements. Supplemental source-derived tests may be added, but candidate output cannot define expected behavior. Shared interface producer receipt must be accepted before dependent implementation claims.",
+    "input": "CODEC-SEMANTIC-INPUT owns immutable DecodedConfig/DecodedBatch/DecodedRecord, source-faithful bounded UTF-8 decoding, relevant primitive token grammar, and source_record_serialized_bytes(record) for the exact serde struct serialization. No raw-substring/JSON.stringify surrogate measurement; callers cannot supply arbitrary trusted byte counts.",
+    "result": "CODEC-SEMANTIC-RESULT owns immutable exact SemanticResult structural model and strict decoded result validation. Historical embedded core_api_version stays3 though coarse current core API is4. Encoding to canonical bytes is a later serializer task; these children may return typed/private state objects but cannot advertise bytes/hash parity.",
+    "admission": "SEMANTIC-RECORD-ADMISSION owns configuration/profile evidence and immutable validated/retain-or-filter decisions. Build reviewed semantic Raw-view index from exact canonical asset, distinct from strict RegistryDocument parser, with explicit reviewed static host byte binding. Native SDK grants/capture/aggregation/source deduplication remain supplied upstream.",
+    "session": "SEMANTIC-BATCH-TRANSACTION owns one private session with immutable/copy-on-write staged deltas; ordered cancellation checkpoints and a reviewed pure final-reduction port declared here. Port consumes only owned immutable retained records/owner dates and returns typed daily/rollup/extensions or safe failure. Initial completion is tested only with a fixture fake port; SEMANTIC-SCALAR-GROUP does not constitute the full daily/BMI/rollup engine.",
+    "cancel": "SEMANTIC-SESSION-CANCEL owns Effect orchestration over the accepted session/checkpoint contract. Mask only atomic ownership/finalizer registration and terminal publication; actual decoding/iteration/reduction interruptible with bounded yields. Completion of cancellation waits cleanup/port acknowledgment. No Fiber identity/raw Cause/parser/value in safe errors.",
+    "scalar": "SEMANTIC-SCALAR-GROUP owns ordered one-day/one-output numeric group result only, not daily/session/result serialization integration. No reconstruction of sdk_aggregate facts; duplicate/mixed SDK facts reject.",
+    "boundary_preconditions": "Trusted upstream static registry-byte binding and reviewed native IANA-timezone evidence are explicit candidate preconditions until separate resolver/source host admission. Config syntax validation does not prove chrono_tz::Tz membership; first session fixture uses independently reviewed exact timezone evidence. No native permission/source/timezone authority inferred from strings.",
+    "parser_scope": "Strict config/batch/record/value/timestamp/unit/extension structs and enum tags; defaults/nullable Option behavior mirror serde. Exact string representations use accepted CODEC-VALUES. Detect duplicate decoded known keys, malformed UTF-8/unpaired surrogate and relevant u32/i32/u64 primitive token grammar before lossy JSON.parse; full general JSON numeric lexeme/canonical serializer behavior remains separate.",
+    "record_meter_scope": "Independent record-only byte measurement must match serde_json::to_vec(SemanticRecord) including field order, null Options, default attributes/extensions, UTF-8, escapes and lexical u32/i32 fields. It is mandatory before session 65536-byte qualification, and does not qualify a whole canonical result/export serializer.",
+    "deferred_operations": "Each unsupported candidate integration operation uses a distinct private candidate_not_implemented status. Never relabel a currently supported native profile/reducer/rollup unavailable, silently emit incomplete completed results, or change public CoreError semantics."
+  },
+  "children": [
+    {
+      "id": "CODEC-SEMANTIC-INPUT",
+      "title": "Decode strict semantic config/batch/record v1 and measure source record bytes",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Decode strict semantic config/batch/record v1 and measure source record bytes",
+      "prerequisites": [
+        "CODEC-VALUES",
+        "BASE-CORE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/contracts/semantic-input.ts",
+        "packages/healthmd-core-ts/tests/semantic-input.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-input-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-INPUT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticSessionConfig",
+        "#/source_symbols/SemanticBatch",
+        "#/source_symbols/SemanticRecord",
+        "#/source_symbols/ExactTimestamp",
+        "#/source_symbols/ExactNumber",
+        "#/source_symbols/SemanticValue",
+        "#/source_symbols/validate_value",
+        "#/source_symbols/validate_extension"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-input-vectors.ts",
+        "introduced_case_ids": [
+          "strict_unknown_fields_each_struct",
+          "duplicate_decoded_key",
+          "optional_null_and_defaults",
+          "primitive_integer_lexeme",
+          "invalid_utf8_surrogate",
+          "i128_u128_u64_i64_edges",
+          "finite_negative_zero_exact_time",
+          "record_serialized_utf8_escapes_null_defaults",
+          "record65536_vs65537",
+          "config262144_vs262145",
+          "batch1048576_vs1048577"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Reject unknown/tag/version/default/null/duplicate/UTF-8/primitive numeric token violations under exact serde struct policy; preserve big integers, finite raw bits/negative zero and timestamp tuple without Date/Number coercion.",
+        "Return immutable owned models and bounded sanitized fixed errors; input arrays/objects cannot mutate decoded state.",
+        "Independently match record-only serde compact serialized byte count; raw record slice or fake supplied encodedBytes cannot qualify record limit. Config/batch raw-byte admission uses original bytes, not reserialization.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Raw byte envelope -> strict owned syntax model plus exact record serialized byte size; semantic profile membership/order/selection is next task.",
+        "bounds": "Raw config262144/batch1048576; parse bounded by those inputs and recorded stack/node limits with explicit candidate guards; additional candidate depth guards are not claimed native-source equivalence until reviewed.",
+        "whole_lexemes": "Relevant semantic primitive fields covered here; arbitrary JSON numerical lexemes/general serializer deferred."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-INPUT.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "CODEC-SEMANTIC-RESULT",
+      "title": "Validate immutable semantic-result v1 structure without claiming serialized bytes",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Validate immutable semantic-result v1 structure without claiming serialized bytes",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "CODEC-VALUES"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/contracts/semantic-result.ts",
+        "packages/healthmd-core-ts/tests/semantic-result.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-result-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-RESULT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticResult",
+        "#/source_symbols/result_with_extensions",
+        "#/source_symbols/canonical_result_bytes"
+      ],
+      "source_test_case_refs": [],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-result-vectors.ts",
+        "introduced_case_ids": [
+          "embedded_core_api3_not4",
+          "strict_result_day_rollup_value_extension",
+          "processing_cancelled_no_deliverables",
+          "u64_counter_strings_in_private_model",
+          "unknown_version_and_profile",
+          "immutable_result_no_alias"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Mirror strict SemanticResult and nested struct shape/default/null/enum/version constraints against source and schemas; preserve embedded semantic-result core_api_version3.",
+        "Keep u64 counts exact in internal model; do not pass through lossy native JSON numbers as exact decoded integers. Relevant raw integer lexeme admission is inherited; serializer not implemented.",
+        "Validate protocol state invariants separately from serde structural acceptance: processing/cancelled deliver no days/rollups/extensions; keep stricter candidate invariants labeled, not retroactively attributed to serde.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Decoded semantic-result structure -> immutable typed result; parser reuse accepted input codec.",
+        "encoding": "No canonical byte encoder/hash parity/JSON.stringify roundtrip claim. Pending canonical serializer must independently match recursive UTF-8 key sorting/escaping and full integer lexemes before public/native byte comparison."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-SEMANTIC-RESULT.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "SEMANTIC-RECORD-ADMISSION",
+      "title": "Resolve one profile and validate record retention attribution",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Resolve one profile and validate record retention attribution",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "REGISTRY-READER",
+        "BASE-CORE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/record-admission.ts",
+        "packages/healthmd-core-ts/tests/record-admission.test.ts",
+        "packages/healthmd-core-ts/tests/record-admission-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-RECORD-ADMISSION.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/RawRegistry",
+        "#/source_symbols/RawMetric",
+        "#/source_symbols/RawBinding",
+        "#/source_symbols/RawProfile",
+        "#/source_symbols/RawOutput",
+        "#/source_symbols/validate_config",
+        "#/source_symbols/build_profile_index",
+        "#/source_symbols/validate_record",
+        "#/source_symbols/should_retain",
+        "#/source_symbols/extension_is_selected"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/empty_selection_filters_every_record_without_leaking_zeroes",
+        "#/source_test_cases/disabled_outputs_and_extension_retention_policy_fail_closed",
+        "#/source_test_cases/selection_dependencies_and_blood_pressure_pair_fail_closed",
+        "#/source_test_cases/semantic_output_and_extension_attribution_cannot_cross_metric_boundaries",
+        "#/source_test_cases/android_observations_must_use_rust_profile_aggregation_rules"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/record-admission-vectors.ts",
+        "introduced_case_ids": [
+          "semantic_raw_view_lenient_distinct_strict_registry",
+          "exact_static_registry_binding_precondition",
+          "profile_explicit_revision1_range2",
+          "timezone_evidence_not_inferred",
+          "direct_dependency_no_expansion",
+          "bmi_dependency_retained_output_suppressed",
+          "bp_pair_both_selected",
+          "extension_subset_unknownnamespace",
+          "android_reducer_inference",
+          "invalid_filtered_record_still_reject"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Build source semantic Raw-view index with defaults/inference/order and explicit backed selection IDs from reviewed canonical bytes, preserving distinction from strict RegistryDocument. No runtime fs/network/hash discovery.",
+        "Validate semantic/output/native selector attribution, source-compatible reducer/kind/value/unit rules and all selection/disabled/BMI/BP/extension retention branches; do not expand caller selectors.",
+        "Validate configured version/revision/range profile constraints; native timezone evidence explicitly trusted until IANA binding proof. Android rollup unsupported stays actual source UnsupportedSemanticOperation; unfinished reducer integration is private not_implemented.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Immutable decoded config/record plus accepted index/evidence -> validated retention decision, not daily result.",
+        "native_sdk": "SDK aggregate semantics/provider dedup/source choice stay native; valid SDK input is not raw sample reconstruction.",
+        "stateful": "ID/ordinal/date tracking and declared-date checks belong transaction task; admission exposes pure checks with transactional proposed deltas."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-RECORD-ADMISSION.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "SEMANTIC-SCALAR-GROUP",
+      "title": "Reduce one ordered numeric output group with reviewed unit conversion",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Reduce one ordered numeric output group with reviewed unit conversion",
+      "prerequisites": [
+        "SEMANTIC-RECORD-ADMISSION",
+        "CODEC-VALUES",
+        "CODEC-SEMANTIC-RESULT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/scalar-group.ts",
+        "packages/healthmd-core-ts/tests/scalar-group.test.ts",
+        "packages/healthmd-core-ts/tests/scalar-group-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-SCALAR-GROUP.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/normalized_value",
+        "#/source_symbols/reduce_record_group",
+        "#/source_symbols/reduce_values",
+        "#/source_symbols/reduce_exact_integers"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/reviewed_unit_normalization_handles_fraction_and_imperial_inputs",
+        "#/source_test_cases/duplicate_sdk_aggregate_facts_fail_instead_of_being_recombined",
+        "#/source_test_cases/latest_ties_use_nanoseconds_then_source_ordinal"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/scalar-group-vectors.ts",
+        "introduced_case_ids": [
+          "sdk_single_no_recombine",
+          "sdk_mixed_duplicate_reject",
+          "sum_duration_sum_signed_unsigned_overflow",
+          "signed_then_unsigned_checked_order",
+          "binary64_source_order_negative_zero",
+          "average_binary64_no_exact_sum_shortcut",
+          "minmax_f64_signed_zero_ties",
+          "latest_end_start_no_time_ordinal",
+          "count_without_numeric_normalization",
+          "ratio_percent_imperial_fraction_conversion",
+          "source_record_ids_sorted_rechunk_stable",
+          "unsupported_complex_rule_private_status"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Implement only numeric/pass-through SDK group boundary: Sum,DurationSum,Average,Minimum,Maximum,Latest,Count. WeightedAverage/Union/Histogram/TimeOfDay and full daily orchestration remain separate.",
+        "Match source normalization and f64 operation order; all-integer Sum/Min/Max use checked u128/i128 and source signed-first then unsigned conversion/order; mixed Binary64 takes source f64 path. Average remains f64 sum/count.",
+        "SDK aggregate must be singular and passed through after source unit normalization; reject mixed/duplicate SDK groups and heterogeneous rules. Latest uses end-or-start seconds/nanoseconds/ordinal and source missing-time tuple; source IDs sorted independent of batching.",
+        "Return no incomplete public completed result; group field-value parity only until accepted serializer/integration.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "One already validated retained day/output group -> one typed SemanticDailyValue; no profile population/BMI/pair/workout/SOM/rollup engine.",
+        "count": "Count follows source bypass of normalization; typed admission still validates source value.",
+        "numeric_mixed": "Source integer conversion to f64 may round above2^53; preserve exact payload until explicitly selected arithmetic path, do not invent arbitrary precision results."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-SCALAR-GROUP.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "SEMANTIC-BATCH-TRANSACTION",
+      "title": "Stage and atomically commit one ordered semantic batch/session transition",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Stage and atomically commit one ordered semantic batch/session transition",
+      "prerequisites": [
+        "CODEC-SEMANTIC-INPUT",
+        "CODEC-SEMANTIC-RESULT",
+        "SEMANTIC-RECORD-ADMISSION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/semantic/batch-transaction.ts",
+        "packages/healthmd-core-ts/tests/batch-transaction.test.ts",
+        "packages/healthmd-core-ts/tests/batch-transaction-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-BATCH-TRANSACTION.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/SemanticSession",
+        "#/source_symbols/from_json",
+        "#/source_symbols/process_batch",
+        "#/source_symbols/process_batch_inner",
+        "#/source_symbols/validate_batch_header",
+        "#/source_symbols/register_owner_dates",
+        "#/source_symbols/validate_record",
+        "#/source_symbols/should_retain",
+        "#/source_symbols/cancel_result",
+        "#/source_symbols/retained_extensions"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/semantic_sessions_enforce_configuration_batch_and_sequence_bounds",
+        "#/source_test_cases/invalid_batch_is_transactional_and_can_be_retried",
+        "#/source_test_cases/cancellation_is_terminal_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/batch-transaction-vectors.ts",
+        "introduced_case_ids": [
+          "invalid_late_record_retry_same_index",
+          "owner_boundary_repeat_not_duplicate_within_batch",
+          "ordinal_u64_record_id_global_unique",
+          "raw_bytes_success_only",
+          "4096_batch_100000_retained_plus_whole_batch",
+          "33554432_session_10000_dates",
+          "filtered_record_validation_before_discard",
+          "processing_no_deliverables",
+          "final_fake_port_failure_atomic",
+          "rechunk_stable_ids_no_new_capture",
+          "terminal_precedes_cancel_parse",
+          "cancel_clear_records_ids_keep_source_counters"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Stage working state and publish only successful transition; invalid header/record/size/date/final port failure cannot consume bytes/index/ID/date/ordinal/retained state. Replaying corrected same-index batch succeeds.",
+        "Preserve source raw config/batch/accepted session bytes and record serialized byte bounds; record session guard is retained-record count plus whole incoming batch, not invented lifetime total accepted-record limit. No unbounded aliases/transaction copies; report measured max temporary state under candidate bounds.",
+        "Preserve ordering across batches, allowed boundary date repeat vs within-batch duplicate, strictly increasing canonical u64 ordinal, global IDs even filtered, and source saturating counters/index.",
+        "Non-final processing has no deliverables. Final fake-port success commits terminal typed result; actual full engine completion remains blocked until BMI/daily/rollup/serializer integration. Cancellation clears retained records and record IDs as source, terminal with no deliverables; preserve other source counters/date state unless independently justified.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "Private session state + decoded/raw-sized batch + deterministic finalization port -> atomic next-state and typed processing/completed/cancelled or stable error.",
+        "reduce_port": "Declared synchronous/checkpoint-capable owned immutable input contract reviewed before code. Fixture fake port tests orchestration only; no scalar reducer dependency/cycle, no public final API wiring. Full engine binding next packet.",
+        "cancellation_hooks": "Before parse, each64record including0, before final reduce and source day/rollup checkpoints exposed for later cooperative Effect adapter. Source terminal check precedes cancel probe; no result emitted after terminal."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-BATCH-TRANSACTION.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "SEMANTIC-SESSION-CANCEL",
+      "title": "Interrupt one owned session operation and await terminal cleanup acknowledgment",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Interrupt one owned session operation and await terminal cleanup acknowledgment",
+      "prerequisites": [
+        "SEMANTIC-BATCH-TRANSACTION",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "K02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/semantic-input/v1/contract.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/operations/semantic-session-cancel.ts",
+        "packages/healthmd-core-ts/tests/semantic-session-cancel.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-session-cancel-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SEMANTIC-SESSION-CANCEL.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private semantic candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/contract.md",
+          "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+          "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "source_revision": "a6f9f77754561e1f8a092161df134a828c3074e5"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/process_batch_inner",
+        "#/source_symbols/reduce_days",
+        "#/source_symbols/cancel_result"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/cancellation_is_checked_during_day_reduction",
+        "#/source_test_cases/cancellation_is_terminal_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Pinned #/fixture_catalog/differential, #/fixture_catalog/range_revision, listed Rust literal tests and accepted CODEC-VALUES fixed corpus; new literal source-derived private interface vectors must be independently reviewed before implementation. No frozen expectation edits or whole-case conformance from partial subcases.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-session-cancel-vectors.ts",
+        "introduced_case_ids": [
+          "cancel_before_parse",
+          "cancel_record0_64_128",
+          "cancel_before_day_and_rollup_reduce",
+          "deferred_reduction_ack_before_fiber_done",
+          "completed_allocation_finalizer_registered",
+          "no_read_after_scope_cancel",
+          "terminal_no_deliverables_no_ids",
+          "repeat_cancel_no_double_cleanup",
+          "concurrent_session_no_cross_cancel",
+          "safe_mixed_interrupt_cleanup_defect"
+        ],
+        "interface_ref": "#/candidate_interfaces",
+        "policy": "Private synthetic cases; pin immutable expected vector raw SHA after independent source review before implementation; declare selected frozen subcases and remaining whole-corpus coverage.",
+        "existing_input_pointers": [
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/config",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/0/batches",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/1",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/cases/2",
+          "packages/contracts/semantic-input/v1/fixtures/differential-v1.json#/rejection_cases",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/calendar_v1",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_v2",
+          "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json#/range_limit_cases"
+        ],
+        "expected_result_policy": "Frozen expected_result_sha256 for whole three differential cases is reserved for complete later engine+canonical serializer integration; no child may claim those hashes from a selected input subcase or regenerate them."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted component tests and boundary/one-Effect graph guards including introduced cases; source-specific Rust fixture expectations checked independently."
+        }
+      ],
+      "acceptance": [
+        "Use actual Effect4 APIs and owned scopes; allocation/finalizer registration atomic even on completed acquisition handoff, preparation interruptible, interrupted operation never reads unregistered owned resource.",
+        "Bounded JS yields permit interruption at record64 checkpoints and day/rollup/final boundaries; synchronous callback alone does not prove cooperative host cancellation. Observe cancellation terminal transition and clear state before interruption/failure acknowledgment.",
+        "Await reducer/native-like fake port finalizer acknowledgment; no success or deliverables on cancelled scope and no false successful cancellation while owned work continues. Distinguish pure source cancellation response from Effect Fiber interruption while preserving safe fixed cause.",
+        "Test actual Deferred/Fiber interruption races against emitted code; mask only registration/sanitized result final publication, not entire long acquisition/parse/reduction; no raw provider/error/cause or retained personal values.",
+        "Frozen source/fixtures/registry/exports/native producer state unchanged; return exact reviewed runtime/source/fixture/artifact fingerprints and actual check counts, with explicit remaining scope."
+      ],
+      "details": {
+        "boundary": "One Effect-owned private session operation -> acknowledged termination/no stale result.",
+        "scope": "No real native port/grant/physical proof; async fake acknowledgment establishes common ownership contract only. Source synchronous Rust probe cadence is not a native runtime cancel-latency promise.",
+        "script_policy": "Existing Effect/Effect exposes required APIs; any additional import/guard/dependency/public interface needs coordinator scope amendment before edits."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; no native capture/SDK aggregation/IANA implementation/real host/public/export/canonical byte serializer/profile-family admission.",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SEMANTIC-SESSION-CANCEL.json",
+      "reviewer_role": "independent core/semantic/codec reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    }
+  ],
+  "dependency_edges": [
+    {
+      "from": "CODEC-SEMANTIC-INPUT",
+      "to": "CODEC-SEMANTIC-RESULT"
+    },
+    {
+      "from": "CODEC-SEMANTIC-INPUT",
+      "to": "SEMANTIC-RECORD-ADMISSION"
+    },
+    {
+      "from": "SEMANTIC-RECORD-ADMISSION",
+      "to": "SEMANTIC-SCALAR-GROUP"
+    },
+    {
+      "from": "CODEC-SEMANTIC-RESULT",
+      "to": "SEMANTIC-SCALAR-GROUP"
+    },
+    {
+      "from": "CODEC-SEMANTIC-INPUT",
+      "to": "SEMANTIC-BATCH-TRANSACTION"
+    },
+    {
+      "from": "CODEC-SEMANTIC-RESULT",
+      "to": "SEMANTIC-BATCH-TRANSACTION"
+    },
+    {
+      "from": "SEMANTIC-RECORD-ADMISSION",
+      "to": "SEMANTIC-BATCH-TRANSACTION"
+    },
+    {
+      "from": "SEMANTIC-BATCH-TRANSACTION",
+      "to": "SEMANTIC-SESSION-CANCEL"
+    }
+  ],
+  "resource_policy": "One writer per new module/test/vector; core-component-build exclusive across all children and CLI/core dependent fingerprints. No root/package/lock/public/frozen changes. Dependencies are accepted interfaces, not concurrent speculative imports; coordinator refreshes later receipts and CLI host input guards after accepted core tree changes.",
+  "choice_dependencies": {
+    "required_decisions": [],
+    "local_progress": "Q-NATIVE-RUNTIME and source/purpose/cloud choices remain open for dependent host/source work, not portable synthetic semantics. TZ resolver and canonical serializer are explicit later proof dependencies, not silently selected product choices."
+  },
+  "consumer_proof_policy": {
+    "retained_authorities": "Native Swift/Kotlin captured model/bounded builders and Rust deterministic evaluator/current exports/direct services unchanged. CLI/MCP/website/external Obsidian consumer bytes are untouched; portable-only child checks do not qualify any consumer.",
+    "existing_check_catalog": {
+      "ref": "docs/migration/effect-refactor/inventories/core.json#/available_consumer_checks",
+      "status": "source-pinned retained check commands; unrun by packet; run affected native/core/contract/CLI/website/external gates only at separately scoped integration"
+    },
+    "integration": "Rust differential reference, Apple semantic adapter, Android unit/instrumentation, shared-contract fixtures, website mirrors, CLI/MCP and external plugin exact-version expectations all remain compatibility authority."
+  },
+  "selected_outcome_map": {
+    "strict_semantic_input": "CODEC-SEMANTIC-INPUT",
+    "record_reserialized_bound": "CODEC-SEMANTIC-INPUT",
+    "typed_result_contract": "CODEC-SEMANTIC-RESULT",
+    "profile_selection_direct_dependencies": "SEMANTIC-RECORD-ADMISSION",
+    "initial_scalar_groups": "SEMANTIC-SCALAR-GROUP",
+    "ordered_transactional_session": "SEMANTIC-BATCH-TRANSACTION",
+    "acknowledged_cooperative_cancel": "SEMANTIC-SESSION-CANCEL",
+    "C02": [
+      "CODEC-SEMANTIC-INPUT",
+      "CODEC-SEMANTIC-RESULT",
+      "SEMANTIC-RECORD-ADMISSION",
+      "SEMANTIC-BATCH-TRANSACTION"
+    ],
+    "K02": [
+      "SEMANTIC-RECORD-ADMISSION",
+      "SEMANTIC-SCALAR-GROUP",
+      "SEMANTIC-BATCH-TRANSACTION",
+      "SEMANTIC-SESSION-CANCEL"
+    ],
+    "F05": [
+      "CODEC-SEMANTIC-INPUT",
+      "CODEC-SEMANTIC-RESULT",
+      "SEMANTIC-SCALAR-GROUP"
+    ]
+  },
+  "remaining_family_work": [
+    {
+      "id": "complex_daily",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "core semantic/reducer",
+      "next_packet": "SPLIT-SEMANTICS daily-engine follow-on",
+      "trigger": "Accepted input/result/admission/scalar/session interfaces",
+      "outcomes": [
+        "Full derive_bmi direct-vs-derived precedence and weight/height population; paired BP, workout duration weights and weighted_average, SOM independent multi-view population, union/histogram/time_of_day.",
+        "Actual reduce_days grouping/output order/declared successful empty dates/missing-vs-zero/extensions and full scalar+complex engine binding; initial fake port cannot qualify completed semantic result."
+      ]
+    },
+    {
+      "id": "civil_rollups",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "core calendar/native timezone",
+      "next_packet": "SPLIT-SEMANTICS civil-rollup packet",
+      "trigger": "Accepted full daily engine and independently pinned chrono/IANA/calendar source oracle",
+      "outcomes": [
+        "ISO year/week/month/leap/DST/civil date owner semantics, revision1 calendar vs revision2 inclusive range10000, requested failed endpoints/coverage/source_dates/days_counted, lower later VO2 and workout weights.",
+        "Complete config IANA membership and trusted native exact offset evidence binding; no Date/Intl inference of native owner dates."
+      ]
+    },
+    {
+      "id": "canonical_serialization",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "contract/serializer",
+      "next_packet": "SPLIT-RENDER codec/serializer follow-on",
+      "trigger": "Accepted typed result and independently reviewed semantic serialization fixtures",
+      "outcomes": [
+        "Complete recursively UTF-8 key sorted canonical SemanticResult bytes, all integer JSON lexemes u64 counters, exact UTF8/escaping/default/null/order and language-engine f64 formatting vectors.",
+        "General JSON numeric lexemes/duplicate-key grammar/Unicode across other codec/render/public profiles; record-only meter is not canonical serializer qualification."
+      ]
+    },
+    {
+      "id": "profile_native_sdk",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "native semantic/SDK",
+      "next_packet": "SPLIT-NATIVE-FEATURES semantic shadow/capture",
+      "trigger": "Accepted full engine plus exact host operation/runtime/source evidence",
+      "outcomes": [
+        "Swift/Kotlin same captured model, source/provider/grants/dedup/SDK aggregate retention, bounded native builder ID/ordinal/rechunk and extension lineage; no repeat capture.",
+        "NativeSDK profile/platform extension/course revisions and complete Rust/Swift/Kotlin differential bytes; Android unavailable vs planned capabilities preserved."
+      ]
+    },
+    {
+      "id": "public_consumers",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "contract/export/CLI/website/external",
+      "next_packet": "SPLIT-RENDER + semantic integration packet",
+      "trigger": "Accepted complete engine/result serializer/native shadow source oracle",
+      "outcomes": [
+        "Whole frozen differential3cases and rejection3 plus range revisions and exact output hashes; not partial-subcase closure.",
+        "Apple8, Android frozen4/analytical5, historical/range9 export serializers and raw/lossless extraction, CLI/MCP/website/external fixture/version/profile checks remain complete independent boundaries."
+      ]
+    },
+    {
+      "id": "hosts_retirement",
+      "families": [
+        "C02",
+        "K02"
+      ],
+      "risks": [
+        "F05"
+      ],
+      "owner_role": "runtime/release/migration",
+      "next_packet": "SPLIT-NATIVE-HOSTS + SPLIT-RELEASE/retirement packet",
+      "trigger": "Accepted full semantic/profile/consumer matrices at exact committed artifacts",
+      "outcomes": [
+        "All engines/OS/ABI actual host/source-purpose/signed/distribution/state rollback and shadow admission; dependency singleton/noRust tool graph and CLI exact input pins must refresh after core changes.",
+        "Promotion, rollout, migration/downgrade/retained readers/rollback window and Rust comparator/reference retirement independently approved; no family/M02 gate closed by packet."
+      ]
+    }
+  ],
+  "qualification": "Planning only. No implementation/native/engine/consumer/serializer/public-result-byte/profile/family/M02/retirement gate qualified. Coordinator must review and merge proposed cards.",
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  }
+}
