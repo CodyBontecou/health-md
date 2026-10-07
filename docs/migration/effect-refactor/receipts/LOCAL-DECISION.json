@@ -1,0 +1,201 @@
+{
+  "schema_version": 1,
+  "task_id": "LOCAL-DECISION",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+  "patch_digest": "516f3ee74bfc0772c494d0e01a7a0ac7c4b98ad58c4f4a8773419c91c897745d",
+  "changed_paths": [
+    "docs/architecture/adr-0001-shared-rust-uniffi-core.md",
+    "docs/architecture/adr-0007-effect-typescript-unified-layer.md",
+    "docs/migration/effect-refactor/decisions/local-architecture.md",
+    "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "method": "SHA256 of UTF-8 canonical ordered {path:SHA256(raw deliverable bytes including newline)}; json.dumps(mapping,sort_keys=True,separators=(comma,colon),ensure_ascii=False), no appended newline.",
+    "canonical_json_options": {
+      "sort_keys": true,
+      "separators": [
+        ",",
+        ":"
+      ],
+      "ensure_ascii": false
+    },
+    "included_paths": [
+      "docs/architecture/adr-0001-shared-rust-uniffi-core.md",
+      "docs/architecture/adr-0007-effect-typescript-unified-layer.md",
+      "docs/migration/effect-refactor/decisions/local-architecture.md"
+    ],
+    "path_digests": {
+      "docs/architecture/adr-0001-shared-rust-uniffi-core.md": "47a60a86efbb9c8f66f17e000fd2e5d64bad37783f4251edb2fde24f035a7c18",
+      "docs/architecture/adr-0007-effect-typescript-unified-layer.md": "3124c18acf2be991af16af3eb492fe4e155e6f12437c80836e1369efc85477d3",
+      "docs/migration/effect-refactor/decisions/local-architecture.md": "e39461a77779bca6e1a42439d60df2342b92182514f514fe956700915d0ac569"
+    },
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json",
+      "docs/migration/effect-refactor/plan.json"
+    ],
+    "exclusion_scope": "All receipt/coordinator state and other worker files excluded; includes three claimed documents only."
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/contracts/manifest.json": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+    },
+    "locks_and_runtime": {
+      "installed_or_changed": false,
+      "toolchain_direction": "Node24/npm Effect4; exact pins delegated TOOLCHAIN-PINS; RN/Hermes hosts separate"
+    },
+    "artifact_and_native_interface": {
+      "accepted_inventory_source": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "inventory_bytes_match_decision_base": true,
+      "native_runtime_or_signed_artifacts_qualified": false
+    },
+    "policy_migration_key_versions": {
+      "public_contract_change": false,
+      "production_authority_change": false,
+      "retained_state_change": false,
+      "architecture_direction": "ADR-0007 selected; Q-LOCAL review pending"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Reconcile selected D01\u2013D18 with applicable current instructions, exact contracts and coarse host interfaces.",
+      "result": "passed",
+      "evidence": "decisions/local-architecture.md D01\u2013D18 table; ADR-0007 boundary/contracts:18 decisions mapped to current rules and coarse host interfaces"
+    },
+    {
+      "criterion": "Define first-slice candidate authority/deletion boundaries and scoped prerequisites; leave cloud decisions independent.",
+      "result": "passed",
+      "evidence": "decisions/local-architecture.md dependency/authority/cloud sections; ADR-0007 Candidate slice and coexistence: exact task prerequisites, candidate/recovery/deletion bounds; cloud choices independent"
+    },
+    {
+      "criterion": "Record reviewed Q-LOCAL resolution and exact ADR path; derive later instruction changes when implementation lands.",
+      "result": "passed",
+      "evidence": "decisions/local-architecture.md technical resolution and exactADR path, pending review/coordinator acceptance explicit; ADR-0007 Consequences derives instruction changes when implementation/retirement lands"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "LOCAL-DECISION"
+      ],
+      "result": "passed",
+      "evidence": "Read outcome/accepted prerequisites/target/write claim"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K01"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design reference read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C01"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design reference read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C02"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design reference read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C11"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design reference read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O01"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design reference read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "No whitespace errors"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Inline document check: relative links exist,18D rows, required architecture/slice terms, ADR0001 only successor paragraph added,3inventory bytes match git show base,4contract digests verified, canonical3doc digest computed"
+    }
+  ],
+  "inspection_summary": "Read root AGENTS/execution entrypoint/core-cli/templates (prior context retained), LOCAL-DECISION brief, K01/C01/C02/C11/O01, D01\u2013D18 topology/layout/coexistence, ADR0001/cross-platform policy/GLOSSARY, accepted BASE scoped records and pins. Domain-modeling skill/ADR format applied within assigned repository paths. Corrected initial nonexistent ADR-name read; one document assertion found missing literal SLICE-PARITY ID in ADR and was repaired before passed recheck. Source-only planning checks, no product behavior exercised.",
+  "observations": [],
+  "limitations": [
+    "Planning architecture record; no runtime/native/signed/physical/external/deployed qualification.",
+    "Independent exact fingerprint review and coordinator Q-LOCAL acceptance pending; worker does not change plan.",
+    "Exact portable/native pins, bridge/non-Rust desktop ABI, filesystem/credential continuity and measured budgets remain scoped follow-up.",
+    "Inventory admission/fixture drift stays explicit reconciliation; no schemas/fixtures/protocol/generated product asset changes.",
+    "Cloud provider/region/billing/identity/recovery/retention and named client admission independent."
+  ],
+  "remaining_qualification": [
+    "Independent exact source/document-fingerprint core/CLI review.",
+    "TOOLCHAIN-PINS, TS-FOUNDATION and portable CI/query adapter/parity evidence.",
+    "Complete contract/workflow/UI/native/P/L/S/H producer/consumer gates and instruction updates at actual cutovers.",
+    "Signed distribution/retained-state recovery/promotion/rollback window before separately reviewed Rust retirement."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+516f3ee74bfc0772c494d0e01a7a0ac7c4b98ad58c4f4a8773419c91c897745d"
+  },
+  "review_evidence": {
+    "scope": "independent bounded planning and technical selection review",
+    "checks": "All D01-D18 rows, document links, input/source pins and canonical document fingerprint verified; current authority and cloud decisions remain scoped."
+  }
+}

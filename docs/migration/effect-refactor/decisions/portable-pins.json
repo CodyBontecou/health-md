@@ -1,0 +1,1420 @@
+{
+  "schema_version": 1,
+  "task_id": "TOOLCHAIN-PINS",
+  "decision_id": "Q-PORTABLE-PINS",
+  "source_revision": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+  "scoped_design_ids": [
+    "D01",
+    "K01",
+    "F03",
+    "F06"
+  ],
+  "proof_class": "planning",
+  "snapshot_utc": "2026-10-07T10:11:31.480818+00:00",
+  "resolution_status": "technical_selection_pending_independent_review",
+  "selection_scope": "Portable Node candidate compile/test/bundle inputs only; React/RN/Hermes/browser/macOS native compatibility and production are separate decisions.",
+  "source_pins": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "d7fde9dacbc405c66a27bc400a57e35b0ffd466a0a8a09a2a15916e48b4ab4ab"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "5869f39aaf549228490c7fced7e97af471763e7a1f58f04b3b38f3b17303e985"
+    },
+    {
+      "path": "docs/migration/effect-refactor/core-cli.md",
+      "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/cli.json",
+      "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/hosts.json",
+      "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+    }
+  ],
+  "selected_runtime": {
+    "node": "24.21.0",
+    "npm": "11.19.0",
+    "packageManager": "npm@11.19.0",
+    "official_release": "https://nodejs.org/en/blog/release/v24.21.0",
+    "index_url": "https://nodejs.org/dist/index.json",
+    "index_raw_sha256": "700401a06eb352ec19100649afbf767f76db33f194b22a9b903b3ff48e3bc482",
+    "index_record": {
+      "version": "v24.21.0",
+      "date": "2026-09-07",
+      "files": [
+        "aix-ppc64",
+        "headers",
+        "linux-arm64",
+        "linux-ppc64le",
+        "linux-s390x",
+        "linux-x64",
+        "linux-x64-musl",
+        "osx-arm64-tar",
+        "osx-x64-pkg",
+        "osx-x64-tar",
+        "src",
+        "win-arm64-7z",
+        "win-arm64-zip",
+        "win-x64-7z",
+        "win-x64-exe",
+        "win-x64-msi",
+        "win-x64-zip"
+      ],
+      "npm": "11.19.0",
+      "v8": "13.6.233.17",
+      "uv": "1.52.1",
+      "zlib": "1.3.2.1-motley",
+      "openssl": "3.5.8",
+      "modules": "137",
+      "lts": "Krypton",
+      "security": false
+    },
+    "shasums_url": "https://nodejs.org/dist/v24.21.0/SHASUMS256.txt",
+    "shasums_raw_sha256": "f410428039e2c922a14058df067a4482691c9304a5c01a75847f9f3f2d3307f6",
+    "platform_archives": [
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz",
+        "sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+      },
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-x64.tar.gz",
+        "sha256": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097"
+      },
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-x64.tar.xz",
+        "sha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6"
+      },
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-linux-arm64.tar.xz",
+        "sha256": "6ad1325edbdb5649c379b75a237147a666c95d4f9ae8d340fef2d1575d289ad2"
+      },
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-x64.zip",
+        "sha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541"
+      },
+      {
+        "url": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-win-arm64.zip",
+        "sha256": "8779b1bde1d39f8d420e3b57aa657b39891af434d3de44a919044cec06785921"
+      }
+    ],
+    "qualification_status": "selected, not installed or executed here; archive/signature verification and exact Node execution required in successor"
+  },
+  "observed_host": {
+    "node": "26.8.1",
+    "npm": "11.19.0",
+    "checks": [
+      "node --version",
+      "npm --version"
+    ],
+    "meaning": "Available host does not qualify selected Node24 runtime."
+  },
+  "manifest_plan": {
+    "package_root": "packages/healthmd-core-ts",
+    "independent_lockfile": "packages/healthmd-core-ts/package-lock.json",
+    "type": "module",
+    "runtime_dependencies": {
+      "effect": "4.0.1"
+    },
+    "dev_dependencies": {
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "@types/node": "24.19.1"
+    },
+    "planned_transitive_overrides": {
+      "undici-types": "7.24.6"
+    },
+    "not_added": [
+      "React",
+      "React Native",
+      "Expo",
+      "@effect/platform-node",
+      "@effect/language-service",
+      "@typescript/typescript6",
+      "@typescript/native-preview",
+      "tsx",
+      "jsdom",
+      "browser providers",
+      "coverage packages",
+      "root workspace orchestrator",
+      "vitest",
+      "@effect/vitest",
+      "vite",
+      "rollup",
+      "rolldown",
+      "lightningcss",
+      "@swc/core",
+      "oxc",
+      "amaro",
+      "Rust-backed test/build add-ons"
+    ],
+    "test_runner": {
+      "name": "node:test",
+      "version": "bundled in Node24.21.0",
+      "assertions": "node:assert/strict",
+      "entrypoints": "Compiled .mjs/.js synthetic tests; never execute .ts through Node native type stripping.",
+      "effect_test_services": "Use effect/testing TestClock.layer() and deterministic fake Layers, run via Effect.runPromise inside node:test; no @effect/vitest dependency."
+    }
+  },
+  "package_metadata": [
+    {
+      "name": "effect",
+      "version": "4.0.1",
+      "license": "MIT",
+      "exports": {
+        ".": "./dist/index.js",
+        "./*": "./dist/*.js",
+        "./ai": "./dist/ai/index.js",
+        "./cli": "./dist/cli/index.js",
+        "./net": "./dist/net/index.js",
+        "./rpc": "./dist/rpc/index.js",
+        "./sql": "./dist/sql/index.js",
+        "./http": "./dist/http/index.js",
+        "./index": null,
+        "./schema": "./dist/schema/index.js",
+        "./socket": "./dist/socket/index.js",
+        "./*/index": null,
+        "./cluster": "./dist/cluster/index.js",
+        "./process": "./dist/process/index.js",
+        "./testing": "./dist/testing/index.js",
+        "./workers": "./dist/workers/index.js",
+        "./devtools": "./dist/devtools/index.js",
+        "./encoding": "./dist/encoding/index.js",
+        "./eventlog": "./dist/eventlog/index.js",
+        "./http-api": "./dist/http-api/index.js",
+        "./workflow": "./dist/workflow/index.js",
+        "./internal/*": null,
+        "./reactivity": "./dist/reactivity/index.js",
+        "./persistence": "./dist/persistence/index.js",
+        "./package.json": "./package.json",
+        "./observability": "./dist/observability/index.js",
+        "./cli/internal/*": null,
+        "./cluster/internal/*": null
+      },
+      "scripts": {
+        "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+        "build": "tsc -b tsconfig.json && pnpm babel",
+        "check": "tsc -b tsconfig.json",
+        "codegen": "effect-utils codegen"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/effect/-/effect-4.0.1.tgz",
+        "integrity": "sha512-b1VlQG9g8fwxE5QnIZuPoOP/0MsqHJSRKxUijjoM80E5q95FXrX5yWtY5XI8G+GJsBQAVSDbLS458z9a++uVvw=="
+      },
+      "metadata_url": "https://registry.npmjs.org/effect/4.0.1",
+      "metadata_raw_sha256": "18468984796988a5eed76d513dd10a69926325182ef65b446d6625e18240915e",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "typescript",
+      "version": "7.0.2",
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "dependencies": {
+        "@typescript/typescript-aix-ppc64": "7.0.2",
+        "@typescript/typescript-linux-arm": "7.0.2",
+        "@typescript/typescript-linux-x64": "7.0.2",
+        "@typescript/typescript-sunos-x64": "7.0.2",
+        "@typescript/typescript-win32-x64": "7.0.2",
+        "@typescript/typescript-darwin-x64": "7.0.2",
+        "@typescript/typescript-netbsd-x64": "7.0.2",
+        "@typescript/typescript-freebsd-x64": "7.0.2",
+        "@typescript/typescript-linux-arm64": "7.0.2",
+        "@typescript/typescript-linux-ppc64": "7.0.2",
+        "@typescript/typescript-linux-s390x": "7.0.2",
+        "@typescript/typescript-openbsd-x64": "7.0.2",
+        "@typescript/typescript-win32-arm64": "7.0.2",
+        "@typescript/typescript-darwin-arm64": "7.0.2",
+        "@typescript/typescript-netbsd-arm64": "7.0.2",
+        "@typescript/typescript-freebsd-arm64": "7.0.2",
+        "@typescript/typescript-linux-loong64": "7.0.2",
+        "@typescript/typescript-linux-riscv64": "7.0.2",
+        "@typescript/typescript-openbsd-arm64": "7.0.2",
+        "@typescript/typescript-linux-mips64el": "7.0.2"
+      },
+      "optionalDependencies": {
+        "@typescript/typescript-aix-ppc64": "7.0.2",
+        "@typescript/typescript-linux-arm": "7.0.2",
+        "@typescript/typescript-linux-x64": "7.0.2",
+        "@typescript/typescript-sunos-x64": "7.0.2",
+        "@typescript/typescript-win32-x64": "7.0.2",
+        "@typescript/typescript-darwin-x64": "7.0.2",
+        "@typescript/typescript-netbsd-x64": "7.0.2",
+        "@typescript/typescript-freebsd-x64": "7.0.2",
+        "@typescript/typescript-linux-arm64": "7.0.2",
+        "@typescript/typescript-linux-ppc64": "7.0.2",
+        "@typescript/typescript-linux-s390x": "7.0.2",
+        "@typescript/typescript-openbsd-x64": "7.0.2",
+        "@typescript/typescript-win32-arm64": "7.0.2",
+        "@typescript/typescript-darwin-arm64": "7.0.2",
+        "@typescript/typescript-netbsd-arm64": "7.0.2",
+        "@typescript/typescript-freebsd-arm64": "7.0.2",
+        "@typescript/typescript-linux-loong64": "7.0.2",
+        "@typescript/typescript-linux-riscv64": "7.0.2",
+        "@typescript/typescript-openbsd-arm64": "7.0.2",
+        "@typescript/typescript-linux-mips64el": "7.0.2"
+      },
+      "license": "Apache-2.0",
+      "bin": {
+        "tsc": "bin/tsc"
+      },
+      "exports": {
+        ".": "./lib/version.cjs",
+        "./unstable/fs": "./dist/api/fs.js",
+        "./package.json": "./package.json",
+        "./unstable/ast": "./dist/ast/index.js",
+        "./unstable/sync": "./dist/api/sync/api.js",
+        "./unstable/async": "./dist/api/async/api.js",
+        "./unstable/proto": "./dist/api/proto.js",
+        "./unstable/ast/is": "./dist/ast/is.js",
+        "./unstable/ast/clone": "./dist/ast/clone.js",
+        "./unstable/ast/utils": "./dist/ast/utils.js",
+        "./unstable/ast/factory": "./dist/ast/factory.generated.js",
+        "./unstable/ast/scanner": "./dist/ast/scanner.js",
+        "./unstable/ast/visitor": "./dist/ast/visitor.js"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/typescript/-/typescript-7.0.2.tgz",
+        "integrity": "sha512-8FYau96o3NKOhbjKi/qNvG/W5jhzxkbdm5sj9AbZ/5T5sWqn3hJgLfGx27sRKZWTvyzCP8dLRBTf5tBTSRVUNA=="
+      },
+      "metadata_url": "https://registry.npmjs.org/typescript/7.0.2",
+      "metadata_raw_sha256": "28a8ef314c6bbc3fddb831088f80eb2fcac6351cb618c8ac029f7229f587b8aa",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "esbuild",
+      "version": "0.28.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "optionalDependencies": {
+        "@esbuild/aix-ppc64": "0.28.2",
+        "@esbuild/linux-arm": "0.28.2",
+        "@esbuild/linux-x64": "0.28.2",
+        "@esbuild/sunos-x64": "0.28.2",
+        "@esbuild/win32-x64": "0.28.2",
+        "@esbuild/darwin-x64": "0.28.2",
+        "@esbuild/linux-ia32": "0.28.2",
+        "@esbuild/netbsd-x64": "0.28.2",
+        "@esbuild/win32-ia32": "0.28.2",
+        "@esbuild/android-arm": "0.28.2",
+        "@esbuild/android-x64": "0.28.2",
+        "@esbuild/freebsd-x64": "0.28.2",
+        "@esbuild/linux-arm64": "0.28.2",
+        "@esbuild/linux-ppc64": "0.28.2",
+        "@esbuild/linux-s390x": "0.28.2",
+        "@esbuild/openbsd-x64": "0.28.2",
+        "@esbuild/win32-arm64": "0.28.2",
+        "@esbuild/darwin-arm64": "0.28.2",
+        "@esbuild/netbsd-arm64": "0.28.2",
+        "@esbuild/android-arm64": "0.28.2",
+        "@esbuild/freebsd-arm64": "0.28.2",
+        "@esbuild/linux-loong64": "0.28.2",
+        "@esbuild/linux-riscv64": "0.28.2",
+        "@esbuild/openbsd-arm64": "0.28.2",
+        "@esbuild/linux-mips64el": "0.28.2",
+        "@esbuild/openharmony-arm64": "0.28.2"
+      },
+      "license": "MIT",
+      "bin": {
+        "esbuild": "bin/esbuild"
+      },
+      "main": "lib/main.js",
+      "types": "lib/main.d.ts",
+      "scripts": {
+        "postinstall": "node install.js"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/esbuild/-/esbuild-0.28.2.tgz",
+        "integrity": "sha512-HKVLS8dvII+xoKW9kmqxbRKrnWEXfJJr/FZhhJmiqIB0e053QNYFqOBouTMO/k5sID4MvCiUCvv8b9M4h32wIA=="
+      },
+      "metadata_url": "https://registry.npmjs.org/esbuild/0.28.2",
+      "metadata_raw_sha256": "7a6838097b106ef5d8877fd543a1e25c46e5eb1730945fb7e57bc467c12c7c8c",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@types/node",
+      "version": "24.19.1",
+      "dependencies": {
+        "undici-types": ">=7.24.0 <7.24.7"
+      },
+      "peerDependencies": {},
+      "license": "MIT",
+      "main": "",
+      "types": "index.d.ts",
+      "scripts": {},
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@types/node/-/node-24.19.1.tgz",
+        "integrity": "sha512-aS3/DG0oM05K0RIXXP+hKjinGG5IgSSVGzswZxW3O0sS3pH4/fycXundUC9XsszgKCk4gHXylTEK6hyFxVxnoQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@types%2fnode/24.19.1",
+      "metadata_raw_sha256": "8f9116d88252170cc673621038f51e9214e56bfb1c62a1e2fd1d79f461e3fd36",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "npm",
+      "version": "11.19.0",
+      "engines": {
+        "node": "^20.17.0 || >=22.9.0"
+      },
+      "dependencies": {
+        "ms": "^2.1.2",
+        "ini": "^6.0.0",
+        "tar": "^7.5.19",
+        "glob": "^13.0.6",
+        "nopt": "^9.0.0",
+        "read": "^5.0.1",
+        "ssri": "^13.0.1",
+        "archy": "~1.0.0",
+        "chalk": "^5.6.2",
+        "p-map": "^7.0.4",
+        "which": "^6.0.1",
+        "abbrev": "^4.0.0",
+        "pacote": "^21.5.1",
+        "semver": "^7.8.5",
+        "cacache": "^20.0.4",
+        "ci-info": "^4.4.0",
+        "is-cidr": "^6.0.4",
+        "minipass": "^7.1.3",
+        "node-gyp": "^12.4.0",
+        "proc-log": "^6.1.0",
+        "libnpmorg": "^8.0.1",
+        "minimatch": "^10.2.5",
+        "treeverse": "^3.0.0",
+        "@npmcli/fs": "^5.0.0",
+        "libnpmdiff": "^8.1.12",
+        "libnpmexec": "^10.3.2",
+        "libnpmfund": "^7.0.26",
+        "libnpmpack": "^9.1.12",
+        "libnpmteam": "^8.0.2",
+        "text-table": "~0.2.0",
+        "fs-minipass": "^3.0.3",
+        "graceful-fs": "^4.2.11",
+        "npm-profile": "^12.0.2",
+        "libnpmaccess": "^10.0.3",
+        "libnpmsearch": "^9.0.1",
+        "@sigstore/tuf": "^4.0.2",
+        "libnpmpublish": "^11.2.0",
+        "libnpmversion": "^8.0.4",
+        "@npmcli/config": "^10.12.0",
+        "@npmcli/redact": "^4.0.0",
+        "supports-color": "^10.2.2",
+        "hosted-git-info": "^9.0.3",
+        "npm-package-arg": "^13.0.2",
+        "qrcode-terminal": "^0.12.0",
+        "@npmcli/arborist": "^9.9.1",
+        "npm-audit-report": "^7.0.0",
+        "init-package-json": "^8.2.5",
+        "make-fetch-happen": "^15.0.6",
+        "minipass-pipeline": "^1.2.4",
+        "npm-pick-manifest": "^11.0.3",
+        "npm-user-validate": "^4.0.0",
+        "@npmcli/run-script": "^10.0.4",
+        "npm-install-checks": "^8.0.0",
+        "npm-registry-fetch": "^19.1.1",
+        "tiny-relative-date": "^2.0.2",
+        "fastest-levenshtein": "^1.0.16",
+        "parse-conflict-json": "^5.0.1",
+        "@npmcli/package-json": "^7.0.5",
+        "@npmcli/promise-spawn": "^9.0.1",
+        "spdx-expression-parse": "^4.0.0",
+        "@npmcli/map-workspaces": "^5.0.3",
+        "validate-npm-package-name": "^7.0.2",
+        "@npmcli/metavuln-calculator": "^9.0.3",
+        "@isaacs/string-locale-compare": "^1.1.0",
+        "json-parse-even-better-errors": "^5.0.0"
+      },
+      "license": "Artistic-2.0",
+      "bin": {
+        "npm": "bin/npm-cli.js",
+        "npx": "bin/npx-cli.js"
+      },
+      "main": "./index.js",
+      "exports": {
+        ".": [
+          {
+            "default": "./index.js"
+          },
+          "./index.js"
+        ],
+        "./package.json": "./package.json"
+      },
+      "scripts": {
+        "lint": "node . run eslint",
+        "snap": "tap",
+        "test": "tap",
+        "eslint": "eslint \"**/*.{js,cjs,ts,mjs,jsx,tsx}\"",
+        "lintfix": "node . run eslint -- --fix",
+        "prepack": "node . run build -w docs",
+        "dumpconf": "env | grep npm | sort | uniq",
+        "licenses": "npx licensee --production --errors-only",
+        "lint-all": "node . run lint --workspaces --include-workspace-root --if-present",
+        "postlint": "template-oss-check",
+        "posttest": "node . run lint",
+        "test-all": "node . run test --workspaces --include-workspace-root --if-present",
+        "resetdeps": "node scripts/resetdeps.js",
+        "dependencies": "node scripts/bundle-and-gitignore-deps.js && node scripts/dependency-graph.js",
+        "test:nocolor": "CI=true tap -Rclassic",
+        "rp-pull-request": "node scripts/update-authors.js",
+        "template-oss-apply": "template-oss-apply --force"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/npm/-/npm-11.19.0.tgz",
+        "integrity": "sha512-SDd/hHg3KqHE5Ht2NHWxNYNtqCQ2pXAPLl6OtQhPyED5PHsRfrOtO199MZTIG2cQoQ1ZRI9t28shrD+2cr3AAw=="
+      },
+      "metadata_url": "https://registry.npmjs.org/npm/11.19.0",
+      "metadata_raw_sha256": "273001988fcaf184d7c3240940a2f8d0a04f7444e84498d100a48727abb71456",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "undici-types",
+      "version": "7.24.6",
+      "license": "MIT",
+      "types": "index.d.ts",
+      "dist": {
+        "tarball": "https://registry.npmjs.org/undici-types/-/undici-types-7.24.6.tgz",
+        "integrity": "sha512-WRNW+sJgj5OBN4/0JpHFqtqzhpbnV0GuB+OozA9gCL7a993SmU+1JBZCzLNxYsbMfIeDL+lTsphD5jN5N+n0zg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/undici-types/7.24.6",
+      "metadata_raw_sha256": "da1edaf8ba78a35896001b51fa0fa13ee8099fa463fe1ee964de44f048d128bf",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@typescript/typescript-darwin-arm64",
+      "version": "7.0.2",
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "license": "Apache-2.0",
+      "exports": {
+        "./package.json": "./package.json"
+      },
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@typescript/typescript-darwin-arm64/-/typescript-darwin-arm64-7.0.2.tgz",
+        "integrity": "sha512-gowzar9MwS/aRWp6f3a4KUqzRjAZjOsmGNCM6LcTgXum+dBfgsBVMN+AgvOCCbguXyick6LJhpBszxMebJ8syA=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@typescript%2ftypescript-darwin-arm64/7.0.2",
+      "metadata_raw_sha256": "29dc735549bace6b2d713ddfa523458c87ad9fbd5ba5a5b96f3eaa7f3423ae21",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@typescript/typescript-linux-x64",
+      "version": "7.0.2",
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "license": "Apache-2.0",
+      "exports": {
+        "./package.json": "./package.json"
+      },
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@typescript/typescript-linux-x64/-/typescript-linux-x64-7.0.2.tgz",
+        "integrity": "sha512-EYdf2cNg7rgCWJnxCdJ+F3V39O8ihb37eHAu1LK8oAFizgTQbPOK7zHHXbPt8rX24COqODXeI3sIf0fCXG7H/A=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@typescript%2ftypescript-linux-x64/7.0.2",
+      "metadata_raw_sha256": "754a96664c15d55e0c7ccba0d9fbe811311a4cb1c0235ae9b6aab062a281a788",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@typescript/typescript-win32-x64",
+      "version": "7.0.2",
+      "engines": {
+        "node": ">=16.20.0"
+      },
+      "license": "Apache-2.0",
+      "exports": {
+        "./package.json": "./package.json"
+      },
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@typescript/typescript-win32-x64/-/typescript-win32-x64-7.0.2.tgz",
+        "integrity": "sha512-0BQ3HkAHHlKLSp1qRvf3SUhGpGsDuhB/jgFw75guyqbxJqEaS0Cw/VFO8i2nHglJUzQCRtMMR/IBAKE3ETMC4g=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@typescript%2ftypescript-win32-x64/7.0.2",
+      "metadata_raw_sha256": "55cd9d76319ab3ba552fd43fcba11e579fac14c5e232146917cf59fc69914a28",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@esbuild/darwin-arm64",
+      "version": "0.28.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "license": "MIT",
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@esbuild/darwin-arm64/-/darwin-arm64-0.28.2.tgz",
+        "integrity": "sha512-n4KqkOQrraxHJcgjM1RvwbigfQKIKJVpM7xp+KsxiyUSrRdIXnt73VhrPAx0fV44hgfmIVKjxMN9J1t5jySVkw=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@esbuild%2fdarwin-arm64/0.28.2",
+      "metadata_raw_sha256": "71ef3c7d38a4eac3247e08b72b6a1801745139043f20c1c3d3f58c031bfa6495",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@esbuild/linux-x64",
+      "version": "0.28.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "license": "MIT",
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@esbuild/linux-x64/-/linux-x64-0.28.2.tgz",
+        "integrity": "sha512-4xTZr1FUmSoQW4XIWmit3tzQrUTZM+N3P0XV8xROKYF50XfI7xeO90+1bZvNwxIufQ9hDQVRJH5YhgPVF8A/HQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@esbuild%2flinux-x64/0.28.2",
+      "metadata_raw_sha256": "b6b0f9925ee7be3147e3dba80c26248c2af19ad11c796bd262497af43e99c679",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@esbuild/win32-x64",
+      "version": "0.28.2",
+      "engines": {
+        "node": ">=18"
+      },
+      "license": "MIT",
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@esbuild/win32-x64/-/win32-x64-0.28.2.tgz",
+        "integrity": "sha512-5ebpxr3nWMzrL/rnUI755Jkuee0bHL/Gq0WTF9lvcpv73wAp5eu8MfBUgWK9bhWvZjj7yX8etf/8tI8Ney695g=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@esbuild%2fwin32-x64/0.28.2",
+      "metadata_raw_sha256": "2989be0abdb22dfcf143fbb5cd6355c90fb502d7bd5c97e4e95d5da44baa98e8",
+      "published_stability": "exact version has no prerelease component"
+    }
+  ],
+  "primary_source_facts": [
+    {
+      "url": "https://effect.website/docs/v4/getting-started/installation",
+      "fact": "Effect v4 documentation requires TypeScript>=5.9, recommends7, and supports Node>=22.18; strict ESM portable source starts here.",
+      "qualification": "Published requirements only, not native host compatibility proof."
+    },
+    {
+      "url": "https://github.com/Effect-TS/effect/releases/tag/effect%404.0.1",
+      "fact": "Exact stable Effect4.0.1 selected by accepted design; npm metadata confirms published nonprerelease version and zero declared runtime dependencies."
+    },
+    {
+      "url": "https://devblogs.microsoft.com/typescript/announcing-typescript-7-0/",
+      "fact": "TS7 ships native compiler and no stable compiler API; tooling requiring old API can use TypeScript6 compatibility package.",
+      "metadata_reconciliation": "TS7.0.2 exposes unstable/* API entries, not the legacy createSourceFile API at the main entry; do not assume importing typescript supplies old AST APIs."
+    },
+    {
+      "url": "https://nodejs.org/docs/v24.21.0/api/test.html",
+      "fact": "node:test is a stable builtin, supports async tests and CLI node --test; runner pinned by exact Node runtime."
+    },
+    {
+      "url": "https://effect.website/docs/v4/testing/testclock",
+      "fact": "TestClock provided as Effect layer and used with Effect.runPromise and Node assertions; test-service helper does not require Vitest."
+    },
+    {
+      "url": "https://esbuild.github.io/faq/#why-is-esbuild-fast",
+      "fact": "esbuild implemented in Go; platform binary is development-only, optional package exact0.28.2."
+    }
+  ],
+  "compatibility_matrix": [
+    {
+      "constraint": "Effect documented minimum",
+      "selected": "Node24.21.0 and TS7.0.2",
+      "result": "metadata-compatible",
+      "remaining": "Fresh exact-runtime compile/import/test."
+    },
+    {
+      "constraint": "@types/node24.19.1 undici-types>=7.24.0<7.24.7",
+      "selected": "7.24.6",
+      "result": "metadata-compatible"
+    },
+    {
+      "constraint": "npm11.19.0 Node^20.17||>=22.9",
+      "selected": "Node24.21.0 bundled npm11.19.0 from official release index",
+      "result": "metadata-compatible"
+    },
+    {
+      "constraint": "Node24 built-in test runner",
+      "selected": "node:test stable since Node20, bundled exactly in24.21.0",
+      "result": "published stable capability; exact-runtime execution pending"
+    },
+    {
+      "constraint": "Effect testing service",
+      "selected": "effect4.0.1 exports ./testing; official v4 TestClock docs demonstrate TestClock.layer()+Effect.runPromise with node:assert",
+      "result": "metadata/docs-compatible; exact API import/type/runtime test pending"
+    }
+  ],
+  "graph_and_boundary_policy": {
+    "portable_runtime": "One Effect4.0.1 module identity, no declared dependencies, React/native SDK/Node builtin/filesystem/network/crypto/DOM/process imports excluded from portable exported source and emitted artifact. Native adapters and Rust reference code stay outside candidate runtime graph.",
+    "development_tools": "Node-only tsc7 Go compiler and esbuild Go bundler stay out of exported portable runtime. No test-framework package: builtin Node JS test runner plus Effect testing Layers. D01 prohibits Rust-backed helpers/addons in development/test/build/generation/release as well as runtime; prebuilt binaries are not exempt. Node runs compiled .js/.mjs, avoiding native .ts stripping paths. Audit implementation language of actual selected native binary graph before accepting no-Rust proof.",
+    "optional_packages": "Keep TypeScript7/esbuild optional OS/CPU binary package resolution; do not omit optional globally or add all platform packages directly. All versions/integrities locked component-locally and verified for selected host; no Rollup/Rust platform package is selected.",
+    "optional_peers": "Selected npm application/development package graph declares no extra test-framework peer dependencies; rejected Vitest/Vite metadata does not authorize installing optional UI/browser/style/tool peers.",
+    "rejected_candidates": "Vitest5.0.3/@effect/vitest4.0.1 peers are mutually compatible by metadata but require Vite. Vite7.3.7 brings Rollup native Rust parser; Vite8.3.3 brings Rolldown/LightningCSS Rust binaries. Reject both for D01 final portable test gate rather than exempt test-only addons. Their exact metadata remains separate historical decision evidence, not selected dependencies."
+  },
+  "boundary_check_plan": {
+    "typescript": "Run local pinned tsc CLI with strict:true, noEmit typecheck/declarations as needed; no legacy TS compiler API or language-service plugins. Keep TypeScript6/unstable AST packages absent unless a separately reviewed need arises.",
+    "artifact_graph": "Use pinned esbuild bundle with platform:neutral, explicit target/format and metafile; resolve all source modules, reject unknown externals and all Node/platform imports; check emitted graph includes only approved runtime modules.",
+    "globals": "Portable tsconfig types:[], ES-only lib (no DOM or Node ambient globals) plus fail-closed source import/export/dynamic-import and forbidden-global inspections; neutral bundle/metafile closes runtime dependency graph. Regex alone is not complete: test computed/aliased/dynamic boundary access and select a reviewed pure-JS parser only if required. Node types exist only for test/host tooling, never portable source config.",
+    "identity": "Bundler graph verifies one Effect and one contract module instance per VM; native Metro/package resolution separate host gate.",
+    "test_execution": "Compile TypeScript tests with pinned esbuild (platform:node), or author .mjs tests against built portable JS. Execute exact Node24.21.0 node --test on explicit compiled JS test paths. Do not call node directly on .ts and do not add TS stripping/loaders implemented with Rust.",
+    "module_specifiers": "Source TypeScript uses ESM .js import specifiers with normal TypeScript/esbuild emit into ignored component-scoped dist; both built package consumers and builtin test runner consume JS. No .ts runtime loader."
+  },
+  "reproducibility_plan": [
+    "TS-FOUNDATION creates scoped package.json and lockfile with exact selected direct versions, npm@11.19.0, Node24.21.0 runtime identity; resolves all range dependencies into exact lock entries including tarball integrities and optional platform graph.",
+    "Use official pinned Node archive and published SHASUMS; verify archive hash and signed checksum provenance. Reject version mismatch before npm install/ci. Do not use npx or latest aliases to download tools implicitly.",
+    "Generate lock under selected npm, record raw package-lock SHA256 and all licenses/engines/peers. Existing snapshot is package metadata selection, not a realized or verified lock.",
+    "Fresh clean exact Node24/npm install with npm ci, engine-strict and default peer resolution; review required esbuild installation script/platform package loading explicitly. No new root dependency framework. Reject every Rust-backed helper/addon across dev/test/build as D01 requires.",
+    "Build tests as JS through esbuild/tsc and run builtin node:test plus node:assert/strict against compiled candidate exports. Run virtual clock, interruption, typed failure/resource cleanup cases with Effect testing Layers; qualify these APIs on exact Node/Effect before accepting the first slice.",
+    "Run scoped typecheck/test/build/boundary/self-test and metadata-derived negative boundary vectors with installed tools; compare built bytes/metafile/hash across two clean builds and check no React/native/Rust/runtime builtin imports.",
+    "Qualify macOS-arm64 development first; Linux-x64 and Windows-x64/arm64 tool/runtime lanes remain separate receipts. Optional binary metadata selection is not cross-platform execution proof.",
+    "Native Release bundles, Hermes/RN/web/macOS globals, license/privacy/flavor exclusion and F-Droid reproducibility have separate F03/F06 admission evidence. Keep all dev package binaries out of mobile/store/customer runtime artifacts."
+  ],
+  "limitations": [
+    "No package install, lockfile creation, compiler API execution, runtime self-test, bundle graph or product test occurred.",
+    "All exact package metadata fetched from public npm; dist integrity is published metadata and tarballs were not downloaded/verified. Node checksum entries fetched; archives/signatures not verified.",
+    "Stable versions satisfy documented/declared ranges; semantic/runtime compatibility remains successor execution evidence.",
+    "Node release index dates2026-09-07 versus blog heading2026-09-08; version/npm selected from exact distribution index, no date used for compatibility.",
+    "No pin accepts native-host, deployed-service, store-flavor or Rust retirement qualification.",
+    "Rejected Vitest/Vite/Rollup metadata is historical candidate evidence only; no accepted package graph may include it. The exact installed optional Go-binary graph and absence of Rust helpers still need lock/install/artifact proof."
+  ],
+  "reconsideration_trigger": "A selected package fails install/engine/peer/type/runtime/bundle checks, optional platform support is absent, required API is unstable/incompatible, relevant policy/support/security changes, or another exact runtime graph is proposed; preserve current authorities and update technical selection with review.",
+  "rollback": "Revert this decision and receipt only; production Rust/native/public launchers and frozen contracts remain authoritative.",
+  "rejected_test_stack_metadata": [
+    {
+      "name": "vitest",
+      "version": "5.0.3",
+      "engines": {
+        "node": "^22.12.0 || ^24.0.0 || >=26.0.0"
+      },
+      "dependencies": {
+        "chai": "^6.2.2",
+        "obug": "^2.1.4",
+        "std-env": "^4.2.0",
+        "tinyexec": "^1.3.0",
+        "picomatch": "^4.0.7",
+        "tinybench": "^6.1.4",
+        "tinyglobby": "^0.2.17",
+        "@types/chai": "^5.2.2",
+        "expect-type": "^1.4.0",
+        "magic-string": "^1.2.3",
+        "@vitest/mocker": "5.0.3",
+        "es-module-lexer": "^2.3.2",
+        "why-is-node-running": "3.2.1"
+      },
+      "peerDependencies": {
+        "vite": "^6.4.0 || ^7.0.0 || ^8.0.0",
+        "jsdom": "*",
+        "happy-dom": "*",
+        "@vitest/ui": "5.0.3",
+        "@types/node": "^22.0.0 || >=24.0.0",
+        "@edge-runtime/vm": "*",
+        "@opentelemetry/api": "^1.9.0",
+        "@vitest/coverage-v8": "5.0.3",
+        "@vitest/browser-preview": "5.0.3",
+        "@vitest/coverage-istanbul": "5.0.3",
+        "@vitest/browser-playwright": "5.0.3",
+        "@vitest/browser-webdriverio": "^5.0.0-beta.5 || >=5.0.0"
+      },
+      "peerDependenciesMeta": {
+        "vite": {
+          "optional": false
+        },
+        "jsdom": {
+          "optional": true
+        },
+        "happy-dom": {
+          "optional": true
+        },
+        "@vitest/ui": {
+          "optional": true
+        },
+        "@types/node": {
+          "optional": true
+        },
+        "@edge-runtime/vm": {
+          "optional": true
+        },
+        "@opentelemetry/api": {
+          "optional": true
+        },
+        "@vitest/coverage-v8": {
+          "optional": true
+        },
+        "@vitest/browser-preview": {
+          "optional": true
+        },
+        "@vitest/coverage-istanbul": {
+          "optional": true
+        },
+        "@vitest/browser-playwright": {
+          "optional": true
+        },
+        "@vitest/browser-webdriverio": {
+          "optional": true
+        }
+      },
+      "license": "MIT",
+      "bin": {
+        "vitest": "./vitest.mjs"
+      },
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "import": {
+            "types": "./dist/index.d.ts",
+            "default": "./dist/index.js"
+          },
+          "require": {
+            "types": "./index.d.cts",
+            "default": "./index.cjs"
+          },
+          "__vitest_source__": "./src/public/index.ts"
+        },
+        "./node": {
+          "types": "./dist/node.d.ts",
+          "default": "./dist/node.js",
+          "__vitest_source__": "./src/public/node.ts"
+        },
+        "./jsdom": {
+          "types": "./jsdom.d.ts"
+        },
+        "./config": {
+          "types": "./config.d.ts",
+          "default": "./dist/config.js",
+          "require": "./dist/config.cjs",
+          "__vitest_source__": "./src/public/config.ts"
+        },
+        "./worker": {
+          "types": "./worker.d.ts",
+          "default": "./dist/worker.js",
+          "__vitest_source__": "./src/public/worker.ts"
+        },
+        "./browser": {
+          "types": "./browser/context.d.ts",
+          "default": "./browser/context.js"
+        },
+        "./globals": {
+          "types": "./globals.d.ts"
+        },
+        "./runtime": {
+          "types": "./dist/runtime.d.ts",
+          "default": "./dist/runtime.js",
+          "__vitest_source__": "./src/public/runtime.ts"
+        },
+        "./importMeta": {
+          "types": "./importMeta.d.ts"
+        },
+        "./import-meta": {
+          "types": "./import-meta.d.ts"
+        },
+        "./package.json": "./package.json",
+        "./internal/traces": {
+          "default": "./dist/traces.js",
+          "__vitest_source__": "./src/utils/traces.ts"
+        },
+        "./internal/browser": {
+          "types": "./dist/browser.d.ts",
+          "default": "./dist/browser.js",
+          "__vitest_source__": "./src/public/browser.ts"
+        },
+        "./optional-types.js": {
+          "types": "./optional-types.d.ts"
+        },
+        "./optional-runtime-types.js": {
+          "types": "./optional-runtime-types.d.ts"
+        }
+      },
+      "scripts": {
+        "dev": "NODE_OPTIONS=\"--max-old-space-size=8192\" rollup -c --watch -m inline",
+        "build": "premove dist && rollup -c"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/vitest/-/vitest-5.0.3.tgz",
+        "integrity": "sha512-xMw97S3rjdtj5dkVat7jCsqWBpvchs3RlpQctUqwJD0KkERk40vz2fJ77lDwW/Vzh/pk18eItYAzkodhSes3jQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/vitest/5.0.3",
+      "metadata_raw_sha256": "f486f26f6402cdcd656c1f3f05638981c0aa0e94f7e4a17ee93e2d0fc78b23b0",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@effect/vitest",
+      "version": "4.0.1",
+      "peerDependencies": {
+        "effect": "^4.0.1",
+        "vitest": ">=5.0.0 <6.0.0"
+      },
+      "license": "MIT",
+      "exports": {
+        ".": "./dist/index.js",
+        "./*": "./dist/*.js",
+        "./index": null,
+        "./*/index": null,
+        "./internal/*": null,
+        "./package.json": "./package.json"
+      },
+      "scripts": {
+        "babel": "babel dist --plugins annotate-pure-calls --out-dir dist --source-maps",
+        "build": "tsc -b tsconfig.json && pnpm babel",
+        "check": "tsc -b tsconfig.json"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@effect/vitest/-/vitest-4.0.1.tgz",
+        "integrity": "sha512-DbY9kf/018zBxRIX7rJwBnPVPzSarnUpcshm0vfYPFiDkSa7AFrXTh2BlDNUbrdrmqcIOBhVZ7GkEtxf8WiQrg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@effect%2fvitest/4.0.1",
+      "metadata_raw_sha256": "f57fc812e06f36288d91c086058c46c7e2c8510b14d90380eaf6fad99c0dd2e0",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "vite",
+      "version": "7.3.7",
+      "engines": {
+        "node": "^20.19.0 || >=22.12.0"
+      },
+      "dependencies": {
+        "fdir": "^6.5.0",
+        "rollup": "^4.43.0",
+        "esbuild": "^0.27.0 || ^0.28.0",
+        "postcss": "^8.5.6",
+        "picomatch": "^4.0.3",
+        "tinyglobby": "^0.2.15"
+      },
+      "optionalDependencies": {
+        "fsevents": "~2.3.3"
+      },
+      "peerDependencies": {
+        "tsx": "^4.8.1",
+        "jiti": ">=1.21.0",
+        "less": "^4.0.0",
+        "sass": "^1.70.0",
+        "yaml": "^2.4.2",
+        "stylus": ">=0.54.8",
+        "terser": "^5.16.0",
+        "sugarss": "^5.0.0",
+        "@types/node": "^20.19.0 || >=22.12.0",
+        "lightningcss": "^1.21.0",
+        "sass-embedded": "^1.70.0"
+      },
+      "peerDependenciesMeta": {
+        "tsx": {
+          "optional": true
+        },
+        "jiti": {
+          "optional": true
+        },
+        "less": {
+          "optional": true
+        },
+        "sass": {
+          "optional": true
+        },
+        "yaml": {
+          "optional": true
+        },
+        "stylus": {
+          "optional": true
+        },
+        "terser": {
+          "optional": true
+        },
+        "sugarss": {
+          "optional": true
+        },
+        "@types/node": {
+          "optional": true
+        },
+        "lightningcss": {
+          "optional": true
+        },
+        "sass-embedded": {
+          "optional": true
+        }
+      },
+      "license": "MIT",
+      "bin": {
+        "vite": "bin/vite.js"
+      },
+      "main": "./dist/node/index.js",
+      "types": "./dist/node/index.d.ts",
+      "exports": {
+        ".": "./dist/node/index.js",
+        "./client": {
+          "types": "./client.d.ts"
+        },
+        "./types/*": {
+          "types": "./types/*"
+        },
+        "./package.json": "./package.json",
+        "./dist/client/*": "./dist/client/*",
+        "./module-runner": "./dist/node/module-runner.js",
+        "./types/internal/*": null
+      },
+      "scripts": {
+        "dev": "premove dist && pnpm build-bundle -w",
+        "lint": "eslint --cache --ext .ts src/**",
+        "build": "premove dist && pnpm build-bundle && pnpm build-types",
+        "format": "prettier --write --cache --parser typescript \"src/**/*.ts\"",
+        "typecheck": "tsc && tsc -p src/node && tsc -p src/module-runner && tsc -p src/shared && tsc -p src/node/__tests_dts__",
+        "build-types": "pnpm build-types-roll && pnpm build-types-check",
+        "build-bundle": "rolldown --config rolldown.config.ts",
+        "generate-target": "tsx scripts/generateTarget.ts",
+        "build-types-roll": "rolldown --config rolldown.dts.config.ts",
+        "build-types-check": "tsc --project tsconfig.check.json"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/vite/-/vite-7.3.7.tgz",
+        "integrity": "sha512-AHEzTORMbi7/7aXp7w7KZ5+DCUdSeLsJz0grY8xHpc9DHdYb0vQu6DqJfm2tOw3gDExNgPgnJTXxM6syYFHaCA=="
+      },
+      "metadata_url": "https://registry.npmjs.org/vite/7.3.7",
+      "metadata_raw_sha256": "7882903d156ecf57daf5ec65504b2337f491727613dd752a485e7d72a2d38302",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "rollup",
+      "version": "4.64.1",
+      "engines": {
+        "npm": ">=8.0.0",
+        "node": ">=18.0.0"
+      },
+      "dependencies": {
+        "@types/estree": "1.0.9"
+      },
+      "optionalDependencies": {
+        "fsevents": "~2.3.2",
+        "@rollup/rollup-darwin-x64": "4.64.1",
+        "@rollup/rollup-freebsd-x64": "4.64.1",
+        "@rollup/rollup-openbsd-x64": "4.64.1",
+        "@napi-rs/lzma-linux-x64-gnu": "1.5.1",
+        "@rollup/rollup-darwin-arm64": "4.64.1",
+        "@rollup/rollup-android-arm64": "4.64.1",
+        "@rollup/rollup-freebsd-arm64": "4.64.1",
+        "@rollup/rollup-linux-x64-gnu": "4.64.1",
+        "@rollup/rollup-win32-x64-gnu": "4.64.1",
+        "@rollup/rollup-linux-x64-musl": "4.64.1",
+        "@rollup/rollup-win32-x64-msvc": "4.64.1",
+        "@rollup/rollup-linux-arm64-gnu": "4.64.1",
+        "@rollup/rollup-linux-ppc64-gnu": "4.64.1",
+        "@rollup/rollup-linux-s390x-gnu": "4.64.1",
+        "@rollup/rollup-win32-ia32-msvc": "4.64.1",
+        "@rollup/rollup-android-arm-eabi": "4.64.1",
+        "@rollup/rollup-linux-arm64-musl": "4.64.1",
+        "@rollup/rollup-linux-ppc64-musl": "4.64.1",
+        "@rollup/rollup-win32-arm64-msvc": "4.64.1",
+        "@rollup/rollup-linux-loong64-gnu": "4.64.1",
+        "@rollup/rollup-linux-riscv64-gnu": "4.64.1",
+        "@rollup/rollup-openharmony-arm64": "4.64.1",
+        "@rollup/rollup-linux-loong64-musl": "4.64.1",
+        "@rollup/rollup-linux-riscv64-musl": "4.64.1",
+        "@rollup/rollup-linux-arm-gnueabihf": "4.64.1",
+        "@rollup/rollup-linux-arm-musleabihf": "4.64.1"
+      },
+      "license": "MIT",
+      "bin": {
+        "rollup": "dist/bin/rollup"
+      },
+      "main": "dist/rollup.js",
+      "types": "dist/rollup.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/rollup.d.ts",
+          "import": "./dist/es/rollup.js",
+          "require": "./dist/rollup.js"
+        },
+        "./dist/*": "./dist/*",
+        "./parseAst": {
+          "types": "./dist/parseAst.d.ts",
+          "import": "./dist/es/parseAst.js",
+          "require": "./dist/parseAst.js"
+        },
+        "./getLogFilter": {
+          "types": "./dist/getLogFilter.d.ts",
+          "import": "./dist/es/getLogFilter.js",
+          "require": "./dist/getLogFilter.js"
+        },
+        "./package.json": "./package.json",
+        "./loadConfigFile": {
+          "types": "./dist/loadConfigFile.d.ts",
+          "default": "./dist/loadConfigFile.js",
+          "require": "./dist/loadConfigFile.js"
+        }
+      },
+      "scripts": {
+        "dev": "concurrently -kc green,blue 'nodemon --watch rust -e rs --exec \"npm run build:wasm\"' 'vitepress dev docs'",
+        "lint": "concurrently -c red,yellow,green,blue 'npm:lint:js' 'npm:lint:native-js' 'npm:lint:markdown' 'npm:lint:rust'",
+        "perf": "npm run build:bootstrap:cjs && node --expose-gc scripts/perf-report/index.js",
+        "test": "npm run build && npm run test:all",
+        "build": "concurrently -c green,blue \"npm run build:wasm\" \"npm:build:ast-converters\" && concurrently -c green,blue \"npm run build:napi -- --release\" \"npm:build:js\" && npm run build:copy-native",
+        "watch": "rollup --config rollup.config.ts --configPlugin typescript --watch",
+        "ci:lint": "concurrently -c red,yellow,green,blue 'npm:lint:js:nofix' 'npm:lint:native-js' 'npm:lint:markdown:nofix' 'npm:lint:rust:nofix'",
+        "lint:js": "eslint . --fix --cache --concurrency auto",
+        "prepare": "husky && npm run prepare:patch && node scripts/check-release.js || npm run build:prepare",
+        "release": "node scripts/prepare-release.js",
+        "build:js": "rollup --config rollup.config.ts --configPlugin typescript --forceExit",
+        "test:all": "concurrently --kill-others-on-fail -c green,blue,magenta,cyan,red 'npm:test:only' 'npm:test:browser' 'npm:test:typescript' 'npm:test:package' 'npm:test:options'",
+        "test:cjs": "npm run build:cjs && npm run test:only",
+        "build:cjs": "rollup --config rollup.config.ts --configPlugin typescript --configTest --forceExit",
+        "lint:rust": "cd rust && cargo fmt && cargo clippy --fix --allow-dirty",
+        "test:leak": "npm install --no-save weak-napi@2.0.2 && npm run test:leak:only",
+        "test:only": "mocha test/test.js",
+        "update:js": "npm run build:js && npm run build:copy-native",
+        "build:docs": "vitepress build docs",
+        "build:napi": "napi build --cwd rust/bindings_napi --platform --dts ../../native.d.ts --no-js --output-dir ../.. --package-json-path ../../package.json",
+        "build:wasm": "wasm-pack build rust/bindings_wasm --out-dir ../../wasm --target web --no-pack && shx rm wasm/.gitignore",
+        "test:quick": "mocha -b test/test.js",
+        "build:quick": "concurrently -c green,blue 'npm:build:napi' 'npm:build:cjs' && npm run build:copy-native",
+        "check-audit": "check-audit",
+        "ci:coverage": "concurrently -c green,blue,magenta,cyan 'npm:test:only:coverage' 'npm:test:typescript' 'npm:test:leak:only' 'npm:test:browser'",
+        "postpublish": "node scripts/postpublish.js",
+        "update:napi": "npm run build:napi && npm run build:copy-native",
+        "ci:artifacts": "napi artifacts",
+        "preview:docs": "vitepress preview docs",
+        "release:docs": "git fetch --update-head-ok origin master:master && git branch --force documentation-published master && git push origin documentation-published",
+        "test:browser": "mocha test/browser/index.js",
+        "test:options": "node scripts/test-options.js",
+        "test:package": "node scripts/test-package.js",
+        "build:js:node": "rollup --config rollup.config.ts --configPlugin typescript --configIsBuildNode --forceExit",
+        "build:prepare": "concurrently -c green,blue \"npm run build:napi -- --release\" \"npm:build:js:node\" && npm run build:copy-native",
+        "lint:js:nofix": "eslint . --cache --concurrency auto",
+        "lint:markdown": "prettier --write \"**/*.md\"",
+        "prepare:patch": "patch-package",
+        "resolve-audit": "resolve-audit",
+        "test:coverage": "bash scripts/coverage.sh",
+        "lint:native-js": "node scripts/lint-native-js.js",
+        "prepublishOnly": "node scripts/check-release.js && node scripts/prepublish.js",
+        "test:leak:only": "node --expose-gc test/leak/index.js",
+        "build:bootstrap": "shx mv dist dist-build && node dist-build/bin/rollup --config rollup.config.ts --configPlugin typescript --forceExit && shx rm -rf dist-build",
+        "build:wasm:node": "wasm-pack build rust/bindings_wasm --out-dir ../../wasm-node --target nodejs --no-pack && shx rm wasm-node/.gitignore",
+        "lint:rust:nofix": "cd rust && cargo fmt --check && cargo clippy",
+        "prepublish:napi": "napi prepublish --no-gh-release",
+        "test:typescript": "shx rm -rf test/typescript/dist && shx cp -r dist test/typescript/ && tsc --noEmit -p test/typescript && tsc --noEmit -p . && tsc --noEmit -p scripts && vue-tsc --noEmit -p docs",
+        "build:copy-native": "shx mkdir -p dist && shx cp rollup.*.node dist/",
+        "test:only:coverage": "node scripts/run-with-coverage-environment.js nyc --reporter lcovonly --reporter html mocha test/test.js",
+        "build:bootstrap:cjs": "shx mv dist dist-build && node dist-build/bin/rollup --config rollup.config.ts --configPlugin typescript --configTest --forceExit && shx rm -rf dist-build",
+        "build:napi:coverage": "bash -c 'coverage_env=\"$(cd rust && cargo llvm-cov show-env --sh)\" && eval \"$coverage_env\" && (cd rust && cargo llvm-cov clean --workspace) && npm run build:napi'",
+        "lint:markdown:nofix": "prettier --check \"**/*.md\"",
+        "build:ast-converters": "node scripts/generate-ast-converters.js",
+        "test:update-snapshots": "node scripts/update-snapshots.js"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/rollup/-/rollup-4.64.1.tgz",
+        "integrity": "sha512-7s4V+3J8ux75WNj9qwSJnrWmlCmZ2YHr2fojtHy5RiIMvhJv6DGe7HKKz7L6G1sq1Eg1fLC8SjYtAtDis1F4CQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/rollup/4.64.1",
+      "metadata_raw_sha256": "5be48b3aa027c26cd9955d3180111569d425f45da0339f9fe3f292dc840d65af",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@vitest/mocker",
+      "version": "5.0.3",
+      "dependencies": {
+        "@vitest/spy": "5.0.3",
+        "magic-string": "^1.2.3",
+        "estree-walker": "^3.0.3",
+        "@jridgewell/trace-mapping": "0.3.31"
+      },
+      "peerDependencies": {
+        "msw": "^2.4.9",
+        "vite": "^6.0.0 || ^7.0.0 || ^8.0.0"
+      },
+      "peerDependenciesMeta": {
+        "msw": {
+          "optional": true
+        },
+        "vite": {
+          "optional": true
+        }
+      },
+      "license": "MIT",
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js",
+          "__vitest_source__": "./src/index.ts"
+        },
+        "./node": {
+          "types": "./dist/node.d.ts",
+          "default": "./dist/node.js",
+          "__vitest_source__": "./src/node/index.ts"
+        },
+        "./browser": {
+          "types": "./dist/browser.d.ts",
+          "default": "./dist/browser.js",
+          "__vitest_source__": "./src/browser/index.ts"
+        },
+        "./automock": {
+          "types": "./dist/automock.d.ts",
+          "default": "./dist/automock.js",
+          "__vitest_source__": "./src/node/automock.ts"
+        },
+        "./redirect": {
+          "types": "./dist/redirect.d.ts",
+          "default": "./dist/redirect.js",
+          "__vitest_source__": "./src/node/redirect.ts"
+        },
+        "./register": {
+          "types": "./dist/register.d.ts",
+          "default": "./dist/register.js",
+          "__vitest_source__": "./src/browser/register.ts"
+        },
+        "./transforms": {
+          "types": "./dist/transforms.d.ts",
+          "default": "./dist/transforms.js",
+          "__vitest_source__": "./src/node/transforms.ts"
+        },
+        "./package.json": "./package.json",
+        "./auto-register": {
+          "types": "./dist/register.d.ts",
+          "default": "./dist/register.js",
+          "__vitest_source__": "./src/browser/auto-register.ts"
+        }
+      },
+      "scripts": {
+        "dev": "rollup -c --watch",
+        "build": "premove dist && rollup -c"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@vitest/mocker/-/mocker-5.0.3.tgz",
+        "integrity": "sha512-T8sWAIbkSyAjkwTcaEc3Iu0o9A27X1/kdXrizhZkGuSKScRQtRzclfAMpOTcGdXCsqxeWlpGy3XjqaW8CpLORg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@vitest%2fmocker/5.0.3",
+      "metadata_raw_sha256": "3ca3834a9be859265b5eaefe0dce2de8d3efe0725b38c6466e76246d05bc9138",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@vitest/spy",
+      "version": "5.0.3",
+      "license": "MIT",
+      "main": "./dist/index.js",
+      "types": "./dist/index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/index.d.ts",
+          "default": "./dist/index.js",
+          "__vitest_source__": "./src/index.ts"
+        },
+        "./*": "./*",
+        "./optional-types.js": {
+          "types": "./optional-types.d.ts"
+        }
+      },
+      "scripts": {
+        "dev": "rollup -c --watch",
+        "build": "premove dist && rollup -c"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@vitest/spy/-/spy-5.0.3.tgz",
+        "integrity": "sha512-XhFysQTB8AZ+P4gMi+Lpo99vg2AZi0qKpaB9yXQl37+CaMEAPO3iH/wGVnSyL5MPERiLezpqTVtrR6UZH5GCXg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@vitest%2fspy/5.0.3",
+      "metadata_raw_sha256": "41b72d3f7e5208e3f59a8edccd4cc2f08d69886e95612871d38a30470b835bc4",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@jridgewell/trace-mapping",
+      "version": "0.3.31",
+      "dependencies": {
+        "@jridgewell/resolve-uri": "^3.1.0",
+        "@jridgewell/sourcemap-codec": "^1.4.14"
+      },
+      "license": "MIT",
+      "main": "dist/trace-mapping.umd.js",
+      "types": "types/trace-mapping.d.cts",
+      "exports": {
+        ".": [
+          {
+            "import": {
+              "types": "./types/trace-mapping.d.mts",
+              "default": "./dist/trace-mapping.mjs"
+            },
+            "default": {
+              "types": "./types/trace-mapping.d.cts",
+              "default": "./dist/trace-mapping.umd.js"
+            }
+          },
+          "./dist/trace-mapping.umd.js"
+        ],
+        "./package.json": "./package.json"
+      },
+      "scripts": {
+        "lint": "run-s -n lint:types lint:format",
+        "test": "run-s -n test:types test:only test:format",
+        "build": "run-s -n build:code build:types",
+        "clean": "run-s -n clean:code clean:types",
+        "benchmark": "run-s build:code benchmark:*",
+        "test:only": "mocha",
+        "build:code": "node ../../esbuild.mjs trace-mapping.ts",
+        "clean:code": "tsc --build --clean tsconfig.build.json",
+        "lint:types": "npm run test:types -- --fix",
+        "test:types": "eslint '{src,test}/**/*.ts'",
+        "build:types": "run-s build:types:force build:types:emit build:types:mts",
+        "clean:types": "rimraf dist types",
+        "lint:format": "npm run test:format -- --write",
+        "test:format": "prettier --check '{src,test}/**/*.ts'",
+        "benchmark:only": "node --expose-gc benchmark/index.mjs",
+        "prepublishOnly": "npm run-s -n build test",
+        "build:types:mts": "node ../../mts-types.mjs",
+        "build:types:emit": "tsc --project tsconfig.build.json",
+        "benchmark:install": "cd benchmark && npm install",
+        "build:types:force": "rimraf tsconfig.build.tsbuildinfo"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz",
+        "integrity": "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@jridgewell%2ftrace-mapping/0.3.31",
+      "metadata_raw_sha256": "0a92d9d204cf3f795c26cda50ad692e6cc537beb508989209d58996fbfd3d358",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "why-is-node-running",
+      "version": "3.2.1",
+      "engines": {
+        "node": ">=20.11"
+      },
+      "license": "MIT",
+      "bin": {
+        "why-is-node-running": "cli.js"
+      },
+      "types": "./index.d.ts",
+      "exports": {
+        ".": {
+          "types": "./index.d.ts",
+          "default": "./index.js"
+        },
+        "./include": "./include.js"
+      },
+      "dist": {
+        "tarball": "https://registry.npmjs.org/why-is-node-running/-/why-is-node-running-3.2.1.tgz",
+        "integrity": "sha512-Tb2FUhB4vUsGQlfSquQLYkApkuPAFQXGFzxWKHHumVz2dK+X1RUm/HnID4+TfIGYJ1kTcwOaCk/buYCEJr6YjQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/why-is-node-running/3.2.1",
+      "metadata_raw_sha256": "6ca72399ae13a1b1b0e135df60a8452551e06c245cdbadb56669eedbfd0aea4d",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@types/estree",
+      "version": "1.0.9",
+      "dependencies": {},
+      "peerDependencies": {},
+      "license": "MIT",
+      "main": "",
+      "types": "index.d.ts",
+      "scripts": {},
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@types/estree/-/estree-1.0.9.tgz",
+        "integrity": "sha512-GhdPgy1el4/ImP05X05Uw4cw2/M93BCUmnEvWZNStlCzEKME4Fkk+YpoA5OiHNQmoS7Cafb8Xa3Pya8m1Qrzeg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@types%2festree/1.0.9",
+      "metadata_raw_sha256": "d48d263fe819a1d4dd0f27e7c950c476885ec6937d3547afb235b91c2d09cfb5",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@rollup/rollup-darwin-arm64",
+      "version": "4.64.1",
+      "license": "MIT",
+      "main": "./rollup.darwin-arm64.node",
+      "os": [
+        "darwin"
+      ],
+      "cpu": [
+        "arm64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@rollup/rollup-darwin-arm64/-/rollup-darwin-arm64-4.64.1.tgz",
+        "integrity": "sha512-MvzZ+qbBi5jrafURHsASUF1qW/58tOJFt/gFVJo2znQWrKX4CSf/Lt/qGONtoA4yHsNL5QzgdXMuITZxAs62Vg=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@rollup%2frollup-darwin-arm64/4.64.1",
+      "metadata_raw_sha256": "cc652734fa644b784a41883728b9b387ea8fad86ebe66d8d12ae28d482d1274b",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@rollup/rollup-linux-x64-gnu",
+      "version": "4.64.1",
+      "license": "MIT",
+      "main": "./rollup.linux-x64-gnu.node",
+      "os": [
+        "linux"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "libc": [
+        "glibc"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@rollup/rollup-linux-x64-gnu/-/rollup-linux-x64-gnu-4.64.1.tgz",
+        "integrity": "sha512-T2C0NXqqD063yJdm8UGdcoudBATDODdphEXWS7rEoh0jOITfoEBv7LHfRBYVsy+pI7wwxgScoZpkFiQOf40ryQ=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@rollup%2frollup-linux-x64-gnu/4.64.1",
+      "metadata_raw_sha256": "ad0666cfdfca663810e9c0de250ed56a1385bcfedabd2fe2edb9bfe2c05259c0",
+      "published_stability": "exact version has no prerelease component"
+    },
+    {
+      "name": "@rollup/rollup-win32-x64-msvc",
+      "version": "4.64.1",
+      "license": "MIT",
+      "main": "./rollup.win32-x64-msvc.node",
+      "os": [
+        "win32"
+      ],
+      "cpu": [
+        "x64"
+      ],
+      "dist": {
+        "tarball": "https://registry.npmjs.org/@rollup/rollup-win32-x64-msvc/-/rollup-win32-x64-msvc-4.64.1.tgz",
+        "integrity": "sha512-KpxCwRn1Qh3tmBHAqIAF4HtUCVKqZd0w57TsItWblx3QVeJLtXaSgeBFAj1WAvBSpBo+Mh9iZCjj6YW/HaBVMw=="
+      },
+      "metadata_url": "https://registry.npmjs.org/@rollup%2frollup-win32-x64-msvc/4.64.1",
+      "metadata_raw_sha256": "f1c65b992ed9286c6046022ace7fad53b232cd167773bb27c8da350f5c8477ae",
+      "published_stability": "exact version has no prerelease component"
+    }
+  ],
+  "technical_resolution": {
+    "decision": "Select Node24.21.0/npm11.19.0, effect4.0.1 runtime; TypeScript7.0.2/esbuild0.28.2/@types/node24.19.1 with undici-types7.24.6 dev tooling; node:test bundled runner, Effect testing layer helpers.",
+    "authority": "Core technical choice within fixed D01/portable Node24 design; coordinator records Q-PORTABLE-PINS after independent review.",
+    "status": "selection awaiting independent review; actual locked graph and runtime proof deferred to TS-FOUNDATION",
+    "reason": "Minimal documented-compatible package graph, no Vite/Vitest/Rollup/Rolldown Rust test-tool chain, no legacy TS compiler API dependency."
+  }
+}

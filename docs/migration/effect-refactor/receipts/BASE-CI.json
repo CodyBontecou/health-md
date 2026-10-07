@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CI",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+  "patch_digest": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+  "patch_digest_method": "SHA256 raw UTF-8 bytes of docs/migration/effect-refactor/inventories/ci.json only; excludes receipt and coordinator-owned plan. Recompute hashlib.sha256(Path(path).read_bytes()).hexdigest().",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/ci.json",
+    "docs/migration/effect-refactor/receipts/BASE-CI.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+    },
+    "locks_and_runtime": {
+      "apps/android/gradle/wrapper/gradle-wrapper.properties": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+      "apps/android/gradle/libs.versions.toml": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+      "apps/cli/Cargo.lock": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+      "apps/cli/rust-toolchain.toml": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d",
+      "apps/website/package-lock.json": "25fa7ccf700cb7bfbf7f86a3dcd3dccd5acc900bcbefd95e42afbff5cb145162",
+      "apps/website/docs-src/package-lock.json": "fe5bd0937c80aff7ae25f44faeb37ff4b9ca03c0f2d347e831e67e9fc75a83e8",
+      "apps/practice/package-lock.json": "e2611aa94ded4c885116852468f4084e58ee667693d22bd1997ed8ab5a1b0c6f",
+      "apps/wake/package-lock.json": "095f3cc02a546fce5c6e8003ba4e839be30d7818f05bc0e228d5cbd9829f9733",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "packages/healthmd-core-rust/rust-toolchain.toml": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d"
+    },
+    "artifact_and_native_interface": {
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "apps/apple/HealthMd/Shared/Models/HealthMetrics.swift": "89de0f22a9f3f4809d63c3cbbe12cbdb35f1bbea6c65bb3258f61f7a91cac24b",
+      "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt": "b57a7e2bebd84d134fd05518c94a8886e76005f8d3811f7794353c44f7e594b8",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt": "ec9c8024b61c85ffa7a359cd54d7bef0c34c36fe1ff21660d1f2f4882a1ec309",
+      "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md": "c1e96bcb1a627880d5190fdbadd375f0296ef035f35bdc9edb33562d742ecd62",
+      "apps/website/docs-src/src/content/docs/shared-metric-registry.md": "21c8b5e9b5865ffa6087fe0ae1c4f607590c9b9aafd47efbbabf478c3e47b54a",
+      "apps/website/docs-src/public/reference/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "apps/cli/crates/healthmd-operations/src/registry.rs": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+      "apps/cli/crates/healthmd-operations/examples/generate_mcp_catalog.rs": "2be027a9670f0c50ba7f717f228aab256dc2838d35aebbf4c87f32f10e5ef3f5",
+      "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+      "apps/cli/crates/healthmd-mcp/assets/query-visualization-v1.html": "ef9549f9df2dd39b138b36e7f950bb6802c1c256e52747f0e8963a345ed512cd",
+      "apps/cli/crates/healthmd-mcp/assets/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "apps/apple/HealthMdCLI/Sources/HealthMdMCPCore/HealthMdMCPApp.swift": "8f752f2a3f4fe37daa3d64ed9cafc27b4de3e53c4838d9a88bc44b33c8f0b60b"
+    },
+    "policy_migration_key_versions": {
+      "design_sha256": "5869f39aaf549228490c7fced7e97af471763e7a1f58f04b3b38f3b17303e985",
+      "component_changes_sha256": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5",
+      "pilot_source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Map push filters and changes inputs, final aggregates, required contexts and exact-source release selectors.",
+      "result": "passed",
+      "evidence": "ci.json workflows/release_selectors/required_contexts/exact_cli_release"
+    },
+    {
+      "criterion": "Map registry/catalog/reference/App assets and every Rust generation consumer including pilot cloud imports.",
+      "result": "passed",
+      "evidence": "ci.json generator_families/generator_asset_pins/pilot import pins/component_isolation"
+    },
+    {
+      "criterion": "Define reproducible timing/output measurements and actual command locations; separate known footprint from unmeasured latency.",
+      "result": "passed",
+      "evidence": "ci.json measurement_plan/current_command_locations/root_router; existing footprint separated from proposed/unmeasured latency"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-CI"
+      ],
+      "result": "passed",
+      "evidence": "exact claimed task scope/read/acceptance/target"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "result": "passed",
+      "evidence": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "status",
+        "--porcelain"
+      ],
+      "result": "passed",
+      "evidence": "initial coordinator plan only modified"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Parsed seven workflows with YAML BaseLoader; asserted six push/changes maps exact equality; pinned inputs with git show and checkout byte-equality; extracted jobs/commands/cache/artifact scopes and test IDs; read accepted inventory scoped records."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "grep",
+        "-l",
+        "healthmd-core-rust",
+        "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "--",
+        "apps/cloud",
+        ".github/workflows"
+      ],
+      "result": "passed",
+      "evidence": "immutable pilot source imports in apps/cloud/mcp/reader.ts and apps/cloud/src/dashboard.ts; no cloud runtime/network touched"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "JSON structure, exact target/changed paths, 7 workflows/6 matching path maps, source/asset/test pins recomputed at exact source, patch digest validated; checked Android exact CARGO_TARGET_DIR scopes."
+    }
+  ],
+  "inspection_summary": "Planning/source-only inventory: seven independent component gates, six matching push/changes maps, 73 source pins, 15 asset pins, 13 test sources. Read selected C01/C11/C12/H09/F08/F09/F10 design, instructions, root/router/component/package/workflow/generator/pilot metadata. No product verification commands were executed.",
+  "observations": [],
+  "limitations": [
+    "Existing source command availability is inventoried, not executed.",
+    "Actual GitHub rulesets/required-context configuration not accessed.",
+    "No candidate portable commands/runtime/dependencies or workflow modifications made.",
+    "Prior footprint audit is guide evidence, not fresh measurement or projected savings.",
+    "No provider credentials/health stores/exports/spools inspected; no build output changed/cleaned."
+  ],
+  "remaining_qualification": [
+    "run affected source/generator/consumer gates on integrated successor",
+    "independent deterministic regenerate-twice and stale/extra output expectations",
+    "new portable scripts/locks/runtime and path-map/full-run reporting matrix",
+    "actual external required-context settings/admin transition",
+    "cloud workflow/runtime/container/VM/Worker dependency admission before H09",
+    "physical/native/signing/external-client gates",
+    "measured baseline/candidate timings/allocated outputs with concurrent worktree and cache evidence"
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9"
+  },
+  "review_evidence": {
+    "scope": "independent bounded planning and technical selection review",
+    "checks": "All seven workflows, trigger pairs, 100 extracted run-script hashes, source/asset/test pins and existing aggregate/context/generator policy independently checked."
+  }
+}

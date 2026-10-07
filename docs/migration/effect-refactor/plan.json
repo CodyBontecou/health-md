@@ -583,7 +583,7 @@
     {
       "id": "Q-LOCAL",
       "title": "Local successor/coexistence interface",
-      "status": "open",
+      "status": "accepted",
       "owner_role": "architecture",
       "authority": "technical",
       "affected_families": [
@@ -594,15 +594,19 @@
       ],
       "resolver_task": "LOCAL-DECISION",
       "resolution_criteria": "Selected Effect/common-operation architecture and candidate authority reconciled with actual source and current instructions.",
-      "resolution": null,
-      "record_path": null,
-      "evidence": [],
-      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified."
+      "resolution": "Effect/core/common operations and first-slice coexistence selected under ADR-0007; actual host/distribution/admission remains gated.",
+      "record_path": "docs/migration/effect-refactor/decisions/local-architecture.md",
+      "evidence": [
+        "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json"
+      ],
+      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
+      "accepted_by": "/root/effect_baseline_review",
+      "accepted_fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+516f3ee74bfc0772c494d0e01a7a0ac7c4b98ad58c4f4a8773419c91c897745d"
     },
     {
       "id": "Q-PORTABLE-PINS",
       "title": "Portable runtime/toolchain pins",
-      "status": "open",
+      "status": "accepted",
       "owner_role": "core",
       "authority": "technical",
       "affected_families": [
@@ -610,10 +614,14 @@
       ],
       "resolver_task": "TOOLCHAIN-PINS",
       "resolution_criteria": "Published stable inputs and compatible deterministic locked graph verified; source evidence and exact pins recorded.",
-      "resolution": null,
-      "record_path": null,
-      "evidence": [],
-      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified."
+      "resolution": "Node24.21.0/npm11.19.0, Effect4.0.1, TS7.0.2/esbuild0.28.2/@types-node24.19.1/undici-types7.24.6 with compiled-JS Node:test selected. Actual lock/install/runtime admission is TS-FOUNDATION.",
+      "record_path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+      "evidence": [
+        "docs/migration/effect-refactor/receipts/TOOLCHAIN-PINS.json"
+      ],
+      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
+      "accepted_by": "/root/effect_baseline_review",
+      "accepted_fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85"
     },
     {
       "id": "Q-NATIVE-RUNTIME",
@@ -3406,7 +3414,7 @@
         "Define reproducible timing/output measurements and actual command locations; separate known footprint from unmeasured latency."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted source inventories in docs/migration/effect-refactor/inventories/{core,cli,hosts}.json; read the scoped records and their exact case/path/digest pins, not unrelated catalog bodies.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -3418,18 +3426,29 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-CI.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 23,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/ci.json",
+          "docs/migration/effect-refactor/receipts/BASE-CI.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-CI.json"
+        ]
       }
     },
     {
@@ -3474,7 +3493,7 @@
         "Record reviewed Q-LOCAL resolution and exact ADR path; derive later instruction changes when implementation lands."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted source inventories in docs/migration/effect-refactor/inventories/{core,cli,hosts}.json; read the scoped records and their exact case/path/digest pins, not unrelated catalog bodies.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -3486,18 +3505,33 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 30,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/local-architecture.md",
+          "docs/architecture/adr-0007-effect-typescript-unified-layer.md",
+          "docs/architecture/adr-0001-shared-rust-uniffi-core.md",
+          "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json"
+        ],
+        "reserved_resources": [
+          "architecture-decision-sequence"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+516f3ee74bfc0772c494d0e01a7a0ac7c4b98ad58c4f4a8773419c91c897745d"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/LOCAL-DECISION.json"
+        ]
       }
     },
     {
@@ -3535,7 +3569,7 @@
         "Record reviewed Q-PORTABLE-PINS technical resolution; native runtime versions remain a separate decision."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted source inventories in docs/migration/effect-refactor/inventories/{core,cli,hosts}.json; read the scoped records and their exact case/path/digest pins, not unrelated catalog bodies.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -3547,18 +3581,29 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/TOOLCHAIN-PINS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 31,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/portable-pins.json",
+          "docs/migration/effect-refactor/receipts/TOOLCHAIN-PINS.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "a2d59ce49f70537ac9ca3bbdd849d6c08b4235e0+5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/TOOLCHAIN-PINS.json"
+        ]
       }
     },
     {
@@ -3596,7 +3641,12 @@
         "packages/healthmd-core-ts/src/index.ts",
         "packages/healthmd-core-ts/src/host-interfaces/*",
         "packages/healthmd-core-ts/tests/foundation*",
-        "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json"
+        "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+        "packages/healthmd-core-ts/scripts/build.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/README.md"
       ],
       "shared_resources": [
         "core-package-lock",
@@ -3618,7 +3668,7 @@
           "availability": "created_by_this_task"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted core source and frozen fixtures pinned by inventories/core.json and its planning receipt; portable-pins.json exact graph; ADR-0007 candidate boundaries. Foundation only: synthetic injected-capability/resource/cancel behavior.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",

@@ -5,6 +5,8 @@
 - **Decision owners:** Apple, Android, and shared-core maintainers
 - **Scope:** Post-capture export modeling, projection, and serialization
 
+**Successor direction (2026-10-07):** [ADR-0007](adr-0007-effect-typescript-unified-layer.md) records the selected Effect TypeScript/common-operation/shared-React target. Its decision review and runtime/host admission are pending. This ADR retains its historical Rust/UniFFI facts and governs existing implementation/coexistence until each scoped replacement and retirement gate passes; no shipped authority, schema or fixture is changed by the successor link.
+
 ## Context
 
 Health.md has two deployed native exporters with intentionally different public contracts. Apple emits `healthmd.health_data` v7. Android must preserve its frozen compatibility v4 output while also supporting the additive Android analytical v5 profile. The native implementations contain overlapping normalization, aggregation, projection, and serialization logic, but HealthKit and Health Connect expose different APIs and data models.
