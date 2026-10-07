@@ -256,40 +256,6 @@
       "evidence": "Scoped exact design requirement read."
     },
     {
-      "cwd": "/Users/codybontecou/dev/time.md",
-      "argv": [
-        "git",
-        "status",
-        "--porcelain=v1"
-      ],
-      "result": "passed",
-      "evidence": "Empty nonignored tracked/untracked metadata; ignored runtime files not enumerated/read."
-    },
-    {
-      "cwd": "/Users/codybontecou/dev/time.md",
-      "argv": [
-        "git",
-        "show",
-        "-s",
-        "--format=%H%n%P%n%s",
-        "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
-      ],
-      "result": "passed",
-      "evidence": "Candidate source parent/subject verified, no Q-DONOR-SOURCE acceptance."
-    },
-    {
-      "cwd": "/Users/codybontecou/dev/time.md",
-      "argv": [
-        "git",
-        "ls-tree",
-        "-r",
-        "--name-only",
-        "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
-      ],
-      "result": "passed",
-      "evidence": "Tracked source/license/native/docs/tests enumerated; no tracked AGENTS.md."
-    },
-    {
       "cwd": ".",
       "argv": [
         "python3",
@@ -340,6 +306,15 @@
       ],
       "result": "passed",
       "evidence": "Independent reviewer rehashed149 immutable donor source pins,262 symbol locators,140 XCTest locators (complete tracked literal set),40 CLI IDs and11 Health recipient inputs; clean revision/parent/subject/license/instructions/source-only target match. Corrected continuation mirror undercount against actual ScreenTimeAutoSaveWriter.swift line388, HistoryStore.swift219 and ScreenTimeDataService.swift1041..1073. Root recomputed corrected raw inventory digest. Future full-history/short-session/title/native/import/permission/channel/S06/source choices remain open; no live data or runtime accessed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Root executed Python subprocess git -C candidate locator wrapper for status --porcelain=v1, show -s --format=%H%n%P%n%s at accepted candidate revision, and ls-tree -r --name-only. Confirmed empty nonignored status, exact revision/parent/subject, tracked LICENSE and no tracked AGENTS.md; no ignored runtime files or user data inspected. Replaces absolute donor working-directory records with actual repository-root executed wrapper evidence."
     }
   ],
   "inspection_summary": "Root/entrypoint/personal-data/GLOSSARY/templates/scoped C14\u2013C15/C17/P03/S00/S02\u2013S05/F11\u2013F16/full-history read. Clean candidate 2955ed07db9c649c77a128db59aed2ac0fef0bc5 native tracker/history/category/UI/CLI/export/sync/crypto/settings/commerce/update and excluded acquisition inspected. 149 raw revision pins, 140 literal XCTest cases, 262 semantic locators, 40 CLI dispatch IDs verified. Existing inline fixtures are independent source expectations, not executed portable or migration proof. No product/heavy tests or live state access. Independent review correction: mirror filters out continuation-only hours/day portions; raw history remains authority. Exact filter is pinned line388, not a runtime observation. Proposed synthetic continuation-hour/cross-midnight/with-start expectations are explicitly unrun.",
