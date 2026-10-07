@@ -680,7 +680,7 @@
     {
       "id": "Q-PERSONAL-CONTRACT",
       "title": "Personal-data contract/profile admission",
-      "status": "open",
+      "status": "accepted",
       "owner_role": "contracts",
       "authority": "technical",
       "affected_families": [
@@ -690,10 +690,14 @@
       ],
       "resolver_task": "PERSONAL-CONTRACT-REVIEW",
       "resolution_criteria": "Scoped IDs/profile/precision/provenance/grants and independent expected cases reviewed; native/public admission boundaries remain explicit.",
-      "resolution": null,
-      "record_path": null,
-      "evidence": [],
-      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified."
+      "resolution": "Bounded synthetic candidate record/selection/coverage/exactvalues/source identity/grants/suppression technical grammar accepted against44draft and37resolution literal expectations. Public names/profile versions/source-purpose/OS/physical/channel/destination policies and actual codecs/storage/archives/cloud/native admission remain unselected or unqualified.",
+      "record_path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+      "evidence": [
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
+      "accepted_by": "/root/donor_mac_review",
+      "accepted_fingerprint": "02988490309f45a913d14a802f7e421a6de27d26+16d9a882eda2b5527ab2140f8a44d28fb4bf20720e9203fa45055ead229e8a4b"
     },
     {
       "id": "Q-USAGE-ADMISSION",
@@ -4657,7 +4661,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 33,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_host",
         "base_revision": "02988490309f45a913d14a802f7e421a6de27d26",
@@ -4670,14 +4674,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "02988490309f45a913d14a802f7e421a6de27d26+16d9a882eda2b5527ab2140f8a44d28fb4bf20720e9203fa45055ead229e8a4b"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+        ]
       }
     },
     {
