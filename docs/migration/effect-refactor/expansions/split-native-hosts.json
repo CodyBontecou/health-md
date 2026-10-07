@@ -1,0 +1,1913 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-NATIVE-HOSTS",
+  "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+  "proof_class": "planning",
+  "outcome": "Produce one reviewed expansion packet of at most six atomic children for separate iOS/Android/Mac Release, F-Droid and cold-entrypoint proofs.",
+  "max_children": 6,
+  "selected_design_ids": [
+    "C12",
+    "U01",
+    "U13",
+    "F03",
+    "F04",
+    "F06"
+  ],
+  "accepted_input_pins": [
+    {
+      "path": "docs/migration/effect-refactor/inventories/native.json",
+      "sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/hosts.json",
+      "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/native-apple.json",
+      "sha256": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/native-android.json",
+      "sha256": "3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+      "sha256": "1f57486a7d46c77a45d53c2de35f3fb6a7fd0f933d9db099abfd4f4ed5a8e211",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+      "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json",
+      "sha256": "cdccd30e7535d34dd179546539b41fa89d9d17379675d373a0612de5dfb0656f",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+      "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/index.ts",
+      "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+      "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+      "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-ui/src/index.ts",
+      "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-ui/package.json",
+      "sha256": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-ui/README.md",
+      "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-core-ts/tests/foundation.test.ts",
+      "sha256": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    },
+    {
+      "path": "packages/healthmd-ui/tests/foundation.test.ts",
+      "sha256": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b"
+    }
+  ],
+  "required_read_pins": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "apps/apple/AGENTS.md",
+      "sha256": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13"
+    },
+    {
+      "path": "apps/android/AGENTS.md",
+      "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "path": "docs/migration/effect-refactor/native-ui.md",
+      "sha256": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05"
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+    },
+    {
+      "path": "packages/healthmd-ui/AGENTS.md",
+      "sha256": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93"
+    },
+    {
+      "path": "packages/healthmd-core-ts/AGENTS.md",
+      "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67"
+    }
+  ],
+  "selected_design_row_pins": [
+    {
+      "id": "C12",
+      "row_sha256": "1c97e2437330a3480f368a9f7ec8c09471f85fcff08e290f9ef7c62e2b52f087",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    },
+    {
+      "id": "U01",
+      "row_sha256": "29b8187397b06bcf12ea507006939a26aad5034c1338518fb6c7fb907b92d03e",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    },
+    {
+      "id": "U13",
+      "row_sha256": "449ff0d7e29ed7b665e9f8c8fc37bfab5fb02f650956adcaab7bb4d5bd916da6",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    },
+    {
+      "id": "F03",
+      "row_sha256": "0cc84da4f2dbd4c9e1a947eef335d20e97c530d8f7452a6054fb578a54ab2c3e",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    },
+    {
+      "id": "F04",
+      "row_sha256": "8416c41eadbf79e80566e821309e3d3e2c367f6c712a406396863f11f2a403e8",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    },
+    {
+      "id": "F06",
+      "row_sha256": "94b01427ac75d227e46be11e6dcc6711324e563346e2c0df0d2bb2d39da964bf",
+      "method": "UTF-8 exact indexed row without newline at assigned source"
+    }
+  ],
+  "status": "proposed_pending_independent_review_and_coordinator_merge",
+  "candidate_interface": {
+    "current_shared_operation": "inspectCandidate / CandidateSession.acquire -> CandidateResource.inspect/release; current exact core interface retained.",
+    "ui": "createReadinessModel/read operation/projectReadiness; only synthetic supplied domain statuses, no grant expansion.",
+    "native": "New private NativeProbe owned resource + async release acknowledgment, no HealthKit/HC/user files/credentials/destination/state SDK access.",
+    "schema": {
+      "schema": "healthmd.candidate_host_probe",
+      "version": 1,
+      "status": "private candidate schema proposed, not production protocol/export",
+      "fields": [
+        "case_id: allowlisted fixed synthetic ID",
+        "phase: acquire/inspect/cancel/release_ack/result",
+        "safe_code: fixed enum",
+        "sequence: bounded integer",
+        "byte_count: bounded integer"
+      ],
+      "limits_proposed_unmeasured": {
+        "max_frame_bytes": 65536,
+        "max_queued_frames": 4,
+        "max_unacknowledged_frames": 2,
+        "operation_seconds": 5,
+        "shutdown_ack_seconds": 5
+      },
+      "rules": [
+        "Pause producer at credit exhaustion and reject unknown/oversize before acquire.",
+        "Cancel/result acknowledgment waits native release; loading subscriber cancel/dispose/supersede cannot acquire stale resource.",
+        "No health payload, private device identity, secret, profile/destination/grant or raw native/Effect error in probe.",
+        "Measure actual startup/peak memory/frame peaks/cleanup timing in exact engine/SDK; these proposed guards are not production budgets."
+      ]
+    },
+    "dependency_policy": "Audit resolved graph before install: no Rust application/tooling parser/test/native addon graph; accepted Go TypeScript/esbuild development tools only. C++ native SDK/engine libraries require explicit license/provenance review, not silent Rust transitive dependencies.",
+    "resolver": "Actual per-host lock/resolver/bundle must show one React identity matching Fabric and one Effect4.0.1 used by core/adapters. Avoid linked/file core node_modules duplication through reviewed external peer/bundler resolution; same version strings insufficient."
+  },
+  "fixture_catalog": {
+    "apple_lifecycle": {
+      "path": "apps/apple/HealthMdTests/Support/LifecycleHarnessTests.swift",
+      "sha256": "61bce08fa818a94395a23c89d04debf3647fed394f9924000889b854b66bc522",
+      "case_ids": [
+        "testCreationStability_metricSelectionState",
+        "testCreationStability_dailyNoteInjectionSettings",
+        "testCreationStability_individualTrackingSettings",
+        "testCreationStability_formatCustomization",
+        "testRetain_keepsObjectAlive",
+        "testCreate_factoryReturnsConfiguredObject",
+        "testRetainedCount_incrementsOnRetain",
+        "testCancellationCleanup_longRunningTask",
+        "testCancellationCleanup_immediateCompletion",
+        "testDrainMainRunLoop_doesNotCrash"
+      ],
+      "execution": "source-pinned current compatibility expectation; not run by packet"
+    },
+    "apple_intent": {
+      "path": "apps/apple/HealthMdTests/iOS/ExportIntentProfileResolutionTests.swift",
+      "sha256": "ab1f88b4be2871d31b67941ca42718ad0d5967e437b5080f324786335bf31647",
+      "case_ids": [
+        "testNoProfilesResolvesLegacySettings",
+        "testUnnamedResolutionUsesActiveProfile",
+        "testNamedResolutionIsTrimmedAndCaseInsensitive",
+        "testUnknownNameFailsClosed",
+        "testProfileRunUsesProfileSnapshotAndAdoptsDestinations",
+        "testProfileNotFoundShortCircuitsBeforeVaultAccess",
+        "testDialogMentionsMissingProfileName"
+      ],
+      "execution": "source-pinned current compatibility expectation; not run by packet"
+    },
+    "mac_context": {
+      "path": "apps/apple/HealthMdTests/macOS/EncryptedHealthContextStoreTests.swift",
+      "sha256": "f962061151dcb02f0ce3e896d912f504b7cca9047099f5691ac47812fc7a5b8c",
+      "case_ids": [
+        "testRoundTripUsesProtectedFilesAndDeterministicIdentifiers",
+        "testSubmillisecondDatesRemainReadableAcrossDigestValidation",
+        "testCiphertextAndOpaqueFilenamesDoNotLeakPHI",
+        "testWrongMissingKeyAndTamperingFailClosed",
+        "testManifestIsAuthenticatedAgainstTampering",
+        "testUpsertCommitFailurePreservesOldGenerationAndSuccessfulReplacementCleansIt",
+        "testUnlimitedTraversalOverThousandsOfDaysLoadsOneDayAtATime",
+        "testDeleteAndExplicitRetentionControlsHaveNoImplicitCap",
+        "testScopedMergePreservesUnrequestedMetricsAndReplacesOnlySelectedSource",
+        "testScopedMergeRetainsAndTrimsEvidenceSharedByUnrequestedMetric",
+        "testProviderOnlyScopedMergePreservesProjectedAppleMetricAndDayStatus",
+        "testRejectsDuplicateBatchDatesAndUnsupportedContextSchemaWithoutChangingExportSchema"
+      ],
+      "execution": "source-pinned current compatibility expectation; not run by packet"
+    },
+    "android_generation": {
+      "path": "apps/android/app/src/test/java/com/healthmd/data/scheduler/ExportSchedulerGenerationTest.kt",
+      "sha256": "f5a3dce891335d82337982215496f89142221993a85b7f272ffd91efc0d3bf06",
+      "case_ids": [
+        "destinationReplacementPersistsNewStateBeforeAwaitingGenerationCancellation",
+        "legacyOccurrenceAndWorkAreCancelledOnceAndReplacedFromCurrentSettings",
+        "dueLegacyOccurrenceUsesCurrentFrozenSettingsDuringMigration",
+        "dueLegacyFallbackMigratesAndAdmitsWithoutCancellingItself",
+        "rebootReconciliationKeepsThePersistedGeneration",
+        "rapidApiFolderSameApiReconfigurationLeavesOnlyFinalGenerationActive",
+        "frozenOutputSettingsReplacementMintsANewGeneration",
+        "dueOccurrenceUsesNewFrozenOutputSettingsDuringReconcile",
+        "dueOccurrenceUsesNewFrozenOutputSettingsBeforeContinuingReplacementGeneration",
+        "dueEndpointChangeFailsClosedAndOnlyArmsAFutureReplacement",
+        "settingsAreCapturedAfterWaitingForRunningWorkerCoordinator",
+        "oversizedWorkDataIsRejectedBeforeReplacingTheActiveGeneration",
+        "interruptedArmRecoversTheSameAdmissionWithoutReadmittingCompletedOccurrence",
+        "busyExactDeliveryDoesNotRearmThePastOccurrence"
+      ],
+      "execution": "source-pinned current compatibility expectation; not run by packet"
+    },
+    "fdroid_policy": {
+      "path": "apps/android/app/src/fdroidTest/java/com/healthmd/distribution/FdroidDistributionPolicyTest.kt",
+      "sha256": "d810b054555d593fef763245c2f913f64b2b382ee6a3a46c2f810276fc813c93",
+      "case_ids": [
+        "channelIncludesFullAccessAndNoPlayIntegrations",
+        "entitlementIsStableAndPurchaseActionsAreUnavailable",
+        "onboardingUsesIncludedAccessStepInsteadOfPaywall",
+        "providerCatalogContainsOnlyHealthConnect",
+        "commonProductionSourceDoesNotImportChannelSpecificIntegrations",
+        "commonBackupRulesContainNoPlayOnlyStateNames"
+      ],
+      "execution": "source-pinned current compatibility expectation; not run by packet"
+    },
+    "core_scope": {
+      "path": "packages/healthmd-core-ts/tests/foundation.test.ts",
+      "sha256": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "case_ids": [
+        "candidate and host-interface exports share the same service identity",
+        "successful scoped inspection releases its owned resource exactly once",
+        "typed inspection failure releases once and exposes only a stable safe failure",
+        "acquisition failure never inspects or releases an unacquired resource",
+        "interruption waits for finalization and releases exactly once",
+        "virtual clock drives inspection without wall-clock delays",
+        "interruption cannot finish before an asynchronous finalizer acknowledges cleanup",
+        "concurrent operations keep fake host resource ownership separate"
+      ],
+      "execution": "Accepted portable synthetic only; not native host proof"
+    },
+    "ui_lifecycle": {
+      "path": "packages/healthmd-ui/tests/foundation.test.ts",
+      "sha256": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+      "case_ids": [
+        "initial unknown state and selected-domain props never admit source grants",
+        "subscription observes actions and cleanup detaches component lifecycle",
+        "dispose awaits owned async cleanup and ignores late source results",
+        "superseding refresh cancels old work without stale publication",
+        "cancel retains loaded state and can refresh again without double cleanup",
+        "raw operation and cleanup errors become content-free state",
+        "bounded source descriptor validation rejects duplicate or oversized results",
+        "independent models and hostile view listeners do not affect operation cleanup",
+        "dispose during supersede waits for prior cleanup acknowledgement",
+        "cancel during supersede waits for prior cleanup and prevents successor read",
+        "third refresh during supersede cannot acquire before prior cleanup",
+        "loading subscriber disposal prevents stale operation acquisition",
+        "loading subscriber cancellation prevents read and permits later refresh",
+        "one-time loading subscriber refresh acquires only the latest operation"
+      ],
+      "execution": "Accepted portable synthetic only; not native host proof"
+    }
+  },
+  "children": [
+    {
+      "id": "NATIVE-IOS-RELEASE-PROBE",
+      "title": "iOS Release owned-resource host",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One isolated iOS Release candidate starts its RN/Hermes engine and executes/cancels the common owned-resource operation with native acknowledgment, without a mounted screen.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "iOS Simulator",
+        "channel": "development candidate",
+        "profile": "Unsigned Release; current iOS17 minimum retained"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/apple/effect-host-candidates/ios/package.json",
+        "apps/apple/effect-host-candidates/ios/package-lock.json",
+        "apps/apple/effect-host-candidates/ios/.node-version",
+        "apps/apple/effect-host-candidates/ios/tsconfig.json",
+        "apps/apple/effect-host-candidates/ios/metro.config.cjs",
+        "apps/apple/effect-host-candidates/ios/src/probe.ts",
+        "apps/apple/effect-host-candidates/ios/src/HostProbe.tsx",
+        "apps/apple/effect-host-candidates/ios/scripts/build.mjs",
+        "apps/apple/effect-host-candidates/ios/scripts/check.mjs",
+        "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json",
+        "apps/apple/effect-host-candidates/ios/ios/Podfile",
+        "apps/apple/effect-host-candidates/ios/ios/Podfile.lock",
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj",
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+        "apps/apple/effect-host-candidates/ios/ios/AppDelegate.swift",
+        "apps/apple/effect-host-candidates/ios/ios/NativeProbe.mm",
+        "apps/apple/effect-host-candidates/ios/ios/Info.plist",
+        "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift",
+        "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh",
+        "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json"
+      ],
+      "shared_resources": [
+        "ios-candidate-project",
+        "ios-candidate-pods-lock",
+        "ios-candidate-js-lock",
+        "ios-candidate-bridge"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/HealthMdApp.swift",
+          "sha256": "e8903d71a56c5f1f3877e7bd3f4bd18596c426ae9d6c710320d94f9d85ba7cc0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/HealthMd.entitlements",
+          "sha256": "c940ced0f6cc1c6b92bbc18f3d4973447a0367b91d89536bb5cc854237469d23",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/Info.plist",
+          "sha256": "ca259ddffec2e1c8edcd7316fd1932838bc9f1099905e6b0a1bb36e8ef37d74a",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd.xcodeproj/project.pbxproj",
+          "sha256": "a1ed2b8b95538440d2f8e07696b437f1baa4569bfdc0056d49b7b22423071429",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/apple_lifecycle"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.3",
+        "react-native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "250829098.0.17; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve scoped common-operation/fake Layer cleanup cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "packages/healthmd-ui",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve model source/grant/reentry lifecycle cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/ios",
+          "argv": [
+            "npm",
+            "ci",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "purpose": "Exact candidate install after resolved no-Rust/license graph audit",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/ios",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Exact candidate bundle/fixture/identity tests",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/ios",
+          "argv": [
+            "./scripts/run-release-probe.sh",
+            "--offline",
+            "--fresh-process"
+          ],
+          "purpose": "Introduced script builds/runs exact installed simulator Release artifact; records safe SDK/runtime not private IDs",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+        "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+        "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+        "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+        "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission."
+      ],
+      "details": {
+        "candidate_identity": "Proposed com.healthmd.effecthost.ioscandidate; no production appgroup/keychain/HealthKit permission or namespace access.",
+        "native_graph": "New isolated Xcode/CocoaPods graph; pin actual compatible RN/Hermes/SDK/minimum OS in child. No production project/Podfile edit.",
+        "later": "Real iOS protected-data/first-unlock/scene/health/background/APNs and signed App Store/iPad proofs separate."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "title": "Android Play Release owned-resource host",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One isolated Play-flavor Release candidate starts the engine and executes/cancels the common probe with bounded bridge traffic and acknowledged native release.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "Android required local device",
+        "channel": "Play candidate",
+        "profile": "Release synthetic host; minSdk28 target36 retained"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/android/effect-host-candidate/package.json",
+        "apps/android/effect-host-candidate/package-lock.json",
+        "apps/android/effect-host-candidate/.node-version",
+        "apps/android/effect-host-candidate/tsconfig.json",
+        "apps/android/effect-host-candidate/metro.config.cjs",
+        "apps/android/effect-host-candidate/src/probe.ts",
+        "apps/android/effect-host-candidate/src/HostProbe.tsx",
+        "apps/android/effect-host-candidate/scripts/build.mjs",
+        "apps/android/effect-host-candidate/scripts/check.mjs",
+        "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+        "apps/android/effect-host-candidate/settings.gradle.kts",
+        "apps/android/effect-host-candidate/build.gradle.kts",
+        "apps/android/effect-host-candidate/gradle.properties",
+        "apps/android/effect-host-candidate/gradlew",
+        "apps/android/effect-host-candidate/gradlew.bat",
+        "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+        "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+        "apps/android/effect-host-candidate/app/build.gradle.kts",
+        "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+        "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+        "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+      ],
+      "shared_resources": [
+        "android-candidate-gradle-graph",
+        "android-candidate-js-lock",
+        "android-candidate-bridge"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/build.gradle.kts",
+          "sha256": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/AndroidManifest.xml",
+          "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/libs.versions.toml",
+          "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
+          "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradlew",
+          "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradlew.bat",
+          "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/wrapper/gradle-wrapper.jar",
+          "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+          "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/android_generation"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.3",
+        "react-native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "250829098.0.17; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve scoped common-operation/fake Layer cleanup cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "packages/healthmd-ui",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve model source/grant/reentry lifecycle cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "npm",
+            "ci",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "purpose": "Candidate-only exact lock/no-Rust/license graph",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Candidate model/probe/bundle identity cases",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./gradlew",
+            "--no-daemon",
+            ":app:assemblePlayRelease",
+            ":app:testPlayReleaseUnitTest"
+          ],
+          "purpose": "Build isolated Release/JVM probe; new wrapper copied from pinned current metadata, actual compatible candidate toolchain selected",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./scripts/run-release-probe.sh",
+            "--channel",
+            "play",
+            "--target",
+            "required-local-device",
+            "--offline",
+            "--fresh-process"
+          ],
+          "purpose": "Component-required local target resolved transiently; no device identifier/user health capture in receipt",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+        "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+        "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+        "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+        "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission."
+      ],
+      "details": {
+        "candidate_identity": "Proposed com.healthmd.effecthost.androidcandidate.play; candidate-private files only, no HC/SAF/keystore grants/access.",
+        "instructions": "Use Android component-required local physical target. This synthetic hardware host integration is not physical HC/reboot/force-stop/permission qualification.",
+        "toolchain": "AGP/Kotlin/JDK/Gradle/SDK current metadata are inputs, not assumed RN-compatible. Pin actual compatible candidate-only graph without changing production support/build graph.",
+        "later": "Native HC/SAF/notifications/foreground/battery/boot/clock/first-unlock/old-state and signed Play proof separate."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "NATIVE-FDROID-GRAPH-PROBE",
+      "title": "F-Droid candidate graph exclusions",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One candidate F-Droid Release native/JS/Gradle/npm/manifest/DEX artifact graph proves current forbidden integration exclusions while preserving generic API scope.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "Android build/artifact graph",
+        "channel": "F-Droid candidate",
+        "profile": "Unsigned Release artifact graph only; runtime/install/signing unqualified"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION",
+        "NATIVE-ANDROID-PLAY-RELEASE-PROBE"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        },
+        {
+          "id": "Q-CLOUD-COMMERCE",
+          "role": "Future hosted channel choice; not prerequisite to current artifact audit"
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/android/effect-host-candidate/app/build.gradle.kts",
+        "apps/android/effect-host-candidate/app/src/fdroid/AndroidManifest.xml",
+        "apps/android/effect-host-candidate/app/src/fdroid/java/com/healthmd/effecthostcandidate/FdroidProbePolicy.kt",
+        "apps/android/effect-host-candidate/scripts/check-fdroid-graph.mjs",
+        "apps/android/effect-host-candidate/scripts/check-fdroid-artifact.sh",
+        "apps/android/effect-host-candidate/fixtures/fdroid-exclusions-v1.json",
+        "docs/migration/effect-refactor/receipts/NATIVE-FDROID-GRAPH-PROBE.json"
+      ],
+      "shared_resources": [
+        "android-candidate-gradle-graph",
+        "android-candidate-js-lock"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/scripts/verify-fdroid-artifact.sh",
+          "sha256": "94f6fc9f2401b56a31e06dcc5c833d0cd400c57734a93d30eac10f59430fa168",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/fdroid/AndroidManifest.xml",
+          "sha256": "559d3414f4541430bbfd02940f917060d5d71a34346a94e29d6bbd6ac45f3299",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/fdroid/java/com/healthmd/distribution/FdroidDistributionRuntime.kt",
+          "sha256": "1cd366fba62f1f64bd89326e408dd8336c99948a3b1e1d76b7c275b58e7909b3",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/fdroid/java/com/healthmd/data/access/FdroidAccessRepository.kt",
+          "sha256": "088e1539c973a7ccfb036946fcd453ab76a42b97796a5c8cbc0fd9dbe8a6ba45",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/fdroid_policy"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/fdroid-exclusions-v1.json",
+        "introduced_case_ids": [
+          "no_forbidden_dependency_graph",
+          "no_forbidden_dex_js_identity",
+          "billing_remove_actual_merged_manifest",
+          "generic_api_not_prohibited",
+          "unsigned_candidate_abi_graph"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.3",
+        "react-native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "250829098.0.17; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "node",
+            "scripts/check-fdroid-graph.mjs"
+          ],
+          "purpose": "Resolved transitive license/no-Rust native+JS+Gradle graph, explicit forbidden source identities",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./gradlew",
+            "--no-daemon",
+            ":app:assembleFdroidRelease",
+            ":app:testFdroidReleaseUnitTest"
+          ],
+          "purpose": "Build only isolated F-Droid candidate unsigned artifact",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./scripts/check-fdroid-artifact.sh",
+            "app/build/outputs/apk/fdroid/release/app-fdroid-release-unsigned.apk"
+          ],
+          "purpose": "Exact merged manifest/DEX/JS/native ABI hashes and exclusions; source tools:node removal alone insufficient",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Resolved native/npm/Gradle source/license/ABI graph and unsigned APK merged manifest/DEX/JS hashes meet independently frozen exclusions.",
+        "Provider OAuth/Play commerce/telemetry/Wear sources and identities absent; tools:node operation evaluated in actual merged artifact.",
+        "Generic current API scope retained; future hosted channel remains open under Q-CLOUD-COMMERCE/consent proof.",
+        "Existing production graph/checker untouched; no Play-to-F-Droid runtime or signed qualification inference."
+      ],
+      "details": {
+        "forbidden": [
+          "Third-party provider OAuth/config identities",
+          "Play Billing/attribution/review/telemetry",
+          "Wear/native wearable-contract"
+        ],
+        "retained": "Generic user-directed API exports and native Health Connect are current separate capabilities; no candidate graph rule prohibits them.",
+        "future_cloud": "Q-CLOUD-COMMERCE/source-purpose/consent/channel proof remains open for optional hosted F-Droid; donor pricing/exclusion is not inherited.",
+        "current_gate": "Current verify-fdroid-artifact.sh is pinned reference, not replaced or repointed.",
+        "proof_limit": "Unsigned candidate dependency/artifact graph integration; does not execute F-Droid host or certify fdroidserver signatures/reproducibility/install."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-FDROID-GRAPH-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "NATIVE-MAC-RELEASE-PROBE",
+      "title": "Mac Release candidate host",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One isolated unsigned macOS Release candidate proves offline owned-resource common-operation execution/cancellation without replacing the actual Mac companion or title collector.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "macOS",
+        "channel": "development candidate",
+        "profile": "Unsigned Release; current macOS14 minimum; signed channels unqualified"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        },
+        {
+          "id": "Q-MAC-COLLECTOR",
+          "role": "Separate future collector proof; does not block fake runtime"
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/apple/effect-host-candidates/macos/package.json",
+        "apps/apple/effect-host-candidates/macos/package-lock.json",
+        "apps/apple/effect-host-candidates/macos/.node-version",
+        "apps/apple/effect-host-candidates/macos/tsconfig.json",
+        "apps/apple/effect-host-candidates/macos/metro.config.cjs",
+        "apps/apple/effect-host-candidates/macos/src/probe.ts",
+        "apps/apple/effect-host-candidates/macos/src/HostProbe.tsx",
+        "apps/apple/effect-host-candidates/macos/scripts/build.mjs",
+        "apps/apple/effect-host-candidates/macos/scripts/check.mjs",
+        "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+        "apps/apple/effect-host-candidates/macos/macos/Podfile",
+        "apps/apple/effect-host-candidates/macos/macos/Podfile.lock",
+        "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/project.pbxproj",
+        "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+        "apps/apple/effect-host-candidates/macos/macos/AppDelegate.swift",
+        "apps/apple/effect-host-candidates/macos/macos/NativeProbe.mm",
+        "apps/apple/effect-host-candidates/macos/macos/Info.plist",
+        "apps/apple/effect-host-candidates/macos/macos/HostProbeTests.swift",
+        "apps/apple/effect-host-candidates/macos/scripts/run-release-probe.sh",
+        "apps/apple/effect-host-candidates/macos/macos/HostProbe.entitlements",
+        "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json"
+      ],
+      "shared_resources": [
+        "mac-candidate-project",
+        "mac-candidate-pods-lock",
+        "mac-candidate-js-lock",
+        "mac-candidate-bridge"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/macOS/Managers/HealthMdAgentAPIService.swift",
+          "sha256": "735e0232cf43d5ac9cf27b049b2cb67f80672e4363de4efdbe76f2d1cbb19ecd",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextStore.swift",
+          "sha256": "1bc0d623cbdfbae0856cb05891e6e7d8e6d069e1ec1b5c08a5e21e8de5e03af6",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/HealthMd-macOS.entitlements",
+          "sha256": "73ff5ba817d263d04bdcbf2a33ba38ba10171efff93343b7d29854f10e770596",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd.xcodeproj/project.pbxproj",
+          "sha256": "a1ed2b8b95538440d2f8e07696b437f1baa4569bfdc0056d49b7b22423071429",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/mac_context"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.0",
+        "react-native": "0.83.10",
+        "react-native-macos": "0.83.0",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "0.14.1; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve scoped common-operation/fake Layer cleanup cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "packages/healthmd-ui",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Preserve model source/grant/reentry lifecycle cases",
+          "availability": "existing",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/macos",
+          "argv": [
+            "npm",
+            "ci",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "purpose": "Separate exact Mac React/RN/RNmacOS graph, not phone tuple",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/macos",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Actual resolver/single identity/bundle/probe cases",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/macos",
+          "argv": [
+            "./scripts/run-release-probe.sh",
+            "--offline",
+            "--fresh-process"
+          ],
+          "purpose": "Build/start exact unsigned native Release process without mounted UI; cancellation/frame/cleanup checks",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+        "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+        "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+        "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+        "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission."
+      ],
+      "details": {
+        "candidate_identity": "Proposed com.healthmd.effecthost.maccandidate; no production bookmark/keychain/helper/encrypted store/loopback port access, no StoreKit startup.",
+        "retained": "Current Home/CLI/Settings/menu-bar/last-window receiver/helper/loopback peer+Host+Origin/encrypted generations remain production authority.",
+        "separate_collector": "Q-MAC-COLLECTOR supported API/title/session/permission/channel proof independent of presentation.",
+        "incompatibility": "Record failed/partial evidence plus bounded alternative for platform owner if minimum OS/SDK/runtime incompatible; do not remove Mac or silently select collector API.",
+        "later": "App Store and Developer ID exact signed helpers/identity/bookmarks/keychain/installed-state/upgrade/downgrade separate."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "NATIVE-IOS-COLD-INTENT-PROBE",
+      "title": "One cold candidate AppIntent",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One private candidate AppIntent decodes a bounded request and invokes the accepted host/common resource operation through actual cold OS ingress, without mounted React or HealthKit.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "iOS Simulator",
+        "channel": "development candidate",
+        "profile": "Release cold AppIntent synthetic; actual OS ingress required"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION",
+        "NATIVE-IOS-RELEASE-PROBE"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/apple/effect-host-candidates/ios/src/cold-intent-probe.ts",
+        "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntent.swift",
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj",
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+        "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
+        "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
+        "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+        "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+      ],
+      "shared_resources": [
+        "ios-candidate-project",
+        "ios-candidate-bridge"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/AppIntents/ExportIntentRunner.swift",
+          "sha256": "db47706fc25fa2ba5f0b0abaceb12114ffea1d9e991ae94f7c03d70164ed1403",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/AppIntents/GetLastExportStatusIntent.swift",
+          "sha256": "6f8565d4b115813265ca704010f4f963f142d5631f6ad35076ed94cd6ee4a7bd",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/HealthMdApp.swift",
+          "sha256": "e8903d71a56c5f1f3877e7bd3f4bd18596c426ae9d6c710320d94f9d85ba7cc0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/apple_lifecycle",
+          "#/fixture_catalog/apple_intent"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+        "introduced_case_ids": [
+          "actual_ingress_no_view",
+          "unknown_schema_before_acquire",
+          "expiry_before_acquire",
+          "cancel_waits_native_ack",
+          "restart_no_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.3",
+        "react-native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "250829098.0.17; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "apps/apple/effect-host-candidates/ios",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Inherited host common scope/model checks; add cold schema/teardown cases",
+          "availability": "created_by_prerequisite",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic",
+          "introduced_by": "NATIVE-IOS-RELEASE-PROBE"
+        },
+        {
+          "cwd": "apps/apple/effect-host-candidates/ios",
+          "argv": [
+            "./scripts/run-cold-intent-probe.sh",
+            "--release",
+            "--offline",
+            "--fresh-process"
+          ],
+          "purpose": "Actual OS AppIntent route and dependency readiness; direct perform() test is insufficient",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+        "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+        "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+        "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+        "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission."
+      ],
+      "details": {
+        "candidate_intent": "New CandidateReadinessProbeIntent only. Existing public names/profile trimmed/case-insensitive lookup/missing-rebind no fallback/quota/history/HealthKit routes unchanged.",
+        "schema": "Private v1 case/sequence/deadline; fail unknown/oversize/expired before native acquire.",
+        "bounded_entrypoint": "Cold startup/callback expiry/native cancellation/release ack measured on exact engine; no foreground scene/React/Metro dependency.",
+        "unsupported_simulator": "If supported SDK cannot exercise actual cold system ingress, report blocked/partial and separately claim device proof; never pass from direct Swift perform-only execution.",
+        "later": "Real source-backed existing status/profile AppIntent common operation adapter after grant/state/native SDK proof; locked/protected-data/first-unlock physical restrictions remain."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    },
+    {
+      "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
+      "title": "One cold candidate Android Worker",
+      "phase": "M02",
+      "stream": "native_ui",
+      "kind": "implementation",
+      "outcome": "One private Play candidate WorkManager Worker validates a bounded payload, invokes the accepted host/common operation cold and waits native finalizer acknowledgment before cancellation result.",
+      "proof_class": "host_integration",
+      "target": {
+        "platform": "Android required local device",
+        "channel": "Play candidate",
+        "profile": "Release actual cold WorkManager synthetic ingress"
+      },
+      "prerequisites": [
+        "BASE-NATIVE",
+        "BASE-HOST",
+        "TS-FOUNDATION",
+        "UI-FOUNDATION",
+        "NATIVE-ANDROID-PLAY-RELEASE-PROBE"
+      ],
+      "required_decisions": [],
+      "choice_dependencies": [
+        {
+          "id": "Q-NATIVE-RUNTIME",
+          "role": "Produce actual candidate engine/SDK/graph/identity evidence; global choice stays open until complete host/purpose set reviewed",
+          "not_global_block": true
+        }
+      ],
+      "coverage": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risk_ids": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "allowed_paths": [
+        "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+        "apps/android/effect-host-candidate/app/build.gradle.kts",
+        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+        "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+        "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+        "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+      ],
+      "shared_resources": [
+        "android-candidate-gradle-graph",
+        "android-candidate-bridge"
+      ],
+      "source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+          "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+          "sha256": "bc4751c8987e8dc62d8aac0726b474ade7819c4f2c18b242d5d49a85743d62e7",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt",
+          "sha256": "6f221289c74d02b0e319537282d59b3cead9afc75049cd79ab88304496d5e5b8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/BootReceiver.kt",
+          "sha256": "1f4b6fcfaf0da8f5dfc14f358dffd78573f78ec59b178ba27c0596ca2d3c4906",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/AndroidManifest.xml",
+          "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/native.json#/host_proof_catalog",
+        "docs/migration/effect-refactor/inventories/native.json#/authority_and_state_retention",
+        "docs/migration/effect-refactor/inventories/native.json#/runtime_and_source_choices",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/hosts.json#/durable_lifecycle",
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
+      ],
+      "interface_contract_ref": "#/candidate_interface",
+      "fixture_inputs": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/android_generation"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+        "introduced_case_ids": [
+          "actual_schedule_no_activity",
+          "unknown_schema_before_acquire",
+          "expiry_before_acquire",
+          "stop_waits_native_ack",
+          "duplicate_request_no_double_acquire"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "candidate_tuple": {
+        "react": "19.2.3",
+        "react-native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler_metadata": "250829098.0.17; not engine/SDK qualification"
+      },
+      "portable_toolchain": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "types_node": "24.19.1",
+        "undici_types": "7.24.6"
+      },
+      "verification": [
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "purpose": "Inherited candidate host/model checks plus cold schema",
+          "availability": "created_by_prerequisite",
+          "status": "not_run_by_packet",
+          "proof_class": "portable_synthetic",
+          "introduced_by": "NATIVE-ANDROID-PLAY-RELEASE-PROBE"
+        },
+        {
+          "cwd": "apps/android/effect-host-candidate",
+          "argv": [
+            "./scripts/run-cold-worker-probe.sh",
+            "--channel",
+            "play",
+            "--release",
+            "--offline",
+            "--fresh-process",
+            "--target",
+            "required-local-device"
+          ],
+          "purpose": "Actual WorkManager process-cold scheduling, stop/expiry/cleanup with no mounted activity/Metro",
+          "availability": "created_by_this_task",
+          "status": "not_run_by_packet",
+          "proof_class": "host_integration"
+        }
+      ],
+      "acceptance": [
+        "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+        "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+        "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+        "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+        "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission."
+      ],
+      "details": {
+        "candidate_worker": "New ColdProbeWorker/candidate Application only; retain production Hilt factory/notification IDs/alarm/boot/settings/journals/direct service authority.",
+        "schema": "Small private WorkData v1 case/sequence/deadline; no health/profile/destination; reject unknown/oversize/expired before acquire.",
+        "cancellation": "Worker stop/expiry interrupts owned operation and waits native finalizer ack before result; no duplicate resource admission.",
+        "later": "Production frozen schedule/profile/source/native state adapter integration and physical reboot/force-stop/first-unlock/HC background/foreground/battery proof separate."
+      },
+      "proof_limits": "Synthetic host-integration only. Physical health/cold lifecycle, signed-distribution/install/upgrade/store publication, production common-operation/native adapter integration and runtime-family closure each require separate receipts.",
+      "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+      "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json",
+      "reviewer_role": "independent native/runtime/security reviewer",
+      "status": "proposed; coordinator must merge and claim before execution"
+    }
+  ],
+  "dependency_edges": [
+    {
+      "from": "NATIVE-IOS-RELEASE-PROBE",
+      "to": "NATIVE-IOS-COLD-INTENT-PROBE"
+    },
+    {
+      "from": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "to": "NATIVE-FDROID-GRAPH-PROBE"
+    },
+    {
+      "from": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "to": "NATIVE-ANDROID-COLD-WORKER-PROBE"
+    }
+  ],
+  "resource_policy": "Single writer per isolated candidate Xcode/Pod/Gradle/npm/bridge graph. Intent serializes after iOS host; F-Droid graph and Worker serialize after Play and each other on candidate Gradle. No production graph/interface/installed state claim.",
+  "selected_outcome_map": {
+    "ios_release": "NATIVE-IOS-RELEASE-PROBE",
+    "android_play_release": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+    "fdroid_graph": "NATIVE-FDROID-GRAPH-PROBE",
+    "mac_release_candidate": "NATIVE-MAC-RELEASE-PROBE",
+    "cold_appintent": "NATIVE-IOS-COLD-INTENT-PROBE",
+    "cold_worker": "NATIVE-ANDROID-COLD-WORKER-PROBE",
+    "C12_candidate_port_and_routing": [
+      "NATIVE-IOS-RELEASE-PROBE",
+      "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "NATIVE-MAC-RELEASE-PROBE",
+      "NATIVE-IOS-COLD-INTENT-PROBE",
+      "NATIVE-ANDROID-COLD-WORKER-PROBE"
+    ],
+    "U01_bootstrap_readiness_boundary": [
+      "NATIVE-IOS-RELEASE-PROBE",
+      "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "NATIVE-MAC-RELEASE-PROBE"
+    ],
+    "U13_synthetic_domain_projection_only": [
+      "NATIVE-IOS-RELEASE-PROBE",
+      "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "NATIVE-MAC-RELEASE-PROBE"
+    ],
+    "F03_actual_host_graph_identity": [
+      "NATIVE-IOS-RELEASE-PROBE",
+      "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+      "NATIVE-MAC-RELEASE-PROBE"
+    ],
+    "F04_cold_cancel_expiry_ack": [
+      "NATIVE-IOS-COLD-INTENT-PROBE",
+      "NATIVE-ANDROID-COLD-WORKER-PROBE"
+    ],
+    "F06_current_fdroid_exclusions": [
+      "NATIVE-FDROID-GRAPH-PROBE"
+    ]
+  },
+  "remaining_family_work": [
+    {
+      "id": "runtime_set",
+      "families": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F03"
+      ],
+      "owner_role": "platform/runtime",
+      "next_packet": "SPLIT-NATIVE-HOSTS follow-on runtime set",
+      "trigger": "First host receipts accepted or incompatible engine/SDK surfaced",
+      "outcomes": [
+        "Complete iPad/browser/Web/ReactDOM/supported OS/ABI/globals/module identity/runtime set and resolve Q-NATIVE-RUNTIME from complete actual engine/SDK/purpose proof, not metadata.",
+        "Concrete Mac/headless supported alternative if candidate fails, reviewed by affected owner; retain current products."
+      ]
+    },
+    {
+      "id": "real_native_ports",
+      "families": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F04"
+      ],
+      "owner_role": "native operation/security/state",
+      "next_packet": "SPLIT-NATIVE-FEATURES + native-port follow-on",
+      "trigger": "Synthetic host/cold scope and relevant shared operation/contract/grants accepted",
+      "outcomes": [
+        "Wire one admitted real HealthKit/HC QuerySource to accepted QUERY-TRAVERSAL; preserve precision/source/typed/partial/denied/revoke meaning and Android typed-query unavailable until explicit implementation target.",
+        "Existing actual AppIntent/Worker/boot/notification/schedules/direct services/profile schemas/frozen grants/quota/history/recovery common-operation integration, separate from fake CandidateSession.",
+        "Credential/keychain/keystore/bookmark/SAF/protected file/crypto/transport/lock/spool/commit+ack/journal version/read-old/write-compatible/downgrade boundaries with current namespaces retained.",
+        "Mac actual loopback peer/Host/Origin/encrypted context/cursors/atomic generation/helper/menu-bar; removed credential/grant/profile surfaces not restored."
+      ]
+    },
+    {
+      "id": "physical_lifecycle",
+      "families": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F03",
+        "F04"
+      ],
+      "owner_role": "platform QA",
+      "next_packet": "SPLIT-NATIVE-HOSTS physical lifecycle packet",
+      "trigger": "Exact relevant host/native operation/artifact accepted",
+      "outcomes": [
+        "Actual iOS protected data/first unlock/grants/revoke/APNs/background/cold expiry/kill/reboot/coverage; direct query foreground only.",
+        "Actual Android HC absent/outdated/history/background/route consent/notifications/exact alarm/battery/foreground/force-stop/boot/update/clock/DST/capture coverage.",
+        "Measured real-device startup/memory/energy/frame-credit/cancel/release bounds, not inherited proposed probe numbers."
+      ]
+    },
+    {
+      "id": "signed_channels",
+      "families": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F06"
+      ],
+      "owner_role": "release/native security",
+      "next_packet": "SPLIT-RELEASE target/channel packet",
+      "trigger": "Exact committed host/native operation receipts and release action scope",
+      "outcomes": [
+        "Separate iOS/App Store and Mac App Store/Developer ID signed entitlements/helpers/principals/bookmarks/keychain/minimum OS/privacy/license/install/upgrade/downgrade.",
+        "Separate Play/F-Droid fdroidserver signed/reproducibility/ABI/manifest/DEX/JS/native dependencies/install exclusions and F-Droid actual runtime, not Play qualification.",
+        "Store synchronization/publication/commerce and production migration/promotion/retirement separately authorized."
+      ]
+    },
+    {
+      "id": "readiness_features",
+      "families": [
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F03"
+      ],
+      "owner_role": "shared feature/UI/native accessibility",
+      "next_packet": "SPLIT-NATIVE-FEATURES readiness/navigation",
+      "trigger": "Relevant host/common operation ports accepted",
+      "outcomes": [
+        "Actual onboarding/tabs/sidebar/iPad/config protection/URL/document/notification/permission/destination/preview/offer routes and themes/fonts/large text/RTL/screen reader/keyboard/Back/focus/reduced motion.",
+        "Actual domain/device/detail/source freshness/coverage/timeline, independent capture/display/query/export, overlapping sources/aggregate-no-events/partial gaps, health-only upgrade and opt-in grants.",
+        "P/L/S/H source-purpose/new location/usage/cloud/agent admission requires corresponding family/decision, not assumed from synthetic selector."
+      ]
+    },
+    {
+      "id": "extensions_collectors",
+      "families": [
+        "C12",
+        "U01",
+        "U13"
+      ],
+      "risks": [
+        "F03",
+        "F04",
+        "F06"
+      ],
+      "owner_role": "extension/watch/platform collector",
+      "next_packet": "Native extension packet; SPLIT-LOCATION / SPLIT-USAGE-DESKTOP / SPLIT-USAGE-MOBILE",
+      "trigger": "Relevant independent snapshot/source/operation contracts accepted",
+      "outcomes": [
+        "Independent native watch HealthKit snapshot/widgets remain phone-runtime independent; widgets/ActivityKit/notifications keep native IDs/expiry/grants.",
+        "Phone-authoritative Wear remains deferred/unpublished until Pixel Watch/Samsung physical + separate signed/store gates.",
+        "Mac title/idle/full sessions collector API/permission/channel Q-MAC-COLLECTOR separate from RN presentation; iOS aggregate eligibility and S06 exact historical sessions follow-up visible.",
+        "Remaining native background/extension routes and independent location watch queue/Stop Activity need separate cold/source/physical receipts."
+      ]
+    }
+  ],
+  "decisions": {
+    "Q-NATIVE-RUNTIME": "Open until actual complete engine/SDK/graph/host-purpose proofs; phone React19.2.3/RN0.87.1 and Mac React19.2.0/RN0.83.10/RNmacOS0.83.0 are separate graphs.",
+    "Q-MAC-COLLECTOR": "Separate API/source/title/session/permission/signed-channel proof; not presentation bootstrap prerequisite.",
+    "Q-CLOUD-COMMERCE": "F-Droid generic API retained; optional future hosted channel/source-purpose/consent open, no donor prohibition inherited.",
+    "local_progress": "Open choices block only dependent host/source/purpose work, not unrelated portable core/synthetic work."
+  },
+  "qualification": "Planning only. No child/native build/device/runtime/signed/physical/store/source capture/promotion/retirement proof executed; parent families/M02 remain open.",
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  }
+}

@@ -1,0 +1,381 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-NATIVE-HOSTS",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+  "patch_digest": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b",
+  "patch_digest_method": "SHA-256 raw UTF-8 expansions/split-native-hosts.json including final newline. Only packet is patch input; excludes receipt/coordinator plan/review/candidate outputs (none created).",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-native-hosts.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-NATIVE-HOSTS.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "docs/migration/effect-refactor/inventories/native.json": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+      "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "docs/migration/effect-refactor/inventories/native-apple.json": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "docs/migration/effect-refactor/inventories/native-android.json": "3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7",
+      "docs/migration/effect-refactor/receipts/BASE-NATIVE.json": "1f57486a7d46c77a45d53c2de35f3fb6a7fd0f933d9db099abfd4f4ed5a8e211",
+      "docs/migration/effect-refactor/receipts/BASE-HOST.json": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+      "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json": "cdccd30e7535d34dd179546539b41fa89d9d17379675d373a0612de5dfb0656f",
+      "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+      "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c"
+    },
+    "locks_and_runtime": {
+      "UI-FOUNDATION_accepted_fingerprint": "3c9c520762e55324e2904955429496574b8ba292+f54d386ce7632a53d00d5ccc32dc4df3c44d0c0504f66239f3779f29070a6e13",
+      "exact_candidate_tuples": {
+        "phone": {
+          "react": "19.2.3",
+          "react-native": "0.87.1",
+          "effect": "4.0.1"
+        },
+        "web": {
+          "react": "19.2.3",
+          "react-dom": "19.2.3",
+          "react-native-web": "0.21.3",
+          "effect": "4.0.1"
+        },
+        "macos_candidate": {
+          "react": "19.2.0",
+          "react-native": "0.83.10",
+          "react-native-macos": "0.83.0",
+          "effect": "4.0.1"
+        }
+      },
+      "native_admission": "Metadata/compiler/portable checks only; actual engine/SDK/graph/Q-NATIVE-RUNTIME unqualified"
+    },
+    "artifact_and_native_interface": {
+      "packet": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
+      "children": [
+        "NATIVE-IOS-RELEASE-PROBE",
+        "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+        "NATIVE-FDROID-GRAPH-PROBE",
+        "NATIVE-MAC-RELEASE-PROBE",
+        "NATIVE-IOS-COLD-INTENT-PROBE",
+        "NATIVE-ANDROID-COLD-WORKER-PROBE"
+      ],
+      "existing_interfaces": "inspectCandidate/CandidateSession; createReadinessModel/projectReadiness",
+      "new_probe_schema": "healthmd.candidate_host_probe v1 proposed only",
+      "fixture_catalog": {
+        "apple_lifecycle": {
+          "path": "apps/apple/HealthMdTests/Support/LifecycleHarnessTests.swift",
+          "sha256": "61bce08fa818a94395a23c89d04debf3647fed394f9924000889b854b66bc522",
+          "case_ids": [
+            "testCreationStability_metricSelectionState",
+            "testCreationStability_dailyNoteInjectionSettings",
+            "testCreationStability_individualTrackingSettings",
+            "testCreationStability_formatCustomization",
+            "testRetain_keepsObjectAlive",
+            "testCreate_factoryReturnsConfiguredObject",
+            "testRetainedCount_incrementsOnRetain",
+            "testCancellationCleanup_longRunningTask",
+            "testCancellationCleanup_immediateCompletion",
+            "testDrainMainRunLoop_doesNotCrash"
+          ],
+          "execution": "source-pinned current compatibility expectation; not run by packet"
+        },
+        "apple_intent": {
+          "path": "apps/apple/HealthMdTests/iOS/ExportIntentProfileResolutionTests.swift",
+          "sha256": "ab1f88b4be2871d31b67941ca42718ad0d5967e437b5080f324786335bf31647",
+          "case_ids": [
+            "testNoProfilesResolvesLegacySettings",
+            "testUnnamedResolutionUsesActiveProfile",
+            "testNamedResolutionIsTrimmedAndCaseInsensitive",
+            "testUnknownNameFailsClosed",
+            "testProfileRunUsesProfileSnapshotAndAdoptsDestinations",
+            "testProfileNotFoundShortCircuitsBeforeVaultAccess",
+            "testDialogMentionsMissingProfileName"
+          ],
+          "execution": "source-pinned current compatibility expectation; not run by packet"
+        },
+        "mac_context": {
+          "path": "apps/apple/HealthMdTests/macOS/EncryptedHealthContextStoreTests.swift",
+          "sha256": "f962061151dcb02f0ce3e896d912f504b7cca9047099f5691ac47812fc7a5b8c",
+          "case_ids": [
+            "testRoundTripUsesProtectedFilesAndDeterministicIdentifiers",
+            "testSubmillisecondDatesRemainReadableAcrossDigestValidation",
+            "testCiphertextAndOpaqueFilenamesDoNotLeakPHI",
+            "testWrongMissingKeyAndTamperingFailClosed",
+            "testManifestIsAuthenticatedAgainstTampering",
+            "testUpsertCommitFailurePreservesOldGenerationAndSuccessfulReplacementCleansIt",
+            "testUnlimitedTraversalOverThousandsOfDaysLoadsOneDayAtATime",
+            "testDeleteAndExplicitRetentionControlsHaveNoImplicitCap",
+            "testScopedMergePreservesUnrequestedMetricsAndReplacesOnlySelectedSource",
+            "testScopedMergeRetainsAndTrimsEvidenceSharedByUnrequestedMetric",
+            "testProviderOnlyScopedMergePreservesProjectedAppleMetricAndDayStatus",
+            "testRejectsDuplicateBatchDatesAndUnsupportedContextSchemaWithoutChangingExportSchema"
+          ],
+          "execution": "source-pinned current compatibility expectation; not run by packet"
+        },
+        "android_generation": {
+          "path": "apps/android/app/src/test/java/com/healthmd/data/scheduler/ExportSchedulerGenerationTest.kt",
+          "sha256": "f5a3dce891335d82337982215496f89142221993a85b7f272ffd91efc0d3bf06",
+          "case_ids": [
+            "destinationReplacementPersistsNewStateBeforeAwaitingGenerationCancellation",
+            "legacyOccurrenceAndWorkAreCancelledOnceAndReplacedFromCurrentSettings",
+            "dueLegacyOccurrenceUsesCurrentFrozenSettingsDuringMigration",
+            "dueLegacyFallbackMigratesAndAdmitsWithoutCancellingItself",
+            "rebootReconciliationKeepsThePersistedGeneration",
+            "rapidApiFolderSameApiReconfigurationLeavesOnlyFinalGenerationActive",
+            "frozenOutputSettingsReplacementMintsANewGeneration",
+            "dueOccurrenceUsesNewFrozenOutputSettingsDuringReconcile",
+            "dueOccurrenceUsesNewFrozenOutputSettingsBeforeContinuingReplacementGeneration",
+            "dueEndpointChangeFailsClosedAndOnlyArmsAFutureReplacement",
+            "settingsAreCapturedAfterWaitingForRunningWorkerCoordinator",
+            "oversizedWorkDataIsRejectedBeforeReplacingTheActiveGeneration",
+            "interruptedArmRecoversTheSameAdmissionWithoutReadmittingCompletedOccurrence",
+            "busyExactDeliveryDoesNotRearmThePastOccurrence"
+          ],
+          "execution": "source-pinned current compatibility expectation; not run by packet"
+        },
+        "fdroid_policy": {
+          "path": "apps/android/app/src/fdroidTest/java/com/healthmd/distribution/FdroidDistributionPolicyTest.kt",
+          "sha256": "d810b054555d593fef763245c2f913f64b2b382ee6a3a46c2f810276fc813c93",
+          "case_ids": [
+            "channelIncludesFullAccessAndNoPlayIntegrations",
+            "entitlementIsStableAndPurchaseActionsAreUnavailable",
+            "onboardingUsesIncludedAccessStepInsteadOfPaywall",
+            "providerCatalogContainsOnlyHealthConnect",
+            "commonProductionSourceDoesNotImportChannelSpecificIntegrations",
+            "commonBackupRulesContainNoPlayOnlyStateNames"
+          ],
+          "execution": "source-pinned current compatibility expectation; not run by packet"
+        },
+        "core_scope": {
+          "path": "packages/healthmd-core-ts/tests/foundation.test.ts",
+          "sha256": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+          "case_ids": [
+            "candidate and host-interface exports share the same service identity",
+            "successful scoped inspection releases its owned resource exactly once",
+            "typed inspection failure releases once and exposes only a stable safe failure",
+            "acquisition failure never inspects or releases an unacquired resource",
+            "interruption waits for finalization and releases exactly once",
+            "virtual clock drives inspection without wall-clock delays",
+            "interruption cannot finish before an asynchronous finalizer acknowledges cleanup",
+            "concurrent operations keep fake host resource ownership separate"
+          ],
+          "execution": "Accepted portable synthetic only; not native host proof"
+        },
+        "ui_lifecycle": {
+          "path": "packages/healthmd-ui/tests/foundation.test.ts",
+          "sha256": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+          "case_ids": [
+            "initial unknown state and selected-domain props never admit source grants",
+            "subscription observes actions and cleanup detaches component lifecycle",
+            "dispose awaits owned async cleanup and ignores late source results",
+            "superseding refresh cancels old work without stale publication",
+            "cancel retains loaded state and can refresh again without double cleanup",
+            "raw operation and cleanup errors become content-free state",
+            "bounded source descriptor validation rejects duplicate or oversized results",
+            "independent models and hostile view listeners do not affect operation cleanup",
+            "dispose during supersede waits for prior cleanup acknowledgement",
+            "cancel during supersede waits for prior cleanup and prevents successor read",
+            "third refresh during supersede cannot acquire before prior cleanup",
+            "loading subscriber disposal prevents stale operation acquisition",
+            "loading subscriber cancellation prevents read and permits later refresh",
+            "one-time loading subscriber refresh acquires only the latest operation"
+          ],
+          "execution": "Accepted portable synthetic only; not native host proof"
+        }
+      }
+    },
+    "policy_migration_key_versions": {
+      "required_read_pins": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+        },
+        {
+          "path": "apps/apple/AGENTS.md",
+          "sha256": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13"
+        },
+        {
+          "path": "apps/android/AGENTS.md",
+          "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+        },
+        {
+          "path": "docs/migration/effect-refactor/native-ui.md",
+          "sha256": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+        },
+        {
+          "path": "packages/healthmd-ui/AGENTS.md",
+          "sha256": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67"
+        }
+      ],
+      "selected_design_rows": [
+        {
+          "id": "C12",
+          "row_sha256": "1c97e2437330a3480f368a9f7ec8c09471f85fcff08e290f9ef7c62e2b52f087",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        },
+        {
+          "id": "U01",
+          "row_sha256": "29b8187397b06bcf12ea507006939a26aad5034c1338518fb6c7fb907b92d03e",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        },
+        {
+          "id": "U13",
+          "row_sha256": "449ff0d7e29ed7b665e9f8c8fc37bfab5fb02f650956adcaab7bb4d5bd916da6",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        },
+        {
+          "id": "F03",
+          "row_sha256": "0cc84da4f2dbd4c9e1a947eef335d20e97c530d8f7452a6054fb578a54ab2c3e",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        },
+        {
+          "id": "F04",
+          "row_sha256": "8416c41eadbf79e80566e821309e3d3e2c367f6c712a406396863f11f2a403e8",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        },
+        {
+          "id": "F06",
+          "row_sha256": "94b01427ac75d227e46be11e6dcc6711324e563346e2c0df0d2bb2d39da964bf",
+          "method": "UTF-8 exact indexed row without newline at assigned source"
+        }
+      ],
+      "production_state": "All native identities/SDK grants/key namespaces/profile/journal/Room/SAF/bookmark/trust/cold schedule and Rust authority retained; candidate private identity proposed only"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-native-hosts.json#children/source_inputs/fixture_catalog/verification/allowed_paths/shared_resources"
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-native-hosts.json#dependency_edges/choice_dependencies/decisions/proof_limits"
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-native-hosts.json#selected_outcome_map/remaining_family_work"
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-native-hosts.json#status/review/qualification"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "SPLIT-NATIVE-HOSTS"
+      ],
+      "result": "passed",
+      "evidence": "Exact task acceptance/target/two-file scope/max6 read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Assigned source accepted inventory/receipt scoped fields, shared interfaces/current check/source locators, exact native raw digest and accepted UI review checked; no full platform pin re-audit."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "6unique atomic children; exact existing source locators, introduced paths/case IDs/commands/resources/dependencies; acyclic edges, every selected outcome and full remaining family owner/trigger; raw digest/exact target/allowed paths validated."
+    }
+  ],
+  "observations": [
+    {
+      "result": "passed",
+      "expected": "At most six unique child cards, all declared existing/child prerequisites valid and child dependency graph acyclic.",
+      "observed": "Six unique cards; all prerequisites resolve to assigned-base tasks or packet children; depth-first cycle validation passed.",
+      "evidence": "expansions/split-native-hosts.json#children/dependency_edges",
+      "case_id": "native-host-planning-1",
+      "procedure": "Source-only Python validation enumerated six child IDs, resolved current task prerequisites and traversed dependency edges for cycles."
+    },
+    {
+      "result": "passed",
+      "expected": "Scoped accepted evidence pointers and exact source/fixture SHA-256 resolve at assigned source; do not re-audit full accepted inventories.",
+      "observed": "54 unique exact source/input/fixture locators hash-match at assigned source; each accepted_inventory_fields JSON pointer resolves.",
+      "evidence": "expansions/split-native-hosts.json#accepted_input_pins/required_read_pins/fixture_catalog/children",
+      "case_id": "native-host-planning-2",
+      "procedure": "Source-only Python and independent reviewer compared exact assigned-base Git blobs and source/fixture SHA hashes, and resolved the declared inventory JSON pointers."
+    },
+    {
+      "result": "passed",
+      "expected": "All six selected outcomes map to child IDs; all remaining family groups have concrete owner, next packet and trigger; introduced checks cannot imply execution.",
+      "observed": "All six mappings resolve; six remaining groups contain owner/packet/trigger/outcomes; all child checks explicitly not_run_by_packet.",
+      "evidence": "expansions/split-native-hosts.json#selected_outcome_map/remaining_family_work/children/verification",
+      "case_id": "native-host-planning-3",
+      "procedure": "Source-only packet review compared selected outcome map and remaining owner_role/next_packet/trigger fields, then checked each introduced verification availability and unrun status."
+    },
+    {
+      "result": "passed",
+      "expected": "Exact task target, bounded two-file scope, pending independent review and raw packet digest including newline.",
+      "observed": "Exact source_only/development/candidate only target matches; both JSON files parse; packet has final newline; SHA-256 11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b; review pending.",
+      "evidence": "receipts/SPLIT-NATIVE-HOSTS.json#target/changed_paths/patch_digest/review",
+      "case_id": "native-host-planning-4",
+      "procedure": "Historical author planning validation parsed both claimed JSON files, matched target/write scope, verified final newline and recomputed raw packet SHA before independent review acceptance."
+    }
+  ],
+  "inspection_summary": "Six isolated candidate Release/graph/cold host boundaries using an existing common owned-resource operation and independent fake/retained case expectations. Complete follow-on real native source/state/common-operation, physical, signed, store, UI/accessibility and new-source work remains assigned to packet owners/triggers. No implementation/native runtime qualification claimed.",
+  "limitations": [
+    "Introduced candidate projects/packages/locks/scripts/probe fixtures do not exist; coordinator must review/merge/claim before writing/executing each child.",
+    "Native SDK/engine/global/Release graph/one-instance identity/current minimum support unresolved until actual host proofs; tuple metadata not admission.",
+    "No native build/device/health/private state/credential/provider/signing/release/Git operation by packet.",
+    "Future Android host run follows component-required local physical target but proves only synthetic host integration, not health/lifecycle physical qualification.",
+    "Cold AppIntent actual OS ingress required; unsupported simulator requires separate scoped device proof, not direct perform-only acceptance."
+  ],
+  "remaining_qualification": [
+    "Independent native/platform/UI packet review and coordinator merge.",
+    "Separately claimed child exact receipts, then follow-on complete native runtime/state/source/physical/signing/accessibility/collector/channel matrices.",
+    "Q-NATIVE-RUNTIME complete actual engine/SDK/host-purpose set, Q-MAC-COLLECTOR and future hosted F-Droid choices only where dependent."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "e3f13acd984f762e5ffe0ddb798788969cf24b2b+11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+  },
+  "independent_review": {
+    "result": "passed",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "e3f13acd984f762e5ffe0ddb798788969cf24b2b+11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b",
+    "evidence": "Independently verified54 committedinputhashes6designrowhashes71retainedcaseIDs6externalinventorypointers/allinternalfixtures6acyclicboundedchildren/proofavailability. Root previewnormalized coordinator state fields and manage.py passed58tasks. Actual runtime/SDK/cold/physical/signed/state/source-purpose/distribution/retirement notqualified; remaining6owner/packet/triggergroups preserved."
+  }
+}
