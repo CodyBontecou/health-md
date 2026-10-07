@@ -4410,7 +4410,9 @@
         "apps/cli/tests/mcp-query*",
         "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json"
       ],
-      "shared_resources": [],
+      "shared_resources": [
+        "cli-candidate-build"
+      ],
       "acceptance": [
         "Tool arguments normalize to the shared command with current caller/capability policy.",
         "Denied/guessed calls fail before dispatch; canonical output is adapted without duplicated query business logic.",
@@ -4428,7 +4430,7 @@
           "introduced_by": "CLI-CANDIDATE-HOST"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted actual Rust MCP tool dispatch/catalog/read-only query source and BASE-CLI inventory; CORE-CANDIDATE-API four exported shared modules and accepted CLI-QUERY-ADAPTER frozen315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2. Independently review source-derived fixed MCP invocation/envelope/error/authority/current-grant/profile/detail/pagination/cancellation expectations before adapter source. Same packed normalizeMetricChart and traverseQuery functions as CLI, no copied query engine or authority from tool JSON. Actual raw/lossless codec, transport/concurrency/process/protocol/native/public parity remain separately qualified.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4440,18 +4442,33 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 71,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/mcp/query.ts",
+          "apps/cli/tests/mcp-query-vectors.ts",
+          "apps/cli/tests/mcp-query.test.ts",
+          "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json"
+        ],
+        "reserved_resources": [
+          "cli-candidate-build"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+6044741862e22e3f77ef1620871dc1ce7cdc325aa7c575701f5eb2771314b6d3"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json"
+        ]
       }
     },
     {
@@ -5718,7 +5735,7 @@
         "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted BASE-CLI rawd013 inventory and BASE-HOST rawd1b inventory protocol/crypto/pairing/cancellation locators, actual independently versioned packages/contracts fixtures and native Swift/Kotlin implementations. Pin exact source/fixture bytes and relevant actual contract version/grammar/sequence/transcript symbols, semantic inventory pointers and design rows before drafting at most six children; no production extraction/relocation/schema/version change, no runtime crypto/toolchain execution or new codec expectations derived from future implementation. Other protocol/client/host/capability/promotion/retirement scope must have owner/trigger.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -5730,8 +5747,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-protocol.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -7627,13 +7653,16 @@
         "apps/apple/effect-host-candidates/macos/macos/HostProbeTests.swift",
         "apps/apple/effect-host-candidates/macos/scripts/run-release-probe.sh",
         "apps/apple/effect-host-candidates/macos/macos/HostProbe.entitlements",
-        "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json"
+        "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json",
+        "apps/apple/effect-host-candidates/macos/babel.config.cjs",
+        "apps/apple/effect-host-candidates/macos/macos/PrivacyInfo.xcprivacy"
       ],
       "shared_resources": [
         "mac-candidate-project",
         "mac-candidate-pods-lock",
         "mac-candidate-js-lock",
-        "mac-candidate-bridge"
+        "mac-candidate-bridge",
+        "native-candidate-build"
       ],
       "source_inputs": [
         {
@@ -7799,9 +7828,45 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "not_started",
+      "status": "in_progress",
       "blocker": null,
-      "claim": null,
+      "claim": {
+        "agent": "/root/mac_release_host",
+        "base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/apple/effect-host-candidates/macos/package.json",
+          "apps/apple/effect-host-candidates/macos/package-lock.json",
+          "apps/apple/effect-host-candidates/macos/.node-version",
+          "apps/apple/effect-host-candidates/macos/tsconfig.json",
+          "apps/apple/effect-host-candidates/macos/metro.config.cjs",
+          "apps/apple/effect-host-candidates/macos/src/probe.ts",
+          "apps/apple/effect-host-candidates/macos/src/HostProbe.tsx",
+          "apps/apple/effect-host-candidates/macos/scripts/build.mjs",
+          "apps/apple/effect-host-candidates/macos/scripts/check.mjs",
+          "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+          "apps/apple/effect-host-candidates/macos/macos/Podfile",
+          "apps/apple/effect-host-candidates/macos/macos/Podfile.lock",
+          "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/project.pbxproj",
+          "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+          "apps/apple/effect-host-candidates/macos/macos/AppDelegate.swift",
+          "apps/apple/effect-host-candidates/macos/macos/NativeProbe.mm",
+          "apps/apple/effect-host-candidates/macos/macos/Info.plist",
+          "apps/apple/effect-host-candidates/macos/macos/HostProbeTests.swift",
+          "apps/apple/effect-host-candidates/macos/scripts/run-release-probe.sh",
+          "apps/apple/effect-host-candidates/macos/macos/HostProbe.entitlements",
+          "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json",
+          "apps/apple/effect-host-candidates/macos/babel.config.cjs",
+          "apps/apple/effect-host-candidates/macos/macos/PrivacyInfo.xcprivacy"
+        ],
+        "reserved_resources": [
+          "mac-candidate-project",
+          "mac-candidate-pods-lock",
+          "mac-candidate-js-lock",
+          "mac-candidate-bridge",
+          "native-candidate-build"
+        ]
+      },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 204,
       "qualification": {
@@ -7844,7 +7909,8 @@
           "no_native_grant_expansion"
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      }
+      },
+      "common_build_window": "Coordinator common make284 passed on unchanged common source; Mac Metro509-source packaged bundle frozen and native compilation/ordinary run do not read common source/dist. Common build resources released after author confirmation; any re-bundle must request and reserve a new explicit window before reads."
     },
     {
       "id": "NATIVE-IOS-COLD-INTENT-PROBE",
@@ -11692,6 +11758,116 @@
         "task_id": "SPLIT-RENDER",
         "path": "docs/migration/effect-refactor/expansions/split-render.json",
         "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "CORE-COHORT-REFRESH",
+      "title": "Refresh the exact reviewed portable core cohort",
+      "stream": "core_cli",
+      "phase": "M01",
+      "kind": "implementation",
+      "outcome": "Admit the independently reviewed exact-number module into the CLI packed core cohort while preserving complete source/output drift rejection and historical authority.",
+      "prerequisites": [
+        "REGISTRY-READER",
+        "CORE-CANDIDATE-API",
+        "SERIALIZE-EXACT-NUMBERS",
+        "MCP-QUERY-ADAPTER"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C01",
+        "C11"
+      ],
+      "risk_ids": [],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/cli/docs/typescript-candidate.md"
+      ],
+      "allowed_paths": [
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "acceptance": [
+        "The cohort is a separately reviewed fixed complete input/output map, with current committed source, exact runtime/locks and accepted delta task/source/vector/artifact evidence; no discovery-generated acceptance.",
+        "Historical REGISTRY-READER code authority, CORE-CANDIDATE-API metadata authority and their unchanged sixteen legacy artifact bytes remain independently checked. The accepted exact-number child supplies only its explicit additional three source/test/vector inputs and two emitted module files, subject to actual complete-tree confirmation.",
+        "The guard hard-pins the cohort digest and complete file sets/counts, verifies source and packed package bytes, and retains exact runtime/lock/manifest/module export boundaries, physical Effect identity and six existing filesystem drift negatives.",
+        "Actual extra/missing/new-module edited/stale-output, absent or tampered cohort and unreviewed delta evidence fail closed. The refresh receipt is not a reverse dependency of its guard or cohort; no self-referential digest.",
+        "Frozen common source is built and checked, the CLI packed local package is refreshed with exact install-links, and all affected CLI/MCP tests pass sequentially under reserved resources. No operation/serializer export, dependency or public/native authority changes are included."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        }
+      ],
+      "fixture_inputs": "At dispatch pin accepted SERIALIZE-EXACT-NUMBERS source/patch/vector receipt and freshly committed complete core tree. Preserve historical REGISTRY-READER source3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4, historical manifest669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2, accepted CORE-CANDIDATE-API metadata raw manifest822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2 and16-artifact map7845384cd4a0c8fb493651100d97159ecb7d269875fb62b0f7ecef2e92c8bbc4. Exact current28-input guard map and six actual disposable-copy negatives are in apps/cli/scripts/check-candidate.mjs; expect31/18 only when complete-tree inspection confirms exactly the accepted three new inputs/two outputs. Review complete cohort/negative expectations before guard implementation. Do not include cohort/guard/refresh receipt in core input tree or hash the refresh receipt from its own guard.",
+      "consumers": "Portable core and packed CLI/MCP candidate package/checks only; common business module was separately reviewed. Preserve historical native/common export bytes and all production consumers; this is a bounded cohort binding, not complete semantic/public/native qualification.",
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "candidate exact-number cohort only"
+      },
+      "rollback": "Restore the previous reviewed CLI guard and packed28-input/16-output cohort from the preserved committed checkpoint; the new unexported common module remains separately revertible. No user state or public launcher is changed.",
+      "deletion_gate": "No public promotion, source-domain admission, Rust/reference/fixture/state deletion or family retirement.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json",
+      "reviewer_role": "independent portable build and core provenance reviewer",
+      "priority": 75,
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "future_scope": "Every later core input/output change needs a separately scoped reviewed cohort delta and fresh affected candidate integration; this task authorizes only the exact-number child. Historical receipts are immutable, not rewritten to pass current source.",
+      "card_review": {
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "4e5615e12660857cf07b8c7f74a31226a0795b2f4458966024bc249338f98516",
+        "fingerprint_method": "SHA256 canonical task JSON before card_review insertion; sort_keys=True,separators=(comma,colon),ensure_ascii=False,UTF8. Exclude this metadata field when replaying the card digest. Implementation review remains pending."
       }
     }
   ]

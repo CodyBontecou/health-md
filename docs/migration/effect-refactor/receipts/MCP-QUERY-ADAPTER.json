@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "task_id": "MCP-QUERY-ADAPTER",
+  "source_sha": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+  "patch_digest": "6044741862e22e3f77ef1620871dc1ce7cdc325aa7c575701f5eb2771314b6d3",
+  "patch_digest_method": "SHA256 over lexically sorted3claimed nonreceipt UTF8 repository-relative paths + NUL + raw file bytes + NUL; excludes receipt/coordinator state/ignored outputs.",
+  "changed_paths": [
+    "apps/cli/src/mcp/query.ts",
+    "apps/cli/tests/mcp-query-vectors.ts",
+    "apps/cli/tests/mcp-query.test.ts",
+    "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "inputs": {
+    "source_contract_and_build_pins": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/cli/crates/healthmd-mcp/src/application.rs": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+      "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+      "apps/cli/crates/healthmd-mcp/src/result.rs": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f",
+      "apps/cli/crates/healthmd-operations/src/limits.rs": "2a5f0ea3854fdb54550a1e075195407141321cc2cc1edeb91c05a3f047485184",
+      "apps/cli/crates/healthmd-operations/src/model.rs": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+      "apps/cli/crates/healthmd-operations/src/receipt.rs": "82efc6d84d830cf4c4eb8cd83db2a7c74953e0ad028a5cb45bf51f923dd05a1b",
+      "apps/cli/crates/healthmd-operations/src/registry.rs": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+      "apps/cli/crates/healthmd-operations/src/service.rs": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+      "apps/cli/package-lock.json": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "apps/cli/package.json": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+      "apps/cli/scripts/build-candidate.mjs": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+      "apps/cli/scripts/check-candidate.mjs": "df45b92da8f6415231bfa78b7d4e516841d2a136bb4a1476ea99aac08c66fe00",
+      "apps/cli/src/candidate-host.ts": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+      "apps/cli/src/cli/query.ts": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+      "apps/cli/tests/candidate-api.test.ts": "3ec07bd038a61561e902b3ef268c361d2791bebf80e6bce7f1cf9f0f44e59c63",
+      "apps/cli/tests/cli-query-vectors.ts": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+      "apps/cli/tests/cli-query.test.ts": "feedc7f5fde3340493335327d5176a63687c05630356c017322beee48f6dbbde",
+      "apps/cli/tsconfig.build.json": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+      "apps/cli/tsconfig.json": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+      "apps/cli/tsconfig.test.json": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "docs/migration/effect-refactor/receipts/BASE-CLI.json": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+      "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json": "ca663fb7c38549ac885086219955913eb82e97e1d89f354e3515b13db5118249",
+      "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+      "docs/migration/effect-refactor/receipts/OP-CATALOG.json": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+      "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json": "d78dcac7a562180f9a30ec4459b0bde53c7e7080cddcf44f6d2edd27d3a2b87d",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+      "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+      "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+      "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+      "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+      "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+      "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+      "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+      "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+      "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5",
+      "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+      "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+      "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+      "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+      "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+      "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+      "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+      "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+      "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+      "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0"
+    },
+    "expected_vectors": {
+      "path": "apps/cli/tests/mcp-query-vectors.ts",
+      "sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+      "independent_review": {
+        "reviewer": "/root",
+        "result": "passed",
+        "timing": "Literal source/interface corpus approved before implementation.",
+        "source_mapping": "Rust application.rs233..343 tool/scope/normalizer/query order; jsonrpc.rs110..165 method/call defaults; result.rs tool_result compact content/isError; receipt.rs backend error shape. Private subset/message and trusted codec/authority limitations explicitly approved."
+      }
+    },
+    "locks_and_runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_executable_sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "graph": "Unchanged scoped core/CLI/UI locks; Effect4.0.1 one physical identity; TS7.0.2/esbuild0.28.2 Go tooling and compiled Node24 ESM tests. Existing packed core/28input/16artifact/manifest/module guards passed. No dependency install, core/UI build, policy/global edit in this task."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "apps/cli/src/mcp/query.ts": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+        "apps/cli/tests/mcp-query-vectors.ts": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+        "apps/cli/tests/mcp-query.test.ts": "48debe7308d79cea2c3894ff1a6d01f8cfe7f8f2d1dc0b23396808f65b1223d8"
+      },
+      "compiled_CLI_artifact_digests": {
+        "apps/cli/dist/candidate/candidate-host.d.ts": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+        "apps/cli/dist/candidate/candidate-host.js": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+        "apps/cli/dist/candidate/cli/query.d.ts": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d",
+        "apps/cli/dist/candidate/cli/query.js": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74",
+        "apps/cli/dist/candidate/mcp/query.d.ts": "f57542998729efec35101b721e065820878ab111c9e9ff4106df8fb6484a47fb",
+        "apps/cli/dist/candidate/mcp/query.js": "c9a5888069e5bb126bf6bbe4104b63cf192f6040a11b33817ea9dce99b72f423",
+        "apps/cli/dist/test-metafile.json": "e570e027fd868bfaf8d0404ff20f1a85630856a365c154fb44e12b700786c0d8",
+        "apps/cli/dist/tests/candidate-api.test.js": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+        "apps/cli/dist/tests/candidate-host.test.js": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+        "apps/cli/dist/tests/cli-query.test.js": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70",
+        "apps/cli/dist/tests/mcp-query.test.js": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240"
+      },
+      "unchanged_common_artifact_digests": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+      },
+      "check_log_sha256": "acab69174150540321e0e0ab385797ff553e6eb762eef429f4deaedd8e66d3b9"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Tool arguments normalize to the shared command with current caller/capability policy.",
+      "result": "passed",
+      "evidence": "Private tools/call + metric_chart routes trusted host-decoded arguments through same packed normalizeMetricChart/traverseQuery as CLI. Current host caller/profile/grants/allowlist and admitted binding are never taken from tool JSON."
+    },
+    {
+      "criterion": "Denied/guessed calls fail before dispatch; canonical output is adapted without duplicated query business logic.",
+      "result": "passed",
+      "evidence": "Guessed names, current allowlist and missing read scope reject before decode/admit/open. Literal one-page/receipt and text-only MCP envelopes match fixed reviewed corpus; codec receives exact common object; source ownership/interrupt cleanup remains shared."
+    },
+    {
+      "criterion": "Transport/resource/concurrency protocol work remains separately inventoried.",
+      "result": "passed",
+      "evidence": "Explicit limitations retain JSONRPC IDs/version, full methods/tools/discovery, transports/listeners/Apps/PNG, cancellation wire/concurrency, real native/health/current-grant proof and general raw lossless codec. No family/authority promotion."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.743,
+      "evidence": "Exit0;79tests (49accepted prior+30MCP),0failures/cancellations/skips; strict source/test typecheck, discovered compiled ESM tests,28core inputs/16artifacts/one physical Effect/shared constructor identity;6actual filesystem guards. LogSHA256 acab69174150540321e0e0ab385797ff553e6eb762eef429f4deaedd8e66d3b9."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Immutable expected corpus;41unchanged core/UI input files,7unchanged CLI package/lock/scripts/adapter files,16unchanged common artifacts; assigned historical source pins and scoped output digests verified."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0:72atomic tasks/86families/16choices; structural graph/pointers/evidence/claims valid, not behavior/release qualification."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator fresh frozen integration191 core+14 UI+79 CLI=284 passed, zero failures/cancelled/skipped/todo on pinned Node24.21.0/npm11.19.0;72 historical/current input pins,11 CLI outputs and16 common outputs in source/packed copies verified. LogSHA256 8c518757adf6ba480911b9f01efd07cd69461f4b357fe1bd830a4910f0e65356."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "current-caller-dispatch-order",
+      "procedure": "Execute fixed method/tool/normalizer negatives and counter-based current allowlist/scope cases.",
+      "expected": "Unknown tools precede scope; denied scope precedes decode/admission/source; tool JSON never creates identity/grants.",
+      "observed": "Two private methods/four tool names/five normalization negatives, malformed names/envelopes and authority injection pass; denied cases acquire0.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "common-invocation-receipt",
+      "procedure": "Record host-normalized invocation and common results for MCP plus accepted CLI with identical arguments.",
+      "expected": "Same summary/default and lossless/all-pages invocation; exact common one-page/receipt objects preserving partial coverage.",
+      "observed": "Both surfaces produce matching invocations/values; one-page and receipt literals match; each common resource owned/released once.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "trusted-codec-boundary",
+      "procedure": "Inject fixed raw compact ASCII text codec and fail/defect/oversized codec cases.",
+      "expected": "Only reviewed literal text envelope; failures emit fixed sanitized diagnostics after release; no general byte equivalence.",
+      "observed": "Success/receipt fixed texts pass; failed/defective/oversized codecs return protocol failure, acquired resource released1.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "private-error-safety",
+      "procedure": "Inject typed unavailable/provider/admission/release errors plus error getters and attempted mutation of reused diagnostics.",
+      "expected": "Known error codes plus private fixed message only; no provider/parser/cause text or getter execution.",
+      "observed": "All failure projections pass; getter not executed; application errors immutable and later calls uncontaminated.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "interruption-ownership",
+      "procedure": "Interrupt actual Fiber during read/admission/final masked allocation while holding release acknowledgment.",
+      "expected": "Interrupt-only cause, no premature completion, exactly once release; pending final allocation cannot leak.",
+      "observed": "Two cleanup/mixed-cause cases and final allocation acq1/read0/release1 pass; admission interruption open0; acknowledgment barrier enforced.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "qualified-cohort-stability",
+      "procedure": "Compare assigned source inputs and16core artifacts; execute CLI-only npm check.",
+      "expected": "Core/UI/business/package/lock/guards unchanged; one packed Effect and service identity.",
+      "observed": "41core/UI files and7CLI package/lock/scripts/adapter files unchanged;16common artifacts unchanged;79compiled cases plus6filesystem guards pass.",
+      "evidence": "Pinned vectors/source/artifacts and actual check log SHA in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "independent-review-and-root-integration",
+      "procedure": "Independent read-only source and artifact review, emitted79-test run, six additional host-authority/codec boundary replays; root fresh frozen common make and hash verification.",
+      "expected": "Same reviewed vector/patch/shared functions and artifacts, fixed private output/error/cancellation behavior without source/authority expansion.",
+      "observed": "Reviewer accepted exact604474... patch;79 tests and six independent cases pass, including ignored toolJSON grants, allowlist ordering, mismatched caller/profile open0, nonstring codec release1 and provider getter never invoked. Root284 scoped tests pass;72 inputs,11 CLI outputs and16 common outputs in both copies match.",
+      "evidence": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+6044741862e22e3f77ef1620871dc1ce7cdc325aa7c575701f5eb2771314b6d3; root logSHA256 8c518757adf6ba480911b9f01efd07cd69461f4b357fe1bd830a4910f0e65356.",
+      "result": "passed"
+    }
+  ],
+  "inspection_summary": {
+    "claim_paths": 4,
+    "nonreceipt_paths": 3,
+    "new_MCP_tests": 30,
+    "total_CLI_tests": 79,
+    "unchanged_common_artifacts": 16,
+    "existing_filesystem_guards": 6,
+    "current_admission": "Current host principal/allowlist/read grant before decode/normalize/admission; binding caller/profile checked before open; complete grammar/native/cursor/coverage attestations remain trusted adapter obligations.",
+    "codec": "No input JSON.parse or general output serializer. Host raw codec supplies text;2MiB JS-codeunit text capacity bound is candidate-only, not UTF8/frame/memory proof.",
+    "ownership": "Same packed normalizer/traverseQuery/QuerySource; host preparations own no resource; shared ownQueryResource registers atomic cleanup. Masked final cause sanitizer retains interrupt IDs only and never invokes provider error getters."
+  },
+  "limitations": [
+    "Private tools/call/healthmd_metric_chart/text-only subset. Rust supports tools/list and other tools; candidate method/tool rejection is not full public dispatcher parity.",
+    "Private fixed backend message The candidate query failed. is sanitized candidate behavior, not legacy backend-message equivalence. Application numeric codes/messages and scoped literal envelope only are preserved.",
+    "Trusted host resolves current authenticated caller/profile/grants/allowed tools, decodes reviewed lossless parsed argument envelope, validates grammar/source/cursor/dataset/capabilities, and encodes reviewed raw text. Synthetic fake attestations do not prove native authentication or real health readiness.",
+    "Fixed compact ASCII-safe-integer body/receipt text corpus only; no general lossless lexemes/Unicode/fractions/-0/bigint serializer/duplicate field/raw JSON lexical parity. Text limit bounds JS codeunits; actual UTF8 serialization/frame/memory accounting remains separate.",
+    "Transport JSONRPC IDs/version/session limits/replay, Apps/PNG/resource negotiation, concurrency/listeners/process signals/notifications/cancelled-wire translation and durable-job semantics remain unimplemented and separately scoped.",
+    "Fiber interruption remains interrupt after cleanup acknowledgment, never a successful or wire-cancelled result; no durable cancellation APIs invoked.",
+    "Darwin-arm64 portable synthetic CLI-only execution. No common core/UI builds while Mac graph probe owns outputs; root final common integration is separate. No physical/native/signed/remote CI/admin/public surface/O02/C11 family/promotion or Rust retirement closure."
+  ],
+  "remaining_qualification": [
+    "SLICE-PARITY broader fixed slice matrix, lossless codecs, real host/source authorization/evaluator, complete MCP/CLI protocol/process/distribution and native proofs."
+  ],
+  "rollback": "Remove only these3private MCP source/vector/test files and this receipt, then rebuild scoped CLI candidate outputs if necessary. Keep accepted CLI/common modules, package locks, public Rust launchers, protocols, frozen fixtures, current trust/state and user data unchanged.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_cli",
+    "fingerprint": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+6044741862e22e3f77ef1620871dc1ce7cdc325aa7c575701f5eb2771314b6d3"
+  }
+}
