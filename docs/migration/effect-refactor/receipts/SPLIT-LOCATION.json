@@ -1,0 +1,274 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-LOCATION",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "683acf1831d65feace61d3702d3b35f2838a42f6",
+  "patch_digest": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "included_paths": [
+      "docs/migration/effect-refactor/expansions/split-location.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json",
+      "plan.json and other worker changes"
+    ],
+    "scope": "Exact raw packet UTF-8 bytes INCLUDING trailing newline; receipt excluded",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/expansions/split-location.json').read_bytes()).hexdigest())"
+    ]
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-location.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "docs/migration/effect-refactor/inventories/donor-location.json": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+      "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json": "2325ad12401e52963f00c622f3e81fb8210e7b6396604516595a7610cb3a8643",
+      "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json": "9c1f44fd63b564fe9a5d0ee6eaeff2a22f34615b1abfd59d8efe23bd4154b4ae",
+      "docs/migration/effect-refactor/decisions/personal-contract-candidate.md": "0c50c6d13e48026c9ed81f0325fea73050d52d7b1aa744eb905eae4884b0349d",
+      "docs/migration/effect-refactor/decisions/personal-contract-cases.json": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c",
+      "docs/migration/effect-refactor/decisions/personal-contract-resolution.md": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df"
+    },
+    "locks_and_runtime": {
+      "packages/healthmd-core-ts/package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b"
+    },
+    "artifact_and_native_interface": {
+      "donor_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd",
+      "historical_source_pins": "docs/migration/effect-refactor/expansions/split-location.json#/historical_donor_source_pins",
+      "current_native_pins": "docs/migration/effect-refactor/expansions/split-location.json#/current_source_pins",
+      "runtime_executed": false
+    },
+    "policy_migration_key_versions": {
+      "public_schema_changed": false,
+      "key_material_read": false,
+      "owner_policy": "Q-PERSONAL-CONTRACT open; bounded technical synthetic grammar accepted"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-location.json#/children"
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-location.json#/dependency_edges"
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-location.json#/remaining_family_work"
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-location.json#/qualification"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "SPLIT-LOCATION"
+      ],
+      "result": "passed",
+      "evidence": "Actual task scope/acceptance/claim inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C14"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L00"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L01"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L03"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F13"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F14"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F15"
+      ],
+      "result": "passed",
+      "evidence": "Exact stdout row pinned in packet selected_design_row_pins."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actual source-only Python inspection/generation: immutable donor7 source blobs verified against accepted hashes; current manifests/profile/resources inspected;37 embedded resolution +44 draft cases parsed by literal identity;6 acyclic proposed children each4exact writes. No product tests."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Final actual validation script rehashed every accepted/read/current raw pin, verified6unique proposed unclaimed children with4exact files each (24disjoint child paths), existing-task dependencies,acyclic graph,literal case ID uniqueness and raw packet SHA. HEAD remained683acf1831d65feace61d3702d3b35f2838a42f6. Read current core README pipeline."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "PASS:78atomic tasks,86families,16choices; graph,pointers,state/evidence and claims valid. Structural only; unmerged packet is independently validated above."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actual in-scope clarification mutation recomputed raw UTF-8 packet SHA; no source/build/plan change. Journal-owned coarse digest injection and exact nonpersonal literal fake vectors added; old card paths/dependencies and source pins retained."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Final clarification validation rehashed all31current/read/accepted input pins, verified6children/24disjoint exact paths/9dependency edges and unchanged22original introduced case IDs; checked literal fake input decodes exactly synthetic-manifest-vector-1 with64hex fixture label,assigned683acfbase and amended raw packet digest."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator actually rehashed all31 accepted/read/current pins and checked each exact Git source blob,6unique children/24disjointpaths/9matching dependency edges and DAG plus draft fixture pointers. Accepted independent reviewer amended62276918 fingerprint; merge normalizes proposed state only and preserves interfaces/expectations/raw packet."
+    }
+  ],
+  "inspection_summary": "Bounded source-only decomposition. Historical donor source/profile/queue gaps and current Apple/Android/watch manifests inspected; 81 accepted literal expectations remain unchanged. No build/install/native/product test/runtime or user-data access. Packet raw hash is the nonreceipt patch fingerprint.",
+  "observations": [],
+  "limitations": [
+    "Independent acquisition/contracts/privacy reviewer and root accepted this exact amended planning fingerprint; no implementation/family/native qualification.",
+    "Core/native builders reserved elsewhere; proposed npm run check existing but unrun here.",
+    "Synthetic durability/fake Layers do not qualify native journal/OS/background/permission/watch delivery or signed/physical admission.",
+    "Source/purpose/channel/OS/native-permission/global owner-policy choices open; technical grammar independently accepted.",
+    "Donor AGPL/dirty source not adopted; no complete transfer corpus or watch ack fixture established by existing donor tests.",
+    "Opaque manifest digest equality and literal fake64hex outputs are synthetic binding only; algorithm,production canonical byte grammar,real host cryptography and authenticated pairing/session/tamper/full-manifest proof remain separate successor."
+  ],
+  "remaining_qualification": [
+    "native_capture: Accepted point/inbox/checkpoint fixture/interface reviews",
+    "watch_native: Accepted full watch journal/phone ack/cleanup synthetic receipts",
+    "meaning_corrections: Accepted source point/inbox/checkpoint slice",
+    "system_surfaces: Native location stop/grant journal accepted",
+    "complete_history_archive: Source selection and complete per-source manifest independent review",
+    "query_export_notifications_schedule: Accepted typed records/repository contracts and source-purpose/channel policies",
+    "admission_retirement: Complete exact committed host/purpose/channel/consumer/history qualification matrices",
+    "manifest_digest_authentication: accepted synthetic exact-byte fake binding, then independently selected algorithm/canonical byte grammar/pinned host implementation and native authenticated source/channel proof."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "683acf1831d65feace61d3702d3b35f2838a42f6+62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7"
+  },
+  "clarification": {
+    "requested_by": "/root",
+    "independent_reviewer": "/donor_mac_review",
+    "reviewed_prior_packet_digest": "b7941aa76ac4e3c50e65339f0863e60f7d3aff03fce141b9d714b95bc4050a5d",
+    "change": "Explicit journal-owned injected digest capability and literal fake byte/output binding, bounds/admission/failure/cancel rules, synthetic-only64hex profile and concrete real crypto/byte grammar/host/auth successor. Six cards,24paths,source pins,deps and all prior positive expectations unchanged.",
+    "review_status": "accepted amended fingerprint"
+  },
+  "coordinator_merge": {
+    "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+    "child_ids": [
+      "LOCATION-POINT-PROJECTION",
+      "LOCATION-POINT-INBOX",
+      "LOCATION-CHECKPOINT-REPLAY",
+      "WATCH-LOCATION-JOURNAL",
+      "WATCH-LOCATION-PHONE-ACK",
+      "WATCH-LOCATION-ACK-CLEANUP"
+    ],
+    "proof": "Planning decomposition only; all children unclaimed and all families scope_complete false."
+  }
+}

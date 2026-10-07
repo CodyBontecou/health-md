@@ -1164,7 +1164,7 @@
       "label": "Personal Data envelope/domain/store/capabilities",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage",
       "stream": "personal_data",
-      "status": "not_started",
+      "status": "in_progress",
       "expansion": "needs_decomposition",
       "remaining_scope": "Complete design obligation remains open; initial child cards cover only their stated outcomes.",
       "review_status": "pending",
@@ -1176,7 +1176,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-LOCATION",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-location.json",
+          "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "C15",
@@ -1648,7 +1657,7 @@
       "label": "L00 \u2014 Location source inventory",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
-      "status": "not_started",
+      "status": "in_progress",
       "expansion": "needs_decomposition",
       "remaining_scope": "Complete design obligation remains open; initial child cards cover only their stated outcomes.",
       "review_status": "pending",
@@ -1660,14 +1669,23 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-LOCATION",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-location.json",
+          "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "L01",
       "label": "L01 \u2014 Mobile location capture and semantics",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
-      "status": "not_started",
+      "status": "in_progress",
       "expansion": "needs_decomposition",
       "remaining_scope": "Complete design obligation remains open; initial child cards cover only their stated outcomes.",
       "review_status": "pending",
@@ -1679,7 +1697,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-LOCATION",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-location.json",
+          "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "L02",
@@ -1705,7 +1732,7 @@
       "label": "L03 \u2014 Wearable and location system surfaces",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
-      "status": "not_started",
+      "status": "in_progress",
       "expansion": "needs_decomposition",
       "remaining_scope": "Complete design obligation remains open; initial child cards cover only their stated outcomes.",
       "review_status": "pending",
@@ -1717,7 +1744,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-LOCATION",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-location.json",
+          "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "L04",
@@ -4777,11 +4813,13 @@
       ],
       "allowed_paths": [
         "packages/healthmd-core-ts/src/contracts/personal-slice.ts",
-        "packages/healthmd-core-ts/tests/personal-codecs*",
+        "packages/healthmd-core-ts/tests/personal-codecs.test.ts",
+        "packages/healthmd-core-ts/tests/personal-codecs-vectors.ts",
         "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json"
       ],
       "shared_resources": [
-        "personal-slice-interface"
+        "personal-slice-interface",
+        "core-component-build"
       ],
       "acceptance": [
         "Encode/decode reviewed domain fixtures with exact provenance/time/coverage and missing/zero distinction.",
@@ -4812,8 +4850,22 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 62,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "780a391041b31a5847865bfd0b62e391e0f8590f",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/contracts/personal-slice.ts",
+          "packages/healthmd-core-ts/tests/personal-codecs.test.ts",
+          "packages/healthmd-core-ts/tests/personal-codecs-vectors.ts",
+          "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json"
+        ],
+        "reserved_resources": [
+          "personal-slice-interface",
+          "core-component-build"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -4824,7 +4876,9 @@
         "proof_class": "portable_synthetic",
         "status": "pending",
         "receipts": []
-      }
+      },
+      "fixture_preimplementation_policy": "Read accepted44draft+37resolution cases and immutable rawcontracts. Freeze new literalvector/interface FIRST; independentlyreview grammarlicable expectations and map every81case to applicablecodec or separate projection/query/store/native gate. No fixture regeneration from implementation. Scope encode/decode strictboundedhealth/location/device_usage records; currenttrustedgrant/catalog authority separate from callerJSON.",
+      "source_reconciliation": "Claimcurrent780a391 source after acceptedNUMBERSandCORE-COHORT-REFRESH;31/18sourcecohortverified377rootportabletests. Newprivatepersonal module/test/vector inputs intentionally staleCLIcohort until its own reviewed accepted source delta; do not widen guards/exports or runCLI/make. Corebuildexclusive for this task afterfixtureapproval. NativeAndroid ownbundle alreadyfrozen and no commonreads/checks; locationplanningdocsdisjoint."
     },
     {
       "id": "COMBINED-SYNTHETIC",
@@ -6284,7 +6338,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/location_inbox_plan",
         "base_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
@@ -6297,14 +6351,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "683acf1831d65feace61d3702d3b35f2838a42f6+62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json"
+        ]
       },
       "max_children": 6
     },
@@ -13923,6 +13979,1502 @@
         "task_id": "SPLIT-PROTOCOL",
         "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
         "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "LOCATION-POINT-PROJECTION",
+      "title": "Given an eligible source-profile point, preserve original exact fields and return canonical location point or fixed unavailable/outside-canonical status.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Given an eligible source-profile point, preserve original exact fields and return canonical location point or fixed unavailable/outside-canonical status.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "BASE-DONOR-LOCATION",
+        "PERSONAL-CONTRACT-REVIEW",
+        "PERSONAL-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L01"
+      ],
+      "risk_ids": [
+        "F15"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/point-projection.ts",
+        "packages/healthmd-core-ts/tests/location-point-projection.test.ts",
+        "packages/healthmd-core-ts/tests/location-point-projection-vectors.ts",
+        "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-point-projection-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location point-projection"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "SourcePointProjector.project(sourceProfile, losslessEligibleFields, currentPurposeEvidence) -> Effect<ProjectedPoint | fixed status>. Owns field-presence, exact-time/units and quality projection; callers never read native payload fields.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMe/Models/LocationPoint.swift",
+        "IsoMe/Services/LocationManager.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMe/Services/LocationManager.swift",
+          "line": 759,
+          "symbol": "saveLocationPoints",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-point-projection-vectors.ts",
+        "introduced_case_ids": [
+          "location-accuracy101-not-universal-reject",
+          "location-missing-original-installation",
+          "location-profile-not-admitted"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "location-accuracy101-not-universal-reject",
+            "input": {
+              "accuracy_meter_bits": "4059400000000000",
+              "profile": "synthetic.location.point.v1",
+              "granted": true
+            },
+            "expected": {
+              "canonical": "valid",
+              "donor_filter_not_applied": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-missing-original-installation",
+            "input": {
+              "installation": "unknown",
+              "latitude_source_bits": true
+            },
+            "expected": {
+              "installation": "unknown",
+              "fabricated_identity": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-profile-not-admitted",
+            "input": {
+              "profile": "unreviewed_native",
+              "purpose_evidence": false
+            },
+            "expected": {
+              "materialize": false,
+              "canonical": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/2",
+            "case_id": "point-binary64-lossless"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/5",
+            "case_id": "mixed-epoch-selection-precision"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/13",
+            "case_id": "unknown-empty-is-not-zero"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/38",
+            "case_id": "geographic-health-distance-distinct"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/0",
+            "case_id": "resolution-coordinate-endpoints"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/3",
+            "case_id": "resolution-negative-speed-sentinel"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/4",
+            "case_id": "resolution-negative-accuracy-sentinel"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/30",
+            "case_id": "resolution-reasonless-sensor-absent"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/13",
+            "case_id": "resolution-apple-unix-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/14",
+            "case_id": "resolution-dyadic-subnanosecond"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory."
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Keep absent speed/altitude distinct from native invalid unavailable; preserve source UUID namespace, Date Apple epoch bits and authorized original evidence references. Do not invent original accuracy/precision/calendar/timezone/identity.",
+        "Use source profile, not donor \u2264100m policy as general admission. Invalid coordinates/nonfinite values have no valid canonical point; report quality/coverage, never zero movement. Source-specific native sentinel/raw archive needs separate eligible profile."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 310,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/0/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/0"
+      }
+    },
+    {
+      "id": "LOCATION-POINT-INBOX",
+      "title": "Commit one bounded mobile point page and its stable original identities atomically, or leave no visible page.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Commit one bounded mobile point page and its stable original identities atomically, or leave no visible page.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "LOCATION-POINT-PROJECTION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L01"
+      ],
+      "risk_ids": [
+        "F13",
+        "F14"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/point-inbox.ts",
+        "packages/healthmd-core-ts/tests/location-point-inbox.test.ts",
+        "packages/healthmd-core-ts/tests/location-point-inbox-vectors.ts",
+        "docs/migration/effect-refactor/receipts/LOCATION-POINT-INBOX.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-point-inbox-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location point-inbox"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "PointInbox.ingest(scopeBinding, boundedOriginalPage) -> Effect<CommittedPageReceipt>. Owns atomic record/evidence/replay-key/checkpoint proposal transaction behind injected InboxStore; no per-record DB API escapes.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMe/Services/LocationManager.swift",
+        "IsoMe/Models/LocationPoint.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMe/Services/LocationManager.swift",
+          "line": 759,
+          "symbol": "saveLocationPoints",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-point-inbox-vectors.ts",
+        "introduced_case_ids": [
+          "location-inbox-crash-before-commit",
+          "location-inbox-equal-replay",
+          "location-inbox-source-field-conflict"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "location-inbox-crash-before-commit",
+            "input": {
+              "failure": "before_commit",
+              "page_records": 2
+            },
+            "expected": {
+              "visible_records": 0,
+              "checkpoint_advanced": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-inbox-equal-replay",
+            "input": {
+              "same_original_key": true,
+              "eligible_fields_equal": true,
+              "different_transport_page": true
+            },
+            "expected": {
+              "originals": 1,
+              "additional_import_evidence": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-inbox-source-field-conflict",
+            "input": {
+              "same_original_key": true,
+              "same_projection": true,
+              "eligible_raw_field_differs": true
+            },
+            "expected": {
+              "commit": false,
+              "safe_code": "record_identity_conflict"
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/19",
+            "case_id": "same-key-same-bytes-replay"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/20",
+            "case_id": "same-key-different-bytes-conflict"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/21",
+            "case_id": "new-install-not-same-device-history"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/43",
+            "case_id": "bounded-page-admission"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/36",
+            "case_id": "grant-revoked-during-page"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/9",
+            "case_id": "resolution-original-record-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/10",
+            "case_id": "resolution-lossy-equality-conflict"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/11",
+            "case_id": "resolution-repartition-key"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory."
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Persist original identity independently of callback/page partition. Same key equal full eligible field vector is idempotent; conflict is never last-write-wins. Unknown stable enumeration refuses automatic merge.",
+        "Recheck current source grant and external suppression frontier at commit. 65536 bytes/record,1048576 bytes/page,4096 records/page,one pending page are private unmeasured guards; rejection is explicit coverage, never truncation."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/LOCATION-POINT-INBOX.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 311,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/1/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/1"
+      }
+    },
+    {
+      "id": "LOCATION-CHECKPOINT-REPLAY",
+      "title": "Resume one committed mobile inbox cursor after crash without duplicate originals or resurrection across current external fences.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Resume one committed mobile inbox cursor after crash without duplicate originals or resurrection across current external fences.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "LOCATION-POINT-INBOX"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L01"
+      ],
+      "risk_ids": [
+        "F13",
+        "F14"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/checkpoint-replay.ts",
+        "packages/healthmd-core-ts/tests/location-checkpoint-replay.test.ts",
+        "packages/healthmd-core-ts/tests/location-checkpoint-replay-vectors.ts",
+        "docs/migration/effect-refactor/receipts/LOCATION-CHECKPOINT-REPLAY.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-checkpoint-replay-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location checkpoint-replay"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "CheckpointReplay.resume(boundDatasetSourceProfile, immutableCheckpoint, currentExternalFrontier) -> Effect<ResumePlan>. Owns commit-generation recovery decisions and stable ordering; store owns durability.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMe/Services/LocationManager.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMe/Services/LocationManager.swift",
+          "line": 759,
+          "symbol": "saveLocationPoints",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-checkpoint-replay-vectors.ts",
+        "introduced_case_ids": [
+          "location-checkpoint-crash-after-commit",
+          "location-checkpoint-current-delete",
+          "location-checkpoint-unknown-tail"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "location-checkpoint-crash-after-commit",
+            "input": {
+              "committed_generation": "2",
+              "caller_ack_lost": true
+            },
+            "expected": {
+              "resume_generation": "2",
+              "duplicate_originals": 0
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-checkpoint-current-delete",
+            "input": {
+              "local_checkpoint_frontier": "1",
+              "external_delete_frontier": "2",
+              "new_capture_grant": true
+            },
+            "expected": {
+              "publish": false,
+              "restore": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "location-checkpoint-unknown-tail",
+            "input": {
+              "callback_tail_observed": false
+            },
+            "expected": {
+              "coverage": "unknown",
+              "zero_movement": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/37",
+            "case_id": "selector-cursor-crosswire"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/36",
+            "case_id": "grant-revoked-during-page"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/16",
+            "case_id": "no-fabricated-completeness"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/41",
+            "case_id": "complete-history-no-dashboard-cap"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/24",
+            "case_id": "resolution-delete-backup-regrant"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/34",
+            "case_id": "resolution-authoritative-frontier-restore-denied"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/15",
+            "case_id": "resolution-half-open-end"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory."
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Checkpoint binds dataset/source/installation/profile/source-revision/selection/grant/frontier and stable original order. Time is source data, not cursor precedence; negative clock/tail gaps remain evidence.",
+        "Replaying an old checkpoint/backup never overrides current external deletion/revocation journal; restore/new grant/renamed record cannot resurrect. Half-open point selection uses exact source time rational comparison; no Date/millisecond epsilon."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/LOCATION-CHECKPOINT-REPLAY.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 312,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/2/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/2"
+      }
+    },
+    {
+      "id": "WATCH-LOCATION-JOURNAL",
+      "title": "Build one immutable bounded full-collection transfer manifest from an independent watch journal only after its append commit succeeds.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Build one immutable bounded full-collection transfer manifest from an independent watch journal only after its append commit succeeds.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "LOCATION-POINT-PROJECTION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L03"
+      ],
+      "risk_ids": [
+        "F13",
+        "F14"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/watch-journal.ts",
+        "packages/healthmd-core-ts/tests/location-watch-journal.test.ts",
+        "packages/healthmd-core-ts/tests/location-watch-journal-vectors.ts",
+        "docs/migration/effect-refactor/receipts/WATCH-LOCATION-JOURNAL.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-watch-journal-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location watch-journal"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "WatchLocationJournal.prepareTransfer(journalGeneration, explicitLimits) -> Effect<CommittedManifest>. Owns sender installation/sequence namespaces, complete session/point/visit relationship manifest and recovery; transport receives a committed immutable manifest.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMeWatch/WatchLocationSyncClient.swift",
+        "IsoMeWatch/WatchLocationTracker.swift",
+        "Shared/WatchLocationSyncPayload.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 90,
+          "symbol": "syncPending",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 139,
+          "symbol": "makePayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 166,
+          "symbol": "handleAck",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 195,
+          "symbol": "saveState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 209,
+          "symbol": "loadState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 254,
+          "symbol": "WatchLocationSyncState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 295,
+          "symbol": "WatchLocationPendingTransfer",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationTracker.swift",
+          "line": 7,
+          "symbol": "WatchLocationTracker",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationTracker.swift",
+          "line": 143,
+          "symbol": "handleLocation",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 32,
+          "symbol": "WatchLocationSyncPayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 93,
+          "symbol": "WatchLocationSyncAck",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-watch-journal-vectors.ts",
+        "introduced_case_ids": [
+          "watch-journal-save-failed",
+          "watch-journal-all-collections",
+          "watch-journal-capacity",
+          "watch-journal-old-no-manifest"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "watch-journal-save-failed",
+            "input": {
+              "append_commit": false
+            },
+            "expected": {
+              "send": false,
+              "sequence_consumed": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-journal-all-collections",
+            "input": {
+              "sessions": 2,
+              "points": 3,
+              "visits": 1,
+              "limits_fit": true
+            },
+            "expected": {
+              "manifest_counts": {
+                "sessions": 2,
+                "points": 3,
+                "visits": 1
+              },
+              "omitted_collections": []
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-journal-capacity",
+            "input": {
+              "sessions_over_limit": true,
+              "points_within_limit": true
+            },
+            "expected": {
+              "send": false,
+              "coverage_gap_explicit": true,
+              "truncate": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-journal-old-no-manifest",
+            "input": {
+              "legacy_pending_sets_missing": true
+            },
+            "expected": {
+              "complete_ack_eligibility": false,
+              "silent_upgrade": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/40",
+            "case_id": "summary-not-complete-transfer"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/24",
+            "case_id": "visit-sentinel-not-observed"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/25",
+            "case_id": "outing-not-recording"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/9",
+            "case_id": "resolution-original-record-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/28",
+            "case_id": "resolution-unknown-source-field"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory.",
+        "digest_literal_vectors_ref": "#/candidate_digest_capability/literal_fake_vectors"
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Bound bytes and every collection: session,point,visit,pending manifest count and retained-history paging. At most one pending page; no fake source admission/battery budgets. Precise numeric watch limits and field revision require independent fixture/interface approval before code.",
+        "Full manifest binds sender installation,sequence,journal generation,source profile,all ordered keys/exact eligible record revisions,collection count/byte totals and digest. Same sequence/different manifest conflict; retries reuse same immutable manifest. Session and visit metadata completeness cannot be inferred from points.",
+        "Donor save errors swallowed/atomic replacement are not fsync proof. Old missing pending metadata stays incomplete, malformed journal never silently becomes fresh identity. Watch heuristic visit counter has no visit-row producer; no invented visits or phone snapshot history.",
+        "Use the one journal-owned coarse injected OwnedManifestDigest capability under the operation scope, bound to independently frozen literal exact complete manifest input bytes and bounded tagged synthetic output. Native/source/purpose/current-grant/frontier checks precede personal metadata exposure and recur at commit. No built-in crypto/Rust/native I/O or opaque-equality authentication claim; fixed failure/cancel releases owned resources without success ack/send. Real algorithm/canonical byte grammar/pinned host implementation and authenticated tamper/full-manifest/session proof are the named successor."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/WATCH-LOCATION-JOURNAL.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "digest_capability_ref": "#/candidate_digest_capability",
+      "blocker": null,
+      "priority": 313,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/3/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/3"
+      }
+    },
+    {
+      "id": "WATCH-LOCATION-PHONE-ACK",
+      "title": "Return a success acknowledgement only for the exact fully committed watch manifest, including replay-safe commit recovery.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Return a success acknowledgement only for the exact fully committed watch manifest, including replay-safe commit recovery.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "WATCH-LOCATION-JOURNAL",
+        "LOCATION-POINT-INBOX"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L03"
+      ],
+      "risk_ids": [
+        "F13",
+        "F15"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/watch-phone-ack.ts",
+        "packages/healthmd-core-ts/tests/location-watch-phone-ack.test.ts",
+        "packages/healthmd-core-ts/tests/location-watch-phone-ack-vectors.ts",
+        "docs/migration/effect-refactor/receipts/WATCH-LOCATION-PHONE-ACK.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-watch-phone-ack-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location watch-phone-ack"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "WatchPhoneReceiver.receive(boundSender, immutableManifest, currentGrantsAndFrontier) -> Effect<CommitAck | fixed rejection>. Owns namespace-bound receipt journal and all-collection transactional admission; no transport error text leaks.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMe/Services/WatchLocationSyncReceiver.swift",
+        "Shared/WatchLocationSyncPayload.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMe/Services/WatchLocationSyncReceiver.swift",
+          "line": 27,
+          "symbol": "importPayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 32,
+          "symbol": "WatchLocationSyncPayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 93,
+          "symbol": "WatchLocationSyncAck",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-watch-phone-ack-vectors.ts",
+        "introduced_case_ids": [
+          "watch-phone-crash-after-commit-before-ack",
+          "watch-phone-one-collection-failed",
+          "watch-phone-sequence-conflict",
+          "watch-phone-wrong-installation"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "watch-phone-crash-after-commit-before-ack",
+            "input": {
+              "commit_complete": true,
+              "ack_sent": false,
+              "retry_same_manifest": true
+            },
+            "expected": {
+              "original_count_unchanged": true,
+              "ack_same_committed_manifest": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-phone-one-collection-failed",
+            "input": {
+              "points_commit": true,
+              "visits_commit": false
+            },
+            "expected": {
+              "success_ack": false,
+              "visible_partial_transaction": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-phone-sequence-conflict",
+            "input": {
+              "same_sender_sequence": true,
+              "different_manifest": true
+            },
+            "expected": {
+              "success_ack": false,
+              "overwrite": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-phone-wrong-installation",
+            "input": {
+              "expected_sender": "synthetic-a",
+              "manifest_sender": "synthetic-b"
+            },
+            "expected": {
+              "success_ack": false,
+              "namespace_merge": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/19",
+            "case_id": "same-key-same-bytes-replay"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/20",
+            "case_id": "same-key-different-bytes-conflict"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/30",
+            "case_id": "capture-not-export-grant"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/22",
+            "case_id": "resolution-tombstone-replay"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/24",
+            "case_id": "resolution-delete-backup-regrant"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory.",
+        "digest_literal_vectors_ref": "#/candidate_digest_capability/literal_fake_vectors"
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Validate version/profile/byte/count/closed keys/coordinate/time/identity and every collection before transaction; preserve point session relation,sender namespace,visit accuracy and original boundary certainty. No earliest-start/latest-end/max normalization repair.",
+        "Ack binds exact sender installation,sequence,full manifest digest,commit generation,all-collection committed receipt/current frontier. Duplicate delivery returns committed receipt after current checks; counts alone, sequence watermark or DTO UUID alone do not prove complete equality.",
+        "Source capture permission, recipient/export grant and current suppression differ. Revoked receiver cannot materialize new payload; no silent stale success acknowledgement across deletion. Phone store unavailable/commit failure/cancel sends no success.",
+        "Use the one journal-owned coarse injected OwnedManifestDigest capability under the operation scope, bound to independently frozen literal exact complete manifest input bytes and bounded tagged synthetic output. Native/source/purpose/current-grant/frontier checks precede personal metadata exposure and recur at commit. No built-in crypto/Rust/native I/O or opaque-equality authentication claim; fixed failure/cancel releases owned resources without success ack/send. Real algorithm/canonical byte grammar/pinned host implementation and authenticated tamper/full-manifest/session proof are the named successor."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/WATCH-LOCATION-PHONE-ACK.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "digest_capability_ref": "#/candidate_digest_capability",
+      "blocker": null,
+      "priority": 314,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/4/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/4"
+      }
+    },
+    {
+      "id": "WATCH-LOCATION-ACK-CLEANUP",
+      "title": "Apply one verified full-manifest commit acknowledgement to transport pending state while preserving independently retained watch history.",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Apply one verified full-manifest commit acknowledgement to transport pending state while preserving independently retained watch history.",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "WATCH-LOCATION-PHONE-ACK"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "L03"
+      ],
+      "risk_ids": [
+        "F13",
+        "F14"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "apps/android/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/location/watch-ack-cleanup.ts",
+        "packages/healthmd-core-ts/tests/location-watch-ack-cleanup.test.ts",
+        "packages/healthmd-core-ts/tests/location-watch-ack-cleanup-vectors.ts",
+        "docs/migration/effect-refactor/receipts/WATCH-LOCATION-ACK-CLEANUP.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-location-watch-ack-cleanup-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic location watch-ack-cleanup"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "WatchAckCleanup.apply(exactCommitAck, pendingJournal, retainedHistory) -> Effect<CleanupCommit>. Owns exact acknowledged membership and pending-generation recovery; cannot delete retained originals or interpret high watermark as acknowledgement.",
+      "source_input_refs": [
+        "#/accepted_input_pins",
+        "#/required_read_pins",
+        "#/current_source_pins"
+      ],
+      "donor_source_paths": [
+        "IsoMeWatch/WatchLocationSyncClient.swift",
+        "Shared/WatchLocationSyncPayload.swift"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 90,
+          "symbol": "syncPending",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 139,
+          "symbol": "makePayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 166,
+          "symbol": "handleAck",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 195,
+          "symbol": "saveState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 209,
+          "symbol": "loadState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 254,
+          "symbol": "WatchLocationSyncState",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "IsoMeWatch/WatchLocationSyncClient.swift",
+          "line": 295,
+          "symbol": "WatchLocationPendingTransfer",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 32,
+          "symbol": "WatchLocationSyncPayload",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        },
+        {
+          "path": "Shared/WatchLocationSyncPayload.swift",
+          "line": 93,
+          "symbol": "WatchLocationSyncAck",
+          "source_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd"
+        }
+      ],
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/location-watch-ack-cleanup-vectors.ts",
+        "introduced_case_ids": [
+          "watch-ack-higher-sequence-not-cumulative",
+          "watch-ack-duplicate",
+          "watch-ack-mismatched-visit-manifest",
+          "watch-ack-cleanup-crash",
+          "watch-ack-unknown-sequence"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "watch-ack-higher-sequence-not-cumulative",
+            "input": {
+              "pending_sequences": [
+                "1",
+                "2"
+              ],
+              "verified_ack": "2"
+            },
+            "expected": {
+              "remove_pending": [
+                "2"
+              ],
+              "retain_pending": [
+                "1"
+              ],
+              "retained_originals_unchanged": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-ack-duplicate",
+            "input": {
+              "already_applied": true,
+              "same_full_ack": true
+            },
+            "expected": {
+              "cleanup_noop": true,
+              "retained_originals_unchanged": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-ack-mismatched-visit-manifest",
+            "input": {
+              "point_match": true,
+              "visit_manifest_match": false
+            },
+            "expected": {
+              "cleanup": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-ack-cleanup-crash",
+            "input": {
+              "cleanup_commit": false
+            },
+            "expected": {
+              "pending_recoverable": true,
+              "retained_originals_unchanged": true
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          },
+          {
+            "case_id": "watch-ack-unknown-sequence",
+            "input": {
+              "pending_manifest_exists": false
+            },
+            "expected": {
+              "cleanup": false,
+              "watermark_proves_commit": false
+            },
+            "status": "proposed literal expectation; requires independent source/fixture approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/40",
+            "case_id": "summary-not-complete-transfer"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/41",
+            "case_id": "complete-history-no-dashboard-cap"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/9",
+            "case_id": "resolution-original-record-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "profile": "accepted bounded synthetic resolution",
+            "embedded_json_pointer": "/24",
+            "case_id": "resolution-delete-backup-regrant"
+          }
+        ],
+        "independence": "Proposed literal vectors frozen by independent acquisition/contracts reviewer BEFORE implementation; entire81 obligations retained. Existing donor XCTest corpus is source evidence only; no watch ack fixture corpus established in inventory."
+      },
+      "acceptance": [
+        "Independent reviewer freezes literal input/expected vectors and typed interface BEFORE implementation; semantic RFC6901/profile resolution must be reviewed, not merely JSON parsing. Never regenerate expected results from candidate output.",
+        "Use accepted 44 draft + 37 resolution case grammar as 81 unchanged literal obligations; only source-backed fields, units, clock representation and independently granted evidence. No aggregate-to-session, CLVisit/watch-counter, geographic/health-distance equivalence.",
+        "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
+        "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
+        "Match sender,installation,sequence,full session/point/visit manifest,commit receipt before removal. Unknown/failed/forged/conflicting ack removes nothing; out-of-order/duplicate/retry recovery independent of phone delivery.",
+        "Cleanup atomically removes only exact committed transport metadata; never all sequences<=ack. Retain durable originals and relations independently, including closed sessions/visits and already-delivered points. Ack does not imply retention expiry, purge/Undo authorization or source-history migration.",
+        "No synthetic claim of donor watch retention: donor currently deletes acknowledged point rows. Future retention store,storage budgets,complete watch archive and destructive retention policy are separate admission tasks."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Existing emitted Node:test and new literal cases pass with actual runtime/source/vector digests; no product or native proof. Reserve core-component-build before invocation.",
+          "executed_during_planning": false
+        }
+      ],
+      "consumers": [
+        "next proposed location child via candidate-only import",
+        "future Apple native location inbox/watch",
+        "future Android Play/F-Droid location inbox/Wear",
+        "common Personal Data query/export/schedule operations"
+      ],
+      "state_contract_impact": "New private synthetic typed interface only; no public payload/profile or current native/donor installed state changed. Durable fake store proof must be independently qualified in native adapters before production.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/WATCH-LOCATION-ACK-CLEANUP.json",
+      "reviewer_role": "independent acquisition/contracts/privacy and durable-commit reviewer",
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 315,
+      "fixture_inputs": "Exact immutable inputs at docs/migration/effect-refactor/expansions/split-location.json#/children/5/fixture_details and accepted/read/current source pin sections. Independently freeze literal vectors and interface before code; planning receipt is not implementation proof.",
+      "expansion_input": {
+        "task_id": "SPLIT-LOCATION",
+        "path": "docs/migration/effect-refactor/expansions/split-location.json",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
+        "child_pointer": "#/children/5"
       }
     }
   ]
