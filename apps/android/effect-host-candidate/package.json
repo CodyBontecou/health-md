@@ -1,0 +1,19 @@
+{
+  "name": "@healthmd/android-play-release-probe",
+  "version": "0.0.0-candidate.1",
+  "private": true,
+  "engines": {"node": "24.21.0", "npm": "11.19.0"},
+  "packageManager": "npm@11.19.0",
+  "scripts": {"build": "node scripts/build.mjs", "check": "node scripts/check.mjs"},
+  "dependencies": {"react": "19.2.3", "react-native": "0.87.1", "effect": "4.0.1"},
+  "devDependencies": {
+    "@react-native/babel-preset": "0.87.1",
+    "@react-native/metro-config": "0.87.1",
+    "metro": "0.87.1",
+    "typescript": "7.0.2",
+    "esbuild": "0.28.2",
+    "@types/node": "24.19.1",
+    "@types/react": "19.2.14"
+  },
+  "overrides": {"undici-types": "7.24.6"}
+}

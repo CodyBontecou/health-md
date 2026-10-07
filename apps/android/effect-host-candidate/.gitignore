@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.gradle/
+build/
+app/build/
+.test-signing/

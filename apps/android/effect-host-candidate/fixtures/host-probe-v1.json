@@ -1,0 +1,83 @@
+{
+  "schema": "healthmd.candidate_host_probe",
+  "version": 1,
+  "platform": "android-play-private-candidate",
+  "proof_class": "host_integration",
+  "bounds": {
+    "frame_bytes": 65536,
+    "queued_frames": 4,
+    "unacknowledged_frames": 2,
+    "operation_ms": 5000,
+    "cleanup_ack_ms": 5000
+  },
+  "admission": {
+    "frame_keys": ["schema", "version", "case_id", "sequence"],
+    "frame_case_id": "queue_backpressure",
+    "frame_sequence": 0,
+    "unknown_keys": "reject",
+    "invalid_json": "reject",
+    "sequence_type": "integer",
+    "invalid_before_acquire": true
+  },
+  "cases": [
+    {
+      "case_id": "offline_success",
+      "stimulus": "Packaged asset in fresh Release process; native host starts Hermes without a React surface or Metro.",
+      "expected": {"acquired": 1, "released": 1, "active": 0, "value": "ready"}
+    },
+    {
+      "case_id": "cancel_before_acquire",
+      "stimulus": "Interrupt before session acquisition; also cancel a loading model before its read dependency resolves.",
+      "expected": {"acquired": 0, "released": 0, "active": 0, "stale_reads": 0}
+    },
+    {
+      "case_id": "cancel_waits_release_ack",
+      "stimulus": "Cancel an in-flight native inspection and separately expire an inspection exceeding the operation bound. Delay native release acknowledgment.",
+      "expected": {"acquired": 1, "released": 1, "active": 0, "ack_before_completion": true, "expiry_ack_before_completion": true, "unresolved_inspections": 0}
+    },
+    {
+      "case_id": "reentry_dispose_cancel_supersede",
+      "stimulus": "Resolve stale loading reads after cancel, disposal and supersession; permit only the current generation to acquire.",
+      "expected": {"stale_reads": 0, "released": 1, "active": 0}
+    },
+    {
+      "case_id": "frame_limit",
+      "stimulus": "Submit raw string é repeated 32768 times plus a: exactly 65537 UTF-8 bytes, despite 32769 UTF-16 code units, rejected before parsing/acquisition. Submit é repeated 32768 times: exactly 65536 UTF-8 bytes, rejected only as schema_invalid. Reject malformed surrogate input as schema_invalid under strict UTF-8 admission; do not rely on TextEncoder availability or lossy native encoding.",
+      "expected": {"code": "frame_limit", "acquired": 0}
+    },
+    {
+      "case_id": "queue_backpressure",
+      "stimulus": "Hold acknowledgment credits while submitting seven valid frames; drain admitted work in FIFO order.",
+      "expected": {"accepted": 6, "rejected": 1, "max_active": 2, "max_queued": 4, "acknowledged": 6, "active_frames": 0, "queued_frames": 0, "fifo": true}
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "stimulus": "Reject unknown schema/version, unknown fields, unknown case, malformed JSON, numeric/boolean values in string fields, string/boolean values in numeric fields and noninteger/nonzero sequence before native acquisition.",
+      "expected": {"code": "schema_invalid", "acquired": 0}
+    },
+    {
+      "case_id": "teardown_fresh_restart",
+      "stimulus": "Destroy the native host after acknowledged cleanup, then start a separate fresh process from the packaged asset.",
+      "expected": {"acquired": 1, "released": 1, "active": 0, "private_state_writes": 0}
+    },
+    {
+      "case_id": "single_react_effect_identity",
+      "stimulus": "Audit actual Metro and portable bundle physical inputs and read Hermes runtime properties from the installed Release.",
+      "expected": {"react": "19.2.3", "effect": "4.0.1", "hermes": true, "mounted_react": false}
+    },
+    {
+      "case_id": "no_native_grant_expansion",
+      "stimulus": "Inspect merged Release manifest and private runtime implementation; no Health Connect, Internet, destination, credentials or production stores.",
+      "expected": {"health_permissions": 0, "internet_permissions": 0, "health_reads": 0, "persistent_writes": 0}
+    }
+  ],
+  "evidence_rules": [
+    "Portable fakes and static graph checks cannot stand in for actual installed runtime observations.",
+    "The required physical target must be connected; no emulator substitution and no other-device discovery.",
+    "Native release, frame credit acknowledgment and teardown must complete within the cleanup bound.",
+    "No device identifiers, user health payloads, secret values or raw native errors enter the report.",
+    "Fresh process means actual process recreation, not resetting counters in the same host.",
+    "The local test certificate supplies installability only; it does not qualify Play distribution signing.",
+    "persistent_writes and private_state_writes count candidate-owned health/private state writes only; OS, Dalvik, RN and JVM caches, APK installation artifacts and harness report files are outside those counters."
+  ]
+}

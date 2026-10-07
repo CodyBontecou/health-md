@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "Bundler", "strict": true,
+    "noEmit": true, "skipLibCheck": true, "lib": ["ES2022", "DOM"], "types": [],
+    "paths": {
+      "healthmd-candidate-capabilities": ["../../../packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.d.ts"],
+      "healthmd-candidate-ui": ["../../../packages/healthmd-ui/dist/model/index.d.ts"]
+    }
+  },
+  "include": ["src/probe.ts"]
+}

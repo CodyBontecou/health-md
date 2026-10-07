@@ -1,0 +1,701 @@
+{
+  "task_id": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
+  "result": "partial",
+  "proof_class": "host_integration",
+  "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+  "patch_digest": "df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa",
+  "patch_digest_method": "SHA256 of lexically sorted claimed non-receipt paths: UTF8(path)+NUL+ASCII(SHA256(file bytes))+LF. Covers32 claimed source/lock/tool files, including untracked files and wrapper binary; excludes receipt itself and ignored build outputs. This is a scoped dirty-patch fingerprint, not a committed qualification.",
+  "patch_inputs": [
+    {
+      "path": "apps/android/effect-host-candidate/.gitignore",
+      "sha256": "f2d854a43a33cf98495813a648597ffe1625d2255d68a4de1bffa8b6ebebf524"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/.node-version",
+      "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/README.md",
+      "sha256": "9aae495c7aff614345b259d6f3c8f50fba4336cb85df58fd5e0024c8e419103d"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/build.gradle.kts",
+      "sha256": "befc9dfcb3f8e19b54e193c7341b16fa0499c726a8fb051d741c05254f56cd5b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/gradle.lockfile",
+      "sha256": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
+      "sha256": "4846802275c69e2fdddf6e42be1e3e288dbd2068944b2bfdd1797fd462f7e4ba"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+      "sha256": "310e9e2eea1588c7ecd522490e7089656dc6c0d25c9b9904dfc7f136f24b2659"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+      "sha256": "0370e878e80f37b753a820f2d775ac2b12b133af61ca05e6cd44e0a977c9819a"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+      "sha256": "c1f9e442494c1430207c27477d2a8626b81f821e49b479e535c4cddc474f1be7"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+      "sha256": "bc30e9d3afe3bf4c13af980a53228aedd579604ba622e014302ae96e1dad1f42"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+      "sha256": "8bb8fb775f43b4c8ee647c4f4bd9f3b0b5aaf0b0a96ae93a5f5709beddcff2ec"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+      "sha256": "c8970b436acdac8a47197c040b826e696df848607366253f1b895aecabecef90"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/babel.config.cjs",
+      "sha256": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/build.gradle.kts",
+      "sha256": "c8c27d1f663530aa86adbb76a22fcb1fcfb4712ce9d19a670fe436cdbe63d1cf"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+      "sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle.properties",
+      "sha256": "4a904e3ff35966ba0bfa74ec5d71dbb43c6780260e7acf619c7849cf49269486"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+      "sha256": "dd5ef3582d96feb39fe6654ec17fbaeb1093b4950592170dfd2cdf5e3575ae05"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+      "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+      "sha256": "519280ee807cb83ee0f7be30bb3aa51b71d0e14905cb3ecc285a4243b2ce4ac8"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradlew",
+      "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradlew.bat",
+      "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/metro.config.cjs",
+      "sha256": "d3cdb3bb8a8b1c9fc9dd5db0f9751357d1b0ed238f03a6d442c0194fc4461826"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/package-lock.json",
+      "sha256": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/package.json",
+      "sha256": "2edde74ff6c2db3e59cf58666577ccbbcdcf2b3dee07c7d547ba1830d0555509"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/build.mjs",
+      "sha256": "b6eabf1cd0269b07d14f517902be42cf4eace4df14d50b3ec4b8fe16c8695615"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/check.mjs",
+      "sha256": "31803e628b1943d38f99382fe098f355158dbeac3a55117cc510ab0930cf040c"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+      "sha256": "24162cdeefd44da0a3fc63c2b142826bbc083f8f10fbc40178dc15ffcbdbc201"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+      "sha256": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/settings.gradle.kts",
+      "sha256": "743e627bb5fe19008459e5254cb74627ded66b163956a92261be0a1e85d96a9b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/src/HostProbe.tsx",
+      "sha256": "b7d67cb8cd1f5f2d60957a9a97d81fa3360786c65e538af2776ea977dd419035"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/src/probe.ts",
+      "sha256": "a7fc5d4c42ab76bce6e8d427ba3bd15faccca1d33ec612c47ac0fb19b4f6964b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/tsconfig.json",
+      "sha256": "4566259156e347d3971fcbd4f59230d47f74b61264402ffec2d5b108933d402e"
+    }
+  ],
+  "changed_paths": [
+    "apps/android/effect-host-candidate/.gitignore",
+    "apps/android/effect-host-candidate/.node-version",
+    "apps/android/effect-host-candidate/README.md",
+    "apps/android/effect-host-candidate/app/build.gradle.kts",
+    "apps/android/effect-host-candidate/app/gradle.lockfile",
+    "apps/android/effect-host-candidate/app/proguard-rules.pro",
+    "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+    "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+    "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+    "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+    "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+    "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+    "apps/android/effect-host-candidate/babel.config.cjs",
+    "apps/android/effect-host-candidate/build.gradle.kts",
+    "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+    "apps/android/effect-host-candidate/gradle.properties",
+    "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+    "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+    "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+    "apps/android/effect-host-candidate/gradlew",
+    "apps/android/effect-host-candidate/gradlew.bat",
+    "apps/android/effect-host-candidate/metro.config.cjs",
+    "apps/android/effect-host-candidate/package-lock.json",
+    "apps/android/effect-host-candidate/package.json",
+    "apps/android/effect-host-candidate/scripts/build.mjs",
+    "apps/android/effect-host-candidate/scripts/check.mjs",
+    "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+    "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+    "apps/android/effect-host-candidate/settings.gradle.kts",
+    "apps/android/effect-host-candidate/src/HostProbe.tsx",
+    "apps/android/effect-host-candidate/src/probe.ts",
+    "apps/android/effect-host-candidate/tsconfig.json",
+    "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "host-probe-v1.json": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+      "cases": 10,
+      "historical_source_inputs": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/build.gradle.kts",
+          "sha256": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/AndroidManifest.xml",
+          "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/libs.versions.toml",
+          "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
+          "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradlew",
+          "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradlew.bat",
+          "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/gradle/wrapper/gradle-wrapper.jar",
+          "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+          "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+          "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+          "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit"
+        }
+      ]
+    },
+    "locks_and_runtime": {
+      "file_digests": {
+        "package-lock.json": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499",
+        "app/gradle.lockfile": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438",
+        "gradle/verification-metadata.xml": "dd5ef3582d96feb39fe6654ec17fbaeb1093b4950592170dfd2cdf5e3575ae05"
+      },
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "react": "19.2.3",
+      "react_native": "0.87.1",
+      "effect": "4.0.1",
+      "hermes_artifact": "250829098.0.17",
+      "gradle": "9.4.1",
+      "agp": "9.2.1",
+      "kotlin_actual": "2.2.10",
+      "kotlin_historical_RN_catalog": "2.2.0; inspected metadata only, not selected compiler",
+      "jdk": "17.0.20",
+      "compile_sdk": 36,
+      "target_sdk": 36,
+      "min_sdk": 28,
+      "build_tools": "36.0.0",
+      "rn_aar_min_compile_sdk": 34,
+      "rn_aar_min_sdk": 24,
+      "resolved_artifact_rows": 193,
+      "resolved_unique_coordinates": 97,
+      "npm_locked_packages": 341,
+      "npm_applicable_installed_packages": 297,
+      "lifecycle_scripts_executed": 0
+    },
+    "artifact_and_native_interface": {
+      "built": {
+        "artifacts": {
+          "app/build/outputs/apk/play/release/app-play-release.apk": {
+            "bytes": 49774527,
+            "sha256": "9b43a916ccffe4dd9beb7078aca9c4a4c8c7f1eae5d1566f35df86033ec8e74e"
+          },
+          "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk": {
+            "bytes": 657485,
+            "sha256": "9a52040fc2fe1637a00872303bb346c330fe084485ea2961336e39aad53f6454"
+          }
+        },
+        "jvm": {
+          "tests": "5",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0"
+        },
+        "jvm_xml_sha256": "dfeb222112a572573493bc36f0f0890c72b08fb83eb4647761cbfba405fedde7",
+        "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+        "fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+        "abis": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86",
+          "x86_64"
+        ]
+      },
+      "native_file_digests": {
+        "app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt": "8bb8fb775f43b4c8ee647c4f4bd9f3b0b5aaf0b0a96ae93a5f5709beddcff2ec",
+        "app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt": "c8970b436acdac8a47197c040b826e696df848607366253f1b895aecabecef90",
+        "scripts/run-release-probe.sh": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d",
+        "app/build.gradle.kts": "befc9dfcb3f8e19b54e193c7341b16fa0499c726a8fb051d741c05254f56cd5b",
+        "app/proguard-rules.pro": "4846802275c69e2fdddf6e42be1e3e288dbd2068944b2bfdd1797fd462f7e4ba"
+      },
+      "artifact_tool_checks": {
+        "path": "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-third.json",
+        "sha256": "13a57e6769bb600d6b4756e60e020ed405d5178bcd599d500822bed5988abb36"
+      },
+      "maven_audit_sha256": "fac2e1b0633ec2e8eee61e6062f591e7ee2661c84c529d2f554f81823bf642d3",
+      "native_license_provenance_sha256": "3e39b9f5a8d628df202f5d58cd5613eda6863bc70afb46862816cb06737ac799"
+    },
+    "policy_migration_key_versions": {
+      "certificate_sha256": "9a012f46825b75b9806d94ea449b044b61a0bc015d0f88e1006c0986f1814347",
+      "signing_scope": "isolated retained local test key only; initial generation random, repeat signing retained-key; no production or distribution qualification",
+      "admission_scope": "private canonical4member tokens, version1/sequence0 only; bounded linear strictUTF8, not public protocol parity",
+      "persistent_write_scope": "candidate-owned health/private state only; excludes OS/Dalvik/RN/JVM caches, install artifacts and harness files",
+      "annotation_rule": "exact javax.lang.model.element.Modifier warning suppressed only for unavailable javac enum in CLASS-retained test annotation metadata; no wildcard/runtime replacement"
+    }
+  },
+  "target": {
+    "platform": "Android required local device",
+    "channel": "Play candidate",
+    "profile": "Release synthetic host; minSdk28 target36 retained"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+      "result": "partial",
+      "evidence": "Exact physical npm graph, resolved native artifacts/licenses, packaged assets and ABI/certificate/manifest checks passed; runtime engine/identity execution unrun."
+    },
+    {
+      "criterion": "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+      "result": "unrun",
+      "evidence": "Actual target-only harness exit3: required_target_unavailable before any installation."
+    },
+    {
+      "criterion": "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+      "result": "partial",
+      "evidence": "Frozen10portable cases and5JVM admission tests passed; actual native cancellation/ack/backpressure/expiry/restart execution unrun."
+    },
+    {
+      "criterion": "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+      "result": "passed",
+      "evidence": "Private IDs/nondebuggable/local test signing; both actual APK manifests Internet0health0; no production source/grants/data/state changes."
+    },
+    {
+      "criterion": "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission.",
+      "result": "partial",
+      "evidence": "Source/fixture/graph/artifact hashes and build bounds recorded; no physical startup/memory/teardown measurement fabricated."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "ci",
+        "--ignore-scripts",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund",
+        "--offline",
+        "--cache",
+        "/private/tmp/healthmd-effect-npm-cache"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": "tool transcript: added 297 packages in 2s"
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": {
+        "path": "apps/android/effect-host-candidate/dist/portable-result.json",
+        "sha256": "2aa0e711b7e692b0849a5c573f3e24875361e7b087711672c00c1ed604d17342"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "build"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": {
+        "path": "apps/android/effect-host-candidate/dist/bundle-build.log",
+        "sha256": "7045281bf946fe03af380b173a97deeaa668dd9034774fd9d29676e1a393a0fb"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/prepare-test-signing.sh"
+      ],
+      "result": "passed",
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/test-signing-supervision.json",
+        "sha256": "ea68b232fec605efd716b51def1373b20d0ece1e3f62e5bcaac98a4e5523b852",
+        "scope": "retained isolated local test key; public certificate only"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--offline",
+        "--max-workers=2",
+        "--dependency-verification=strict",
+        ":app:assemblePlayRelease",
+        ":app:testPlayReleaseUnitTest",
+        ":app:assemblePlayReleaseAndroidTest"
+      ],
+      "result": "failed",
+      "exit_code": 1,
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/native-build-supervision.json",
+        "log": "apps/android/effect-host-candidate/dist/audit/native-build.log",
+        "log_sha256": "24cf3fa7a2b52a5c5a00626bdbb1c604dc55b0309608627a7f0501e6c8d6bf21",
+        "elapsed_seconds": 37.978,
+        "output_bytes": 9100,
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--offline",
+        "--max-workers=2",
+        "--dependency-verification=strict",
+        ":app:assemblePlayRelease",
+        ":app:testPlayReleaseUnitTest",
+        ":app:assemblePlayReleaseAndroidTest"
+      ],
+      "result": "failed",
+      "exit_code": 1,
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/native-build-retry-supervision.json",
+        "log": "apps/android/effect-host-candidate/dist/audit/native-build-retry.log",
+        "log_sha256": "291f4539bfacd3e55c1863de3222db05fd2386b66db46e44d3d30e6964a602d5",
+        "elapsed_seconds": 12.194,
+        "output_bytes": 8154,
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--offline",
+        "--max-workers=2",
+        "--dependency-verification=strict",
+        ":app:assemblePlayRelease",
+        ":app:testPlayReleaseUnitTest",
+        ":app:assemblePlayReleaseAndroidTest"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/native-build-third-supervision.json",
+        "log": "apps/android/effect-host-candidate/dist/audit/native-build-third.log",
+        "log_sha256": "f9a0803717d79585fcf0e901197396a3f2f7958b6e716c7814acec37e9270698",
+        "elapsed_seconds": 22.349,
+        "output_bytes": 8418,
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "result": "failed",
+      "exit_code": 3,
+      "runtime_check": "unrun",
+      "evidence": {
+        "path": "apps/android/effect-host-candidate/dist/runtime/failure.json",
+        "sha256": "2e1507d38fdb42e227c49a0688189579bafc588f82bcd7ddccff7d68cf4924f9",
+        "code": "required_target_unavailable",
+        "action": "target_preflight",
+        "installation": "unrun",
+        "observations": "unrun"
+      }
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "unrun",
+      "evidence": "Deferred to coordinator qualification checks after common cohort refresh; no stale or duplicate common build claimed."
+    },
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "unrun",
+      "evidence": "Deferred to coordinator qualification checks after common cohort refresh; no stale or duplicate common build claimed."
+    }
+  ],
+  "observations": [],
+  "limitations": [
+    "Required physical target unavailable; installation, packaged-engine execution, fresh-process outcomes, startup/memory/teardown and native finalizer acknowledgment unrun.",
+    "Native build success and portable/JVM cases do not qualify host_integration or physical_device acceptance.",
+    "Exact test annotation dependency repaired instrumentation compilation; first two failed attempts preserved. Third build successful; JVM output reused up-to-date after initial5-method execution.",
+    "Common source/bundle read window was released after first bundle; common checks deferred to coordinator while other task owns compiler/cache. No common/JS rebuild during native attempts.",
+    "All13 historical source pins match assigned d126 and current bytes; both frozen emitted capability/UI asset inputs match current bytes. Claim remains d126, separately observed integration revision retained. Current host source patch review and committed-source qualification remain pending.",
+    "Tooling/native license provenance reviewed within candidate scope; signed distribution/store/legal/reproducible upstream native-source builds remain separate gates."
+  ],
+  "remaining_qualification": [
+    "Required physical target connection and exact bounded harness installation plus2fresh packaged Release probe runs.",
+    "Actual runtime React/Effect/Hermes identity, native resource cleanup/expiry/backpressure/frame cases and startup/sampled-memory/teardown measurements.",
+    "Coordinator current identical-input common core/UI qualification commands and independent final source/receipt review.",
+    "Committed integrated source/artifact qualification; no global runtime choice or distribution adoption."
+  ],
+  "rollback": "Current production Android/native/public/state authority retained. Candidate remains private and isolated; remove only its two private package IDs if installed later. No production migration occurred.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa"
+  },
+  "prebuild_review": {
+    "reviewer": "/root/donor_mac_review",
+    "native_source_review": "accepted bounded preflight; final native8bb/JVMc897 reviewed before execution",
+    "coordinator_review": "Exact annotation193row/97artifact delta and4lock bindings independently accepted; subsequent exact test compiler-metadata rule and minSdkVersion harness correction approved before writes. Final patch/receipt still pending."
+  },
+  "observed_integration_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+  "source_reconciliation": {
+    "assigned_task_claim_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+    "historical_pin_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+    "observed_integration_revision_at_initial_receipt": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+    "policy": "Claim remained at assigned d126 while coordinator committed disjoint common files. Observed integration HEAD is separate; no implicit claim rebase or build/check replay.",
+    "source_pin_hash_checks": [
+      {
+        "path": "packages/healthmd-core-ts/src/index.ts",
+        "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+        "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+        "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-ui/src/index.ts",
+        "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-ui/README.md",
+        "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/build.gradle.kts",
+        "sha256": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/src/main/AndroidManifest.xml",
+        "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/libs.versions.toml",
+        "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
+        "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradlew",
+        "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradlew.bat",
+        "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/wrapper/gradle-wrapper.jar",
+        "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+        "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      }
+    ],
+    "common_frozen_asset_input_checks": [
+      {
+        "path": "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js",
+        "frozen_bundle_input_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "current_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "match": true
+      },
+      {
+        "path": "packages/healthmd-ui/dist/model/index.js",
+        "frozen_bundle_input_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "current_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "match": true
+      }
+    ],
+    "private_bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+    "private_fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+    "common_cohort_scope": "Coordinator current318core tests/20emitted files includes separate unexported personal-codec module. That module is not adopted into this frozen private asset. These coordinator checks are separate evidence, not rerun or asserted as this task host qualification.",
+    "verification": "Read-only raw byte SHA256 and git-show historical/assigned-source hashing only; no build, target poll, installation, npm, Gradle, core or CLI command."
+  },
+  "review_scope": "Independent source/locked graph/licensing/bounded private build/JVM/static artifact evidence accepted only. Partial runtime result preserved; requiredphysicaltargetunavailable beforeinstallation. No host_integration/physical/channel/runtime admission.",
+  "coordinator_verification": {
+    "actual": "Root independentlyhashedall32source/tool/lockfiles+13assignedsourceinputs/currentGit, all3nativeattemptlogs andactualfinalAPKraws; earlieractualaapt2/apksigner/ZIP/JVMchecks andindependentprebuildreview acknowledged. NarrowannotatedclassCLASSretention/strictparser/samplerlock/finiteharness/exactminSdkVersion correction reviewed.",
+    "remaining": "Requiredphysicaltarget and2fresh actualpackagedruntime runs, commoncomponentqualificationmatchingfrozeninputs, committedsource/realengine/OS measurement andhostadmission."
+  }
+}

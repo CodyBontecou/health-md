@@ -7473,8 +7473,8 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
-      "blocker": null,
+      "status": "blocked",
+      "blocker": "Required repository Pixel7 target unavailable; exact bounded harness exited3 beforeinstallation. Resume at same frozen private32filepatch/asset/APKs when target connected; execute2freshpackagedruntime runs plus matchingcommonchecks. Nativebuilder released for independentwork; hostqualificationpending, no substitute.",
       "claim": {
         "agent": "/root/android_release_host",
         "base_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
@@ -7534,9 +7534,9 @@
         "apps/android/AGENTS.md"
       ],
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa"
       },
       "expansion_input": {
         "task_id": "SPLIT-NATIVE-HOSTS",
@@ -7597,7 +7597,11 @@
         "current_license_audit_sha256": "fac2e1b0633ec2e8eee61e6062f591e7ee2661c84c529d2f554f81823bf642d3",
         "lock_sha256": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438",
         "next": "Same bounded240s/20MiBownprocessgroup strict offlinebuild; separate retrylog. Device/runtimequalificationpending."
-      }
+      },
+      "pending_evidence": [
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+      ],
+      "released_after_partial": "Claim/source/path/resource fields retained as provenance only; blockedtask holds no active build/write reservation. Resume requires coordinator fresh claim/resource/source checks."
     },
     {
       "id": "NATIVE-FDROID-GRAPH-PROBE",
@@ -15625,8 +15629,23 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json",
       "reviewer_role": "independent portable build and core provenance reviewer",
       "priority": 76,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -15644,6 +15663,15 @@
         "reviewer": "/root/donor_mac_review",
         "fingerprint": "0ecc4d94f18a2e0c054f8c6616e524f908a789f802db59d071a8fd5917823c67",
         "fingerprint_method": "SHA256 canonical task JSON excluding only card_review; sort_keys=True,separators=(comma,colon),ensure_ascii=False,UTF8. Card only; accepted committed personal delta and separately reviewed fixed maps required before guard editing."
+      },
+      "source_reconciliation": "Accepted personal source committedba5c644; root independently verified exact34input/20outputset and all31/18previousbytes retained. Author maywrite newcohortandreceiptFIRST only; completefixedmap/inputGit/artifact/rawacceptedreceipt authority review mandatoryBEFORE anyguard/docs edits or npm/core/CLI commands. Other common-source writers not dispatched until integrationdone; Androidassets frozen and no commonreads; desktopplanning2docs awaits rootreview.",
+      "cohort_review_before_guard_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json",
+        "sha256": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579",
+        "source_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+        "evidence": "Root independentlyverifiedexactcompletecurrentnon-symlink34inputset=committedGitset andeachbyte;20outputset/bytes;all31oldinputs18oldoutputsretained;5immutableacceptedrawreceipts/sourcepatch/reviewandoldcohort157b, numeric/historicalauthoritiesunchanged, no ownrefreshreceipt reversepin. Proposed24actualnegativecases retain16old IDs+8personal source/output/receipt cases; existing absent/tamper targetsnewcohort. No guard/build/npm yet."
       }
     }
   ]
