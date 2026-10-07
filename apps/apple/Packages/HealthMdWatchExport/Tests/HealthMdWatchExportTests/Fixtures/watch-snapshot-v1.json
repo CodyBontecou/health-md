@@ -1,0 +1,19 @@
+{
+  "schema": "healthmd.watch_snapshot",
+  "schema_version": 1,
+  "upload_id": "00000000-0000-0000-0000-000000000171",
+  "captured_at": "2026-07-13T12:00:00Z",
+  "interval_start": "2026-07-13T00:00:00Z",
+  "interval_end": "2026-07-13T12:00:00Z",
+  "calendar_timezone": "UTC",
+  "source": "watch_local_healthkit",
+  "capture_status": "partial",
+  "history_availability": "unknown_local_store_may_be_purged",
+  "earliest_permitted_sample_date": "2026-07-12T00:00:00Z",
+  "workouts_status": "not_requested",
+  "observations": [
+    {"metric": "steps", "unit": "count", "reducer": "healthkit_cumulative_sum", "status": "value", "value": 0},
+    {"metric": "active_energy_kcal", "unit": "kcal", "reducer": "healthkit_cumulative_sum", "status": "no_data_or_not_authorized"},
+    {"metric": "apple_exercise_minutes", "unit": "min", "reducer": "healthkit_cumulative_sum", "status": "query_failed"}
+  ]
+}

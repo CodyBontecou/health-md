@@ -119,6 +119,7 @@ jobs:
         run: |
           set -euo pipefail
           cargo fmt --all --check
+          python3 scripts/tests/test_registry_capability_scope.py
           python3 scripts/import-native-registry.py --check
           python3 scripts/generate-registry-adapters.py --check
           python3 ../contracts/validate.py

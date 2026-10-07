@@ -516,6 +516,54 @@ jobs:
       - name: Test standalone direct protocol package
         run: swift test --package-path apps/apple/Packages/HealthMdConnectivity
 
+  build-watch:
+    name: Watch app and widgets build
+    needs: [changes, prepare-shared-core]
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: macos-26
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: apps/apple
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      # Xcode resolves all project package references even though the Watch target
+      # does not link Rust. Reuse the prepared artifact instead of another build.
+      - uses: actions/download-artifact@v4
+        with:
+          name: apple-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+      - name: Compile actual Watch app and widgets
+        run: |
+          set -euo pipefail
+          mkdir -p build/watch-ci
+          xcodebuild build -project HealthMd.xcodeproj -scheme HealthMdWatch \
+            -configuration Debug -destination 'generic/platform=watchOS Simulator' \
+            -derivedDataPath build/watch-derived -jobs 2 \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY='' DEVELOPMENT_TEAM='' PROVISIONING_PROFILE_SPECIFIER='' \
+            2>&1 | tee build/watch-ci/build.log
+      - name: Preserve Watch build diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-watch-build-diagnostics
+          path: apps/apple/build/watch-ci/build.log
+          retention-days: 7
+
   gate:
     name: Apple CI
     if: ${{ always() }}
@@ -526,6 +574,7 @@ jobs:
       - test-ios-ui
       - test-macos
       - connectivity-package
+      - build-watch
     runs-on: ubuntu-24.04
     steps:
       - name: Require Apple checks
@@ -537,6 +586,7 @@ jobs:
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
+          WATCH_RESULT: ${{ needs.build-watch.result }}
         run: |
           set -e
           test "$CHANGES_RESULT" = success
@@ -549,3 +599,4 @@ jobs:
           test "$IOS_UI_RESULT" = success
           test "$MACOS_RESULT" = success
           test "$CONNECTIVITY_RESULT" = success
+          test "$WATCH_RESULT" = success
