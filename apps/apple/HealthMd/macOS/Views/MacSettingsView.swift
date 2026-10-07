@@ -154,6 +154,7 @@ struct MacGeneralSettingsView: View {
     @EnvironmentObject var syncService: SyncService
     @EnvironmentObject var healthDataStore: HealthDataStore
     @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
+    @StateObject private var feedbackReporter = FeedbackReporter()
     @State private var showClearConfirmation = false
     @State private var showEncryptedContextDeleteConfirmation = false
     @State private var showRetentionConfirmation = false
@@ -310,13 +311,13 @@ struct MacGeneralSettingsView: View {
 
             Section {
                 Button {
-                    FeedbackHelper.openMailClient()
+                    feedbackReporter.open(.email)
                 } label: {
                     Label("Send Feedback", systemImage: "envelope")
                 }
 
                 Button {
-                    FeedbackHelper.openGitHubIssue()
+                    feedbackReporter.open(.github)
                 } label: {
                     Label("Report a Bug on GitHub", systemImage: "ladybug")
                 }
@@ -325,6 +326,7 @@ struct MacGeneralSettingsView: View {
             }
         }
         .formStyle(.grouped)
+        .feedbackFailureSheet($feedbackReporter.failure)
         .geistDialog(
             isPresented: $showClearConfirmation,
             title: Text("Delete Legacy Synced Data?"),
@@ -1116,6 +1118,8 @@ struct MacDataSettingsTab: View {
 // MARK: - Feedback Tab (for ⌘, window)
 
 struct MacFeedbackTab: View {
+    @StateObject private var feedbackReporter = FeedbackReporter()
+
     var body: some View {
         Form {
             Section {
@@ -1133,7 +1137,7 @@ struct MacFeedbackTab: View {
 
             Section {
                 Button {
-                    FeedbackHelper.openMailClient()
+                    feedbackReporter.open(.email)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "envelope.fill")
@@ -1156,7 +1160,7 @@ struct MacFeedbackTab: View {
                 .buttonStyle(.plain)
 
                 Button {
-                    FeedbackHelper.openGitHubIssue()
+                    feedbackReporter.open(.github)
                 } label: {
                     HStack(spacing: 10) {
                         Image(systemName: "ladybug.fill")
@@ -1209,6 +1213,7 @@ struct MacFeedbackTab: View {
             }
         }
         .formStyle(.grouped)
+        .feedbackFailureSheet($feedbackReporter.failure)
     }
 }
 

@@ -44,6 +44,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "support.local-reporting-fallback",
             ),
             idsWithState(states, "planned"),
         )
@@ -110,6 +111,7 @@ class ProductCapabilityManifestTest {
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
             "direct-cli.shared-qr-pairing",
+            "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
         )
 
@@ -138,6 +140,7 @@ class ProductCapabilityManifestTest {
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "support.local-reporting-fallback",
         )
     }
 }
