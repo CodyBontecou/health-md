@@ -1,0 +1,234 @@
+{
+  "schema_version": 1,
+  "task_id": "REGISTRY-READER",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
+  "patch_digest": "110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+  "patch_digest_method": "SHA256 over sorted three claimed nonreceipt source/test/vector paths, each UTF-8 repository-relative path + NUL + raw file bytes + NUL. Excludes receipt, coordinator plan/state, ignored dist/build/node_modules/cache outputs.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/src/contracts/registry.ts",
+    "packages/healthmd-core-ts/tests/registry.test.ts",
+    "packages/healthmd-core-ts/tests/registry-vectors.ts",
+    "docs/migration/effect-refactor/receipts/REGISTRY-READER.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/cross-platform-unification-policy.md": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs": "a22d63fb859bb466ec030b1801551498e88aca0b607e360479de56a472342256",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-apple-v7.json": "0b6db66f28d19565bd06f85e352a7d5af4ff859139c36ae4eb00f98cb7f23f30",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-android-v4-v5.json": "c042b7c78cfeef7e4825f1b30d8b4e32c566635369797589d62af3bfe5e016a6",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e",
+      "packages/healthmd-core-rust/scripts/import-native-registry.py": "5a4004fefe7526b118ff82222376df7088c6d0226112648ba54666aeabaa1045",
+      "packages/healthmd-core-rust/scripts/generate-registry-adapters.py": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "installation": "Retained prerequisite scoped installation; no dependency/lock/policy change."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a"
+      },
+      "emitted_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/neutral-metafile.json": "34908db6cd8e7e5cbe4b2850e17df6d811380d2e524afd3fd29ff329f22bbaaf",
+        "dist/test-metafile.json": "81cf4ac59385425cb005144003a6dd766a5910eb08592f2f770a333201137302",
+        "dist/tests/catalog.test.js": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653",
+        "dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46",
+        "dist/tests/query-traversal.test.js": "4b7c0fc2023cf12782b4063c2d825732d6050b55617163581785103126b83171",
+        "dist/tests/registry.test.js": "b658b988e46ed6185ade3b90ae4405c8da91f02fad2730cfd1bff87e4ceff3ec"
+      },
+      "expected_vectors": {
+        "path": "packages/healthmd-core-ts/tests/registry-vectors.ts",
+        "sha256": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "cases": {
+          "whole_profile_projections": 3,
+          "representative_semantics": 6,
+          "mutations": 18,
+          "accepted_mutations": 4,
+          "rejected_mutations": 14
+        },
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root",
+          "fingerprint": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+          "procedure": "Independent Python literal mapping directly from registry.rs project_snapshot reproduced all three compact recursively sorted UTF-8 snapshot hashes. Strict structs and validate_platform/profile/defaults independently reviewed all 18 outcomes, without candidate reader."
+        }
+      },
+      "upstream_parser": {
+        "package": "serde_json",
+        "version": "1.0.151",
+        "reference": "serde_json-1.0.151/src/read.rs:905-973",
+        "sha256": "17a2efe49e5a6937c8d7d4a5c0b9eac84453de0f86bf8e7ee421387e82341bb3",
+        "evidence": "Locally installed primary source inspected; paired UTF16 surrogate requirement for UTF8 strings confirmed. Version pinned by shared Rust Cargo.lock; no Rust compiler/test invocation."
+      }
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Match canonical bytes/digest, IDs/order/classifications/units and unsupported state.",
+      "result": "passed",
+      "evidence": "Canonical frozen asset501908 bytes SHA56def644 matches host test; all248 semantic rows and classifications retained. All three full independent projection hashes, profile IDs/order/schema versions/defaults/counts/units, and existing immutable Apple/Android baseline fields/order match. Unsupported selection is distinct from backed/unavailable. Production authority unchanged; expected snapshot pin requires trusted host build binding, never caller-supplied SHA."
+    },
+    {
+      "criterion": "Use reviewed static asset/build injection; portable runtime performs no filesystem/network discovery.",
+      "result": "passed",
+      "evidence": "One internal pure reviewed-text injection with strict nested Effect Schema, canonical text comparison, source invariants and immutable defensive snapshots. No supplied-digest parameter or runtime filesystem/network/hash discovery. Host test verifies raw authority bytes before injection. ES-only typecheck, transitive module analysis and19 negative guards pass."
+    },
+    {
+      "criterion": "Report all relocation/generator/native consumer work as remaining scope.",
+      "result": "passed",
+      "evidence": "Current authority/importer/generator/crosswalk/native baselines retained. All relocation, generator replacement, native/CLI/UI/website/external consumer admission and broader C01/K01 qualification remain explicitly open below."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exact Node24.21.0/npm11.19.0; exit0 in 1.4s. Strict ES-only source/test typechecks; ESM build;191 discovered emitted-JS tests,0 failures/cancellations/skips;19 boundary negatives;8 own source modules;one Effect installation and module identity checks passed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "20 assigned-base source/fixture/config/lock inputs verified raw-byte unchanged, reviewed vector fingerprint retained, sorted3-file patch and source/emitted artifact raw hashes computed. Supplemental lazy-profile/Unicode expectations are source-defined tests, not regenerated corpus."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "packages/healthmd-core-ts/src/contracts/registry.ts",
+        "packages/healthmd-core-ts/tests/registry.test.ts",
+        "packages/healthmd-core-ts/tests/registry-vectors.ts"
+      ],
+      "result": "passed",
+      "evidence": "Exit0, no whitespace diagnostics on scoped paths."
+    }
+  ],
+  "inspection_summary": "Read root/component instructions, entrypoint/core branch and scoped C01/K01. Inspected registry.rs strict structs/decode_and_validate/validate_document/validate_platform/validate_profile/project_snapshot and baseline tests; accepted core inventory, semantic RawRegistry distinction, retained importer/generator and reviewed crosswalk/baselines. Candidate uses unchanged registry authority and declarations, preserving source validator permissiveness (equivalence string/empty Android unit) rather than inventing global policy. Requested profile projection is lazy; missing legacy unavailable mapping fails only requested projection. Parent independently reviewed corpus and parser supplementary source evidence.",
+  "observations": [
+    {
+      "case_id": "whole-profile-projection",
+      "procedure": "Hash-check frozen asset, inject trusted text, canonical-compact sorted snapshot hashing for three fixed profiles. Compare independent literal hashes and all native baseline fields/order.",
+      "expected": "Apple230/226/0; Android106/161/102; enabled226/132/148; schema8/4/5; all projection bytes represented by three independently pinned hashes.",
+      "observed": "All three hashes, counts, schema versions, order and frozen Apple/Android baseline field comparisons match.",
+      "evidence": "packages/healthmd-core-ts/tests/registry-vectors.ts accepted f4708960 fingerprint and registry.test.ts complete independent projection/native baseline cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "strict-boundary-and-source-defaults",
+      "procedure": "Execute18 fixed mutations from strict serde structs and source validators. Exercise source-specific lazy unavailable projection.",
+      "expected": "14 rejects,4 validator-only successes; unrelated Apple projection succeeds when Android unavailable lookup is invalid; requested Android lookup fails.",
+      "observed": "All18 fixed outcomes match; lazy requested-profile failure regression passes. No changed asset authenticated.",
+      "evidence": "packages/healthmd-core-ts/tests/registry-vectors.ts and tests/registry.test.ts strict source boundary/requested-profile cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "unicode-canonical-and-capacity",
+      "procedure": "Test noncanonical/no-newline/extra-newline/duplicate keys; bounded text/depth/node rejection; lone high/low/reversed/broken surrogate pairs and malformed key; valid astral pair.",
+      "expected": "Stable sanitized invalid_registry; valid Unicode pair preserved. Source serde_json UTF8 string semantics maintained.",
+      "observed": "All negative admission/parser cases fail safely; valid astral pair survives trusted structural projection; source u32/fraction/overflow literals pass.",
+      "evidence": "tests/registry.test.ts parser/capacity cases; serde_json1.0.151/src/read.rs SHA17a2efe4",
+      "result": "passed"
+    },
+    {
+      "case_id": "availability-immutability-and-trust",
+      "procedure": "Lookup backed/unavailable/unsupported selection; mutate frozen snapshot; structurally validate changed Android unit with distinct host-computed digest.",
+      "expected": "No invented zero or parity; immutable owned snapshots; changed input not authenticated by structural reader or expected pin metadata.",
+      "observed": "Three distinct states, deep freeze, mutation rejection and explicit requires_reviewed_host_binding authority metadata pass. No caller SHA field exists.",
+      "evidence": "tests/registry.test.ts availability/defensive snapshots cases; src/contracts/registry.ts reviewed static precondition",
+      "result": "passed"
+    }
+  ],
+  "source_policy_distinction": {
+    "registry_snapshot_boundary": "registry.rs RegistryDocument/AvailableCapabilities/CategoryRow/MetricRow/PlatformBinding/AppleOutputRow/ProfileRow/ProfileOutputRow/LegacyUnavailable/UnavailableRow deny_unknown_fields. Candidate preserves strict nested boundary.",
+    "semantic_subset_reader": "semantic.rs RawRegistry/RawMetric/RawBinding are a separate lenient partial reader. Accepted core inventory broad unknown-field narrative is incomplete for registry snapshots; source takes precedence. Inventory correction belongs to coordinator outside this claim.",
+    "version_scope": "Only unchanged registry schema1/registry1 and historical profile schema8/4/5; no common export/core API/profile revision migration."
+  },
+  "retained_consumers": [
+    "Shared Rust registry and semantic readers; immutable native baselines and semantic crosswalk",
+    "import-native-registry.py and generate-registry-adapters.py",
+    "Apple HealthMetrics.swift/HealthMetricsDictionary.swift/HealthMdCoreRegistryAdapter.swift",
+    "Android MetricSelection.kt/HealthDataFields.kt/HealthMdCoreRegistryAdapter.kt/parity ledger",
+    "Website shared-metric-registry.md and public/reference/metric-registry-v1.json",
+    "CLI/MCP operations and public/external Obsidian consumers retain current authority; candidate has no host/package public integration"
+  ],
+  "limitations": [
+    "Trusted static/build injection precondition only. The pure reader does not authenticate arbitrary supplied text: host build must bind exact raw reviewed UTF8 bytes to pinned SHA before projecting expected registry_sha256 metadata. Input has no supplied SHA parameter. Hash verification/bundle authority integration remains unqualified.",
+    "Local1MiB UTF8/UTF16 text,depth32,node100000 safeguards are candidate internal budgets, not a new public registry schema/version. Text API does not independently prove original byte encoding; host must preserve and authenticate authority bytes.",
+    "Only exact Node24 darwin-arm64 portable synthetic proof. Cargo/native/mobile/website/external/CLI integration tests and production behavior unrun.",
+    "Public package index/exports/build policy/locks/current authorities unchanged. Semantic classification rows retained separately from exact native snapshot fields. No persisted selection migration or broad contract codec implemented."
+  ],
+  "remaining_qualification": [
+    "Independent final source/patch review pending; fixed expected corpus accepted separately.",
+    "Bind reviewed registry bytes/digest and complete build identity in admitted hosts before native or persisted snapshot use.",
+    "Relocation/portable generator/importer replacement, native baseline/crosswalk parity, Apple/Android registry adapters, CLI/MCP/React/UI/website/external consumer integration and required affected gates remain separate work.",
+    "Complete C01/K01 contract fixtures/versions/native and chosen JS-host qualification, defaults persistence and production/retirement gates remain open."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4"
+  },
+  "independent_review": {
+    "result": "passed",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+    "evidence": "Independent3patch20input23rebuilt artifact hashes match after root integratedmake; emitted29registrytests passed. Independent probe rejected8malformed mutations, preserved validastral pair, isolatedlazyprofilefailure, verified3selectionstates anddeepfreezing. Root fixedcorpus review reproduced3entire snapshot hashes and6semantic18mutation literals; frozenvectorSHA unchanged. Exacthostbytebinding/nativegenerator/publicconsumer/family qualification open."
+  }
+}

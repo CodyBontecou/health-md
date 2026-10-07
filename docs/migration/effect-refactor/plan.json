@@ -3938,7 +3938,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 51,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
@@ -3953,14 +3953,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/REGISTRY-READER.json"
+        ]
       }
     },
     {
