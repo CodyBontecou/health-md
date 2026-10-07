@@ -380,6 +380,32 @@ jobs:
       - name: Test iOS simulator selection policy
         run: python3 scripts/tests/test_select_ios_simulator.py
 
+      - name: Test UI build and execution contract
+        run: python3 scripts/tests/test_ios_ui_build_contract.py
+
+      - name: Build UI test artifacts once
+        id: ui_artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/test-results
+          MD_UI_DERIVED_DATA=$(mktemp -d "$PWD/build/ios-ui-derived-data.XXXXXX")
+          touch "$MD_UI_DERIVED_DATA/.healthmd-ui-build-start"
+          xcodebuild build-for-testing \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug-iOS \
+            -derivedDataPath "$MD_UI_DERIVED_DATA" \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/build-ios-ui-compile.log
+          MD_UI_XCTESTRUN=$(python3 scripts/validate_ios_ui_xctestrun.py \
+            --derived-data "$MD_UI_DERIVED_DATA" \
+            --source-sha "$(git rev-parse HEAD)" \
+            --receipt build/logs/ios-ui-build-receipt.json)
+          echo "xctestrun=$MD_UI_XCTESTRUN" >> "$GITHUB_OUTPUT"
+
       - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
@@ -395,11 +421,9 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs build/test-results
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
+          xcodebuild test-without-building \
+            -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
-            -configuration Debug-iOS \
             -resultBundlePath build/test-results/HealthMd-UI-Smoke-iPhone.xcresult \
             -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
@@ -414,16 +438,12 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
+          xcodebuild test-without-building \
+            -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
-            -configuration Debug-iOS \
             -resultBundlePath build/test-results/HealthMd-UI-Profiles-iPhone.xcresult \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
@@ -434,13 +454,11 @@ jobs:
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee -a build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
       - name: Run App Review export regression (iPad)
-        if: ${{ !cancelled() }}
+        if: ${{ !cancelled() && steps.ui_artifacts.outcome == 'success' }}
         timeout-minutes: 15
         shell: bash
         run: |
@@ -451,24 +469,22 @@ jobs:
           echo "Running App Review regression on ${IPAD_DESTINATION}"
           xcrun simctl bootstatus "${IPAD_DESTINATION##*id=}" -b
 
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
+          xcodebuild test-without-building \
+            -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \
             -destination "${IPAD_DESTINATION}" \
-            -configuration Debug-iOS \
             -resultBundlePath build/test-results/HealthMd-UI-NoData-iPad.xcresult \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee -a build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
       - name: Check warnings (iOS UI)
         if: ${{ !cancelled() }}
-        run: scripts/check-warnings.sh build/logs/build-ios-ui.log
+        run: |
+          scripts/check-warnings.sh build/logs/build-ios-ui-compile.log
+          scripts/check-warnings.sh build/logs/build-ios-ui.log
 
       - name: Upload iOS UI artifacts
         if: ${{ !cancelled() }}
@@ -476,6 +492,8 @@ jobs:
         with:
           name: ios-ui-build-logs
           path: |
+            apps/apple/build/logs/build-ios-ui-compile.log
+            apps/apple/build/logs/ios-ui-build-receipt.json
             apps/apple/build/logs/build-ios-ui.log
             apps/apple/build/test-results/HealthMd-UI-*.xcresult
           retention-days: 14
