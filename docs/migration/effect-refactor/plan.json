@@ -7145,12 +7145,20 @@
         "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
         "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
         "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
-        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+        "apps/android/effect-host-candidate/babel.config.cjs",
+        "apps/android/effect-host-candidate/.gitignore",
+        "apps/android/effect-host-candidate/README.md",
+        "apps/android/effect-host-candidate/app/proguard-rules.pro",
+        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+        "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+        "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh"
       ],
       "shared_resources": [
         "android-candidate-gradle-graph",
         "android-candidate-js-lock",
-        "android-candidate-bridge"
+        "android-candidate-bridge",
+        "native-candidate-build"
       ],
       "source_inputs": [
         {
@@ -7355,9 +7363,52 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "not_started",
+      "status": "in_progress",
       "blocker": null,
-      "claim": null,
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/android/effect-host-candidate/package.json",
+          "apps/android/effect-host-candidate/package-lock.json",
+          "apps/android/effect-host-candidate/.node-version",
+          "apps/android/effect-host-candidate/tsconfig.json",
+          "apps/android/effect-host-candidate/metro.config.cjs",
+          "apps/android/effect-host-candidate/src/probe.ts",
+          "apps/android/effect-host-candidate/src/HostProbe.tsx",
+          "apps/android/effect-host-candidate/scripts/build.mjs",
+          "apps/android/effect-host-candidate/scripts/check.mjs",
+          "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+          "apps/android/effect-host-candidate/settings.gradle.kts",
+          "apps/android/effect-host-candidate/build.gradle.kts",
+          "apps/android/effect-host-candidate/gradle.properties",
+          "apps/android/effect-host-candidate/gradlew",
+          "apps/android/effect-host-candidate/gradlew.bat",
+          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+          "apps/android/effect-host-candidate/app/build.gradle.kts",
+          "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+          "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+          "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+          "apps/android/effect-host-candidate/babel.config.cjs",
+          "apps/android/effect-host-candidate/.gitignore",
+          "apps/android/effect-host-candidate/README.md",
+          "apps/android/effect-host-candidate/app/proguard-rules.pro",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+          "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+          "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh"
+        ],
+        "reserved_resources": [
+          "android-candidate-gradle-graph",
+          "android-candidate-js-lock",
+          "android-candidate-bridge",
+          "native-candidate-build"
+        ]
+      },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 202,
       "qualification": {
@@ -7400,6 +7451,22 @@
           "no_native_grant_expansion"
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
+      },
+      "source_reconciliation": "All13 historicale3f13 source pins match currentd126. Candidate extensions approved before writes: Babel config, private README/gitignore, launcher-only Activity, Proguard, pure native JVM admission test, isolated local test signing script. Production identity/signing/state unchanged. ExactRN0.87.1 prebuilt AAR and exactGradle/Kotlin compatible metadata remain subject to graph inspection before installation; no cached0.86 substitution. Numbers commonbuild is separately reserved; wait root-frozen input/output window before bundling/checking common packages.",
+      "local_signing_scope": "Generate and retain one ignored candidate-local .test-signing test key idempotently; publiccertificate hash only in receipt. Sign nondebuggable isolated Play Release and instrumentation APKs solely for synthetic install on component-required target; no production credentials/keystores/store/publication or signed-distribution qualification. Initial random testkey generation is not reproducible; repeated signing uses retained key.",
+      "host_availability": "Read-only exact adb required target is currently unavailable; sandboxlistener constraint narrowly escalated and actualgetstate reported targetnotfound. Continue graph/fixture/source/build work. Task cannot pass actualruntime acceptance until target reconnects and packaged probe runs; no emulator/other-device substitution.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "vector_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+        "evidence": "Root read all10 cases and matched parent private interface/bounds. UTF8 strict counting and preparse limit evidence explicit (65537vs65536), malformed-surrogate/schema/numeric/bool rejection before acquire; twoactive/fourqueued/sixack/FIFO/drain; cancel/expiry/reentry waitownednativeack, separatefreshprocess; React/Effect/engine physicalgraph and candidate-ownedwrite/manifestInternet0scope. Metadata and fake checks cannot supply actualruntime proof.",
+        "scope_limits": "Fixture/interface approval only; actual exactresolved nativegraph, build, installed runtime, physicalhealth/lifecycle/signeddistribution remain unqualified."
+      },
+      "npm_graph_preinstall_review": {
+        "status": "accepted_scoped_metadata",
+        "reviewer": "/root",
+        "lock_sha256": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499",
+        "evidence": "Root parsed all341 transitive entries plusroot, eachprimaryregistry SHA512 tarball; inspected exactmanifesttuple and onephysicalReact/Effect map, license histogram allowlisted MIT286/ISC17/BSD3 3/Apache29/CCBY1/dualMITApache1/0BSD1/BSD2 2/dualMITCC01; only esbuilddeclaresinstallscript. No detectedRustnative/toolpackages. Postinstallphysicalgraph and transitive native Gradle/C++ provenance still require independentreview; blockedscript policy retained."
       }
     },
     {
@@ -9945,7 +10012,11 @@
           "cwd": "packages/healthmd-core-ts",
           "argv": [
             "npm",
-            "ci"
+            "ci",
+            "--offline",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
           ],
           "availability": "existing",
           "proof_class": "portable_synthetic",
@@ -9987,27 +10058,62 @@
       "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
       "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
       "reviewer_role": "independent core codec/render reviewer",
-      "status": "not_started",
+      "status": "done",
       "primary_dependency_refs": [
         "#/primary_dependency_sources"
       ],
       "priority": 240,
-      "claim": null,
+      "claim": {
+        "agent": "/root/serialize_numbers",
+        "base_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "packages/healthmd-core-ts/tests/exact-json-numbers.test.ts",
+          "packages/healthmd-core-ts/tests/exact-json-numbers-vectors.ts",
+          "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json"
+        ],
+        "reserved_resources": [
+          "core-component-build"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json"
+        ]
       },
       "expansion_input": {
         "task_id": "SPLIT-RENDER",
         "path": "docs/migration/effect-refactor/expansions/split-render.json",
         "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      },
+      "source_reconciliation": "Parent SPLIT-RENDER pins preserve historicalc306 bytes. Current core metadata is independently accepted CORE-CANDIDATE-API:READMEe8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606, manifest822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2 and current CLI guard from that accepted patch. No common business/runtime/lock drift. Verify historical references at their declared revisions and separately pin current assigned d126 metadata; no expectation regeneration. New3inputs/2outputs make CLI old28/16 cohort fail closed until separately reviewed CORE-COHORT-REFRESH; no CLI/core guard bypass or export metadata change.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "vector_sha256": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "interface": "serializeExactJsonNumber(representation: unknown, payload: unknown); primitive binary64 / signed_integer / unsigned_integer inputs only; owned Uint8Array or fixed immutable Effect Result failure; no reflection/coercion/callback",
+        "evidence": "Primary zmij1.0.23 dtoa literal assertions inspected; all33 binary64 expectations independently checked using exact Python Fraction interval membership, exhaustive smaller significant-digit/exponent candidates, nearest/ties-even and lexical thresholds/sign; six i64/u64 endpoints and strict canonical negatives reviewed. Hostile nonprimitive inputs are rejected without reflection. Fixture records are harness-only, not object admission.",
+        "check": {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "/private/tmp/healthmd-numbers-fixture-review.py"
+          ],
+          "result": "passed",
+          "log": "/private/tmp/healthmd-numbers-fixture-review.log",
+          "log_sha256": "2013b0062ad3a87011ceaa8202171f305b1d52d8388c5fb0628a225b62e5386b",
+          "validator_sha256": "7d6142fcff6fbbb9f5effd037d7a932e149c2a8cf9065458378a01e9ca103585"
+        },
+        "scope_limits": "Literal scope only; not entire serde binary64 equivalence, native engine or export profile qualification."
       }
     },
     {
