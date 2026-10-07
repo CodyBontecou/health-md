@@ -1,0 +1,493 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-NATIVE-APPLE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+  "patch_digest": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "included_paths": [
+      "docs/migration/effect-refactor/inventories/native-apple.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json",
+      "docs/migration/effect-refactor/plan.json",
+      "coordinator-owned design documents and other workers changes"
+    ],
+    "scope": "Exact raw UTF-8 native-apple.json bytes including trailing newline; excludes receipt/coordinator state.",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/inventories/native-apple.json').read_bytes()).hexdigest())"
+    ]
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/native-apple.json",
+    "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v1.json": "d2bad75b69e34e0e8e4ddd95ddb6d22ef867ddf81fca712c54612a9ec18587fb",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v2.json": "108c5e5e0c1627bf4a871d33f7d099fe8c9468db7f930f08bb248e763395c84c",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v3.json": "3b2b72348c0704f568ee2a7bf84f74e535cb72e50b5d6924be33c9ce4694646b",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v4.json": "21b4796e4642f36cda19bfbe7b35e045b4864117b8b838319ed55ffb7e42502c",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v5.json": "c76ec463eb03067f5f717a55087e97daf8ab636dba9aae505ba8e5df5d66d13e",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v6.json": "43f69724e342eae61ccd37555525bc98f856e300e089aad31ef6e49f316e4fed",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v8.json": "d077deb20f8bcae121b9ac2da30b1f7f6bbf0ed2c1a7c4296076d882ca98374a",
+      "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "apps/apple/scripts/fixtures/clinician-report-localization-en.json": "b1345e77ed01293c9b1376b95284992ef01aa5f7ef8ce2ede42e39141c22b2ed",
+      "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/contracts/direct-protocol/v2/fixtures/interop.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/contracts/proposals/provider-sections-v1/fixtures/whoop-complete.providers.json": "acd89611db846010dd8613d0afb79ccdb10995b45e12fc7a7c804d6dbc8ddd82",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/android-minimal.json": "ad5c60141fc1d6ae3bb3cb3ef0c9874316b705effb6f1d47513d016286c577e8",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/android-not-requested.json": "086c900836619a6bd621476f5083fb6f341a2e024da01c19fe0d8b2eb97b0ab1",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-minimal.json": "b754fcbaed0568d972f4807798b9833730312f7300e52625d84095f5f06fff95",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-partial.json": "d9a495d1bdbea58f33b92b780ff7f3166ffca562a09e59a617e2fa381c46c09a",
+      "packages/contracts/proposals/unified-health-data-v9/fixtures/apple-whoop.json": "f1076949ab39f0bebefaecf000bf54b84c8ddf2dc4def09dde785edef6910f9e",
+      "packages/contracts/render-input/v1/fixtures/differential-v1.json": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+      "packages/contracts/render-input/v1/fixtures/native-apple-v7.json": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.json": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "packages/contracts/shared-setup/v2/apple-profile-field-coverage.json": "2636449ec9303886a27ccfd5e8fce9c1e4355b6cc92b102219eb5b8f8a37d1d9",
+      "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+      "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+      "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+      "packages/contracts/shared-setup/v2/shared-setup.schema.json": "39e56dc54dfb56c556e2c71c734c00da4f02305a2a9b98ad795486c3e9c81f45"
+    },
+    "locks_and_runtime": {
+      "apps/apple/HealthMd.xcodeproj/project.pbxproj": "a1ed2b8b95538440d2f8e07696b437f1baa4569bfdc0056d49b7b22423071429",
+      "apps/apple/HealthMd.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved": "20d0beda80c42edc18e6a733507a64494ee6d3968435c8404427a1daffd3bbb1",
+      "apps/apple/HealthMdCLI/Package.swift": "90393bb0010df7096ec60b526e7fb6264a99bee10435d0e2c4ebe3f256ea3c23",
+      "apps/apple/Packages/HealthMdConnectivity/Package.swift": "402f1d7b45ae8912dd56385a3d6f21c71699fe96f0d19d7bf2b020ce6eef54e1",
+      "apps/apple/Packages/HealthMdCoreRust/Package.swift": "d1f14a21e0ba10d92879fee2b0f9b73a3da78504497d51714e1f820310b05f5a"
+    },
+    "artifact_and_native_interface": {
+      "target_graph": "docs/migration/effect-refactor/inventories/native-apple.json#/target_graph",
+      "source_records": "docs/migration/effect-refactor/inventories/native-apple.json#/source_records",
+      "native_sdk_security_lifecycle": "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping",
+      "entitlements_privacy_storekit_source": "docs/migration/effect-refactor/inventories/native-apple.json#/metadata",
+      "accepted_baseline_inventories": {
+        "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+        "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+        "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+      }
+    },
+    "policy_migration_key_versions": {
+      "HealthMdExportSchema": 8,
+      "SharedSetupV2": 2,
+      "query_family": 1,
+      "IPhoneDirectFileJournal_current": 6,
+      "IPhoneDirectFileJournal_readable": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "contract_change": false
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Map actual Apple producers/targets/entrypoints/state and tests; mark future U17\u2013U18 cloud scope as proposed.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping /target_graph /surface_extensions /local_api /installed_state_source /test_cases:all18U rows;9targets/40configurations;316source+37fixture records;184testpaths/2807case locators;U13\u2013U18 explicitly proposed."
+    },
+    {
+      "criterion": "Separate current native source/security/lifecycle from shareable feature logic, including independent watch and local-only reports.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping /surface_extensions /native_lifecycle_policy /report_metrics:retainednative versus shared candidates each row;watch independent HK;11metric local nativePDF;strong scheduling/cold/recovery currentauthority preserved."
+    },
+    {
+      "criterion": "Record commerce/Mac/installed-state/Release/headless and physical qualification gaps; run no app or personal-data capture.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-apple.json#/commerce /target_graph /metadata /qualification_gates /limitations /checks_available:ReleaseMacfree/noStoreKitstub;receiver/currentnavigation;installedstate source only;F03/F04/F06/F10/native/signed/physical unqualified;no runtime capture or build."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-NATIVE-APPLE"
+      ],
+      "result": "passed",
+      "evidence": "Exact write scope/acceptance/target read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C10"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C12"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U01"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U02"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U03"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U04"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U05"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U06"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U07"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U08"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U09"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U10"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U11"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U12"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U13"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U14"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U15"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U16"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U17"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "U18"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F03"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F04"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F06"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F10"
+      ],
+      "result": "passed",
+      "evidence": "Scoped design row read; source authority distinguished from proposed successor intent."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "36244fd0a543456cfd7e2487d790ebe2fce2c19e"
+      ],
+      "result": "passed",
+      "evidence": "Tracked assigned-base source paths resolved; no installed-state/marketing files."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "rg",
+        "--files",
+        "apps/apple/HealthMd/Shared/SharedSetup",
+        "apps/apple/HealthMd/Shared/Views",
+        "apps/apple/HealthMd/iOS/ClinicianReport"
+      ],
+      "result": "passed",
+      "evidence": "Exact v2 transaction/gate/adapter and report filenames resolved. SettingsTabView is in ContentView.swift."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "rg",
+        "-n",
+        "SettingsTabView|@main|Tab\\(|TabView|onOpenURL|onContinueUserActivity|register|scenePhase|protected",
+        "apps/apple/HealthMd/iOS/HealthMdApp.swift",
+        "apps/apple/HealthMd/iOS/ContentView.swift",
+        "apps/apple/HealthMd/macOS/HealthMdApp+macOS.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift"
+      ],
+      "result": "passed",
+      "evidence": "Main apps/scene/URL/cold/BG/protected-data source locators inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Source-only inventory generator resolves source/metadata/fixture/test/target/configuration records from git show; no product execution."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Independent inline assertion pass:547 pins rehashed;2807 test func source lines verified;U01\u2013U18 complete/U13\u2013U18 proposed;9 targets. Only two coordinator design documents differ from base; source/fixtures/tests match."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Line-anchored graph metadata:exact nine target-name set/40 Debug-Release/Debug-iOS-Release-iOS configs validated; digest/receipt updated."
+    }
+  ],
+  "inspection_summary": "Read execution entrypoint/root+Apple AGENTS/native-ui/component feature inventory/scoped C10/C12/U01\u2013U18/F03/F04/F06/F10 refs/templates; inspected native app lifecycle/navigation/targets/configuration/permissions, scheduling/recovery/intent, report/watch/widgets, profiles/purchase/provider, loopback removed endpoint policy/encrypted store/context/evidence and Release check sources. Pinned assigned Git blobs and synthetic fixture/test case metadata.547pins rehashed/2807locators verified; only coordinator design documents differ. Two generator preflight assertions exposed guessed SharedSetup/settings filenames and exited before writes; corrected exact tracked names passed. No product tests/builds/UI/app/device/network/data/credential/installed-state actions. Final graph validation caught a multiline-comment regex spanning the first PBX block; corrected to line-anchored single-line names and verified exact nine target names/40 Debug-Release-iOS configuration names; no source/schema bodies retained in graph records.",
+  "observations": [],
+  "limitations": [
+    "All builds/unit/product/UI tests unrun; case IDs source expectations only.",
+    "Physical HK/locked-device/APNs/network/watch/widget/live activity/background/StoreKit unqualified; no app launch/capture.",
+    "Installed preferences/bookmarks/Keychain/journals unread; migration/downgrade/delete/exactly-once pending.",
+    "U13-U18 source/permission/API/consent/channel implementation proposed.",
+    "Independent frozen fixtures retained; successor consumes expected bytes rather than overwrites.",
+    "Historical files/screenshots not current navigation proof."
+  ],
+  "remaining_qualification": [
+    "Independent source/inventory review accepted; native runtime and successor admission remain unqualified.",
+    "All native runtime/offline/headless/physical/accessibility/StoreKit/channel/signed distribution tests remain unrun. Source planning does not close native family or qualify successor.",
+    "U13\u2013U18 PersonalData/location/usage/cloud source/permission/consent/OS/distribution choices and implementation remain separately scoped proposed work.",
+    "Installed-state migration/crash/downgrade/delete and frozen-journal/engine/protocol replay authority unchanged; no retirement authorized."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834"
+  },
+  "independent_review": {
+    "scope": "All U01-U18 rows, graph/channel/native/extension/commerce/state/contract scope and limitations reviewed. No blocking findings.",
+    "evidence": "Rehashed all547 unique assigned-source pins and verified2807 exact test symbol/line locators; raw inventory patch digest matched. Sampled current iPhone/Mac navigation, watch/intent/widgets, localAPI removed routes, local-only report and commerce/lifecycle authorities against source. No native behavior or signed/physical qualification asserted."
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-NATIVE-ANDROID",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+  "patch_digest": "3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7",
+  "patch_digest_method": "SHA-256 of raw UTF-8 inventories/native-android.json bytes including final newline; excludes this receipt and coordinator-owned plan/review state. Inventory is the only patch input.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/native-android.json",
+    "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json": "f92aaef42e1198bcd1b7591aa5248fc759270f2900ec108042d0375ed418152c",
+      "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json": "05f3778112115d9424a7e14fa25d2cdb6a657689b555cb14d41a847b44cdd966",
+      "apps/android/app/src/test/resources/health-providers/fitbit/activity.json": "991352a1c65afe9c67f0ac6687e46cb2ececc18ccb284ef6bf63fe02240682b3",
+      "apps/android/app/src/test/resources/health-providers/fitbit/body.json": "51784dfa1eb742f94de6059fb841d6b77a2651b2c0a179260bd82e5853ca85fc",
+      "apps/android/app/src/test/resources/health-providers/fitbit/heart.json": "52e8203547323db3dbccae2d14daa51963385aa0bcf9c863805f5576fa179e3c",
+      "apps/android/app/src/test/resources/health-providers/fitbit/sleep.json": "b4e216422525f2fbfc3e70e82f348259524ccbda6ad0833b2b03ddc4e1fe284c",
+      "apps/android/app/src/test/resources/health-providers/oura/daily_activity.json": "14e3e3e462c1b783bf5aa7020beabc5b8656ff6bb0630fff5912d69c699384c9",
+      "apps/android/app/src/test/resources/health-providers/oura/heartrate.json": "395825b94e046ae8f0724b01f4d988ab7fdeae6a47f3b1c921c9366ae21ad69e",
+      "apps/android/app/src/test/resources/health-providers/oura/sleep.json": "99408650805823a2be9e6c2182da2c8a7a24ea31f532ab1581fe391935f13632",
+      "apps/android/app/src/test/resources/health-providers/oura/workout.json": "e93832b5f92c8b8d547c9c1c8c673fbe30bfe91182fddd61bd65587a1390d9af",
+      "apps/android/app/src/test/resources/health-providers/whoop/body.json": "64f76a88a6475123dd9df585414be5fda56709a1eedae0d0ea031cc23eea2522",
+      "apps/android/app/src/test/resources/health-providers/whoop/cycle.json": "4b4a7247ed95e5b3b1b2852f5fa66b0a1b54e9ebab4a49314626c9ce6fcf6cff",
+      "apps/android/app/src/test/resources/health-providers/whoop/recovery.json": "fa571df91690be268e5bd236420234384498ac35478012f6d7703ff22a1f389f",
+      "apps/android/app/src/test/resources/health-providers/whoop/sleep.json": "e9d95f28f8478ddbbfa58d65eff29d6ba849f9bd1b03429e521f3f4f646abe76",
+      "apps/android/app/src/test/resources/health-providers/whoop/workouts.json": "d777af46a56c77fd6288849997ad89e26d7d1c6d4723dd0bd757f054a02fd229",
+      "apps/android/app/src/test/resources/health-providers/withings/activity.json": "61cf2ea5200adfbc390af5851fa12595b7872c192c9db0826fedd149117dbe29",
+      "apps/android/app/src/test/resources/health-providers/withings/measures.json": "97af0ac35aa50b6eb9823f61b2e31b83e48cac81defea932a141092453879fb7",
+      "apps/android/app/src/test/resources/health-providers/withings/sleep.json": "006322158ab4e366105246214e917f98a117190e9d91d2b822961a8b41202c6c",
+      "apps/android/app/src/test/resources/raw-export/v1/medical-exact-fhir-record.json": "61a375c44b011603bc4d2b623b367c9c65ab957298d03edacd5edcf82320dbb2",
+      "apps/android/app/src/test/resources/raw-export/v1/minimal-snapshot.json": "ee7425f1257dc1e9825ac7bbeb21f1384927d065856428ceddbb056f027b2f1d",
+      "apps/android/app/src/test/resources/raw-export/v1/planned-manual-completion-record.json": "1bee5feaac8bee67bd6fc02f5bfb25b427f88b800f27169ee3dde5f3dcc158f4",
+      "apps/android/scripts/fixtures/clinician-report-localization-en.json": "d14d0b3830757a8eafeab5175df5ba94a157612ec8a1d4e5fc66bdcd9cd1f86e",
+      "apps/android/wearable-contract/src/test/resources/fixtures/wear-health-snapshot-v1.json": "7a86e58d1259193f4154150f7659104210a86d80726b4e72d1d8c20b7e6f5f44",
+      "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/contracts/direct-protocol/v2/fixtures/interop.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/contracts/shared-setup/v2/fixtures/android-shared-setup-v2.json": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+      "packages/contracts/shared-setup/v2/fixtures/apple-shared-setup-v2.json": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+      "packages/contracts/shared-setup/v2/fixtures/transaction-scenarios-v1.json": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb",
+      "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    "locks_and_runtime": {
+      "apps/android/app/build.gradle.kts": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
+      "apps/android/gradle/libs.versions.toml": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+      "apps/android/gradle/wrapper/gradle-wrapper.properties": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+      "apps/android/healthmd-core/build.gradle.kts": "4fd628af0ac071d52086325042a0bcd775c9591a06dbbd8a66b7638b4b86c67f",
+      "apps/android/wear/build.gradle.kts": "886b11c6ef59de1f02fb0fc73e3caf124d29915d1bfd4ea90cfb719cbf8ecdd0"
+    },
+    "artifact_and_native_interface": {
+      "apps/android/app/src/debug/AndroidManifest.xml": "f0e6a1cdccada96b80786c7d90f631bb2f57973743fdaf3a90ba2d5999575774",
+      "apps/android/app/src/e2e/AndroidManifest.xml": "7af5599c93cf7c4f14f95706610fc3e099746a279e9ad7067851fc51fed3a0f8",
+      "apps/android/app/src/fdroid/AndroidManifest.xml": "559d3414f4541430bbfd02940f917060d5d71a34346a94e29d6bbd6ac45f3299",
+      "apps/android/app/src/main/AndroidManifest.xml": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+      "apps/android/app/src/main/java/com/healthmd/domain/exportengine/ExportEnginePin.kt": "f11aa387821da293a036b9c9f744b31c859b87ffa569132882262e757ec28b48",
+      "apps/android/app/src/main/java/com/healthmd/domain/exportengine/ExportEnginePolicy.kt": "2a83a35281eaebffab39507803dc82027adca21b75a6ed85cb04f55b384ad7d4",
+      "apps/android/app/src/play/AndroidManifest.xml": "0112533370393e89a9c41c03f1edbb8b946c2154fb853c911614ee454a3a70c9",
+      "apps/android/release-scope.json": "0146a97a34a8ed6bf26ced9a07030fb1c439bb695d756119e38e8d70b3c83e26",
+      "apps/android/scripts/verify-fdroid-artifact.sh": "94f6fc9f2401b56a31e06dcc5c833d0cd400c57734a93d30eac10f59430fa168",
+      "apps/android/wear/src/main/AndroidManifest.xml": "1c168c2f5f7b44e456d6a0e97dd04f3731965f65800ae1006c69d9214d1a6abf"
+    },
+    "policy_migration_key_versions": {
+      "inventory": "docs/migration/effect-refactor/inventories/native-android.json",
+      "source_versions": "Room6;direct journal3 readers1..3;scheduled API journal1;SharedSetup2/v1unsupported;HealthKeyStore aliases retained",
+      "capability_registry_sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Map actual Android producers/entrypoints/state/tests and Play/F-Droid/Wear support; mark future cloud scope as proposed.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-android.json#feature_rows/channels/native_manifests/test_source_pins"
+    },
+    {
+      "criterion": "Separate native Health Connect/permissions/persistence/workers from shared logic and planned/unavailable parity.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-android.json#native_state_and_ports/authority_and_upgrade/capability_subset"
+    },
+    {
+      "criterion": "Record billing/quota/F-Droid/deferred Wear/cold-host and physical qualification gaps; run no app or user-data capture.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native-android.json#channels/remaining_qualification/measurements"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-NATIVE-ANDROID"
+      ],
+      "result": "passed",
+      "evidence": "Exact task target/acceptance/write scope recorded."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "36244fd0a543456cfd7e2487d790ebe2fce2c19e"
+      ],
+      "result": "passed",
+      "evidence": "Scoped Android producers, manifests, test and fixture paths resolved."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "show",
+        "36244fd0a543456cfd7e2487d790ebe2fce2c19e:apps/android/release-scope.json"
+      ],
+      "result": "passed",
+      "evidence": "Actual source-read command. The python3 stdin audit additionally invokes git show for every inventory-pinned path at this revision."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Inventory generation and JSON/pin validation; no native/product checks invoked."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Rechecked every source/test/fixture hash against git show; matched accepted hosts/core baseline fixture identities; JSON schema_version1/18 unique U rows/target/write scope/digest validated."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Assigned-base XML audit of all 63 uses-permission/SDK permission declarations; retained full Android/tools attributes and explicit merge operations. F-Droid BILLING tools:node=remove recorded as removal; merged artifact permissions remain null/unrun."
+    }
+  ],
+  "inspection_summary": "18 U rows; 116 source pins, 125 test source pins, 767 literal test case IDs, 32 fixture pins. Assigned-base source only. Source declarations are not executed qualification.",
+  "observations": [],
+  "limitations": [
+    "No Gradle/build/install/device/app/provider/user-data/credential operation; test availability only.",
+    "Coordinator documentation checkout drift recorded per source pin; source authority remains assigned git revision.",
+    "Literal function case IDs exclude runtime parameter expansion.",
+    "Artifact dependency/manifest/DEX exclusions are source gate obligations, not signed artifact results.",
+    "Manifest permission declarations are merge inputs. Explicit tools:node removal/replacement and other attributes are retained; merged/requested artifact permissions are unqualified."
+  ],
+  "remaining_qualification": [
+    "Independent source/inventory review accepted; successor/native/artifact behavior remains unqualified.",
+    "Native Release packaged/offline Effect/Hermes/headless bridge host has not been created or executed; cold Worker startup/expiry/cancel/teardown remains pending.",
+    "Physical HC grants/revoke/history/background/route consent and HC absent/outdated states pending.",
+    "Physical kill/reboot/first unlock/force-stop/clock changes/exact alarm/battery/foreground limits and frozen residual recovery pending.",
+    "Signed Play/F-Droid APK exclusion, reproducibility, billing/restore/offline/pending/revoked entitlement and migration/once-only accounting qualification pending.",
+    "Wear remains deferred/unpublished; Pixel Watch/Samsung physical and signed release/store qualification pending.",
+    "Shared Setup cross-platform physical interoperability and TalkBack/large text/RTL/Back/adaptive/localization qualification pending.",
+    "Native tagged report/share/cancellation structure and no-side-effect validation require executed tests; no new physical receipts.",
+    "All future P/L/S/H personal-data/cloud/agent capabilities require separate implementation, source admission and host/client/service receipts."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7"
+  },
+  "independent_review": {
+    "scope": "All18 U rows, Play/F-Droid/deferred Wear, SDK/permission/cold entrypoint/state/commerce/contract/source and test obligations reviewed.",
+    "evidence": "Rehashed275 unique source pins and verified767 literal Test functions; raw inventory digest matched. Reviewed all63 exact manifest permission declaration attributes and merge operations against assigned-source XML after correction; F-Droid billing removal explicit. Native/build/merged artifacts remain unrun.",
+    "resolved_finding": "Raw permission list omitted tools:node removal semantics; corrected declaration/merge metadata without product source changes."
+  }
+}

@@ -2837,7 +2837,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 20,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
@@ -2850,14 +2850,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json"
+        ]
       }
     },
     {
@@ -2927,7 +2929,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 21,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_host",
         "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
@@ -2940,14 +2942,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json"
+        ]
       }
     },
     {
@@ -3380,8 +3384,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 22,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/cloud.json",
+          "docs/migration/effect-refactor/receipts/BASE-CLOUD.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -4988,8 +5001,23 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PORTABLE-CI.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 91,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          ".github/workflows/core-typescript-ci.yml",
+          ".github/workflows/README.md",
+          "Makefile",
+          "docs/migration/effect-refactor/inventories/portable-ci-result.json",
+          "docs/migration/effect-refactor/receipts/PORTABLE-CI.json"
+        ],
+        "reserved_resources": [
+          "root-makefile",
+          "portable-ci-workflow"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
