@@ -13,6 +13,8 @@
 
 Read the nearest component `AGENTS.md` before changing files in a component. Keep component build commands, lockfiles, and generated artifacts scoped to that component.
 
+For the Effect/React refactor, personal-data integration, or hosted export/MCP work, start with `docs/architecture/javascript-unified-layer-research.md`. Select a bounded task from its execution manifest and read the linked design sections for that task. Existing component instructions apply until their implementation is deliberately updated.
+
 ## Cross-platform product and contract policy
 
 Apple and Android should remain unified whenever their operating systems expose semantically compatible capabilities. Read `docs/architecture/cross-platform-unification-policy.md` before changing a mobile feature, metric, setting, export, API behavior, automation surface, or public terminology.
