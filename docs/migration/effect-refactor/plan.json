@@ -792,7 +792,7 @@
         "H04",
         "H07"
       ],
-      "resolver_task": null,
+      "resolver_task": "CLOUD-TOPOLOGY-CANDIDATE",
       "resolution_criteria": "Select a candidate provider/runtime/storage/key/region topology against concrete streaming, SQL/query isolation, recovery and cost requirements. Actual provider limits, load, keys, region and deployed recovery are separately qualified in H01/H07/V11/V13.",
       "resolution": null,
       "record_path": null,
@@ -22662,7 +22662,7 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/personal_codecs",
         "base_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
@@ -22981,13 +22981,15 @@
         {
           "cwd": "apps/cli",
           "argv": [
-            "npm",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
             "run",
             "check"
           ],
           "availability": "existing",
-          "executed_during_planning": false,
-          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+          "execution_owner": "/root/android_release_host",
+          "credited_from": "CORE-COHORT-IOS-ELIGIBILITY exclusive authorized integration",
+          "purpose": "175tests=105retained+70discovery,84 actual guard negatives with exact43/26 core packed authority."
         }
       ],
       "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
@@ -22998,13 +23000,19 @@
       "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
+        ]
       },
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cli-discovery-final-root-review.json",
+          "sha256": "d97eb5c5bc5c531c3aa810b34a726e5311f69bd4bd60ff5ad4d98ca6598e1abf"
+        }
       },
       "blocker": null,
       "priority": 70,
@@ -23076,7 +23084,32 @@
           "path": "/private/tmp/healthmd-cli-discovery-root-source-review.json",
           "sha256": "0015a6b0013d1f9d74e9f6f79b1ceccb48213c20411e1b9937204aca779040ad"
         },
-        "actual_checks_pending": true
+        "actual_checks_pending": false
+      },
+      "verification_command_reconciliation": {
+        "original_logical_verification": [
+          {
+            "cwd": "apps/cli",
+            "argv": [
+              "npm",
+              "run",
+              "check"
+            ],
+            "availability": "existing",
+            "executed_during_planning": false,
+            "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+          }
+        ],
+        "reason": "Same frozen3source bytes compiled and executed under explicitly authorized exclusive integration task, credited to actual owner. No redundant author build requested after accepted full checks and independent root replay."
+      },
+      "accepted_integration_execution": {
+        "task_id": "CORE-COHORT-IOS-ELIGIBILITY",
+        "commit": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+        "core_inputs": 43,
+        "core_outputs": 26,
+        "author_check_log_sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "independent_root_replay_log_sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+        "scope": "Private local discovery only; no resource allocation/evaluator/deferred execution/currentgrant/public parser/renderer or transport qualification. Historical source-only gates and authority remain preserved."
       }
     },
     {
@@ -24999,6 +25032,116 @@
         "status": "approved",
         "by": "/root",
         "permission": "Run exactly three declared physical verification argv sequentially: core check, offline CLI install-links, CLI check. Timeout180s per command and16MiB output cap; exclusive3 builder/input leases. Preserve failures, stop on unrelated source/artifact drift or non-scoped errors. No dependency/lock/native/public/source semantics/profile changes."
+      }
+    },
+    {
+      "id": "CLOUD-TOPOLOGY-CANDIDATE",
+      "title": "Select a costed US cloud candidate topology",
+      "stream": "cloud_release",
+      "phase": "M00",
+      "kind": "decision",
+      "outcome": "One primary-source technical topology and workload-priced infrastructure recommendation for a US-first 1000-DAU cloud, preserving separately qualified operational and owner policy choices.",
+      "prerequisites": [
+        "BASE-CLOUD",
+        "BASE-HOST",
+        "BASE-CORE",
+        "CLOUD-FAULT-MODEL"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "H00",
+        "H01",
+        "H03",
+        "H04",
+        "H07",
+        "C18",
+        "C22"
+      ],
+      "risk_ids": [
+        "F17",
+        "F18",
+        "F19",
+        "F20"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md",
+        "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json"
+      ],
+      "shared_resources": [
+        "cloud-topology-candidate-decision"
+      ],
+      "acceptance": [
+        "Compare concrete Node/Effect/PostgreSQL/private objects/regional key and Worker/D1/R2 topology against immutable consent/isolation/streaming/current per-page grant/frontier/recovery/erasure requirements using current primary sources. Correct current US-jurisdiction facts without inferring code/secrets/queues/keys residency from object jurisdiction.",
+        "Select a technical candidate architecture with runtime, region, SQL/object/key separation, least-privilege roles, transaction/cancellation boundaries and provider-adapter proof obligations. Actual deployment/load/keys/copies/residency/recovery remain unqualified.",
+        "Cost an explicit 1000-cloud-active-user workload separately from 1000 app DAU: storage/history/growth/query/row/crypto/network/backup/log assumptions and growth sensitivity. Reproducible arithmetic, current dated primary prices, ranges and exclusions; no measured capacity claim.",
+        "Record root recommended 500USD monthly planning allowance and 200\u2013300USD controlled-beta range as recommendation only. Owner US-first preference recorded; no accepted spending cap, pricing policy, identity/retention/grants defaults or external spend/deployment.",
+        "Save one cited Markdown research note and a sanitized planning receipt with exact raw source pins, candidate alternatives/tradeoffs/open owners/proof matrix and reproducible path+NUL+bytes+NUL patch digest; independent final review before technical choice acceptance."
+      ],
+      "verification": [],
+      "fixture_inputs": "Accepted cloud baseline and43 independent cloud fault cases; historical pilot is source evidence only. Public scratch preflights /private/tmp/healthmd-cloud-topology-personal-preflight.json SHAe3a075fc7c27e7258083b5c64ca18a6dc30fe2aa1165f3c51a0b9188835cd799, AWS1000 budget /private/tmp/healthmd-aws-1000dau-budget.txt SHA285be0985d7ea0c9e84c944a02d6f2cbf13cf36fc6e13f4ccd5fd7048f171c52, CF1000 /private/tmp/healthmd-cloudflare-1000-cloud-user-budget.json SHA360fc09bf6a0bbcbdf0ae97dabfde1ea0eb88b0fbfc9cb93dc679cd9abbc124d. Independently verify official pricing/source claims; do not inherit scratch as owner policy.",
+      "consumers": "Future H01/H03/H04/H07 Effect hosted adapters and deployment/operational matrix; local account-free/native/Practice/Wake/website boundaries retained.",
+      "target": {
+        "platform": "source_only",
+        "channel": "development",
+        "profile": "US candidate topology and 1000-cloud-user cost model"
+      },
+      "rollback": "Revert candidate note and technical recommendation without production/account/data/service mutation. All previous source authority and alternative evidence retained.",
+      "deletion_gate": "No provisioning/purchases/deployment/public promises/region qualification/owner policy/release or Rust retirement.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json",
+      "reviewer_role": "independent cloud architecture and price-model reviewer",
+      "priority": 69,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md",
+          "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json"
+        ],
+        "reserved_resources": [
+          "cloud-topology-candidate-decision"
+        ]
+      },
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "planning",
+        "status": "pending",
+        "receipts": []
+      },
+      "proof_class": "planning",
+      "choice_dependencies": [
+        {
+          "id": "Q-CLOUD-TOPOLOGY",
+          "role": "Resolve technical candidate only after independent review; H01/H07 actual provider proof remains open",
+          "not_global_block": true
+        },
+        {
+          "id": "Q-CLOUD-REGION",
+          "role": "Owner US preference selected; full actual regional inventory is a future proof",
+          "not_global_block": true
+        }
+      ],
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+        "canonical_card_sha256": "d1a5bfb9d0afbcd19116cace3b32f2b98857e1f9192c3afa7ebe1dd482cb1a30",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-cloud-topology-preclaim-card.json",
+        "scope": "One primary-cited source-only technical note and receipt. No code/dependency/production/provider/account/device/data writes; no owner budget acceptance inferred. Complete separate actual qualification and open product owners preserved."
       }
     }
   ]

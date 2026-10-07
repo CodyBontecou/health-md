@@ -1,0 +1,3411 @@
+{
+  "task_id": "CLI-DISCOVERY-NORMALIZER",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "aa563e6de291e7da746268e4fddef4296d70e35d",
+  "patch_digest": "b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+  "patch_digest_method": "SHA256 sorted three nonreceipt claimed paths, each UTF8 repository-relative path+NUL+raw current file bytes+NUL; receipt excluded; vector immutable",
+  "changed_paths": [
+    "apps/cli/src/surfaces/discovery-normalizer.ts",
+    "apps/cli/tests/surfaces/discovery-normalizer.test.ts",
+    "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+    "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
+  ],
+  "inputs": {
+    "source_pins": [
+      {
+        "path": "AGENTS.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 6129,
+        "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "GLOSSARY.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3868,
+        "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-research.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 13361,
+        "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 284562,
+        "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/core-cli.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 5578,
+        "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/templates.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 10054,
+        "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/cli.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 347600,
+        "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/core.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 95633,
+        "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 12304,
+        "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 26431,
+        "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 145883,
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 33855,
+        "sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 27886,
+        "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 34945,
+        "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 124059,
+        "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 139864,
+        "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/AGENTS.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 860,
+        "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/docs/typescript-candidate.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 7580,
+        "sha256": "1b7898390cf04c276a285b60fee5c09215640ca95618b94c9abb73f756c3490b",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/package.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 880,
+        "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/package-lock.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 28291,
+        "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/scripts/build-candidate.mjs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 1574,
+        "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/scripts/check-candidate.mjs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 35746,
+        "sha256": "aca2e32e0047fc397c9bde572f3464b17a4482589d6a1a986a6b0bda3efd8de3",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tsconfig.build.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 144,
+        "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tsconfig.test.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 123,
+        "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 110543,
+        "sha256": "7f6be243c49085ea188adf739b829d968d8330b196a7e2317a043d4a8e2ddf32",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 42824,
+        "sha256": "f71d47555df981fbbc27f70bec6746a40846b6287f3f1200f2d9a6aac95456e0",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 27301,
+        "sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 17008,
+        "sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 29781,
+        "sha256": "7ffedba6a33ee4111a993c5b6091da1b309d6e3ccc02d7a3ed64374b42e62afb",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 17363,
+        "sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 2531,
+        "sha256": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 52174,
+        "sha256": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 58209,
+        "sha256": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-operations/src/model.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 1129,
+        "sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/src/cli/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 7155,
+        "sha256": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/src/mcp/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 6487,
+        "sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/normalize.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 2808,
+        "sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 8929,
+        "sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 116261,
+        "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tests/cli-query-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 4412,
+        "sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tests/mcp-query-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3586,
+        "sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tests/candidate-api-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3176,
+        "sha256": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6",
+        "assigned_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/OP-CATALOG.json",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "bytes": 17512,
+        "sha256": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/catalog.ts",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "bytes": 5539,
+        "sha256": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/tests/catalog.test.ts",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "bytes": 6926,
+        "sha256": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/README.md",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "bytes": 2988,
+        "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "assigned_git_current_equal": true
+      },
+      {
+        "path": "apps/cli/tsconfig.json",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "bytes": 342,
+        "sha256": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+        "assigned_git_current_equal": true
+      }
+    ],
+    "preclaim_card": {
+      "path": "/private/tmp/healthmd-cli-discovery-preclaim-card.json",
+      "sha256": "7bc4960e735984d2976da1719b50c3b016fdf8d58760585a7ac5136f97b71f3d"
+    },
+    "packet": {
+      "path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+      "sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+      "pointer": "#/children/0"
+    },
+    "frozen_vector": {
+      "path": "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+      "sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+      "bytes": 98121,
+      "count": 64,
+      "packet_minimum_count": 6
+    },
+    "runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "executed": true,
+      "execution_owner": "/root/android_release_host",
+      "independent_replay_owner": "/root",
+      "scope": "Physical pinnedNode/npm authorized integration; not executed by this receipt author",
+      "source_only_checkpoint_executed": false
+    },
+    "source_checkpoint": {
+      "apps/cli/src/surfaces/discovery-normalizer.ts": {
+        "bytes": 15905,
+        "sha256": "0dccb2424625e049adfb4af400b39c55f0bde0226eeaa436a1a4a259836dd31c"
+      },
+      "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts": {
+        "bytes": 98121,
+        "sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      },
+      "apps/cli/tests/surfaces/discovery-normalizer.test.ts": {
+        "bytes": 10479,
+        "sha256": "ac0b33a834a5193ed9d4596c98183aebdf9a85deb26228d9e86f130abdaa71f2"
+      }
+    },
+    "fixture_review_before_implementation": {
+      "status": "accepted",
+      "reviewer": "/root/android_release_host",
+      "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+78ee801186742725c3c6d8a6d726e8f54561d0d244a0230c93c92da3d5d6708e",
+      "vector_raw_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+      "literal_count": 64,
+      "evidence": {
+        "path": "/private/tmp/healthmd-cli-discovery-normalizer-stage1-independent-review.json",
+        "sha256": "82680bf60e042c6ff9f01f880a235b9cae68c93c407fd57a88d83bae36b16f2e",
+        "current_git_pins": 47,
+        "symbol_test_line_pins": 15,
+        "inventory_pointers": 3,
+        "minimum_packet_cases": 6
+      },
+      "scope": "Private local discovery decisions and owned trusted parser/issuer boundary only; fake parser/closed private decision bytes do not qualify complete public clap/TS parser or public stdout/json/schema/human rendering."
+    },
+    "implementation_clearance": {
+      "status": "approved_source_only",
+      "by": "/root",
+      "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+      "permission": "After reviewer completes eligibility supplemental findings, implement exact private source/test against frozen64 literals with no frozen expectation edits. No builds/npm/typecheck/install/common outputs/CLIguard/cohort/native until accepted CORE-COHORT-IOS-ELIGIBILITY and explicit builder/input lease reacquisition. Record partial source checkpoint then await approved emitted check; public launchers/parser/wire remain unchanged.",
+      "build_permitted": false,
+      "requires_accepted_task": "CORE-COHORT-IOS-ELIGIBILITY"
+    },
+    "source_pins_scope": "47 historical current/assignedGit input pins at aa563e6 remain the frozen source authority; successor guard/docs/cohort and actual emitted bytes recorded separately, never silently substituted.",
+    "accepted_current_integration_authority": {
+      "commit": "b8922e877",
+      "receipt": {
+        "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "bytes": 171341,
+        "sha256": "2aeb43dc54043fef42e8f2ace7ddafb46c915d54b659034e2b1fc74143f207c0"
+      },
+      "review": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5+7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+        "evidence": {
+          "path": "/private/tmp/healthmd-core-cohort-ios-final-root-review.json",
+          "sha256": "b3cf5075f33c03d418a4c3d6fe205775709341efa59ae06f545ab6d274c207dc"
+        }
+      },
+      "cohort": {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+        "bytes": 47904
+      },
+      "core_input_count": 43,
+      "core_output_count": 26,
+      "core_input_pins": {
+        ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+        "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "src/location/point-projection.ts": "ca9fffbc5bdb1af9c261cd084251ad905f2cd911173d4792b482bb8c499aa7d3",
+        "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "src/operations/personal-slice.ts": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+        "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "src/usage-mobile/ios-eligibility.ts": "92b8181ffbb5c3df2986449e18108a753516bdaabbf69629f4b9ac0593673017",
+        "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "tests/combined-slice-vectors.ts": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "tests/combined-slice.test.ts": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+        "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+        "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "tests/location-point-projection-vectors.ts": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+        "tests/location-point-projection.test.ts": "4e84fce04de24da82c3d00905ba0daf6757fc256aee461b539cc86ec6d7894da",
+        "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+        "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "tests/usage-mobile-ios-eligibility-vectors.ts": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "tests/usage-mobile-ios-eligibility.test.ts": "01c83101c70411b6e83134140704da57ea47d22f2200c0056cf79db35ff57cfc",
+        "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "core_output_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/location/point-projection.d.ts": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477",
+        "dist/core/location/point-projection.js": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/personal-slice.d.ts": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091",
+        "dist/core/operations/personal-slice.js": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268",
+        "dist/core/usage-mobile/ios-eligibility.d.ts": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9",
+        "dist/core/usage-mobile/ios-eligibility.js": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+      },
+      "current_guard": {
+        "sha256": "aca2e32e0047fc397c9bde572f3464b17a4482589d6a1a986a6b0bda3efd8de3",
+        "bytes": 35746
+      },
+      "current_documentation": {
+        "sha256": "1b7898390cf04c276a285b60fee5c09215640ca95618b94c9abb73f756c3490b",
+        "bytes": 7580
+      },
+      "actual_cli_emitted_files": {
+        "dist/candidate/candidate-host.d.ts": {
+          "sha256": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+          "bytes": 1398
+        },
+        "dist/candidate/candidate-host.js": {
+          "sha256": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+          "bytes": 2126
+        },
+        "dist/candidate/cli/query.d.ts": {
+          "sha256": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d",
+          "bytes": 1728
+        },
+        "dist/candidate/cli/query.js": {
+          "sha256": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74",
+          "bytes": 6222
+        },
+        "dist/candidate/mcp/query.d.ts": {
+          "sha256": "f57542998729efec35101b721e065820878ab111c9e9ff4106df8fb6484a47fb",
+          "bytes": 2247
+        },
+        "dist/candidate/mcp/query.js": {
+          "sha256": "c9a5888069e5bb126bf6bbe4104b63cf192f6040a11b33817ea9dce99b72f423",
+          "bytes": 5026
+        },
+        "dist/candidate/surfaces/discovery-normalizer.d.ts": {
+          "sha256": "a2de83654c965454a55fff13cf04ffc74e1b0ae5c111d816f20687ef73bba3ed",
+          "bytes": 3847
+        },
+        "dist/candidate/surfaces/discovery-normalizer.js": {
+          "sha256": "bbfba1b0c743062a2546d085dfe4a3bface84d825efe62e96cbd03719e960b6a",
+          "bytes": 13267
+        },
+        "dist/test-metafile.json": {
+          "sha256": "2cc56b4b407ae8411e0f6a7fa50392abf5a7c138fcda0961a256c26507076470",
+          "bytes": 29054
+        },
+        "dist/tests/candidate-api.test.js": {
+          "sha256": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+          "bytes": 7645
+        },
+        "dist/tests/candidate-host.test.js": {
+          "sha256": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+          "bytes": 9686
+        },
+        "dist/tests/cli-query.test.js": {
+          "sha256": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70",
+          "bytes": 21461
+        },
+        "dist/tests/mcp-query.test.js": {
+          "sha256": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240",
+          "bytes": 30226
+        },
+        "dist/tests/shared-slice-parity.test.js": {
+          "sha256": "e48f38575a3cf08ba19085259d9e36df3bb2842836fbfff266fbfdbfeb944a0c",
+          "bytes": 38112
+        },
+        "dist/tests/surfaces/discovery-normalizer.test.js": {
+          "sha256": "477e264907c9e04b28272349235e7de35689fa96dfa699380c085da4e17395d7",
+          "bytes": 93990
+        }
+      },
+      "source_files_reverified_unchanged": {
+        "apps/cli/src/surfaces/discovery-normalizer.ts": {
+          "sha256": "0dccb2424625e049adfb4af400b39c55f0bde0226eeaa436a1a4a259836dd31c",
+          "bytes": 15905
+        },
+        "apps/cli/tests/surfaces/discovery-normalizer.test.ts": {
+          "sha256": "ac0b33a834a5193ed9d4596c98183aebdf9a85deb26228d9e86f130abdaa71f2",
+          "bytes": 10479
+        },
+        "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts": {
+          "sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+          "bytes": 98121
+        }
+      },
+      "old40_input_and24_output_authority_retained": true,
+      "private_discovery_not_part_of_core_authority": true,
+      "source_review": {
+        "path": "/private/tmp/healthmd-cli-discovery-root-source-review.json",
+        "bytes": 1354,
+        "sha256": "0015a6b0013d1f9d74e9f6f79b1ceccb48213c20411e1b9937204aca779040ad"
+      }
+    }
+  },
+  "target": {
+    "channel": "development",
+    "platform": "portable",
+    "profile": "private synthetic discovery-normalizer"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+      "result": "passed",
+      "evidence": "Independent fixture review82680bf6 accepted64 source-derived literals before implementation; source-only root review0015a6b0 accepted exact b1c9253 patch before integration. Physical CLI check and independent emitted replay now pass; full parser/render byte parity explicitly deferred.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+      "result": "passed",
+      "evidence": "Exact three nonreceipt file hashes unchanged from frozen b1c9253; no production launcher/package/locks/public wire/schema/version/core exports edits by this task. Common full/read-only IDs imported from sole catalog owner; pure local discovery calls no evaluator.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+      "result": "passed",
+      "evidence": "Owned trusted fake parser descriptors are local metadata only, not grants.70 real emitted synthetic tests verify zero source/network/credential/acquisition/mutation calls and no authority publication; current grant/fence evaluation is deferred with complete execution routes.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+      "result": "passed",
+      "evidence": "64 independently frozen vectors plus6 supplemental properties pass: primitive argv/tty before properties/callbacks; private4KiB/argv/token bounds, canonical raw u16 tokens before Number, surrogate/NUL/malformed/Proxy/coercion/foreign ownership and fixed error redaction. Historical Rust parser grammar remains separately authoritative.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+      "result": "passed",
+      "evidence": "Private discovery has no allocation/Scope resource/slow sink/process/session/commit. Actual Effect cancellation test verifies parser is not called before interrupted work and zero acquisition. Async cleanup ACK/EOF/pipe/session/remote cancellation/durable ambiguity remain next execution-owner obligations, not qualified here.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+      "result": "passed",
+      "evidence": "64 fixed decisions retain Health14 normal paths+featureHTTP metadata,21full/13read-only common IDs, local query kinds/defaults/guidance/error/exit/noecho; donor40 remains separate.175 CLI tests retain105 prior cases; no claim complete public tools/CLI runtime.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    },
+    {
+      "criterion": "Discovery route is non-network/non-credential/non-mutating. Full command/date/selection/pairing lexemes/default aliases remain immutable catalog authorities; this child handles local discovery edge only. Complete query/export normalizers and actual pairing mutation separately assigned.",
+      "result": "passed",
+      "evidence": "Owned fake flow exercises corrected unknown query without arguments as local_query_catalog exit0 recognizedfalse request_sentfalse and fixed noecho catalog; incomplete metadata paths avoid transport validation/execution. Complete query/export/date/selection/pairing execution deferred.",
+      "scope": "private local discovery only; deferred public/execution obligations listed under remaining_qualification"
+    }
+  ],
+  "checks": [
+    {
+      "name": "cli-check",
+      "cwd": "apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "environment": {
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "timeout_seconds": 180,
+      "combined_output_cap_bytes": 16777216,
+      "exit_code": 0,
+      "result": "passed",
+      "supervisor_failure": null,
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      },
+      "execution_owner": "/root/android_release_host",
+      "credited_from": "CORE-COHORT-IOS-ELIGIBILITY accepted integration receipt",
+      "logical_argv": [
+        "npm",
+        "run",
+        "check"
+      ]
+    },
+    {
+      "name": "independent-emitted-cli-test-replay",
+      "cwd": "apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "test"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "execution_owner": "/root",
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+        "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+        "bytes": 19498,
+        "tests": 175,
+        "filesystem_negative_cases": 84
+      },
+      "limit": "tests-only existing emitted artifacts and own finally-cleaned84 filesystemfixtures; no source/shared artifact rebuild or install. Guard final generic output mentions typecheck/build historically; this reviewer command did not rerun those phases.",
+      "credited_from": "CORE-COHORT-IOS-ELIGIBILITY accepted integration receipt",
+      "logical_argv": [
+        "npm",
+        "run",
+        "test"
+      ]
+    }
+  ],
+  "inspection_summary": "Exact frozen b1c9253 source/test/64vector patch accepted by root source review; authorized integration author compiled/typechecked and executed70 discovery tests within175 total CLI tests/84 guard negatives. Root independently replayed the same emitted175 tests. Author of this receipt performed read-only hash/log reconciliation and did not run these commands. Private local metadata/noI/O seam qualified; full parser/rendering/execution/native/public behavior remains deferred.",
+  "observations": [
+    {
+      "case_id": "source_pin_reconciliation",
+      "result": "passed",
+      "procedure": "Read each source path and compare raw SHA/size/current bytes to assignedGit and packet pins",
+      "expected": "42packet pins current/Git exact plus5additional source/prerequisite pins",
+      "observed": "47 current/assignedGit exact pins",
+      "evidence": "vector discoverySourcePins"
+    },
+    {
+      "case_id": "stage1_scope",
+      "result": "passed",
+      "procedure": "Author literal-only vector and partialreceipt under exact Stage1allowedpaths",
+      "expected": "No sourceimplementation/test/build/npm/install/native/commonoutput reads",
+      "observed": "Only vector+receipt written; fake parser stimuli sourced from retainedRust; candidate parser output never executed",
+      "evidence": "vector types/catalog/contract/grammar/literal expected_decision_utf8"
+    },
+    {
+      "case_id": "locators_and_inventory_pointers",
+      "result": "passed",
+      "procedure": "Read11 childsymbol and4 source test declaration exactlines; hash UTF8withoutLF; resolve3 selected accepted inventory pointers",
+      "expected": "All15locator lineSHAs and selected inventory fields resolve unchanged",
+      "observed": "11symbols/4tests exact; cli/workflows0/catalog inventory pointers resolve; no tests executed",
+      "evidence": "accepted child0 source_symbol_refs/source_test_locators/accepted_inventory_fields"
+    },
+    {
+      "case_id": "source_only_checkpoint",
+      "result": "passed",
+      "procedure": "Write only authorized source/test/receipt, inspect complete source and fake harness, hash exact three-file patch and unchanged vector",
+      "expected": "Immutable64literal SHA3f109 unchanged; no build/typecheck/npm/install/common generated reads/CLIguard/native",
+      "observed": "Vector exact unchanged. Source+70 declared test cases authored but unrun. No execution. Code-only checkpoint awaiting independently accepted CORE-COHORT-IOS-ELIGIBILITY and explicit builder lease.",
+      "evidence": {
+        "patch_digest": "b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+        "files": {
+          "apps/cli/src/surfaces/discovery-normalizer.ts": {
+            "bytes": 15905,
+            "sha256": "0dccb2424625e049adfb4af400b39c55f0bde0226eeaa436a1a4a259836dd31c"
+          },
+          "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts": {
+            "bytes": 98121,
+            "sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+          },
+          "apps/cli/tests/surfaces/discovery-normalizer.test.ts": {
+            "bytes": 10479,
+            "sha256": "ac0b33a834a5193ed9d4596c98183aebdf9a85deb26228d9e86f130abdaa71f2"
+          }
+        }
+      }
+    },
+    {
+      "case_id": "discovery-query-no-operation",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery-query-synopsis-no-arguments",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery-reset-trust-incomplete",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery-json-human-conflict",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery-fixed-defaults",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery-unknown-operation-not-echoed",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_metric_chart",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_training_alignment",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_workouts",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_coverage",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_compare_periods",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_training_evidence",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_query",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-schema-healthmd_evidence_packet",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-nonquery-operation-is-catalog",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-unknown-with-arguments-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-no-operation-with-arguments-is-catalog",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-nearby-before-platform-validation",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-terminal-human",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-forced-json-terminal",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "query-forced-human-pipe",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-direct",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-mcp",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-setup",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-resume",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-cancel",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-direct-unpair",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-export",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "incomplete-extract",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "export-dates-no-mode",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "export-mode-no-dates",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "extract-date-no-scope",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "extract-scope-no-date",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "export-complete-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "extract-alias-complete-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "export-device-settings-alias-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "reset-confirm-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "mcp-schema-deferred-local-owner",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "unknown-argument-no-echo",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "status-port-zero-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "status-port-max-deferred",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "retained-text-welcome",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "retained-text-help",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "retained-text-version",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-nonprimitive-proxy",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-nonprimitive-array",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-nonprimitive-object-coercion",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-invalid-tty-proxy",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-wire-over4096",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-argv-over64",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-token-over1024",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-malformed-json",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-nested-json",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-number-token",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-lone-surrogate",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-nul-token",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-issuer-fractional-port",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-issuer-underflow-port",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-issuer-noncanonical-zero",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-issuer-oversize-port",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-parser-foreign-owned",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-parser-proxy-result",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-parser-raw-record-result",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "private-parser-throw-redacted",
+      "result": "passed",
+      "procedure": "Integration owner executes compiled owned fake discovery flow against immutable literal stimulus and exact17-field JSON+LF expected decision; no expected-case lookup used by implementation. Root independently replays emitted tests.",
+      "expected": "Exact frozen decision bytes/fields, source catalog/guidance/noecho/error/exit semantics and zero forbidden I/O/callback/ownership effects as applicable.",
+      "observed": "Actual named emitted test passed in both175-test runs;64 frozen literals unchanged.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "independent_replay_owner": "/root",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        },
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b"
+      }
+    },
+    {
+      "case_id": "discovery admits private JSON escapes/whitespace and snapshots only primitive arguments",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "discovery encoder rejects revoked proxies and coercion objects without effects",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "discovery issuer rejects nonprimitive/extra/nested/rounded tuples before issuing ownership",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "discovery owned result mutation cannot alter later encoding or catalog filtering",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "discovery observes Effect cancellation before a pure parser callback without acquisition",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "discovery factory and result expose only the frozen metadata boundary",
+      "result": "passed",
+      "procedure": "Execute supplemental compiled property/ownership/interruption stimulus in real Effect harness, inspect counters and frozen outputs.",
+      "expected": "Property assertions hold; no coercion/Proxy effect or authority/I/O/acquisition; mutation does not alter owned metadata and interrupted work does not invoke parser.",
+      "observed": "Named emitted test passed; same six properties replayed by root.",
+      "evidence": {
+        "execution_owner": "/root/android_release_host",
+        "check_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        },
+        "replay_log": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+          "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+          "bytes": 19498,
+          "tests": 175,
+          "filesystem_negative_cases": 84
+        }
+      }
+    },
+    {
+      "case_id": "receipt_finalization_read_only_reconciliation",
+      "result": "passed",
+      "procedure": "Hash all3 source files/all15 emittedCLI files/actual logs and root source report against accepted integration authority; no tool execution beyond read-only inspection.",
+      "expected": "Frozen b1c9253 source/vector exact;70 discovery+105 retained tests,84 negatives,43coreinputs26outputs; final remaining_qualification list.",
+      "observed": "All pins exact; both log counts175/0fail and70 discovery. Only own receipt changed; previous checkpoint retained as history.",
+      "evidence": {
+        "execution_owner": "/root/personal_codecs",
+        "source_patch_digest": "b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+        "integration_receipt": {
+          "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+          "bytes": 171341,
+          "sha256": "2aeb43dc54043fef42e8f2ace7ddafb46c915d54b659034e2b1fc74143f207c0"
+        }
+      }
+    }
+  ],
+  "contract_findings": [
+    "Accepted packet has six minimum literals, not seven; root confirmed counting correction.",
+    "Complete injected Rust-parser descriptor contract accepted as localgate scope by root; future concrete SPLIT-CLI-PARSER-GRAMMAR packet/owner/trigger remains unassigned, not O01/publicgrammar complete.",
+    "Exact public JSON/schema/human/color/TTY rendering belongs CLI-RESULT-ENVELOPE; private decision expected bytes are distinct.",
+    "Transport validation comes after localguidance; nearby querydiscovery remains0 and no execution.",
+    "Export device-settings alias is not an extract flag; full source grammar retained."
+  ],
+  "limitations": [
+    "Private4KiB argv/count64/token1024 limits are synthetic private admission policy, unmeasured for production and not new public CLI restrictions.",
+    "Injected fake parser descriptors do not establish full clap/OsString/nonUnicode grammar, source grants or actual I/O.",
+    "Fixed private17-field decision JSON+LF is not exact public stdout/JSON/schema/human/color/TTY serializer qualification.",
+    "Discovery allocates no resource; cancellation test proves pre-parser interruption only. Scope cleanup ACK/pipe/process/EOF/remote cancellation and durable commits are separately deferred.",
+    "Health14+featureHTTP, common21full13read-only and donor40 catalogs retain distinct scope.",
+    "No production/native/real-data/transport/pairing or release qualification. Checks credited to execution owners; no repeated build/install/test by this author."
+  ],
+  "remaining_qualification": [
+    {
+      "id": "full_parser",
+      "owner": "core_cli coordinator",
+      "next_packet": "SPLIT-CLI-PARSER-GRAMMAR",
+      "trigger": "before any TypeScript parser production replacement or public command grammar parity claim",
+      "proof": "full clap token/default/alias/UUID/u16/u64/date/selection/feature/help/version source-derived vectors, explicit OsString/nonUnicode profile, exact parser/error contracts; not completed by sourcefake descriptors"
+    },
+    {
+      "id": "rendering",
+      "owner": "CLI-RESULT-ENVELOPE",
+      "trigger": "before exact public stdout/error/schema/human/color/TTY byte parity",
+      "proof": "full source documents/serializer/renderer/environment profiles independently frozen"
+    },
+    {
+      "id": "query_export_execution",
+      "owner": "full_common_operations remaining SPLIT-SURFACES scope",
+      "trigger": "before executing deferred route",
+      "proof": "common OP-CATALOG/query/export owner; complete evaluator/state/source authorization separate"
+    },
+    {
+      "id": "future_core_changes",
+      "owner": "root separately reviewed cohort successor",
+      "trigger": "any further common input/output delta before CLI integration",
+      "proof": "Current43/26 accepted integration complete, prior40/24 retained; no self-update or guard relaxation."
+    }
+  ],
+  "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+    "evidence": {
+      "path": "/private/tmp/healthmd-cli-discovery-final-root-review.json",
+      "sha256": "d97eb5c5bc5c531c3aa810b34a726e5311f69bd4bd60ff5ad4d98ca6598e1abf"
+    }
+  },
+  "resolved_stage_history": [
+    {
+      "stage": "fixture_only",
+      "patch_digest": "78ee801186742725c3c6d8a6d726e8f54561d0d244a0230c93c92da3d5d6708e",
+      "receipt_raw_sha256": "02ffe026295c678325a9c13eeaef58a80c98d8ca18ff0eaf5488a99bcaf247bd",
+      "result": "accepted_before_implementation",
+      "review": {
+        "status": "accepted",
+        "reviewer": "/root/android_release_host",
+        "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+78ee801186742725c3c6d8a6d726e8f54561d0d244a0230c93c92da3d5d6708e",
+        "vector_raw_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+        "literal_count": 64,
+        "evidence": {
+          "path": "/private/tmp/healthmd-cli-discovery-normalizer-stage1-independent-review.json",
+          "sha256": "82680bf60e042c6ff9f01f880a235b9cae68c93c407fd57a88d83bae36b16f2e",
+          "current_git_pins": 47,
+          "symbol_test_line_pins": 15,
+          "inventory_pointers": 3,
+          "minimum_packet_cases": 6
+        },
+        "scope": "Private local discovery decisions and owned trusted parser/issuer boundary only; fake parser/closed private decision bytes do not qualify complete public clap/TS parser or public stdout/json/schema/human rendering."
+      }
+    },
+    {
+      "stage": "source_only_checkpoint",
+      "result": "accepted_source_checkpoint_only_before_integration",
+      "receipt_raw_sha256": "79808da0b084f2edce263d5e2a0eed58a366b274877ca8a4f23f13e2788bacc4",
+      "patch_digest": "b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+      "inspection_summary": "Source-only successor checkpoint against independently accepted64 immutable literals: primitive bounded argvJSON/tty, same-factory owned trusted parser issuer, fixed private output decision, retained metadata/defaults/query kind/incomplete-route ordering, no common execution or I/O.64 literal tests plus6 supplemental property/interface tests authored, none executed. Common catalog IDs imported from sole accepted core owner, no duplicate evaluator/catalog schema.",
+      "checks": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "result": "not_run",
+          "evidence": "Root source-only clearance: independently accepted CORE-COHORT-IOS-ELIGIBILITY successor and builder/input lease required before npm/build/typecheck/install/common-output reads/CLIguard. Tests and physical Effect identity unverified at checkpoint."
+        }
+      ],
+      "limitations": [
+        "Source checkpoint only: independent Stage1 accepted before code; final source/test review and all actual emitted checks pending.70 declared tests unrun.",
+        "New private argv/issuer budgets unmeasured and not productionCLI restrictions.",
+        "Parserfakes do not establish clap parity, hostOsString/nonUnicode behavior, health/native/grants or actual I/O.",
+        "Existing40/24cohort immutable; newer core requires separate independently reviewed refresh before CLIintegration.",
+        "Health14+featureHTTP/21full13readonly and donor40 remain distinct.",
+        "No syntax/typecheck/execution result is claimed; no generated core/CLI outputs read. Shared catalog import uses existing admitted common source owner; new full core cohort remains separately gated before CLI integration."
+      ],
+      "acceptance_results": [
+        {
+          "criterion": "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        },
+        {
+          "criterion": "Discovery route is non-network/non-credential/non-mutating. Full command/date/selection/pairing lexemes/default aliases remain immutable catalog authorities; this child handles local discovery edge only. Complete query/export normalizers and actual pairing mutation separately assigned.",
+          "result": "partial",
+          "evidence": "Stage1 closedinterface/source-derived private literals only; independent review and implementation/checks pending"
+        }
+      ],
+      "source_review": {
+        "path": "/private/tmp/healthmd-cli-discovery-root-source-review.json",
+        "bytes": 1354,
+        "sha256": "0015a6b0013d1f9d74e9f6f79b1ceccb48213c20411e1b9937204aca779040ad"
+      }
+    }
+  ],
+  "qualification_scope": "Bounded private local discovery-normalizer implementation and emitted synthetic tests only; final independent receipt review pending."
+}
