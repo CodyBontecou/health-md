@@ -377,6 +377,9 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
+      - name: Test iOS simulator selection policy
+        run: python3 scripts/tests/test_select_ios_simulator.py
+
       - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
@@ -385,17 +388,19 @@ jobs:
           IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
           echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          xcrun simctl bootstatus "${IOS_DESTINATION##*id=}" -b
 
       - name: Run UI smoke tests (iOS)
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          mkdir -p build/logs
+          mkdir -p build/logs build/test-results
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -resultBundlePath build/test-results/HealthMd-UI-Smoke-iPhone.xcresult \
             -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
@@ -419,6 +424,7 @@ jobs:
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -resultBundlePath build/test-results/HealthMd-UI-Profiles-iPhone.xcresult \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
@@ -440,46 +446,17 @@ jobs:
         run: |
           set -euo pipefail
 
-          IPAD_LINE=$(
-            xcrun simctl list devices available iOS \
-              | grep -E "iPad (Air|Pro)" \
-              | head -n 1 \
-              || true
-          )
+          mkdir -p build/logs build/test-results
+          IPAD_DESTINATION=$(scripts/select-ios-simulator.sh --device-family iPad --create-missing)
+          echo "Running App Review regression on ${IPAD_DESTINATION}"
+          xcrun simctl bootstatus "${IPAD_DESTINATION##*id=}" -b
 
-          if [[ -n "${IPAD_LINE}" ]]; then
-            IPAD_UDID=$(echo "${IPAD_LINE}" | sed -nE 's/.*\(([0-9A-Fa-f-]+)\).*/\1/p')
-          else
-            IPAD_DEVICE_TYPE=$(
-              xcrun simctl list devicetypes \
-                | grep -E "iPad Air 11-inch|iPad Pro 11-inch|iPad Air" \
-                | head -n 1 \
-                | sed -nE 's/.*\((com\.apple\.CoreSimulator\.SimDeviceType\.[^)]+)\).*/\1/p'
-            )
-            IOS_RUNTIME=$(
-              xcrun simctl list runtimes available \
-                | grep -E "^iOS " \
-                | tail -n 1 \
-                | sed -nE 's/.* - (com\.apple\.CoreSimulator\.SimRuntime\.iOS-[^)]+).*/\1/p'
-            )
-            if [[ -z "${IPAD_DEVICE_TYPE}" || -z "${IOS_RUNTIME}" ]]; then
-              echo "::error::No iPad device type or iOS runtime is available"
-              exit 1
-            fi
-            IPAD_UDID=$(xcrun simctl create "HealthMd CI iPad" "${IPAD_DEVICE_TYPE}" "${IOS_RUNTIME}")
-          fi
-
-          if [[ -z "${IPAD_UDID}" ]]; then
-            echo "::error::Could not resolve an iPad Simulator UDID"
-            exit 1
-          fi
-
-          echo "Running App Review regression on iPad ${IPAD_UDID}"
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
-            -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
+            -destination "${IPAD_DESTINATION}" \
             -configuration Debug-iOS \
+            -resultBundlePath build/test-results/HealthMd-UI-NoData-iPad.xcresult \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
@@ -498,7 +475,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-ui-build-logs
-          path: apps/apple/build/logs/build-ios-ui.log
+          path: |
+            apps/apple/build/logs/build-ios-ui.log
+            apps/apple/build/test-results/HealthMd-UI-*.xcresult
           retention-days: 14
 
   connectivity-package:
