@@ -62,17 +62,23 @@ const coreInputPins = {
   "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
   "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
   "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+  "src/location/point-projection.ts": "ca9fffbc5bdb1af9c261cd084251ad905f2cd911173d4792b482bb8c499aa7d3",
   "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
   "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+  "src/operations/personal-slice.ts": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
   "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
   "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
   "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
   "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+  "tests/combined-slice-vectors.ts": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+  "tests/combined-slice.test.ts": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
   "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
   "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
   "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
   "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
   "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+  "tests/location-point-projection-vectors.ts": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+  "tests/location-point-projection.test.ts": "4e84fce04de24da82c3d00905ba0daf6757fc256aee461b539cc86ec6d7894da",
   "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
   "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
   "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
@@ -96,30 +102,43 @@ const coreOutputPaths = [
   "dist/core/host-interfaces/faults.js",
   "dist/core/index.d.ts",
   "dist/core/index.js",
+  "dist/core/location/point-projection.d.ts",
+  "dist/core/location/point-projection.js",
   "dist/core/operations/catalog.d.ts",
   "dist/core/operations/catalog.js",
   "dist/core/operations/normalize.d.ts",
   "dist/core/operations/normalize.js",
+  "dist/core/operations/personal-slice.d.ts",
+  "dist/core/operations/personal-slice.js",
   "dist/core/operations/query.d.ts",
   "dist/core/operations/query.js",
   "dist/core/serialization/exact-json-numbers.d.ts",
   "dist/core/serialization/exact-json-numbers.js"
 ];
-const cohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json");
-const cohortSha256 = "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579";
+const cohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json");
+const cohortSha256 = "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853";
 async function auditCohort(path) {
   const bytes = await readFile(path);
   assert.equal(hash(bytes), cohortSha256, "reviewed_core_cohort_bytes_drift");
   const value = JSON.parse(bytes);
-  assert.equal(value.committed_source_sha, "ba5c644ebca4c028fe8d60feb580a5e668965341", "reviewed_core_committed_source_drift");
+  assert.equal(value.committed_source_sha, "37580ca24a6d352d0ee2d8df2eca58e64e316d49", "reviewed_core_committed_source_drift");
   assert.deepEqual(value.runtime, { node: "24.21.0", npm: "11.19.0" });
-  assert.equal(value.input_count, 34); assert.equal(value.output_count, 20);
-  assert.equal(Object.keys(coreInputPins).length, 34);
+  assert.equal(value.input_count, 40); assert.equal(value.output_count, 24);
+  assert.equal(Object.keys(coreInputPins).length, 40);
   assert.deepEqual(value.input_pins, coreInputPins, "reviewed_core_input_map_drift");
   assert.deepEqual(Object.keys(value.output_pins).sort(), coreOutputPaths, "reviewed_core_output_set_drift");
   return value;
 }
 const cohort = await auditCohort(cohortPath);
+async function auditPriorPersonalCohort(path) {
+  const bytes = await readFile(path);
+  assert.equal(hash(bytes), "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579", "reviewed_core_cohort_bytes_drift");
+  return JSON.parse(bytes);
+}
+const priorPersonal = await auditPriorPersonalCohort(resolve("../../", cohort.prior_personal_cohort_authority.cohort_path));
+assert.equal(priorPersonal.input_count, 34); assert.equal(priorPersonal.output_count, 20);
+for (const name of ["historical_registry_authority", "metadata_authority", "accepted_delta", "personal_delta", "prior_cohort_authority"])
+  assert.deepEqual(cohort[name], priorPersonal[name], "historical_personal_authority_changed");
 const source = resolve("../../packages/healthmd-core-ts");
 const installed = resolve("node_modules/@healthmd/core-ts");
 const sourceManifest = await readFile(join(source, "package.json"));
@@ -175,13 +194,40 @@ assert.equal(Object.keys(cohort.personal_delta.input_pins).length, 3);
 assert.equal(Object.keys(cohort.personal_delta.output_pins).length, 2);
 assert.equal(cohort.personal_delta.vector_sha256, "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a");
 assert.equal(cohort.personal_delta.vector_sha256, coreInputPins["tests/personal-codecs-vectors.ts"]);
-assert.deepEqual({ ...priorCohort.input_pins, ...cohort.personal_delta.input_pins }, coreInputPins, "qualified_personal_complete_inputs_drift");
-const artifacts = { ...priorArtifacts, ...cohort.personal_delta.output_pins };
-assert.deepEqual(artifacts, cohort.output_pins, "qualified_personal_delta_output_map_drift");
-assert.deepEqual(Object.fromEntries(Object.entries(personal.inputs.artifact_and_native_interface.actual_complete_emitted_pins).map(([path, digest]) => ["dist/core/" + path, digest])), artifacts, "qualified_personal_delta_artifact_authority_drift");
-assert.equal(Object.keys(artifacts).length, 20);
+assert.deepEqual({ ...priorCohort.input_pins, ...cohort.personal_delta.input_pins }, priorPersonal.input_pins, "qualified_personal_complete_inputs_drift");
+const personalArtifacts = { ...priorArtifacts, ...cohort.personal_delta.output_pins };
+assert.deepEqual(personalArtifacts, priorPersonal.output_pins, "qualified_personal_delta_output_map_drift");
+assert.deepEqual(Object.fromEntries(Object.entries(personal.inputs.artifact_and_native_interface.actual_complete_emitted_pins).map(([path, digest]) => ["dist/core/" + path, digest])), personalArtifacts, "qualified_personal_delta_artifact_authority_drift");
+assert.equal(Object.keys(personalArtifacts).length, 20);
 for (const [path, digest] of Object.entries(cohort.personal_delta.input_pins)) assert.equal(coreInputPins[path], digest);
 for (const [path, digest] of Object.entries(cohort.accepted_delta.input_pins)) assert.equal(coreInputPins[path], digest);
+// New private modules extend fixed byte authority only; no package export or semantic admission.
+const priorPersonalRefresh = await auditAuthority(cohort.prior_personal_cohort_authority);
+assert.equal(cohort.prior_personal_cohort_authority.receipt_sha256, "2b0eff4a2e4cd2e190353c8f88ea4eaa6b4325b856f403981aa77df0b3ed9a19");
+assert.deepEqual(priorPersonalRefresh.inputs.artifact_and_native_interface.committed_input_pins, priorPersonal.input_pins);
+assert.deepEqual(priorPersonalRefresh.inputs.artifact_and_native_interface.existing_built_emitted_pins, priorPersonal.output_pins);
+const location = await auditAuthority(cohort.location_delta);
+const combined = await auditAuthority(cohort.combined_delta);
+assert.equal(cohort.location_delta.receipt_sha256, "2709b73dfa64db2ba58e28b60cd9457e372e8e20c7e4175647927f750e167aca");
+assert.equal(cohort.combined_delta.receipt_sha256, "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f");
+assert.equal(cohort.location_delta.committed_source_sha, "62a1547eb6c856c55ca5731e20de7f27cef27fe7");
+assert.equal(cohort.combined_delta.committed_source_sha, "37580ca24a6d352d0ee2d8df2eca58e64e316d49");
+const locationArtifact = location.inputs.artifact_and_native_interface;
+const combinedArtifact = combined.inputs.artifact_and_native_interface;
+assert.deepEqual(relativeMap(locationArtifact.patch_files), cohort.location_delta.input_pins);
+assert.deepEqual(relativeMap(Object.fromEntries(Object.entries(combinedArtifact.patch_files).map(([path, pin]) => [path, pin.sha256]))), cohort.combined_delta.input_pins);
+for (const [authority, vectorPath] of [[cohort.location_delta, "tests/location-point-projection-vectors.ts"], [cohort.combined_delta, "tests/combined-slice-vectors.ts"]]) {
+  assert.equal(Object.keys(authority.input_pins).length, 3); assert.equal(Object.keys(authority.output_pins).length, 2);
+  assert.equal(authority.vector_sha256, coreInputPins[vectorPath]);
+}
+assert.deepEqual({ ...priorPersonal.input_pins, ...cohort.location_delta.input_pins }, locationArtifact.complete_current_input_pins);
+assert.deepEqual({ ...priorPersonal.output_pins, ...cohort.location_delta.output_pins }, locationArtifact.complete_emitted_pins);
+assert.deepEqual({ ...locationArtifact.complete_current_input_pins, ...cohort.combined_delta.input_pins }, coreInputPins);
+const artifacts = { ...personalArtifacts, ...cohort.location_delta.output_pins, ...cohort.combined_delta.output_pins };
+assert.deepEqual(artifacts, cohort.output_pins);
+assert.deepEqual(artifacts, combinedArtifact.complete_emitted_pins);
+assert.deepEqual(coreInputPins, combinedArtifact.complete_current_input_pins);
+assert.equal(Object.keys(artifacts).length, 24);
 assert.equal(hash(sourceManifest), coreInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 async function tree(directory, skipBins = false) {
   const files = [];
@@ -219,6 +265,7 @@ async function auditCore(directory) {
 }
 await auditCore(source); await auditCore(installed);
 // Exercise actual filesystem failures in disposable copies, never alter installed/source packages.
+const negativeIdentityCases = [];
 const temporary = await mkdtemp(join(tmpdir(), "healthmd-cli-identity-"));
 try {
   const inputCopy = join(temporary, "inputs");
@@ -297,13 +344,88 @@ try {
   await writeFile(unreviewedPersonal, JSON.stringify({ ...personal, review: { ...personal.review, status: "pending" } }));
   await assert.rejects(auditAuthority(cohort.personal_delta, unreviewedPersonal), /qualified_core_receipt_bytes_drift/);
   const absentCohort = join(temporary, "absent-cohort.json");
-  await assert.rejects(auditCohort(absentCohort), { code: "ENOENT" });
+  await assert.rejects(auditPriorPersonalCohort(absentCohort), { code: "ENOENT" });
   const tamperedCohort = join(temporary, "tampered-cohort.json");
-  await writeFile(tamperedCohort, JSON.stringify({ ...cohort, committed_source_sha: "unreviewed" }));
-  await assert.rejects(auditCohort(tamperedCohort), /reviewed_core_cohort_bytes_drift/);
+  await writeFile(tamperedCohort, JSON.stringify({ ...priorPersonal, committed_source_sha: "unreviewed" }));
+  await assert.rejects(auditPriorPersonalCohort(tamperedCohort), /reviewed_core_cohort_bytes_drift/);
   const unreviewedDelta = join(temporary, "unreviewed-delta.json");
   await writeFile(unreviewedDelta, JSON.stringify({ ...delta, review: { ...delta.review, status: "pending" } }));
   await assert.rejects(auditAuthority(cohort.accepted_delta, unreviewedDelta), /qualified_core_receipt_bytes_drift/);
+  // Record retained cases only after their actual filesystem assertions above complete.
+  negativeIdentityCases.push(...["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta", "missing-personal-source", "personal-source-edit", "personal-source-symlink", "personal-output-stale", "missing-personal-output", "extra-personal-output", "personal-output-symlink", "unreviewed-personal-receipt"]);
+  const sliceSourcePaths = [
+  "src/location/point-projection.ts",
+  "src/operations/personal-slice.ts",
+  "tests/combined-slice-vectors.ts",
+  "tests/combined-slice.test.ts",
+  "tests/location-point-projection-vectors.ts",
+  "tests/location-point-projection.test.ts"
+];
+  const sliceOutputPaths = [
+  "dist/core/location/point-projection.d.ts",
+  "dist/core/location/point-projection.js",
+  "dist/core/operations/personal-slice.d.ts",
+  "dist/core/operations/personal-slice.js"
+];
+  for (const path of sliceSourcePaths) {
+    const copy = join(temporary, "slice-inputs");
+    await rm(copy, { recursive: true, force: true });
+    for (const input of Object.keys(coreInputPins)) {
+      const target = join(copy, input); await mkdir(dirname(target), { recursive: true });
+      await writeFile(target, await readFile(join(source, input)));
+    }
+    await auditCoreInputs(copy);
+    await rm(join(copy, path));
+    await assert.rejects(auditCoreInputs(copy), /core_input_file_set_drift/);
+    negativeIdentityCases.push(`slice-source:${path}:missing`);
+    await writeFile(join(copy, path), "export {};\n");
+    await assert.rejects(auditCoreInputs(copy), /core_input_bytes_drift/);
+    negativeIdentityCases.push(`slice-source:${path}:edited`);
+    await rm(join(copy, path)); await symlink(join(source, path), join(copy, path));
+    await assert.rejects(auditCoreInputs(copy), /candidate_source_symlink_unreviewed/);
+    negativeIdentityCases.push(`slice-source:${path}:symlink`);
+  }
+  for (const path of sliceOutputPaths) {
+    const copy = join(temporary, "slice-outputs");
+    await rm(copy, { recursive: true, force: true }); await cp(installed, copy, { recursive: true });
+    await auditCore(copy);
+    await rm(join(copy, path));
+    await assert.rejects(auditCore(copy), /core_build_file_set_drift/);
+    negativeIdentityCases.push(`slice-output:${path}:missing`);
+    await writeFile(join(copy, path), "export {};\n");
+    await assert.rejects(auditCore(copy), /core_build_bytes_drift/);
+    negativeIdentityCases.push(`slice-output:${path}:stale`);
+    await rm(join(copy, path)); await symlink(join(installed, path), join(copy, path));
+    await assert.rejects(auditCore(copy), /candidate_build_symlink_unreviewed/);
+    negativeIdentityCases.push(`slice-output:${path}:symlink`);
+  }
+  const extraCopy = join(temporary, "slice-extra-output"); await cp(installed, extraCopy, { recursive: true });
+  await auditCore(extraCopy);
+  await writeFile(join(extraCopy, "dist/core/operations/unreviewed-slice.js"), "export {};\n");
+  await assert.rejects(auditCore(extraCopy), /core_build_file_set_drift/);
+  negativeIdentityCases.push("slice-extra-output");
+  await assert.rejects(auditCohort(join(temporary, "absent-slice-cohort.json")), { code: "ENOENT" });
+  negativeIdentityCases.push("slice-cohort:absent");
+  const changedCohort = join(temporary, "changed-slice-cohort.json");
+  await writeFile(changedCohort, JSON.stringify({ ...cohort, committed_source_sha: "unreviewed" }));
+  await assert.rejects(auditCohort(changedCohort), /reviewed_core_cohort_bytes_drift/);
+  negativeIdentityCases.push("slice-cohort:tampered");
+  for (const name of ["location_delta", "combined_delta"]) {
+    const authority = cohort[name]; const bytes = await readFile(resolve("../../", authority.receipt_path));
+    const copy = join(temporary, `${name}.json`);
+    await assert.rejects(auditAuthority(authority, copy), { code: "ENOENT" });
+    negativeIdentityCases.push(`slice-receipt:${name}:absent`);
+    await writeFile(copy, Buffer.concat([bytes, Buffer.from("\n")]));
+    await assert.rejects(auditAuthority(authority, copy), /qualified_core_receipt_bytes_drift/);
+    negativeIdentityCases.push(`slice-receipt:${name}:tampered`);
+    const value = JSON.parse(bytes);
+    await writeFile(copy, JSON.stringify({ ...value, review: { ...value.review, status: "pending" } }));
+    await assert.rejects(auditAuthority(authority, copy), /qualified_core_receipt_bytes_drift/);
+    negativeIdentityCases.push(`slice-receipt:${name}:unreviewed`);
+    await rm(copy);
+  }
+  assert.deepEqual(negativeIdentityCases, cohort.negative_fixture_catalog.cases.map(({ id }) => id), "frozen_negative_fixture_execution_drift");
+  assert.equal(negativeIdentityCases.length, 63);
 } finally { await rm(temporary, { recursive: true, force: true }); }
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
@@ -329,7 +451,7 @@ assert.equal(effects.length, 1, "duplicate_effect_installation");
 const core = await import(coreUrl); const host = await import(hostUrl);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
 console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(artifacts).length, qualifiedCoreInputs: Object.keys(coreInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta", "missing-personal-source", "personal-source-edit", "personal-source-symlink", "personal-output-stale", "missing-personal-output", "extra-personal-output", "personal-output-symlink", "unreviewed-personal-receipt"] }));
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));
