@@ -3370,7 +3370,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 30,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "e9e9697a476c962c9df2762334b9623955f1a6ba",
@@ -3383,14 +3383,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "e9e9697a476c962c9df2762334b9623955f1a6ba+67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json"
+        ]
       }
     },
     {
@@ -4912,7 +4914,7 @@
         "Record all unknown capacity/retention/provider guarantees as candidate without choosing product policy."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted BASE-CLOUD inventory raw SHAa02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b and exact retained source/fixtures/role/commit/profile maps; accepted BASE-HOST/BASE-CORE/CLI-CANDIDATE-HOST. Synthetic fault expected model only, independent of future implementation: reserve/receive/verify/seal/commit/project boundaries, ambiguous acknowledgments/cancel/replay, tenant/source/selection/date-generation overlap and receipt authority, credential/grant/source-purpose separation, complete authenticated unit/truncation/range checks, later delete/revoke outside old backup lineage suppression journal fail-closed restoration. Candidate numerical limits/retention/providers/policy choices explicit; no source-purpose grant inferred, no existing ledger mutation/provider/deploy/userdata. Three exact allowed paths, no code or shared schemas changed.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -4924,8 +4926,18 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 34,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+          "docs/migration/effect-refactor/decisions/cloud-fault-model.md",
+          "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",

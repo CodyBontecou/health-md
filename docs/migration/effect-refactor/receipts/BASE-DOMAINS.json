@@ -1,0 +1,340 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DOMAINS",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "e9e9697a476c962c9df2762334b9623955f1a6ba",
+  "patch_digest": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+  "patch_digest_method": "SHA256 exact raw UTF-8 inventories/donors.json bytes INCLUDING final newline; excludes receipt, coordinator plan/state and unrelated changes.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/donors.json",
+    "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "GLOSSARY.md": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/personal-data.md": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "docs/migration/source-revisions.md": "6f1b31ba8db04b5c4402634edb2b60b8eb7c82b182d229568048bcfe9d5d1888",
+      "docs/migration/effect-refactor/inventories/donor-location.json": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "docs/migration/effect-refactor/inventories/donor-usage-mac.json": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "docs/migration/effect-refactor/inventories/donor-usage-mobile.json": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d"
+    },
+    "locks_and_runtime": {
+      "dependency_changes": false,
+      "builds_or_native_runtime_executed": false
+    },
+    "artifact_and_native_interface": {
+      "accepted_inventory_source": "e9e9697a476c962c9df2762334b9623955f1a6ba",
+      "donor_source_admission": "Q-DONOR-SOURCE open; no re-audit/import or fresh donor HEAD observation",
+      "fixture_graphs": "docs/migration/effect-refactor/inventories/donors.json#/source_fixture_authorities",
+      "inventory_raw_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
+    },
+    "policy_migration_key_versions": {
+      "contract_policy_or_key_changed": false,
+      "source_purpose_and_destination_grants": "Separate explicit future admission; no transferred grant/credential/armed destination"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Assign every observed donor outcome and full-transfer requirement to a successor, retained compatibility route or explicit later scope.",
+      "result": "passed",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/donors.json#/transition_map",
+        "docs/migration/effect-refactor/inventories/donors.json#/complete_transfer_requirements",
+        "docs/migration/effect-refactor/inventories/donors.json#/coverage"
+      ]
+    },
+    {
+      "criterion": "Record candidate clean revisions/patches/licenses and remaining Q-DONOR-SOURCE/Q-DONOR-SUPPORT resolutions.",
+      "result": "passed",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/donors.json#/inputs",
+        "docs/migration/effect-refactor/inventories/donors.json#/open_owner_choices"
+      ]
+    },
+    {
+      "criterion": "Preserve missing history/precision/provenance, browser/input exclusions and the aggregate-first/open-S06 exception without re-auditing all source.",
+      "result": "passed",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/donors.json#/correction_guards",
+        "docs/migration/effect-refactor/inventories/donors.json#/common_contract_and_authority",
+        "docs/migration/effect-refactor/inventories/donors.json#/remaining_qualification"
+      ]
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-DOMAINS"
+      ],
+      "result": "passed",
+      "evidence": "Actual brief inspected: exact two writes, three pinned fixtures, task target and acceptance."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C14"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C15"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C16"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C17"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P01"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P02"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P03"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L00"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S00"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S05"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S06"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F11"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F12"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F13"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F14"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F15"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F16"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped normative design row inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "case_id": "DOMAINS-PINS-POINTERS-COVERAGE",
+      "result": "passed",
+      "evidence": "Read-only root Python wrapper compared git show assignedbase:repository-relative inventory paths with current raw bytes, pinned3digests/3acceptedreceipts; recursively resolved308canonicalvalue pins; checked281routes cover1141unique semantic leaves exactly once,13transferrequirements/40CLI IDs/8locationformats/3correctionguards; final newline present. No donor git/source access or product checks."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json"
+      ],
+      "result": "passed",
+      "evidence": "Actual scoped diff whitespace check exited0; no source/state/Git mutation."
+    }
+  ],
+  "inspection_summary": "Read bounded brief, root rules, execution entrypoint, personal-data/templates/GLOSSARY/source-revisions and scoped design donor/full-history sections and17design rows. Parsed three accepted inventories and reviewed receipts at common Health source. Reconciled source-defined metadata, feature/state/format/history/import/precision and grant boundaries via JSON pointers without re-auditing donor code. Exhaustive semantic coverage check is evidence indexing, not runtime/contract correctness proof.",
+  "observations": [
+    {
+      "case_id": "DOMAINS-PINS-POINTERS-COVERAGE",
+      "result": "passed",
+      "procedure": "Read-only Python canonical-pointer and leaf-coverage verification described in checks; planning observation only.",
+      "expected": "Exact accepted input bytes/receipt identity; all semantic leaves uniquely assigned; all value pins resolve; all route targets defined.",
+      "observed": "3immutableinputs,3acceptedreceipts,308valuepins,281transitionrecords,1141semantic leaves,13fulltransferrequirements,40CLI IDs,8locationformats,18featureoutcomes,3correctionguards; no gaps or duplicate assignments.",
+      "evidence": "docs/migration/effect-refactor/inventories/donors.json#/coverage"
+    },
+    {
+      "case_id": "COORDINATOR-DOMAIN-COVERAGE-REPLAY",
+      "procedure": "Root independently compares three raw inventories and accepted receipts with assigned Git tree, resolves all canonical value pins, recursively derives semantic leaf sets and validates each route partition with no gap/overlap.",
+      "expected": "Three accepted source inputs;308 value pins;281 routes covering1141 semantic leaves;13 transfer requirements and3 corrected baseline guards.",
+      "observed": "All raw/tree/input/review digests match;308 pins resolve;281 unique rows cover location361/Mac645/mobile135 leaves exactly once. Root route counts independently match reviewer;13 transfers/3 guards present.",
+      "evidence": "inventories/donors.json#/inputs, transition_map, coverage; /private/tmp/healthmd-donors-root-replay.json",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Planning reconciliation only; no product/native/API/build/device/data/import/service checks executed.",
+    "Source pin graph/test availability inherited from accepted inventories; their unrun/proposed cases remain unrun. Donor HEAD/dirt/license acceptance not freshly checked.",
+    "Exhaustive pointer coverage does not establish source admission, consumer compatibility, archival completeness, native permissions or production eligibility.",
+    "S05 concrete human assignment/milestone, S06 exact-session feasibility and Q-DONOR-SOURCE/Q-DONOR-SUPPORT remain owner/coordinator work."
+  ],
+  "remaining_qualification": [
+    "C14-C17/P01-P03 reviewed contracts, complete archive/import/Undo matrices and frozen health consumer goldens.",
+    "L01-L05 physical background/watch/offline/crash/correction/destination/installed-user and battery/storage numerical-budget proofs.",
+    "S01 production entitlement/purpose/per-destination iOS26.4 EUdevice+account/one-app and actual lookback coverage; report sandbox remains display-only.",
+    "S02 signed Mac supported title/idle permissions/channel and checkpoint/short-session full-history proof; browser titles excluded before observation.",
+    "Android prototype event pairing/unlocked/null/prewindow/OEM/history/checkpoint/sourceidentity proof; Health Android new domains remain planned.",
+    "S05 required owner/milestone assignment and S06 exact supported-source gap; initial aggregate exception does not close exact sessions.",
+    "Q-DONOR-SOURCE/Q-DONOR-SUPPORT and independent native/distribution/physical/external/deployed source-purpose/grant proof remain open; no family gate/deletion authority."
+  ],
+  "rollback": "Remove/revert only inventories/donors.json and this receipt. All donor readers/native state, current Health production capture/exports/schedules/contracts/public launchers and user data remain unchanged; no import/authority promotion/deletion occurred.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_core",
+    "fingerprint": "e9e9697a476c962c9df2762334b9623955f1a6ba+67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
+  }
+}
