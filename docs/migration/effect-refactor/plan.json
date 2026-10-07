@@ -8341,9 +8341,27 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "not_started",
+      "status": "in_progress",
       "blocker": null,
-      "claim": null,
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/apple/effect-host-candidates/ios/src/cold-intent-probe.ts",
+          "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntent.swift",
+          "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj",
+          "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+          "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
+          "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
+          "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+        ],
+        "reserved_resources": [
+          "ios-candidate-project",
+          "ios-candidate-bridge"
+        ]
+      },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 205,
       "qualification": {
@@ -8382,7 +8400,8 @@
           "restart_no_grant_expansion"
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      }
+      },
+      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing."
     },
     {
       "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
@@ -15629,7 +15648,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json",
       "reviewer_role": "independent portable build and core provenance reviewer",
       "priority": 76,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/personal_codecs",
         "base_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
@@ -15648,14 +15667,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "ba5c644ebca4c028fe8d60feb580a5e668965341+8ae762955e4c907d00773c62eac606722ce81da55dd468d00e8b2580981baaef"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json"
+        ]
       },
       "future_scope": "This authorizes only the accepted personal codec delta. Existing exact-number cohort/receipts remain immutable; native host assets independently frozen, complete domain/source/repository/native/export/cloud qualification still open.",
       "card_review": {

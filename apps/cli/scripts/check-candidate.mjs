@@ -57,6 +57,7 @@ const coreInputPins = {
   "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
   "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
   "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+  "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
   "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
   "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
   "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
@@ -72,6 +73,8 @@ const coreInputPins = {
   "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
   "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
   "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+  "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+  "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
   "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
   "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
   "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
@@ -83,6 +86,8 @@ const coreInputPins = {
 const coreOutputPaths = [
   "dist/core/contracts/exact-values.d.ts",
   "dist/core/contracts/exact-values.js",
+  "dist/core/contracts/personal-slice.d.ts",
+  "dist/core/contracts/personal-slice.js",
   "dist/core/contracts/registry.d.ts",
   "dist/core/contracts/registry.js",
   "dist/core/host-interfaces/capabilities.d.ts",
@@ -100,16 +105,16 @@ const coreOutputPaths = [
   "dist/core/serialization/exact-json-numbers.d.ts",
   "dist/core/serialization/exact-json-numbers.js"
 ];
-const cohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json");
-const cohortSha256 = "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7";
+const cohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json");
+const cohortSha256 = "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579";
 async function auditCohort(path) {
   const bytes = await readFile(path);
   assert.equal(hash(bytes), cohortSha256, "reviewed_core_cohort_bytes_drift");
   const value = JSON.parse(bytes);
-  assert.equal(value.committed_source_sha, "683acf1831d65feace61d3702d3b35f2838a42f6", "reviewed_core_committed_source_drift");
+  assert.equal(value.committed_source_sha, "ba5c644ebca4c028fe8d60feb580a5e668965341", "reviewed_core_committed_source_drift");
   assert.deepEqual(value.runtime, { node: "24.21.0", npm: "11.19.0" });
-  assert.equal(value.input_count, 31); assert.equal(value.output_count, 18);
-  assert.equal(Object.keys(coreInputPins).length, 31);
+  assert.equal(value.input_count, 34); assert.equal(value.output_count, 20);
+  assert.equal(Object.keys(coreInputPins).length, 34);
   assert.deepEqual(value.input_pins, coreInputPins, "reviewed_core_input_map_drift");
   assert.deepEqual(Object.keys(value.output_pins).sort(), coreOutputPaths, "reviewed_core_output_set_drift");
   return value;
@@ -129,6 +134,16 @@ async function auditAuthority(authority, path = resolve("../../", authority.rece
   assert.deepEqual(value.review, authority.review, "qualified_core_review_authority_drift");
   return value;
 }
+const priorBytes = await readFile(resolve("../../", cohort.prior_cohort_authority.cohort_path));
+assert.equal(hash(priorBytes), "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7", "reviewed_prior_core_cohort_bytes_drift");
+const priorCohort = JSON.parse(priorBytes);
+assert.equal(priorCohort.input_count, 31); assert.equal(priorCohort.output_count, 18);
+assert.equal(priorCohort.committed_source_sha, "683acf1831d65feace61d3702d3b35f2838a42f6");
+for (const name of ["historical_registry_authority", "metadata_authority", "accepted_delta"])
+  assert.deepEqual(cohort[name], priorCohort[name], "historical_core_authority_changed");
+const priorRefresh = await auditAuthority(cohort.prior_cohort_authority);
+assert.equal(cohort.prior_cohort_authority.receipt_sha256, "66ecaf5ff5dcc257424e4ee1490998a3109e6b8ad59913950b8750876bd4ebba");
+assert.deepEqual(priorRefresh.inputs.cohort.fixed_input_pins, priorCohort.input_pins);
 const receipt = await auditAuthority(cohort.historical_registry_authority);
 assert.equal(receipt.source_sha, coreInputAuthority.sourceSha);
 assert.equal(receipt.patch_digest, coreInputAuthority.patchDigest);
@@ -148,10 +163,24 @@ assert.deepEqual(relativeMap(delta.inputs.artifact_and_native_interface.patch_fi
 assert.equal(Object.keys(cohort.accepted_delta.input_pins).length, 3);
 assert.equal(Object.keys(cohort.accepted_delta.output_pins).length, 2);
 assert.equal(cohort.accepted_delta.vector_sha256, coreInputPins["tests/exact-json-numbers-vectors.ts"]);
-const artifacts = { ...legacyArtifacts, ...cohort.accepted_delta.output_pins };
-assert.deepEqual(artifacts, cohort.output_pins, "qualified_core_delta_output_map_drift");
-assert.deepEqual(relativeMap(delta.inputs.artifact_and_native_interface.core_emitted_artifacts), artifacts, "qualified_core_delta_artifact_authority_drift");
-assert.equal(Object.keys(artifacts).length, 18);
+const priorArtifacts = { ...legacyArtifacts, ...cohort.accepted_delta.output_pins };
+assert.deepEqual(priorArtifacts, priorCohort.output_pins, "qualified_core_delta_output_map_drift");
+assert.deepEqual(relativeMap(delta.inputs.artifact_and_native_interface.core_emitted_artifacts), priorArtifacts, "qualified_core_delta_artifact_authority_drift");
+assert.equal(Object.keys(priorArtifacts).length, 18);
+const personal = await auditAuthority(cohort.personal_delta);
+assert.equal(cohort.personal_delta.receipt_sha256, "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859");
+assert.equal(cohort.personal_delta.committed_source_sha, "ba5c644ebca4c028fe8d60feb580a5e668965341");
+assert.deepEqual(relativeMap(personal.inputs.artifact_and_native_interface.patch_files), cohort.personal_delta.input_pins, "qualified_personal_delta_inputs_drift");
+assert.equal(Object.keys(cohort.personal_delta.input_pins).length, 3);
+assert.equal(Object.keys(cohort.personal_delta.output_pins).length, 2);
+assert.equal(cohort.personal_delta.vector_sha256, "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a");
+assert.equal(cohort.personal_delta.vector_sha256, coreInputPins["tests/personal-codecs-vectors.ts"]);
+assert.deepEqual({ ...priorCohort.input_pins, ...cohort.personal_delta.input_pins }, coreInputPins, "qualified_personal_complete_inputs_drift");
+const artifacts = { ...priorArtifacts, ...cohort.personal_delta.output_pins };
+assert.deepEqual(artifacts, cohort.output_pins, "qualified_personal_delta_output_map_drift");
+assert.deepEqual(Object.fromEntries(Object.entries(personal.inputs.artifact_and_native_interface.actual_complete_emitted_pins).map(([path, digest]) => ["dist/core/" + path, digest])), artifacts, "qualified_personal_delta_artifact_authority_drift");
+assert.equal(Object.keys(artifacts).length, 20);
+for (const [path, digest] of Object.entries(cohort.personal_delta.input_pins)) assert.equal(coreInputPins[path], digest);
 for (const [path, digest] of Object.entries(cohort.accepted_delta.input_pins)) assert.equal(coreInputPins[path], digest);
 assert.equal(hash(sourceManifest), coreInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 async function tree(directory, skipBins = false) {
@@ -237,6 +266,36 @@ try {
   await rm(join(changedNumeric, numericOutput));
   await symlink(join(installed, numericOutput), join(changedNumeric, numericOutput));
   await assert.rejects(auditCore(changedNumeric), /candidate_build_symlink_unreviewed/);
+  const personalSource = "src/contracts/personal-slice.ts";
+  const personalInputCopy = join(temporary, "personal-inputs");
+  for (const path of Object.keys(coreInputPins)) {
+    const target = join(personalInputCopy, path); await mkdir(dirname(target), { recursive: true });
+    await writeFile(target, await readFile(join(source, path)));
+  }
+  await auditCoreInputs(personalInputCopy);
+  await rm(join(personalInputCopy, personalSource));
+  await assert.rejects(auditCoreInputs(personalInputCopy), /core_input_file_set_drift/);
+  await writeFile(join(personalInputCopy, personalSource), "export {};\n");
+  await assert.rejects(auditCoreInputs(personalInputCopy), /core_input_bytes_drift/);
+  await rm(join(personalInputCopy, personalSource));
+  await symlink(join(source, personalSource), join(personalInputCopy, personalSource));
+  await assert.rejects(auditCoreInputs(personalInputCopy), /candidate_source_symlink_unreviewed/);
+  const personalOutput = "dist/core/contracts/personal-slice.js";
+  const changedPersonal = join(temporary, "changed-personal"); await cp(installed, changedPersonal, { recursive: true });
+  await writeFile(join(changedPersonal, personalOutput), "export {};\n");
+  await assert.rejects(auditCore(changedPersonal), /core_build_bytes_drift/);
+  await rm(join(changedPersonal, personalOutput));
+  await assert.rejects(auditCore(changedPersonal), /core_build_file_set_drift/);
+  await writeFile(join(changedPersonal, personalOutput), await readFile(join(installed, personalOutput)));
+  await writeFile(join(changedPersonal, "dist/core/contracts/unreviewed-personal.js"), "export {};\n");
+  await assert.rejects(auditCore(changedPersonal), /core_build_file_set_drift/);
+  await rm(join(changedPersonal, "dist/core/contracts/unreviewed-personal.js"));
+  await rm(join(changedPersonal, personalOutput));
+  await symlink(join(installed, personalOutput), join(changedPersonal, personalOutput));
+  await assert.rejects(auditCore(changedPersonal), /candidate_build_symlink_unreviewed/);
+  const unreviewedPersonal = join(temporary, "unreviewed-personal.json");
+  await writeFile(unreviewedPersonal, JSON.stringify({ ...personal, review: { ...personal.review, status: "pending" } }));
+  await assert.rejects(auditAuthority(cohort.personal_delta, unreviewedPersonal), /qualified_core_receipt_bytes_drift/);
   const absentCohort = join(temporary, "absent-cohort.json");
   await assert.rejects(auditCohort(absentCohort), { code: "ENOENT" });
   const tamperedCohort = join(temporary, "tampered-cohort.json");
@@ -270,7 +329,7 @@ assert.equal(effects.length, 1, "duplicate_effect_installation");
 const core = await import(coreUrl); const host = await import(hostUrl);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
 console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(artifacts).length, qualifiedCoreInputs: Object.keys(coreInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta"] }));
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta", "missing-personal-source", "personal-source-edit", "personal-source-symlink", "personal-output-stale", "missing-personal-output", "extra-personal-output", "personal-output-symlink", "unreviewed-personal-receipt"] }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));

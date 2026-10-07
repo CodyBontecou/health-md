@@ -1,0 +1,163 @@
+{
+  "accepted_delta": {
+    "input_pins": {
+      "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+      "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+      "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810"
+    },
+    "output_pins": {
+      "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+      "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+    },
+    "patch_digest": "2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236",
+    "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+    "receipt_sha256": "9100d985d40af66c026624c4050713477127f195dc9f20f45bbb20047f9d1f3e",
+    "review": {
+      "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236",
+      "reviewer": "/root/effect_base_core",
+      "status": "accepted"
+    },
+    "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+    "task_id": "SERIALIZE-EXACT-NUMBERS",
+    "vector_sha256": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8"
+  },
+  "cohort_id": "core-ts-personal-v1",
+  "committed_source_sha": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+  "historical_manifest_sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+  "historical_registry_authority": {
+    "patch_digest": "110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+    "receipt_path": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
+    "receipt_sha256": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+    "review": {
+      "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+      "reviewer": "/root/donor_mac_review",
+      "status": "accepted"
+    },
+    "source_sha": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
+    "task_id": "REGISTRY-READER"
+  },
+  "input_count": 34,
+  "input_pins": {
+    ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+    "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+    "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+    "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+    "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+    "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+    "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+    "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+    "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+    "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+    "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+    "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+    "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+    "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+    "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+    "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+    "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+    "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+    "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+    "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+    "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+    "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+    "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+    "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+    "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+    "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+    "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+    "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+    "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+    "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+    "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+    "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+    "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+    "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+  },
+  "input_tree_excluded_component_root_directories": [
+    "build",
+    "dist",
+    "node_modules"
+  ],
+  "legacy_output_map_sha256": "7845384cd4a0c8fb493651100d97159ecb7d269875fb62b0f7ecef2e92c8bbc4",
+  "metadata_authority": {
+    "patch_digest": "a848efb5a5a6d1a09fbcab31cf753ecc40e856afd1921a4f94374adf1fc037a0",
+    "receipt_path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+    "receipt_sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+    "review": {
+      "fingerprint": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6+a848efb5a5a6d1a09fbcab31cf753ecc40e856afd1921a4f94374adf1fc037a0",
+      "reviewer": "/root/donor_mac_review",
+      "status": "accepted"
+    },
+    "source_sha": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
+    "task_id": "CORE-CANDIDATE-API"
+  },
+  "output_count": 20,
+  "output_pins": {
+    "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+    "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+    "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+    "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+    "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+    "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+    "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+    "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+    "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+    "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+    "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+    "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+    "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+    "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+    "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+    "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+    "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+    "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+    "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+    "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+  },
+  "personal_delta": {
+    "committed_source_sha": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+    "input_pins": {
+      "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+      "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+      "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197"
+    },
+    "output_pins": {
+      "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+      "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29"
+    },
+    "patch_digest": "6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6",
+    "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+    "receipt_sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+    "review": {
+      "fingerprint": "780a391041b31a5847865bfd0b62e391e0f8590f+6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6",
+      "reviewer": "/root/donor_mac_review",
+      "status": "accepted"
+    },
+    "source_sha": "780a391041b31a5847865bfd0b62e391e0f8590f",
+    "task_id": "PERSONAL-CODECS",
+    "vector_sha256": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a"
+  },
+  "prior_cohort_authority": {
+    "cohort_path": "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json",
+    "cohort_sha256": "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7",
+    "committed_source_sha": "683acf1831d65feace61d3702d3b35f2838a42f6",
+    "input_count": 31,
+    "output_count": 18,
+    "patch_digest": "70530eb5c70b07592e271c8fe3f7f424a9b2ee69c523151b1cb07d68c41ebfb9",
+    "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json",
+    "receipt_sha256": "66ecaf5ff5dcc257424e4ee1490998a3109e6b8ad59913950b8750876bd4ebba",
+    "review": {
+      "fingerprint": "683acf1831d65feace61d3702d3b35f2838a42f6+70530eb5c70b07592e271c8fe3f7f424a9b2ee69c523151b1cb07d68c41ebfb9",
+      "reviewer": "/root/effect_base_core",
+      "status": "accepted"
+    },
+    "source_sha": "683acf1831d65feace61d3702d3b35f2838a42f6",
+    "task_id": "CORE-COHORT-REFRESH"
+  },
+  "runtime": {
+    "node": "24.21.0",
+    "npm": "11.19.0"
+  },
+  "schema_version": 1,
+  "task_id": "CORE-COHORT-PERSONAL"
+}

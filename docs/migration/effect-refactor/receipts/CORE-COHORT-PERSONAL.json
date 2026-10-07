@@ -1,0 +1,602 @@
+{
+  "task_id": "CORE-COHORT-PERSONAL",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+  "patch_digest": "8ae762955e4c907d00773c62eac606722ce81da55dd468d00e8b2580981baaef",
+  "patch_digest_method": "SHA256 over sorted3claimed nonreceipt guard/docs/cohort paths: UTF8 repo-relative path + NUL + exact raw bytes + NUL. Own receipt/disjoint writers/coordinator/dist/node_modules/caches excluded. No own receipt reverse-pin.",
+  "changed_paths": [
+    "apps/cli/docs/typescript-candidate.md",
+    "apps/cli/scripts/check-candidate.mjs",
+    "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json",
+    "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate personal codec cohort only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "apps/cli/docs/typescript-candidate.md": "dd0702df31ae6ce167326a620fb715d879d3d08fcbb61a27bedd8cda0dd98737",
+      "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json": "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7",
+      "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+      "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json": "66ecaf5ff5dcc257424e4ee1490998a3109e6b8ad59913950b8750876bd4ebba"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "core_package": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "core_lock": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "cli_package": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+      "cli_lock": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "runtime_execution": "Actual pinned Node24.21.0/npm11.19.0 PATH, darwin-arm64, sharedcache /private/tmp/healthmd-effect-npm-cache; sequential corecheck then exactCLIinstalllinks then CLIcheck; no policyenable/dependency/lock changes",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2"
+    },
+    "artifact_and_native_interface": {
+      "cohort_path": "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json",
+      "cohort_raw_sha256": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579",
+      "complete_input_count": 34,
+      "complete_emitted_count": 20,
+      "committed_input_pins": {
+        ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+        "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+        "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+        "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "existing_built_emitted_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+      },
+      "all31prior_inputs_retained": true,
+      "all18prior_emitted_bytes_retained": true,
+      "personal_delta": {
+        "task_id": "PERSONAL-CODECS",
+        "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+        "receipt_sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+        "source_sha": "780a391041b31a5847865bfd0b62e391e0f8590f",
+        "patch_digest": "6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root/donor_mac_review",
+          "fingerprint": "780a391041b31a5847865bfd0b62e391e0f8590f+6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6"
+        },
+        "committed_source_sha": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+        "vector_sha256": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "input_pins": {
+          "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+          "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+          "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197"
+        },
+        "output_pins": {
+          "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+          "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29"
+        }
+      },
+      "prior_cohort_authority": {
+        "task_id": "CORE-COHORT-REFRESH",
+        "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json",
+        "receipt_sha256": "66ecaf5ff5dcc257424e4ee1490998a3109e6b8ad59913950b8750876bd4ebba",
+        "source_sha": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "patch_digest": "70530eb5c70b07592e271c8fe3f7f424a9b2ee69c523151b1cb07d68c41ebfb9",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root/effect_base_core",
+          "fingerprint": "683acf1831d65feace61d3702d3b35f2838a42f6+70530eb5c70b07592e271c8fe3f7f424a9b2ee69c523151b1cb07d68c41ebfb9"
+        },
+        "cohort_path": "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json",
+        "cohort_sha256": "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7",
+        "committed_source_sha": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "input_count": 31,
+        "output_count": 18
+      },
+      "retained_actual_negative_cases": [
+        "sibling-symlink",
+        "stale-build",
+        "unbuilt-source-edit",
+        "extra-source-file",
+        "unreviewed-metadata-edit",
+        "unreviewed-packed-export",
+        "missing-source-file",
+        "new-module-edit",
+        "source-symlink",
+        "new-module-stale-output",
+        "missing-output",
+        "extra-output",
+        "output-symlink",
+        "absent-cohort",
+        "tampered-cohort",
+        "unreviewed-delta"
+      ],
+      "proposed_additional_actual_filesystem_negatives": [
+        {
+          "case_id": "missing-personal-source",
+          "expected_fixed_failure": "core_input_file_set_drift"
+        },
+        {
+          "case_id": "personal-source-edit",
+          "expected_fixed_failure": "core_input_bytes_drift"
+        },
+        {
+          "case_id": "personal-source-symlink",
+          "expected_fixed_failure": "candidate_source_symlink_unreviewed"
+        },
+        {
+          "case_id": "personal-output-stale",
+          "expected_fixed_failure": "core_build_bytes_drift"
+        },
+        {
+          "case_id": "missing-personal-output",
+          "expected_fixed_failure": "core_build_file_set_drift"
+        },
+        {
+          "case_id": "extra-personal-output",
+          "expected_fixed_failure": "core_build_file_set_drift"
+        },
+        {
+          "case_id": "personal-output-symlink",
+          "expected_fixed_failure": "candidate_build_symlink_unreviewed"
+        },
+        {
+          "case_id": "unreviewed-personal-receipt",
+          "expected_fixed_failure": "qualified_core_receipt_bytes_drift"
+        }
+      ],
+      "patch_files": {
+        "apps/cli/docs/typescript-candidate.md": "389db4cbe4841c220a57f49ad8a81d7e9d63fbede0f34ce71eed62d0e1bce01a",
+        "apps/cli/scripts/check-candidate.mjs": "cb16348477412006f6aca0cde2ca3ce5c55ce8d499e25de2308806629625b128",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579"
+      },
+      "fresh_source_emitted_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+      },
+      "fresh_packed_emitted_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+      },
+      "source_and_packed_outputs_equal": true,
+      "physical_effect_installations": 1,
+      "source_modules": 10,
+      "core_tests": 318,
+      "cli_mcp_tests": 105,
+      "actual_filesystem_negative_case_count": 24,
+      "cohort_preimplementation_review": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "ba5c644ebca4c028fe8d60feb580a5e668965341+a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579",
+        "scope": "Mandatory independent fullGit/current34set/20outputset/31and18retention/fiveimmutableauthorities before guard/docs/build"
+      }
+    },
+    "policy_migration_key_versions": {
+      "public_exports": "unchanged explicit six entrypoints, no personal export",
+      "scope": "fixed new personal source cohort only; historical raw authorities immutable",
+      "own_receipt_reverse_pin": false
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "The personal delta is independently accepted and committed before dispatch; freeze and independently review the new complete fixed source/output maps and current exact runtime/locks/accepted raw receipt fingerprints before guard edits. No discovery-generated acceptance or mutable historical receipt.",
+      "result": "passed",
+      "evidence": "Accepted personal source committedba5; independent root cohort rawSHAa81 passed before guard, complete fixed34/20sets and immutable raw receipt pins/currentGit proof recorded. No discovery-generated expectedvalues."
+    },
+    {
+      "criterion": "Retain all31 exact-number cohort inputs and all18 prior packed artifact bytes plus historical REGISTRY-READER, CORE-CANDIDATE-API, SERIALIZE-EXACT-NUMBERS and accepted CORE-COHORT-REFRESH authority. Only personal-slice.ts, personal-codecs.test.ts, personal-codecs-vectors.ts and the corresponding emitted module/declaration may extend that set; confirm exact34inputs/20outputs from committed tree and freshly built bytes before accepting the count.",
+      "result": "passed",
+      "evidence": "All31priorinputpins/18prioroutputpins exact;3personalinputs/2personaloutputs sole additions. Historical registry/API/numeric/priorrefresh/rawpersonal accepted bytes/source/patch/reviews pinned;318freshcoretests pass."
+    },
+    {
+      "criterion": "Hard-pin the reviewed new cohort digest and complete source/packed file sets and contents. Preserve physical one-Effect identity, package/runtime/lock/public export/no-Rust checks and all16 existing actual disposable filesystem negatives; add actual missing/edited/symlinked personal source and missing/stale/extra/symlinked personal output plus absent/tampered cohort and unreviewed personal receipt negatives.",
+      "result": "passed",
+      "evidence": "Hardpinned newcohort SHA/currentba5, literal34completeinputhashmap/20outputset and receipt-bound completeoutputhashmap; onephysicalEffect/manifest/runtime/locks/export/noRust checks pass; all24actualdisposablefilesystemnegativeassertions pass, preserving16old plus8personal."
+    },
+    {
+      "criterion": "No guard or cohort reverse-pin of its own refresh receipt, automatic broadening, package/index exports, dependency, serializer/operation semantics, public/native authority, or source-purpose admission changes.",
+      "result": "passed",
+      "evidence": "Newcohort and guard never read/reversepin ownrefreshreceipt. Allhistoricalreceipt/cohort files unchanged; no package/index/export/dependency/business/public/native admission changes."
+    },
+    {
+      "criterion": "With core/CLI builders and qualified input resources exclusively reserved after source freeze, run the common component check, exact CLI install-links refresh and affected CLI/MCP tests sequentially, then record actual integration/source/vector/artifact/check proof and limitations. Later common input changes require a new independently reviewed delta.",
+      "result": "passed",
+      "evidence": "Exclusive sequential actualcorecheck318 \u2192 exactCLIci8packedpackages \u2192 CLIcheck105 passed. Source/packed20bytes exact; old18 untouched. Later commoninput changes require independent reviewedcohortdelta."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "318compiledJS tests,0failed/cancelled/skipped;10ES-only modules/1Effect/19boundarynegatives, stricttyping/build; noRust/native tools.",
+      "log_path": "/private/tmp/healthmd-cohort-personal-core-check.log",
+      "log_sha256": "a0a0e812443a3401f25ed5ec3ecc99a5f6d3ea8875fddaff37842966563802a5"
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "ci",
+        "--install-links",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "result": "passed",
+      "evidence": "8packagesinstalled in1s as packedlocalcore,exit0; inheritednpm11allowScripts warned esbuildpostinstallnotallowed; policy unchanged. Existing pinnedoptionalGo binary works.",
+      "log_path": "/private/tmp/healthmd-cohort-personal-cli-ci.log",
+      "log_sha256": "b8e2d51ec44ff41f75e802927bba14c8297fe6a810013c5ab384badef16d7870"
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "105compiledJS CLI/MCPtests,0failed/cancelled/skipped;34/20map/24filesystemnegatives/onephysicalEffect/sharedservice/privateexports/manifest/runtime/locks/noRust checks pass;5compiledtestentries.",
+      "log_path": "/private/tmp/healthmd-cohort-personal-cli-check.log",
+      "log_sha256": "b835580be32ace1989e3c9b2b8e70e34d158bd0f61f2fad92a1b36b9a01f04b3"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Afterfreshbuild verifiedall34sourcepins/all20source+packedpins; approvedcohortSHA unchanged andfiveauthorityreceipt raws immutable; sorted3patchdigestactual."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Actualexit0; no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-core-cohort-personal-root-make.log",
+      "log_sha256": "c7aeacb8a2b8e1f031e61c63bc73cbe9ca87d382cd0b9a8596a035cc5a124dbe",
+      "exit_code": 0,
+      "wall_seconds": 6.207,
+      "environment": "Pinned Node24.21.0/npm11.19.0; shared npm cache /private/tmp/healthmd-effect-npm-cache; offline; existing lifecycle-script blocking policy retained."
+    }
+  ],
+  "inspection_summary": "Bounded fixed cohortbinding only: prior31/18immutable maps plus independently reviewedpersonal3/2delta accepted before code. Guardhardpins newrawcohort/currentcommittedsource/fullinputmap/outputset; completeoutputdigests reconstructed from pinned16historical+2numeric+2personalrawreceipt authority. Priorcohort/refresh andallfiveacceptedreceipt raws/sourcepatch/reviews checked. Source/packedbytes, publicprivateexports, runtime/locks/oneEffect and24actualdisposablefilesystemnegatives preserved/extended. No business source or publicnative authority changes.",
+  "observations": [
+    {
+      "case_id": "sibling-symlink",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with install_packed_core_with_install_links.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "stale-build",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "unbuilt-source-edit",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "extra-source-file",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "unreviewed-metadata-edit",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "unreviewed-packed-export",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_manifest_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "missing-source-file",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "new-module-edit",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "source-symlink",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with candidate_source_symlink_unreviewed.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "new-module-stale-output",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "missing-output",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "extra-output",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "output-symlink",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with candidate_build_symlink_unreviewed.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "absent-cohort",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with ENOENT.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "tampered-cohort",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with reviewed_core_cohort_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "unreviewed-delta",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with qualified_core_receipt_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "missing-personal-source",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "personal-source-edit",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_input_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "personal-source-symlink",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with candidate_source_symlink_unreviewed.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "personal-output-stale",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "missing-personal-output",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "extra-personal-output",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with core_build_file_set_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "personal-output-symlink",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with candidate_build_symlink_unreviewed.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "unreviewed-personal-receipt",
+      "procedure": "Actual disposable filesystem copied source/packed package or receipt/cohort; mutate named case then assert.rejects; finally remove entire temporary tree. Source/installed/reference packages never mutated.",
+      "expected": "Fail closed with qualified_core_receipt_bytes_drift.",
+      "observed": "Executed assert.rejects matched expected fixedfailure; fullCLIcheckexit0 reached24case successlogger.",
+      "evidence": "apps/cli/scripts/check-candidate.mjs; /private/tmp/healthmd-cohort-personal-cli-check.log",
+      "result": "passed"
+    },
+    {
+      "case_id": "fresh-complete34-20-and-historical-authority",
+      "procedure": "Freshcorebuild; exactpackedCLIrefresh; source/packedfullfile-set/hash/manifest checks plusfivehistoricalreceipt raw/source/patch/review pins.",
+      "expected": "34inputs/20outputs,31and18retained,1physicalEffect, historicalauthoritybytes unchanged.",
+      "observed": "All counts/hashes/physicalidentity pass,318core/105CLItests pass in requiredsequence;5immutableauthorityreceipt raws remain exact.",
+      "evidence": "receipt inputs maps and3actualcheck logs",
+      "result": "passed"
+    },
+    {
+      "case_id": "root-fresh-portable-integration",
+      "procedure": "Independent source/guard review accepted before coordinator ran actual make test-portable and rehashed fixed34 inputs/20 source and packed outputs afterward.",
+      "expected": "437 emitted tests (318core+14UI+105CLI), zero failures/cancellation/skips; all24 actual filesystem rejection cases; oneEffect; prior accepted authority bytes unchanged.",
+      "observed": "437 passed; all9 fail/cancel/skip counters0; 24filesystemnegatives; exact34/20 maps and packed bytes unchanged.",
+      "evidence": "/private/tmp/healthmd-core-cohort-personal-root-make.log SHA256 c7aeacb8a2b8e1f031e61c63bc73cbe9ca87d382cd0b9a8596a035cc5a124dbe",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Independent implementation review pending; partial result does not qualify native/physical/signed/public/source-purpose/mobile/compiler host or completepersonal family semantics.",
+    "Current proof exactdarwin-arm64 Node24.21.0/npm11.19.0 syntheticcore/CLI/MCP only; no realhealth/device/credential/donor/live service data accessed.",
+    "Existinginheritednpm11policy blocks esbuildpostinstall, retainedwithoutenablingpolicy; pinnedoptionalbinary build succeeded.",
+    "No Git executable or ownrefreshreceipt needed by runtimeguard; priorimmutablecohortrefreshreceipt deliberately required historicalauthority.",
+    "Publicpackageexports remain unchanged/unexportedpersonalmodule; packedpresence is buildcohortadmissiononly, not publicpeer negotiation/sourceauthorization."
+  ],
+  "remaining_qualification": [
+    "Root independent exactguard/docs/cohortpatch review and coordinatorcommit/integratedvalidation.",
+    "Futurecommoninputdelta needs independentfixedcohortreview/rebind; broaderpersonal/query/store/native/sourcepurpose/publicprofile/retirement gates remain separate."
+  ],
+  "rollback": "Restore prior committed31-input/18-output guard/cohort and packed candidate package together; unexported personal codec remains independently revertible. No public launcher or installed user state changes.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "ba5c644ebca4c028fe8d60feb580a5e668965341+8ae762955e4c907d00773c62eac606722ce81da55dd468d00e8b2580981baaef"
+  },
+  "independent_implementation_review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "evidence": "Read-only exact34 committed/current inputs and20 source+packed maps;31/18 historical bytes retained;5 exact accepted raw/source/patch/review authorities;16 original rejection lines byte-identical plus8 personal exercised cases and actual retained logs; exact pinned module probe6existing exports/onephysicalEffect/sharedservice/3hiddenPersonalpaths rejected. No guard loosening or own-receipt reversepin. ROOT fresh complete integration remains pending."
+  },
+  "coordinator_integration_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f"
+}
