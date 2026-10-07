@@ -390,12 +390,13 @@ jobs:
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          mkdir -p build/logs
+          mkdir -p build/logs build/ui-results
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -resultBundlePath build/ui-results/ios-smoke.xcresult \
             -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
@@ -416,6 +417,7 @@ jobs:
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -resultBundlePath build/ui-results/ios-profile-regressions.xcresult \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
@@ -477,6 +479,7 @@ jobs:
             -scheme HealthMd-UITests-iOS \
             -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
             -configuration Debug-iOS \
+            -resultBundlePath build/ui-results/ipad-export-regression.xcresult \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
@@ -495,7 +498,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-ui-build-logs
-          path: apps/apple/build/logs/build-ios-ui.log
+          path: |
+            apps/apple/build/logs/build-ios-ui.log
+            apps/apple/build/ui-results/*.xcresult
           retention-days: 14
 
   connectivity-package:

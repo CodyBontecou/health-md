@@ -254,14 +254,20 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         snap("12-profile-detail")
 
         // Copy the profile ID for CLI/automation references.
+        let profileID = app.staticTexts.matching(
+            NSPredicate(
+                format: "label MATCHES %@",
+                "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+            )
+        ).firstMatch
+        XCTAssertTrue(profileID.waitUntilExists(timeout: 5), "detail should expose the exact profile UUID")
+        let expectedProfileID = profileID.label
+        XCTAssertNotNil(UUID(uuidString: expectedProfileID))
         let copy = app.buttons["export.profiles.copyID"]
         XCTAssertTrue(copy.waitUntilExists(timeout: 5))
-        let copied = expectation(
-            for: NSPredicate(format: "value == 'Copied'"),
-            evaluatedWith: copy
-        )
         copy.tap()
-        wait(for: [copied], timeout: 5)
+        // Copy must remain correct when automation observes it after the three-second feedback expires.
+        Thread.sleep(forTimeInterval: 4)
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()
@@ -288,7 +294,25 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertTrue(field.waitUntilExists(timeout: 5))
         field.tap()
         XCTAssertEqual(field.value as? String, "Default 2")
-        field.typeText(String(repeating: "\u{8}", count: "Default 2".count) + "Daily Everything")
+        field.typeText(String(repeating: "\u{8}", count: "Default 2".count))
+        field.press(forDuration: 1)
+        let paste = app.menuItems["Paste"]
+        XCTAssertTrue(paste.waitUntilExists(timeout: 5), "the rename field should offer native clipboard paste")
+        // Targeting the menu item makes XCTest dismiss the rename alert as an interruption.
+        // Tap its measured frame through the application while retaining the exact paste assertion.
+        let pasteFrame = paste.frame
+        let appFrame = app.frame
+        XCTAssertFalse(pasteFrame.isEmpty)
+        XCTAssertTrue(appFrame.contains(pasteFrame), "the Paste action should be on screen")
+        app.coordinate(withNormalizedOffset: .zero).withOffset(
+            CGVector(dx: pasteFrame.midX - appFrame.minX, dy: pasteFrame.midY - appFrame.minY)
+        ).tap()
+        XCTAssertEqual(
+            field.value as? String,
+            expectedProfileID,
+            "Copy profile ID must place the exact displayed UUID on the clipboard after its feedback disappears"
+        )
+        field.typeText(String(repeating: "\u{8}", count: expectedProfileID.count) + "Daily Everything")
         app.alerts.buttons["Save"].tap()
         XCTAssertTrue(
             app.navigationBars["Daily Everything"].waitUntilExists(timeout: 5),

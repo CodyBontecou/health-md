@@ -50,6 +50,61 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
     }
 
+    /// Preserve the hosted-only failure state without changing the tap or its wait.
+    /// A missing toast can mean the preset tap missed, protection was off, or the
+    /// accessibility query omitted the toast; the text log alone cannot distinguish them.
+    private func attachProtectionToastFailureDiagnostics(
+        in app: XCUIApplication,
+        preset: XCUIElement,
+        scrollView: XCUIElement
+    ) {
+        func describe(_ element: XCUIElement) -> String {
+            guard element.exists else { return "exists=false" }
+            return "exists=true, enabled=\(element.isEnabled), hittable=\(element.isHittable), "
+                + "label=\(element.label), value=\(String(describing: element.value)), frame=\(element.frame)"
+        }
+
+        let toastPredicate = NSPredicate(
+            format: "identifier == %@",
+            UITestLaunchHelper.ConfigurationProtection.toast
+        )
+        let protectedRegions = app.buttons.matching(
+            NSPredicate(
+                format: "identifier == %@",
+                UITestLaunchHelper.ConfigurationProtection.protectedRegion
+            )
+        )
+        let presetFrame = preset.exists ? preset.frame : .null
+        let viewportFrame = scrollView.exists ? scrollView.frame : .null
+        let presetCenter = CGPoint(x: presetFrame.midX, y: presetFrame.midY)
+        let state = XCTAttachment(string: """
+        State captured after the original toast wait failed:
+        Protection overlay button count: \(protectedRegions.count)
+        Toast button count: \(app.buttons.matching(toastPredicate).count)
+        Toast any-element count: \(app.descendants(matching: .any).matching(toastPredicate).count)
+        Yesterday preset: \(describe(preset))
+        Today preset: \(describe(app.buttons[UITestLaunchHelper.Export.datePresetTodayButton]))
+        Export button: \(describe(app.buttons[UITestLaunchHelper.Export.exportButton]))
+        Scroll viewport: \(describe(scrollView))
+        Preset center inside scroll frame: \(viewportFrame.contains(presetCenter))
+        The overlay count is observable UI evidence, not a direct manager-state read.
+        Frames describe the failure snapshot; the screenshot shows footer or tab-bar occlusion.
+        """)
+        state.name = "Protection toast failure state"
+        state.lifetime = .keepAlways
+        add(state)
+
+        let hierarchy = XCTAttachment(string: app.debugDescription)
+        hierarchy.name = "Protection toast failure hierarchy"
+        hierarchy.lifetime = .keepAlways
+        add(hierarchy)
+
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Protection toast failure screenshot"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
+    }
+
     func testBlockedChangeToastNavigatesToProtectionToggle() {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -77,6 +132,11 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         protectedControl.tap()
 
         guard let toast = waitForHittableToast(in: app) else {
+            attachProtectionToastFailureDiagnostics(
+                in: app,
+                preset: protectedControl,
+                scrollView: scrollView
+            )
             XCTFail("The visible configuration-protection toast should be tappable")
             return
         }
