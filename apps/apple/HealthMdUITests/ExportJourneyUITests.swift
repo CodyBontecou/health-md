@@ -572,14 +572,7 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(customPreset, in: app, swipingUp: true)
-        // A partially visible SwiftUI button can report isHittable while its center remains below
-        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
-        let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        scrollDatePresetIntoView(customPreset, in: app)
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()
@@ -588,6 +581,37 @@ final class ExportJourneyUITests: XCTestCase {
         let endPicker = app.descendants(matching: .any)[UITestLaunchHelper.Export.customEndDatePicker]
         XCTAssertTrue(startPicker.waitForExistence(timeout: 3), "Start Date picker should appear after tapping Custom")
         XCTAssertTrue(endPicker.waitForExistence(timeout: 3), "End Date picker should appear after tapping Custom")
+    }
+
+    /// Covers the reachable inline selector, not a claimed reproduction of
+    /// the reported native calendar completion flow (see investigation #168).
+    func testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport() throws {
+        let app = UITestLaunchHelper.firstRunExportApp()
+        app.launch()
+        let custom = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled)
+        custom.tap()
+        let start = app.descendants(matching: .any)[UITestLaunchHelper.Export.customStartDatePicker]
+        let end = app.descendants(matching: .any)[UITestLaunchHelper.Export.customEndDatePicker]
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertEqual(custom.value as? String, "Selected")
+
+        tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync").tap()
+        tabButton(in: app, identifier: UITestLaunchHelper.Tab.export, label: "Export").tap()
+        scrollDatePresetIntoView(custom, in: app)
+        XCTAssertTrue(custom.isEnabled, "Selected Custom must not become a disabled preset on reentry")
+        XCTAssertEqual(custom.value as? String, "Selected")
+        custom.tap() // Deliberately do not select Today first.
+        XCTAssertTrue(start.waitForExistence(timeout: 3))
+        XCTAssertTrue(end.waitForExistence(timeout: 3))
+        XCTAssertTrue(start.isEnabled)
+        XCTAssertTrue(end.isEnabled)
+        let screenshot = XCTAttachment(screenshot: app.screenshot())
+        screenshot.name = "Custom selector after export reentry"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
     }
 
     // MARK: - Tab Navigation
@@ -662,6 +686,24 @@ final class ExportJourneyUITests: XCTestCase {
         for _ in 0..<6 where !element.isHittable {
             swipingUp ? scrollView.swipeUp() : scrollView.swipeDown()
         }
+    }
+
+    private func scrollDatePresetIntoView(_ preset: XCUIElement, in app: XCUIApplication) {
+        scrollUntilHittable(preset, in: app, swipingUp: true)
+        guard preset.exists else { return }
+        let scrollView = app.scrollViews.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        let visibleBottom = tabBar.exists
+            ? min(scrollView.frame.maxY, tabBar.frame.minY)
+            : scrollView.frame.maxY
+        // A partly visible button may be hittable underneath the tab bar. Only nudge
+        // that lower-edge case; an unconditional extra drag can hide a safe row
+        // underneath the navigation bar after the first swipe has already found it.
+        guard preset.frame.maxY > visibleBottom - 24 else { return }
+        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
+            forDuration: 0.05,
+            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        )
     }
 
     private func waitForAccessibilityText(
