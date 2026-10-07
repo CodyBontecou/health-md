@@ -64,8 +64,11 @@ const coreInputPins = {
   "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
   "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
   "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+  "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
   "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
   "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+  "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+  "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
   "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
   "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
   "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
@@ -77,18 +80,79 @@ const coreInputPins = {
   "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
   "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
 };
+const coreOutputPaths = [
+  "dist/core/contracts/exact-values.d.ts",
+  "dist/core/contracts/exact-values.js",
+  "dist/core/contracts/registry.d.ts",
+  "dist/core/contracts/registry.js",
+  "dist/core/host-interfaces/capabilities.d.ts",
+  "dist/core/host-interfaces/capabilities.js",
+  "dist/core/host-interfaces/faults.d.ts",
+  "dist/core/host-interfaces/faults.js",
+  "dist/core/index.d.ts",
+  "dist/core/index.js",
+  "dist/core/operations/catalog.d.ts",
+  "dist/core/operations/catalog.js",
+  "dist/core/operations/normalize.d.ts",
+  "dist/core/operations/normalize.js",
+  "dist/core/operations/query.d.ts",
+  "dist/core/operations/query.js",
+  "dist/core/serialization/exact-json-numbers.d.ts",
+  "dist/core/serialization/exact-json-numbers.js"
+];
+const cohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json");
+const cohortSha256 = "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7";
+async function auditCohort(path) {
+  const bytes = await readFile(path);
+  assert.equal(hash(bytes), cohortSha256, "reviewed_core_cohort_bytes_drift");
+  const value = JSON.parse(bytes);
+  assert.equal(value.committed_source_sha, "683acf1831d65feace61d3702d3b35f2838a42f6", "reviewed_core_committed_source_drift");
+  assert.deepEqual(value.runtime, { node: "24.21.0", npm: "11.19.0" });
+  assert.equal(value.input_count, 31); assert.equal(value.output_count, 18);
+  assert.equal(Object.keys(coreInputPins).length, 31);
+  assert.deepEqual(value.input_pins, coreInputPins, "reviewed_core_input_map_drift");
+  assert.deepEqual(Object.keys(value.output_pins).sort(), coreOutputPaths, "reviewed_core_output_set_drift");
+  return value;
+}
+const cohort = await auditCohort(cohortPath);
 const source = resolve("../../packages/healthmd-core-ts");
 const installed = resolve("node_modules/@healthmd/core-ts");
 const sourceManifest = await readFile(join(source, "package.json"));
-const receipt = JSON.parse(await readFile("../../docs/migration/effect-refactor/receipts/REGISTRY-READER.json", "utf8"));
-assert.equal(receipt.result, "passed"); assert.equal(receipt.review.status, "accepted", "qualified_core_receipt_required");
-assert.equal(receipt.source_sha, coreInputAuthority.sourceSha, "qualified_core_source_authority_drift");
-assert.equal(receipt.patch_digest, coreInputAuthority.patchDigest, "qualified_core_patch_authority_drift");
+async function auditAuthority(authority, path = resolve("../../", authority.receipt_path)) {
+  const bytes = await readFile(path);
+  assert.equal(hash(bytes), authority.receipt_sha256, "qualified_core_receipt_bytes_drift");
+  const value = JSON.parse(bytes);
+  assert.equal(value.task_id, authority.task_id);
+  assert.equal(value.result, "passed"); assert.equal(value.review.status, "accepted", "qualified_core_receipt_required");
+  assert.equal(value.source_sha, authority.source_sha, "qualified_core_source_authority_drift");
+  assert.equal(value.patch_digest, authority.patch_digest, "qualified_core_patch_authority_drift");
+  assert.deepEqual(value.review, authority.review, "qualified_core_review_authority_drift");
+  return value;
+}
+const receipt = await auditAuthority(cohort.historical_registry_authority);
+assert.equal(receipt.source_sha, coreInputAuthority.sourceSha);
+assert.equal(receipt.patch_digest, coreInputAuthority.patchDigest);
 const qualified = receipt.inputs.artifact_and_native_interface.emitted_artifacts;
-const artifacts = Object.fromEntries(Object.entries(qualified).filter(([path]) => path.startsWith("dist/core/")));
-assert.equal(Object.keys(artifacts).length, 16, "qualified_core_artifact_cohort_drift");
-assert.equal(hash(JSON.stringify(Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b)))), coreMetadataAuthority.emittedArtifactMapSha256, "qualified_core_artifact_authority_drift");
+const legacyArtifacts = Object.fromEntries(Object.entries(qualified).filter(([path]) => path.startsWith("dist/core/")));
+assert.equal(Object.keys(legacyArtifacts).length, 16, "qualified_core_artifact_cohort_drift");
+assert.equal(hash(JSON.stringify(Object.entries(legacyArtifacts).sort(([a], [b]) => a.localeCompare(b)))), coreMetadataAuthority.emittedArtifactMapSha256, "qualified_core_artifact_authority_drift");
 assert.equal(receipt.inputs.contract_and_fixture_digests["packages/healthmd-core-ts/package.json"], coreMetadataAuthority.historicalManifestSha256, "historical_core_manifest_authority_drift");
+const metadata = await auditAuthority(cohort.metadata_authority);
+assert.equal(metadata.source_sha, coreMetadataAuthority.sourceSha);
+assert.deepEqual(metadata.inputs.artifact_and_native_interface.retained_qualified_core_emitted_artifacts, legacyArtifacts);
+assert.equal(metadata.inputs.artifact_and_native_interface.patch_files["packages/healthmd-core-ts/package.json"], coreInputPins["package.json"]);
+assert.equal(metadata.inputs.artifact_and_native_interface.patch_files["packages/healthmd-core-ts/README.md"], coreInputPins["README.md"]);
+const delta = await auditAuthority(cohort.accepted_delta);
+const relativeMap = (map) => Object.fromEntries(Object.entries(map).map(([path, digest]) => [path.replace(/^packages\/healthmd-core-ts\//, ""), digest]));
+assert.deepEqual(relativeMap(delta.inputs.artifact_and_native_interface.patch_files), cohort.accepted_delta.input_pins, "qualified_core_delta_inputs_drift");
+assert.equal(Object.keys(cohort.accepted_delta.input_pins).length, 3);
+assert.equal(Object.keys(cohort.accepted_delta.output_pins).length, 2);
+assert.equal(cohort.accepted_delta.vector_sha256, coreInputPins["tests/exact-json-numbers-vectors.ts"]);
+const artifacts = { ...legacyArtifacts, ...cohort.accepted_delta.output_pins };
+assert.deepEqual(artifacts, cohort.output_pins, "qualified_core_delta_output_map_drift");
+assert.deepEqual(relativeMap(delta.inputs.artifact_and_native_interface.core_emitted_artifacts), artifacts, "qualified_core_delta_artifact_authority_drift");
+assert.equal(Object.keys(artifacts).length, 18);
+for (const [path, digest] of Object.entries(cohort.accepted_delta.input_pins)) assert.equal(coreInputPins[path], digest);
 assert.equal(hash(sourceManifest), coreInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 async function tree(directory, skipBins = false) {
   const files = [];
@@ -153,6 +217,34 @@ try {
   const stale = join(temporary, "stale"); await cp(installed, stale, { recursive: true });
   await writeFile(join(stale, "dist/core/index.js"), "export {};\n");
   await assert.rejects(auditCore(stale), /core_build_bytes_drift/);
+  await rm(join(inputCopy, "src/serialization/exact-json-numbers.ts"));
+  await assert.rejects(auditCoreInputs(inputCopy), /core_input_file_set_drift/);
+  await writeFile(join(inputCopy, "src/serialization/exact-json-numbers.ts"), "export {};\n");
+  await assert.rejects(auditCoreInputs(inputCopy), /core_input_bytes_drift/);
+  await rm(join(inputCopy, "src/serialization/exact-json-numbers.ts"));
+  await symlink(join(source, "src/serialization/exact-json-numbers.ts"), join(inputCopy, "src/serialization/exact-json-numbers.ts"));
+  await assert.rejects(auditCoreInputs(inputCopy), /candidate_source_symlink_unreviewed/);
+  const numericOutput = "dist/core/serialization/exact-json-numbers.js";
+  const changedNumeric = join(temporary, "changed-numeric"); await cp(installed, changedNumeric, { recursive: true });
+  await writeFile(join(changedNumeric, numericOutput), "export {};\n");
+  await assert.rejects(auditCore(changedNumeric), /core_build_bytes_drift/);
+  await rm(join(changedNumeric, numericOutput));
+  await assert.rejects(auditCore(changedNumeric), /core_build_file_set_drift/);
+  await writeFile(join(changedNumeric, numericOutput), await readFile(join(installed, numericOutput)));
+  await writeFile(join(changedNumeric, "dist/core/unreviewed.js"), "export {};\n");
+  await assert.rejects(auditCore(changedNumeric), /core_build_file_set_drift/);
+  await rm(join(changedNumeric, "dist/core/unreviewed.js"));
+  await rm(join(changedNumeric, numericOutput));
+  await symlink(join(installed, numericOutput), join(changedNumeric, numericOutput));
+  await assert.rejects(auditCore(changedNumeric), /candidate_build_symlink_unreviewed/);
+  const absentCohort = join(temporary, "absent-cohort.json");
+  await assert.rejects(auditCohort(absentCohort), { code: "ENOENT" });
+  const tamperedCohort = join(temporary, "tampered-cohort.json");
+  await writeFile(tamperedCohort, JSON.stringify({ ...cohort, committed_source_sha: "unreviewed" }));
+  await assert.rejects(auditCohort(tamperedCohort), /reviewed_core_cohort_bytes_drift/);
+  const unreviewedDelta = join(temporary, "unreviewed-delta.json");
+  await writeFile(unreviewedDelta, JSON.stringify({ ...delta, review: { ...delta.review, status: "pending" } }));
+  await assert.rejects(auditAuthority(cohort.accepted_delta, unreviewedDelta), /qualified_core_receipt_bytes_drift/);
 } finally { await rm(temporary, { recursive: true, force: true }); }
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
@@ -178,7 +270,7 @@ assert.equal(effects.length, 1, "duplicate_effect_installation");
 const core = await import(coreUrl); const host = await import(hostUrl);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
 console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(artifacts).length, qualifiedCoreInputs: Object.keys(coreInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export"] }));
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta"] }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));

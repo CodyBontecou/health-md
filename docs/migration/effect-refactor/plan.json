@@ -6284,8 +6284,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/location_inbox_plan",
+        "base_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-location.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-LOCATION.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -7152,7 +7161,9 @@
         "apps/android/effect-host-candidate/app/proguard-rules.pro",
         "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
         "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
-        "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh"
+        "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+        "apps/android/effect-host-candidate/app/gradle.lockfile",
+        "apps/android/effect-host-candidate/gradle/verification-metadata.xml"
       ],
       "shared_resources": [
         "android-candidate-gradle-graph",
@@ -7400,7 +7411,9 @@
           "apps/android/effect-host-candidate/app/proguard-rules.pro",
           "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
           "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
-          "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh"
+          "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+          "apps/android/effect-host-candidate/app/gradle.lockfile",
+          "apps/android/effect-host-candidate/gradle/verification-metadata.xml"
         ],
         "reserved_resources": [
           "android-candidate-gradle-graph",
@@ -7452,7 +7465,7 @@
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       },
-      "source_reconciliation": "All13 historicale3f13 source pins match currentd126. Candidate extensions approved before writes: Babel config, private README/gitignore, launcher-only Activity, Proguard, pure native JVM admission test, isolated local test signing script. Production identity/signing/state unchanged. ExactRN0.87.1 prebuilt AAR and exactGradle/Kotlin compatible metadata remain subject to graph inspection before installation; no cached0.86 substitution. Numbers commonbuild is separately reserved; wait root-frozen input/output window before bundling/checking common packages.",
+      "source_reconciliation": "All13 historicale3f13 source pins match currentd126. Candidate extensions approved before writes: Babel config, private README/gitignore, launcher-only Activity, Proguard, pure native JVM admission test, isolated local test signing script. Production identity/signing/state unchanged. ExactRN0.87.1 prebuilt AAR and exactGradle/Kotlin compatible metadata remain subject to graph inspection before installation; no cached0.86 substitution. Numbers commonbuild is separately reserved; wait root-frozen input/output window before bundling/checking common packages. Coordinator approved two additional nativegraph outputs BEFOREwrites: app/gradle.lockfile and gradle/verification-metadata.xml; resolved hashes do not automatically qualify trust/license/provenance, require independent primary metadata/actual graph review.",
       "local_signing_scope": "Generate and retain one ignored candidate-local .test-signing test key idempotently; publiccertificate hash only in receipt. Sign nondebuggable isolated Play Release and instrumentation APKs solely for synthetic install on component-required target; no production credentials/keystores/store/publication or signed-distribution qualification. Initial random testkey generation is not reproducible; repeated signing uses retained key.",
       "host_availability": "Read-only exact adb required target is currently unavailable; sandboxlistener constraint narrowly escalated and actualgetstate reported targetnotfound. Continue graph/fixture/source/build work. Task cannot pass actualruntime acceptance until target reconnects and packaged probe runs; no emulator/other-device substitution.",
       "fixture_review_before_implementation": {
@@ -12010,18 +12023,35 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json",
       "reviewer_role": "independent portable build and core provenance reviewer",
       "priority": 75,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/core_cohort_refresh",
+        "base_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "683acf1831d65feace61d3702d3b35f2838a42f6+70530eb5c70b07592e271c8fe3f7f424a9b2ee69c523151b1cb07d68c41ebfb9"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json"
+        ]
       },
       "future_scope": "Every later core input/output change needs a separately scoped reviewed cohort delta and fresh affected candidate integration; this task authorizes only the exact-number child. Historical receipts are immutable, not rewritten to pass current source.",
       "card_review": {
@@ -12029,6 +12059,15 @@
         "reviewer": "/root/effect_base_cli",
         "fingerprint": "4e5615e12660857cf07b8c7f74a31226a0795b2f4458966024bc249338f98516",
         "fingerprint_method": "SHA256 canonical task JSON before card_review insertion; sort_keys=True,separators=(comma,colon),ensure_ascii=False,UTF8. Exclude this metadata field when replaying the card digest. Implementation review remains pending."
+      },
+      "source_reconciliation": "Numeric child now independently accepted and committed at683acf1831d65feace61d3702d3b35f2838a42f6, historicalbase d126+sorted3patch2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236, vector3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8. Rootverified41sourcepins/18outputs/prior16unchanged, independent67newtests/2303mathematicalcases and full258corecheck. Existing REGISTRY/COREAPI historicalauthorities remain required. Coordinator must independently review fixedcohortfile beforeguardimplementation; only numeric3input/2outputdelta, never blanketfuturemoduleacceptance. Android is an independentprivatecandidate writer; its currentcommonreadwindow usesfrozenfiles, so coordinatebeforecommonbuild/check/reinstall.",
+      "cohort_review_before_guard_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json",
+        "sha256": "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7",
+        "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
+        "evidence": "Root independently parsed historicalguard28fixedmap and verified exact reviewed3delta; completecurrentfilesystem and committedGit31inputsets/bytes;18outputsets/bytes and legacy16sourceauthority/mapSHA plusreviewed2newnumeric artifacts; all3acceptedrawreceipts/reviewfingerprints/sourcepatch/vector/metadata/runtime; no ownrefreshreceipt reversepin."
       }
     },
     {
