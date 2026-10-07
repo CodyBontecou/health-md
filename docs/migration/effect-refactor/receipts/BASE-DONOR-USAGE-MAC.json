@@ -1,0 +1,369 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DONOR-USAGE-MAC",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "b56fad0131798e4906f5e49a9612717ad484fe59",
+  "patch_digest": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "included_paths": [
+      "docs/migration/effect-refactor/inventories/donor-usage-mac.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+      "docs/migration/effect-refactor/plan.json",
+      "coordinator state and other workers changes"
+    ],
+    "scope": "Exact raw UTF-8 donor-usage-mac.json bytes INCLUDING trailing newline, excludes receipt/coordinator state.",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/inventories/donor-usage-mac.json').read_bytes()).hexdigest())"
+    ]
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+    "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "independent_case_index": "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/independent_checks/case_index",
+      "complete_archive_title_idle_fixture": "not established; unqualified"
+    },
+    "locks_and_runtime": {
+      "donor_Package_resolved_sha256": "aebe6d77e2b063669557c39baf20f2e0dfca670bbe93e3e0eeea55200bec0106",
+      "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "runtime_executed": false
+    },
+    "artifact_and_native_interface": {
+      "source_graph": "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/source_records",
+      "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "license_sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "candidate_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "status": "clean nonignored metadata",
+      "Q-DONOR-SOURCE": "open",
+      "signed_or_installed_artifacts_inspected": false
+    },
+    "policy_migration_key_versions": {
+      "formatted_export": 1,
+      "mirror": 1,
+      "daily_snapshot": 1,
+      "pairing": 1,
+      "encrypted_envelope": 1,
+      "initial_key_version": 1,
+      "key_material_read": false,
+      "migration_or_policy_changed": false
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Map full available Mac history versus summary mirror, discarded short sessions, clock/crash gaps and source identity.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history/source_identity: retained raw table versus bounded365day mirror; <2s/clock/order/crash losses; separate hardware/installation/row IDs and pending admission. Corrected source-defined mirror continuation undercount and required synthetic cases in history/mirror/continuation_loss_evidence and independent_checks/proposed_mirror_regression_cases."
+    },
+    {
+      "criterion": "Inventory Mac usage/category/CLI/export/sync/update/commerce behavior and every browser/input exclusion from source.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/feature_map/cli/exports/sync/storage_migrations/exclusions/updates_commerce_native: all40 IDs, formats/rawValues/version/bounds/day replacement/state/egress/deferred fields."
+    },
+    {
+      "criterion": "Separate new idle/title capabilities and signed-channel permission proofs; inspect no usage database/window titles/credentials.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs/limitations: idle/title absent; planned native SDK/channel/permission/login/headless/energy/full-history gates, Git-only inspection."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-DONOR-USAGE-MAC"
+      ],
+      "result": "passed",
+      "evidence": "Exact target/write scope/acceptance inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C14"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C15"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C17"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P03"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S00"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S02"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S03"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S04"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S05"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F11"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F12"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F13"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F14"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F15"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F16"
+      ],
+      "result": "passed",
+      "evidence": "Scoped exact design requirement read."
+    },
+    {
+      "cwd": "/Users/codybontecou/dev/time.md",
+      "argv": [
+        "git",
+        "status",
+        "--porcelain=v1"
+      ],
+      "result": "passed",
+      "evidence": "Empty nonignored tracked/untracked metadata; ignored runtime files not enumerated/read."
+    },
+    {
+      "cwd": "/Users/codybontecou/dev/time.md",
+      "argv": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%s",
+        "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+      ],
+      "result": "passed",
+      "evidence": "Candidate source parent/subject verified, no Q-DONOR-SOURCE acceptance."
+    },
+    {
+      "cwd": "/Users/codybontecou/dev/time.md",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+      ],
+      "result": "passed",
+      "evidence": "Tracked source/license/native/docs/tests enumerated; no tracked AGENTS.md."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Inline Git-show-only source/metadata/assertion inspection and final rehash: 149 revision-specific SHA256 pins, 140 literal XCTest cases, 262 semantic symbol locators and 40 dispatch IDs verified. Current paths exist in pinned source, trailing newline present, donor remains clean. No product/API/store operation."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json"
+      ],
+      "result": "passed",
+      "evidence": "Scoped command returned0; both new files are untracked, so this does not inspect their whitespace; JSON parsing/raw digest validation separately passed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "status",
+        "--short",
+        "--",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json"
+      ],
+      "result": "passed",
+      "evidence": "Only the two claimed files selected; both new untracked deliverables, no commit/push."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Corrective Git-show inspection at candidate 2955ed07: HistoryStore.swift:219 continuation session_count=0; ScreenTimeDataService.swift:1041\u20131073 passes grouped totals/counts; ScreenTimeAutoSaveWriter.swift:388 requires positive total AND positive count. All 149 pins rehashed, literal corrective locators validated; three proposed unrun synthetic fixture obligations added. No donor/runtime/state change."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-source-review"
+      ],
+      "result": "passed",
+      "evidence": "Independent reviewer rehashed149 immutable donor source pins,262 symbol locators,140 XCTest locators (complete tracked literal set),40 CLI IDs and11 Health recipient inputs; clean revision/parent/subject/license/instructions/source-only target match. Corrected continuation mirror undercount against actual ScreenTimeAutoSaveWriter.swift line388, HistoryStore.swift219 and ScreenTimeDataService.swift1041..1073. Root recomputed corrected raw inventory digest. Future full-history/short-session/title/native/import/permission/channel/S06/source choices remain open; no live data or runtime accessed."
+    }
+  ],
+  "inspection_summary": "Root/entrypoint/personal-data/GLOSSARY/templates/scoped C14\u2013C15/C17/P03/S00/S02\u2013S05/F11\u2013F16/full-history read. Clean candidate 2955ed07db9c649c77a128db59aed2ac0fef0bc5 native tracker/history/category/UI/CLI/export/sync/crypto/settings/commerce/update and excluded acquisition inspected. 149 raw revision pins, 140 literal XCTest cases, 262 semantic locators, 40 CLI dispatch IDs verified. Existing inline fixtures are independent source expectations, not executed portable or migration proof. No product/heavy tests or live state access. Independent review correction: mirror filters out continuation-only hours/day portions; raw history remains authority. Exact filter is pinned line388, not a runtime observation. Proposed synthetic continuation-hour/cross-midnight/with-start expectations are explicitly unrun.",
+  "observations": [],
+  "limitations": [
+    "Source-only candidate, Q-DONOR-SOURCE open; no import/source acceptance.",
+    "No liveSQLite/defaults/CloudKit/keychain/config/usage/windowtitles/credential/account/history access; no launch/install/build/tests/networkservice.",
+    "Clean Git metadata excludes ignored runtimefiles, not enumerated/read.",
+    "Static facts do not prove runtime delivery/recovery/fullhistory/bytefidelity/signedchannel/entitlement.",
+    "Literal testcase index omits possible generatedcases; freeze expectations and reconcile executabletargetbindings before port.",
+    "External dependency license/source review/native supportedAPI/channel proofs remain required."
+  ],
+  "remaining_qualification": [
+    "Q-DONOR-SOURCE/history/license/entitlement/support/grant/destination/queue choices open.",
+    "C14/C15/C17/P03/S00/S02\u2013S05/F11\u2013F16 fullfamily proofopen; source maps do not qualify full-history migration.",
+    "No productionpromotion or source/reference/donorstore deletion authorized.",
+    "Source installed-state/secret/grant access forbidden in this task; a later authorized synthetic archive harness must prove full retained history, exclusion-before-persistence, precision and installed-state recovery.",
+    "Historical aggregate-only source preserves declared source detail; missing exact iOS sessions remain S06, not fabricated by the Mac importer.",
+    "Synthetic continuation-only hour, cross-midnight and same-app continuation-with-start fixtures must prove source mirror undercount versus complete raw-history authority; no donor source fix or executed fixture in this planning task."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data. Donor stores/defaults/permissions/purchases/credentials/destinations remain untouched.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "b56fad0131798e4906f5e49a9612717ad484fe59+5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c"
+  }
+}

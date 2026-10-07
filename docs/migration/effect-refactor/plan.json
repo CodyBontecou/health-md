@@ -3179,7 +3179,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 23,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
@@ -3192,14 +3192,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "b56fad0131798e4906f5e49a9612717ad484fe59+5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json"
+        ]
       }
     },
     {
@@ -4075,7 +4077,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/cli.json service.rs/limits.rs/backend.rs/model.rs/application.rs and native query authority/test locators; OP-CATALOG reviewed normalizer; frozen direct-v3 Swift query fixture SHA25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2. Independently review fixed fake pages/receipt/authority negative expectations before implementation. Preserve current aggregate2MiB reserve16384/pages4096 and distinguish synthetic trusted adapter binding from actual native evaluator/protocol authentication.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4087,8 +4089,21 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 60,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "6ee124c7ea0df91825c24d7105ef2f329ed18584",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/operations/query.ts",
+          "packages/healthmd-core-ts/tests/query-traversal.test.ts",
+          "packages/healthmd-core-ts/tests/query-traversal-vectors.ts",
+          "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json"
+        ],
+        "reserved_resources": [
+          "query-operation-interface"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",

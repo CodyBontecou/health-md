@@ -1,0 +1,4736 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DONOR-USAGE-MAC",
+  "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+  "design_ids": [
+    "C14",
+    "C15",
+    "C17",
+    "P03",
+    "S00",
+    "S02",
+    "S03",
+    "S04",
+    "S05",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16"
+  ],
+  "proof_class": "planning",
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "scope": "Candidate Mac source/state/features only; static descriptions do not qualify runtime, complete transfer, signed channel, grants or parent family.",
+  "source_identity": {
+    "candidate_locator": "/Users/codybontecou/dev/time.md",
+    "candidate_repository": "CodyBontecou/time.md (design locator; remote not contacted)",
+    "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+    "candidate_parent": "30c8c306f2fc09029bb5975126c3f41f36bb12a4",
+    "candidate_subject": "Remove unreachable feature surface and sync docs with reality",
+    "status_porcelain_v1": "empty",
+    "candidate_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "patch_method": "SHA256 raw git diff --binary HEAD; clean empty bytes; nonignored status only; ignored runtime files not inspected",
+    "dirty_patch_adopted": false,
+    "license": {
+      "path": "LICENSE",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "text_identity": "GNU Affero General Public License, Version 3",
+      "admission": "Separate owner license/reuse review required; no source import/legal conclusion"
+    },
+    "Q-DONOR-SOURCE": {
+      "state": "open",
+      "accepted_here": false,
+      "required": "Accept immutable source/history/license/dependency map and intended patch separately"
+    },
+    "nearest_donor_instructions": "No tracked AGENTS.md in candidate revision tree; no donor writes authorized",
+    "runtime_state_accessed": false
+  },
+  "source_records": [
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": ".github/workflows/ci.yml",
+      "sha256": "22f9e2174aff045987962eb2592cdd8bb35decdc7d03dfd67654e01c8f5a6f0d",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "ExportOptions-macOS.plist",
+      "sha256": "3ea2a388a1870aff6de0d654ef54e522d92e94fc9704f7b6cec347b656994969",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "Info.plist",
+      "sha256": "073ff795a930de5d532a5a033bea8d41b77dd5d497908e6e4008f8ecbf091d90",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "LICENSE",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "Makefile",
+      "sha256": "e78f9811e4e234ee34e389c36188c60b9baf2acb05290e8b2be32733c761701e",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "README.md",
+      "sha256": "a41aa1786344eb6285c8bfe69080205de118be954a8d03095832cc0966657d7e",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/FEATURES.md",
+      "sha256": "3b4a2958622b9c79beef0f3c3a1ed3ec6c20025e4a2b033605944ed3ce3fbf45",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/PRIVACY.md",
+      "sha256": "ac65e8847d72d299618416c157800c8fad83a4331e22e11d90fef6e130303cef",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/cli.md",
+      "sha256": "0c849e4d1079c48de794b37b13a6c1fbdf105af671883802fe107b85c6e7df7e",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/cloudkit-sync.md",
+      "sha256": "c94b9b974058ce445b2ebdf3eb3ecde2dbc192f9a789df4c4e17cf96c6fea77b",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/cross-platform-sync.md",
+      "sha256": "0dd0d50811b0d9673f8ec608793201efac219ebbe61ea12f00ebfdaa68cc16cb",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/exportkit-package.md",
+      "sha256": "6db8732e7b623bdb14086bada53b442b98222aa3a43f565d5f345c9afd447e30",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/features/backend-commerce-inventory.md",
+      "sha256": "74c799452c467a45ddafbb75d3091654d0fece508b67e6b7852f57b547b513cf",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/features/cli-skills-inventory.md",
+      "sha256": "a3884f237c8e33c3989ea1155e8ec3e42ea37cd2aa6f9e569493561a27d89b04",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/features/macos-services-inventory.md",
+      "sha256": "d5068023ea0bc328fa2202d7f2939c86bd0ac252e8407d3d890de8a3fcebd91c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/features/macos-ui-inventory.md",
+      "sha256": "2b5722877092029c097aef2a56069120d093b34d09b574b6e1cfbc722a72cb72",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/markdown-obsidian-export-examples.md",
+      "sha256": "b21594f4b6c08104c98c7b9888c94db79b21ff52483e77c90a0c28cbbd0d5d1f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "release.config.json",
+      "sha256": "ccc42aa718c131b2772b90526d485c091b10fa0eedeb8f4d0bee896db45979b4",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md.xcodeproj/project.pbxproj",
+      "sha256": "b405e84c0bbcd29a6b767829308a1acb642992761c0cd24b393903fdddfdf289",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+      "sha256": "aebe6d77e2b063669557c39baf20f2e0dfca670bbe93e3e0eeea55200bec0106",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md.xcodeproj/xcshareddata/xcschemes/time.md.xcscheme",
+      "sha256": "44e586a9cb5efc3675f43b3e8f6bc1059d733a70cbef011dea667ec1770493e7",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/AppEnvironment.swift",
+      "sha256": "be590fa04c799983cf381bf9057f448491c3d0b3e10bfb8d5de43d212c3bf0d0",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/AppNameDisplayStore.swift",
+      "sha256": "9ede1c7af4ac3e9d23e69f538cf7aab5072e7aaf9f6ad0314aeb7cfc8a1fb2d0",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/AppVisibilityMode.swift",
+      "sha256": "ba2df6daa7ef6abe82a30b21e798eb957b633445e9fbae4898f1a4db4affa6f9",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/BrowserSettingsStore.swift",
+      "sha256": "a8f9e0801ae84f608dffc35bcec2a266f3c0710fb20ee5d5ce3612c08d76e32d",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "sha256": "6bae119cf6b7effe1d909bbd58589e4d1a8977aa472446f30ca991749eca0ac3",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/DataAccessContext.swift",
+      "sha256": "d4637e14d513072a28544ee2c311eeb88290ecfeb6a084c6caf042b3544d2ee2",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/DataSourceRefreshInterval.swift",
+      "sha256": "b51cd0b3f5fd976d9d7b43ec0ddc3f71aa9df4734b54300508bb1d615f4de21e",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/DemoMode.swift",
+      "sha256": "abc1176092ae6847a868fedc4b0db2bdfd8026fd868604cf053406505c688ea7",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/FeatureFlags.swift",
+      "sha256": "01e687fdd07f1958f24e85104dad3d1b4b93b5cefb2b5a96db8d3cf60cf8a4be",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/GlobalFilterStore.swift",
+      "sha256": "b2b4ca9d7941d6ff66409b4bede7f03fe8cd2b5388bab9e51e26be06222ffa2c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/HerdrIntegrationService.swift",
+      "sha256": "6ab56eaf4cd71aa497ef4ce322d097b332208bcb38925d537ed8e118467a2266",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/LicenseActivationKeychain.swift",
+      "sha256": "d4e59fc65a86033b85211457f04c1963561750f1394a2c96be989f7c4dce910c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/LicenseActivationModels.swift",
+      "sha256": "10e8c5a884ccd7131ce8d583d2fc5d9390be15cdc10255848e1e7f348e1ffbe8",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/LicenseActivationService.swift",
+      "sha256": "e185a74689443e16dd237ec0a03da84767f7a0eb5aac85a993df2eee4a49900c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "sha256": "98a6dba809c5a7b0cc73d24d9dc053fbaed8d1dd9fb635370aa0b6c84dd87c8c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/LicenseActivationView.swift",
+      "sha256": "2d4a69d867fbae5e12461f7c6f969db99a67e424a4d79c1e72d33f733c021cb9",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/MacOnboardingView.swift",
+      "sha256": "8f113409a99231d013bd0aa3056a7fdb9832a3c723213399314dab3d65d4cfd0",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/MenuBarExtra.swift",
+      "sha256": "bcaf848bbc7a2159f347958233f2da70e799489e668f6b79a408c22310ea3fd0",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/NavigationCoordinator.swift",
+      "sha256": "964131b81f925880526aff107fe67577244ff7aa9287270cddc89463da0a6453",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/NavigationDestination.swift",
+      "sha256": "75061681bc3688f367d007009242f1361e97149b3da136e3f171bac214785f33",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/PerformanceTrace.swift",
+      "sha256": "32f83e7cad0fb798921f462212740c1b106e353296a06283ceea06796a115450",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/RootSplitView.swift",
+      "sha256": "ce81998c25e1c6754869108aeb3228b8d0e806012d0f1c5dce13243a3610fdbe",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/SafariWebExtensionSupport.swift",
+      "sha256": "3fc8f0d7e268e7767e02dbbe537bacea57466bfc43b764b2e5aab17e49d18acb",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/SparkleUpdater.swift",
+      "sha256": "d277b94de177ff32e3e6b5a67511b16a5d97e5ffbc13ff37c825c9d033a1ea14",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/time.mdApp.swift",
+      "sha256": "5d590f40f85facffd34ab43f9757a430735e16640e42f0b9f5d7fa381cf60b6b",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/App/time.mdCommands.swift",
+      "sha256": "fb812c92614bc373d99ed5ec55e6416d043a51af05ed93ba2be4a298168440da",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "sha256": "a816e35377bdf90f4d2615593aebb715c0b5c2a355e510594ef55f429d8967ad",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/AnalyticsModels.swift",
+      "sha256": "596ba7d0695226c8e39ee6dace6e4725d554f4fa9041079643d97b8d3fc09aaf",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/AppBlockingEventSource.swift",
+      "sha256": "6046a126739ba168ed04494abafcbf56c5a37e8a23bbb4f30f13ce60ad7dfcb5",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/AppCategorizer.swift",
+      "sha256": "107139b2f644ebdcaa94e6f852d8ea0c612416144d82363803b17725fc4d93c2",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/AppIconProvider.swift",
+      "sha256": "24323ee3f063dd3292fd86c395c9830a72531351943dd2af0e2c89d7c3a46cbb",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/BlockPolicyEngine.swift",
+      "sha256": "864a49d42f138c90a88581b11a09dc92642c1af62ddebfbbc6dd04e037d7352f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/BlockPolicyModels.swift",
+      "sha256": "28c114c0c07fda7e4a0d0ae4f05d8270d0ffda03a60bae7c5400aa823fe0e217",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/BlockRuleStore.swift",
+      "sha256": "b212053b98ee1a89210cf697f19163052aadd4f61e222c522b91ec74f9690e04",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/BrowsingHistoryModels.swift",
+      "sha256": "cbf3a844f9e2b378db76a4d1cc00b548eb837843015107e319a7001cdcb0758b",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/BrowsingHistoryService.swift",
+      "sha256": "4778efd098ac2eb8ab8e99f7db598bbb91cc124f489a00ef32fa12d61ec175b1",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "sha256": "470052af476f2fd34173449bfda26a3f77b66249f03443ff7085ad608c688415",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/HerdrTelemetryIngestor.swift",
+      "sha256": "c3d685f747281780246a3b36f0bf28da16d97976316d6225ea64a10efda8fed2",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/HerdrTelemetryStore.swift",
+      "sha256": "3de66678241ac2c7b6fcc48536dee76df5a3bcc17cb08ae2c8593cc8b193d988",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/HistoryStore.swift",
+      "sha256": "5d686fe1779f7efb4cb825b1975c04c1a7e7aebb366295245dbbb273c0ed05d4",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/InputAggregator.swift",
+      "sha256": "8fe0b90c394ad0a65af0ba86a917456252d2efe53244b2a1fceea427fc067b86",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/InputDataPruner.swift",
+      "sha256": "68f5a30874f4fd49480e301fd6a6c55738a4a69a8b457c08fb6c66429c5d4abb",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/InputEventTracker.swift",
+      "sha256": "ae12d154ac8a26ea7c591d92cfc48365516ca2e715c81d79a302f1505715c80d",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/InputTrackingLevels.swift",
+      "sha256": "4efb60edc8cf064d633ccdcde5dd506a367b72b9c4bf437a8f9cedaae42bbd54",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "sha256": "3a3c91d99dd202fdd5119c1c3bcf36a630d275276ca5a1c5a96af8ac47ff8f6f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/ScreenTimeDataService+InputTracking.swift",
+      "sha256": "22a36204bea3a5dac8bca8a6bb10210375877e5ff2fd38eccf24ecc000866648",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/ScreenTimeDataService.swift",
+      "sha256": "1574c60faba00419c1bd557d1dc28ebf85c0ef3ed98663e9f84888398a4bd587",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/WebHistoryArchiveStore.swift",
+      "sha256": "2d237cf8510f78c693289b936be172e427f227ad622bc53b94342f9a04af14bf",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/WebHistoryCollectionSettings.swift",
+      "sha256": "c428773fe41f2790c84f506a2237f80a33b948790783a9c39aa15ceb9b283fe3",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/WebsiteAccessEventSource.swift",
+      "sha256": "f03b9351aac1a9570aec530d7f4e0ea90f0ba53bd46559d9a2dd680078e02fef",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Data/WebsiteFaviconProvider.swift",
+      "sha256": "40110a5b24649fc946ea72266d08f228171b1c15376d6fa15313a44aeda64c3d",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/ExportCoordinator.swift",
+      "sha256": "cd9c543db476de65a80d1ccfa8eaf0aad21494f2a260f9172b2e41404805976c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/ExportFilterPreset.swift",
+      "sha256": "8147f29f27ead2452d9948a8f963da8215853df487ae0c09d6eb8e90208ec871",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/ExportModels.swift",
+      "sha256": "61376c0b73b3030c7f6431f0987f4d7526a898d2609f9792947218a6bd165d8e",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "sha256": "e3cb89b8cfb3d6e2b30d38eb3510fe55c62094bc2ac987d60b05106758de80b8",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "sha256": "d5cfcc22a19d8c840de1b0f1c05b593a121cc8ac41e87aff3f396f6a50ad9cec",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Export/TimeMdExportKitAdapter.swift",
+      "sha256": "2d97dcd062585803b98b765e6fa766d539626737330f9a473f6896964c19d0e8",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Blocking/BlockingView.swift",
+      "sha256": "9fdde843e2b7c4f6b920e745d228843b6c8aa99637a32deff01a068a093ce12f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Blocking/BlockingViewModel.swift",
+      "sha256": "b632ec4446d42763eb6d5dd0a67490ce47d558504757fdc888e298c18d93f050",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Details/TimingDetailsView.swift",
+      "sha256": "e660b59e7b5568f1dc9aa6ef9d26329cdaf25daeee8b30af5dc13c7f85275767",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Exports/ExportAutomationFormState.swift",
+      "sha256": "a382d4df3b3abe33fc2bcf5b79a68f45e8f6accc10e31d131f7cc479ede73b11",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Exports/ExportFilterPresetEditor.swift",
+      "sha256": "9f0acd58290fecc8bdc768fe1f37eab507d1c96cb579d7ad7e5052bda4043190",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Exports/ExportsView.swift",
+      "sha256": "164b7567f8178a7097ef1c6312d0071530f4cabddbe774aefaf02bb807605879",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Herdr/HerdrTelemetryView.swift",
+      "sha256": "cd60030e79dc5080246c493b7ad4ebb8e5cb49cf1d28e07c8b6e5b7aef1727e3",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Input/InputTrackingSettingsSection.swift",
+      "sha256": "f90216a8e09e82e6b036f0131ea8ec47203df74114dc08c7113bc30a59767fc5",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Input/InputTrackingView.swift",
+      "sha256": "1af6cbd73f668a12867c57741bd5ea77713b2e1f5a200ca10d1b93a4b240892b",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Overview/TimingOverviewView.swift",
+      "sha256": "e6228b119038df27ad9c3409740e6669a29fdb79a8f5d2bb16a573e9ea4ff95f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Projects/TimingProjectsView.swift",
+      "sha256": "e77cf0152005abfb3fc0b609856f720462be607ba074df3ec38680380d2ecc25",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Reports/TimingReportsView.swift",
+      "sha256": "e56599fa1bcbea22c0dff3dc4da24aa7c76207b40c4e25f9f0ecc550279d9150",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/Rules/TimingRulesView.swift",
+      "sha256": "b4ba0368569dd42fdb567b400d13035200188175e7db388a2a384fb2c5eed464",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Features/WebHistory/WebHistoryView.swift",
+      "sha256": "933528a1c5f004b74935858853a21f9b2cd631ab17c51af8e00d4495f6883682",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Shared/Formatting/TimeFormatters.swift",
+      "sha256": "4e736ef68f08eacc5cc2eb00de431a71fde7a53c9b6bacffa466cb46a0370c55",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "sha256": "65219890e2b95f0e1bdbbc72b6d620d4e01db178b025c20dc51f1b8c5cb98545",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Shared/Models/InputTrackingModels.swift",
+      "sha256": "a3b194978375ab78a0405fc8d99972642d81fbac4d3f544a3889863c9b7e1cff",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Shared/Models/SharedAnalyticsModels.swift",
+      "sha256": "1f15200c68d01bf0c864f1dcb01960897c4e19a8109b1c268e04bc4665f61b52",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "sha256": "e37587e908956970c975caaddff1b55f8b216368cc65728cd46c6aeb32c44a36",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncModels.swift",
+      "sha256": "e906e8e3f987f0c4038d147aa0bd830e27a397254c64dba86f316d9328a09942",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncScheduler.swift",
+      "sha256": "3215d8cd35d98e04115c7d1fb3b6eca9a43058fd40f618f2fdea4ae93f98d39a",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncSettingsSection.swift",
+      "sha256": "064e7b923fb6cd17e729815c396a7e5e685970f88341fe0c9be14bd05172994b",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "sha256": "e202d8b0254c7e0ee8727453feee6daee0434de7316e5e3c2bb39141ba4610ad",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "sha256": "95fcd345b1062abd6dd05e566f0b1a07075dcb7ddcbc7b8be6bd033bc420a7c4",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncStore.swift",
+      "sha256": "04ea4ba4de53ed9b2d438397b6d141ddb36b42a5829d5f3e4df2ab3ea06dfb86",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformCredentialStore.swift",
+      "sha256": "74a9b3d6d3e76c4629e05ad7b38eaf3debd3db1a92e63a03a767bb9749e6ae3f",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "sha256": "6849b050fe1c30e21091941c71914694ca7656909c553648a4ed6570bc9544c7",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "sha256": "5df061b05822392d3c5bef893ecbb849a6dc6ddd85de5bef0c134d51df219f64",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncModels.swift",
+      "sha256": "8c37d1bfc4f39576c9d996475c1628277be7100a92a8bdcfea358d5118ec06dc",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncScheduler.swift",
+      "sha256": "0b102396b7d08b724678df07d2c4d9ce5e5a3af2d93d23b5d35cbb194d954ab5",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "sha256": "4c37d15fc3ca319c71de6e5397a4c33742e77bb8af2652e4ac5531c08be7bfe9",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncSettingsSection.swift",
+      "sha256": "c128078c74ef1d30b0f77349cfe13baae597769aa76971c6fe37bbf370f83f62",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncStore.swift",
+      "sha256": "9a5d4149451538cc6cbc4c90ef74fa79480e4b04b8cf5a4f4dff32c19b4c6d74",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdPairingQRCodeView.swift",
+      "sha256": "09cd3a7146c16af9b080adf3e8023fcbdd9b032bcd2bb38ce92ffb7c8cbdbaf3",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/time.md.entitlements",
+      "sha256": "813fa4f14fed4bebd4e703358cae2c7d4913b3a590fc2f74e60d9c5f2b170e59",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+      "sha256": "555278b8adae1d189d8da71d8be007dbc93957ea3b04c0da5040b98f85857495",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+      "sha256": "06293605be4b2778c35a5a390e1d289abab547ab6cb1c11b039c8db263a9526a",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+      "sha256": "9f9ca1de540c407b2f393e2608919aa594cfb711656a62213d01f396ab4fd772",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+      "sha256": "5594a678449802ea202a693de874cef29b321f25f926a68b9567a51114d6c52a",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BlockingRecoveryTests.swift",
+      "sha256": "27a27946b54d2f0129771fc541476bb653bd1818616b9a59c3e8b113f294738c",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+      "sha256": "5f26fe93c933aca352ab84227884a961e641d61477b729024750b0643a65dd43",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+      "sha256": "60bf754c086934463c0cdbe28e31ac2875afc601bad6bfe36455d86029ce73b8",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+      "sha256": "57f92e46fb16fbc1ff5a7fa0f63b173ce45c1eb6f636efe0cf9ac182afe748ad",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/CLICommandTests.swift",
+      "sha256": "6b24e1b0ee919ad8df87c884b9d4bbd921f342db35e758865267c658152a9e86",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+      "sha256": "08614ef63292d5e41314a707655a66ddcc094493030e8dd870d1bd467b780aa4",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+      "sha256": "223a955323d0704f908cbbc415cd929f773b80681009fd94255b52589fe12686",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+      "sha256": "95c33bbf016c71da03e46df9fc6386ea2a7c0fedf358699f218a5571dceb2ea1",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+      "sha256": "3e306ae40f7ad9269f7037b8fd33ec60b23dc2e7a06b84338986b53db630ca53",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+      "sha256": "3adb94efba2f2057253a3f3b011bf170183a2308b6ebb7363351594bb3ba0a6f",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+      "sha256": "f25d1e6ec84535a6de55fa1544ddc437131bff30748943be24dcd8e5c45ff9f7",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdTests/CategoryMappingIntegrationTests.swift",
+      "sha256": "9efa3370a41f4e2b5b85aad6aa07da313f9adee6730cc9aa36f3367918276aba",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdTests/ExportCoordinatorTests.swift",
+      "sha256": "1379d6e65c2d1881a50a8160baf9964c7d9933dc3ea38c0f5b0f69379df26f5e",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdTests/InputAggregatorTests.swift",
+      "sha256": "c0d6e6a1608c0a387a9d6afbea445dc14a776619c985f212844815357736fb75",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdTests/ScreenTimeDataServiceErrorTests.swift",
+      "sha256": "a370ede46aedea1b778e9937c33f80b9d4c2697856723c06725802dc415d4255",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.mdTests/SharedModelsTests.swift",
+      "sha256": "5f54514eee4dc6ad4599d85357d52db1ecbcb8d364644fb9ae36d6b513a41e93",
+      "role": "independent_test_source"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "timemd/Database.swift",
+      "sha256": "8811764cb63e56fc4642798ff976ce71e09c2903815014efe88e48e710a9d47c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "timemd/Handlers.swift",
+      "sha256": "ef3b1254df1f60c6936a226e8cf8182f069df83ae8f89212908a1fc08b7053de",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "timemd/Range.swift",
+      "sha256": "8ac8b97979d39d15b2eaafc0003cadc73b56e3e50ff8e4851c109805e21dc7ee",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "timemd/Tools.swift",
+      "sha256": "7b1683985fdede46f65c3acde70aa6ad90cb8c3123075a47f20995fc48855c49",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "timemd/main.swift",
+      "sha256": "2f3daab32665b8f33cfbb5f39e1af98d3b5d85ee4b0eca8c94856eab56c8132c",
+      "role": "source_or_metadata"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "GLOSSARY.md",
+      "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/personal-data.md",
+      "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/templates.md",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/manage.py",
+      "sha256": "cb86c74e203b6d948508336984bb7a183e7bbd5666b0f203c67238810659b90d",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/inventories/native-apple.json",
+      "sha256": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/inventories/hosts.json",
+      "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/inventories/cli.json",
+      "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "role": "policy_or_accepted_input"
+    },
+    {
+      "repository": "Health.md",
+      "source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+      "path": "docs/migration/effect-refactor/decisions/local-architecture.md",
+      "sha256": "e39461a77779bca6e1a42439d60df2342b92182514f514fe956700915d0ac569",
+      "role": "policy_or_accepted_input"
+    }
+  ],
+  "source_symbol_locators": [
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 6,
+      "symbol": "CLIIntegrationService"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 9,
+      "symbol": "InstallStatus"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 48,
+      "symbol": "agentSkillsInstallPrompt"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 71,
+      "symbol": "status"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 84,
+      "symbol": "install"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 109,
+      "symbol": "uninstall"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 120,
+      "symbol": "LinkState"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 126,
+      "symbol": "linkState"
+    },
+    {
+      "path": "time.md/App/CLIIntegrationService.swift",
+      "line": 152,
+      "symbol": "CLIInstallError"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 6,
+      "symbol": "LicenseActivationStore"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 102,
+      "symbol": "trialRemainingDescription"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 110,
+      "symbol": "prepareForLaunch"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 129,
+      "symbol": "activate"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 162,
+      "symbol": "createTrialCheckoutURL"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 181,
+      "symbol": "activateTrial"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 204,
+      "symbol": "handleDeepLink"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 209,
+      "symbol": "trialCheckoutSessionID"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 227,
+      "symbol": "activateTrial"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 265,
+      "symbol": "revalidateCurrentEntitlement"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 280,
+      "symbol": "revalidateSavedActivation"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 324,
+      "symbol": "revalidateSavedTrial"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 372,
+      "symbol": "resetActivation"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 379,
+      "symbol": "restoreSavedPaidActivation"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 404,
+      "symbol": "restoreSavedTrial"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 435,
+      "symbol": "clearStoredActivation"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 443,
+      "symbol": "clearStoredTrial"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 456,
+      "symbol": "enableDebugBypass"
+    },
+    {
+      "path": "time.md/App/LicenseActivationStore.swift",
+      "line": 472,
+      "symbol": "currentAppVersion"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 9,
+      "symbol": "ActiveAppTracker"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 32,
+      "symbol": "CurrentAppSnapshot"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 42,
+      "symbol": "snapshot"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 63,
+      "symbol": "start"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 124,
+      "symbol": "stop"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 142,
+      "symbol": "handleAppSwitch"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 174,
+      "symbol": "handleScreenInactive"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 186,
+      "symbol": "handleScreenActive"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 201,
+      "symbol": "finalizeCurrentSession"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 243,
+      "symbol": "writeCurrentSessionFile"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 257,
+      "symbol": "clearCurrentSessionFile"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "line": 263,
+      "symbol": "writeSession"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 4,
+      "symbol": "CategoryMappingStore"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 7,
+      "symbol": "fetchAll"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 17,
+      "symbol": "upsert"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 54,
+      "symbol": "category"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 63,
+      "symbol": "delete"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 92,
+      "symbol": "installMappings"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 118,
+      "symbol": "installMappingsIntoTemporaryTable"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 143,
+      "symbol": "OpenedDatabase"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 150,
+      "symbol": "openDatabase"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 178,
+      "symbol": "databaseURL"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 207,
+      "symbol": "insertMappings"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 237,
+      "symbol": "ensureSchema"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 248,
+      "symbol": "queryMappings"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 283,
+      "symbol": "exec"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 290,
+      "symbol": "sqliteMessage"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "line": 295,
+      "symbol": "sqliteColumnText"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 12,
+      "symbol": "HistoryStore"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 18,
+      "symbol": "databaseURL"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 28,
+      "symbol": "inputTrackingDatabaseURL"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 39,
+      "symbol": "webHistoryDatabaseURL"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 58,
+      "symbol": "applicationSupportDirectory"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 67,
+      "symbol": "ensureSchema"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 177,
+      "symbol": "ensureUsageRollupSchema"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 444,
+      "symbol": "backfillUsageRollupsIfNeeded"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 569,
+      "symbol": "localMetaExists"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 585,
+      "symbol": "ensureInputTrackingSchema"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 683,
+      "symbol": "migrateInputTrackingFromMainDBIfNeeded"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 760,
+      "symbol": "legacyHasTable"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 775,
+      "symbol": "ensureWebHistorySchema"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 971,
+      "symbol": "backfillWebHistoryRollupsIfNeeded"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 1025,
+      "symbol": "webHistoryColumnExists"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 1038,
+      "symbol": "webHistoryRollupMetaExists"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "line": 1055,
+      "symbol": "migrateWebHistoryFromMainDBIfNeeded"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 10,
+      "symbol": "ScreenTimeAutoSaveWriter"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 33,
+      "symbol": "start"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 85,
+      "symbol": "updateRefreshInterval"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 93,
+      "symbol": "stop"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 106,
+      "symbol": "scheduleRefreshTimer"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 120,
+      "symbol": "requestWrite"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 146,
+      "symbol": "writeNow"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 210,
+      "symbol": "write"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 225,
+      "symbol": "shouldWriteFormattedAutoExport"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 238,
+      "symbol": "writeFormattedAutoExport"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 273,
+      "symbol": "removeStaleFormattedAutoExports"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 287,
+      "symbol": "makeSnapshot"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 349,
+      "symbol": "rawSessionAccumulators"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 381,
+      "symbol": "accumulatorsFromRollupRows"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 403,
+      "symbol": "addActiveSession"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 434,
+      "symbol": "buildSnapshot"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 463,
+      "symbol": "parseSnapshotDay"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 481,
+      "symbol": "DayAccumulator"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 482,
+      "symbol": "AppAccumulator"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 493,
+      "symbol": "add"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 504,
+      "symbol": "add"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 553,
+      "symbol": "ScreenTimeSnapshot"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 563,
+      "symbol": "CodingKeys"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 574,
+      "symbol": "DateRange"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 578,
+      "symbol": "CodingKeys"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 584,
+      "symbol": "Day"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 591,
+      "symbol": "CodingKeys"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 600,
+      "symbol": "AppUsage"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 605,
+      "symbol": "CodingKeys"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 612,
+      "symbol": "HourUsage"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "line": 616,
+      "symbol": "CodingKeys"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 7,
+      "symbol": "ExportDeliveryKind"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 28,
+      "symbol": "ExportDeliveryDestination"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 50,
+      "symbol": "ExternalAPIHTTPMethod"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 58,
+      "symbol": "ExternalAPIBodyMode"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 81,
+      "symbol": "ExternalAPIAuthMode"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 104,
+      "symbol": "ExternalAPIHeaderField"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 118,
+      "symbol": "ExternalAPIExportDestination"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 175,
+      "symbol": "validatingForSave"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 197,
+      "symbol": "ExportDeliveryResult"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 208,
+      "symbol": "local"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 222,
+      "symbol": "remote"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 262,
+      "symbol": "ExternalAPIExportResponse"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 270,
+      "symbol": "ExternalAPIExportError"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 320,
+      "symbol": "ExternalAPIExportRequestBuilder"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 323,
+      "symbol": "buildRequest"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 392,
+      "symbol": "validatedEndpointURL"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 408,
+      "symbol": "envelope"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 423,
+      "symbol": "stableIdempotencyKey"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 431,
+      "symbol": "isAllowedHeaderName"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 437,
+      "symbol": "isAllowedHeaderValue"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 441,
+      "symbol": "isReservedSecretHeader"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 453,
+      "symbol": "send"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 461,
+      "symbol": "URLSessionExternalAPIExportClient"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 468,
+      "symbol": "send"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 524,
+      "symbol": "shouldRetry"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 528,
+      "symbol": "shouldRetry"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 540,
+      "symbol": "sleepBeforeRetry"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 550,
+      "symbol": "bodyPreview"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 557,
+      "symbol": "responseIdentifier"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 565,
+      "symbol": "normalizedHeaders"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 578,
+      "symbol": "readSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 579,
+      "symbol": "saveSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 580,
+      "symbol": "deleteSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 583,
+      "symbol": "KeychainExternalAPIExportCredentialStore"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 586,
+      "symbol": "readSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 590,
+      "symbol": "saveSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 594,
+      "symbol": "deleteSecret"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 598,
+      "symbol": "readString"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 617,
+      "symbol": "saveString"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 639,
+      "symbol": "deleteString"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 647,
+      "symbol": "baseQuery"
+    },
+    {
+      "path": "time.md/Export/ExternalAPIExportDelivery.swift",
+      "line": 655,
+      "symbol": "keychainMessage"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 10,
+      "symbol": "ScheduledExportRunner"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 29,
+      "symbol": "start"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 40,
+      "symbol": "stop"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 46,
+      "symbol": "runNow"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 51,
+      "symbol": "tick"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 58,
+      "symbol": "execute"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 92,
+      "symbol": "localOutputDirectory"
+    },
+    {
+      "path": "time.md/Export/ScheduledExportRunner.swift",
+      "line": 102,
+      "symbol": "makeFilterSnapshot"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 5,
+      "symbol": "DeviceInfo"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 12,
+      "symbol": "Platform"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 20,
+      "symbol": "current"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 32,
+      "symbol": "deviceIdentifier"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 36,
+      "symbol": "macOSHardwareUUID"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 57,
+      "symbol": "deviceName"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 63,
+      "symbol": "deviceModel"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 67,
+      "symbol": "macOSModelName"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "line": 77,
+      "symbol": "osVersionString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 4,
+      "symbol": "TimeMdCloudKitSyncService"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 21,
+      "symbol": "accountStatus"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 33,
+      "symbol": "pushToday"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 39,
+      "symbol": "push"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 64,
+      "symbol": "fetchSnapshots"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 87,
+      "symbol": "ensureZone"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 92,
+      "symbol": "remoteSnapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 105,
+      "symbol": "encryptedPayloadData"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 115,
+      "symbol": "recordName"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 119,
+      "symbol": "sanitizedRecordNameComponent"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 124,
+      "symbol": "accountStatusDescription"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "line": 142,
+      "symbol": "TimeMdCloudSyncError"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 4,
+      "symbol": "TimeMdCloudSyncSnapshotBuilder"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 5,
+      "symbol": "snapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 30,
+      "symbol": "localDayString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 39,
+      "symbol": "dayRange"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 46,
+      "symbol": "databaseDateString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 55,
+      "symbol": "dateFromDatabaseString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 64,
+      "symbol": "readUsageEntries"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 145,
+      "symbol": "columnText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 154,
+      "symbol": "bindText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 4,
+      "symbol": "TimeMdCloudSyncSnapshotImporter"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 9,
+      "symbol": "importSnapshots"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 25,
+      "symbol": "importDailySnapshots"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 88,
+      "symbol": "removeImportedDeviceDays"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 142,
+      "symbol": "validate"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 173,
+      "symbol": "localDayDate"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 187,
+      "symbol": "deleteExistingSnapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 215,
+      "symbol": "insertSnapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 263,
+      "symbol": "normalizedStreamType"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 288,
+      "symbol": "normalizedPlatform"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 296,
+      "symbol": "databaseDateString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 305,
+      "symbol": "sqliteError"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 309,
+      "symbol": "bindText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 314,
+      "symbol": "bindOptionalText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 323,
+      "symbol": "SyncImportError"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 4,
+      "symbol": "TimeMdCrossPlatformCrypto"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 10,
+      "symbol": "generateKey"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 14,
+      "symbol": "encrypt"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 52,
+      "symbol": "decrypt"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 109,
+      "symbol": "authenticatedData"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 128,
+      "symbol": "isLocalDay"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "line": 132,
+      "symbol": "normalizedPlatform"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 3,
+      "symbol": "TimeMdCrossPlatformSyncClient"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 24,
+      "symbol": "createSpace"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 36,
+      "symbol": "createPairingToken"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 47,
+      "symbol": "listDevices"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 58,
+      "symbol": "upload"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 72,
+      "symbol": "fetch"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 86,
+      "symbol": "revokeDevice"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 101,
+      "symbol": "deleteSpace"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 113,
+      "symbol": "request"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 136,
+      "symbol": "requestWithoutBody"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 157,
+      "symbol": "makeRequest"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 187,
+      "symbol": "validateHTTP"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 202,
+      "symbol": "SpaceResponse"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 208,
+      "symbol": "PairingTokenResponse"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 214,
+      "symbol": "CreateSpaceRequest"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 219,
+      "symbol": "EmptyRequest"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 221,
+      "symbol": "DevicesResponse"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 225,
+      "symbol": "SnapshotsResponse"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 229,
+      "symbol": "UpsertResponse"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 233,
+      "symbol": "ServerError"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "line": 234,
+      "symbol": "Detail"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 4,
+      "symbol": "TimeMdCrossPlatformSyncService"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 19,
+      "symbol": "configuration"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 24,
+      "symbol": "createSpace"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 58,
+      "symbol": "createPairingBundle"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 73,
+      "symbol": "devices"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 80,
+      "symbol": "revokeDevice"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 90,
+      "symbol": "syncToday"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 166,
+      "symbol": "disconnect"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "line": 180,
+      "symbol": "normalizedURL"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 5,
+      "symbol": "DatabaseError"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 28,
+      "symbol": "SQLValue"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 44,
+      "symbol": "Database"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 48,
+      "symbol": "realHomeDirectory"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 55,
+      "symbol": "expandedPath"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 113,
+      "symbol": "CurrentSession"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 123,
+      "symbol": "currentSession"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 173,
+      "symbol": "hasInputTrackingTable"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 195,
+      "symbol": "query"
+    },
+    {
+      "path": "timemd/Database.swift",
+      "line": 262,
+      "symbol": "queryReadOnlyRaw"
+    },
+    {
+      "path": "timemd/Range.swift",
+      "line": 3,
+      "symbol": "DateRange"
+    },
+    {
+      "path": "timemd/Range.swift",
+      "line": 9,
+      "symbol": "parse"
+    },
+    {
+      "path": "timemd/Range.swift",
+      "line": 58,
+      "symbol": "format"
+    },
+    {
+      "path": "timemd/Range.swift",
+      "line": 66,
+      "symbol": "parseDate"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 12,
+      "symbol": "handleCLIMode"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 59,
+      "symbol": "runCLICommand"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 69,
+      "symbol": "commandCatalog"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 77,
+      "symbol": "resolveCommandName"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 91,
+      "symbol": "parseCLIArguments"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 141,
+      "symbol": "normalizeCLIKey"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 145,
+      "symbol": "coerceCLIValue"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 154,
+      "symbol": "parseJSONObject"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 162,
+      "symbol": "printJSON"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 172,
+      "symbol": "printCLIHelp"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 202,
+      "symbol": "writeStderr"
+    },
+    {
+      "path": "timemd/main.swift",
+      "line": 206,
+      "symbol": "CLIError"
+    }
+  ],
+  "cli": {
+    "binary": "Swift bundled timemd, independent of Health.md CLI/MCP",
+    "operation_catalog": [
+      {
+        "operation_id": "get_schema",
+        "path": "timemd/Handlers.swift",
+        "line": 19,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_range_totals",
+        "path": "timemd/Handlers.swift",
+        "line": 20,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_today",
+        "path": "timemd/Handlers.swift",
+        "line": 21,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_top_apps",
+        "path": "timemd/Handlers.swift",
+        "line": 22,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_top_categories",
+        "path": "timemd/Handlers.swift",
+        "line": 23,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_sessions",
+        "path": "timemd/Handlers.swift",
+        "line": 24,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_hourly_distribution",
+        "path": "timemd/Handlers.swift",
+        "line": 25,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_daily_trend",
+        "path": "timemd/Handlers.swift",
+        "line": 26,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_weekday_breakdown",
+        "path": "timemd/Handlers.swift",
+        "line": 27,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_app_detail",
+        "path": "timemd/Handlers.swift",
+        "line": 28,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_web_usage",
+        "path": "timemd/Handlers.swift",
+        "line": 29,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_media_usage",
+        "path": "timemd/Handlers.swift",
+        "line": 30,
+        "classification": "separate_source_research_no_automatic_parity",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_longest_sessions",
+        "path": "timemd/Handlers.swift",
+        "line": 31,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_session_buckets",
+        "path": "timemd/Handlers.swift",
+        "line": 32,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_focus_blocks",
+        "path": "timemd/Handlers.swift",
+        "line": 33,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_context_switches",
+        "path": "timemd/Handlers.swift",
+        "line": 34,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_app_transitions",
+        "path": "timemd/Handlers.swift",
+        "line": 35,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_devices",
+        "path": "timemd/Handlers.swift",
+        "line": 36,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_stream_types",
+        "path": "timemd/Handlers.swift",
+        "line": 37,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_category_mappings",
+        "path": "timemd/Handlers.swift",
+        "line": 38,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "compare_periods",
+        "path": "timemd/Handlers.swift",
+        "line": 39,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_heatmap",
+        "path": "timemd/Handlers.swift",
+        "line": 40,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_daily_app_breakdown",
+        "path": "timemd/Handlers.swift",
+        "line": 41,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_category_trend",
+        "path": "timemd/Handlers.swift",
+        "line": 42,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_first_last_use",
+        "path": "timemd/Handlers.swift",
+        "line": 43,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_active_days",
+        "path": "timemd/Handlers.swift",
+        "line": 44,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_time_of_day_split",
+        "path": "timemd/Handlers.swift",
+        "line": 45,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_weekend_vs_weekday",
+        "path": "timemd/Handlers.swift",
+        "line": 46,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_new_apps",
+        "path": "timemd/Handlers.swift",
+        "line": 47,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_abandoned_apps",
+        "path": "timemd/Handlers.swift",
+        "line": 48,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_usage_streaks",
+        "path": "timemd/Handlers.swift",
+        "line": 49,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_pickup_count",
+        "path": "timemd/Handlers.swift",
+        "line": 50,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_typical_day",
+        "path": "timemd/Handlers.swift",
+        "line": 51,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_metadata_hash_breakdown",
+        "path": "timemd/Handlers.swift",
+        "line": 52,
+        "classification": "candidate_common_typed_operation_after_allowed_source_projection",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "raw_query",
+        "path": "timemd/Handlers.swift",
+        "line": 53,
+        "classification": "retired_arbitrary_sql",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_cursor_heatmap",
+        "path": "timemd/Handlers.swift",
+        "line": 54,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_top_typed_words",
+        "path": "timemd/Handlers.swift",
+        "line": 55,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_top_typed_keys",
+        "path": "timemd/Handlers.swift",
+        "line": 56,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_typing_intensity",
+        "path": "timemd/Handlers.swift",
+        "line": 57,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      },
+      {
+        "operation_id": "get_input_event_counts",
+        "path": "timemd/Handlers.swift",
+        "line": 58,
+        "classification": "excluded_browser_or_input",
+        "output_version": "unversioned JSON helper output; formatted export schema_version1 separate",
+        "executed": false
+      }
+    ],
+    "grammar": "help/--help/-h; list-commands/commands; call resolved command; sql/query→raw_query; direct names hyphens→underscores with optional get_ prefix, raw alias. --key=value/--key value/bare boolean; --json/--args JSON-object merge, numeric/bool coercion; invalid command/positional return1, stdout JSON newline/error stderr.",
+    "sources": [
+      "timemd/main.swift",
+      "timemd/Tools.swift",
+      "timemd/Handlers.swift",
+      "timemd/Database.swift",
+      "timemd/Range.swift",
+      "time.md/App/CLIIntegrationService.swift"
+    ],
+    "data": "Primary READONLY|FULLMUTEX, optional cat/inp ATTACH, hint augmentation. TIMEMD_DATA_DIR/SCREENTIME_DB_PATH overrides defined, not read at runtime here.",
+    "range": "Half-open local text[start,end), default7d; today/yesterday/this_week/month/year/all(epoch)/N d,w,m,y/local ISO. Invalid since silently7d; missing/invalid until next midnight. No strict timezone/range/cursor contract.",
+    "bounds": {
+      "sessions_default": 500,
+      "sessions_max": 10000,
+      "top_apps_default": 25,
+      "many_top_lists_max": 500,
+      "daily_app_top_default": 5,
+      "daily_app_top_max": 50,
+      "streaks_default": 10,
+      "streaks_max": 100,
+      "raw_sql_row_byte_bounds": "not established",
+      "all_history": "epoch-to-now allowed, not bounded multi-year paging proof"
+    },
+    "sql_policy": "Trim surrounding semicolons, SELECT/WITH/EXPLAIN prefix and no internal semicolon; never inherited raw SQL; exclude browser/input attachments/fields.",
+    "installation": "App owned ~/.local/bin/timemd symlink→bundled resource, rejects conflicts/nonowned uninstall. Make install-cli builds Debug/ln -sf differs in overwrite behavior; neither run."
+  },
+  "independent_checks": {
+    "case_index": [
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 23,
+        "case_id": "testDirectAppBlockShowsCountdownAndHidesApp",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 58,
+        "case_id": "testCategoryBlockMatchesCurrentCategoryMapping",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 86,
+        "case_id": "testDirectAppMatchWinsOverBlockedCategory",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 108,
+        "case_id": "testProtectedAppsAreSkippedByDefaultUnlessExplicitlyAllowed",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 140,
+        "case_id": "testExpiredBlocksAreClearedAndNotEnforced",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 161,
+        "case_id": "testRepeatedActivationIsThrottledToAvoidActionSpam",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockEnforcerTests.swift",
+        "line": 190,
+        "case_id": "testEnforcementActionsAreAudited",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 24,
+        "case_id": "testDirectAppRuleTriggersCooldownFromCompletedSession",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 45,
+        "case_id": "testCategoryRuleTriggersThroughCustomCategoryMapping",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 66,
+        "case_id": "testFallbackCategoryLookupIsUsedWhenCustomMappingIsMissing",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 84,
+        "case_id": "testUnknownCategoryStillAllowsDirectAppRuleMatching",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 97,
+        "case_id": "testSubThresholdSessionsDoNotCreateStrikes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/AppBlockingEventTests.swift",
+        "line": 111,
+        "case_id": "testProtectedAppsAreIgnoredUnlessExplicitlyAllowed",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 24,
+        "case_id": "testExponentialProgressionSchedulesOneTwoFourMinuteCooldowns",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 53,
+        "case_id": "testActiveBlockAttemptIsDeniedWithoutShorteningOrIncreasingStrikeCount",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 72,
+        "case_id": "testMaxCapFixedMultiplierAndOverflowProtection",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 84,
+        "case_id": "testResetAndStepDownDecayBehavior",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 134,
+        "case_id": "testActiveBlocksSurviveRestartAndExpiredBlocksClear",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 160,
+        "case_id": "testRulePrecedenceUsesEventSpecificityBeforePriority",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 190,
+        "case_id": "testClockSkewClampsMalformedFutureBlockToMaxDuration",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockPolicyEngineTests.swift",
+        "line": 214,
+        "case_id": "testUnmatchedAndSubThresholdEventsAreIgnored",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 24,
+        "case_id": "testTargetNormalizationForDomainsAppsAndCategories",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 49,
+        "case_id": "testInvalidTargetsAndPoliciesThrowActionableErrors",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 67,
+        "case_id": "testRuleCRUDPersistsAcrossOperations",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 114,
+        "case_id": "testBlockStatePersistsIndependentlyFromRuleDefinitions",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 141,
+        "case_id": "testSchemaCreationIsIdempotentAndUsesIsolatedDatabase",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 153,
+        "case_id": "testCorruptRowsAreSkippedDuringFetch",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockRuleStoreTests.swift",
+        "line": 185,
+        "case_id": "testAuditEventsRoundTrip",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingRecoveryTests.swift",
+        "line": 21,
+        "case_id": "testDiagnosticsReportsHealthyDegradedAndBrokenStates",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingRecoveryTests.swift",
+        "line": 80,
+        "case_id": "testClearExpiredReconcilesDomainHelperState",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingRecoveryTests.swift",
+        "line": 105,
+        "case_id": "testRemoveAllManagedBlocksClearsCooldownsAndHelperStateWithoutDeletingRules",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingRecoveryTests.swift",
+        "line": 136,
+        "case_id": "testEndToEndPolicyToDomainAndAppEnforcementWithFakes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 5,
+        "case_id": "testRuleCreationNormalizesSubpathsAndRejectsDuplicateTargets",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 25,
+        "case_id": "testActiveCountdownRowsSortByUnlockAndFormatDurations",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 44,
+        "case_id": "testHelperStatusStatesReflectDomainRuleNeeds",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 64,
+        "case_id": "testOnOffToggleCreatesAndRemovesManualBlockState",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 83,
+        "case_id": "testEditDeleteAndResetFlowsUseInjectedStore",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BlockingViewModelTests.swift",
+        "line": 108,
+        "case_id": "testExpiredBlocksAreClearedWithoutRemovingStrikeHistory",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 21,
+        "case_id": "testParsesURLAccessPayloadAndTriggersDomainRule",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 49,
+        "case_id": "testInvalidAndMaliciousMessagesAreIgnoredSafely",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 65,
+        "case_id": "testActiveBlockResponsePayloadTellsExtensionToBlockWithCountdown",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 93,
+        "case_id": "testPathRuleBlocksOnlyMatchingSubpath",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 126,
+        "case_id": "testDomainDecisionStartsHelperReconcileTask",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 155,
+        "case_id": "testExtensionAndHistoryEventsShareDeduplicationWindow",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+        "line": 196,
+        "case_id": "testNativeMessageCodecFramesResponses",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 33,
+        "case_id": "testAcceptedEventIsArchivedExactlyOnceAcrossRetry",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 77,
+        "case_id": "testExtensionOnlyServiceReadsTheArchiveWithoutBrowserDiscovery",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 116,
+        "case_id": "testFirefoxAndSafariEventsUseTheirOwnArchiveSources",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 150,
+        "case_id": "testArchiveFailureIsRetryableAndDoesNotMutateBlockingState",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 179,
+        "case_id": "testDelayedQueuedEventArchivesWithoutStartingCooldown",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 208,
+        "case_id": "testLoopbackServerAcceptsSupportedExtensionOriginsAndReturnsBridgeJSON",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+        "line": 286,
+        "case_id": "testMissingEventIDIsRejectedWithoutPersistence",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/CLICommandTests.swift",
+        "line": 4,
+        "case_id": "testListCommandsPrintsCatalogWithoutOpeningDatabase",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/CLICommandTests.swift",
+        "line": 15,
+        "case_id": "testNoArgumentsPrintsHelpWithoutOpeningDatabase",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/CLICommandTests.swift",
+        "line": 24,
+        "case_id": "testUnknownCommandReturnsFailure",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/CLICommandTests.swift",
+        "line": 32,
+        "case_id": "testBundledAgentSkillsArePackagedWithApp",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 23,
+        "case_id": "testCompilerNormalizesDomainsAndBuildsIPv4IPv6HostsEntries",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 47,
+        "case_id": "testCompilerIncludesObservedSubdomainHostnamesWithoutChangingActiveDomains",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 63,
+        "case_id": "testHostsChangeDetectionIgnoresGeneratedTimestampOnlyChanges",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 73,
+        "case_id": "testHostsReconcilerPreservesUserContentAndReplacesOldOwnedBlock",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 102,
+        "case_id": "testHostsReconcilerClearsOnlyOwnedBlockAndRejectsInvalidHostsFiles",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 114,
+        "case_id": "testFakeHelperInstallApplyClearRepairAndFailureModes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 141,
+        "case_id": "testEnforcerAddsRecentlyObservedSubdomainsToHostsPlan",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 174,
+        "case_id": "testEnforcerPublishesOnlyActiveDomainNetworkBlocks",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 204,
+        "case_id": "testLaunchDaemonHelperStatusUsesInjectedInstallArtifacts",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 250,
+        "case_id": "testLaunchDaemonHelperApplyDoesNotPromptWhenHelperIsMissing",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/DomainBlockHelperTests.swift",
+        "line": 275,
+        "case_id": "testLocalHelperUsesInjectedFilesAndIsIdempotent",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 7,
+        "case_id": "testHydratingFromSchedulePreservesCustomSectionSelectionAndFormat",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 29,
+        "case_id": "testDefaultExportSelectionMatchesGeneralMode",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 37,
+        "case_id": "testScheduleHydrationPreservesUsageSourceCombination",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 46,
+        "case_id": "testLegacyFilterPresetWithoutUsageSourcesDefaultsToAll",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 57,
+        "case_id": "testLegacyScheduleWithoutUsageSourcesDefaultsToAll",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 68,
+        "case_id": "testUsageSourceFiltersSeparateMacWebAndMobileRows",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 106,
+        "case_id": "testRollupTopAppsKeepBrowserSessionsWhenDomainRowsAreExcluded",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+        "line": 125,
+        "case_id": "testFullSelectionHydratesAsExtensiveModeWithoutDroppingSections",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 6,
+        "case_id": "testActivationKeyFormatterAcceptsUngroupedPastes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 21,
+        "case_id": "testActivateStoresNormalizedKeyAndMetadata",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 46,
+        "case_id": "testActivateTrialStoresTokenAndUnlocks",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 71,
+        "case_id": "testCreateTrialCheckoutURLRequestsAppReturn",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 83,
+        "case_id": "testDeepLinkCheckoutSessionActivatesTrial",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 107,
+        "case_id": "testTrialCheckoutSessionIDParsesCustomScheme",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 115,
+        "case_id": "testPrepareForLaunchUnlocksCachedActivation",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 128,
+        "case_id": "testPrepareForLaunchUnlocksCachedTrial",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 148,
+        "case_id": "testExpiredCachedTrialDoesNotUnlock",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 170,
+        "case_id": "testInvalidRevalidationClearsStoredActivation",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+        "line": 185,
+        "case_id": "testExpiredTrialRevalidationClearsStoredTrial",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 7,
+        "case_id": "testCryptoRoundTripAndAADContract",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 53,
+        "case_id": "testCrossLanguageAESGCMKnownVector",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 74,
+        "case_id": "testTamperedEnvelopeIsRejected",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 90,
+        "case_id": "testImporterRejectsEntriesOutsideAuthenticatedSourceDay",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 111,
+        "case_id": "testPairingBundleRoundTrip",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 122,
+        "case_id": "testSnapshotBuilderPrefersDirectObservationsOverKnowledgeCRows",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 151,
+        "case_id": "testAnalyticsKeepNonOverlappingKnowledgeCHistory",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+        "line": 175,
+        "case_id": "testImportedDeviceRowsCoexistAndWholeDayReplacementRemovesStaleEntries",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 8,
+        "case_id": "testTimeMdRenderersProduceExpectedOutputPerFormat",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 40,
+        "case_id": "testPathPlanningRejectsTraversalAndAllowsNestedRelativePaths",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 63,
+        "case_id": "testDestinationWriterSupportsOverwriteAndAppendModes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 92,
+        "case_id": "testPreviewBuilderPlansContentWithoutWriting",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 107,
+        "case_id": "testMultipleFormatPreviewAvoidsMarkdownObsidianFilenameCollision",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 124,
+        "case_id": "testRunExportsWritesMultipleFormats",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 142,
+        "case_id": "testExternalAPIRequestBuilderCreatesEnvelopeWithAuthAndMetadata",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 181,
+        "case_id": "testExternalAPIRequestBuilderRequiresHTTPSAndSecretSafeHeaders",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 211,
+        "case_id": "testExportSettingsRememberExternalAPIWhenLocalIsSelected",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 221,
+        "case_id": "testExportScheduleDestinationCompatibility",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 240,
+        "case_id": "testExportKitOrchestrationReportsPartialSuccessForAppRecords",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 304,
+        "case_id": "testScheduledExportBridgesTimingToExportAutomationKit",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+        "line": 328,
+        "case_id": "testNonDomainInvoiceSampleUsesExportKitGenerically",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 24,
+        "case_id": "testVisitToConfiguredDomainTriggersPolicyEvent",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 42,
+        "case_id": "testSubdomainVisitIncludesParentDomainForRuleMatching",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 57,
+        "case_id": "testRepeatedPollingDoesNotDoubleCountProcessedVisits",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 74,
+        "case_id": "testDuplicateVisitsAcrossBrowsersAreProcessedOncePerPoll",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 92,
+        "case_id": "testInvalidUrlsAndLocalhostAreIgnored",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 109,
+        "case_id": "testBrowserReadErrorsAreSkippedWithoutThrowing",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 125,
+        "case_id": "testBrowserHistoryClearDoesNotBreakFutureProcessing",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 147,
+        "case_id": "testActiveDomainBlockAttemptDoesNotShortenBlock",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+        "line": 165,
+        "case_id": "testDomainNetworkDecisionReconcilesHelperImmediately",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/CategoryMappingIntegrationTests.swift",
+        "line": 26,
+        "case_id": "testCategoryMappingStoreCRUDPersistsAcrossOperations",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ExportCoordinatorTests.swift",
+        "line": 19,
+        "case_id": "testCSVExportIncludesExpectedSectionsAndRows",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ExportCoordinatorTests.swift",
+        "line": 43,
+        "case_id": "testPNGExportWritesPNGArtifact",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ExportCoordinatorTests.swift",
+        "line": 61,
+        "case_id": "testPDFExportWritesPDFArtifact",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ExportCoordinatorTests.swift",
+        "line": 81,
+        "case_id": "testUnsupportedDestinationThrowsExportError",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 8,
+        "case_id": "test_normalizeWord_keepsBasicWords",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 14,
+        "case_id": "test_normalizeWord_rejectsTooShort",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 19,
+        "case_id": "test_normalizeWord_rejectsTooLong",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 23,
+        "case_id": "test_normalizeWord_rejectsDigitsAndSymbols",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 31,
+        "case_id": "test_normalizeWord_rejectsHexHashes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 36,
+        "case_id": "test_normalizeWord_acceptsHyphenated",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 40,
+        "case_id": "test_normalizeWord_acceptsApostrophes",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 44,
+        "case_id": "test_normalizeWord_rejectsHighEntropy",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/InputAggregatorTests.swift",
+        "line": 51,
+        "case_id": "test_hourBucket_formatsLocalTime",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ScreenTimeDataServiceErrorTests.swift",
+        "line": 27,
+        "case_id": "testInvalidPathOverrideProducesActionableDatabaseNotFoundError",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/ScreenTimeDataServiceErrorTests.swift",
+        "line": 51,
+        "case_id": "testDirectoryPathOverrideProducesPermissionDeniedError",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 7,
+        "case_id": "testFormatDurationCompact",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 15,
+        "case_id": "testFormatDurationFull",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 22,
+        "case_id": "testFormatDurationHoursOnly",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 28,
+        "case_id": "testFormatHour",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 36,
+        "case_id": "testDeviceInfoCurrentReturnsValidMacDevice",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 46,
+        "case_id": "testMacPlatformMetadata",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 53,
+        "case_id": "testTimeGranularityRollingWindowDayCounts",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "time.mdTests/SharedModelsTests.swift",
+        "line": 62,
+        "case_id": "testFilterSnapshotDayCount",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      }
+    ],
+    "standalone_archive_fixtures": [],
+    "fixture_limit": "No complete allowed-history/title/idle migration archive fixture established. Existing source test assertions/inline synthetic fixtures independently pinned; freeze before port, never regenerate from successor. Literal index may omit generated cases.",
+    "available_not_run": [
+      {
+        "path": ".github/workflows/ci.yml",
+        "command": "xcodebuild -scheme time.md -destination platform=macOS -configuration Debug CODE_SIGNING_ALLOWED=NO test",
+        "scope": "Source CI macos15/Xcode16.2 recipe; local availability/runtime not asserted"
+      },
+      {
+        "path": "Makefile",
+        "command": "make check",
+        "scope": "lint+build only; not signed/native proof; not run"
+      },
+      {
+        "path": "time.mdRegressionTests/CLICommandTests.swift",
+        "command": "XCTest source cases",
+        "scope": "Target binding/temporary fixture harness requires verification before running; no live donor DB access"
+      }
+    ],
+    "case_groups": {
+      "CLI": [
+        {
+          "path": "time.mdRegressionTests/CLICommandTests.swift",
+          "case_id": "testListCommandsPrintsCatalogWithoutOpeningDatabase"
+        },
+        {
+          "path": "time.mdRegressionTests/CLICommandTests.swift",
+          "case_id": "testNoArgumentsPrintsHelpWithoutOpeningDatabase"
+        },
+        {
+          "path": "time.mdRegressionTests/CLICommandTests.swift",
+          "case_id": "testUnknownCommandReturnsFailure"
+        },
+        {
+          "path": "time.mdRegressionTests/CLICommandTests.swift",
+          "case_id": "testBundledAgentSkillsArePackagedWithApp"
+        }
+      ],
+      "category": [
+        {
+          "path": "time.mdTests/CategoryMappingIntegrationTests.swift",
+          "case_id": "testCategoryMappingStoreCRUDPersistsAcrossOperations"
+        }
+      ],
+      "export": [
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testHydratingFromSchedulePreservesCustomSectionSelectionAndFormat"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testDefaultExportSelectionMatchesGeneralMode"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testScheduleHydrationPreservesUsageSourceCombination"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testLegacyFilterPresetWithoutUsageSourcesDefaultsToAll"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testLegacyScheduleWithoutUsageSourcesDefaultsToAll"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testUsageSourceFiltersSeparateMacWebAndMobileRows"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testRollupTopAppsKeepBrowserSessionsWhenDomainRowsAreExcluded"
+        },
+        {
+          "path": "time.mdRegressionTests/ExportAutomationFormStateTests.swift",
+          "case_id": "testFullSelectionHydratesAsExtensiveModeWithoutDroppingSections"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testTimeMdRenderersProduceExpectedOutputPerFormat"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testPathPlanningRejectsTraversalAndAllowsNestedRelativePaths"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testDestinationWriterSupportsOverwriteAndAppendModes"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testPreviewBuilderPlansContentWithoutWriting"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testMultipleFormatPreviewAvoidsMarkdownObsidianFilenameCollision"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testRunExportsWritesMultipleFormats"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testExternalAPIRequestBuilderCreatesEnvelopeWithAuthAndMetadata"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testExternalAPIRequestBuilderRequiresHTTPSAndSecretSafeHeaders"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testExportSettingsRememberExternalAPIWhenLocalIsSelected"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testExportScheduleDestinationCompatibility"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testExportKitOrchestrationReportsPartialSuccessForAppRecords"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testScheduledExportBridgesTimingToExportAutomationKit"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdExportKitAdapterTests.swift",
+          "case_id": "testNonDomainInvoiceSampleUsesExportKitGenerically"
+        },
+        {
+          "path": "time.mdTests/ExportCoordinatorTests.swift",
+          "case_id": "testCSVExportIncludesExpectedSectionsAndRows"
+        },
+        {
+          "path": "time.mdTests/ExportCoordinatorTests.swift",
+          "case_id": "testPNGExportWritesPNGArtifact"
+        },
+        {
+          "path": "time.mdTests/ExportCoordinatorTests.swift",
+          "case_id": "testPDFExportWritesPDFArtifact"
+        },
+        {
+          "path": "time.mdTests/ExportCoordinatorTests.swift",
+          "case_id": "testUnsupportedDestinationThrowsExportError"
+        }
+      ],
+      "sync_crypto_replace": [
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testCryptoRoundTripAndAADContract"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testCrossLanguageAESGCMKnownVector"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testTamperedEnvelopeIsRejected"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testImporterRejectsEntriesOutsideAuthenticatedSourceDay"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testPairingBundleRoundTrip"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testSnapshotBuilderPrefersDirectObservationsOverKnowledgeCRows"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testAnalyticsKeepNonOverlappingKnowledgeCHistory"
+        },
+        {
+          "path": "time.mdRegressionTests/TimeMdCrossPlatformSyncTests.swift",
+          "case_id": "testImportedDeviceRowsCoexistAndWholeDayReplacementRemovesStaleEntries"
+        }
+      ],
+      "commerce": [
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testActivationKeyFormatterAcceptsUngroupedPastes"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testActivateStoresNormalizedKeyAndMetadata"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testActivateTrialStoresTokenAndUnlocks"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testCreateTrialCheckoutURLRequestsAppReturn"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testDeepLinkCheckoutSessionActivatesTrial"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testTrialCheckoutSessionIDParsesCustomScheme"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testPrepareForLaunchUnlocksCachedActivation"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testPrepareForLaunchUnlocksCachedTrial"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testExpiredCachedTrialDoesNotUnlock"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testInvalidRevalidationClearsStoredActivation"
+        },
+        {
+          "path": "time.mdRegressionTests/LicenseActivationTests.swift",
+          "case_id": "testExpiredTrialRevalidationClearsStoredTrial"
+        }
+      ],
+      "models_errors": [
+        {
+          "path": "time.mdTests/ScreenTimeDataServiceErrorTests.swift",
+          "case_id": "testInvalidPathOverrideProducesActionableDatabaseNotFoundError"
+        },
+        {
+          "path": "time.mdTests/ScreenTimeDataServiceErrorTests.swift",
+          "case_id": "testDirectoryPathOverrideProducesPermissionDeniedError"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testFormatDurationCompact"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testFormatDurationFull"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testFormatDurationHoursOnly"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testFormatHour"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testDeviceInfoCurrentReturnsValidMacDevice"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testMacPlatformMetadata"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testTimeGranularityRollingWindowDayCounts"
+        },
+        {
+          "path": "time.mdTests/SharedModelsTests.swift",
+          "case_id": "testFilterSnapshotDayCount"
+        }
+      ],
+      "excluded_input_browser": [
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testParsesURLAccessPayloadAndTriggersDomainRule"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testInvalidAndMaliciousMessagesAreIgnoredSafely"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testActiveBlockResponsePayloadTellsExtensionToBlockWithCountdown"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testPathRuleBlocksOnlyMatchingSubpath"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testDomainDecisionStartsHelperReconcileTask"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testExtensionAndHistoryEventsShareDeduplicationWindow"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionBridgeTests.swift",
+          "case_id": "testNativeMessageCodecFramesResponses"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testAcceptedEventIsArchivedExactlyOnceAcrossRetry"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testExtensionOnlyServiceReadsTheArchiveWithoutBrowserDiscovery"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testFirefoxAndSafariEventsUseTheirOwnArchiveSources"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testArchiveFailureIsRetryableAndDoesNotMutateBlockingState"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testDelayedQueuedEventArchivesWithoutStartingCooldown"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testLoopbackServerAcceptsSupportedExtensionOriginsAndReturnsBridgeJSON"
+        },
+        {
+          "path": "time.mdRegressionTests/BrowserExtensionEventProcessorTests.swift",
+          "case_id": "testMissingEventIDIsRejectedWithoutPersistence"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testVisitToConfiguredDomainTriggersPolicyEvent"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testSubdomainVisitIncludesParentDomainForRuleMatching"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testRepeatedPollingDoesNotDoubleCountProcessedVisits"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testDuplicateVisitsAcrossBrowsersAreProcessedOncePerPoll"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testInvalidUrlsAndLocalhostAreIgnored"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testBrowserReadErrorsAreSkippedWithoutThrowing"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testBrowserHistoryClearDoesNotBreakFutureProcessing"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testActiveDomainBlockAttemptDoesNotShortenBlock"
+        },
+        {
+          "path": "time.mdRegressionTests/WebsiteAccessEventSourceTests.swift",
+          "case_id": "testDomainNetworkDecisionReconcilesHelperImmediately"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_keepsBasicWords"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_rejectsTooShort"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_rejectsTooLong"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_rejectsDigitsAndSymbols"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_rejectsHexHashes"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_acceptsHyphenated"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_acceptsApostrophes"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_normalizeWord_rejectsHighEntropy"
+        },
+        {
+          "path": "time.mdTests/InputAggregatorTests.swift",
+          "case_id": "test_hourBucket_formatsLocalTime"
+        }
+      ]
+    },
+    "qualified_fixture_versions": {
+      "complete_migration_archive": null,
+      "title_observations": null,
+      "idle_events": null,
+      "source_inline_fixture_version": "No independent schema-wide version; source revision pins authoritative assertions, not new portable expectations."
+    },
+    "proposed_mirror_regression_cases": [
+      {
+        "case_id": "MAC-MIRROR-CONTINUATION-HOUR",
+        "state": "required synthetic fixture; not an existing executed donor case",
+        "input": "One allowed app session 09:30–10:30 with no other session start in 10:00 hour.",
+        "source_defined_current_expected": "Raw history keeps complete session, SQL rollup has duration in both hours but start count only 09:00; mirror drops positive 10:00 portion.",
+        "successor_obligation": "Full-history archive retains complete duration/precision, and shared summary either preserves both portions or explicitly reports donor mirror undercount."
+      },
+      {
+        "case_id": "MAC-MIRROR-CROSS-MIDNIGHT",
+        "state": "required synthetic fixture; not an existing executed donor case",
+        "input": "One allowed app session spanning local midnight with no next-day same-app/hour session start.",
+        "source_defined_current_expected": "Raw record retained; SQL continuation next day has zero session count, mirror omits that continuation.",
+        "successor_obligation": "Preserve available raw record and both day portions with explicit local-time/clock uncertainty."
+      },
+      {
+        "case_id": "MAC-MIRROR-CONTINUATION-WITH-START",
+        "state": "required synthetic fixture; not an existing executed donor case",
+        "input": "Continuation and a separate same-app session start in the same hour.",
+        "source_defined_current_expected": "Grouped sessionCount positive permits mirror row, including continuation duration.",
+        "successor_obligation": "Independent fixture prevents incorrectly treating every continuation hour as absent or changing session counts to fabricate starts."
+      }
+    ]
+  },
+  "design_mapping": {
+    "C14": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C14 | Personal Data envelope/domain/store/capabilities | Independently versioned health/location/device_usage payloads, source/device identity, exact time/quality/provenance, annotations/inference/tombstones, capture/display/query/export status, independent domain/detail/destination grants. |",
+    "C15": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C15 | Combined/selected export profiles and donor compatibility | New summary/records/archive manifests and selection, per-source coverage/snapshot identity, strict/partial rules, location/usage format fixtures, frozen historical health bytes and actual pinned consumers. |",
+    "C17": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C17 | Donor migration archive and settings/state handoff | Complete IDs/precision/lineage/settings/annotations/queue schema, manifests and safe import, browser exclusions, overlap/replacement/empty-day rules, rollback and inaccessible-grant/entitlement disclosure. |",
+    "P03": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| P03 — Donor installed-user migration | Accepted source/history/license maps; complete migration archives/readers, preview/conflict/Undo, source grants/destination handoff and entitlement/support plan. | Exact donor-to-new round trips including IDs, corrections, sessions/places/category assignments/queues; unknown legacy boundary certainty, discarded sessions and time precision preserved; repeat/interrupted import, browser exclusions and actual sandbox/purchase limits. |",
+    "S00": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S00 — Usage source inventory | time.md features/state/export/sync/commerce mapping, accepted source and explicit browser exclusions. | Every retained feature has a shared successor; donor minimum-session filtering and missing/title/browser behavior documented. |",
+    "S02": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S02 — macOS app/device/title collector | Native login/background acquisition, durable full session/event history including short sessions; new idle detection and separately authorized window observations. | Multi-year paged queries/exports and complete available donor backfill, no summary-window raw pruning, switches/titles/idle/lock/sleep/reboot/crash/clock/exclusions/revoke/hung app, signed channel and energy/latency receipts. |",
+    "S03": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S03 — Usage models and UI | Shared apps/trends/full-history/timeline/aggregate/detail/title views, categories/app assignments and source coverage. | No false iOS sessions/cross-device double counts; source-aware reducers and assignment revisions, missing versus empty titles, accessibility and bounded multi-year views. |",
+    "S04": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S04 — Usage exports and migration | Browser-free typed/summary and full retained-history profiles, complete available donor import, common schedules and optional reviewed sync compatibility. | JSON/CSV/YAML/Markdown/Obsidian/archive fixtures, past-range/session detail, title escaping/redaction, daily/hourly replacement, retention/partial receipts, dedup and P03 recovery. |",
+    "S05": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S05 — Later desktop collectors | Windows/Linux API, permission/session/display-server and distribution research after macOS qualification. | Concrete owner and successor milestone in M00; no first-release collector parity claim; portable CLI/MCP remains qualified on all current targets. |",
+    "F11": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F11 | macOS title/collector permission and sandbox/channel incompatibility | M02/S02 proves a supported signed collector/API and explicit installation/grants. Resolve channel/helper architecture before promising titles; no assumed Accessibility-in-sandbox or inherited-helper escape. |",
+    "F12": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F12 | iOS usage production eligibility, purpose and export destinations | M02/S01 qualifies iOS 26.4+, entitlement, EU/device/account/one-app conditions and permitted destinations separately. Preserve report sandbox and display-only/unavailable outcomes; no development-profile proof or arbitrary MCP export claim. |",
+    "F13": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F13 | Lossless donor identity/history/entitlement migration | P03/L05/S04 proves complete archive transfer with original precision/unknown provenance, transactional replay/Undo and rebind/support policy. Legacy exports/snapshot mirrors are accurately scoped and donor stores remain readable. |",
+    "F14": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F14 | Continuous capture energy, storage and retention | M00 sets device-specific numerical budgets; M02/M05/V10 measures background GPS/watch/Mac title/idle and mobile checkpoint cost with large synthetic histories. Bound queues/storage/indexes and tune capture while preserving declared coverage. |",
+    "F15": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F15 | False equivalence and duplicate totals across domains/devices | C14–C16/K06 fixtures preserve source aggregate/session/visit/inference kinds, overlapping devices, hourly/daily replacement and independent coverage. No aliased health/GPS distance or fabricated missing data. |",
+    "F16": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F16 | Full history versus source/API losses | S02/S04 retains all observed sessions beyond summaries and imports every available source record, declaring donor short-session/clock/crash/deletion gaps. S01 preserves historical aggregates; S06 remains required because no exact iOS app-session API is established. Aggregate shipping does not close it. |"
+  },
+  "history": {
+    "primary": {
+      "source": "time.md/Data/HistoryStore.swift",
+      "source_defined_path": "Library/Application Support/time.md/screentime.db",
+      "table": "usage",
+      "columns": [
+        "id INTEGER PRIMARY KEY AUTOINCREMENT",
+        "app_name TEXT",
+        "duration_seconds REAL",
+        "start_time TEXT",
+        "stream_type TEXT DEFAULT app_usage",
+        "source_timestamp REAL",
+        "device_id TEXT",
+        "metadata_hash TEXT",
+        "url TEXT",
+        "title TEXT",
+        "source_platform TEXT",
+        "sync_transport TEXT",
+        "source_local_day TEXT",
+        "source_entry_id TEXT"
+      ],
+      "meaning": "Every available persisted normalized session/imported aggregate is candidate history, including pre-mirror ranges. No live store opened; contents/completeness/readability not asserted. No raw-usage age pruning identified in inspected tracker/history; imported-day replacement distinct; full retention audit remains required."
+    },
+    "mirror": {
+      "source": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "path": "Library/Application Support/time.md/screen-time-snapshot.json",
+      "version": 1,
+      "history_days": 365,
+      "debounce_seconds": 10,
+      "fields": [
+        "generated_at",
+        "canonical_database_path",
+        "history_days",
+        "device",
+        "range",
+        "days date/total_seconds/session_count/apps/hours"
+      ],
+      "behavior": "Daily/app/hour summary; active hint augmentation, atomic write, attempted POSIX0600. Not lossless archive; window never limits intended complete available donor backfill. SQLite rollups split duration across hours but count a session only in its start hour. The mirror accepts rollup rows only when totalSeconds>0 AND sessionCount>0, dropping positive-duration continuation hours with no same-app session start. A lone synthetic 09:30–10:30 session therefore loses its 10:00–10:30 continuation from the mirror; cross-midnight continuation is likewise dropped unless another same-app/hour start contributes sessionCount. Raw fallback instead assigns whole duration by start day/hour. Neither mirror path qualifies faithful per-hour/day history; raw persisted sessions remain source authority.",
+      "continuation_loss_evidence": [
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 219,
+          "literal": "CASE WHEN ABS(bucket_start_jd - start_bucket_jd) < 0.0000001 THEN 1 ELSE 0 END AS session_count",
+          "meaning": "Continuation portions carry positive duration with zero session count."
+        },
+        {
+          "path": "time.md/Data/ScreenTimeDataService.swift",
+          "line": 1041,
+          "through_line": 1073,
+          "meaning": "Grouped rollup query passes summed duration and session count through."
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 388,
+          "literal": "for row in rows where row.totalSeconds > 0 && row.sessionCount > 0",
+          "meaning": "Mirror discards continuation-only positive duration rows."
+        }
+      ]
+    },
+    "collector": {
+      "source": "time.md/Data/ActiveAppTracker.swift",
+      "acquisition": "NSWorkspace activation/frontmostApplication bundle ID fallback localizedName; screen sleep/wake/system sleep/wake/session resign/become-active delimit sessions. No active historical knowledgeC reader demonstrated.",
+      "states": [
+        "start observes and seeds frontmost",
+        "switch while active finalizes old/seeds next",
+        "inactive finalizes/clears hint",
+        "active seeds frontmost",
+        "stop finalizes/removes observers"
+      ],
+      "minimum_session_seconds": 2.0,
+      "loss": "duration<2 seconds discarded including negative clock duration; pre-install/app-off/crash-unflushed/denied/missing/deleted records cannot be reconstructed. Future capture must retain observed short sessions.",
+      "clock": "Date wall-clock duration Double; start_time local yyyy-MM-ddTHH:mm:ss without offset, whole-second text; source_timestamp epoch Double retains finer start precision. No monotonic reconciliation/event sequence; clock/DST/timezone uncertainty preserved, not repaired by invented precision.",
+      "commit": "NSLock in-memory transitions; independent global utility async writes/hint changes can reorder. SQLite READWRITE|FULLMUTEX, busy_timeout5000, INSERT OR IGNORE; no capture journal/checkpoint/fsync ack or ignored-versus-new-row distinction.",
+      "device_event_gap": "OS state notifications delimit sessions; no complete separate durable device-event ledger demonstrated."
+    },
+    "hint": {
+      "source": [
+        "time.md/Data/ActiveAppTracker.swift",
+        "timemd/Database.swift"
+      ],
+      "path": "Library/Application Support/time.md/current_session.json",
+      "fields": [
+        "app_name",
+        "start_timestamp Double epoch",
+        "stream_type app_usage"
+      ],
+      "behavior": "Atomic best-effort async live hint, CLI augments some queries; not completed durable history. Wake seeds tracker without corresponding hint write."
+    },
+    "identity": {
+      "sources": [
+        "time.md/Shared/Models/DeviceInfo.swift",
+        "time.md/Sync/TimeMdCloudSyncStore.swift",
+        "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift"
+      ],
+      "tracker_device": "IOPlatformUUID via IOKit; fallback UUID per call not stable installation. Host/model/OS getters exist, not called here.",
+      "sync_installation": "UserDefaults timeMdCloudSyncDeviceId persists macos-UUID, distinct from hardware identity.",
+      "record": "Autoincrement usage.id, snapshot macos-row-ID scoped to installation; not globally immutable event identity. Preserve aliases/lineage without collapsing devices.",
+      "legacy": "Cloudkit metadata-hash backfilled transport/platform/day/entry; unknown origin remains unknown; iOS aggregates never exact sessions."
+    },
+    "dedup": {
+      "sources": [
+        "time.md/Data/HistoryStore.swift",
+        "timemd/Handlers.swift",
+        "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift"
+      ],
+      "local_unique": [
+        "app_name",
+        "source_timestamp",
+        "stream_type"
+      ],
+      "local_predicate": "sync_transport IS NULL, device_id omitted",
+      "import_unique": [
+        "device_id",
+        "source_local_day",
+        "source_entry_id"
+      ],
+      "import_predicate": "sync_transport IS NOT NULL",
+      "order": "Snapshot start_time ASC,id ASC; CLI sessions start_time DESC lacks ID tie-breaker. Direct observation suppresses overlapping legacy same-app/media rows; nonoverlap retained. Source kind/device must remain separate.",
+      "rollups": "usage_hourly_app_rollups/usage_rollup_meta backfilled_v2/triggers; all/direct scopes; first-hour session count."
+    }
+  },
+  "feature_map": [
+    {
+      "id": "usage-ui",
+      "current": "Overview totals/top apps/trends; Details sessions/focus/buckets/heatmap; Reports analytics; range/granularity/source filters/current-period-following/refresh, names/icons.",
+      "successor": "Shared React/Effect source-aware full-history/timeline/reducers, coarse native application/icon SDK.",
+      "paths": [
+        "time.md/Features/Overview/TimingOverviewView.swift",
+        "time.md/Features/Details/TimingDetailsView.swift",
+        "time.md/Features/Reports/TimingReportsView.swift",
+        "time.md/App/GlobalFilterStore.swift",
+        "time.md/Data/ScreenTimeDataService.swift",
+        "time.md/Data/AnalyticsModels.swift"
+      ]
+    },
+    {
+      "id": "categories-annotations",
+      "current": "Projects groups categories; Rules manual/bulk app-name→category; AppCategorizer seeds bundle categories. category-mappings.db app_category_map app_name primarykey/category; upsert/delete/temp joins. No independent project entity/general annotation history or assignment revisions established.",
+      "successor": "Preserve available assignments with source lineage; common versioned assignment/annotation contracts remain required.",
+      "paths": [
+        "time.md/Data/CategoryMappingStore.swift",
+        "time.md/Data/AppCategorizer.swift",
+        "time.md/Features/Projects/TimingProjectsView.swift",
+        "time.md/Features/Rules/TimingRulesView.swift"
+      ]
+    },
+    {
+      "id": "analytics",
+      "current": "Duration/buckets/focus threshold/session-count context switching/transitions/first-last starts/active-days/streak/weekend/typical-day. Pickup short-session proxy, not OS unlocks; missing days not known-zero. Native PerformanceTrace OS Logger exists, no telemetry grant inherited.",
+      "successor": "Common independent source-aware reducers and coverage/overlap/time fixtures.",
+      "paths": [
+        "timemd/Handlers.swift",
+        "time.md/Data/ScreenTimeDataService.swift",
+        "time.md/App/PerformanceTrace.swift"
+      ]
+    },
+    {
+      "id": "blocking",
+      "current": "Separate blocking rule/helper/enforcement/recovery/settings/app/browser watchers.",
+      "successor": "Retained-feature purpose review separately required; no enforcement/helper/browser-policy activation inherited.",
+      "paths": [
+        "time.md/Data/BlockPolicyEngine.swift",
+        "time.md/Data/BlockRuleStore.swift",
+        "time.md/Features/Blocking/BlockingView.swift",
+        "time.md/App/time.mdApp.swift"
+      ]
+    },
+    {
+      "id": "herdr",
+      "current": "Optional DEBUG coding-agent telemetry feature with repository/model/agent fields.",
+      "successor": "Separate source/purpose review, never implicit usage history.",
+      "paths": [
+        "time.md/App/FeatureFlags.swift",
+        "time.md/Data/HerdrTelemetryStore.swift",
+        "time.md/Data/HerdrTelemetryIngestor.swift"
+      ]
+    },
+    {
+      "id": "settings",
+      "current": "UserDefaults appearance/menu/visibility/filter/granularity/refresh/onboarding/collection/sync; JSON presets/schedule; native Keychain references. Licensed/trial lifecycle gates service startup, demo stops capture.",
+      "successor": "Preview supported inert settings; rebind capture/source/destination/purchase grants, no credentials/defaults/grants inherited.",
+      "paths": [
+        "time.md/App/RootSplitView.swift",
+        "time.md/App/AppVisibilityMode.swift",
+        "time.md/Export/ExportFilterPreset.swift",
+        "time.md/Export/ExportModels.swift",
+        "time.md/App/time.mdApp.swift"
+      ]
+    }
+  ],
+  "exports": {
+    "sources": [
+      "time.md/Export/ExportModels.swift",
+      "time.md/Export/ExportCoordinator.swift",
+      "time.md/Export/TimeMdExportKitAdapter.swift",
+      "time.md/Export/ScheduledExportRunner.swift",
+      "time.md/Export/ExternalAPIExportDelivery.swift"
+    ],
+    "schema_version": 1,
+    "formats": [
+      "csv",
+      "json",
+      "yaml",
+      "markdown",
+      "obsidian"
+    ],
+    "options": "CSV delimiters/quotes/headers, JSON flat/nested metadata, YAML, Markdown tables/headings; Obsidian YAML payload in Markdown frontmatter, legacy options decode. Static bytes pinned, consumer compatibility unqualified.",
+    "retained_sections": [
+      "summary",
+      "apps",
+      "categories",
+      "trends",
+      "sessions",
+      "heatmap",
+      "raw_sessions",
+      "context_switches",
+      "app_transitions",
+      "period_comparison"
+    ],
+    "excluded_sections": [
+      "web_history",
+      "top_domains",
+      "input_top_words",
+      "input_top_keys",
+      "input_cursor_heatmap",
+      "input_typing_intensity",
+      "input_raw_keystrokes",
+      "input_raw_mouse_events"
+    ],
+    "archive_gap": "Formatted exports/mirror do not preserve complete IDs/epoch precision/origin/settings/category revision/queue state; complete allowed archive+exact roundtrip required.",
+    "presets": "export-presets.json/custom filter presets; browser built-in preset excluded, allowed settings inert/preview only.",
+    "schedule": {
+      "path": "Library/Application Support/time.md/export-schedule.json",
+      "single_schedule": true,
+      "frequencies": [
+        "daily",
+        "weekly",
+        "monthly"
+      ],
+      "fields": [
+        "frequency/hour/minute/dayOfWeek/dayOfMonth",
+        "format/sections/usageSources/relativeDateRange",
+        "outputPath/deliveryDestination",
+        "isEnabled/lastRunAt/lastRunSuccess/lastRunError"
+      ],
+      "poll_seconds": 60,
+      "tolerance_seconds": 15,
+      "behavior": "Immediate tick, in-process isRunning guard, Run now; recordRun updates lastRunAt on failure AND success despite last-successful-run comment. No durable multi-job outbox/crash replay proven. No active schedule/destination armed by migration."
+    },
+    "external_api": {
+      "methods": [
+        "POST",
+        "PUT",
+        "PATCH"
+      ],
+      "bodies": [
+        "jsonEnvelope",
+        "rawContent"
+      ],
+      "auth": [
+        "none",
+        "bearerToken",
+        "apiKeyHeader"
+      ],
+      "api_header_default": "X-API-Key",
+      "timeout_seconds": [
+        5,
+        120
+      ],
+      "retry_count_default": 2,
+      "retry_count_max": 5,
+      "attempts_max": 6,
+      "retry_statuses": [
+        408,
+        425,
+        429,
+        "500–599"
+      ],
+      "backoff_max_seconds": 8,
+      "numeric_retry_after_cap_seconds": 10,
+      "idempotency": "timemd-export- plus sanitized planned-fileID prefix120, separate testprefix; not durable content-hash job identity",
+      "envelope_fields": [
+        "schema_version",
+        "source time.md",
+        "test",
+        "filename",
+        "relative_path",
+        "format_id",
+        "format_name",
+        "content_type",
+        "byte_count",
+        "content"
+      ],
+      "queue": "In-memory request retry, cancellation; native Keychain/destination configuration not read/inherited. Response preview source behavior never logged to receipts."
+    },
+    "ExportKit": "main pinned17993dc0361c41145dc6429738ed369d9976e550, separate dependency license/source review required; no fetch/adoption.",
+    "file_extensions": {
+      "csv": "csv",
+      "json": "json",
+      "yaml": "yaml",
+      "markdown": "md",
+      "obsidian": "md"
+    },
+    "format_locator": {
+      "path": "time.md/Export/ExportCoordinator.swift",
+      "symbol": "ExportFormat",
+      "meaning": "Exact rawValue IDs; obsidianmd is a design format label, current donor ID is obsidian."
+    }
+  },
+  "sync": {
+    "sources": [
+      "time.md/Sync/TimeMdCloudSyncModels.swift",
+      "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "time.md/Sync/TimeMdCloudKitSyncService.swift",
+      "time.md/Sync/TimeMdCloudSyncScheduler.swift",
+      "time.md/Sync/TimeMdCrossPlatformSyncModels.swift",
+      "time.md/Sync/TimeMdCrossPlatformCrypto.swift",
+      "time.md/Sync/TimeMdCrossPlatformSyncClient.swift",
+      "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+      "time.md/Sync/TimeMdCrossPlatformCredentialStore.swift"
+    ],
+    "payload": {
+      "schema": "tech.isolated.timemd.cloudkit.daily-usage.v1",
+      "version": 1,
+      "fields": [
+        "schema",
+        "schemaVersion",
+        "app",
+        "generatedAt",
+        "localDay",
+        "sourceDeviceId",
+        "sourcePlatform",
+        "sourceAppVersion",
+        "entries"
+      ],
+      "entry_fields": [
+        "id",
+        "sourceDeviceId",
+        "sourcePlatform",
+        "streamType",
+        "appName",
+        "startTime",
+        "durationSeconds",
+        "url",
+        "title",
+        "metadataHash"
+      ],
+      "encoding": "Codable camelCase JSON sortedkeys ISO8601 dates; original precision/timezone not guaranteed."
+    },
+    "cloudkit": {
+      "private_database": true,
+      "record_type": "TimeMdDailyUsageSnapshot",
+      "encrypted_payload": "encryptedValues payloadJSON",
+      "visible_metadata": "schema/version/localDay/device/platform/count",
+      "record_name": "daily_localDay_sanitizedDeviceID",
+      "fetch_default": "today",
+      "results_limit": 200,
+      "pagination_gap": "Returns first matchResults, no continuation cursor consumed."
+    },
+    "scheduler": "Startup push20s/session debounce90s/periodic5min pushToday/importToday ifenabled; builder date argument allows one historicalday but default lifecycle today, no full-history traversal guarantee.",
+    "builder": "Local rows one day, exclude imports/transport metadatahash prefixes, direct-overlap dominance, ORDER start_time ASC,id ASC. Does not split spanning session into independently authoritative records.",
+    "import_replacement": "All nonlocal snapshots validated before BEGIN IMMEDIATE; delete device+transport+source_local_day; insert positive entries then COMMIT/ROLLBACK. Empty snapshot deletes imported day. Crossplatform revoked-device cleanup only currentday; historicaldays remain.",
+    "validation_bounds": {
+      "entries_max": 50000,
+      "snapshot_device_chars_max": 256,
+      "entry_id_chars_max": 512,
+      "entry_id_unique": true,
+      "duration_seconds": [
+        0,
+        172800
+      ],
+      "day_slack_hours": 18,
+      "latest_end_hours_from_day_start": 42,
+      "sqlite_busy_timeout_ms": 10000
+    },
+    "cross_platform": {
+      "envelope_schema": "tech.isolated.timemd.encrypted-daily-snapshot.v1",
+      "pairing_schema": "tech.isolated.timemd.pairing.v1",
+      "version": 1,
+      "algorithm": "A256GCM",
+      "initial_key_version": 1,
+      "key_bytes": 32,
+      "nonce_bytes": 12,
+      "tag_bytes": 16,
+      "sealed_bytes_max": 524288,
+      "encoded_ciphertext_chars_max": 700000,
+      "encoded_nonce_chars_max": 32,
+      "envelope_device_chars_max": 128,
+      "accepted_platforms": [
+        "macos",
+        "android"
+      ],
+      "AAD": "UTF8 newline join envelope schema,1,spaceId,sourceDeviceId,sourcePlatform,localDay,keyVersion,A256GCM",
+      "identity": "Authenticated decrypt, then inner schema/version/device/platform/day equality; rejected unauthenticated snapshots counted, not imported.",
+      "routes": [
+        "POST /v1/spaces",
+        "POST /v1/pairing-tokens",
+        "GET /v1/devices",
+        "PUT /v1/snapshots/{localDay}",
+        "GET /v1/snapshots/{localDay}",
+        "DELETE /v1/devices/{deviceId}",
+        "DELETE /v1/spaces/current"
+      ],
+      "request_timeout_seconds": 20,
+      "resource_timeout_seconds": 30,
+      "credentials": "Native Keychain configuration; pairing link includes sensitive token/key. No config/credentials/relay/network/data accessed; compatibility/recovery/client proofs unqualified."
+    }
+  },
+  "storage_migrations": {
+    "source": "time.md/Data/HistoryStore.swift",
+    "usage": "CREATE/ALTER mixed url/title/provenance, legacy backfill/drop dedup index/hourly rollups; URL getters ensure/mutate schema, not invoked.",
+    "input": "inputTrackingMigratedToSeparateDB_v1 ATTACH/BEGIN IMMEDIATE copies six tables then DROPS legacy keystroke/mouse/typedwords/cursorbins/meta/consent tables, COMMIT/defaults flag/VACUUM legacy. Destructive donor behavior EXCLUDED from successor and never executed.",
+    "browser": "webHistoryMigratedToSeparateDB_v1 ORIGNORE visit copy to web-history.db, main archive table retained for rollback, flag on absentstore/table; not executed.",
+    "required": "Browser-free complete available allowed history IDs/precision/unknowns/lineage/categories/inert-settings and any available annotations; preview/conflict/Undo/repeated/interrupted transactional import; donor stores remain readable; grants/credentials/purchases/destinations/queues require explicit rebind, never inherited."
+  },
+  "exclusions": {
+    "before_persistence": "Classify browser application IDs BEFORE title observation/journal/store; allowed browser application-duration identity may remain, but no browser window/tab titles/URL/domain/path/visits/profile copies/extensions/loopback events. Deferred browser/input excluded before persistence through every mixed query/import/export/sync/diagnostic path.",
+    "browser": "Safari/Chrome/Firefox/Arc/Brave/Edge history discovery/copies; Safari Web Extension/127.0.0.1:52781 loopback/archival/websiteaccess/browserblocking queues deferred and excluded. Existing title column not desktop title capture.",
+    "browser_paths": [
+      "time.md/Data/BrowsingHistoryService.swift",
+      "time.md/Data/BrowsingHistoryModels.swift",
+      "time.md/Data/WebHistoryArchiveStore.swift",
+      "time.md/Data/WebHistoryCollectionSettings.swift",
+      "time.md/Data/WebsiteAccessEventSource.swift",
+      "time.md/App/BrowserSettingsStore.swift",
+      "time.md/App/SafariWebExtensionSupport.swift",
+      "time.md/Features/WebHistory/WebHistoryView.swift",
+      "time.md/App/time.mdApp.swift"
+    ],
+    "input": "Keys/typedchars/words/modifiers/secureinput content, keystroke events, mouse/cursor position/buttons/scroll/heatmaps/intensity, input stores/consentlogs/retention migration deferred and excluded; native optin grant never transferred.",
+    "input_paths": [
+      "time.md/Data/InputEventTracker.swift",
+      "time.md/Data/InputAggregator.swift",
+      "time.md/Data/InputDataPruner.swift",
+      "time.md/Data/InputTrackingLevels.swift",
+      "time.md/Data/ScreenTimeDataService+InputTracking.swift",
+      "time.md/Features/Input/InputTrackingView.swift",
+      "time.md/Shared/Models/InputTrackingModels.swift"
+    ],
+    "mixed_paths": [
+      "timemd/Database.swift",
+      "timemd/Handlers.swift",
+      "time.md/Export/ExportModels.swift",
+      "time.md/Export/ExportCoordinator.swift",
+      "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift"
+    ],
+    "projection": "Incoming migration/sync and outgoing query/export/sync, fixtures, React UI and logs remove deferred fields BEFORE durable persistence. No excluded table/content copied. Browser duration identity distinct from excluded title/content."
+  },
+  "updates_commerce_native": {
+    "sources": [
+      "time.md.xcodeproj/project.pbxproj",
+      "time.md/time.md.entitlements",
+      "Info.plist",
+      "Makefile",
+      "time.md/App/SparkleUpdater.swift",
+      "time.md/App/LicenseActivationService.swift",
+      "time.md/App/LicenseActivationStore.swift",
+      "time.md/App/LicenseActivationKeychain.swift",
+      "time.md/App/time.mdApp.swift"
+    ],
+    "xcode": "macOS14.0/marketing3.0.7/build37, sandboxNO/hardenedruntimeYES/automatic signing: config facts, not actual signedartifact/channel proof.",
+    "entitlements": "Networkserver/CloudKitcontainer/services declared; Accessibility/AppleEvents/InputMonitoring descriptions, no granted permission/title eligibility.",
+    "updates": "Sparkle2.9.0 rev21d8df80440b1ca3b65fa82e40782f1e5a9e6ba2 feedURL/public ED-key/check-for-updates source. Make archive/export/notarytool/staple/ZIP/sign-update recipe only; not executed/inherited.",
+    "commerce": "Native activation/trial Keychain tokens+metadata defaults; donor activation/Stripe trial checkout/verification URLSession endpoints POSTtimeout20s. Paid/cached-validtrial gates collectors; demo stops services. Network trial reverify failure retains unexpired trial until expiry; entitlement/support/purchase migration choices separate, no account/token/purchase accessed.",
+    "headless": "Capture owned by licensed app lifecycle; CLI queries persisted store without app but does not acquire new sessions. Independent login/background/headless/signedpermission proof absent."
+  },
+  "future_native_proofs": {
+    "state": "planned/unqualified",
+    "current_absence": "ActiveAppTracker has no general idle or desktop-window-title API. Mixed schema/import url/title not desktop capture authority.",
+    "requirements": [
+      "F11 supported signed Mac SDK/helper/channel architecture and grantUX, no assumed sandbox Accessibility/helperescape.",
+      "S02 full future observed short/full sessions and device/title events; stableinstallation/event IDs/durable recovery/reboot/clock/lock/sleep/revoke/hungapp; full available allowed donorhistory beyond mirrors.",
+      "New idle observation independent of keyboard content; distinguish idle/lock/sleep/denied/missingcoverage.",
+      "Separate authorized desktoptitles with unavailable/redacted/missing versus empty status/provenance/escaping; exclude browser titles BEFORE observation/persistence.",
+      "Signed login/background/headless/upgrade/reinstall/permission/channel proofs; numerical battery/energy/latency/storage/queue budgets, bounded multi-year cursors/exports.",
+      "C14 typed independent domain/detail/destination/source grants, C15 summary/records/archive/donor-byte fixtures, C17/P03 complete replay/roundtrip/preview/Undo.",
+      "S05 Windows/Linux collector owner/milestone pending; no acquisitionparity. F12/S01 iOS signedeligibility/purpose/destination and S06 exactsession follow-up stayopen."
+    ],
+    "shared_native_seam": "Native SDK/security/acquisition/lifecycle coarse adapter; shared Effect commonoperations validation/provenance/grants/history/reducers/query/export and broadReactUI. DonorSwift/hiddenSQL not separate successor core."
+  },
+  "producer_consumers": [
+    {
+      "producer": "Mac NSWorkspace tracker",
+      "consumer": "usage→nativeUI/service/mirror/timemd/exports/daily snapshots",
+      "paths": [
+        "time.md/Data/ActiveAppTracker.swift",
+        "time.md/Data/HistoryStore.swift",
+        "time.md/Data/ScreenTimeDataService.swift",
+        "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+        "timemd/Database.swift",
+        "time.md/Export/ExportCoordinator.swift"
+      ]
+    },
+    {
+      "producer": "CategoryMappingStore",
+      "consumer": "temporaryjoins/Projects/Rules/CLIcat/export, futureassignmentcontracts",
+      "paths": [
+        "time.md/Data/CategoryMappingStore.swift",
+        "time.md/Features/Projects/TimingProjectsView.swift",
+        "time.md/Features/Rules/TimingRulesView.swift",
+        "timemd/Handlers.swift"
+      ]
+    },
+    {
+      "producer": "dailybuilder/CloudKit/crossplatformdecryptor",
+      "consumer": "device-dayreplacement→usage, separateiOS/Androidaggregate/sessionprofiles",
+      "paths": [
+        "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+        "time.md/Sync/TimeMdCloudKitSyncService.swift",
+        "time.md/Sync/TimeMdCrossPlatformSyncService.swift",
+        "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift"
+      ]
+    },
+    {
+      "producer": "ExportCoordinator/ExportKit",
+      "consumer": "localfiles/API/Markdown/Obsidian; donorbytes independent Health.mdfrozencontract",
+      "paths": [
+        "time.md/Export/ExportCoordinator.swift",
+        "time.md/Export/TimeMdExportKitAdapter.swift",
+        "time.md/Export/ExternalAPIExportDelivery.swift"
+      ]
+    },
+    {
+      "producer": "plannednativeMacadapter",
+      "consumer": "Effect/React/commonCLI/MCP and authorizedApple/Android/website/Obsidianconsumers",
+      "authority": "Health.mdnative/Rust/reference retained until scopedintegrated/native/signed/promotion/deletiongates; no existingcontract change."
+    }
+  ],
+  "limitations": [
+    "Source-only candidate, Q-DONOR-SOURCE open; no import/source acceptance.",
+    "No liveSQLite/defaults/CloudKit/keychain/config/usage/windowtitles/credential/account/history access; no launch/install/build/tests/networkservice.",
+    "Clean Git metadata excludes ignored runtimefiles, not enumerated/read.",
+    "Static facts do not prove runtime delivery/recovery/fullhistory/bytefidelity/signedchannel/entitlement.",
+    "Literal testcase index omits possible generatedcases; freeze expectations and reconcile executabletargetbindings before port.",
+    "External dependency license/source review/native supportedAPI/channel proofs remain required."
+  ],
+  "remaining_qualification": [
+    "Independent personal/data fingerprint reviewpending.",
+    "Q-DONOR-SOURCE/history/license/entitlement/support/grant/destination/queue choices open.",
+    "C14/C15/C17/P03/S00/S02–S05/F11–F16 fullfamily proofopen; source maps do not qualify full-history migration.",
+    "No productionpromotion or source/reference/donorstore deletion authorized.",
+    "Source installed-state/secret/grant access forbidden in this task; a later authorized synthetic archive harness must prove full retained history, exclusion-before-persistence, precision and installed-state recovery.",
+    "Historical aggregate-only source preserves declared source detail; missing exact iOS sessions remain S06, not fabricated by the Mac importer.",
+    "Synthetic continuation-only hour, cross-midnight and same-app continuation-with-start fixtures must prove source mirror undercount versus complete raw-history authority; no donor source fix or executed fixture in this planning task."
+  ]
+}
