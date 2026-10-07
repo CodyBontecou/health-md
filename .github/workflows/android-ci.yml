@@ -294,6 +294,18 @@ jobs:
             cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
 
+      - name: Upload instrumentation reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-reports
+          path: |
+            apps/android/healthmd-core/build/reports/androidTests/connected
+            apps/android/healthmd-core/build/outputs/androidTest-results/connected
+            apps/android/app/build/reports/androidTests/connected
+            apps/android/app/build/outputs/androidTest-results/connected
+          retention-days: 14
+
   fdroid:
     name: F-Droid clean build
     needs: changes

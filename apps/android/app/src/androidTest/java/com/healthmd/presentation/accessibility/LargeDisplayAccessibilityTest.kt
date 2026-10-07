@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -463,8 +465,13 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     @Test
     fun scheduleFieldsFitLocalizedValuesAndCommitKeyboardEdits() {
         val state = mutableStateOf(ScheduleUiState(cadenceValue = 99999, lookbackDays = 365))
+        lateinit var keyboardInsets: WindowInsets
+        lateinit var keyboardDensity: Density
         compose.setContent {
             TestViewport {
+                val insets = WindowInsets.ime
+                val density = LocalDensity.current
+                SideEffect { keyboardInsets = insets; keyboardDensity = density }
                 Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()
                     .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
                     ScheduleSettingsCard(
@@ -491,7 +498,13 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.runOnIdle { assertEquals(ScheduleCadenceUnit.MINUTES, state.value.cadenceUnit) }
         compose.onNodeWithTag(ScheduleControlTags.HOUR).assertDoesNotExist()
 
-        field.performScrollTo().performTouchInput { click() }
+        field.performScrollTo().performTouchInput { click() }.assertIsFocused()
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.runOnIdle {
+                ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                    ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+            }
+        }
         field.performTextReplacement(formatInteger(7, locale))
         compose.runOnIdle { assertEquals("Don't persist a below-minimum partial edit", 99999, state.value.cadenceValue) }
         field.performImeAction()
@@ -507,6 +520,12 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         field.performImeAction()
         compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(12345, locale))
+        field.assertIsNotFocused()
+        // Native IME visibility becomes false before Compose's animated inset reaches zero.
+        // Wait for the inset consumed by this fitted viewport before measuring clipped text.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.runOnIdle { keyboardInsets.getBottom(keyboardDensity) == 0 }
+        }
         assertTextFits(field, GeistType.label20Mono.fontSize)
 
         val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)
