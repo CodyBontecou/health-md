@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install/register the manual Apple pilot runner; never install a service."""
+"""Register the Apple pilot runner only with its private controller; never install a service."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ import tempfile
 import urllib.request
 
 
-REPOSITORY = "CodyBontecou/health-md"
+REPOSITORY = "CodyBontecou/health-md-local-ci"
 LABEL = "healthmd-local-pilot-macos-arm64"
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -28,6 +28,23 @@ def github(endpoint: str, method: str = "GET"):
     if result.returncode:
         raise ValueError(f"GitHub access failed for {endpoint}; verify gh auth login and repository admin access")
     return json.loads(result.stdout)
+
+
+def require_private_controller() -> None:
+    metadata = github(f"repos/{REPOSITORY}")
+    if not isinstance(metadata, dict) or metadata.get("full_name") != REPOSITORY:
+        raise ValueError(f"Runner controller must be exactly {REPOSITORY}")
+    owner = metadata.get("owner")
+    if (not isinstance(owner, dict) or owner.get("login") != REPOSITORY.split("/", 1)[0]
+            or owner.get("type") != "User"):
+        raise ValueError("Runner controller must remain owned by the expected personal account")
+    if metadata.get("private") is not True:
+        raise ValueError("Runner controller must be private; public runner registration is prohibited")
+    if metadata.get("default_branch") != "main":
+        raise ValueError("Runner controller default branch must be main")
+    permissions = metadata.get("permissions")
+    if not isinstance(permissions, dict) or permissions.get("admin") is not True:
+        raise ValueError("Authenticated GitHub access must have controller repository admin permission")
 
 
 def runner_asset(release: dict) -> tuple[str, str]:
@@ -105,6 +122,9 @@ def main() -> int:
             raise ValueError("Runner name must use 1-64 letters, digits, periods, underscores or hyphens")
         if destination.exists() and any(destination.iterdir()):
             raise ValueError(f"Runner directory is not empty: {destination}; refusing to replace registration")
+        # Check the actual API visibility/identity before any archive download,
+        # filesystem installation, registration-token request or runner execution.
+        require_private_controller()
         runners = registered_runners()
         if any(item["name"] == args.name for item in runners):
             raise ValueError(f"Runner name {args.name!r} is already registered; refusing replacement")
@@ -130,7 +150,7 @@ def main() -> int:
         matches = [item for item in registered_runners() if item["name"] == args.name]
         if len(matches) != 1 or {item["name"] for item in matches[0]["labels"]} != {LABEL}:
             raise ValueError("Registered labels differ from the isolated pilot policy; do not start this runner")
-        print(f"Registered {args.name} with only label {LABEL}")
+        print(f"Registered {args.name} on private controller {REPOSITORY} with only label {LABEL}")
         print(f"Runner directory: {destination}")
         print("Start in that directory: env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN ./run.sh")
         print("Stop with Ctrl-C. No background service was installed.")

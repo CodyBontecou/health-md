@@ -20,18 +20,29 @@ The final gate jobs fail unless every job in their component workflow succeeds (
 
 ## Optional Apple local pilot
 
-`apple-local-pilot.yml` is a manually dispatched experiment for an everyday Apple Silicon Mac.
-It has no push, pull-request, schedule, or reusable-workflow trigger and is not a required gate.
-Existing CI, nightly, release, and exact-SHA qualification workflows keep their current ownership.
-This pilot exercises the bounded `apps/apple/scripts/run-local-actions-pilot.sh` entry point;
-it is not the complete Apple CI matrix or evidence accepted by release qualification.
+The Mac runner belongs exclusively to the private
+[`CodyBontecou/health-md-local-ci`](https://github.com/CodyBontecou/health-md-local-ci)
+controller repository. Public PRs cannot schedule this repository-scoped runner. Labels select
+machines; they do not enforce workflow access. Do not register an everyday development Mac
+against this public repository or use runner hooks as an access-control substitute.
 
-Register the runner using `scripts/setup-local-actions-runner.py` with **no default labels** and
-the single custom label `healthmd-local-pilot-macos-arm64`. The setup helper defaults to the ignored
-`.external/local-actions-runner` installation; `--runner-dir` selects another location. Its `_work`
-checkout is separate from the development source. Setup registers the runner and does not install
-a background service or start it. Start the foreground process when the Mac is available and stop
-it with Control-C:
+`scripts/local-actions/apple-local-pilot.yml.template` is the reviewed controller workflow.
+Copy it to `.github/workflows/apple-local-pilot.yml` in the private controller when updating it;
+compare the deployed workflow with this template. This public repository's
+`apple-local-pilot.yml` runs tooling safety tests on a hosted runner only.
+
+The controller permits manual dispatch from its `main` branch. A hosted resolver checks out
+public `health-md` main, validates an optional full 40-character `source_sha` against main
+history, rejects commits predating the pilot script, and runs tooling safety tests before
+scheduling the Mac. The default is the public main commit resolved at job start. The Mac then
+checks out that exact public SHA. The controller does not accept public PR triggers, reusable
+workflow calls, repository dispatches, or arbitrary source repositories.
+
+Register with `scripts/setup-local-actions-runner.py`. It refuses a public controller or a
+non-main default branch and uses **no default labels**, with only
+`healthmd-local-pilot-macos-arm64`. Its ignored `.external/local-actions-runner/_work` checkout
+is separate from development source. Registration does not install a background service.
+Run the listener in a foreground terminal when the Mac is available; stop with Control-C:
 
 ```sh
 python3 scripts/setup-local-actions-runner.py
@@ -39,30 +50,30 @@ cd .external/local-actions-runner
 env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN ./run.sh
 ```
 
-Runner registration credentials stay in the ignored runner installation. Never commit them.
+From another terminal, dispatch and inspect the private run:
 
-The `--no-default-labels` registration option is essential: the existing Apple nightly uses generic
-`runs-on: self-hosted`, and adding a custom label while retaining that default would allow those
-nightly jobs to run on this Mac. This workflow instead routes only to
-`runs-on: [healthmd-local-pilot-macos-arm64]`. If no matching runner is online, the optional Mac job
-waits for capacity; required hosted CI continues independently.
+```sh
+gh workflow run apple-local-pilot.yml --repo CodyBontecou/health-md-local-ci --ref main
+gh run list --repo CodyBontecou/health-md-local-ci --workflow apple-local-pilot.yml
+```
 
-Dispatch from `main`, optionally providing a full 40-character `source_sha`. A hosted resolver
-rejects branch/tag dispatches, commits outside `origin/main` history, and commits that predate the
-pilot script before it schedules the Mac. With no input, it tests the dispatch commit. The local
-job checks out that exact SHA with `persist-credentials: false`, verifies `HEAD`, and checks for
-native arm64 macOS with installed Swift 6.3 or newer. It uses the installed Xcode without changing
-the machine's global Xcode or Git settings and requests only `contents: read`.
+To test an earlier eligible commit, add `-f source_sha=<full-main-commit-sha>` to the dispatch.
+Only trusted people should have write/dispatch access to the private controller. Keep runner
+registration credentials inside the ignored installation and never commit them. A custom-only
+label prevents generic self-hosted jobs from claiming this runner; private registration provides
+the public-PR access boundary. If the listener is offline, the optional Mac job waits for capacity.
 
-The component script owns test simulator selection/isolation; do not point it at the simulator
-used for interactive development. Its absolute `PILOT_OUTPUT_DIR` is an attempt-specific directory
-under `$RUNNER_TEMP`. Logs, test results, and source/toolchain evidence are uploaded for seven days,
-including available diagnostics after a failure. Pilot runs are serialized and use unsigned test
-builds without release certificates, signing secrets, publication, or deployment. Keep the Mac
-awake while a run is active and review its CPU, memory, disk, and simulator impact before moving
-additional work onto it.
+The component entry point `apps/apple/scripts/run-local-actions-pilot.sh` requires a clean
+committed checkout, native arm64 macOS, and installed Swift 6.3 or newer. It creates a fresh
+compatible iPhone simulator, runs the unsigned iOS unit suite with isolated DerivedData, checks
+for nonzero passing tests with no failures, and removes only its own simulator. Attempt-specific
+logs, xcresult and a receipt with source/toolchain/controller identity are retained for seven days.
+Cancellation preserves available diagnostics and records cleanup errors. It does not change
+global Xcode or Git settings. Keep the Mac awake while a run is active.
 
-Before expanding this pilot, preserve the complete component checks and release qualification described below.
+This pilot is optional and is not the complete Apple CI matrix or release qualification.
+Its checks/artifacts appear in the private controller and do not satisfy public PR status gates.
+Existing required hosted CI, nightly, release, and exact-SHA qualification remain in place.
 
 ## Android release trigger
 

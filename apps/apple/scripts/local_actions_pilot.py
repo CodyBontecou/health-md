@@ -88,6 +88,9 @@ def run_pilot(output: Path, source_sha: str | None) -> int:
     started = time.monotonic()
     receipt = {"schema": "healthmd.apple.local-pilot/1", "source_sha": sha,
                "profile": "unsigned-ios-unit-only", "toolchain": tools, "result": "failed"}
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        receipt["controller"] = {key: os.environ.get(f"GITHUB_{key.upper()}") for key in
+                                 ("repository", "workflow_ref", "workflow_sha", "run_id", "run_attempt")}
 
     def interrupt(signum, _frame):
         nonlocal interrupted

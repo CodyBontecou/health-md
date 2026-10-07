@@ -23,6 +23,10 @@ bootstrap = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(bootstrap)
 
 TOKEN = "synthetic-registration-secret"
+CONTROLLER = "CodyBontecou/health-md-local-ci"
+PRIVATE_CONTROLLER = {"full_name": CONTROLLER, "private": True, "default_branch": "main",
+                      "owner": {"login": "CodyBontecou", "type": "User"},
+                      "permissions": {"admin": True}}
 
 
 def archive_bytes(members: tuple[tuple[str, bytes, bytes], ...] = (("config.sh", b"#!/bin/sh\n", tarfile.REGTYPE),)) -> bytes:
@@ -135,7 +139,8 @@ class BootstrapSafetyTests(unittest.TestCase):
             self.assertEqual((destination / "hard").stat().st_ino, (destination / "target").stat().st_ino)
 
     def invoke(self, destination: Path, *, initial: dict | list[dict] | None = None, name: str = "pilot-test",
-               registration_code: int = 0, labels: tuple[str, ...] = (bootstrap.LABEL,)):
+               registration_code: int = 0, labels: tuple[str, ...] = (bootstrap.LABEL,),
+               controller: dict | None = None):
         data = archive_bytes()
         output, errors = io.StringIO(), io.StringIO()
         api_calls, registrations = [], []
@@ -144,6 +149,8 @@ class BootstrapSafetyTests(unittest.TestCase):
         def github(endpoint, method="GET"):
             nonlocal listings
             api_calls.append((endpoint, method))
+            if endpoint == f"repos/{CONTROLLER}":
+                return PRIVATE_CONTROLLER if controller is None else controller
             if "registration-token" in endpoint:
                 return {"token": TOKEN}
             if endpoint == "repos/actions/runner/releases/latest":
@@ -183,6 +190,27 @@ class BootstrapSafetyTests(unittest.TestCase):
             os.umask(previous_umask)
         return code, output.getvalue() + errors.getvalue(), api_calls, registrations, downloads
 
+    def test_public_wrong_owner_or_insufficient_controller_policy_fails_before_install_or_registration(self):
+        invalid = [dict(PRIVATE_CONTROLLER, private=False),
+                   dict(PRIVATE_CONTROLLER, private="true"),
+                   dict(PRIVATE_CONTROLLER, full_name="CodyBontecou/health-md"),
+                   dict(PRIVATE_CONTROLLER, owner={"login": "someone-else", "type": "User"}),
+                   dict(PRIVATE_CONTROLLER, owner={"login": "CodyBontecou", "type": "Organization"}),
+                   dict(PRIVATE_CONTROLLER, default_branch="development"),
+                   dict(PRIVATE_CONTROLLER, permissions={"admin": False}),
+                   dict(PRIVATE_CONTROLLER, permissions={"admin": "true"}), {}]
+        with tempfile.TemporaryDirectory() as temporary:
+            for index, metadata in enumerate(invalid):
+                destination = Path(temporary) / f"runner-{index}"
+                with self.subTest(metadata=metadata):
+                    code, output, calls, registrations, downloads = self.invoke(destination, controller=metadata)
+                    self.assertEqual(code, 1)
+                    self.assertEqual(calls, [(f"repos/{CONTROLLER}", "GET")])
+                    self.assertEqual(registrations, [])
+                    self.assertEqual(downloads, 0)
+                    self.assertFalse(destination.exists())
+                    self.assertNotIn(TOKEN, output)
+
     def test_existing_configuration_duplicate_name_or_invalid_name_cannot_replace_runner(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -215,6 +243,9 @@ class BootstrapSafetyTests(unittest.TestCase):
             self.assertEqual(downloads, 1)
             self.assertEqual(len(registrations), 1)
             args, kwargs = registrations[0]
+            self.assertEqual(calls[0], (f"repos/{CONTROLLER}", "GET"))
+            self.assertTrue(all(not endpoint.startswith("repos/CodyBontecou/health-md/") for endpoint, _ in calls))
+            self.assertEqual(args[args.index("--url") + 1], f"https://github.com/{CONTROLLER}")
             self.assertEqual(args[0], str(destination.resolve() / "config.sh"))
             self.assertIn("--no-default-labels", args)
             self.assertEqual(args[args.index("--labels") + 1], bootstrap.LABEL)
@@ -248,7 +279,7 @@ class BootstrapSafetyTests(unittest.TestCase):
     def test_github_auth_failure_does_not_disclose_cli_output(self):
         failure = subprocess.CompletedProcess(["gh"], 1, stdout=TOKEN, stderr=TOKEN)
         with patch.object(bootstrap.subprocess, "run", return_value=failure), self.assertRaises(ValueError) as error:
-            bootstrap.github("repos/CodyBontecou/health-md/actions/runners")
+            bootstrap.github(f"repos/{CONTROLLER}/actions/runners")
         self.assertNotIn(TOKEN, str(error.exception))
         self.assertIn("verify gh auth", str(error.exception))
 
