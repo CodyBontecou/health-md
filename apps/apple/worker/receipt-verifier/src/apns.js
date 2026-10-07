@@ -74,8 +74,10 @@ async function sendSilentPush(creds, opts) {
     body
   });
   const apnsId = response.headers.get("apns-id") ?? void 0;
+  // The Console's development Delivery Log lookup uses this distinct ID.
+  const apnsUniqueId = response.headers.get("apns-unique-id") ?? void 0;
   if (response.status === 200) {
-    return { status: 200, apnsId };
+    return { status: 200, apnsId, ...(apnsUniqueId ? { apnsUniqueId } : {}) };
   }
   let reason;
   let timestamp;
@@ -88,7 +90,7 @@ async function sendSilentPush(creds, opts) {
     }
   } catch {
   }
-  return { status: response.status, reason, apnsId, timestamp };
+  return { status: response.status, reason, apnsId, timestamp, ...(apnsUniqueId ? { apnsUniqueId } : {}) };
 }
 
 export function apnsHost(environment) {

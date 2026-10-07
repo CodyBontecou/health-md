@@ -27,6 +27,8 @@ with at most three attempts inside a one-hour acceptance window. APNs acceptance
 is not proof of iOS delivery or completed export. Network ambiguity or a Worker
 crash after APNs accepts and before D1 persists the result can still cause a
 duplicate; the app's occurrence handling must remain idempotent.
+For development pushes, `apnsUniqueId` captures Apple's `apns-unique-id`
+response header for the Console's Delivery Log lookup. This differs from `apns-id`.
 
 The schedule advances after all current recipients are accepted, or after the
 window expires with an explicit failure record. A compare-and-swap protects a

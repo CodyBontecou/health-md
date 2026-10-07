@@ -84,6 +84,7 @@ async function deliver(row, env, clock, sendPush) {
   console.log(JSON.stringify({ route: "scheduled", platform: row.platform,
     environment: row.apns_environment ?? "legacy-production", status: result.status,
     reason: result.reason ?? null, apnsId: result.apnsId ?? null,
+    apnsUniqueId: result.apnsUniqueId ?? null,
     fireAt: new Date(row.next_fire_at * 1000).toISOString(), deliveryState: state }));
 }
 

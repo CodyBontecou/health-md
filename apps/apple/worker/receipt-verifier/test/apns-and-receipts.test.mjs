@@ -19,12 +19,12 @@ test("APNs wire request uses the selected environment, background type and prior
         assert.equal(options.headers["apns-priority"], "5");
         assert.equal(options.headers["apns-expiration"], "123456");
         assert.deepEqual(JSON.parse(options.body), { aps: { "content-available": 1 }, type: "scheduled-export", fireAt: "synthetic" });
-        return new Response(JSON.stringify({ reason: "Unregistered", timestamp: 123000 }), { status: 410, headers: { "apns-id": "synthetic-id" } });
+        return new Response(JSON.stringify({ reason: "Unregistered", timestamp: 123000 }), { status: 410, headers: { "apns-id": "synthetic-id", "apns-unique-id": "synthetic-delivery-id" } });
       };
       assert.deepEqual(await sendSilentPush({ authKey, keyId: "synthetic-key", teamId: "synthetic-team" }, {
         apnsToken: "synthetic-device", bundleId: BUNDLE_ID, host: apnsHost(environment),
         customPayload: { type: "scheduled-export", fireAt: "synthetic" }, expirationSec: 123456
-      }), { status: 410, reason: "Unregistered", timestamp: 123000, apnsId: "synthetic-id" });
+      }), { status: 410, reason: "Unregistered", timestamp: 123000, apnsId: "synthetic-id", apnsUniqueId: "synthetic-delivery-id" });
     }
   } finally { globalThis.fetch = original; }
 });
