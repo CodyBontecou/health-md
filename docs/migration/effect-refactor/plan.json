@@ -9338,6 +9338,33 @@
         "official_release_reference": "https://developer.android.com/jetpack/androidx/releases/work#2.10.0",
         "checked_at": "2026-10-07",
         "release_note_observation": "2.10.0 released 2024-10-30, compiled SDK35; newer2.10.5 and2.12.0 exist. This fixed narrow nonnetwork/nonforeground private probe pin is not a production recommendation/version admission; later shipping graph requires separate current maintenance review."
+      },
+      "dependency_graph_review": {
+        "status": "accepted_bounded_graph_only",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+4151c6b49e7b5e7fd43fe1e70112a7739d185a73f9b340b4a605e08d5384dcec",
+        "evidence": {
+          "path": "/private/tmp/healthmd-android-cold-personal-graph-review.json",
+          "sha256": "9df39736b6968bbe5a906cec74489c8b8d276e75d43c36f38ba4588c9b8f7271"
+        },
+        "limits": [
+          "Graph and source API acceptance only, no native/Kotlin compile, JS bundle, packaged ABI, installed permission/Shell principal, OS scheduling/cancellation/PID/process-cold/engine/ACK/runtime qualification.",
+          "WorkManager cancelWorkById documented best effort. WorkerWrapper calls stop before cancelling future. onStopped thread unspecified/nonblocking; work result ignored after stop. Native exact-once cleanup ACK must remain separate, not Operation/WorkInfo/future completion.",
+          "SystemJobService source explicitly notes GreedyScheduler may have already executed work. Actual OS job ingress must independently exclude already-running greedy path; no scheduler proof from manifest alone.",
+          "Default Play remains dependency-isolated; coldPlay-only WorkManager changes do not update productionAndroid dependency policy.",
+          "Manifest includes startup providers/scheduler services/boot/foreground declarations and normal permissions. Source/runtime must prohibit unintended network/foreground/native-health paths and distinguish library/private bookkeeping from customer data.",
+          "Publisher checksums and POM license declarations are provenance corroboration, not maintainer signature/legal/security approval.2.10.0 fixed probe pin not production maintenance recommendation.",
+          "Observed seven commands finish under300seconds/16MiB. Supervisor source has timeout/output caps and own processgroup TERM; fault paths not independently exercised. If parent exits before descendants, current wait-on-parent then KILL-only-on-Timeout does not establish descendant cleanup. Do not promote this scratch graph supervisor to native/runtime fault-qualified lifetime proof."
+        ]
+      },
+      "implementation_clearance_after_graph": {
+        "status": "approved_source_only",
+        "by": "/root",
+        "permission": "Implement exact closed frozen fixture/interface in the fifteen claimed paths. No frozen literal changes or original Play/native production source/graph changes. First handoff is source-only Worker/Application/Bridge/JS/test/runner/finite R8 with complete provenance proposition before any build, common bundle, Kotlin compile, install or device action. New43/26 core authority must be reconciled separately before bundle. Library network/foreground/boot declarations do not authorize those runtime paths. Native stop/future/work status never substitutes for exact cleanup ACK. Repair and independently review supervisor process-group/descendant fault lifetime before native commands; scratch graph helper is not qualified on parent-fast-exit fault. No generated common output reads until explicit current cohort/resource clearance.",
+        "build_permitted": false,
+        "fixture_sha256": "f2a67c17977e3eb615c581bccb73a817d417a57f272ede30a1d7ebb38db00bd2",
+        "accepted_graph_patch_digest": "4151c6b49e7b5e7fd43fe1e70112a7739d185a73f9b340b4a605e08d5384dcec",
+        "accepted_provenance_sha256": "3f4699761a5a0361e1fae6066f9e861376c387ee87638e409b7a46ad90b18d52"
       }
     },
     {
@@ -23040,6 +23067,16 @@
         "permission": "After reviewer completes eligibility supplemental findings, implement exact private source/test against frozen64 literals with no frozen expectation edits. No builds/npm/typecheck/install/common outputs/CLIguard/cohort/native until accepted CORE-COHORT-IOS-ELIGIBILITY and explicit builder/input lease reacquisition. Record partial source checkpoint then await approved emitted check; public launchers/parser/wire remain unchanged.",
         "build_permitted": false,
         "requires_accepted_task": "CORE-COHORT-IOS-ELIGIBILITY"
+      },
+      "source_review_before_build": {
+        "status": "accepted_source_only",
+        "reviewer": "/root",
+        "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+b1c9253f1869808e8e4ad1c9b4c2f8bf4e501270257f12920b7d441924945916",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cli-discovery-root-source-review.json",
+          "sha256": "0015a6b0013d1f9d74e9f6f79b1ceccb48213c20411e1b9937204aca779040ad"
+        },
+        "actual_checks_pending": true
       }
     },
     {
@@ -24798,7 +24835,7 @@
         "cli-candidate-qualified-core-inputs"
       ],
       "reviewer_role": "independent portable build and core provenance reviewer",
-      "rollback": "Restore prior committed34-input/20-output personal guard/cohort and packed CLI candidate together. New private location/combined modules remain independently revertible; no public launchers/user state/data mutation.",
+      "rollback": "Restore prior committed40-input/24-output personal-slices guard/cohort and packed CLI candidate together. The separately accepted private eligibility module remains independently revertible; no public launchers/user state/data mutation.",
       "deletion_gate": "No production promotion, source/profile admission, Rust/reference/fixture/state deletion or family retirement.",
       "verification": [
         {
@@ -24883,18 +24920,85 @@
       },
       "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
       "priority": 65,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5+7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+        "evidence": {
+          "path": "/private/tmp/healthmd-core-cohort-ios-final-root-review.json",
+          "sha256": "b3cf5075f33c03d418a4c3d6fe205775709341efa59ae06f545ab6d274c207dc"
+        }
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
+        ]
+      },
+      "card_review": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "5b7a4e03da20dbcbbf1f9e784bd260975cd3b1ec794beffd306c3b09affae4b6",
+        "source_revision": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-core-cohort-ios-eligibility-preclaim-card.json",
+        "scope": "Exact four integration paths, retained40/24 plus independently accepted committed three-input/two-output eligibility delta. Complete43/26 authority freeze independently reviewed before guard/docs/build/install. Existing63 negatives preserved and additional cases derived explicitly; no authority self-refresh or source/public/native admission."
+      },
+      "authority_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_sha": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+        "stage1_patch_digest": "fbd883d92c9048bec2c2c957f81d103705b3d7012051abcd3e98dc74b8facebe",
+        "cohort_raw_sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+        "evidence": {
+          "path": "/private/tmp/healthmd-core-cohort-ios-stage1-root-review.json",
+          "sha256": "7b7006a9c83d91c239d51f4ca321ac57fd4246dc21fccb6740fc3f6922bda26d"
+        },
+        "scope": "Full43/26 core and13 historical raw authorities, physical toolchain/locks, complete84 literal filesystem fixtures, old40/24/63 unchanged. New source/grant/native/public/production authority not inferred."
+      },
+      "implementation_clearance": {
+        "status": "approved",
+        "by": "/root",
+        "cohort_raw_sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+        "allowed_paths": [
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
+        ],
+        "permission": "Implement only CLI guard/doc and receipt on this immutable cohort. After guard/source inspection, bounded sequential core check, exact offline CLI install-links, CLI check under exclusive three leases; preserve first failures. Source-reviewed frozen discovery files may compile as separate current CLI inputs, no new core adoption/public parser qualification. No other core/CLI writer/build/install/native bundle until freeze."
+      },
+      "prebuild_guard_review": {
+        "status": "accepted_source_only",
+        "reviewer": "/root",
+        "fingerprint": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5+7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+        "evidence": {
+          "path": "/private/tmp/healthmd-core-cohort-ios-prebuild-root-review.json",
+          "sha256": "5fcb93dd347d41157f651b751ebd1dabe96794236ed24a1d9aaea3a521154244"
+        }
+      },
+      "bounded_check_clearance": {
+        "status": "approved",
+        "by": "/root",
+        "permission": "Run exactly three declared physical verification argv sequentially: core check, offline CLI install-links, CLI check. Timeout180s per command and16MiB output cap; exclusive3 builder/input leases. Preserve failures, stop on unrelated source/artifact drift or non-scoped errors. No dependency/lock/native/public/source semantics/profile changes."
       }
     }
   ]

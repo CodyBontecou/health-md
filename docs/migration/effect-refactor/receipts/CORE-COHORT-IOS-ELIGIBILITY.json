@@ -1,0 +1,3902 @@
+{
+  "task_id": "CORE-COHORT-IOS-ELIGIBILITY",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+  "patch_digest": "7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+  "patch_digest_method": "SHA256 sorted3 nonreceipt paths, repository-relative UTF8 path + NUL + exact bytes + NUL. Cohort immutable; no self-reference.",
+  "changed_paths": [
+    "apps/cli/scripts/check-candidate.mjs",
+    "apps/cli/docs/typescript-candidate.md",
+    "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+    "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "private iOS eligibility successor cohort only"
+  },
+  "inputs": {
+    "assigned_committed_source_sha": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+    "card_review": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "fingerprint": "5b7a4e03da20dbcbbf1f9e784bd260975cd3b1ec794beffd306c3b09affae4b6",
+      "source_revision": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+      "reviewed_snapshot_path": "/private/tmp/healthmd-core-cohort-ios-eligibility-preclaim-card.json",
+      "scope": "Exact four integration paths, retained40/24 plus independently accepted committed three-input/two-output eligibility delta. Complete43/26 authority freeze independently reviewed before guard/docs/build/install. Existing63 negatives preserved and additional cases derived explicitly; no authority self-refresh or source/public/native admission."
+    },
+    "toolchain": {
+      "physical_file_pins": {
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node": {
+          "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+          "bytes": 122129232
+        },
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js": {
+          "sha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7",
+          "bytes": 54
+        },
+        "/opt/homebrew/lib/node_modules/npm/package.json": {
+          "sha256": "09dfcf187178ce1ab3ea6194c80d3ae082ad2a86dc1269ac963f94429e718122",
+          "bytes": 6597
+        },
+        "/opt/homebrew/lib/node_modules/npm/lib/cli.js": {
+          "sha256": "67666f06479f9b0bbc01412c198caadd4287d34d5ed74a02871ea78f186451e7",
+          "bytes": 407
+        }
+      },
+      "component_metadata_and_lock_pins": {
+        "apps/cli/package.json": {
+          "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+          "bytes": 880
+        },
+        "apps/cli/package-lock.json": {
+          "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+          "bytes": 28291
+        },
+        "packages/healthmd-core-ts/package.json": {
+          "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+          "bytes": 1410
+        },
+        "packages/healthmd-core-ts/package-lock.json": {
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "bytes": 27929
+        },
+        "packages/healthmd-core-ts/node_modules/effect/package.json": {
+          "sha256": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f",
+          "bytes": 2588
+        }
+      },
+      "dependency_versions": {
+        "effect": "4.0.1",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "@types/node": "24.19.1",
+        "undici-types": "7.24.6"
+      },
+      "status": "Physical bytes rehashed before and after execution. Actual core and CLI checks asserted Node24.21.0/npm11.19.0/exact dependency versions. Offline CLI install refreshed packed26 files; actual guard reported one physical Effect and service identity. Stage1 declarations remain historical; current checks are recorded separately.",
+      "script_policy": "Do not enable global blocked esbuild/fsevents scripts.",
+      "installed_cli_status": "Actual offline install-links succeeded; all26 installed outputs and packed manifest exactly match reviewed source artifacts. Global blocked esbuild install script remained blocked."
+    },
+    "artifact_and_native_interface": {
+      "cohort_path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+      "cohort_sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+      "cohort_bytes": 47904,
+      "complete_current_input_count": 43,
+      "complete_current_input_pins": {
+        ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+        "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "src/location/point-projection.ts": "ca9fffbc5bdb1af9c261cd084251ad905f2cd911173d4792b482bb8c499aa7d3",
+        "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "src/operations/personal-slice.ts": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+        "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "src/usage-mobile/ios-eligibility.ts": "92b8181ffbb5c3df2986449e18108a753516bdaabbf69629f4b9ac0593673017",
+        "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "tests/combined-slice-vectors.ts": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "tests/combined-slice.test.ts": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+        "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+        "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "tests/location-point-projection-vectors.ts": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+        "tests/location-point-projection.test.ts": "4e84fce04de24da82c3d00905ba0daf6757fc256aee461b539cc86ec6d7894da",
+        "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+        "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "tests/usage-mobile-ios-eligibility-vectors.ts": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "tests/usage-mobile-ios-eligibility.test.ts": "01c83101c70411b6e83134140704da57ea47d22f2200c0056cf79db35ff57cfc",
+        "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "complete_emitted_count": 26,
+      "complete_emitted_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/location/point-projection.d.ts": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477",
+        "dist/core/location/point-projection.js": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/personal-slice.d.ts": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091",
+        "dist/core/operations/personal-slice.js": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268",
+        "dist/core/usage-mobile/ios-eligibility.d.ts": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9",
+        "dist/core/usage-mobile/ios-eligibility.js": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+      },
+      "old40_input_bytes_retained": true,
+      "old24_emitted_bytes_retained": true,
+      "introduced_input_pins": {
+        "src/usage-mobile/ios-eligibility.ts": "92b8181ffbb5c3df2986449e18108a753516bdaabbf69629f4b9ac0593673017",
+        "tests/usage-mobile-ios-eligibility-vectors.ts": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "tests/usage-mobile-ios-eligibility.test.ts": "01c83101c70411b6e83134140704da57ea47d22f2200c0056cf79db35ff57cfc"
+      },
+      "introduced_output_pins": {
+        "dist/core/usage-mobile/ios-eligibility.d.ts": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9",
+        "dist/core/usage-mobile/ios-eligibility.js": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+      },
+      "historical_raw_authority_pins": {
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json": {
+          "sha256": "9100d985d40af66c026624c4050713477127f195dc9f20f45bbb20047f9d1f3e",
+          "bytes": 42459
+        },
+        "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": {
+          "sha256": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+          "bytes": 19045
+        },
+        "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json": {
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548
+        },
+        "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json": {
+          "sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+          "bytes": 24593
+        },
+        "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json": {
+          "sha256": "2709b73dfa64db2ba58e28b60cd9457e372e8e20c7e4175647927f750e167aca",
+          "bytes": 34523
+        },
+        "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json": {
+          "sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f",
+          "bytes": 90390
+        },
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-REFRESH.json": {
+          "sha256": "66ecaf5ff5dcc257424e4ee1490998a3109e6b8ad59913950b8750876bd4ebba",
+          "bytes": 30952
+        },
+        "docs/migration/effect-refactor/cohorts/core-ts-exact-numbers-v1.json": {
+          "sha256": "157b3cd4335575c56e517a7920f35773c2f69a4753b681b4f9ef2d56f9b38ee7",
+          "bytes": 8276
+        },
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL.json": {
+          "sha256": "2b0eff4a2e4cd2e190353c8f88ea4eaa6b4325b856f403981aa77df0b3ed9a19",
+          "bytes": 43671
+        },
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json": {
+          "sha256": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579",
+          "bytes": 11123
+        },
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json": {
+          "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+          "bytes": 124059
+        },
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json": {
+          "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+          "bytes": 34945
+        },
+        "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json": {
+          "sha256": "9a6e7da735c732dabe7dc1d77a1ff9d6aee0ee75bdb41cdf2e23a47e9862a93e",
+          "bytes": 336408
+        }
+      },
+      "new_eligibility_authority": {
+        "task_id": "IOS-USAGE-ELIGIBILITY",
+        "source_sha": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "patch_digest": "bf5bd96a34f1938fccd10d39667a6de3f518bdc7a6343ade79f9b429cf8bf4ea",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root",
+          "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+bf5bd96a34f1938fccd10d39667a6de3f518bdc7a6343ade79f9b429cf8bf4ea",
+          "evidence": {
+            "path": "/private/tmp/healthmd-ios-eligibility-root-independent-recheck.json",
+            "sha256": "cd220e73c92b9789a8d8c6a6f5c03fe952fe28cb4372fe5db79e1458f5fe28ae"
+          }
+        },
+        "receipt_path": "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json",
+        "receipt_sha256": "9a6e7da735c732dabe7dc1d77a1ff9d6aee0ee75bdb41cdf2e23a47e9862a93e",
+        "committed_source_sha": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+        "input_pins": {
+          "src/usage-mobile/ios-eligibility.ts": "92b8181ffbb5c3df2986449e18108a753516bdaabbf69629f4b9ac0593673017",
+          "tests/usage-mobile-ios-eligibility-vectors.ts": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+          "tests/usage-mobile-ios-eligibility.test.ts": "01c83101c70411b6e83134140704da57ea47d22f2200c0056cf79db35ff57cfc"
+        },
+        "output_pins": {
+          "dist/core/usage-mobile/ios-eligibility.d.ts": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9",
+          "dist/core/usage-mobile/ios-eligibility.js": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+        },
+        "vector_sha256": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "frozen_literal_count": 154,
+        "independent_scope_reentry_supplemental_count": 6,
+        "qualified_test_count": 161,
+        "qualification": "Private synthetic gate-only owned metadata handoff; zero personal reads/materializations. No actual iOS eligibility, authenticated native source/purpose/channel, durable grant, report/export, or public/source/profile admission."
+      },
+      "negative_fixture_catalog": {
+        "version": 1,
+        "retained_case_count": 63,
+        "new_case_count": 21,
+        "total_case_count": 84,
+        "count_derivation": {
+          "three_inputs_times_missing_edited_symlink": 9,
+          "two_outputs_times_missing_stale_symlink": 6,
+          "extra_output": 1,
+          "successor_cohort_absent_tampered": 2,
+          "eligibility_receipt_absent_tampered_unreviewed": 3
+        },
+        "status": "frozen_before_guard_implementation_not_executed",
+        "isolation": "Each mutation uses a disposable input/packed/JSON copy, validates a clean baseline, restores or recreates bytes before the next case and removes only its own temporary tree in finally. Symlinks point to the retained original; source and installed packages are never mutated. Prior personal cohort absence/tamper cases remain explicitly exercised against its unchanged raw authority in addition to new-cohort cases. Retained slice cohort/receipt cases remain independently exercised; successor cases use only new owned disposable copies. No original source/installed package mutation.",
+        "cases": [
+          {
+            "expected_failure": "install_packed_core_with_install_links",
+            "id": "sibling-symlink",
+            "mutation": "symlink to sibling core",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "installed core root"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "stale-build",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/index.js"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "unbuilt-source-edit",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/index.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "extra-source-file",
+            "mutation": "add export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/unbuilt-extra.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "unreviewed-metadata-edit",
+            "mutation": "replace bytes with unreviewed metadata LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "README.md"
+          },
+          {
+            "expected_failure": "core_manifest_drift",
+            "id": "unreviewed-packed-export",
+            "mutation": "add ./candidate/unreviewed export",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "package.json"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "missing-source-file",
+            "mutation": "remove",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/serialization/exact-json-numbers.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "new-module-edit",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/serialization/exact-json-numbers.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "source-symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/serialization/exact-json-numbers.ts"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "new-module-stale-output",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/serialization/exact-json-numbers.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "missing-output",
+            "mutation": "remove",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/serialization/exact-json-numbers.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "extra-output",
+            "mutation": "add export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/unreviewed.js"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "output-symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/serialization/exact-json-numbers.js"
+          },
+          {
+            "expected_failure": "ENOENT",
+            "id": "absent-cohort",
+            "mutation": "absent disposable path",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json"
+          },
+          {
+            "expected_failure": "reviewed_core_cohort_bytes_drift",
+            "id": "tampered-cohort",
+            "mutation": "set committed_source_sha to unreviewed in disposable JSON",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "unreviewed-delta",
+            "mutation": "set review.status to pending in disposable JSON",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "missing-personal-source",
+            "mutation": "remove",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/contracts/personal-slice.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "personal-source-edit",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/contracts/personal-slice.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "personal-source-symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "src/contracts/personal-slice.ts"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "personal-output-stale",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/contracts/personal-slice.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "missing-personal-output",
+            "mutation": "remove",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/contracts/personal-slice.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "extra-personal-output",
+            "mutation": "add export {}; LF",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/contracts/unreviewed-personal.js"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "personal-output-symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "dist/core/contracts/personal-slice.js"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "unreviewed-personal-receipt",
+            "mutation": "set review.status to pending in disposable JSON",
+            "origin": "retained_actual_24_case_catalog",
+            "target": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:src/location/point-projection.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "src/location/point-projection.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:src/location/point-projection.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "src/location/point-projection.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:src/location/point-projection.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "src/location/point-projection.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:src/operations/personal-slice.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "src/operations/personal-slice.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:src/operations/personal-slice.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "src/operations/personal-slice.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:src/operations/personal-slice.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "src/operations/personal-slice.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:tests/combined-slice-vectors.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice-vectors.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:tests/combined-slice-vectors.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice-vectors.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:tests/combined-slice-vectors.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice-vectors.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:tests/combined-slice.test.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice.test.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:tests/combined-slice.test.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice.test.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:tests/combined-slice.test.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "tests/combined-slice.test.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:tests/location-point-projection-vectors.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection-vectors.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:tests/location-point-projection-vectors.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection-vectors.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:tests/location-point-projection-vectors.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection-vectors.ts"
+          },
+          {
+            "expected_failure": "core_input_file_set_drift",
+            "id": "slice-source:tests/location-point-projection.test.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection.test.ts"
+          },
+          {
+            "expected_failure": "core_input_bytes_drift",
+            "id": "slice-source:tests/location-point-projection.test.ts:edited",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection.test.ts"
+          },
+          {
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "id": "slice-source:tests/location-point-projection.test.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "tests/location-point-projection.test.ts"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "slice-output:dist/core/location/point-projection.d.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.d.ts"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "slice-output:dist/core/location/point-projection.d.ts:stale",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.d.ts"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "slice-output:dist/core/location/point-projection.d.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.d.ts"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "slice-output:dist/core/location/point-projection.js:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.js"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "slice-output:dist/core/location/point-projection.js:stale",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.js"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "slice-output:dist/core/location/point-projection.js:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/location/point-projection.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.d.ts"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.d.ts"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.d.ts"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "slice-output:dist/core/operations/personal-slice.js:missing",
+            "mutation": "remove",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.js"
+          },
+          {
+            "expected_failure": "core_build_bytes_drift",
+            "id": "slice-output:dist/core/operations/personal-slice.js:stale",
+            "mutation": "replace bytes with export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.js"
+          },
+          {
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "id": "slice-output:dist/core/operations/personal-slice.js:symlink",
+            "mutation": "replace with symlink to retained original",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/personal-slice.js"
+          },
+          {
+            "expected_failure": "core_build_file_set_drift",
+            "id": "slice-extra-output",
+            "mutation": "add export {}; LF",
+            "origin": "new_frozen_fixture",
+            "target": "dist/core/operations/unreviewed-slice.js"
+          },
+          {
+            "expected_failure": "ENOENT",
+            "id": "slice-cohort:absent",
+            "mutation": "absent disposable path",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json"
+          },
+          {
+            "expected_failure": "reviewed_core_cohort_bytes_drift",
+            "id": "slice-cohort:tampered",
+            "mutation": "set committed_source_sha to unreviewed in disposable JSON",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json"
+          },
+          {
+            "expected_failure": "ENOENT",
+            "id": "slice-receipt:location_delta:absent",
+            "mutation": "absent disposable path",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "slice-receipt:location_delta:tampered",
+            "mutation": "append LF to disposable raw receipt",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "slice-receipt:location_delta:unreviewed",
+            "mutation": "set review.status to pending in disposable JSON",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+          },
+          {
+            "expected_failure": "ENOENT",
+            "id": "slice-receipt:combined_delta:absent",
+            "mutation": "absent disposable path",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "slice-receipt:combined_delta:tampered",
+            "mutation": "append LF to disposable raw receipt",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+          },
+          {
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "id": "slice-receipt:combined_delta:unreviewed",
+            "mutation": "set review.status to pending in disposable JSON",
+            "origin": "new_frozen_fixture",
+            "target": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+          },
+          {
+            "id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+            "target": "src/usage-mobile/ios-eligibility.ts",
+            "mutation": "remove",
+            "expected_failure": "core_input_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+            "target": "src/usage-mobile/ios-eligibility.ts",
+            "mutation": "replace bytes with export {}; LF",
+            "expected_failure": "core_input_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+            "target": "src/usage-mobile/ios-eligibility.ts",
+            "mutation": "replace with symlink to retained original",
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+            "target": "tests/usage-mobile-ios-eligibility-vectors.ts",
+            "mutation": "remove",
+            "expected_failure": "core_input_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+            "target": "tests/usage-mobile-ios-eligibility-vectors.ts",
+            "mutation": "replace bytes with export {}; LF",
+            "expected_failure": "core_input_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+            "target": "tests/usage-mobile-ios-eligibility-vectors.ts",
+            "mutation": "replace with symlink to retained original",
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+            "target": "tests/usage-mobile-ios-eligibility.test.ts",
+            "mutation": "remove",
+            "expected_failure": "core_input_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+            "target": "tests/usage-mobile-ios-eligibility.test.ts",
+            "mutation": "replace bytes with export {}; LF",
+            "expected_failure": "core_input_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+            "target": "tests/usage-mobile-ios-eligibility.test.ts",
+            "mutation": "replace with symlink to retained original",
+            "expected_failure": "candidate_source_symlink_unreviewed",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+            "target": "dist/core/usage-mobile/ios-eligibility.d.ts",
+            "mutation": "remove",
+            "expected_failure": "core_build_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+            "target": "dist/core/usage-mobile/ios-eligibility.d.ts",
+            "mutation": "replace bytes with export {}; LF",
+            "expected_failure": "core_build_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+            "target": "dist/core/usage-mobile/ios-eligibility.d.ts",
+            "mutation": "replace with symlink to retained original",
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+            "target": "dist/core/usage-mobile/ios-eligibility.js",
+            "mutation": "remove",
+            "expected_failure": "core_build_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+            "target": "dist/core/usage-mobile/ios-eligibility.js",
+            "mutation": "replace bytes with export {}; LF",
+            "expected_failure": "core_build_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+            "target": "dist/core/usage-mobile/ios-eligibility.js",
+            "mutation": "replace with symlink to retained original",
+            "expected_failure": "candidate_build_symlink_unreviewed",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-extra-output",
+            "target": "dist/core/usage-mobile/unreviewed-eligibility.js",
+            "mutation": "add export {}; LF",
+            "expected_failure": "core_build_file_set_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-cohort:absent",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+            "mutation": "absent disposable path",
+            "expected_failure": "ENOENT",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-cohort:tampered",
+            "target": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+            "mutation": "set committed_source_sha to unreviewed in disposable JSON",
+            "expected_failure": "reviewed_core_cohort_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-receipt:absent",
+            "target": "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json",
+            "mutation": "absent disposable path",
+            "expected_failure": "ENOENT",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-receipt:tampered",
+            "target": "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json",
+            "mutation": "append LF to disposable raw receipt",
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          },
+          {
+            "id": "eligibility-receipt:unreviewed",
+            "target": "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json",
+            "mutation": "set review.status to pending in disposable JSON",
+            "expected_failure": "qualified_core_receipt_bytes_drift",
+            "origin": "new_frozen_ios_eligibility_fixture"
+          }
+        ]
+      },
+      "current_guard_baseline": {
+        "sha256": "aca2e32e0047fc397c9bde572f3464b17a4482589d6a1a986a6b0bda3efd8de3",
+        "bytes": 35746
+      },
+      "current_documentation_baseline": {
+        "sha256": "1b7898390cf04c276a285b60fee5c09215640ca95618b94c9abb73f756c3490b",
+        "bytes": 7580
+      },
+      "no_own_refresh_receipt_reverse_pin": true,
+      "separate_discovery_source_not_adopted": true,
+      "prebuild_patch_files": {
+        "apps/cli/docs/typescript-candidate.md": {
+          "sha256": "cfd673b889af17653694ca48bd5947f86e686b0a20260c10eab63716344b68c9",
+          "bytes": 9517
+        },
+        "apps/cli/scripts/check-candidate.mjs": {
+          "sha256": "04a26fccd1b2c32976d18995ca161507ceeafa24c34dbae93e15927726332794",
+          "bytes": 48837
+        },
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json": {
+          "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+          "bytes": 47904
+        }
+      },
+      "actual_packed_core_output_pins": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/location/point-projection.d.ts": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477",
+        "dist/core/location/point-projection.js": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/personal-slice.d.ts": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091",
+        "dist/core/operations/personal-slice.js": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268",
+        "dist/core/usage-mobile/ios-eligibility.d.ts": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9",
+        "dist/core/usage-mobile/ios-eligibility.js": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+      },
+      "source_and_packed_manifest_sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "actual_identity_report": {
+        "qualifiedCoreFiles": 26,
+        "qualifiedCoreInputs": 43,
+        "packedLocalCore": true,
+        "physicalEffectInstallations": 1,
+        "reviewedToolLaunchers": [
+          "esbuild",
+          "tsc"
+        ],
+        "serviceIdentity": true,
+        "negativeIdentityCases": [
+          "sibling-symlink",
+          "stale-build",
+          "unbuilt-source-edit",
+          "extra-source-file",
+          "unreviewed-metadata-edit",
+          "unreviewed-packed-export",
+          "missing-source-file",
+          "new-module-edit",
+          "source-symlink",
+          "new-module-stale-output",
+          "missing-output",
+          "extra-output",
+          "output-symlink",
+          "absent-cohort",
+          "tampered-cohort",
+          "unreviewed-delta",
+          "missing-personal-source",
+          "personal-source-edit",
+          "personal-source-symlink",
+          "personal-output-stale",
+          "missing-personal-output",
+          "extra-personal-output",
+          "personal-output-symlink",
+          "unreviewed-personal-receipt",
+          "slice-source:src/location/point-projection.ts:missing",
+          "slice-source:src/location/point-projection.ts:edited",
+          "slice-source:src/location/point-projection.ts:symlink",
+          "slice-source:src/operations/personal-slice.ts:missing",
+          "slice-source:src/operations/personal-slice.ts:edited",
+          "slice-source:src/operations/personal-slice.ts:symlink",
+          "slice-source:tests/combined-slice-vectors.ts:missing",
+          "slice-source:tests/combined-slice-vectors.ts:edited",
+          "slice-source:tests/combined-slice-vectors.ts:symlink",
+          "slice-source:tests/combined-slice.test.ts:missing",
+          "slice-source:tests/combined-slice.test.ts:edited",
+          "slice-source:tests/combined-slice.test.ts:symlink",
+          "slice-source:tests/location-point-projection-vectors.ts:missing",
+          "slice-source:tests/location-point-projection-vectors.ts:edited",
+          "slice-source:tests/location-point-projection-vectors.ts:symlink",
+          "slice-source:tests/location-point-projection.test.ts:missing",
+          "slice-source:tests/location-point-projection.test.ts:edited",
+          "slice-source:tests/location-point-projection.test.ts:symlink",
+          "slice-output:dist/core/location/point-projection.d.ts:missing",
+          "slice-output:dist/core/location/point-projection.d.ts:stale",
+          "slice-output:dist/core/location/point-projection.d.ts:symlink",
+          "slice-output:dist/core/location/point-projection.js:missing",
+          "slice-output:dist/core/location/point-projection.js:stale",
+          "slice-output:dist/core/location/point-projection.js:symlink",
+          "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+          "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+          "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+          "slice-output:dist/core/operations/personal-slice.js:missing",
+          "slice-output:dist/core/operations/personal-slice.js:stale",
+          "slice-output:dist/core/operations/personal-slice.js:symlink",
+          "slice-extra-output",
+          "slice-cohort:absent",
+          "slice-cohort:tampered",
+          "slice-receipt:location_delta:absent",
+          "slice-receipt:location_delta:tampered",
+          "slice-receipt:location_delta:unreviewed",
+          "slice-receipt:combined_delta:absent",
+          "slice-receipt:combined_delta:tampered",
+          "slice-receipt:combined_delta:unreviewed",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+          "eligibility-extra-output",
+          "eligibility-cohort:absent",
+          "eligibility-cohort:tampered",
+          "eligibility-receipt:absent",
+          "eligibility-receipt:tampered",
+          "eligibility-receipt:unreviewed"
+        ]
+      },
+      "negative_fixture_execution": {
+        "result": "passed",
+        "count": 84,
+        "retained": 63,
+        "added": 21,
+        "case_ids": [
+          "sibling-symlink",
+          "stale-build",
+          "unbuilt-source-edit",
+          "extra-source-file",
+          "unreviewed-metadata-edit",
+          "unreviewed-packed-export",
+          "missing-source-file",
+          "new-module-edit",
+          "source-symlink",
+          "new-module-stale-output",
+          "missing-output",
+          "extra-output",
+          "output-symlink",
+          "absent-cohort",
+          "tampered-cohort",
+          "unreviewed-delta",
+          "missing-personal-source",
+          "personal-source-edit",
+          "personal-source-symlink",
+          "personal-output-stale",
+          "missing-personal-output",
+          "extra-personal-output",
+          "personal-output-symlink",
+          "unreviewed-personal-receipt",
+          "slice-source:src/location/point-projection.ts:missing",
+          "slice-source:src/location/point-projection.ts:edited",
+          "slice-source:src/location/point-projection.ts:symlink",
+          "slice-source:src/operations/personal-slice.ts:missing",
+          "slice-source:src/operations/personal-slice.ts:edited",
+          "slice-source:src/operations/personal-slice.ts:symlink",
+          "slice-source:tests/combined-slice-vectors.ts:missing",
+          "slice-source:tests/combined-slice-vectors.ts:edited",
+          "slice-source:tests/combined-slice-vectors.ts:symlink",
+          "slice-source:tests/combined-slice.test.ts:missing",
+          "slice-source:tests/combined-slice.test.ts:edited",
+          "slice-source:tests/combined-slice.test.ts:symlink",
+          "slice-source:tests/location-point-projection-vectors.ts:missing",
+          "slice-source:tests/location-point-projection-vectors.ts:edited",
+          "slice-source:tests/location-point-projection-vectors.ts:symlink",
+          "slice-source:tests/location-point-projection.test.ts:missing",
+          "slice-source:tests/location-point-projection.test.ts:edited",
+          "slice-source:tests/location-point-projection.test.ts:symlink",
+          "slice-output:dist/core/location/point-projection.d.ts:missing",
+          "slice-output:dist/core/location/point-projection.d.ts:stale",
+          "slice-output:dist/core/location/point-projection.d.ts:symlink",
+          "slice-output:dist/core/location/point-projection.js:missing",
+          "slice-output:dist/core/location/point-projection.js:stale",
+          "slice-output:dist/core/location/point-projection.js:symlink",
+          "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+          "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+          "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+          "slice-output:dist/core/operations/personal-slice.js:missing",
+          "slice-output:dist/core/operations/personal-slice.js:stale",
+          "slice-output:dist/core/operations/personal-slice.js:symlink",
+          "slice-extra-output",
+          "slice-cohort:absent",
+          "slice-cohort:tampered",
+          "slice-receipt:location_delta:absent",
+          "slice-receipt:location_delta:tampered",
+          "slice-receipt:location_delta:unreviewed",
+          "slice-receipt:combined_delta:absent",
+          "slice-receipt:combined_delta:tampered",
+          "slice-receipt:combined_delta:unreviewed",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+          "eligibility-extra-output",
+          "eligibility-cohort:absent",
+          "eligibility-cohort:tampered",
+          "eligibility-receipt:absent",
+          "eligibility-receipt:tampered",
+          "eligibility-receipt:unreviewed"
+        ],
+        "clean_baseline_before_mutation": true,
+        "owned_temporary_tree_removed_in_finally": true,
+        "evidence": {
+          "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+          "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+          "bytes": 19703,
+          "elapsed_seconds": 1.088,
+          "tests": 175,
+          "retained_tests": 105,
+          "separate_discovery_tests": 70,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "filesystem_negative_cases": 84,
+          "packed_core_files": 26,
+          "qualified_core_inputs": 43,
+          "physical_effect_installations": 1
+        }
+      },
+      "actual_cli_emitted_files": {
+        "dist/candidate/candidate-host.d.ts": {
+          "sha256": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+          "bytes": 1398
+        },
+        "dist/candidate/candidate-host.js": {
+          "sha256": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+          "bytes": 2126
+        },
+        "dist/candidate/cli/query.d.ts": {
+          "sha256": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d",
+          "bytes": 1728
+        },
+        "dist/candidate/cli/query.js": {
+          "sha256": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74",
+          "bytes": 6222
+        },
+        "dist/candidate/mcp/query.d.ts": {
+          "sha256": "f57542998729efec35101b721e065820878ab111c9e9ff4106df8fb6484a47fb",
+          "bytes": 2247
+        },
+        "dist/candidate/mcp/query.js": {
+          "sha256": "c9a5888069e5bb126bf6bbe4104b63cf192f6040a11b33817ea9dce99b72f423",
+          "bytes": 5026
+        },
+        "dist/candidate/surfaces/discovery-normalizer.d.ts": {
+          "sha256": "a2de83654c965454a55fff13cf04ffc74e1b0ae5c111d816f20687ef73bba3ed",
+          "bytes": 3847
+        },
+        "dist/candidate/surfaces/discovery-normalizer.js": {
+          "sha256": "bbfba1b0c743062a2546d085dfe4a3bface84d825efe62e96cbd03719e960b6a",
+          "bytes": 13267
+        },
+        "dist/test-metafile.json": {
+          "sha256": "2cc56b4b407ae8411e0f6a7fa50392abf5a7c138fcda0961a256c26507076470",
+          "bytes": 29054
+        },
+        "dist/tests/candidate-api.test.js": {
+          "sha256": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+          "bytes": 7645
+        },
+        "dist/tests/candidate-host.test.js": {
+          "sha256": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+          "bytes": 9686
+        },
+        "dist/tests/cli-query.test.js": {
+          "sha256": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70",
+          "bytes": 21461
+        },
+        "dist/tests/mcp-query.test.js": {
+          "sha256": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240",
+          "bytes": 30226
+        },
+        "dist/tests/shared-slice-parity.test.js": {
+          "sha256": "e48f38575a3cf08ba19085259d9e36df3bb2842836fbfff266fbfdbfeb944a0c",
+          "bytes": 38112
+        },
+        "dist/tests/surfaces/discovery-normalizer.test.js": {
+          "sha256": "477e264907c9e04b28272349235e7de35689fa96dfa699380c085da4e17395d7",
+          "bytes": 93990
+        }
+      },
+      "separate_discovery_candidate_input_pins": {
+        "apps/cli/src/surfaces/discovery-normalizer.ts": {
+          "sha256": "0dccb2424625e049adfb4af400b39c55f0bde0226eeaa436a1a4a259836dd31c",
+          "bytes": 15905
+        },
+        "apps/cli/tests/surfaces/discovery-normalizer.test.ts": {
+          "sha256": "ac0b33a834a5193ed9d4596c98183aebdf9a85deb26228d9e86f130abdaa71f2",
+          "bytes": 10479
+        },
+        "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts": {
+          "sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+          "bytes": 98121
+        }
+      },
+      "discovery_qualification_limit": "70 actual CLI tests execute separately inspected frozen discovery candidate; not fixed core authority, full clap/OsString grammar or public JSON/stdout/human rendering qualification.",
+      "core_actual_tests": 592,
+      "cli_actual_tests": 175,
+      "cli_retained_tests": 105,
+      "cli_separate_discovery_tests": 70,
+      "core_portable_boundary_negatives": 19,
+      "cli_retained_unchanged_committed_input_pins": {
+        "apps/cli/package-lock.json": {
+          "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+          "bytes": 28291
+        },
+        "apps/cli/package.json": {
+          "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+          "bytes": 880
+        },
+        "apps/cli/scripts/build-candidate.mjs": {
+          "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+          "bytes": 1574
+        },
+        "apps/cli/src/candidate-host.ts": {
+          "sha256": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+          "bytes": 2377
+        },
+        "apps/cli/src/cli/query.ts": {
+          "sha256": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+          "bytes": 7155
+        },
+        "apps/cli/src/mcp/query.ts": {
+          "sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+          "bytes": 6487
+        },
+        "apps/cli/tests/candidate-api-vectors.ts": {
+          "sha256": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6",
+          "bytes": 3176
+        },
+        "apps/cli/tests/candidate-api.test.ts": {
+          "sha256": "3ec07bd038a61561e902b3ef268c361d2791bebf80e6bce7f1cf9f0f44e59c63",
+          "bytes": 6121
+        },
+        "apps/cli/tests/candidate-host.test.ts": {
+          "sha256": "ec424cd4d5653b8c03400c70320770353afcecdd3251a14739479b75de74d88f",
+          "bytes": 8214
+        },
+        "apps/cli/tests/cli-query-vectors.ts": {
+          "sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+          "bytes": 4412
+        },
+        "apps/cli/tests/cli-query.test.ts": {
+          "sha256": "feedc7f5fde3340493335327d5176a63687c05630356c017322beee48f6dbbde",
+          "bytes": 13152
+        },
+        "apps/cli/tests/mcp-query-vectors.ts": {
+          "sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+          "bytes": 3586
+        },
+        "apps/cli/tests/mcp-query.test.ts": {
+          "sha256": "48debe7308d79cea2c3894ff1a6d01f8cfe7f8f2d1dc0b23396808f65b1223d8",
+          "bytes": 16806
+        },
+        "apps/cli/tests/shared-slice-parity-vectors.ts": {
+          "sha256": "449fe744c8d9a6f68e4648c44fd59eaa0440161aae8136c5234ea3b9b0cb6001",
+          "bytes": 16306
+        },
+        "apps/cli/tests/shared-slice-parity.test.ts": {
+          "sha256": "6afe9effd4834e42d671e034a8b7277343d9610a95ff5ba00b152cce41398f71",
+          "bytes": 14525
+        },
+        "apps/cli/tsconfig.build.json": {
+          "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+          "bytes": 144
+        },
+        "apps/cli/tsconfig.json": {
+          "sha256": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+          "bytes": 342
+        },
+        "apps/cli/tsconfig.test.json": {
+          "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+          "bytes": 123
+        }
+      }
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Eligibility implementation, frozen154 literals and source/test/artifact receipt independently accepted and committed before dispatch. Freeze complete exact assigned Git/current source/output/runtime/lock/receipt sets and obtain independent review BEFORE guard/docs edits or build/install. No discovered file set automatically authorizes code.",
+      "result": "passed",
+      "evidence": "Root independently froze complete43/26/old40/24 and13historical raw authorities at assigned8a31e6f before guard; stage1review7b7006 and prebuildreview5fcb93 accepted exact frozen cohort25b48 and patch7007."
+    },
+    {
+      "criterion": "Retain all40 old personal-slice source inputs and24 exact source/packed module outputs plus every historical cohort/receipt byte. Extend only usage-mobile/ios-eligibility.ts, its exact frozen vector and actual test, and corresponding emitted module/declaration outputs. Expected43inputs/26outputs must match actual committed source and built artifacts; unexpected changes remain rejected.",
+      "result": "passed",
+      "evidence": "After actual core592 check every43current/Git input and26built/packed module output rehashed exact; all old40/24 and historical raw authorities retain bytes."
+    },
+    {
+      "criterion": "Hard-pin successor cohort digest and accepted eligibility source+patch+independent review+raw receipt, preserving previous authority. Keep one physical Effect, exact Node/runtime/locks/package/public exports/no-Rust checks and all63 existing actual disposable-filesystem negative tests. Add missing/edited/symlinked each introduced input, missing/stale/symlinked each introduced output, extra output, absent/tampered successor cohort, and absent/tampered/unreviewed eligibility receipt cases; all exercised on actual bounded filesystem fixtures.",
+      "result": "passed",
+      "evidence": "Actual CLI guard hard-pinned43/26 successor/eligibilityraw+originalsource+repairpatch+acceptedreview and historical authorities; actual84filesystem negatives=63retained+21passed; packed onephysicalEffect/serviceidentity and unchanged package/locks/runtime asserted."
+    },
+    {
+      "criterion": "No own refresh receipt reverse-pin, immutable previous cohort/receipt edits, automatic broadening, package/index/exports/dependency/lock, source semantics, native/API/profile/source-purpose/public authority admission. Candidate handoff stays metadata-only, native/export unqualified.",
+      "result": "passed",
+      "evidence": "Exactly guard/docs/newcohort/receipt claimed; no reverse ownreceipt pin. Source/index/exports/dependency/lock/public/native/profile/userstate/Rust authorities retain bytes; discovery tested separately without common authority expansion."
+    },
+    {
+      "criterion": "After independent complete authority review, exclusively run core check, exact offline CLI install-links refresh and CLI/MCP check sequentially. Record actual physical cwd+argv/log/source/packed/output/guard/negative test hashes and first failures. New CLI discovery vectors/source are separate scoped future inputs; no other core writer/build/install/native bundle until this integration freezes.",
+      "result": "passed",
+      "evidence": "Three exact actual physical commands passed sequentially180s/16MiB each:core592/19negatives,offlineCLIci8packages with blockedesbuildscript unchanged,CLI175=105retained+70separate discovery plus84 actual guard negatives. All artifact/pins/logs retained."
+    }
+  ],
+  "checks": [
+    {
+      "name": "core-check",
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "environment": {
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "timeout_seconds": 180,
+      "combined_output_cap_bytes": 16777216,
+      "exit_code": 0,
+      "result": "passed",
+      "supervisor_failure": null,
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-core-check.log",
+        "sha256": "3c21594da090b6aa1cb9060708b050f775eb893d9162f5600a93e001a2f9c3e3",
+        "bytes": 40098,
+        "elapsed_seconds": 1.197,
+        "tests": 592,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "portable_boundary_negatives": 19,
+        "source_modules": 13,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "name": "cli-ci",
+      "cwd": "apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "ci",
+        "--offline",
+        "--cache",
+        "/private/tmp/healthmd-effect-npm-cache",
+        "--install-links",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "environment": {
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "timeout_seconds": 180,
+      "combined_output_cap_bytes": 16777216,
+      "exit_code": 0,
+      "result": "passed",
+      "supervisor_failure": null,
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-ci.log",
+        "sha256": "b8e2d51ec44ff41f75e802927bba14c8297fe6a810013c5ab384badef16d7870",
+        "bytes": 324,
+        "elapsed_seconds": 1.322,
+        "installed_packages": 8,
+        "esbuild_install_script_blocked": true,
+        "global_script_policy_enabled": false
+      }
+    },
+    {
+      "name": "cli-check",
+      "cwd": "apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "environment": {
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "timeout_seconds": 180,
+      "combined_output_cap_bytes": 16777216,
+      "exit_code": 0,
+      "result": "passed",
+      "supervisor_failure": null,
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "name": "independent-emitted-cli-test-replay",
+      "cwd": "apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "test"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "execution_owner": "/root",
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-root-test.log",
+        "sha256": "54a49b89dc4e791da987f1d8075269f44460d04cc1a556f9338030d4c5c3e951",
+        "bytes": 19498,
+        "tests": 175,
+        "filesystem_negative_cases": 84
+      },
+      "limit": "tests-only existing emitted artifacts and own finally-cleaned84 filesystemfixtures; no source/shared artifact rebuild or install. Guard final generic output mentions typecheck/build historically; this reviewer command did not rerun those phases."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "sibling-symlink",
+      "result": "passed",
+      "procedure": "symlink to sibling core on only the owned disposable installed core root; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "install_packed_core_with_install_links"
+      },
+      "observed": {
+        "failure": "install_packed_core_with_install_links",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "stale-build",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/index.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "unbuilt-source-edit",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/index.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "extra-source-file",
+      "result": "passed",
+      "procedure": "add export {}; LF on only the owned disposable src/unbuilt-extra.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "unreviewed-metadata-edit",
+      "result": "passed",
+      "procedure": "replace bytes with unreviewed metadata LF on only the owned disposable README.md; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "unreviewed-packed-export",
+      "result": "passed",
+      "procedure": "add ./candidate/unreviewed export on only the owned disposable package.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_manifest_drift"
+      },
+      "observed": {
+        "failure": "core_manifest_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "missing-source-file",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable src/serialization/exact-json-numbers.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "new-module-edit",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/serialization/exact-json-numbers.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "source-symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable src/serialization/exact-json-numbers.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "new-module-stale-output",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/serialization/exact-json-numbers.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "missing-output",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/serialization/exact-json-numbers.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "extra-output",
+      "result": "passed",
+      "procedure": "add export {}; LF on only the owned disposable dist/core/unreviewed.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "output-symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/serialization/exact-json-numbers.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "absent-cohort",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "tampered-cohort",
+      "result": "passed",
+      "procedure": "set committed_source_sha to unreviewed in disposable JSON on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "reviewed_core_cohort_bytes_drift"
+      },
+      "observed": {
+        "failure": "reviewed_core_cohort_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "unreviewed-delta",
+      "result": "passed",
+      "procedure": "set review.status to pending in disposable JSON on only the owned disposable docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "missing-personal-source",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable src/contracts/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "personal-source-edit",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/contracts/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "personal-source-symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable src/contracts/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "personal-output-stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/contracts/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "missing-personal-output",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/contracts/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "extra-personal-output",
+      "result": "passed",
+      "procedure": "add export {}; LF on only the owned disposable dist/core/contracts/unreviewed-personal.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "personal-output-symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/contracts/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "unreviewed-personal-receipt",
+      "result": "passed",
+      "procedure": "set review.status to pending in disposable JSON on only the owned disposable docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/location/point-projection.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable src/location/point-projection.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/location/point-projection.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/location/point-projection.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/location/point-projection.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable src/location/point-projection.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/operations/personal-slice.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable src/operations/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/operations/personal-slice.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/operations/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:src/operations/personal-slice.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable src/operations/personal-slice.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice-vectors.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/combined-slice-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice-vectors.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/combined-slice-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice-vectors.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/combined-slice-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice.test.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/combined-slice.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice.test.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/combined-slice.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/combined-slice.test.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/combined-slice.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection-vectors.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/location-point-projection-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection-vectors.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/location-point-projection-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection-vectors.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/location-point-projection-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection.test.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/location-point-projection.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection.test.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/location-point-projection.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-source:tests/location-point-projection.test.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/location-point-projection.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.d.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/location/point-projection.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.d.ts:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/location/point-projection.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.d.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/location/point-projection.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.js:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/location/point-projection.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.js:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/location/point-projection.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/location/point-projection.js:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/location/point-projection.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/operations/personal-slice.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/operations/personal-slice.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/operations/personal-slice.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.js:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/operations/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.js:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/operations/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-output:dist/core/operations/personal-slice.js:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/operations/personal-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-extra-output",
+      "result": "passed",
+      "procedure": "add export {}; LF on only the owned disposable dist/core/operations/unreviewed-slice.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-cohort:absent",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-cohort:tampered",
+      "result": "passed",
+      "procedure": "set committed_source_sha to unreviewed in disposable JSON on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "reviewed_core_cohort_bytes_drift"
+      },
+      "observed": {
+        "failure": "reviewed_core_cohort_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:location_delta:absent",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:location_delta:tampered",
+      "result": "passed",
+      "procedure": "append LF to disposable raw receipt on only the owned disposable docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:location_delta:unreviewed",
+      "result": "passed",
+      "procedure": "set review.status to pending in disposable JSON on only the owned disposable docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:combined_delta:absent",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:combined_delta:tampered",
+      "result": "passed",
+      "procedure": "append LF to disposable raw receipt on only the owned disposable docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "slice-receipt:combined_delta:unreviewed",
+      "result": "passed",
+      "procedure": "set review.status to pending in disposable JSON on only the owned disposable docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable src/usage-mobile/ios-eligibility.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable src/usage-mobile/ios-eligibility.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable src/usage-mobile/ios-eligibility.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/usage-mobile-ios-eligibility-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/usage-mobile-ios-eligibility-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/usage-mobile-ios-eligibility-vectors.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable tests/usage-mobile-ios-eligibility.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_input_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable tests/usage-mobile-ios-eligibility.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_input_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_input_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable tests/usage-mobile-ios-eligibility.test.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_source_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_source_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/usage-mobile/ios-eligibility.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/usage-mobile/ios-eligibility.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/usage-mobile/ios-eligibility.d.ts; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+      "result": "passed",
+      "procedure": "remove on only the owned disposable dist/core/usage-mobile/ios-eligibility.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+      "result": "passed",
+      "procedure": "replace bytes with export {}; LF on only the owned disposable dist/core/usage-mobile/ios-eligibility.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_bytes_drift"
+      },
+      "observed": {
+        "failure": "core_build_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+      "result": "passed",
+      "procedure": "replace with symlink to retained original on only the owned disposable dist/core/usage-mobile/ios-eligibility.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "candidate_build_symlink_unreviewed"
+      },
+      "observed": {
+        "failure": "candidate_build_symlink_unreviewed",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-extra-output",
+      "result": "passed",
+      "procedure": "add export {}; LF on only the owned disposable dist/core/usage-mobile/unreviewed-eligibility.js; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "core_build_file_set_drift"
+      },
+      "observed": {
+        "failure": "core_build_file_set_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-cohort:absent",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-cohort:tampered",
+      "result": "passed",
+      "procedure": "set committed_source_sha to unreviewed in disposable JSON on only the owned disposable docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "reviewed_core_cohort_bytes_drift"
+      },
+      "observed": {
+        "failure": "reviewed_core_cohort_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-receipt:absent",
+      "result": "passed",
+      "procedure": "absent disposable path on only the owned disposable docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "ENOENT"
+      },
+      "observed": {
+        "failure": "ENOENT",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-receipt:tampered",
+      "result": "passed",
+      "procedure": "append LF to disposable raw receipt on only the owned disposable docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "eligibility-receipt:unreviewed",
+      "result": "passed",
+      "procedure": "set review.status to pending in disposable JSON on only the owned disposable docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json; original clean baseline validated first; assert failure and remove owned temporary tree.",
+      "expected": {
+        "failure": "qualified_core_receipt_bytes_drift"
+      },
+      "observed": {
+        "failure": "qualified_core_receipt_bytes_drift",
+        "assertion_passed": true
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "actual-core-check",
+      "result": "passed",
+      "procedure": "Execute exact recorded physical cwd+argv under180s/16MiB own-process-group supervisor.",
+      "expected": {
+        "exit_code": 0
+      },
+      "observed": {
+        "exit_code": 0,
+        "supervisor_failure": null
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-core-check.log",
+        "sha256": "3c21594da090b6aa1cb9060708b050f775eb893d9162f5600a93e001a2f9c3e3",
+        "bytes": 40098,
+        "elapsed_seconds": 1.197,
+        "tests": 592,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "portable_boundary_negatives": 19,
+        "source_modules": 13,
+        "physical_effect_installations": 1
+      }
+    },
+    {
+      "case_id": "actual-cli-ci",
+      "result": "passed",
+      "procedure": "Execute exact recorded physical cwd+argv under180s/16MiB own-process-group supervisor.",
+      "expected": {
+        "exit_code": 0
+      },
+      "observed": {
+        "exit_code": 0,
+        "supervisor_failure": null
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-ci.log",
+        "sha256": "b8e2d51ec44ff41f75e802927bba14c8297fe6a810013c5ab384badef16d7870",
+        "bytes": 324,
+        "elapsed_seconds": 1.322,
+        "installed_packages": 8,
+        "esbuild_install_script_blocked": true,
+        "global_script_policy_enabled": false
+      }
+    },
+    {
+      "case_id": "actual-cli-check",
+      "result": "passed",
+      "procedure": "Execute exact recorded physical cwd+argv under180s/16MiB own-process-group supervisor.",
+      "expected": {
+        "exit_code": 0
+      },
+      "observed": {
+        "exit_code": 0,
+        "supervisor_failure": null
+      },
+      "evidence": {
+        "log_path": "/private/tmp/healthmd-core-cohort-ios-cli-check.log",
+        "sha256": "0d9b418c99bfd279f83c81292112d5e02c52aff82d2c836b0cd9616832a73117",
+        "bytes": 19703,
+        "elapsed_seconds": 1.088,
+        "tests": 175,
+        "retained_tests": 105,
+        "separate_discovery_tests": 70,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "filesystem_negative_cases": 84,
+        "packed_core_files": 26,
+        "qualified_core_inputs": 43,
+        "physical_effect_installations": 1
+      }
+    }
+  ],
+  "inspection_summary": "Complete accepted immutable43/26 cohort and13rawauthority/physicaltoolchainpins independently frozen before guard. Guard/documentation patch7007 independently reviewed before all three exact bounded sequential checks. Actual core592tests/19guards andCLI175tests plus84filesystem negatives passed, packed26modulebytes match currentfixedoutputs and onephysicalEffect/serviceidentity. All old40/24 retained. No checksfailed; no runtimetool/dependency/lock change. Discovery70tests are separately scoped, not core/public parser admission. Independent root final review accepted exact source+patch, all43 current/Git inputs,26 source/packed outputs,15 CLI outputs,13 historical authorities, physical tools and logs; root actual tests-only175/84 replay passed.",
+  "limitations": [
+    "Portable private synthetic integration only; no actual iOS eligibility/native source/purpose/channel/grant authentication, SDKbudget/report/export/currentpublic profile admission.",
+    "Discovery70 actual tests qualify only its separately inspected private gate seam; no full clap/OsString grammar or public stdout/schema/human rendering qualification.",
+    "No native device/build/bundle, production launchers, account/private state/user-data, distribution, public exports or Rust retirement."
+  ],
+  "remaining_qualification": [
+    "Future native/public/source/profile/distribution/grammar/rendering tasks retain their separate required proof."
+  ],
+  "rollback": "Restore prior committed40-input/24-output personal-slices guard/cohort and packed CLI candidate together. The separately accepted private eligibility module remains independently revertible; no public launchers/user state/data mutation.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5+7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+    "evidence": {
+      "path": "/private/tmp/healthmd-core-cohort-ios-final-root-review.json",
+      "sha256": "b3cf5075f33c03d418a4c3d6fe205775709341efa59ae06f545ab6d274c207dc"
+    }
+  },
+  "resolved_review_attempts": [
+    {
+      "stage": "stage_one_independent_authority_review_before_guard",
+      "result": "passed",
+      "cohort_sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+      "stage1_receipt_sha256": "ce23e4e0bf5520b543788f52f3b6cb75b98d231e4d9481a7d84fc2e3991baebc",
+      "stage1_patch_digest": "fbd883d92c9048bec2c2c957f81d103705b3d7012051abcd3e98dc74b8facebe",
+      "reviewer": "/root",
+      "evidence": {
+        "path": "/private/tmp/healthmd-core-cohort-ios-stage1-root-review.json",
+        "sha256": "7b7006a9c83d91c239d51f4ca321ac57fd4246dc21fccb6740fc3f6922bda26d"
+      }
+    },
+    {
+      "stage": "prebuild_guard_and_documentation_independent_review",
+      "result": "passed",
+      "reviewer": "/root",
+      "source_patch_digest": "7007c4f887005dd5433c8b26cc0006bdfac69a8247f2f1444ac17aee9db762a1",
+      "partial_receipt_raw_sha256": "43a224cc1fdfdfd759e470f90f1be47a84a1461ebfc9b466a4deda1f73164926",
+      "evidence": {
+        "path": "/private/tmp/healthmd-core-cohort-ios-prebuild-root-review.json",
+        "sha256": "5fcb93dd347d41157f651b751ebd1dabe96794236ed24a1d9aaea3a521154244"
+      },
+      "bounded_check_clearance": "ROOT recorded before three commands:180s and16MiB combined output each, pinned physical Node/npm PATH/existing cache, exclusive core/CLI leases."
+    }
+  ],
+  "observed_integration_revision": "8a31e6f038d4f74b8ed6acb0da5003e0329714f5",
+  "source_reconciliation": "Assigned8a31e6f retained for exact43committed/current inputs, scoped3nonreceipt patch7007 and historical raw authorities. Current observedHEAD recorded separately. Prior40/24 unchanged; discovery source separately inspected and outside commoncohort. No implicit claim rebase."
+}
