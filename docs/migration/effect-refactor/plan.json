@@ -7512,46 +7512,15 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "blocked",
-      "blocker": "Required repository Pixel7 target unavailable; exact bounded harness exited3 beforeinstallation. Resume at same frozen private32filepatch/asset/APKs when target connected; execute2freshpackagedruntime runs plus matchingcommonchecks. Nativebuilder released for independentwork; hostqualificationpending, no substitute.",
+      "status": "in_progress",
+      "blocker": null,
       "claim": {
         "agent": "/root/android_release_host",
-        "base_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+        "base_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
         "worktree": "/Users/codybontecou/dev/health-md",
         "write_paths": [
-          "apps/android/effect-host-candidate/package.json",
-          "apps/android/effect-host-candidate/package-lock.json",
-          "apps/android/effect-host-candidate/.node-version",
-          "apps/android/effect-host-candidate/tsconfig.json",
-          "apps/android/effect-host-candidate/metro.config.cjs",
-          "apps/android/effect-host-candidate/src/probe.ts",
-          "apps/android/effect-host-candidate/src/HostProbe.tsx",
-          "apps/android/effect-host-candidate/scripts/build.mjs",
-          "apps/android/effect-host-candidate/scripts/check.mjs",
-          "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
-          "apps/android/effect-host-candidate/settings.gradle.kts",
-          "apps/android/effect-host-candidate/build.gradle.kts",
-          "apps/android/effect-host-candidate/gradle.properties",
-          "apps/android/effect-host-candidate/gradlew",
-          "apps/android/effect-host-candidate/gradlew.bat",
-          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
-          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
-          "apps/android/effect-host-candidate/app/build.gradle.kts",
-          "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
-          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
-          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
-          "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
-          "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
-          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
-          "apps/android/effect-host-candidate/babel.config.cjs",
-          "apps/android/effect-host-candidate/.gitignore",
-          "apps/android/effect-host-candidate/README.md",
           "apps/android/effect-host-candidate/app/proguard-rules.pro",
-          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
-          "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
-          "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
-          "apps/android/effect-host-candidate/app/gradle.lockfile",
-          "apps/android/effect-host-candidate/gradle/verification-metadata.xml"
+          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
         ],
         "reserved_resources": [
           "android-candidate-gradle-graph",
@@ -7640,7 +7609,74 @@
       "pending_evidence": [
         "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
       ],
-      "released_after_partial": "Claim/source/path/resource fields retained as provenance only; blockedtask holds no active build/write reservation. Resume requires coordinator fresh claim/resource/source checks."
+      "released_after_partial": "Claim/source/path/resource fields retained as provenance only; blockedtask holds no active build/write reservation. Resume requires coordinator fresh claim/resource/source checks.",
+      "historical_claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/android/effect-host-candidate/package.json",
+          "apps/android/effect-host-candidate/package-lock.json",
+          "apps/android/effect-host-candidate/.node-version",
+          "apps/android/effect-host-candidate/tsconfig.json",
+          "apps/android/effect-host-candidate/metro.config.cjs",
+          "apps/android/effect-host-candidate/src/probe.ts",
+          "apps/android/effect-host-candidate/src/HostProbe.tsx",
+          "apps/android/effect-host-candidate/scripts/build.mjs",
+          "apps/android/effect-host-candidate/scripts/check.mjs",
+          "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+          "apps/android/effect-host-candidate/settings.gradle.kts",
+          "apps/android/effect-host-candidate/build.gradle.kts",
+          "apps/android/effect-host-candidate/gradle.properties",
+          "apps/android/effect-host-candidate/gradlew",
+          "apps/android/effect-host-candidate/gradlew.bat",
+          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+          "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+          "apps/android/effect-host-candidate/app/build.gradle.kts",
+          "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+          "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+          "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+          "apps/android/effect-host-candidate/babel.config.cjs",
+          "apps/android/effect-host-candidate/.gitignore",
+          "apps/android/effect-host-candidate/README.md",
+          "apps/android/effect-host-candidate/app/proguard-rules.pro",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+          "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+          "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+          "apps/android/effect-host-candidate/app/gradle.lockfile",
+          "apps/android/effect-host-candidate/gradle/verification-metadata.xml"
+        ],
+        "reserved_resources": [
+          "android-candidate-gradle-graph",
+          "android-candidate-js-lock",
+          "android-candidate-bridge",
+          "native-candidate-build"
+        ]
+      },
+      "runtime_resume": {
+        "source_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+        "reviewed_original_source_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+        "reviewed_source_patch": "df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa",
+        "evidence": "Human reports requiredPixel7 nowconnected; rootverified all32sourcefiles exactcommitted/current unchanged and patchdf before fresh scoped claim. No sourcewrites authorized for runtime resume; retainedAPK/cert/assets/fixture require rehash before device.",
+        "source_delta_authorized_before_write": {
+          "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
+          "reviewer": "/root",
+          "cause": "Actual requiredtarget instrumentation fails beforeanyprobe: AndroidJUnitRunner.onCreate NoClassDefFoundError androidx.tracing.Trace. OwnPID/time scoped crash block; originalappAPK/testDEXdefs noTraceclass while test referencesit; existing97coordinate graph alreadycontains tracing1.1.0, appR8removedsharedclass.",
+          "exact_delta": "Document required runner entrypoint class and add only -keep class androidx.tracing.Trace { *; }. No newdependency/Rust/common/JSbundle/fixture/globalminify/dontwarn change.",
+          "verification": "Same bounded240s/20MiBstrict offlineGradlebuild; nativeDEXclass definition check plusactualoriginalexacttwofreshprocess deviceharness. Retain failedAPK/log/hash before overwrite/reinstall; newAPK/cert/bundle/graph/fixture/sourcepatch mustbe rebound/independentlyreviewed. Existing actualharness is correct regression seam for this startupclassloading bug; no shallow mirrored unit test."
+        },
+        "trace_keep_prebuild_review": {
+          "status": "accepted_prebuild_only",
+          "reviewer": "/root",
+          "source_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+          "raw_scoped_diff_sha256": "99ca760588be887057b17079ffe6104f053f1b70390bf7ee55e49fe37fd37111",
+          "current_cumulative_patch_digest": "e4e72f47fbc1d1f883651c0d6a93c1e488c32eb6534516551af1de3a3034b6b9",
+          "evidence": "ROOT inspected exact explanatorycomment+one-class/memberkeep diff and current32cumulativepatch; all31othercurrent/Gitfiles unchanged. Ownprocess fatalNoClassDef tracing/runner startup plusDEXclassdefinition absence/R8removedshareddependency pins provide cause. Previous failedAPKs/runtime11files preserved; original10fixture/JSbundle/graph/testcert unchanged. No build/runtime/OSqualification inferred."
+        }
+      }
     },
     {
       "id": "NATIVE-FDROID-GRAPH-PROBE",
@@ -8255,7 +8291,8 @@
         "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
         "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
         "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
-        "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm"
+        "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
+        "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
       ],
       "shared_resources": [
         "ios-candidate-project",
@@ -8398,7 +8435,8 @@
           "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
           "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
           "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
-          "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm"
+          "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
+          "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
         ],
         "reserved_resources": [
           "ios-candidate-project",
@@ -8444,7 +8482,16 @@
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       },
-      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing. Coordinator approved two precise additional private ColdProbeBridge.h/.mm seam paths BEFORE implementation; required to reach RCTHost from headless Swift intent target without mutating existing production/private AppDelegate auto-run or NativeProbe. Complete interface/fixture review still required before any implementation. SDK/API/actual OS ingress unqualified; no substitute direct perform(), URL or presentation launch proof."
+      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing. Coordinator approved two precise additional private ColdProbeBridge.h/.mm seam paths BEFORE implementation; required to reach RCTHost from headless Swift intent target without mutating existing production/private AppDelegate auto-run or NativeProbe. Complete interface/fixture review still required before any implementation. SDK/API/actual OS ingress unqualified; no substitute direct perform(), URL or presentation launch proof. Coordinator approved exact additional scripts/build-cold-intent.mjs private entry/asset separation path before code; no existingbuild/HostProbe/oldtenfixture/assets maychange. Nativebuild window currently held by requiredPixel7 resumedruntime, iOS implementation/build awaits fixture review and exclusive runtime build slot.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "vector_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+        "vector_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+        "source_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+        "evidence": "ROOT read5full independent literalcases and completeclosedprivatecanonicalASCII request/native monotonicdeadlines/headlessoneengine/credits+queue/ownedcancel+ack/fixederrors/interface/separatebundle/OSingress limits; actual15historicalcurrentGitpins+21predecessorfiles+2installedSDKhashes+acceptedpredecessor/old10fixtureunchanged verified. ExactprivateColdBridgeandbuildseams accepted. ActualSiri OSingress/OS cancellation/systemnetworking/iOS17/support unqualified; directperform/URL/applaunch/counters cannot substitute actualOSproof."
+      },
+      "implementation_clearance": "Frozen literal vectors/interface independently accepted beforecode. Exactallowed implementationpaths may nowbe written; no public/native/profile/exports/sourceadmission or immutablefixture changes. Exclusive generatedcommon builder window coordinated separately."
     },
     {
       "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
@@ -14115,7 +14162,7 @@
       "phase": "M02",
       "kind": "implementation",
       "outcome": "Given an eligible source-profile point, preserve original exact fields and return canonical location point or fixed unavailable/outside-canonical status.",
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "061afd67a77dca0316a5b3bbd6d5649d078d8186",
@@ -14338,14 +14385,16 @@
       "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
       "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
       "qualification": {
-        "status": "pending",
+        "status": "passed",
         "proof_class": "portable_synthetic",
-        "receipts": []
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+        ]
       },
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "061afd67a77dca0316a5b3bbd6d5649d078d8186+429ff404246691d1796202431185d9b7dcad89dcf923de05fd7410d8a87c8346"
       },
       "blocker": null,
       "priority": 310,
@@ -14357,7 +14406,16 @@
         "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
         "child_pointer": "#/children/0"
       },
-      "source_reconciliation": "Accepted personal codec/cohort committed061afd67a before dispatch; exact source/pinned full34/20 builds currently frozen. Stage1 complete literal vector/interface only in allowedvector/receipt before independent review; no implementation/build/npm before clearance. Native cold AppIntent source feasibility only concurrent; coordinator supplies exclusive common source/build window after native asset inputs pinned. Preserve all81 private Personal obligations and immutable accepted source receipts. This private projection does not change profile/production/native acquisition admission; every future common module requires separately reviewed core/CLI cohort binding before integration."
+      "source_reconciliation": "Accepted personal codec/cohort committed061afd67a before dispatch; exact source/pinned full34/20 builds currently frozen. Stage1 complete literal vector/interface only in allowedvector/receipt before independent review; no implementation/build/npm before clearance. Native cold AppIntent source feasibility only concurrent; coordinator supplies exclusive common source/build window after native asset inputs pinned. Preserve all81 private Personal obligations and immutable accepted source receipts. This private projection does not change profile/production/native acquisition admission; every future common module requires separately reviewed core/CLI cohort binding before integration.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root/personal_codecs",
+        "vector_path": "packages/healthmd-core-ts/tests/location-point-projection-vectors.ts",
+        "vector_sha256": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+        "source_revision": "061afd67a77dca0316a5b3bbd6d5649d078d8186",
+        "evidence": "Independent reviewer derived10exactprojectedrecords/canonicalsortedbytes and rationalcoordinates/sensors/clocks;32failure/interruption traces/3requiredcases matchinputs;22Git/currentpins/2immutableiso blobs/10RFCrefs/44+37obligations unchanged. Complete coarse trustedlease/materialization/currentauthority-aftercleanup/ownedPersonalrecord boundary accepted; implementation/runtime/native qualification pending."
+      },
+      "implementation_clearance": "Frozen literal vectors/interface independently accepted beforecode. Exactallowed implementationpaths may nowbe written; no public/native/profile/exports/sourceadmission or immutablefixture changes. Exclusive generatedcommon builder window coordinated separately."
     },
     {
       "id": "LOCATION-POINT-INBOX",
