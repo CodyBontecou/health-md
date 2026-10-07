@@ -1,0 +1,491 @@
+{
+  "task_id": "CLOUD-TOPOLOGY-CANDIDATE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+  "patch_digest": "7a4900e3d5de2126fddd997d348848e6f16cccd76d02b495fbe5225f19479d06",
+  "patch_digest_method": "SHA256 of repository-relative Markdown path UTF8 + NUL + exact Markdown bytes + NUL; receipt excluded, sole nonreceipt claimed path.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md",
+    "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": {
+        "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+        "bytes": 6129,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/cloud-release.md": {
+        "sha256": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+        "bytes": 6107,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/templates.md": {
+        "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+        "bytes": 10054,
+        "assigned_git_current_equal": true
+      },
+      "docs/architecture/javascript-unified-layer-research.md": {
+        "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "bytes": 13361,
+        "assigned_git_current_equal": true
+      },
+      "docs/architecture/javascript-unified-layer-design-reference.md": {
+        "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "bytes": 284562,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/decisions/cloud-fault-model.md": {
+        "sha256": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d",
+        "bytes": 5423,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/decisions/cloud-fault-cases.json": {
+        "sha256": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974",
+        "bytes": 78932,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/receipts/BASE-CLOUD.json": {
+        "sha256": "7ceadf78af0969ba65c2fa124dbdfc4ab8ef1116396df362287d80de9799e5d5",
+        "bytes": 16448,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/receipts/BASE-HOST.json": {
+        "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+        "bytes": 10062,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/receipts/BASE-CORE.json": {
+        "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+        "bytes": 26431,
+        "assigned_git_current_equal": true
+      },
+      "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json": {
+        "sha256": "4a6b1ccbe61e33f3e2ae983a2d0172cd55144147bee9d6a533449792a38ca9fb",
+        "bytes": 9265,
+        "assigned_git_current_equal": true
+      }
+    },
+    "locks_and_runtime": {
+      "not_applicable": "No code/runtime/dependency selection qualified or modified; Node24/Effect4 is candidate requirement only."
+    },
+    "artifact_and_native_interface": {
+      "note": {
+        "sha256": "e0c0b04221b15aa35f9ca7105e65c0ce2779ea06a82c8e63d3c22de3fcbdb47b",
+        "bytes": 24330
+      },
+      "scratch_public_price_and_research_artifacts": {
+        "/private/tmp/healthmd-cloud-topology-personal-preflight.json": {
+          "sha256": "e3a075fc7c27e7258083b5c64ca18a6dc30fe2aa1165f3c51a0b9188835cd799",
+          "bytes": 11661
+        },
+        "/private/tmp/healthmd-aws-1000dau-budget.txt": {
+          "sha256": "285be0985d7ea0c9e84c944a02d6f2cbf13cf36fc6e13f4ccd5fd7048f171c52",
+          "bytes": 7229
+        },
+        "/private/tmp/healthmd-cloudflare-1000-cloud-user-budget.json": {
+          "sha256": "360fc09bf6a0bbcbdf0ae97dabfde1ea0eb88b0fbfc9cb93dc679cd9abbc124d",
+          "bytes": 7246
+        },
+        "/private/tmp/healthmd-cloud-topology-candidate-rds-current.json": {
+          "sha256": "79222b863d148fa1d3178a36440c0811e3aa489ae04af8a10e4aa56a26a8ae0b",
+          "bytes": 27411603
+        },
+        "/private/tmp/healthmd-cloud-topology-candidate-s3-current.json": {
+          "sha256": "798f9727bc5102d15d471c5b84c15ed3e20297015330f515a33d5f6a032cc2f1",
+          "bytes": 473422
+        },
+        "/private/tmp/healthmd-cloud-topology-candidate-rds-selected.json": {
+          "sha256": "0302023a478dbfabd7e72db9703a916f679c18f0517bc6a8dd2eec6e3d95194d",
+          "bytes": 14395
+        },
+        "/private/tmp/healthmd-cloud-topology-candidate-s3-selected.json": {
+          "sha256": "961c02a9bd9b84986fd4b6c1eba00da39ad293587c64b5563de9da1cf31ec085",
+          "bytes": 3834
+        },
+        "/private/tmp/healthmd-cloud-topology-candidate-arithmetic.json": {
+          "sha256": "0fe55e4b790d65445c33800b3e33c218bca6aa8f5ee901aaf593a91917751412",
+          "bytes": 576
+        },
+        "/private/tmp/healthmd-cloud-topology-preclaim-card.json": {
+          "sha256": "bb1bab3ed0647cb71f695998515fcd3d4d44c625c32b721970096b027447cda4",
+          "bytes": 4912
+        }
+      },
+      "primary_sources": {
+        "verified_date": "2026-10-07",
+        "urls": [
+          "https://aws.amazon.com/cloudwatch/pricing/",
+          "https://aws.amazon.com/cognito/pricing/",
+          "https://aws.amazon.com/ec2/pricing/on-demand/",
+          "https://aws.amazon.com/elasticloadbalancing/pricing/",
+          "https://aws.amazon.com/fargate/pricing/",
+          "https://aws.amazon.com/kms/pricing/",
+          "https://aws.amazon.com/privatelink/pricing/",
+          "https://aws.amazon.com/rds/postgresql/pricing/",
+          "https://aws.amazon.com/vpc/pricing/",
+          "https://developers.cloudflare.com/d1/configuration/data-location/",
+          "https://developers.cloudflare.com/d1/platform/limits/",
+          "https://developers.cloudflare.com/d1/platform/pricing/",
+          "https://developers.cloudflare.com/d1/reference/data-security/",
+          "https://developers.cloudflare.com/d1/reference/time-travel/",
+          "https://developers.cloudflare.com/d1/worker-api/d1-database/",
+          "https://developers.cloudflare.com/data-localization/",
+          "https://developers.cloudflare.com/data-localization/how-to/workers/",
+          "https://developers.cloudflare.com/r2/api/s3/api/",
+          "https://developers.cloudflare.com/r2/pricing/",
+          "https://developers.cloudflare.com/r2/reference/data-location/",
+          "https://developers.cloudflare.com/r2/reference/data-security/",
+          "https://developers.cloudflare.com/workers/platform/pricing/",
+          "https://developers.cloudflare.com/workers/runtime-apis/nodejs/",
+          "https://developers.cloudflare.com/workers/runtime-apis/streams/",
+          "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html",
+          "https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_DeleteInstance.html",
+          "https://docs.aws.amazon.com/AmazonS3/latest/userguide/DeletingObjectVersions.html",
+          "https://docs.aws.amazon.com/encryption-sdk/latest/developer-guide/data-key-caching.html",
+          "https://docs.aws.amazon.com/kms/latest/developerguide/concepts.html",
+          "https://docs.aws.amazon.com/kms/latest/developerguide/deleting-keys.html",
+          "https://docs.aws.amazon.com/kms/latest/developerguide/multi-region-keys-overview.html",
+          "https://docs.aws.amazon.com/vpc/latest/privatelink/gateway-endpoints.html",
+          "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-1/index.json",
+          "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/us-east-1/index.json",
+          "https://www.postgresql.org/docs/current/ddl-rowsecurity.html"
+        ],
+        "method": "Official documentation/pricing read using web open/find; web bodies not assigned fabricated raw hashes. AWS price API bodies retained and SHA256-pinned separately."
+      },
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+        "canonical_card_sha256": "d1a5bfb9d0afbcd19116cace3b32f2b98857e1f9192c3afa7ebe1dd482cb1a30",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-cloud-topology-preclaim-card.json",
+        "scope": "One primary-cited source-only technical note and receipt. No code/dependency/production/provider/account/device/data writes; no owner budget acceptance inferred. Complete separate actual qualification and open product owners preserved."
+      }
+    },
+    "policy_migration_key_versions": {
+      "owner_region_preference": "US first",
+      "technical_candidate": "AWS us-east-1 ECS Fargate Node24/Effect4, RDS PostgreSQL, private S3, single-region customer-managed KMS; independently accepted technical candidate only, actual provider proof remains required.",
+      "owner_budget_identity_retention_grant_default_policy": "not selected by this research",
+      "historical_fault_case_count": 43
+    },
+    "contract_and_fixture_pin_source_sha": "b8922e877a432d3ec2fa216e1d76b714c0515d70"
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "US candidate topology and 1000-cloud-user cost model"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Compare concrete Node/Effect/PostgreSQL/private objects/regional key and Worker/D1/R2 topology against immutable consent/isolation/streaming/current per-page grant/frontier/recovery/erasure requirements using current primary sources. Correct current US-jurisdiction facts without inferring code/secrets/queues/keys residency from object jurisdiction.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md; planning-only authored evidence, independent review pending"
+    },
+    {
+      "criterion": "Select a technical candidate architecture with runtime, region, SQL/object/key separation, least-privilege roles, transaction/cancellation boundaries and provider-adapter proof obligations. Actual deployment/load/keys/copies/residency/recovery remain unqualified.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md; planning-only authored evidence, independent review pending"
+    },
+    {
+      "criterion": "Cost an explicit 1000-cloud-active-user workload separately from 1000 app DAU: storage/history/growth/query/row/crypto/network/backup/log assumptions and growth sensitivity. Reproducible arithmetic, current dated primary prices, ranges and exclusions; no measured capacity claim.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md; planning-only authored evidence, independent review pending"
+    },
+    {
+      "criterion": "Record root recommended 500USD monthly planning allowance and 200\u2013300USD controlled-beta range as recommendation only. Owner US-first preference recorded; no accepted spending cap, pricing policy, identity/retention/grants defaults or external spend/deployment.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md; planning-only authored evidence, independent review pending"
+    },
+    {
+      "criterion": "Save one cited Markdown research note and a sanitized planning receipt with exact raw source pins, candidate alternatives/tradeoffs/open owners/proof matrix and reproducible path+NUL+bytes+NUL patch digest; independent final review before technical choice acceptance.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md; planning-only authored evidence, independent review pending"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--connect-timeout",
+        "10",
+        "--max-time",
+        "40",
+        "--max-filesize",
+        "60000000",
+        "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonRDS/current/us-east-1/index.json",
+        "-o",
+        "/private/tmp/healthmd-cloud-topology-candidate-rds-current.json"
+      ],
+      "result": "passed",
+      "evidence": {
+        "public_raw_artifact": "/private/tmp/healthmd-cloud-topology-candidate-rds-current.json",
+        "sha256": "79222b863d148fa1d3178a36440c0811e3aa489ae04af8a10e4aa56a26a8ae0b",
+        "bytes": 27411603,
+        "publication_date": "2026-10-06T22:40:50Z",
+        "elapsed_seconds": 3.581,
+        "scope": "Narrow approved public pricing read; no credentials/accounts."
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "curl",
+        "--fail",
+        "--silent",
+        "--show-error",
+        "--connect-timeout",
+        "10",
+        "--max-time",
+        "40",
+        "--max-filesize",
+        "30000000",
+        "https://pricing.us-east-1.amazonaws.com/offers/v1.0/aws/AmazonS3/current/us-east-1/index.json",
+        "-o",
+        "/private/tmp/healthmd-cloud-topology-candidate-s3-current.json"
+      ],
+      "result": "passed",
+      "evidence": {
+        "public_raw_artifact": "/private/tmp/healthmd-cloud-topology-candidate-s3-current.json",
+        "sha256": "798f9727bc5102d15d471c5b84c15ed3e20297015330f515a33d5f6a032cc2f1",
+        "bytes": 473422,
+        "publication_date": "2026-09-28T23:04:16Z",
+        "elapsed_seconds": 0.577,
+        "scope": "Narrow approved public pricing read; no credentials/accounts."
+      }
+    }
+  ],
+  "inspection_summary": "Eleven current/Git exact source pins, three fixed scratch references, 43 accepted cloud fault cases and eleven design sections reviewed. Current primary AWS/Cloudflare/PG documentation independently verified. Public regional RDS/S3 price API JSON parsed for explicit selected rates; note arithmetic independently recalculated. No provider execution, account access, product tests, build/install or production changes. Brief/reference command entries were withdrawn after independent review because their cwd/argv evidence was insufficient. Card/read-required/design conclusions are source-inspection evidence only; no reconstructed execution claim. All eleven input pins are recorded and reconciled against assigned b8922e877a432d3ec2fa216e1d76b714c0515d70, not a subsequently observed HEAD. Root independent source/price/Decimal arithmetic review accepted exact source+note patch; original invalid/unrecoverable brief/reference executable claims are withdrawn into preserved inspection history.",
+  "observations": [
+    {
+      "case_id": "CLOUD-TOPOLOGY-CANDIDATE-COST-MODEL",
+      "result": "passed",
+      "procedure": "Recalculate explicit hypothetical decimal original-byte workload and distinct SQL provisioned/storage assumptions using primary rates.",
+      "expected": "Reproducible cost arithmetic with no measured capacity or all-in financial guarantee.",
+      "observed": {
+        "aws": {
+          "common_USD": 177.7877346573677,
+          "controlled_public_single_AZ_USD": 244.0377346573677,
+          "endpoint_single_AZ_USD": 295.1377346573677,
+          "two_NAT_multi_AZ_t4g_USD": 372.4577346573677,
+          "two_NAT_multi_AZ_m7g_USD": 524.2977346573678
+        },
+        "cloudflare_before_rounding_enterprise_identity_keys_and_other_exclusions": {
+          "light_USD": 92.225,
+          "base_USD": 93.47999999999999,
+          "heavy_USD": 226.425,
+          "write_intensive_USD": 376.425
+        },
+        "queries_per_month": 912500.0,
+        "object_average_bytes": 1075000000000,
+        "derived_not_measured": true
+      },
+      "evidence": {
+        "path": "/private/tmp/healthmd-cloud-topology-candidate-arithmetic.json",
+        "sha256": "0fe55e4b790d65445c33800b3e33c218bca6aa8f5ee901aaf593a91917751412",
+        "bytes": 576
+      }
+    },
+    {
+      "case_id": "CLOUD-TOPOLOGY-CANDIDATE-AUTHORITY",
+      "result": "passed",
+      "procedure": "Inspect technical candidate, CF alternative and open owners/proof matrix.",
+      "expected": "US preference separate from topology acceptance/spend/identity/retention/grants; current page/frontier/recovery semantics retained.",
+      "observed": "Candidate pending independent review; current US D1/R2 acknowledged; global code/secrets and queue/cron/outgoing exclusions explicit; no provider/key/restore/client/security/load qualification.",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md"
+    }
+  ],
+  "resolved_attempts": [
+    {
+      "result": "failed",
+      "scope": "Public RDS/S3 exact pricing fetch sandbox attempts",
+      "observed": "curl exit6 DNS resolution failure; no downloaded artifact admitted from failed attempt. Narrow public network escalation then succeeded with the same bounded requests.",
+      "qualification": "Not a passed check; no automatic-review rejection or provider service execution."
+    }
+  ],
+  "limitations": [
+    "Planning only. No deployed operational, runtime/provider, isolation, key/copy residency, load/capacity, recovery, security or external-client proof.",
+    "1000 cloud-active DAU is hypothetical and distinct from app DAU, cloud opt-in fraction and identity MAU. Prices dated, usage unmeasured, free allowances account-shared and not guaranteed.",
+    "USD500/month and USD200\u2013300 beta are recommendations, not owner accepted spend caps or all-in guarantees; identity/email/SMS/M2M, Enterprise localization/regional key services and other exclusions separately priced.",
+    "One unrotated KMS key modeled; rotations and per-tenant/environment key count change charges; shared key does not prove tenant-specific crypto-erasure.",
+    "No public local/native/Practice/Wake/website contract change, provisioning, purchase, deploy, release or Rust retirement."
+  ],
+  "remaining_qualification": [
+    "H01 exact runtime/provider graph; H03/C18 durable faults/quota/object/SQL ambiguity/cancellation; H04 full-history projection; H05/C22/V13 erasure/restore-current suppression; H06/V12 real clients/identity; H07/V11/V13 operational/security/capacity/regional inventory.",
+    "Owner identity, retention, commerce, grants, defaults and budget policies remain open."
+  ],
+  "rollback": "Revert candidate note and technical recommendation without production/account/data/service mutation. All previous source authority and alternative evidence retained.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "b8922e877a432d3ec2fa216e1d76b714c0515d70+7a4900e3d5de2126fddd997d348848e6f16cccd76d02b495fbe5225f19479d06",
+    "evidence": {
+      "path": "/private/tmp/healthmd-cloud-topology-root-review.json",
+      "sha256": "af4c5ba636c001f1803cfe0bd60d8c3f9d4be2d21516af940809e6fa59f0fa79"
+    }
+  },
+  "skill_used": {
+    "name": "research",
+    "source": "/Users/codybontecou/.agents/skills/research/SKILL.md",
+    "role": "Background primary-source researcher; one Markdown note, no further delegates."
+  },
+  "resolved_history": [
+    {
+      "result": "partial",
+      "reason": "Independent review found brief/reference entries recorded cwd repository root with nonexistent root manage.py. Exact executed invocation not recovered from retained command evidence, so these entries are withdrawn as executable checks rather than reconstructed.",
+      "superseded_check_entries": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "brief",
+            "CLOUD-TOPOLOGY-CANDIDATE"
+          ],
+          "result": "passed",
+          "evidence": "Actual card/allowed paths/read_required/acceptance inspected; planning command, no product qualification."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "H00"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "H01"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "H03"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "H04"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "H07"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "C18"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "C22"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "F17"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "F18"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "F19"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "manage.py",
+            "reference",
+            "F20"
+          ],
+          "result": "passed",
+          "evidence": "Actual indexed design section read; design-reference raw pin below."
+        }
+      ],
+      "replacement_evidence_class": "source_inspection",
+      "qualification": "No executed brief/reference check claimed. Read task card/design sections and exact pinned source bytes remain inspection evidence."
+    },
+    {
+      "result": "partial",
+      "stage": "Prior frozen recommendation and corrected execution evidence",
+      "source_sha": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
+      "note": {
+        "sha256": "0a8db9affe993b77296ad824aef7dd38bd1c962172283c76ab079a3b9e6cddd2",
+        "bytes": 24251
+      },
+      "patch_digest": "e089b071fc4b3604812b966ccd4c168fad4939e9e87bc3746644d7a3820779c3",
+      "receipt_sha256": "03392e3730ea03056c6be50d0df94e6fd750c61db9fdfc73fd1a5c3c49744bbb",
+      "receipt_bytes": 23066,
+      "superseded_reason": "State-neutral opening now links plan.json for independent review/candidate-selection status; recommendations, prices and remaining proof/owner obligations unchanged."
+    }
+  ]
+}

@@ -778,12 +778,12 @@
       "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
       "owner_selected_region": "US first",
       "owner_selection_evidence": "Human async answer in this goal chat: US first, 2026-10-07.",
-      "resolution_progress": "Owner regional preference selected. Candidate topology and complete actual processing/data/keys/backups/subprocessor residency inventory still required before full decision acceptance or deployment qualification; no EU/both launch assumption."
+      "resolution_progress": "Owner US-first preference retained. Accepted AWS us-east-1 technical candidate in CLOUD-TOPOLOGY-CANDIDATE. Complete actual processing/data/keys/backups/logs/subprocessor/residency inventory and owner promise scope still required; not globally accepted or deployment-qualified."
     },
     {
       "id": "Q-CLOUD-TOPOLOGY",
       "title": "Cloud provider/runtime/storage topology",
-      "status": "open",
+      "status": "accepted",
       "owner_role": "architecture/service",
       "authority": "technical",
       "affected_families": [
@@ -794,10 +794,22 @@
       ],
       "resolver_task": "CLOUD-TOPOLOGY-CANDIDATE",
       "resolution_criteria": "Select a candidate provider/runtime/storage/key/region topology against concrete streaming, SQL/query isolation, recovery and cost requirements. Actual provider limits, load, keys, region and deployed recovery are separately qualified in H01/H07/V11/V13.",
-      "resolution": null,
-      "record_path": null,
-      "evidence": [],
-      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified."
+      "resolution": "Technical implementation candidate: AWS us-east-1, locked Node24/Effect4 common-operation container on ECS Fargate, private RDS PostgreSQL/S3 and single-region customer-managed KMS. Separate ingest/query/lifecycle authority, RLS non-owner runtime roles, seal-object thenSQL-ledger/quota/outbox and latest independent suppression authority before page/restore. No actual provider/load/region/key/copy/recovery/deployment qualification or owner budget/policy acceptance.",
+      "record_path": "docs/migration/effect-refactor/decisions/cloud-topology-candidate.md",
+      "evidence": [
+        "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json"
+      ],
+      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
+      "accepted_scope": "planning technical candidate only",
+      "review": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "b8922e877a432d3ec2fa216e1d76b714c0515d70+7a4900e3d5de2126fddd997d348848e6f16cccd76d02b495fbe5225f19479d06",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cloud-topology-root-review.json",
+          "sha256": "af4c5ba636c001f1803cfe0bd60d8c3f9d4be2d21516af940809e6fa59f0fa79"
+        }
+      }
     },
     {
       "id": "Q-CLOUD-IDENTITY",
@@ -23493,11 +23505,25 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "ff72e1af486d1ace8106281abbe34b3dd3e21e60",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+          "apps/cli/tests/surfaces/jsonrpc-envelope.test.ts",
+          "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+          "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
+        ],
+        "reserved_resources": [
+          "private-jsonrpc-envelope-interface"
+        ]
+      },
       "prerequisites": [
         "BASE-CLI",
-        "SLICE-PARITY"
+        "SLICE-PARITY",
+        "CORE-COHORT-IOS-ELIGIBILITY"
       ],
       "required_decisions": [],
       "coverage": [
@@ -23532,7 +23558,10 @@
         "apps/cli/scripts/build-candidate.mjs",
         "apps/cli/scripts/check-candidate.mjs",
         "apps/cli/tsconfig.build.json",
-        "apps/cli/tsconfig.test.json"
+        "apps/cli/tsconfig.test.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
       ],
       "allowed_paths": [
         "apps/cli/src/surfaces/jsonrpc-envelope.ts",
@@ -23541,8 +23570,6 @@
         "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
       ],
       "shared_resources": [
-        "cli-candidate-build",
-        "cli-candidate-qualified-core-inputs",
         "private-jsonrpc-envelope-interface"
       ],
       "target": {
@@ -23639,7 +23666,7 @@
         "docs/migration/effect-refactor/inventories/cli.json#/catalog",
         "docs/migration/effect-refactor/inventories/cli.json#/schemas"
       ],
-      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_inputs": "Accepted SPLIT-SURFACES child2 a5157 minimum proposals and exact retained Rust JSONRPC/result/application/main/catalog source/test/profile inputs plus current independently accepted43/26 cohort25b48. Full independent Stage1 freeze and source-only review before code; no synthetic/fake interface implies source-purpose or public/client/durability qualification.",
       "fixture_details": {
         "introduced_path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
         "introduced_case_ids": [
@@ -23806,6 +23833,38 @@
         "child_pointer": "#/children/2",
         "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
         "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      },
+      "resource_stage_history": [
+        {
+          "original_resources": [
+            "cli-candidate-build",
+            "cli-candidate-qualified-core-inputs",
+            "private-jsonrpc-envelope-interface"
+          ],
+          "released_for_stage1": [
+            "cli-candidate-build",
+            "cli-candidate-qualified-core-inputs"
+          ],
+          "reason": "Stage1 source/fixture/receipt only. Builder/input leases must be explicitly reacquired before any current common generated output reads, typecheck/build/install/test. Native candidate common bundle and CLI component mutation cannot overlap."
+        }
+      ],
+      "source_reconciliation": "Assigned current ff72e1af source after accepted43/26 cohort25b48 and discovery64/70. Accepted packet a515 child2 source pins at203c82f remain historical evidence; independently reconcile every current/Git source pin and separately record any accepted guard/docs/cohort integration differences. Initial Stage1 ONLY jsonrpc-envelope-vectors.ts and own partial receipt. Freeze complete typed factory/request/lossless-parser/serializer/fixed common-dispatcher/owned-output/session/Scope/current-grant/progress/cancel/cleanup interfaces, full source-derived literals and all seven packet minima BEFORE code. Current source preserves duplicate-key last-value, outerunknownignored, exact signed i64 IDs/canonical encoded<=128B/16384 lifetime usedIDs, missing-ID notification noresponse, supportedprotocols and ping beforeinitialize. No external/parser dependencies/package/lock/index/cohort/guard/public profile rewrites. No npm/typecheck/build/install/native/bundle/device/common generated reads duringStage1. Full schema/tool/render/currentgrant/operation/transport and actual clients/native state/public authority are not qualified by fake shell metadata. Resolve integer/string/escaping/ordering/negativezero/fraction/exponent and serde canonicalization using primary source/evidence, no ordinaryJSON.parse lossless shortcut or newly invented stricter source grammar. Scope-owned completedallocations/asyncreleaseACK/closed originalScope reentry/fixed redaction beforepublication; private unmeasured budgets not public contract limits.",
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "ff72e1af486d1ace8106281abbe34b3dd3e21e60",
+        "canonical_card_sha256": "7540c84201e68e4e878148a2c5cb15a0c6e8f87f82ae4949089dbd948a77c303",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-mcp-jsonrpc-envelope-preclaim-card.json",
+        "scope": "Exact4private paths with Stage1onlyvector/receipt. Full source/lossless parser/serializer/common fake interfaces and independent literals beforeimplementation; source byte/numeric/unknown/duplicate semantics preserved, no public parser/source/state/client admission. Reacquire shared builder resources only before explicit later execution."
+      },
+      "implementation_build_gate": {
+        "requires_accepted_task": "CORE-COHORT-IOS-ELIGIBILITY",
+        "reacquire_resources": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ],
+        "stage1_source_only_allowed": true,
+        "build_permitted": false
       }
     },
     {
@@ -25098,7 +25157,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json",
       "reviewer_role": "independent cloud architecture and price-model reviewer",
       "priority": 69,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/android_release_host",
         "base_revision": "b8922e877a432d3ec2fa216e1d76b714c0515d70",
@@ -25113,14 +25172,20 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "b8922e877a432d3ec2fa216e1d76b714c0515d70+7a4900e3d5de2126fddd997d348848e6f16cccd76d02b495fbe5225f19479d06",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cloud-topology-root-review.json",
+          "sha256": "af4c5ba636c001f1803cfe0bd60d8c3f9d4be2d21516af940809e6fa59f0fa79"
+        }
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLOUD-TOPOLOGY-CANDIDATE.json"
+        ]
       },
       "proof_class": "planning",
       "choice_dependencies": [
@@ -25142,6 +25207,21 @@
         "canonical_card_sha256": "d1a5bfb9d0afbcd19116cace3b32f2b98857e1f9192c3afa7ebe1dd482cb1a30",
         "reviewed_snapshot_path": "/private/tmp/healthmd-cloud-topology-preclaim-card.json",
         "scope": "One primary-cited source-only technical note and receipt. No code/dependency/production/provider/account/device/data writes; no owner budget acceptance inferred. Complete separate actual qualification and open product owners preserved."
+      },
+      "planning_budget_recommendation": {
+        "monthly_USD": 500,
+        "controlled_beta_range_USD": [
+          200,
+          300
+        ],
+        "planning_range_USD": [
+          350,
+          600
+        ],
+        "owner_accepted_cap": false,
+        "daily_active_user_target_from_human": 1000,
+        "model_cohort": "Hypothetical1000 cloud-activeusers, not all appDAU automatically uploading",
+        "exclusions": "Paid identity/model tokens/support/security/legal/tax/localization services and operational proofs remain separate."
       }
     }
   ]
