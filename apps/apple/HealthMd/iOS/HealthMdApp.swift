@@ -255,11 +255,11 @@ struct HealthMdApp: App {
         Task { @MainActor in
             SchedulingManager.shared.registerBackgroundTask()
 
-            // If scheduling is enabled, set up HealthKit background delivery.
-            // Notification permission is requested when the user enables a schedule.
-            if SchedulingManager.shared.schedule.isEnabled {
-                await HealthKitManager.shared.enableBackgroundDelivery()
-                HealthKitManager.shared.setupObserverQueries()
+            // Restored profile schedules also need local fallbacks, the
+            // HealthKit delivery callback, and APNs registration/schedule sync.
+            // The legacy schedule is disabled after profile migration.
+            if SchedulingManager.shared.isSchedulingActive {
+                SchedulingManager.shared.refreshScheduledAutomation()
             }
         }
     }

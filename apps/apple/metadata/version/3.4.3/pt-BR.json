@@ -1,0 +1,3 @@
+{
+  "whatsNew": "O Health.md 3.4.3 melhora a recuperação dos agendamentos e deixa os lembretes de exportações gratuitas mais claros.\n\n• Os agendamentos dos perfis de exportação restauram suas notificações ao reabrir o app e evitam tentativas duplicadas de recuperar exportações pendentes.\n• Melhorias na configuração das notificações agendadas e na recuperação após erros temporários de entrega.\n• Os lembretes de upgrade mostram corretamente quantas exportações gratuitas você já usou."
+}

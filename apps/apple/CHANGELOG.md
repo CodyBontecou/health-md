@@ -4,6 +4,13 @@ All notable changes to Health.md will be documented in this file.
 
 ## [Unreleased]
 
+## [3.4.3] - 2026-10-07
+
+### Fixed
+- Export-profile schedules restore their notifications when you reopen the app and avoid duplicate catch-up attempts.
+- Improved scheduled notification setup and recovery after temporary delivery errors.
+- Upgrade reminders correctly show how many free exports you have used.
+
 ## [3.4.2] - 2026-09-17
 
 ### Changed

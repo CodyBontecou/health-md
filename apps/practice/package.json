@@ -29,8 +29,8 @@
     "react-dom": "19.2.8"
   },
   "overrides": {
-    "undici": "7.29.0",
-    "sharp": "0.35.4"
+    "undici": "7.29.1",
+    "sharp": "0.35.5"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.12.1",
