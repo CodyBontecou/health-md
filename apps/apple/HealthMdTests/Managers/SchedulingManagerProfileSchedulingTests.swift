@@ -248,6 +248,9 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
             exportTarget: .apiEndpoint,
             profileID: profileID,
             profileName: "Daily",
+            apiDestinationIdentity: ScheduledAPIEndpointIdentity(
+                destination: try XCTUnwrap(harness.apiDestination), bindingID: nil
+            ),
             calendar: calendar
         )
         try harness.pendingStore.upsert(request)
