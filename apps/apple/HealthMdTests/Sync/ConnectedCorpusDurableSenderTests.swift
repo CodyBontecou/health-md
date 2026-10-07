@@ -466,6 +466,80 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
+    func testScheduledPartitionCancellationRetainsCheckpointOnlyForOrdinaryStop() async throws {
+        enum CancellationSource: Equatable { case attempt, discard, peer }
+        for source in [CancellationSource.attempt, .discard, .peer] {
+            let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
+            let harness = Harness()
+            let baseline = harness.transport()
+            var transmissionStarted = false
+            var partitionURL: URL?
+            let transport = ConnectedCorpusSender.Transport(
+                open: baseline.open,
+                sendPartition: { file, manifest, transferID, _ in
+                    partitionURL = file.url
+                    transmissionStarted = true
+                    if source != .peer {
+                        do { try await Task.sleep(for: .seconds(30)) } catch {}
+                    }
+                    return .failure(ConnectedTransferAbort(
+                        transferID: transferID, jobID: manifest.jobID,
+                        reason: .cancelled, message: "Synthetic partition cancellation"
+                    ))
+                },
+                finalize: baseline.finalize, cancel: baseline.cancel
+            )
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, transportProvider: { _ in transport }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: ConnectedCorpusTransferNegotiation(
+                    protocolVersion: fixture.session.protocolVersion,
+                    partitionTargetBytes: fixture.session.partitionTargetBytes
+                ),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            let task = Task { @MainActor in
+                try await manager.send(
+                    origin: .scheduledIPhone, jobID: fixture.session.jobID,
+                    manifest: fixture.manifest, durableNegotiation: negotiation,
+                    syncService: SyncService(),
+                    produceItem: { _, date in try self.makeSmallItem(date: date) }
+                )
+            }
+            await waitUntil { transmissionStarted }
+            switch source {
+            case .attempt: task.cancel()
+            case .discard:
+                try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+            case .peer: break
+            }
+            _ = try? await task.value
+            let journal = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+            XCTAssertEqual(journal.state, source == .attempt ? .paused : .cancelled)
+            XCTAssertEqual(journal.session.requestFingerprint, fixture.session.requestFingerprint)
+            if source == .attempt {
+                let pending = try XCTUnwrap(journal.pendingPartition)
+                XCTAssertEqual(journal.items.count, 1)
+                XCTAssertGreaterThan(fixture.store.totalInternalSpoolBytes(jobID: journal.jobID), 0)
+                let resumedHarness = Harness()
+                _ = try await ConnectedCorpusDurableSender.send(
+                    configuration: .init(jobID: journal.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: resumedHarness.transport(),
+                    produceItem: { _, _ in throw TestError.unexpectedProduction }
+                )
+                XCTAssertEqual(resumedHarness.opens.first?.partition.sha256, pending.descriptor.sha256)
+                XCTAssertEqual(resumedHarness.transfers.count, 1)
+                XCTAssertEqual(manager.journal(jobID: journal.jobID)?.state, .completed)
+            } else {
+                XCTAssertNil(journal.pendingPartition)
+                XCTAssertTrue(journal.items.isEmpty)
+                XCTAssertFalse(FileManager.default.fileExists(atPath: try XCTUnwrap(partitionURL).path))
+            }
+        }
+    }
+
     func testRecoveryManagerKeepsScheduledRecoveryOutOfInteractiveUI() throws {
         let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
         let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
