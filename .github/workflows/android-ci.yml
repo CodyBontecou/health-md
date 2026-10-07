@@ -199,6 +199,17 @@ jobs:
           ./gradlew --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
           ./gradlew --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
+      - name: Retain failed JVM test reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-jvm-failure-reports-${{ github.run_attempt }}
+          path: |
+            apps/android/app/build/reports/tests/
+            apps/android/app/build/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Run Wear lint, assemble, and bundle
         run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
 
