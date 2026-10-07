@@ -1,9 +1,37 @@
 import Compression
 import Darwin
 import XCTest
+import zlib
 @testable import HealthMd
 
 final class ZipArchiveWriterTests: XCTestCase {
+    func testChecksumOracleMatchesKnownVectorsAndBitwiseReference() {
+        XCTAssertEqual(ZIP64TestReader.crc32(Data()), 0)
+        XCTAssertEqual(ZIP64TestReader.crc32(Data("123456789".utf8)), 0xcbf43926)
+        XCTAssertEqual(ZIP64TestReader.crc32(Data((0...255).map { UInt8($0) })), 0x29058c73)
+
+        // Keep the slow, independent reference confined to small inputs. The
+        // archive reader must validate large entries without eight steps per byte.
+        func bitwiseReference(_ data: Data) -> UInt32 {
+            var value: UInt32 = 0xffff_ffff
+            for byte in data {
+                value ^= UInt32(byte)
+                for _ in 0..<8 {
+                    value = (value & 1) == 1 ? (0xedb88320 ^ (value >> 1)) : (value >> 1)
+                }
+            }
+            return value ^ 0xffff_ffff
+        }
+        let source = deterministicIncompressibleBytes(count: 4_096)
+        let fixtures = [
+            Data(), Data([0]), Data([0xff]), Data("今日 é العربية".utf8),
+            source, source[37..<293]
+        ]
+        for data in fixtures {
+            XCTAssertEqual(ZIP64TestReader.crc32(data), bitwiseReference(data))
+        }
+    }
+
     func testStreamsDeflatedDataAndFileEntriesIntoReadableZIP64Archive() throws {
         let directory = try temporaryDirectory()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -598,14 +626,14 @@ private enum ZIP64TestReader {
     }
 
     static func crc32(_ data: Data) -> UInt32 {
-        var value: UInt32 = 0xffff_ffff
-        for byte in data {
-            value ^= UInt32(byte)
-            for _ in 0..<8 {
-                value = (value & 1) == 1 ? (0xedb88320 ^ (value >> 1)) : (value >> 1)
-            }
+        // Use an independent system oracle, not the archive writer's CRC code.
+        data.withUnsafeBytes { bytes in
+            UInt32(zlib.crc32_z(
+                0,
+                bytes.bindMemory(to: Bytef.self).baseAddress,
+                z_size_t(bytes.count)
+            ))
         }
-        return value ^ 0xffff_ffff
     }
 
     private static func inflateRawDeflate(
