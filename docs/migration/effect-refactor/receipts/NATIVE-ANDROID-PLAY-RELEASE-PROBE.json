@@ -1,9 +1,9 @@
 {
   "task_id": "NATIVE-ANDROID-PLAY-RELEASE-PROBE",
-  "result": "partial",
+  "result": "passed",
   "proof_class": "host_integration",
   "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
-  "patch_digest": "df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa",
+  "patch_digest": "ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5",
   "patch_digest_method": "SHA256 of lexically sorted claimed non-receipt paths: UTF8(path)+NUL+ASCII(SHA256(file bytes))+LF. Covers32 claimed source/lock/tool files, including untracked files and wrapper binary; excludes receipt itself and ignored build outputs. This is a scoped dirty-patch fingerprint, not a committed qualification.",
   "patch_inputs": [
     {
@@ -28,7 +28,7 @@
     },
     {
       "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
-      "sha256": "4846802275c69e2fdddf6e42be1e3e288dbd2068944b2bfdd1797fd462f7e4ba"
+      "sha256": "dd0df21dd79e1a2fed363807c49e12e07455b8ff3c09d35f23138d0888d68706"
     },
     {
       "path": "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
@@ -44,7 +44,7 @@
     },
     {
       "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
-      "sha256": "bc30e9d3afe3bf4c13af980a53228aedd579604ba622e014302ae96e1dad1f42"
+      "sha256": "1c33d3a991e39a93cf980887d35fc91d3921db2399ab99fcb4f46a6e90ab9547"
     },
     {
       "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
@@ -289,11 +289,11 @@
         "artifacts": {
           "app/build/outputs/apk/play/release/app-play-release.apk": {
             "bytes": 49774527,
-            "sha256": "9b43a916ccffe4dd9beb7078aca9c4a4c8c7f1eae5d1566f35df86033ec8e74e"
+            "sha256": "f2c3f300dc90501304ac26dd8de85eb9a346ae50d0da5334d657bcf37aba689b"
           },
           "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk": {
             "bytes": 657485,
-            "sha256": "9a52040fc2fe1637a00872303bb346c330fe084485ea2961336e39aad53f6454"
+            "sha256": "d7c76df17d09b8cf4df4e90f7f277d85b43fcb83ce02d7fbed26855aaf78afb4"
           }
         },
         "jvm": {
@@ -303,6 +303,18 @@
           "skipped": "0"
         },
         "jvm_xml_sha256": "dfeb222112a572573493bc36f0f0890c72b08fb83eb4647761cbfba405fedde7",
+        "dex": {
+          "app/build/outputs/apk/play/release/app-play-release.apk": {
+            "Trace_defined": true,
+            "Trace_reference": true,
+            "AndroidJUnitRunner_defined": false
+          },
+          "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk": {
+            "Trace_defined": false,
+            "Trace_reference": true,
+            "AndroidJUnitRunner_defined": true
+          }
+        },
         "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
         "fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
         "abis": [
@@ -310,21 +322,30 @@
           "armeabi-v7a",
           "x86",
           "x86_64"
-        ]
+        ],
+        "graph_hashes": {
+          "package-lock.json": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499",
+          "app/gradle.lockfile": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438",
+          "gradle/verification-metadata.xml": "dd5ef3582d96feb39fe6654ec17fbaeb1093b4950592170dfd2cdf5e3575ae05",
+          "dist/audit/resolved-artifacts.tsv": "1550a2036427bdd45ae133af88d6a67f5fa6081aefc01bffab7f7bd5db903a83",
+          "scripts/run-release-probe.sh": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d"
+        }
       },
       "native_file_digests": {
         "app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt": "8bb8fb775f43b4c8ee647c4f4bd9f3b0b5aaf0b0a96ae93a5f5709beddcff2ec",
         "app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt": "c8970b436acdac8a47197c040b826e696df848607366253f1b895aecabecef90",
         "scripts/run-release-probe.sh": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d",
         "app/build.gradle.kts": "befc9dfcb3f8e19b54e193c7341b16fa0499c726a8fb051d741c05254f56cd5b",
-        "app/proguard-rules.pro": "4846802275c69e2fdddf6e42be1e3e288dbd2068944b2bfdd1797fd462f7e4ba"
+        "app/proguard-rules.pro": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44"
       },
       "artifact_tool_checks": {
-        "path": "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-third.json",
-        "sha256": "13a57e6769bb600d6b4756e60e020ed405d5178bcd599d500822bed5988abb36"
+        "path": "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-fourth.json",
+        "sha256": "9475fe111afbbe725a22059b6d9c21ab02b913e917d7f5d30b721a44f0c9cfa8"
       },
       "maven_audit_sha256": "fac2e1b0633ec2e8eee61e6062f591e7ee2661c84c529d2f554f81823bf642d3",
-      "native_license_provenance_sha256": "3e39b9f5a8d628df202f5d58cd5613eda6863bc70afb46862816cb06737ac799"
+      "native_license_provenance_sha256": "3e39b9f5a8d628df202f5d58cd5613eda6863bc70afb46862816cb06737ac799",
+      "built_source_proguard_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+      "current_source_build_status": "fourth build passed with Trace class present; actual runtime failed on Kotlin LazyKt runner startup"
     },
     "policy_migration_key_versions": {
       "certificate_sha256": "9a012f46825b75b9806d94ea449b044b61a0bc015d0f88e1006c0986f1814347",
@@ -342,31 +363,3319 @@
   "acceptance_results": [
     {
       "criterion": "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
-      "result": "partial",
-      "evidence": "Exact physical npm graph, resolved native artifacts/licenses, packaged assets and ABI/certificate/manifest checks passed; runtime engine/identity execution unrun."
+      "result": "passed",
+      "evidence": "Final exact locked graph/artifacts and both actual reports prove React19.2.3,Effect4.0.1,Hermes250829098.0.17/bytecode98/Release; one private physical asset/graph."
     },
     {
       "criterion": "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
-      "result": "unrun",
-      "evidence": "Actual target-only harness exit3: required_target_unavailable before any installation."
+      "result": "passed",
+      "evidence": "Both emitted actual fresh-process reports pass all10synthetic cases without Metro/network/UI mounting."
     },
     {
       "criterion": "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
-      "result": "partial",
-      "evidence": "Frozen10portable cases and5JVM admission tests passed; actual native cancellation/ack/backpressure/expiry/restart execution unrun."
+      "result": "passed",
+      "evidence": "Both actual fixture reports pass pre-acquire schema/UTF8 limit, cancellation,expiry,backpressure/FIFO,reentry and cleanup; engine destroy acknowledged21/12ms."
     },
     {
       "criterion": "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
       "result": "passed",
-      "evidence": "Private IDs/nondebuggable/local test signing; both actual APK manifests Internet0health0; no production source/grants/data/state changes."
+      "evidence": "Exact private IDs/nondebuggable/local-test certificate; actual manifests Internet0health0 and health-free synthetic adapter. No production data/grants/public adoption."
     },
     {
       "criterion": "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission.",
-      "result": "partial",
-      "evidence": "Source/fixture/graph/artifact hashes and build bounds recorded; no physical startup/memory/teardown measurement fabricated."
+      "result": "passed",
+      "evidence": "Assigned d126 source/current32patch, all assets/graph/artifacts/engine/SDK and both raw runtime/evidence hashes recorded; actual measured startup/memory/teardown; no unavailable proof invented."
     }
   ],
   "checks": [
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "ci",
+        "--ignore-scripts",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund",
+        "--offline",
+        "--cache",
+        "/private/tmp/healthmd-effect-npm-cache"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": "tool transcript: added 297 packages in 2s"
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": {
+        "path": "apps/android/effect-host-candidate/dist/portable-result.json",
+        "sha256": "2aa0e711b7e692b0849a5c573f3e24875361e7b087711672c00c1ed604d17342"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "build"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "portable_synthetic",
+      "evidence": {
+        "path": "apps/android/effect-host-candidate/dist/bundle-build.log",
+        "sha256": "7045281bf946fe03af380b173a97deeaa668dd9034774fd9d29676e1a393a0fb"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/prepare-test-signing.sh"
+      ],
+      "result": "passed",
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/test-signing-supervision.json",
+        "sha256": "ea68b232fec605efd716b51def1373b20d0ece1e3f62e5bcaac98a4e5523b852",
+        "scope": "retained isolated local test key; public certificate only"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--offline",
+        "--max-workers=2",
+        "--dependency-verification=strict",
+        ":app:assemblePlayRelease",
+        ":app:testPlayReleaseUnitTest",
+        ":app:assemblePlayReleaseAndroidTest"
+      ],
+      "environment": {
+        "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+        "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+        "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+      },
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "native_build",
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/native-build-seventh-supervision.json",
+        "log": "apps/android/effect-host-candidate/dist/audit/native-build-seventh.log",
+        "log_sha256": "03b4b3f2b5c42bcb6829a610d68c3a4c520f960e44ea0966a4c78405f4cac49c",
+        "elapsed_seconds": 21.066,
+        "output_bytes": 7487,
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "environment": {
+        "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      },
+      "result": "passed",
+      "exit_code": 0,
+      "proof_class": "host_integration",
+      "evidence": {
+        "fresh_processes": 2,
+        "cases_per_process": 10,
+        "runs": [
+          {
+            "process": 1,
+            "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+            "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+            "bytes": 5057,
+            "instrumentation_log_sha256": "e26f3f6e6ef8bf74809986f92315ae811286bbc4240a86324ef6dc9b33ace5c8"
+          },
+          {
+            "process": 2,
+            "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+            "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+            "bytes": 5057,
+            "instrumentation_log_sha256": "924103549b8a000e71dc901fc3c91e65437a575391a90ec5dc1416739fa89002"
+          }
+        ],
+        "command_bounds": "Unchanged individual client/tool deadlines5\u201345seconds and8192\u20132097152byte output limits. Only own client or private-app force-stop; no daemon/global stop."
+      }
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "proof_class": "portable_synthetic",
+      "executed_by": "/root/donor_mac_review",
+      "evidence": "receipt#/coordinator_common_verification/core"
+    },
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "proof_class": "portable_synthetic",
+      "executed_by": "/root",
+      "evidence": "receipt#/coordinator_common_verification/ui"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "receipt#/independent_final_review; independent actual artifact/DEX/20observation/source review plus ROOT common-map reconciliation."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "offline_success",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "value": "ready"
+      },
+      "observed_per_process": [
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "value": "ready"
+        },
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "value": "ready"
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "value": "ready"
+        },
+        "fresh_process_2": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "value": "ready"
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/1"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/1"
+        }
+      ]
+    },
+    {
+      "case_id": "cancel_before_acquire",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "acquired": 0,
+        "released": 0,
+        "active": 0,
+        "stale_reads": 0
+      },
+      "observed_per_process": [
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 0,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 0,
+          "unresolved_inspections": 0,
+          "stale_reads": 0
+        },
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 0,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 0,
+          "unresolved_inspections": 0,
+          "stale_reads": 0
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 0,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 0,
+          "unresolved_inspections": 0,
+          "stale_reads": 0
+        },
+        "fresh_process_2": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 0,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 0,
+          "unresolved_inspections": 0,
+          "stale_reads": 0
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/2"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/2"
+        }
+      ]
+    },
+    {
+      "case_id": "cancel_waits_release_ack",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "ack_before_completion": true,
+        "expiry_ack_before_completion": true,
+        "unresolved_inspections": 0
+      },
+      "observed_per_process": [
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "cleanup_ms": 54,
+          "ack_before_completion": true,
+          "expiry_ack_before_completion": true,
+          "incomplete_during_native_release": true
+        },
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "cleanup_ms": 56,
+          "ack_before_completion": true,
+          "expiry_ack_before_completion": true,
+          "incomplete_during_native_release": true
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "cleanup_ms": 54,
+          "ack_before_completion": true,
+          "expiry_ack_before_completion": true,
+          "incomplete_during_native_release": true
+        },
+        "fresh_process_2": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "cleanup_ms": 56,
+          "ack_before_completion": true,
+          "expiry_ack_before_completion": true,
+          "incomplete_during_native_release": true
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/3"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/3"
+        }
+      ]
+    },
+    {
+      "case_id": "reentry_dispose_cancel_supersede",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "stale_reads": 0,
+        "released": 1,
+        "active": 0
+      },
+      "observed_per_process": [
+        {
+          "stale_reads": 0,
+          "fresh_reads": 1,
+          "released": 1,
+          "active": 0
+        },
+        {
+          "stale_reads": 0,
+          "fresh_reads": 1,
+          "released": 1,
+          "active": 0
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "stale_reads": 0,
+          "fresh_reads": 1,
+          "released": 1,
+          "active": 0
+        },
+        "fresh_process_2": {
+          "stale_reads": 0,
+          "fresh_reads": 1,
+          "released": 1,
+          "active": 0
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/4"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/4"
+        }
+      ]
+    },
+    {
+      "case_id": "frame_limit",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "code": "frame_limit",
+        "acquired": 0
+      },
+      "observed_per_process": [
+        {
+          "code": "frame_limit",
+          "acquired": 0,
+          "utf8_multibyte_rejected": true
+        },
+        {
+          "code": "frame_limit",
+          "acquired": 0,
+          "utf8_multibyte_rejected": true
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "code": "frame_limit",
+          "acquired": 0,
+          "utf8_multibyte_rejected": true
+        },
+        "fresh_process_2": {
+          "code": "frame_limit",
+          "acquired": 0,
+          "utf8_multibyte_rejected": true
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/5"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/5"
+        }
+      ]
+    },
+    {
+      "case_id": "queue_backpressure",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "accepted": 6,
+        "rejected": 1,
+        "max_active": 2,
+        "max_queued": 4,
+        "acknowledged": 6,
+        "active_frames": 0,
+        "queued_frames": 0,
+        "fifo": true
+      },
+      "observed_per_process": [
+        {
+          "accepted": 6,
+          "rejected": 1,
+          "max_active": 2,
+          "max_queued": 4,
+          "acknowledged": 6,
+          "active_frames": 0,
+          "queued_frames": 0,
+          "fifo": true
+        },
+        {
+          "accepted": 6,
+          "rejected": 1,
+          "max_active": 2,
+          "max_queued": 4,
+          "acknowledged": 6,
+          "active_frames": 0,
+          "queued_frames": 0,
+          "fifo": true
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "accepted": 6,
+          "rejected": 1,
+          "max_active": 2,
+          "max_queued": 4,
+          "acknowledged": 6,
+          "active_frames": 0,
+          "queued_frames": 0,
+          "fifo": true
+        },
+        "fresh_process_2": {
+          "accepted": 6,
+          "rejected": 1,
+          "max_active": 2,
+          "max_queued": 4,
+          "acknowledged": 6,
+          "active_frames": 0,
+          "queued_frames": 0,
+          "fifo": true
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/7"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/7"
+        }
+      ]
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "code": "schema_invalid",
+        "acquired": 0
+      },
+      "observed_per_process": [
+        {
+          "code": "schema_invalid",
+          "acquired": 0,
+          "boolean_and_fractional_negatives": 3
+        },
+        {
+          "code": "schema_invalid",
+          "acquired": 0,
+          "boolean_and_fractional_negatives": 3
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "code": "schema_invalid",
+          "acquired": 0,
+          "boolean_and_fractional_negatives": 3
+        },
+        "fresh_process_2": {
+          "code": "schema_invalid",
+          "acquired": 0,
+          "boolean_and_fractional_negatives": 3
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/6"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/6"
+        }
+      ]
+    },
+    {
+      "case_id": "teardown_fresh_restart",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "private_state_writes": 0
+      },
+      "observed_per_process": [
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "private_state_writes": 0
+        },
+        {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "private_state_writes": 0
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "private_state_writes": 0
+        },
+        "fresh_process_2": {
+          "queued_frames": 0,
+          "active_frames": 0,
+          "max_queued": 0,
+          "acknowledged_frames": 0,
+          "accepted_frames": 0,
+          "acquired": 1,
+          "releasing": 0,
+          "inspecting": 0,
+          "max_active": 0,
+          "active": 0,
+          "released": 1,
+          "unresolved_inspections": 0,
+          "private_state_writes": 0
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/8"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/8"
+        }
+      ]
+    },
+    {
+      "case_id": "single_react_effect_identity",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "react": "19.2.3",
+        "effect": "4.0.1",
+        "hermes": true,
+        "mounted_react": false
+      },
+      "observed_per_process": [
+        {
+          "react": "19.2.3",
+          "hermes": true,
+          "hermes_release": "250829098.0.17",
+          "bytecode_version": 98,
+          "engine_build": "Release",
+          "effect": "4.0.1",
+          "mounted_react": false
+        },
+        {
+          "react": "19.2.3",
+          "hermes": true,
+          "hermes_release": "250829098.0.17",
+          "bytecode_version": 98,
+          "engine_build": "Release",
+          "effect": "4.0.1",
+          "mounted_react": false
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "react": "19.2.3",
+          "hermes": true,
+          "hermes_release": "250829098.0.17",
+          "bytecode_version": 98,
+          "engine_build": "Release",
+          "effect": "4.0.1",
+          "mounted_react": false
+        },
+        "fresh_process_2": {
+          "react": "19.2.3",
+          "hermes": true,
+          "hermes_release": "250829098.0.17",
+          "bytecode_version": 98,
+          "engine_build": "Release",
+          "effect": "4.0.1",
+          "mounted_react": false
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/0"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/0"
+        }
+      ]
+    },
+    {
+      "case_id": "no_native_grant_expansion",
+      "result": "passed",
+      "procedure": "Original exact own-target packaged offline Release harness; two fresh processes under explicit null-Activity active host lifecycle.",
+      "expected": {
+        "health_permissions": 0,
+        "internet_permissions": 0,
+        "health_reads": 0,
+        "persistent_writes": 0
+      },
+      "observed_per_process": [
+        {
+          "health_permissions": 0,
+          "internet_permissions": 0,
+          "health_reads": 0,
+          "persistent_writes": 0,
+          "scope": "candidate_owned_adapter"
+        },
+        {
+          "health_permissions": 0,
+          "internet_permissions": 0,
+          "health_reads": 0,
+          "persistent_writes": 0,
+          "scope": "candidate_owned_adapter"
+        }
+      ],
+      "observed": {
+        "fresh_process_1": {
+          "health_permissions": 0,
+          "internet_permissions": 0,
+          "health_reads": 0,
+          "persistent_writes": 0,
+          "scope": "candidate_owned_adapter"
+        },
+        "fresh_process_2": {
+          "health_permissions": 0,
+          "internet_permissions": 0,
+          "health_reads": 0,
+          "persistent_writes": 0,
+          "scope": "candidate_owned_adapter"
+        }
+      },
+      "evidence": [
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "json_pointer": "/report/observations/9"
+        },
+        {
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "json_pointer": "/report/observations/9"
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Qualification is explicit private active no-surface host with null Activity. No actual OS background/wake scheduling, Activity lifecycle or HeadlessJsTask execution proof.",
+    "Play is private flavor identity/local test signing only; no distribution keystore, Play store upload/legal/channel qualification or public runtime adoption.",
+    "Memory peaks sampled every20ms are lower bounds on true peaks; Java heap final metrics and PSS are process-local observations, not production performance budgets.",
+    "Persistent/private state zero counts mean candidate-owned health/private state writes. OS/dalvik/RN/JVM caches, install artifacts, profile installation and harness report files are excluded.",
+    "Historical failures/unrun attempts are preserved separately and resolved by reviewed exact fixes; stale ignored dist/runtime/failure.json belongs to prior failure, not current successful run.",
+    "Original source claim remains d126; observed integration revision separately retained. No source commit/push by this author; committed integration is coordinator-owned.",
+    "Fresh current431core and14UIchecks attributed by coordinator; source+patch independently accepted. These bounded checks do not establish production authority, signed distribution, mounted React UI or background scheduling."
+  ],
+  "remaining_qualification": [
+    "Exact committed-source rollout/release/production integration and background/wake/Activity/HeadlessJsTask proof remain separate gates. Narrow candidate source integration is coordinator-owned; no deployment, store publication or Rust retirement."
+  ],
+  "rollback": "Current production Android/native/public/state authority retained. Candidate remains private and isolated; remove only its two private package IDs if installed later. No production migration occurred.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/personal_codecs",
+    "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5"
+  },
+  "prebuild_review": {
+    "reviewer": "/root/donor_mac_review",
+    "native_source_review": "accepted bounded preflight; final native8bb/JVMc897 reviewed before execution",
+    "coordinator_review": "Exact annotation193row/97artifact delta and4lock bindings independently accepted; subsequent exact test compiler-metadata rule and minSdkVersion harness correction approved before writes. Final patch/receipt still pending."
+  },
+  "observed_integration_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+  "source_reconciliation": {
+    "assigned_task_claim_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+    "historical_pin_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+    "observed_integration_revision_at_initial_receipt": "ba5c644ebca4c028fe8d60feb580a5e668965341",
+    "policy": "Claim remained at assigned d126 while coordinator committed disjoint common files. Observed integration HEAD is separate; no implicit claim rebase or build/check replay.",
+    "source_pin_hash_checks": [
+      {
+        "path": "packages/healthmd-core-ts/src/index.ts",
+        "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+        "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+        "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-ui/src/index.ts",
+        "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "packages/healthmd-ui/README.md",
+        "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/build.gradle.kts",
+        "sha256": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/src/main/AndroidManifest.xml",
+        "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/libs.versions.toml",
+        "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
+        "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradlew",
+        "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradlew.bat",
+        "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/gradle/wrapper/gradle-wrapper.jar",
+        "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      },
+      {
+        "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+        "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+        "historical_matches": true,
+        "assigned_claim_matches": true,
+        "current_matches": true
+      }
+    ],
+    "common_frozen_asset_input_checks": [
+      {
+        "path": "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js",
+        "frozen_bundle_input_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "current_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "match": true
+      },
+      {
+        "path": "packages/healthmd-ui/dist/model/index.js",
+        "frozen_bundle_input_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "current_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "match": true
+      }
+    ],
+    "private_bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+    "private_fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+    "common_cohort_scope": "Coordinator current318core tests/20emitted files includes separate unexported personal-codec module. That module is not adopted into this frozen private asset. These coordinator checks are separate evidence, not rerun or asserted as this task host qualification.",
+    "verification": "Read-only raw byte SHA256 and git-show historical/assigned-source hashing only; no build, target poll, installation, npm, Gradle, core or CLI command."
+  },
+  "review_scope": "Accepted exact source32patch ce88, seventh build/JVM/static dependency+own DEX/signature/manifest/bundle and both actual ten-case fresh-process reports, plus current core431/UI14 checks with frozen native selected bytes. Historical results preserved separately.",
+  "coordinator_verification": {
+    "actual": "Root independentlyhashedall32source/tool/lockfiles+13assignedsourceinputs/currentGit, all3nativeattemptlogs andactualfinalAPKraws; earlieractualaapt2/apksigner/ZIP/JVMchecks andindependentprebuildreview acknowledged. NarrowannotatedclassCLASSretention/strictparser/samplerlock/finiteharness/exactminSdkVersion correction reviewed.",
+    "remaining": "Independent final source32/artifact/runtime/receipt review and identical-frozen-input common component check attribution; two fresh runtime reports now actualpassed."
+  },
+  "runtime_resume": {
+    "claim_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+    "original_claim_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+    "original_scoped_source_patch_digest": "df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa",
+    "historical_partial_receipt_sha256": "9d40f2aa00e154236f6673ee847bc95c8346149eb07984010f1557d51ca3cab2",
+    "historical_partial_receipt_git_reference": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768:docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+    "historical_review_scope": "Independent source/locked graph/licensing/bounded private build/JVM/static artifact evidence accepted only. Partial runtime result preserved; requiredphysicaltargetunavailable beforeinstallation. No host_integration/physical/channel/runtime admission.",
+    "source_files_rehashed_unchanged": 32,
+    "preflight_required_target_available": true,
+    "required_target_runtime_sdk": 37,
+    "required_target_runtime_abis": [
+      "arm64-v8a"
+    ],
+    "candidate_compile_sdk": 36,
+    "candidate_target_sdk": 36,
+    "candidate_min_sdk": 28,
+    "note": "The harness artifacts field target_sdk is ro.build.version.sdk for the physical runtime, not the candidate manifest targetSdk. No claimbase rebase, source or build change.",
+    "installation": "passed; only exact private application and instrumentation IDs",
+    "installed_matches_built": true,
+    "runtime_result": "passed",
+    "failure": {
+      "result": "failed",
+      "runtime_check": "failed",
+      "code": "harness_assertion",
+      "action": "artifact_or_fixture_guard"
+    },
+    "first_fresh_process": "actual emitted10case report passed with teardown ACK",
+    "second_fresh_process": "actual emitted10case report passed with teardown ACK",
+    "health_or_production_grants": 0,
+    "private_app_cleanup": "Harness bounded failure handler force-stopped only the private candidate app; private APKs remain installed.",
+    "evidence_files": {
+      "apps/android/effect-host-candidate/dist/runtime/target-preflight.json": {
+        "sha256": "48abadafa40eb24710de544c35105247974a58f3f6154696f24d500c0acdff2c",
+        "bytes": 78
+      },
+      "apps/android/effect-host-candidate/dist/runtime/artifacts.json": {
+        "sha256": "4303f54c763081e9952003f00ee9e82f6c343c8b27b842df73acccec85c7add3",
+        "bytes": 648
+      },
+      "apps/android/effect-host-candidate/dist/runtime/failure.json": {
+        "sha256": "f339f3c4339fca7f50aac6689ddeefba88e4e5276f891ebfde4d3ea271694f35",
+        "bytes": 109
+      },
+      "apps/android/effect-host-candidate/dist/runtime/app-install.log": {
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      "apps/android/effect-host-candidate/dist/runtime/test-install.log": {
+        "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+        "bytes": 36
+      },
+      "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log": {
+        "sha256": "cc376fcd260b55a01f82c04af5e0a9ead88516f600131a38bdea1a3e05b10a8d",
+        "bytes": 74
+      }
+    },
+    "crash_diagnosis": {
+      "skill": "/Users/codybontecou/.agents/skills/diagnosing-bugs/SKILL.md",
+      "feedback_loop": "Actual existing target-only fresh-process harness already failed on the runtime path; no additional reproduction or minimization device action while root holds source/build/rerun.",
+      "diagnostics_scope": "Only required target: activity exit-info for the two private package IDs, then crash buffer filtered to known own process PID and its recorded crash-time boundary; no device enumeration/global log clearing/user state. Exact device selector omitted from receipt intentionally.",
+      "diagnostic_deadline_seconds": 30,
+      "diagnostic_output_limit_bytes": 2097152,
+      "exit_info": {
+        "app_output_bytes": 628,
+        "test_output_bytes": 143,
+        "reason": "APP CRASH(EXCEPTION)",
+        "status": 0,
+        "description": "crash"
+      },
+      "own_process_crash_buffer": {
+        "output_bytes": 1546,
+        "raw_sha256": "1b3c5c629d0609cad7fdf1dd2f8076a5a7d732b62eb269d6dd3bc598ef144c8f",
+        "fatal_thread": "main",
+        "exception": "java.lang.NoClassDefFoundError: Failed resolution of: Landroidx/tracing/Trace;",
+        "throwing_boundary": "androidx.test.runner.AndroidJUnitRunner.onCreate",
+        "cause": "java.lang.ClassNotFoundException: androidx.tracing.Trace",
+        "loaded_engine_evidence": "No engine/probe report; runner startup failed before any synthetic case evidence."
+      },
+      "static_artifact_correspondence": {
+        "main_apk_Trace_class_defined": false,
+        "main_apk_Trace_type_reference_present": false,
+        "test_apk_AndroidJUnitRunner_class_defined": true,
+        "test_apk_Trace_type_reference_present": true,
+        "test_apk_Trace_class_defined": false,
+        "main_R8_Trace_class_mapping_present": false,
+        "main_R8_inlined_Trace_method_references": 142,
+        "test_R8_Trace_class_mapping_present": false,
+        "exact_audited_dependency": "androidx.tracing:tracing:1.1.0",
+        "dependency_AAR_sha256": "5b78e2c618fc10b3d14decc01df76158f15954ad746aacf0607766721da081f6",
+        "same_dependency_in_app_JVM_test": true
+      },
+      "proposed_smallest_correction": {
+        "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
+        "rule": "-keep class androidx.tracing.Trace { *; }",
+        "reason": "Main Release optimizer inlined and removed this shared class; instrumentation startup still directly references its original class. Retain exact class/members without changing graph or globally disabling optimization.",
+        "status": "Exact rule implemented after coordinator expanded two-path claim; source frozen pending root prebuild review. No new native build or harness yet."
+      }
+    },
+    "trace_keep_prebuild": {
+      "status": "accepted_root_prebuild_only",
+      "allowed_new_write_paths": [
+        "apps/android/effect-host-candidate/app/proguard-rules.pro",
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+      ],
+      "claim_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+      "source_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+      "raw_scoped_diff_sha256": "99ca760588be887057b17079ffe6104f053f1b70390bf7ee55e49fe37fd37111",
+      "raw_scoped_diff_method": "SHA256 raw git diff --binary a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768 -- apps/android/effect-host-candidate/app/proguard-rules.pro",
+      "rule": "-keep class androidx.tracing.Trace { *; }",
+      "source_delta": "One explanatory comment and exact-class/member keep rule; no other31source/graph/fixture/bundle/certificate changes.",
+      "build": "passed fourth native attempt; exact Trace class_def now present in app",
+      "device_harness": "failed at next runner startup missing kotlin.LazyKt; no cases/second process unrun",
+      "history": {
+        "directory": "apps/android/effect-host-candidate/dist/audit/runtime-trace-failure-history",
+        "manifest_sha256": "089cf693bb14e6a8f11366a1592a13fae66f2a8f1f1a8c32e73a73f12e78d5bb",
+        "files": 11,
+        "total_bytes": 50477848,
+        "keys_or_cache_copies": false
+      },
+      "diagnosing_skill_phase_exceptions": "Existing actual native harness is the red-capable startup regression seam. Direct package-scoped fatal NoClassDefFoundError plus exact DEX class-def absence/R8 removal identify cause; speculative hypothesis ranking skipped. Repeat/minimization loops deferred by coordinator freeze. No shallow unit test, new harness, instrumentation or source library added.",
+      "review": {
+        "status": "accepted_prebuild_only",
+        "reviewer": "/root",
+        "source_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+        "raw_scoped_diff_sha256": "99ca760588be887057b17079ffe6104f053f1b70390bf7ee55e49fe37fd37111",
+        "current_cumulative_patch_digest": "e4e72f47fbc1d1f883651c0d6a93c1e488c32eb6534516551af1de3a3034b6b9",
+        "evidence": "ROOT inspected exact explanatorycomment+one-class/memberkeep diff and current32cumulativepatch; all31othercurrent/Gitfiles unchanged. Ownprocess fatalNoClassDef tracing/runner startup plusDEXclassdefinition absence/R8removedshareddependency pins provide cause. Previous failedAPKs/runtime11files preserved; original10fixture/JSbundle/graph/testcert unchanged. No build/runtime/OSqualification inferred."
+      }
+    },
+    "trace_keep_result": {
+      "source_proguard_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+      "build": {
+        "argv": [
+          "./gradlew",
+          "--no-daemon",
+          "--offline",
+          "--max-workers=2",
+          "--dependency-verification=strict",
+          ":app:assemblePlayRelease",
+          ":app:testPlayReleaseUnitTest",
+          ":app:assemblePlayReleaseAndroidTest"
+        ],
+        "environment": {
+          "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+          "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+          "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+        },
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited",
+        "exit_code": 0,
+        "elapsed_seconds": 40.562,
+        "output_bytes": 7465,
+        "log_sha256": "c43c4d0ad11dd50a692b04be32e13f2525ebba443caab2a50e8299d0bc2954f1",
+        "termination_scope": "only isolated spawned process group; no global Gradle/adb stop"
+      },
+      "artifacts": {
+        "artifacts": {
+          "app/build/outputs/apk/play/release/app-play-release.apk": {
+            "bytes": 49774527,
+            "sha256": "f2c3f300dc90501304ac26dd8de85eb9a346ae50d0da5334d657bcf37aba689b"
+          },
+          "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk": {
+            "bytes": 657485,
+            "sha256": "d7c76df17d09b8cf4df4e90f7f277d85b43fcb83ce02d7fbed26855aaf78afb4"
+          }
+        },
+        "jvm": {
+          "tests": "5",
+          "failures": "0",
+          "errors": "0",
+          "skipped": "0"
+        },
+        "jvm_xml_sha256": "dfeb222112a572573493bc36f0f0890c72b08fb83eb4647761cbfba405fedde7",
+        "dex": {
+          "app/build/outputs/apk/play/release/app-play-release.apk": {
+            "Trace_defined": true,
+            "Trace_reference": true,
+            "AndroidJUnitRunner_defined": false
+          },
+          "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk": {
+            "Trace_defined": false,
+            "Trace_reference": true,
+            "AndroidJUnitRunner_defined": true
+          }
+        },
+        "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+        "fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+        "abis": [
+          "arm64-v8a",
+          "armeabi-v7a",
+          "x86",
+          "x86_64"
+        ],
+        "graph_hashes": {
+          "package-lock.json": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499",
+          "app/gradle.lockfile": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438",
+          "gradle/verification-metadata.xml": "dd5ef3582d96feb39fe6654ec17fbaeb1093b4950592170dfd2cdf5e3575ae05",
+          "dist/audit/resolved-artifacts.tsv": "1550a2036427bdd45ae133af88d6a67f5fa6081aefc01bffab7f7bd5db903a83",
+          "scripts/run-release-probe.sh": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d"
+        }
+      },
+      "artifact_tool_checks": {
+        "path": "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-fourth.json",
+        "sha256": "9475fe111afbbe725a22059b6d9c21ab02b913e917d7f5d30b721a44f0c9cfa8"
+      },
+      "installed_matches_built": true,
+      "installed_artifact_evidence_sha256": "c01cb594c18a64fa0e64bf17193325d6521ca682c6b9e5d5d7b07ce486b52bb8",
+      "Trace_original_failure": "resolved: exact class_def in packaged app and runner reached registerTestStorage",
+      "actual_new_failure": "kotlin.LazyKt class missing at runner startup; no synthetic case report",
+      "shared_linkage_audit": {
+        "path": "apps/android/effect-host-candidate/dist/audit/shared-test-linkage-fourth.json",
+        "sha256": "5ac18b8fc39f2c51fd596c9d35010090c2a189d2289e5f647db073e2218149a3",
+        "original_main_class_count": 7686,
+        "actual_test_referenced_shared_types": 43,
+        "unresolved_original_shared_class_defs": 39,
+        "method": "Exact audited main-runtime AAR/JAR class headers intersect actual test DEX type_ids; subtract actual main/test DEX class_defs. Static evidence does not assert every unmatched annotation/reference is runtime-executed.",
+        "next_correction": "Source-only finite shared ABI/member/inherited closure review proposed; no new rules/dependencies/source changes/build/rerun after this failure."
+      }
+    },
+    "finite_shared_ABI_proposal": {
+      "status": "finite policy/source/build/static guards accepted or passed as attributed; actual runtime failed completion wait; no further source changes or device reruns",
+      "normalized_audit": "apps/android/effect-host-candidate/dist/audit/shared-test-abi-closure-complete-inventory-fourth.json",
+      "normalized_audit_sha256": "f8d02e453ea7cb619ac9e43f45cba5c0e334d956ecbbc5dbdefee382e924ec7e",
+      "summary": {
+        "original_classes": 7735,
+        "normalized_shared_type_roots": 66,
+        "root_classification": {
+          "renamed": 23,
+          "removed": 39,
+          "original_defined": 4
+        },
+        "actual_method_refs": 60,
+        "unavailable_method_refs": 46,
+        "actual_field_refs": 17,
+        "unavailable_field_refs": 8,
+        "original_member_unresolved": 0,
+        "finite_keep_classes": 112
+      },
+      "method": "Original cache AAR/JAR hashes matched audited rows; JVM class headers parsed. Actual test DEX type/method/field identities normalized through main R8 class/member aliases; inherited original members resolved with exact descriptors. Original facade/superclass/interface and invoked descriptor type closure has per-addition provenance/reason.",
+      "rule_policy": "112literal class/member rules total including existing Trace;111additional exact classes. No package wildcard, new dependency, duplicate library, global minify-off or blanket warning suppression.",
+      "metadata_scope": "RUNTIME annotation metadata conservatively retained without execution claim. CLASS-only ReplaceWith root is classified separately, not automatically a runtime dependency. Exact already-reviewed javax.lang.model.element.Modifier compiler-only warning rule unchanged.",
+      "superseded_preliminary_audit": "shared-test-abi-closure-fourth.json was preliminary without full descriptor/member alias normalization; not an admission artifact.",
+      "fourth_failed_artifact_history": {
+        "directory": "apps/android/effect-host-candidate/dist/audit/runtime-lazy-failure-history",
+        "manifest_sha256": "2560639f0a4c8c44ff4578ec469ff03c541240edff2816b0904d3c8e65cca0d0",
+        "files": 11,
+        "total_bytes": 50493164,
+        "keys_or_cache_copies": false
+      },
+      "superseded_top_level_only_audit": {
+        "path": "apps/android/effect-host-candidate/dist/audit/shared-test-abi-closure-normalized-fourth.json",
+        "sha256": "313c89d209d746fa9646b0d545c4393a245038f7558ae2524fb69bcc11cb16c0",
+        "original_classes": 7686,
+        "reason": "Omitted 49 exact embedded emoji2 classes from inventory; complete audit adds them and proves no original/alias test reference intersection."
+      },
+      "independent_review": {
+        "reviewers": [
+          "/root/personal_codecs",
+          "/root"
+        ],
+        "status": "accepted_policy_before_source_mutation",
+        "scope": "Exact artifact hashes, 7735 complete original classes including all49 embedded headers/provenance, original+alias test-reference intersection,66roots/77members,112literalclassclosure. Policy acceptance is not build/runtime qualification."
+      },
+      "complete_inventory_reconciliation": {
+        "embedded_class_headers": 49,
+        "embedded_jar_sha256": "de10d78b35a33c1ade2607b63c29b3b70a856cad821b5bc711a9018eed9a43ab",
+        "test_type_ids": 1305,
+        "original_intersection": [],
+        "mapped_aliases": 3,
+        "alias_intersection": []
+      },
+      "source_freeze": {
+        "proguard_sha256": "ca61dfb1f62290d0bd699021f91e4055131e5e94977104e1b349deecec2fd77e",
+        "raw_scoped_diff_sha256": "6842195229291997522a0ece240c18f21eba53dcab4b59915a22cdc9b108f7a8",
+        "raw_scoped_diff_bytes": 7067,
+        "raw_scoped_diff_method": "SHA256 raw git diff --binary a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768 -- apps/android/effect-host-candidate/app/proguard-rules.pro",
+        "prior_cumulative32_patch_digest": "e4e72f47fbc1d1f883651c0d6a93c1e488c32eb6534516551af1de3a3034b6b9",
+        "cumulative32_patch_digest": "4c4bb80e4caffb19934451b1a1380b303dccdd8fc4a80680a46fb4f51a5ec17f",
+        "exact_additional_rules": 111,
+        "Trace_occurrences": 1,
+        "other31_source_files_unchanged": true,
+        "next_build": "unrun; awaiting ROOT source prebuild verification",
+        "next_device_harness": "unrun; existing regression seam only after build/artifact admission",
+        "prebuild_review": {
+          "status": "accepted_ROOT_before_build",
+          "proguard_sha256": "ca61dfb1f62290d0bd699021f91e4055131e5e94977104e1b349deecec2fd77e",
+          "scoped_diff_sha256": "6842195229291997522a0ece240c18f21eba53dcab4b59915a22cdc9b108f7a8",
+          "cumulative32_patch_digest": "4c4bb80e4caffb19934451b1a1380b303dccdd8fc4a80680a46fb4f51a5ec17f"
+        }
+      }
+    },
+    "finite_ABI_result": {
+      "result": "partial",
+      "build": {
+        "argv": [
+          "./gradlew",
+          "--no-daemon",
+          "--offline",
+          "--max-workers=2",
+          "--dependency-verification=strict",
+          ":app:assemblePlayRelease",
+          ":app:testPlayReleaseUnitTest",
+          ":app:assemblePlayReleaseAndroidTest"
+        ],
+        "environment": {
+          "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+          "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+          "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+        },
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited",
+        "exit_code": 0,
+        "elapsed_seconds": 23.337,
+        "output_bytes": 7465,
+        "log_sha256": "779981ac6ccb9446ce6351789ad962a65ea83cc44c22397b0c57cbd206f7e5de",
+        "termination_scope": "only isolated spawned process group; no global Gradle/adb stop"
+      },
+      "blocked_sandbox_attempt": {
+        "argv": [
+          "./gradlew",
+          "--no-daemon",
+          "--offline",
+          "--max-workers=2",
+          "--dependency-verification=strict",
+          ":app:assemblePlayRelease",
+          ":app:testPlayReleaseUnitTest",
+          ":app:assemblePlayReleaseAndroidTest"
+        ],
+        "environment": {
+          "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+          "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+          "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+        },
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited",
+        "exit_code": 1,
+        "elapsed_seconds": 0.216,
+        "output_bytes": 611,
+        "log_sha256": "14a6d0f1195a952e2859235bb3e037299483ae9c4a2064076c3a3067ae68607c",
+        "termination_scope": "only isolated spawned process group; no global Gradle/adb stop"
+      },
+      "artifact_audit": {
+        "path": "apps/android/effect-host-candidate/dist/audit/built-artifacts-fifth.json",
+        "sha256": "c276ea2d3d9cb817ef96ce77c99b7d2575c216faa6c48c366a69a68033f8667d",
+        "all112_literal_class_defs_present": true,
+        "all60_actual_shared_method_and17_field_references_resolved": true,
+        "all77_prior_original_signature_checks_available": true
+      },
+      "static_guards": "six bounded actual signature/badging/permission checks passed; same private IDs/local certificate/min28target36/nondebuggable/Internet0health0; bundle and locked graph hashes unchanged",
+      "invocation_environment_failure": {
+        "failure_sha256": "8dedadd75e059a26c16fd23b184793ff894c85771f00f8ba2f63eb5139e0062d",
+        "failure": {
+          "result": "failed",
+          "runtime_check": "unrun",
+          "code": "harness_assertion",
+          "action": "artifact_or_fixture_guard"
+        },
+        "actual_global_node": "v26.8.1",
+        "diagnosis": "Invocation lacked pinned Node PATH; unchanged harness rejects process.version before target_preflight. No target/install/runtime command executed. Retry uses previously approved pinned Node24.21.0/JDK17 environment, no source correction."
+      },
+      "actual_harness_argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "actual_harness_environment": {
+        "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      },
+      "runtime": "failed first process test after30.032 seconds awaiting ProbeRuntime.completed; no case result report; second fresh process unrun",
+      "runtime_log_sha256": "30b940081d7406cc5b3dc25aa05cead7ff1cf8492721b6174f6d105632f57840",
+      "runtime_log_bytes": 2742,
+      "installed_matches_built": true,
+      "cases_reported": 0,
+      "actual_cleanup": "Harness failure handler force-stopped only private candidate; exact-package exit-info confirms instrumentation-finished force-stop, not app crash. APKs remain installed.",
+      "history": {
+        "directory": "apps/android/effect-host-candidate/dist/audit/runtime-completion-failure-history",
+        "manifest_sha256": "eba7a0683986feee69a5bb2f83c47104620832aff304ceb09c88a7a5d4d92226",
+        "files": 10,
+        "bytes": 51026938,
+        "keys_or_cache_copies": false
+      },
+      "diagnosis": {
+        "scope": "Exact required target package exit-info then actual historical own PID-only logcat -d -t1000; per command30seconds/2MiB; no enumeration/global logs/clear/other apps.",
+        "actual_startup": "ReactHost creates ReactInstance, native Hermes libraries load, JS bundle loading and ReactInstance event listeners are recorded. No JS fatal or native report.",
+        "noncause": "libappmodules.so warning is caught as optional by exact RN DefaultSoLoader.kt; actual initialization continued.",
+        "source_mismatch": "HostProbeApplication starts but never resumes the host and registers no active HeadlessJsTask. Exact RN JavaTimerManager starts paused and with no running task; TimerFrameCallback returns in that state. ReactHostImpl first initialization resumes context only if host is already RESUMED. Probe uses JS timers/Effect scheduling.",
+        "proposed_correction": "Candidate-only HostProbeApplication.onCreate: call reactHost.onHostResume(null) on main thread before reactHost.start(), with concise explicit private host lifecycle/no Activity or surface comment. Exact nullable UI-thread API supported. No source mutation; needs claim amendment and independent review.",
+        "certainty": "Paused timer source mismatch is concrete; actual precise JS await stage is not exposed by current failure seam, so no claim that every engine/probe case executed.",
+        "exact_RN_source_evidence": [
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/runtime/ReactInstance.kt",
+            "sha256": "48b3a97bb1c41568d4eb953fcd18a03b3ac06f2fc64468ee9611d4fe8a122bbb"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/runtime/ReactHostImpl.kt",
+            "sha256": "d431fdf7b819ca10f801d09e00e131d3ea40a443f282ee14d4105d75e8ada417"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/runtime/ReactLifecycleStateManager.kt",
+            "sha256": "c6dc9146f613532db9b58d40e1b39598017abab9aad792292822945560d5c31d"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/modules/core/JavaTimerManager.kt",
+            "sha256": "2ece31995da4fc2b37f117ccd7713a85a14aefb750f2255a1542315828a3fc25"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/jstasks/HeadlessJsTaskContext.kt",
+            "sha256": "79c47ea668cd250b4d504b11939ede85f1eba1e7ad4b5bcc51161a2a6161e654"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/ReactAndroid/src/main/java/com/facebook/react/jstasks/HeadlessJsTaskConfig.kt",
+            "sha256": "cbead7ee76264ecdcd326cf2d24d7c4d5c911d94f5a8bfaf71d83c9d72e6c1cb"
+          },
+          {
+            "path": "apps/android/effect-host-candidate/node_modules/react-native/Libraries/ReactNative/AppRegistryImpl.js",
+            "sha256": "9f58cfbd0c060422203c10080ed1b520b333a02207125fc5d9b7b315429942a4"
+          }
+        ],
+        "lifecycle_comparison": {
+          "active_null_activity_host": {
+            "api": "ReactHostImpl.onHostResume(Activity?) UI-thread API",
+            "owner": "Private application onCreate on UI thread; null Activity, no surface or Activity launch",
+            "timer_activation": "Manager RESUMED before first context init; actual JavaTimerManager gets onHostResume and posts Choreographer timer callbacks",
+            "paired_teardown": "Existing awaited ReactHost.destroy runs lifecycle moveToOnHostDestroy on UI executor; RESUMED branch pauses then destroys; timer callbacks cleared and JavaTimerManager.onInstanceDestroy unregisters listeners. Existing test requires successful destroy acknowledgment within5seconds.",
+            "affected_source_paths": [
+              "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+              "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+            ],
+            "qualification_limits": "Only explicit private no-surface active engine/resource host. No background scheduling, OS wake, actual Activity lifecycle or HeadlessJsTask execution proof."
+          },
+          "actual_owned_HeadlessJsTask": {
+            "api": "HeadlessJsTaskContext.startTask(HeadlessJsTaskConfig) on UI thread with active ReactContext",
+            "requirements": "Real JS AppRegistry.registerHeadlessTask/task provider, native startTask invoking JS, owned task ID/positive timeout, task-finished notification; no fabricated task listener events",
+            "cleanup_limit": "finishTask removes native active-task bookkeeping/timeout and notifies timer listener, but does not stop JS work; cancellation/finalizer ownership must remain explicit",
+            "scope_cost": "Requires native startup/context listener + JS registration/return/finish changes and regenerated frozen bundle; larger than active-host lifecycle correction",
+            "qualification_limits": "Even this only proves an owned task in private process, not OS background/wake service scheduling."
+          }
+        }
+      },
+      "evidence_files": {
+        "apps/android/effect-host-candidate/dist/audit/native-build-fifth.log": {
+          "sha256": "14a6d0f1195a952e2859235bb3e037299483ae9c4a2064076c3a3067ae68607c",
+          "bytes": 611
+        },
+        "apps/android/effect-host-candidate/dist/audit/native-build-fifth-supervision.json": {
+          "sha256": "82897bb6fb52a2b77ceb8d1e70195095221fcbec95eaa071fdc35312ea74b235",
+          "bytes": 816
+        },
+        "apps/android/effect-host-candidate/dist/audit/native-build-fifth-executed.log": {
+          "sha256": "779981ac6ccb9446ce6351789ad962a65ea83cc44c22397b0c57cbd206f7e5de",
+          "bytes": 7465
+        },
+        "apps/android/effect-host-candidate/dist/audit/native-build-fifth-executed-supervision.json": {
+          "sha256": "2cbf4901e572a4b6b90cfe84be68d8d0d6dc6aa52599a76bd81a688f49fe9425",
+          "bytes": 818
+        },
+        "apps/android/effect-host-candidate/dist/audit/built-artifacts-fifth.json": {
+          "sha256": "c276ea2d3d9cb817ef96ce77c99b7d2575c216faa6c48c366a69a68033f8667d",
+          "bytes": 39910
+        },
+        "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-fifth.json": {
+          "sha256": "bce47cf1256e84e0da533810aa8b7eeede619a88475714da2a78b6bdb8e0dc1c",
+          "bytes": 2937
+        },
+        "apps/android/effect-host-candidate/dist/audit/fifth-harness-node-guard-failure.json": {
+          "sha256": "c0e471845f4b612617f05f6cc298a0421099aaf12f6cfa37c8997694c82e0fa3",
+          "bytes": 531
+        },
+        "apps/android/effect-host-candidate/dist/audit/fifth-own-app-exit-info.txt": {
+          "sha256": "6733c31295557143971e5ef8a3df0468dba976be85126e4696863696d206b61d",
+          "bytes": 1465
+        },
+        "apps/android/effect-host-candidate/dist/audit/fifth-own-process-log.txt": {
+          "sha256": "d0a8e531f77520ede9d136d1f4566c252b1ae9a97913257fdd2c4dae863b46c4",
+          "bytes": 34270
+        },
+        "apps/android/effect-host-candidate/dist/audit/runtime-completion-failure-history/manifest.json": {
+          "sha256": "eba7a0683986feee69a5bb2f83c47104620832aff304ceb09c88a7a5d4d92226",
+          "bytes": 1987
+        }
+      }
+    },
+    "evidence_files_history_note": "Earlier top-level evidence_files are first Trace attempt references, preserved in runtime-trace-failure-history; subsequent attempt evidence is in trace_keep_result and finite_ABI_result. They are not current files.",
+    "active_host_lifecycle_prebuild": {
+      "status": "accepted ROOT prebuild; sixth native build and static guards passed; actual runtime failed at own Application getter before teardown acknowledgment",
+      "claim_amended_before_mutation": true,
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+      "application_sha256": "1c33d3a991e39a93cf980887d35fc91d3921db2399ab99fcb4f46a6e90ab9547",
+      "scoped_diff_sha256": "e965de56816e3dc1e7f2189578724719e4eeb542e34ac85aa18a7791a78fffda",
+      "scoped_diff_bytes": 900,
+      "scoped_diff_method": "SHA256 raw git diff --binary a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768 -- apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+      "prior_cumulative32_patch_digest": "4c4bb80e4caffb19934451b1a1380b303dccdd8fc4a80680a46fb4f51a5ec17f",
+      "cumulative32_patch_digest": "967318817d0a8160478da46b645017c3d375b0fd7b6484cb988f3ae3a71d58cf",
+      "change": "Exactly one concise private qualification comment and main-thread reactHost.onHostResume(null) before start(); other31source files unchanged.",
+      "ownership": "Explicit private active ReactHost, null Activity/no surface. Exact RN timer lifecycle enabled; existing acknowledged destroy pauses/destroys and removes timers/listeners.",
+      "qualification_limits": "No OS background/wake, actual Activity lifecycle or HeadlessJsTask execution proof. Existing ten-case fixture and original runtime regression seam unchanged; actual runtime results still partial/failed.",
+      "prebuild_review": {
+        "status": "accepted_ROOT_before_build",
+        "application_sha256": "1c33d3a991e39a93cf980887d35fc91d3921db2399ab99fcb4f46a6e90ab9547",
+        "scoped_diff_sha256": "e965de56816e3dc1e7f2189578724719e4eeb542e34ac85aa18a7791a78fffda",
+        "cumulative32_patch_digest": "967318817d0a8160478da46b645017c3d375b0fd7b6484cb988f3ae3a71d58cf"
+      }
+    },
+    "active_host_lifecycle_result": {
+      "result": "partial",
+      "build": {
+        "argv": [
+          "./gradlew",
+          "--no-daemon",
+          "--offline",
+          "--max-workers=2",
+          "--dependency-verification=strict",
+          ":app:assemblePlayRelease",
+          ":app:testPlayReleaseUnitTest",
+          ":app:assemblePlayReleaseAndroidTest"
+        ],
+        "environment": {
+          "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+          "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+          "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+        },
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited",
+        "exit_code": 0,
+        "elapsed_seconds": 24.297,
+        "output_bytes": 8373,
+        "log_sha256": "57815c20a91d263ec9380e13ef43b43182b59267f68f83ab6195762db458c631",
+        "termination_scope": "only isolated spawned process group; no global Gradle/adb stop",
+        "pinned_node_path": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "artifacts": {
+        "artifacts": {
+          "app": {
+            "path": "app/build/outputs/apk/play/release/app-play-release.apk",
+            "bytes": 50365382,
+            "sha256": "cb3b98d862a00cb01d3993051c7ffa57ca56b886359879fa3be638bae9810fa0"
+          },
+          "test": {
+            "path": "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk",
+            "bytes": 657193,
+            "sha256": "03dced98a824b2a4d839474414b0b6a32da675a259483658cd39833e477d4d42"
+          }
+        },
+        "literal_class_defs_present": 112,
+        "missing_classes": [],
+        "actual_shared_reference_checks": {
+          "fields": [
+            {
+              "owner": "Landroidx/concurrent/futures/DirectExecutor;",
+              "name": "INSTANCE",
+              "descriptor": "Landroidx/concurrent/futures/DirectExecutor;",
+              "declaring_owner": "Landroidx/concurrent/futures/DirectExecutor;"
+            },
+            {
+              "owner": "Landroidx/lifecycle/Lifecycle$State;",
+              "name": "CREATED",
+              "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+              "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+            },
+            {
+              "owner": "Landroidx/lifecycle/Lifecycle$State;",
+              "name": "DESTROYED",
+              "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+              "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+            },
+            {
+              "owner": "Landroidx/lifecycle/Lifecycle$State;",
+              "name": "RESUMED",
+              "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+              "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+            },
+            {
+              "owner": "Landroidx/lifecycle/Lifecycle$State;",
+              "name": "STARTED",
+              "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+              "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+            },
+            {
+              "owner": "Lkotlin/Result;",
+              "name": "Companion",
+              "descriptor": "Lkotlin/Result$Companion;",
+              "declaring_owner": "Lkotlin/Result;"
+            },
+            {
+              "owner": "Lkotlin/Unit;",
+              "name": "INSTANCE",
+              "descriptor": "Lkotlin/Unit;",
+              "declaring_owner": "Lkotlin/Unit;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/EmptyCoroutineContext;",
+              "name": "INSTANCE",
+              "descriptor": "Lkotlin/coroutines/EmptyCoroutineContext;",
+              "declaring_owner": "Lkotlin/coroutines/EmptyCoroutineContext;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;",
+              "name": "receiver",
+              "descriptor": "Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/jvm/internal/CallableReference;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Ref$BooleanRef;",
+              "name": "element",
+              "descriptor": "Z",
+              "declaring_owner": "Lkotlin/jvm/internal/Ref$BooleanRef;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Ref$ObjectRef;",
+              "name": "element",
+              "descriptor": "Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/jvm/internal/Ref$ObjectRef;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/StringCompanionObject;",
+              "name": "INSTANCE",
+              "descriptor": "Lkotlin/jvm/internal/StringCompanionObject;",
+              "declaring_owner": "Lkotlin/jvm/internal/StringCompanionObject;"
+            },
+            {
+              "owner": "Lkotlin/text/Charsets;",
+              "name": "UTF_8",
+              "descriptor": "Ljava/nio/charset/Charset;",
+              "declaring_owner": "Lkotlin/text/Charsets;"
+            },
+            {
+              "owner": "Lkotlin/time/Duration;",
+              "name": "Companion",
+              "descriptor": "Lkotlin/time/Duration$Companion;",
+              "declaring_owner": "Lkotlin/time/Duration;"
+            },
+            {
+              "owner": "Lkotlin/time/DurationUnit;",
+              "name": "SECONDS",
+              "descriptor": "Lkotlin/time/DurationUnit;",
+              "declaring_owner": "Lkotlin/time/DurationUnit;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CoroutineStart;",
+              "name": "DEFAULT",
+              "descriptor": "Lkotlinx/coroutines/CoroutineStart;",
+              "declaring_owner": "Lkotlinx/coroutines/CoroutineStart;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CoroutineStart;",
+              "name": "UNDISPATCHED",
+              "descriptor": "Lkotlinx/coroutines/CoroutineStart;",
+              "declaring_owner": "Lkotlinx/coroutines/CoroutineStart;"
+            }
+          ],
+          "methods": [
+            {
+              "owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;",
+              "name": "getUninterruptibly",
+              "descriptor": "(Ljava/util/concurrent/Future;)Ljava/lang/Object;",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;",
+              "name": "set",
+              "descriptor": "(Ljava/lang/Object;)Z",
+              "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;",
+              "name": "setException",
+              "descriptor": "(Ljava/lang/Throwable;)Z",
+              "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter;",
+              "name": "getFuture",
+              "descriptor": "(Landroidx/concurrent/futures/CallbackToFutureAdapter$Resolver;)Lcom/google/common/util/concurrent/ListenableFuture;",
+              "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "addListener",
+              "descriptor": "(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)V",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "cancel",
+              "descriptor": "(Z)Z",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "create",
+              "descriptor": "()Landroidx/concurrent/futures/ResolvableFuture;",
+              "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "get",
+              "descriptor": "()Ljava/lang/Object;",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "get",
+              "descriptor": "(JLjava/util/concurrent/TimeUnit;)Ljava/lang/Object;",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "isCancelled",
+              "descriptor": "()Z",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "isDone",
+              "descriptor": "()Z",
+              "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "set",
+              "descriptor": "(Ljava/lang/Object;)Z",
+              "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+              "name": "setException",
+              "descriptor": "(Ljava/lang/Throwable;)Z",
+              "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+            },
+            {
+              "owner": "Landroidx/lifecycle/Lifecycle$State;",
+              "name": "values",
+              "descriptor": "()[Landroidx/lifecycle/Lifecycle$State;",
+              "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+            },
+            {
+              "owner": "Landroidx/tracing/Trace;",
+              "name": "beginSection",
+              "descriptor": "(Ljava/lang/String;)V",
+              "declaring_owner": "Landroidx/tracing/Trace;"
+            },
+            {
+              "owner": "Landroidx/tracing/Trace;",
+              "name": "endSection",
+              "descriptor": "()V",
+              "declaring_owner": "Landroidx/tracing/Trace;"
+            },
+            {
+              "owner": "Landroidx/tracing/Trace;",
+              "name": "forceEnableAppTracing",
+              "descriptor": "()V",
+              "declaring_owner": "Landroidx/tracing/Trace;"
+            },
+            {
+              "owner": "Lcom/facebook/react/ReactHost;",
+              "name": "destroy",
+              "descriptor": "(Ljava/lang/String;Ljava/lang/Exception;Lkotlin/jvm/functions/Function1;)Lcom/facebook/react/interfaces/TaskInterface;",
+              "declaring_owner": "Lcom/facebook/react/ReactHost;"
+            },
+            {
+              "owner": "Lcom/facebook/react/ReactHost;",
+              "name": "invalidate",
+              "descriptor": "()V",
+              "declaring_owner": "Lcom/facebook/react/ReactHost;"
+            },
+            {
+              "owner": "Lcom/google/common/util/concurrent/ListenableFuture;",
+              "name": "addListener",
+              "descriptor": "(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)V",
+              "declaring_owner": "Lcom/google/common/util/concurrent/ListenableFuture;"
+            },
+            {
+              "owner": "Lkotlin/Lazy;",
+              "name": "getValue",
+              "descriptor": "()Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/Lazy;"
+            },
+            {
+              "owner": "Lkotlin/LazyKt;",
+              "name": "lazy",
+              "descriptor": "(Lkotlin/jvm/functions/Function0;)Lkotlin/Lazy;",
+              "declaring_owner": "Lkotlin/LazyKt__LazyJVMKt;"
+            },
+            {
+              "owner": "Lkotlin/Result;",
+              "name": "constructor-impl",
+              "descriptor": "(Ljava/lang/Object;)Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/Result;"
+            },
+            {
+              "owner": "Lkotlin/Result;",
+              "name": "exceptionOrNull-impl",
+              "descriptor": "(Ljava/lang/Object;)Ljava/lang/Throwable;",
+              "declaring_owner": "Lkotlin/Result;"
+            },
+            {
+              "owner": "Lkotlin/ResultKt;",
+              "name": "createFailure",
+              "descriptor": "(Ljava/lang/Throwable;)Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/ResultKt;"
+            },
+            {
+              "owner": "Lkotlin/ResultKt;",
+              "name": "throwOnFailure",
+              "descriptor": "(Ljava/lang/Object;)V",
+              "declaring_owner": "Lkotlin/ResultKt;"
+            },
+            {
+              "owner": "Lkotlin/collections/CollectionsKt;",
+              "name": "collectionSizeOrDefault",
+              "descriptor": "(Ljava/lang/Iterable;I)I",
+              "declaring_owner": "Lkotlin/collections/CollectionsKt__IterablesKt;"
+            },
+            {
+              "owner": "Lkotlin/collections/IntIterator;",
+              "name": "nextInt",
+              "descriptor": "()I",
+              "declaring_owner": "Lkotlin/collections/IntIterator;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/Continuation;",
+              "name": "resumeWith",
+              "descriptor": "(Ljava/lang/Object;)V",
+              "declaring_owner": "Lkotlin/coroutines/Continuation;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/ContinuationKt;",
+              "name": "createCoroutine",
+              "descriptor": "(Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;",
+              "declaring_owner": "Lkotlin/coroutines/ContinuationKt;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt;",
+              "name": "getCOROUTINE_SUSPENDED",
+              "descriptor": "()Ljava/lang/Object;",
+              "declaring_owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsKt;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt;",
+              "name": "intercepted",
+              "descriptor": "(Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;",
+              "declaring_owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsJvmKt;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/jvm/internal/ContinuationImpl;",
+              "name": "<init>",
+              "descriptor": "(Lkotlin/coroutines/Continuation;)V",
+              "declaring_owner": "Lkotlin/coroutines/jvm/internal/ContinuationImpl;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/jvm/internal/DebugProbesKt;",
+              "name": "probeCoroutineSuspended",
+              "descriptor": "(Lkotlin/coroutines/Continuation;)V",
+              "declaring_owner": "Lkotlin/coroutines/jvm/internal/DebugProbesKt;"
+            },
+            {
+              "owner": "Lkotlin/coroutines/jvm/internal/SuspendLambda;",
+              "name": "<init>",
+              "descriptor": "(ILkotlin/coroutines/Continuation;)V",
+              "declaring_owner": "Lkotlin/coroutines/jvm/internal/SuspendLambda;"
+            },
+            {
+              "owner": "Lkotlin/io/CloseableKt;",
+              "name": "closeFinally",
+              "descriptor": "(Ljava/io/Closeable;Ljava/lang/Throwable;)V",
+              "declaring_owner": "Lkotlin/io/CloseableKt;"
+            },
+            {
+              "owner": "Lkotlin/io/TextStreamsKt;",
+              "name": "readText",
+              "descriptor": "(Ljava/io/Reader;)Ljava/lang/String;",
+              "declaring_owner": "Lkotlin/io/TextStreamsKt;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;",
+              "name": "<init>",
+              "descriptor": "(ILjava/lang/Object;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;I)V",
+              "declaring_owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Intrinsics;",
+              "name": "areEqual",
+              "descriptor": "(Ljava/lang/Object;Ljava/lang/Object;)Z",
+              "declaring_owner": "Lkotlin/jvm/internal/Intrinsics;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Lambda;",
+              "name": "<init>",
+              "descriptor": "(I)V",
+              "declaring_owner": "Lkotlin/jvm/internal/Lambda;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Ref$BooleanRef;",
+              "name": "<init>",
+              "descriptor": "()V",
+              "declaring_owner": "Lkotlin/jvm/internal/Ref$BooleanRef;"
+            },
+            {
+              "owner": "Lkotlin/jvm/internal/Ref$ObjectRef;",
+              "name": "<init>",
+              "descriptor": "()V",
+              "declaring_owner": "Lkotlin/jvm/internal/Ref$ObjectRef;"
+            },
+            {
+              "owner": "Lkotlin/ranges/RangesKt;",
+              "name": "until",
+              "descriptor": "(II)Lkotlin/ranges/IntRange;",
+              "declaring_owner": "Lkotlin/ranges/RangesKt___RangesKt;"
+            },
+            {
+              "owner": "Lkotlin/text/StringsKt;",
+              "name": "startsWith$default",
+              "descriptor": "(Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Z",
+              "declaring_owner": "Lkotlin/text/StringsKt__StringsJVMKt;"
+            },
+            {
+              "owner": "Lkotlin/time/DurationKt;",
+              "name": "toDuration",
+              "descriptor": "(ILkotlin/time/DurationUnit;)J",
+              "declaring_owner": "Lkotlin/time/DurationKt;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/BuildersKt;",
+              "name": "async",
+              "descriptor": "(Lkotlinx/coroutines/CoroutineScope;Lkotlin/coroutines/CoroutineContext;Lkotlinx/coroutines/CoroutineStart;Lkotlin/jvm/functions/Function2;)Lkotlinx/coroutines/Deferred;",
+              "declaring_owner": "Lkotlinx/coroutines/BuildersKt;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/BuildersKt;",
+              "name": "runBlocking",
+              "descriptor": "(Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)Ljava/lang/Object;",
+              "declaring_owner": "Lkotlinx/coroutines/BuildersKt;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuation$DefaultImpls;",
+              "name": "cancel$default",
+              "descriptor": "(Lkotlinx/coroutines/CancellableContinuation;Ljava/lang/Throwable;ILjava/lang/Object;)Z",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation$DefaultImpls;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+              "name": "invokeOnCancellation",
+              "descriptor": "(Lkotlin/jvm/functions/Function1;)V",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+              "name": "resume",
+              "descriptor": "(Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)V",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+              "name": "resumeWith",
+              "descriptor": "(Ljava/lang/Object;)V",
+              "declaring_owner": "Lkotlin/coroutines/Continuation;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+              "name": "<init>",
+              "descriptor": "(Lkotlin/coroutines/Continuation;I)V",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+              "name": "getResult",
+              "descriptor": "()Ljava/lang/Object;",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+              "name": "initCancellability",
+              "descriptor": "()V",
+              "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/Deferred;",
+              "name": "await",
+              "descriptor": "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+              "declaring_owner": "Lkotlinx/coroutines/Deferred;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/Dispatchers;",
+              "name": "getMain",
+              "descriptor": "()Lkotlinx/coroutines/MainCoroutineDispatcher;",
+              "declaring_owner": "Lkotlinx/coroutines/Dispatchers;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/Dispatchers;",
+              "name": "getUnconfined",
+              "descriptor": "()Lkotlinx/coroutines/CoroutineDispatcher;",
+              "declaring_owner": "Lkotlinx/coroutines/Dispatchers;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/ExecutorsKt;",
+              "name": "from",
+              "descriptor": "(Ljava/util/concurrent/Executor;)Lkotlinx/coroutines/CoroutineDispatcher;",
+              "declaring_owner": "Lkotlinx/coroutines/ExecutorsKt;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/Job$DefaultImpls;",
+              "name": "cancel$default",
+              "descriptor": "(Lkotlinx/coroutines/Job;Ljava/util/concurrent/CancellationException;ILjava/lang/Object;)V",
+              "declaring_owner": "Lkotlinx/coroutines/Job$DefaultImpls;"
+            },
+            {
+              "owner": "Lkotlinx/coroutines/TimeoutKt;",
+              "name": "withTimeout-KLykuaI",
+              "descriptor": "(JLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+              "declaring_owner": "Lkotlinx/coroutines/TimeoutKt;"
+            }
+          ]
+        },
+        "unresolved_actual_members": [],
+        "previous_original_member_checks_available": 77,
+        "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+        "main_mapping_sha256": "747bb1f6c15cd59abfa5d74214887c0400f71f561a8bcc6d9763ce367cb4ea4a",
+        "jvm": {
+          "name": "com.healthmd.effecthostcandidate.NativeProbeAdmissionTest",
+          "tests": "5",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-07T17:31:50.156Z",
+          "hostname": "Mac.lan",
+          "time": "0.027"
+        },
+        "jvm_xml_sha256": "3e2b3fa28e8029d5e2123d262352c2a9383b17ddcbb5f9c72f10cde7ba04fc77"
+      },
+      "static_guards": "Both actual signatures/local certificate, private IDs/min28target36/nondebuggable/Internet0health0; original graph/fixture/packaged bundle guards passed.112 dependency classdefs,60actualmethod/17field/77prior-original checks resolve.",
+      "harness_argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "harness_environment": {
+        "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+      },
+      "runtime_result": "failed first process actual JUnit test after6.11seconds; NoSuchMethodError HostProbeApplication.getReactHost at mappedline35; no final case report or teardown acknowledgment; secondprocess unrun.",
+      "inference_limit": "Exact test/R8 correspondence indicates prior completion/result/fixture assertions advanced to teardown; this is not a reported ten-case pass or successful engine teardown. No synthetic reconstruction of report.",
+      "installed_matches_built": true,
+      "private_cleanup": "Original bounded harness failure handler force-stopped only the private candidate; APKs remain installed.",
+      "history": {
+        "directory": "apps/android/effect-host-candidate/dist/audit/runtime-getter-failure-history",
+        "manifest_sha256": "69f2f05633b7fd4710b33f2163d72d3805ae5a363c3d77d97b10d961fee71450",
+        "files": 10,
+        "bytes": 51027026,
+        "keys_or_cache_copies": false
+      },
+      "diagnosis": {
+        "actual_artifact_hashes": {
+          "app": "cb3b98d862a00cb01d3993051c7ffa57ca56b886359879fa3be638bae9810fa0",
+          "test": "03dced98a824b2a4d839474414b0b6a32da675a259483658cd39833e477d4d42"
+        },
+        "candidate_owned_test_reference_checks": [
+          {
+            "kind": "fields",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "INSTANCE",
+            "descriptor": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/HostProbeApplication;",
+            "name": "getReactHost",
+            "descriptor": "()Lcom/facebook/react/ReactHost;",
+            "declaring_owner": null
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getCompleted",
+            "descriptor": "()Ljava/util/concurrent/CountDownLatch;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getFirstAcquireNanos",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getResult",
+            "descriptor": "()Ljava/util/concurrent/atomic/AtomicReference;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getSampledPeakJavaHeapBytes",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getSampledPeakPssBytes",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getStartedNanos",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/test/R;",
+            "name": "<init>",
+            "descriptor": "()V",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/test/R;"
+          }
+        ],
+        "unresolved": [
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/HostProbeApplication;",
+            "name": "getReactHost",
+            "descriptor": "()Lcom/facebook/react/ReactHost;",
+            "declaring_owner": null
+          }
+        ],
+        "cause": "Exact main getter was inlined into onCreate and removed; separately minified test invokes original method at teardown. Dependency112class policy did not cover own Application method.",
+        "proposed_rule": "-keepclassmembers class com.healthmd.effecthostcandidate.HostProbeApplication { public com.facebook.react.ReactHost getReactHost(); }",
+        "rule_scope": "Literal own candidate getter only; Application class is already manifest-retained; ReactHost dependency already explicit finite ABI retained. No wildcard/dependency/minify-off."
+      },
+      "proposed_getter_rule_status": "pending ROOT source approval; no mutation/build/rerun",
+      "qualification_limits": "Explicit private active no-surface host only; no OS background/wake/Activity/HeadlessJsTask proof. Runtime/cleanup/channel qualification remains partial.",
+      "evidence_files": {
+        "apps/android/effect-host-candidate/dist/audit/native-build-sixth.log": {
+          "bytes": 8373,
+          "sha256": "57815c20a91d263ec9380e13ef43b43182b59267f68f83ab6195762db458c631"
+        },
+        "apps/android/effect-host-candidate/dist/audit/native-build-sixth-supervision.json": {
+          "bytes": 910,
+          "sha256": "3ee1ee77c70897eb172afadd6200484b407b4dd1e2a8804158d1f3f0af0c1c49"
+        },
+        "apps/android/effect-host-candidate/dist/audit/built-artifacts-sixth.json": {
+          "bytes": 19310,
+          "sha256": "ee6a206ef7f19f0bad4068806e9d04c339a21286b08998b9bca43dbaa31380b3"
+        },
+        "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-sixth.json": {
+          "bytes": 2937,
+          "sha256": "bce47cf1256e84e0da533810aa8b7eeede619a88475714da2a78b6bdb8e0dc1c"
+        },
+        "apps/android/effect-host-candidate/dist/audit/own-candidate-abi-sixth.json": {
+          "bytes": 3294,
+          "sha256": "f4770600935e0e0aa0ab3ba2c768e450b9c1a15616bde2c7f0b8fcca1805fef2"
+        },
+        "apps/android/effect-host-candidate/dist/audit/runtime-getter-failure-history/manifest.json": {
+          "bytes": 1987,
+          "sha256": "69f2f05633b7fd4710b33f2163d72d3805ae5a363c3d77d97b10d961fee71450"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log": {
+          "bytes": 2830,
+          "sha256": "a08765862a441fba5a276820f29f3d8635c2e5dd13a5936d975c46d7ff412fc1"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/artifacts.json": {
+          "bytes": 648,
+          "sha256": "5167e9040c2f3a5e10b32c006ccdeb84477ec98324a1422878a4c8280a977466"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/failure.json": {
+          "bytes": 109,
+          "sha256": "f339f3c4339fca7f50aac6689ddeefba88e4e5276f891ebfde4d3ea271694f35"
+        }
+      }
+    },
+    "owned_getter_prebuild": {
+      "status": "accepted ROOT prebuild; seventh build and original two-process runtime passed, pending independent final review",
+      "claim_recorded_before_mutation": true,
+      "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
+      "proguard_sha256": "dd0df21dd79e1a2fed363807c49e12e07455b8ff3c09d35f23138d0888d68706",
+      "raw_scoped_diff_sha256": "f1202a90b1bf9512e0ae257059ea3f829dad724c1ca6af3c844675b9177cb232",
+      "raw_scoped_diff_bytes": 7294,
+      "raw_scoped_diff_method": "SHA256 raw git diff --binary a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768 -- apps/android/effect-host-candidate/app/proguard-rules.pro",
+      "prior_cumulative32_patch_digest": "967318817d0a8160478da46b645017c3d375b0fd7b6484cb988f3ae3a71d58cf",
+      "cumulative32_patch_digest": "ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5",
+      "change": "One exact keepclassmembers getter rule and concise rationale, preserving all112 literal dependency rules and original host keeps; active-host Application1c33 and all31 other source bytes unchanged.",
+      "rule": "-keepclassmembers class com.healthmd.effecthostcandidate.HostProbeApplication { public com.facebook.react.ReactHost getReactHost(); }",
+      "evidence_audit_sha256": "f4770600935e0e0aa0ab3ba2c768e450b9c1a15616bde2c7f0b8fcca1805fef2",
+      "qualification_limits": "No runtime pass inferred from sixth assertion progress; original reported10cases/twofreshprocesses/teardown acknowledgment still required. Explicit private active host only, no OS background/wake/Activity/HeadlessJsTask qualification.",
+      "prebuild_review": {
+        "reviewer": "/root",
+        "status": "accepted_before_build",
+        "proguard_sha256": "dd0df21dd79e1a2fed363807c49e12e07455b8ff3c09d35f23138d0888d68706",
+        "cumulative32_patch_digest": "ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5"
+      }
+    },
+    "failure_history_note": "Earlier failure field/evidence remain historical; current result is owned_getter_result and current_runtime_result.",
+    "owned_getter_result": {
+      "result": "passed",
+      "proof_class": "host_integration",
+      "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+      "patch_digest": "ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5",
+      "build": {
+        "argv": [
+          "./gradlew",
+          "--no-daemon",
+          "--offline",
+          "--max-workers=2",
+          "--dependency-verification=strict",
+          ":app:assemblePlayRelease",
+          ":app:testPlayReleaseUnitTest",
+          ":app:assemblePlayReleaseAndroidTest"
+        ],
+        "environment": {
+          "JAVA_HOME": "/opt/homebrew/Cellar/openjdk@17/17.0.20/libexec/openjdk.jdk/Contents/Home",
+          "ANDROID_HOME": "/Users/codybontecou/Library/Android/sdk",
+          "GRADLE_USER_HOME": "/Users/codybontecou/.gradle"
+        },
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited",
+        "exit_code": 0,
+        "elapsed_seconds": 21.066,
+        "output_bytes": 7487,
+        "log_sha256": "03b4b3f2b5c42bcb6829a610d68c3a4c520f960e44ea0966a4c78405f4cac49c",
+        "termination_scope": "only isolated spawned process group; no global Gradle/adb stop",
+        "pinned_node_path": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "artifacts": {
+        "artifacts": {
+          "app": {
+            "path": "app/build/outputs/apk/play/release/app-play-release.apk",
+            "bytes": 50365382,
+            "sha256": "b35fa8ea42706d48f4a217c72a410c2945c7e5038fb2f6cd81c18b3a98f49406"
+          },
+          "test": {
+            "path": "app/build/outputs/apk/androidTest/play/release/app-play-release-androidTest.apk",
+            "bytes": 657193,
+            "sha256": "03dced98a824b2a4d839474414b0b6a32da675a259483658cd39833e477d4d42"
+          }
+        },
+        "all112_dependency_class_defs": true,
+        "actual_dependency_member_checks": [
+          {
+            "kind": "fields",
+            "owner": "Landroidx/concurrent/futures/DirectExecutor;",
+            "name": "INSTANCE",
+            "descriptor": "Landroidx/concurrent/futures/DirectExecutor;",
+            "declaring_owner": "Landroidx/concurrent/futures/DirectExecutor;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Landroidx/lifecycle/Lifecycle$State;",
+            "name": "CREATED",
+            "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+            "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Landroidx/lifecycle/Lifecycle$State;",
+            "name": "DESTROYED",
+            "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+            "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Landroidx/lifecycle/Lifecycle$State;",
+            "name": "RESUMED",
+            "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+            "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Landroidx/lifecycle/Lifecycle$State;",
+            "name": "STARTED",
+            "descriptor": "Landroidx/lifecycle/Lifecycle$State;",
+            "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/Result;",
+            "name": "Companion",
+            "descriptor": "Lkotlin/Result$Companion;",
+            "declaring_owner": "Lkotlin/Result;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/Unit;",
+            "name": "INSTANCE",
+            "descriptor": "Lkotlin/Unit;",
+            "declaring_owner": "Lkotlin/Unit;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/coroutines/EmptyCoroutineContext;",
+            "name": "INSTANCE",
+            "descriptor": "Lkotlin/coroutines/EmptyCoroutineContext;",
+            "declaring_owner": "Lkotlin/coroutines/EmptyCoroutineContext;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;",
+            "name": "receiver",
+            "descriptor": "Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/jvm/internal/CallableReference;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/jvm/internal/Ref$BooleanRef;",
+            "name": "element",
+            "descriptor": "Z",
+            "declaring_owner": "Lkotlin/jvm/internal/Ref$BooleanRef;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/jvm/internal/Ref$ObjectRef;",
+            "name": "element",
+            "descriptor": "Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/jvm/internal/Ref$ObjectRef;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/jvm/internal/StringCompanionObject;",
+            "name": "INSTANCE",
+            "descriptor": "Lkotlin/jvm/internal/StringCompanionObject;",
+            "declaring_owner": "Lkotlin/jvm/internal/StringCompanionObject;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/text/Charsets;",
+            "name": "UTF_8",
+            "descriptor": "Ljava/nio/charset/Charset;",
+            "declaring_owner": "Lkotlin/text/Charsets;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/time/Duration;",
+            "name": "Companion",
+            "descriptor": "Lkotlin/time/Duration$Companion;",
+            "declaring_owner": "Lkotlin/time/Duration;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlin/time/DurationUnit;",
+            "name": "SECONDS",
+            "descriptor": "Lkotlin/time/DurationUnit;",
+            "declaring_owner": "Lkotlin/time/DurationUnit;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlinx/coroutines/CoroutineStart;",
+            "name": "DEFAULT",
+            "descriptor": "Lkotlinx/coroutines/CoroutineStart;",
+            "declaring_owner": "Lkotlinx/coroutines/CoroutineStart;"
+          },
+          {
+            "kind": "fields",
+            "owner": "Lkotlinx/coroutines/CoroutineStart;",
+            "name": "UNDISPATCHED",
+            "descriptor": "Lkotlinx/coroutines/CoroutineStart;",
+            "declaring_owner": "Lkotlinx/coroutines/CoroutineStart;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;",
+            "name": "getUninterruptibly",
+            "descriptor": "(Ljava/util/concurrent/Future;)Ljava/lang/Object;",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;",
+            "name": "set",
+            "descriptor": "(Ljava/lang/Object;)Z",
+            "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;",
+            "name": "setException",
+            "descriptor": "(Ljava/lang/Throwable;)Z",
+            "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter$Completer;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter;",
+            "name": "getFuture",
+            "descriptor": "(Landroidx/concurrent/futures/CallbackToFutureAdapter$Resolver;)Lcom/google/common/util/concurrent/ListenableFuture;",
+            "declaring_owner": "Landroidx/concurrent/futures/CallbackToFutureAdapter;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "addListener",
+            "descriptor": "(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)V",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "cancel",
+            "descriptor": "(Z)Z",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "create",
+            "descriptor": "()Landroidx/concurrent/futures/ResolvableFuture;",
+            "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "get",
+            "descriptor": "()Ljava/lang/Object;",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "get",
+            "descriptor": "(JLjava/util/concurrent/TimeUnit;)Ljava/lang/Object;",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "isCancelled",
+            "descriptor": "()Z",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "isDone",
+            "descriptor": "()Z",
+            "declaring_owner": "Landroidx/concurrent/futures/AbstractResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "set",
+            "descriptor": "(Ljava/lang/Object;)Z",
+            "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/concurrent/futures/ResolvableFuture;",
+            "name": "setException",
+            "descriptor": "(Ljava/lang/Throwable;)Z",
+            "declaring_owner": "Landroidx/concurrent/futures/ResolvableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/lifecycle/Lifecycle$State;",
+            "name": "values",
+            "descriptor": "()[Landroidx/lifecycle/Lifecycle$State;",
+            "declaring_owner": "Landroidx/lifecycle/Lifecycle$State;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/tracing/Trace;",
+            "name": "beginSection",
+            "descriptor": "(Ljava/lang/String;)V",
+            "declaring_owner": "Landroidx/tracing/Trace;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/tracing/Trace;",
+            "name": "endSection",
+            "descriptor": "()V",
+            "declaring_owner": "Landroidx/tracing/Trace;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Landroidx/tracing/Trace;",
+            "name": "forceEnableAppTracing",
+            "descriptor": "()V",
+            "declaring_owner": "Landroidx/tracing/Trace;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/facebook/react/ReactHost;",
+            "name": "destroy",
+            "descriptor": "(Ljava/lang/String;Ljava/lang/Exception;Lkotlin/jvm/functions/Function1;)Lcom/facebook/react/interfaces/TaskInterface;",
+            "declaring_owner": "Lcom/facebook/react/ReactHost;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/facebook/react/ReactHost;",
+            "name": "invalidate",
+            "descriptor": "()V",
+            "declaring_owner": "Lcom/facebook/react/ReactHost;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/google/common/util/concurrent/ListenableFuture;",
+            "name": "addListener",
+            "descriptor": "(Ljava/lang/Runnable;Ljava/util/concurrent/Executor;)V",
+            "declaring_owner": "Lcom/google/common/util/concurrent/ListenableFuture;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/Lazy;",
+            "name": "getValue",
+            "descriptor": "()Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/Lazy;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/LazyKt;",
+            "name": "lazy",
+            "descriptor": "(Lkotlin/jvm/functions/Function0;)Lkotlin/Lazy;",
+            "declaring_owner": "Lkotlin/LazyKt__LazyJVMKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/Result;",
+            "name": "constructor-impl",
+            "descriptor": "(Ljava/lang/Object;)Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/Result;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/Result;",
+            "name": "exceptionOrNull-impl",
+            "descriptor": "(Ljava/lang/Object;)Ljava/lang/Throwable;",
+            "declaring_owner": "Lkotlin/Result;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/ResultKt;",
+            "name": "createFailure",
+            "descriptor": "(Ljava/lang/Throwable;)Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/ResultKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/ResultKt;",
+            "name": "throwOnFailure",
+            "descriptor": "(Ljava/lang/Object;)V",
+            "declaring_owner": "Lkotlin/ResultKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/collections/CollectionsKt;",
+            "name": "collectionSizeOrDefault",
+            "descriptor": "(Ljava/lang/Iterable;I)I",
+            "declaring_owner": "Lkotlin/collections/CollectionsKt__IterablesKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/collections/IntIterator;",
+            "name": "nextInt",
+            "descriptor": "()I",
+            "declaring_owner": "Lkotlin/collections/IntIterator;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/Continuation;",
+            "name": "resumeWith",
+            "descriptor": "(Ljava/lang/Object;)V",
+            "declaring_owner": "Lkotlin/coroutines/Continuation;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/ContinuationKt;",
+            "name": "createCoroutine",
+            "descriptor": "(Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;",
+            "declaring_owner": "Lkotlin/coroutines/ContinuationKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt;",
+            "name": "getCOROUTINE_SUSPENDED",
+            "descriptor": "()Ljava/lang/Object;",
+            "declaring_owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt;",
+            "name": "intercepted",
+            "descriptor": "(Lkotlin/coroutines/Continuation;)Lkotlin/coroutines/Continuation;",
+            "declaring_owner": "Lkotlin/coroutines/intrinsics/IntrinsicsKt__IntrinsicsJvmKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/jvm/internal/ContinuationImpl;",
+            "name": "<init>",
+            "descriptor": "(Lkotlin/coroutines/Continuation;)V",
+            "declaring_owner": "Lkotlin/coroutines/jvm/internal/ContinuationImpl;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/jvm/internal/DebugProbesKt;",
+            "name": "probeCoroutineSuspended",
+            "descriptor": "(Lkotlin/coroutines/Continuation;)V",
+            "declaring_owner": "Lkotlin/coroutines/jvm/internal/DebugProbesKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/coroutines/jvm/internal/SuspendLambda;",
+            "name": "<init>",
+            "descriptor": "(ILkotlin/coroutines/Continuation;)V",
+            "declaring_owner": "Lkotlin/coroutines/jvm/internal/SuspendLambda;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/io/CloseableKt;",
+            "name": "closeFinally",
+            "descriptor": "(Ljava/io/Closeable;Ljava/lang/Throwable;)V",
+            "declaring_owner": "Lkotlin/io/CloseableKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/io/TextStreamsKt;",
+            "name": "readText",
+            "descriptor": "(Ljava/io/Reader;)Ljava/lang/String;",
+            "declaring_owner": "Lkotlin/io/TextStreamsKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;",
+            "name": "<init>",
+            "descriptor": "(ILjava/lang/Object;Ljava/lang/Class;Ljava/lang/String;Ljava/lang/String;I)V",
+            "declaring_owner": "Lkotlin/jvm/internal/FunctionReferenceImpl;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/jvm/internal/Intrinsics;",
+            "name": "areEqual",
+            "descriptor": "(Ljava/lang/Object;Ljava/lang/Object;)Z",
+            "declaring_owner": "Lkotlin/jvm/internal/Intrinsics;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/jvm/internal/Lambda;",
+            "name": "<init>",
+            "descriptor": "(I)V",
+            "declaring_owner": "Lkotlin/jvm/internal/Lambda;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/jvm/internal/Ref$BooleanRef;",
+            "name": "<init>",
+            "descriptor": "()V",
+            "declaring_owner": "Lkotlin/jvm/internal/Ref$BooleanRef;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/jvm/internal/Ref$ObjectRef;",
+            "name": "<init>",
+            "descriptor": "()V",
+            "declaring_owner": "Lkotlin/jvm/internal/Ref$ObjectRef;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/ranges/RangesKt;",
+            "name": "until",
+            "descriptor": "(II)Lkotlin/ranges/IntRange;",
+            "declaring_owner": "Lkotlin/ranges/RangesKt___RangesKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/text/StringsKt;",
+            "name": "startsWith$default",
+            "descriptor": "(Ljava/lang/String;Ljava/lang/String;ZILjava/lang/Object;)Z",
+            "declaring_owner": "Lkotlin/text/StringsKt__StringsJVMKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlin/time/DurationKt;",
+            "name": "toDuration",
+            "descriptor": "(ILkotlin/time/DurationUnit;)J",
+            "declaring_owner": "Lkotlin/time/DurationKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/BuildersKt;",
+            "name": "async",
+            "descriptor": "(Lkotlinx/coroutines/CoroutineScope;Lkotlin/coroutines/CoroutineContext;Lkotlinx/coroutines/CoroutineStart;Lkotlin/jvm/functions/Function2;)Lkotlinx/coroutines/Deferred;",
+            "declaring_owner": "Lkotlinx/coroutines/BuildersKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/BuildersKt;",
+            "name": "runBlocking",
+            "descriptor": "(Lkotlin/coroutines/CoroutineContext;Lkotlin/jvm/functions/Function2;)Ljava/lang/Object;",
+            "declaring_owner": "Lkotlinx/coroutines/BuildersKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuation$DefaultImpls;",
+            "name": "cancel$default",
+            "descriptor": "(Lkotlinx/coroutines/CancellableContinuation;Ljava/lang/Throwable;ILjava/lang/Object;)Z",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation$DefaultImpls;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+            "name": "invokeOnCancellation",
+            "descriptor": "(Lkotlin/jvm/functions/Function1;)V",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+            "name": "resume",
+            "descriptor": "(Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)V",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuation;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuation;",
+            "name": "resumeWith",
+            "descriptor": "(Ljava/lang/Object;)V",
+            "declaring_owner": "Lkotlin/coroutines/Continuation;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+            "name": "<init>",
+            "descriptor": "(Lkotlin/coroutines/Continuation;I)V",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+            "name": "getResult",
+            "descriptor": "()Ljava/lang/Object;",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/CancellableContinuationImpl;",
+            "name": "initCancellability",
+            "descriptor": "()V",
+            "declaring_owner": "Lkotlinx/coroutines/CancellableContinuationImpl;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/Deferred;",
+            "name": "await",
+            "descriptor": "(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+            "declaring_owner": "Lkotlinx/coroutines/Deferred;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/Dispatchers;",
+            "name": "getMain",
+            "descriptor": "()Lkotlinx/coroutines/MainCoroutineDispatcher;",
+            "declaring_owner": "Lkotlinx/coroutines/Dispatchers;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/Dispatchers;",
+            "name": "getUnconfined",
+            "descriptor": "()Lkotlinx/coroutines/CoroutineDispatcher;",
+            "declaring_owner": "Lkotlinx/coroutines/Dispatchers;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/ExecutorsKt;",
+            "name": "from",
+            "descriptor": "(Ljava/util/concurrent/Executor;)Lkotlinx/coroutines/CoroutineDispatcher;",
+            "declaring_owner": "Lkotlinx/coroutines/ExecutorsKt;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/Job$DefaultImpls;",
+            "name": "cancel$default",
+            "descriptor": "(Lkotlinx/coroutines/Job;Ljava/util/concurrent/CancellationException;ILjava/lang/Object;)V",
+            "declaring_owner": "Lkotlinx/coroutines/Job$DefaultImpls;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lkotlinx/coroutines/TimeoutKt;",
+            "name": "withTimeout-KLykuaI",
+            "descriptor": "(JLkotlin/jvm/functions/Function2;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;",
+            "declaring_owner": "Lkotlinx/coroutines/TimeoutKt;"
+          }
+        ],
+        "candidate_owned_member_checks": [
+          {
+            "kind": "fields",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "INSTANCE",
+            "descriptor": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/HostProbeApplication;",
+            "name": "getReactHost",
+            "descriptor": "()Lcom/facebook/react/ReactHost;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/HostProbeApplication;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getCompleted",
+            "descriptor": "()Ljava/util/concurrent/CountDownLatch;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getFirstAcquireNanos",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getResult",
+            "descriptor": "()Ljava/util/concurrent/atomic/AtomicReference;",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getSampledPeakJavaHeapBytes",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getSampledPeakPssBytes",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;",
+            "name": "getStartedNanos",
+            "descriptor": "()J",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/ProbeRuntime;"
+          },
+          {
+            "kind": "methods",
+            "owner": "Lcom/healthmd/effecthostcandidate/test/R;",
+            "name": "<init>",
+            "descriptor": "()V",
+            "declaring_owner": "Lcom/healthmd/effecthostcandidate/test/R;"
+          }
+        ],
+        "previous_original_member_checks_available": 77,
+        "unresolved": [],
+        "getter_defined": true,
+        "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+        "jvm": {
+          "name": "com.healthmd.effecthostcandidate.NativeProbeAdmissionTest",
+          "tests": "5",
+          "skipped": "0",
+          "failures": "0",
+          "errors": "0",
+          "timestamp": "2026-10-07T17:31:50.156Z",
+          "hostname": "Mac.lan",
+          "time": "0.027"
+        },
+        "jvm_xml_sha256": "3e2b3fa28e8029d5e2123d262352c2a9383b17ddcbb5f9c72f10cde7ba04fc77",
+        "main_mapping_sha256": "afbb1a275b27065f7cadbdde80b566f3abb5539d041e78860e1c4d49f2785bc8"
+      },
+      "static_guards": "Actual112dependency class definitions,77testdependencyrefs/77priororiginalsignaturechecks +9owncandidate refs resolve; getter defined. Both local signatures/private IDs/min28target36/nondebuggable/noInternethealth/frozen graph/fixture/packaged asset pass.",
+      "installed_artifacts": {
+        "application_id": "com.healthmd.effecthost.androidcandidate.play",
+        "apk_sha256": "b35fa8ea42706d48f4a217c72a410c2945c7e5038fb2f6cd81c18b3a98f49406",
+        "test_apk_sha256": "03dced98a824b2a4d839474414b0b6a32da675a259483658cd39833e477d4d42",
+        "certificate_sha256": "9a012f46825b75b9806d94ea449b044b61a0bc015d0f88e1006c0986f1814347",
+        "signing": "isolated_local_test_only",
+        "bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
+        "fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+        "target_sdk": 37,
+        "target_abis": [
+          "arm64-v8a"
+        ],
+        "installed_matches_built": true
+      },
+      "actual_runs": [
+        {
+          "process": 1,
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json",
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724",
+          "bytes": 5057,
+          "instrumentation_log_sha256": "e26f3f6e6ef8bf74809986f92315ae811286bbc4240a86324ef6dc9b33ace5c8",
+          "report": {
+            "schema": "healthmd.candidate_host_probe",
+            "version": 1,
+            "result": "passed",
+            "observations": [
+              {
+                "case_id": "single_react_effect_identity",
+                "result": "passed",
+                "observed": {
+                  "react": "19.2.3",
+                  "hermes": true,
+                  "hermes_release": "250829098.0.17",
+                  "bytecode_version": 98,
+                  "engine_build": "Release",
+                  "effect": "4.0.1",
+                  "mounted_react": false
+                }
+              },
+              {
+                "case_id": "offline_success",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "value": "ready"
+                }
+              },
+              {
+                "case_id": "cancel_before_acquire",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 0,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 0,
+                  "unresolved_inspections": 0,
+                  "stale_reads": 0
+                }
+              },
+              {
+                "case_id": "cancel_waits_release_ack",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "cleanup_ms": 54,
+                  "ack_before_completion": true,
+                  "expiry_ack_before_completion": true,
+                  "incomplete_during_native_release": true
+                }
+              },
+              {
+                "case_id": "reentry_dispose_cancel_supersede",
+                "result": "passed",
+                "observed": {
+                  "stale_reads": 0,
+                  "fresh_reads": 1,
+                  "released": 1,
+                  "active": 0
+                }
+              },
+              {
+                "case_id": "frame_limit",
+                "result": "passed",
+                "observed": {
+                  "code": "frame_limit",
+                  "acquired": 0,
+                  "utf8_multibyte_rejected": true
+                }
+              },
+              {
+                "case_id": "unknown_schema_before_acquire",
+                "result": "passed",
+                "observed": {
+                  "code": "schema_invalid",
+                  "acquired": 0,
+                  "boolean_and_fractional_negatives": 3
+                }
+              },
+              {
+                "case_id": "queue_backpressure",
+                "result": "passed",
+                "observed": {
+                  "accepted": 6,
+                  "rejected": 1,
+                  "max_active": 2,
+                  "max_queued": 4,
+                  "acknowledged": 6,
+                  "active_frames": 0,
+                  "queued_frames": 0,
+                  "fifo": true
+                }
+              },
+              {
+                "case_id": "teardown_fresh_restart",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "private_state_writes": 0
+                }
+              },
+              {
+                "case_id": "no_native_grant_expansion",
+                "result": "passed",
+                "observed": {
+                  "health_permissions": 0,
+                  "internet_permissions": 0,
+                  "health_reads": 0,
+                  "persistent_writes": 0,
+                  "scope": "candidate_owned_adapter"
+                }
+              }
+            ],
+            "teardown_ack": true,
+            "teardown_ms": 21,
+            "elapsed_ms": 6161,
+            "startup_to_first_acquire_ms": 240,
+            "sampled_peak_pss_bytes": 45211648,
+            "sampled_peak_java_heap_bytes": 5708352,
+            "memory_sampling_interval_ms": 20,
+            "java_heap_used_bytes": 5851712
+          }
+        },
+        {
+          "process": 2,
+          "path": "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json",
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7",
+          "bytes": 5057,
+          "instrumentation_log_sha256": "924103549b8a000e71dc901fc3c91e65437a575391a90ec5dc1416739fa89002",
+          "report": {
+            "schema": "healthmd.candidate_host_probe",
+            "version": 1,
+            "result": "passed",
+            "observations": [
+              {
+                "case_id": "single_react_effect_identity",
+                "result": "passed",
+                "observed": {
+                  "react": "19.2.3",
+                  "hermes": true,
+                  "hermes_release": "250829098.0.17",
+                  "bytecode_version": 98,
+                  "engine_build": "Release",
+                  "effect": "4.0.1",
+                  "mounted_react": false
+                }
+              },
+              {
+                "case_id": "offline_success",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "value": "ready"
+                }
+              },
+              {
+                "case_id": "cancel_before_acquire",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 0,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 0,
+                  "unresolved_inspections": 0,
+                  "stale_reads": 0
+                }
+              },
+              {
+                "case_id": "cancel_waits_release_ack",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "cleanup_ms": 56,
+                  "ack_before_completion": true,
+                  "expiry_ack_before_completion": true,
+                  "incomplete_during_native_release": true
+                }
+              },
+              {
+                "case_id": "reentry_dispose_cancel_supersede",
+                "result": "passed",
+                "observed": {
+                  "stale_reads": 0,
+                  "fresh_reads": 1,
+                  "released": 1,
+                  "active": 0
+                }
+              },
+              {
+                "case_id": "frame_limit",
+                "result": "passed",
+                "observed": {
+                  "code": "frame_limit",
+                  "acquired": 0,
+                  "utf8_multibyte_rejected": true
+                }
+              },
+              {
+                "case_id": "unknown_schema_before_acquire",
+                "result": "passed",
+                "observed": {
+                  "code": "schema_invalid",
+                  "acquired": 0,
+                  "boolean_and_fractional_negatives": 3
+                }
+              },
+              {
+                "case_id": "queue_backpressure",
+                "result": "passed",
+                "observed": {
+                  "accepted": 6,
+                  "rejected": 1,
+                  "max_active": 2,
+                  "max_queued": 4,
+                  "acknowledged": 6,
+                  "active_frames": 0,
+                  "queued_frames": 0,
+                  "fifo": true
+                }
+              },
+              {
+                "case_id": "teardown_fresh_restart",
+                "result": "passed",
+                "observed": {
+                  "queued_frames": 0,
+                  "active_frames": 0,
+                  "max_queued": 0,
+                  "acknowledged_frames": 0,
+                  "accepted_frames": 0,
+                  "acquired": 1,
+                  "releasing": 0,
+                  "inspecting": 0,
+                  "max_active": 0,
+                  "active": 0,
+                  "released": 1,
+                  "unresolved_inspections": 0,
+                  "private_state_writes": 0
+                }
+              },
+              {
+                "case_id": "no_native_grant_expansion",
+                "result": "passed",
+                "observed": {
+                  "health_permissions": 0,
+                  "internet_permissions": 0,
+                  "health_reads": 0,
+                  "persistent_writes": 0,
+                  "scope": "candidate_owned_adapter"
+                }
+              }
+            ],
+            "teardown_ack": true,
+            "teardown_ms": 12,
+            "elapsed_ms": 6136,
+            "startup_to_first_acquire_ms": 204,
+            "sampled_peak_pss_bytes": 41801728,
+            "sampled_peak_java_heap_bytes": 4989376,
+            "memory_sampling_interval_ms": 20,
+            "java_heap_used_bytes": 5165504
+          }
+        }
+      ],
+      "cleanup": "Both reports show zero owned active resource/inspection/frame/queue work and acknowledged successful ReactHost.destroy; lifecycle destroys timers/listeners and test invalidates host. Original force-stop ran before each instrumentation process. No Activity/surface launched; private APKs remain installed.",
+      "measurement_scope": "Actual process-local20ms sampled PSS/Java heap peaks are lower bounds; no extrapolated true peak or OS production/background performance claim.",
+      "qualification_limits": "Private local-test-signed offline explicit active host only. No production health data/grants, UI mount, OS background/wake/Activity/Headless task or store signing proof.",
+      "evidence_files": {
+        "apps/android/effect-host-candidate/dist/audit/native-build-seventh.log": {
+          "bytes": 7487,
+          "sha256": "03b4b3f2b5c42bcb6829a610d68c3a4c520f960e44ea0966a4c78405f4cac49c"
+        },
+        "apps/android/effect-host-candidate/dist/audit/native-build-seventh-supervision.json": {
+          "bytes": 910,
+          "sha256": "9494ab642eacbeba53f0377658abaf3df0d2af76ecf3f2ce636f7210543ec9ca"
+        },
+        "apps/android/effect-host-candidate/dist/audit/built-artifacts-seventh.json": {
+          "bytes": 22583,
+          "sha256": "eebd65206077c32bea89ff05a9ab0658575ceb6e7361712ae952107cb29c4a66"
+        },
+        "apps/android/effect-host-candidate/dist/audit/artifact-tool-checks-seventh.json": {
+          "bytes": 2937,
+          "sha256": "bce47cf1256e84e0da533810aa8b7eeede619a88475714da2a78b6bdb8e0dc1c"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/artifacts.json": {
+          "bytes": 648,
+          "sha256": "7871b7d8a83916943fc8261f7cc99cf1c418f027776a851b475bfc551510d732"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log": {
+          "bytes": 3485,
+          "sha256": "e26f3f6e6ef8bf74809986f92315ae811286bbc4240a86324ef6dc9b33ace5c8"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/instrumentation-2.log": {
+          "bytes": 3485,
+          "sha256": "924103549b8a000e71dc901fc3c91e65437a575391a90ec5dc1416739fa89002"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/run-1-evidence.json": {
+          "bytes": 5057,
+          "sha256": "fccaa571cd772feacab5b25b7f832125962a015a31fcc830eced227c4c377724"
+        },
+        "apps/android/effect-host-candidate/dist/runtime/run-2-evidence.json": {
+          "bytes": 5057,
+          "sha256": "4e0517077ffd4dfe3668f6507ef4621f9c584e614d5545d8dbf243c6b16cbdb7"
+        }
+      }
+    }
+  },
+  "historical_source_review": {
+    "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+    "patch_digest": "df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa",
+    "review": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa"
+    },
+    "scope": "Previously accepted independent source/graph/licensing/bounded build/JVM/static artifact evidence only; original source+patch review fingerprint retained. Runtime-only resume failed before case reports and awaits separate root review; no host/runtime admission.",
+    "receipt_before_trace_keep_sha256": "d40239565229a44050d42334df312c7b32c854b932499fba796307130e8bbd77"
+  },
+  "historical_checks": [
     {
       "cwd": "apps/android/effect-host-candidate",
       "argv": [
@@ -547,155 +3856,357 @@
       ],
       "result": "unrun",
       "evidence": "Deferred to coordinator qualification checks after common cohort refresh; no stale or duplicate common build claimed."
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "result": "failed",
+      "exit_code": 1,
+      "environment": {
+        "path_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin",
+        "java_version": "17.0.20"
+      },
+      "evidence": {
+        "action": "first fresh-process instrumentation",
+        "fixed_error": "harness_assertion",
+        "instrumentation_outcome": "Process crashed",
+        "first_process_log": "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log",
+        "first_process_log_sha256": "cc376fcd260b55a01f82c04af5e0a9ead88516f600131a38bdea1a3e05b10a8d",
+        "installed_artifact_evidence": "apps/android/effect-host-candidate/dist/runtime/artifacts.json",
+        "installed_artifact_evidence_sha256": "4303f54c763081e9952003f00ee9e82f6c343c8b27b842df73acccec85c7add3",
+        "second_process": "unrun",
+        "command_bounds": "Existing source-frozen individual client timeouts5\u201345s and8192\u20132097152byte limits; only spawnedclient/process or privateapp stop, no globaldaemon stop."
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--offline",
+        "--max-workers=2",
+        "--dependency-verification=strict",
+        ":app:assemblePlayRelease",
+        ":app:testPlayReleaseUnitTest",
+        ":app:assemblePlayReleaseAndroidTest"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "supervision": "apps/android/effect-host-candidate/dist/audit/native-build-fourth-supervision.json",
+        "log": "apps/android/effect-host-candidate/dist/audit/native-build-fourth.log",
+        "log_sha256": "c43c4d0ad11dd50a692b04be32e13f2525ebba443caab2a50e8299d0bc2954f1",
+        "elapsed_seconds": 40.562,
+        "output_bytes": 7465,
+        "deadline_seconds": 240,
+        "combined_output_limit_bytes": 20971520,
+        "outcome": "exited"
+      }
+    },
+    {
+      "cwd": "apps/android/effect-host-candidate",
+      "argv": [
+        "./scripts/run-release-probe.sh",
+        "--channel",
+        "play",
+        "--target",
+        "required-local-device",
+        "--offline",
+        "--fresh-process"
+      ],
+      "result": "failed",
+      "exit_code": 1,
+      "evidence": {
+        "first_process_log": "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log",
+        "first_process_log_sha256": "2c19d34c608c2d4fb8a59c02f8ebd86cdcab5d98f93e78f68f675e0cee290d56",
+        "log_bytes": 3000,
+        "fatal": "NoClassDefFoundError: kotlin.LazyKt at TestDirCalculator\u2192FileTestStorage\u2192AndroidJUnitRunner.registerTestStorage/onCreate",
+        "installed_artifact_evidence": "apps/android/effect-host-candidate/dist/runtime/artifacts.json",
+        "installed_artifact_sha256": "c01cb594c18a64fa0e64bf17193325d6521ca682c6b9e5d5d7b07ce486b52bb8",
+        "runtime_cases": 0,
+        "second_process": "unrun",
+        "cleanup": "bounded own-private-app force-stop on failure"
+      }
     }
   ],
-  "observations": [],
-  "limitations": [
-    "Required physical target unavailable; installation, packaged-engine execution, fresh-process outcomes, startup/memory/teardown and native finalizer acknowledgment unrun.",
+  "historical_observations": [
+    {
+      "case_id": "runtime_resume_first_process_crash",
+      "procedure": "Exact approved target-only offline fresh-process harness using unchanged APKs/runner/bundle/fixture and isolated test certificate.",
+      "expected": "Two fresh packaged synthetic10-case reports with acknowledged native cleanup and teardown.",
+      "observed": "Requiredtarget connected; both private installs and installed artifact hashes passed. First instrumentation reported Process crashed. Zero case reports; second process unrun. Harness force-stopped only private app.",
+      "result": "failed",
+      "evidence": {
+        "apps/android/effect-host-candidate/dist/runtime/target-preflight.json": {
+          "sha256": "48abadafa40eb24710de544c35105247974a58f3f6154696f24d500c0acdff2c",
+          "bytes": 78
+        },
+        "apps/android/effect-host-candidate/dist/runtime/artifacts.json": {
+          "sha256": "4303f54c763081e9952003f00ee9e82f6c343c8b27b842df73acccec85c7add3",
+          "bytes": 648
+        },
+        "apps/android/effect-host-candidate/dist/runtime/failure.json": {
+          "sha256": "f339f3c4339fca7f50aac6689ddeefba88e4e5276f891ebfde4d3ea271694f35",
+          "bytes": 109
+        },
+        "apps/android/effect-host-candidate/dist/runtime/app-install.log": {
+          "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+          "bytes": 36
+        },
+        "apps/android/effect-host-candidate/dist/runtime/test-install.log": {
+          "sha256": "781a31c82430c97897af612ece5e0ca2205e301cb5ff121ce2660541ea5182c7",
+          "bytes": 36
+        },
+        "apps/android/effect-host-candidate/dist/runtime/instrumentation-1.log": {
+          "sha256": "cc376fcd260b55a01f82c04af5e0a9ead88516f600131a38bdea1a3e05b10a8d",
+          "bytes": 74
+        }
+      }
+    },
+    {
+      "case_id": "trace_keep_runner_progression_then_LazyKt_failure",
+      "procedure": "Reviewed exact Trace rule, same offline bounded fourth build, actual class/signature/manifest/assets checks and original physical harness.",
+      "expected": "Runner initializes and executes both fresh10-case probes.",
+      "observed": "App now defines Trace, exact private APKs signed/installed and hashes verified. Runner advances beyond initial Trace call, then throws NoClassDefFoundError kotlin.LazyKt. Zero cases; second process unrun; private app force-stopped.",
+      "result": "failed",
+      "evidence": {
+        "instrumentation_sha256": "2c19d34c608c2d4fb8a59c02f8ebd86cdcab5d98f93e78f68f675e0cee290d56",
+        "artifacts_sha256": "c01cb594c18a64fa0e64bf17193325d6521ca682c6b9e5d5d7b07ce486b52bb8",
+        "shared_linkage_audit_sha256": "5ac18b8fc39f2c51fd596c9d35010090c2a189d2289e5f647db073e2218149a3"
+      }
+    }
+  ],
+  "historical_acceptance_results": [
+    {
+      "criterion": "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+      "result": "partial",
+      "evidence": "Exact physical npm graph, resolved native artifacts/licenses, packaged assets and ABI/certificate/manifest checks passed; runtime engine/identity execution unrun."
+    },
+    {
+      "criterion": "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+      "result": "failed",
+      "evidence": "Trace keep artifact actual install/hash verification passed; first fresh instrumentation progressed past Trace and failed kotlin.LazyKt in runner startup before any case report. Second fresh process remains unrun."
+    },
+    {
+      "criterion": "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+      "result": "partial",
+      "evidence": "Frozen10portable cases and5JVM admission tests passed previously; actual runtime attempt crashed before native cancellation/ack/backpressure/expiry/restart observations. No cases inferred."
+    },
+    {
+      "criterion": "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+      "result": "passed",
+      "evidence": "Private IDs/nondebuggable/local test signing; both actual APK manifests Internet0health0; no production source/grants/data/state changes."
+    },
+    {
+      "criterion": "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission.",
+      "result": "partial",
+      "evidence": "Source/fixture/graph/artifact hashes and build bounds recorded; no physical startup/memory/teardown measurement fabricated."
+    }
+  ],
+  "historical_limitations": [
+    "Fourth native build passed and Trace class is now packaged. First physical fresh process fails kotlin.LazyKt in AndroidJUnitRunner startup; no synthetic case or engine/resource/finalizer/teardown/measurement proof, second process unrun. Static audit found39 referenced shared original types absent from packaged class_defs; further finite linkage correction needs prewrite review.",
+    "Required physical target now connected at API37/arm64-v8a; first packaged instrumentation process crashed before reporting any cases. Installed exact artifacts verified, but runtime identity/resource cleanup/teardown/memory proof remains failed/unrun; second process unrun.",
     "Native build success and portable/JVM cases do not qualify host_integration or physical_device acceptance.",
     "Exact test annotation dependency repaired instrumentation compilation; first two failed attempts preserved. Third build successful; JVM output reused up-to-date after initial5-method execution.",
     "Common source/bundle read window was released after first bundle; common checks deferred to coordinator while other task owns compiler/cache. No common/JS rebuild during native attempts.",
     "All13 historical source pins match assigned d126 and current bytes; both frozen emitted capability/UI asset inputs match current bytes. Claim remains d126, separately observed integration revision retained. Current host source patch review and committed-source qualification remain pending.",
     "Tooling/native license provenance reviewed within candidate scope; signed distribution/store/legal/reproducible upstream native-source builds remain separate gates."
   ],
-  "remaining_qualification": [
-    "Required physical target connection and exact bounded harness installation plus2fresh packaged Release probe runs.",
-    "Actual runtime React/Effect/Hermes identity, native resource cleanup/expiry/backpressure/frame cases and startup/sampled-memory/teardown measurements.",
-    "Coordinator current identical-input common core/UI qualification commands and independent final source/receipt review.",
-    "Committed integrated source/artifact qualification; no global runtime choice or distribution adoption."
-  ],
-  "rollback": "Current production Android/native/public/state authority retained. Candidate remains private and isolated; remove only its two private package IDs if installed later. No production migration occurred.",
-  "review": {
-    "status": "accepted",
-    "reviewer": "/root",
-    "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa"
+  "current_runtime_result": "passed",
+  "current_runtime_review": "Accepted by independent personal_codecs; ROOT reconciled actual431core/14UI checks, exactcurrentmaps and unchanged native selected modules. Bounded source+patch host integration passed.",
+  "coordinator_common_verification": {
+    "status": "passed_actual_current_component_checks_selected_native_bytes_retained",
+    "source": "Current corrected Combined component patch99c13271 independently accepted; complete40coreinputs/24outputs match receipt, all previous37/22 retained. UI13inputs/6outputs unchanged before/after. Native bundle uses only accepted capabilities/faults and headlessUI model, all three exact bytes remain unchanged.",
+    "core": {
+      "executed_by": "/root/donor_mac_review",
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "tests": 431,
+      "guard_negatives": 19,
+      "log_path": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log",
+      "log_sha256": "8334711f0293d4bae35e90bca5d6c0768a8b6b9206dbbdd583e99c992a874f24",
+      "accepted_receipt_path": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json",
+      "accepted_receipt_sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f",
+      "inputs": {
+        ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+        "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "src/location/point-projection.ts": "ca9fffbc5bdb1af9c261cd084251ad905f2cd911173d4792b482bb8c499aa7d3",
+        "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "src/operations/personal-slice.ts": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+        "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "tests/combined-slice-vectors.ts": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "tests/combined-slice.test.ts": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+        "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+        "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "tests/location-point-projection-vectors.ts": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+        "tests/location-point-projection.test.ts": "4e84fce04de24da82c3d00905ba0daf6757fc256aee461b539cc86ec6d7894da",
+        "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+        "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "outputs": {
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/location/point-projection.js": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a",
+        "dist/core/location/point-projection.d.ts": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477",
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/personal-slice.d.ts": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/operations/personal-slice.js": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef"
+      }
+    },
+    "ui": {
+      "executed_by": "/root",
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "tests": 14,
+      "guard_negatives": 22,
+      "actual_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "exit_code": 0,
+      "elapsed_seconds": 0.919,
+      "log_path": "/private/tmp/healthmd-ui-android-final-check.log",
+      "log_sha256": "978a168946919718bc3835cc9931637df79b71cec04800755d3707daa45990b9",
+      "log_bytes": 1738,
+      "inputs": {
+        "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+        "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+        "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+        "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+        "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+        "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+        "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+        "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+        "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+        "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+        "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+        "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0"
+      },
+      "outputs": {
+        "packages/healthmd-ui/dist/model/index.d.ts": "237b829c85532ece48d90c1fba1b784f998c8f7bf3e02ee400f041321a5bed28",
+        "packages/healthmd-ui/dist/model/index.js": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "packages/healthmd-ui/dist/model-metafile.json": "c114fae73a3d859995ce640117417604636fa4af59dbc31b6a5d6ab7399717fb",
+        "packages/healthmd-ui/dist/model.bundle.js": "66ca058af12d1c00811f1a2daf6ee2a9caca2b920c7f5b75c7d438fc7fa17870",
+        "packages/healthmd-ui/dist/test-metafile.json": "5a8c83dbd94ac54fbff53618e2eb73e00952242fe7515c3430e835ec64e66f7b",
+        "packages/healthmd-ui/dist/tests/foundation.test.js": "6b2cfd7b151526933d56bdf9e8e0f1ec29a69b9b7614fb00a9de9e5282dda0f8"
+      },
+      "before_after_unchanged": true
+    },
+    "limits": "Core tests portable synthetic; UI14 headless model/props only. No repeat native build/runtime was needed because all frozen native selected common bytes retained; no CLI/make executed against stale fixedcohort."
   },
-  "prebuild_review": {
-    "reviewer": "/root/donor_mac_review",
-    "native_source_review": "accepted bounded preflight; final native8bb/JVMc897 reviewed before execution",
-    "coordinator_review": "Exact annotation193row/97artifact delta and4lock bindings independently accepted; subsequent exact test compiler-metadata rule and minSdkVersion harness correction approved before writes. Final patch/receipt still pending."
-  },
-  "observed_integration_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
-  "source_reconciliation": {
-    "assigned_task_claim_revision": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
-    "historical_pin_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
-    "observed_integration_revision_at_initial_receipt": "ba5c644ebca4c028fe8d60feb580a5e668965341",
-    "policy": "Claim remained at assigned d126 while coordinator committed disjoint common files. Observed integration HEAD is separate; no implicit claim rebase or build/check replay.",
-    "source_pin_hash_checks": [
+  "historical_coordinator_common_verification": {
+    "status": "historical accepted native-input basis; fresh common qualification pending",
+    "executed_by": "/root",
+    "cwd": "/Users/codybontecou/dev/health-md",
+    "argv": [
+      "make",
+      "test-portable"
+    ],
+    "checkpoint": "CORE-COHORT-PERSONAL/061afd",
+    "log": {
+      "path": "/private/tmp/healthmd-core-cohort-personal-root-make.log",
+      "bytes": 35325,
+      "sha256": "c7aeacb8a2b8e1f031e61c63bc73cbe9ca87d382cd0b9a8596a035cc5a124dbe"
+    },
+    "elapsed_seconds": 6.207,
+    "test_counts": {
+      "total": 437,
+      "core": 318,
+      "UI": 14,
+      "CLI": 105,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "actual_make_subcommands": [
       {
-        "path": "packages/healthmd-core-ts/src/index.ts",
-        "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
+        "cwd": "packages/healthmd-core-ts",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ]
       },
       {
-        "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
-        "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
-        "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "packages/healthmd-ui/src/index.ts",
-        "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "packages/healthmd-ui/README.md",
-        "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/app/build.gradle.kts",
-        "sha256": "5da2af2833f0eea8ecb0bd66adf005461dbf38ee11bb8423c256e4fa4a4d6d14",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/app/src/main/AndroidManifest.xml",
-        "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/gradle/libs.versions.toml",
-        "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
-        "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/gradlew",
-        "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/gradlew.bat",
-        "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/gradle/wrapper/gradle-wrapper.jar",
-        "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
-      },
-      {
-        "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
-        "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
-        "historical_matches": true,
-        "assigned_claim_matches": true,
-        "current_matches": true
+        "cwd": "packages/healthmd-ui",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ]
       }
     ],
-    "common_frozen_asset_input_checks": [
-      {
-        "path": "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js",
-        "frozen_bundle_input_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
-        "current_sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
-        "match": true
-      },
-      {
-        "path": "packages/healthmd-ui/dist/model/index.js",
-        "frozen_bundle_input_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
-        "current_sha256": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
-        "match": true
-      }
-    ],
-    "private_bundle_sha256": "23c27b7327d676a0b6682bc2c81d174c33faa7e685d5b068c4da22e64b45f0d6",
-    "private_fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
-    "common_cohort_scope": "Coordinator current318core tests/20emitted files includes separate unexported personal-codec module. That module is not adopted into this frozen private asset. These coordinator checks are separate evidence, not rerun or asserted as this task host qualification.",
-    "verification": "Read-only raw byte SHA256 and git-show historical/assigned-source hashing only; no build, target poll, installation, npm, Gradle, core or CLI command."
+    "toolchain": "Root-witnessed pinned Node24/npm11 physical path; no fabricated aliases or subcommands invoked by native author.",
+    "input_basis": "Root observed identical34/20 common map before/after the historical run. Native selected capabilities ae1516..., faults662d61..., UI model68d7d5... retained; separate location hidden additions do not enter frozen bundle.",
+    "limits": "Not fresh full current component qualification while Combined is uncompiled. No common build/check or JS bundle rerun performed here; fresh shared core/UI qualification waits coordinated window."
   },
-  "review_scope": "Independent source/locked graph/licensing/bounded private build/JVM/static artifact evidence accepted only. Partial runtime result preserved; requiredphysicaltargetunavailable beforeinstallation. No host_integration/physical/channel/runtime admission.",
-  "coordinator_verification": {
-    "actual": "Root independentlyhashedall32source/tool/lockfiles+13assignedsourceinputs/currentGit, all3nativeattemptlogs andactualfinalAPKraws; earlieractualaapt2/apksigner/ZIP/JVMchecks andindependentprebuildreview acknowledged. NarrowannotatedclassCLASSretention/strictparser/samplerlock/finiteharness/exactminSdkVersion correction reviewed.",
-    "remaining": "Requiredphysicaltarget and2fresh actualpackagedruntime runs, commoncomponentqualificationmatchingfrozeninputs, committedsource/realengine/OS measurement andhostadmission."
-  }
+  "independent_final_review": {
+    "receipt_before_review_sha256": "3e0a5370427a8e26b2b204c1ae394cefcc881eec7fa45567363b83a6fabaa5d5",
+    "evidence": "Independent personal_codecs reviewed and rehashed all32source/lock/tool pins,9finalevidence files, actualAPK/mainJS/fixture,20literalobservations in both raw instrumentation logs and reports; OK1test each,ACK21/12ms/all0resources. Direct DEX class_data/member/type parser verified all112finitekeptclasses and77dependency+9candidate/testownrefs inclinheritedowners; exactfinalR8mappingafbb1a retained.517Metrophysicalpins,oneReact/65Effectinputs oneEffectroot, signatures/privateIDs/nondebuggable/noInternethealthpermissionoutputs verified. Source realizes finite admission/50msownedrelease/cancel/expiry/2active4queueFIFO/actualReactHost.destroy+invalidate. No optimizer disabling/wildcards/dependencydelta. No material findings. ROOT current common checks and all32patch independently verified after review. Qualification only private active nullActivity/noSurface host; noOSbackground,wake,HeadlessJsTask,store,productiondata/grant or truepeakmemory proof."
+  },
+  "observation_metadata_reconciliation": "ROOT independently resolved each existing observed_per_process entry to its raw emitted run1/run2 case, exact expected field assertions and SHA-pinned JSON pointer. Added required observed/evidence metadata without altering raw fixture, actual observations, source/runtime artifacts or review fingerprint."
 }

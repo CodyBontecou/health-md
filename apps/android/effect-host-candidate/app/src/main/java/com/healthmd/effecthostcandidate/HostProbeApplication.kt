@@ -24,6 +24,8 @@ class HostProbeApplication : Application(), ReactApplication {
         ProbeRuntime.beginSampling()
         SoLoader.init(this, OpenSourceMergedSoMapping)
         DefaultNewArchitectureEntryPoint.load()
+        // Explicit private active host with no Activity or surface; not OS background/wake proof.
+        reactHost.onHostResume(null)
         reactHost.start()
     }
 }

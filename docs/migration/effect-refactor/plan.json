@@ -4952,18 +4952,34 @@
       "risk_ids": [],
       "read_required": [
         "AGENTS.md",
-        "docs/migration/effect-refactor/personal-data.md"
+        "docs/migration/effect-refactor/personal-data.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json"
       ],
       "allowed_paths": [
         "packages/healthmd-core-ts/src/operations/personal-slice.ts",
-        "packages/healthmd-core-ts/tests/combined-slice*",
+        "packages/healthmd-core-ts/tests/combined-slice.test.ts",
+        "packages/healthmd-core-ts/tests/combined-slice-vectors.ts",
         "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
       ],
-      "shared_resources": [],
+      "shared_resources": [
+        "core-component-build",
+        "private-combined-personal-operation-interface"
+      ],
       "acceptance": [
         "One health fact, location point and usage aggregate preserve their distinct source/coverage/profile meaning.",
         "Health-only/location-only/usage-only/combined and denied/strict/partial cases use one frozen selection and bounded ordered artifacts.",
-        "Fake delivery has one job/accounting/cancel outcome and no credential/network/native acquisition side effect."
+        "Fake delivery has one job/accounting/cancel outcome and no credential/network/native acquisition side effect.",
+        "Freeze full exact typed common operation/source/delivery interfaces and independent literal input/expected artifacts before implementation; retain all81 Personal obligations and original record/encoding bytes. Public caller objects/flags are not source/grant/deletion authority; verify current trusted source/detail/destination grants before personal materialization and again before publication/commit.",
+        "Use one scoped common operation for selected/combined planning and fake delivery, owned same-factory Personal records, bounded original precision/time/identity/profile/coverage and fixed sanitized failures. Strict source requirements fail before delivery; partial results explicitly preserve missing/unavailable coverage and never infer full history from source exhaustion.",
+        "Current suppression and atomic committed/definitely-not-committed/ambiguous delivery outcomes survive cancellation correctly; cancel is not rollback after possible commit. Owned allocation/finalizer acknowledgments precede completion; fake durable/storage/cloud/auth/source/channel guarantees remain unqualified.",
+        "Limit implementation to exact4candidate files; no index/package/exports/lock/cohortguard/native/public contracts. Complete source37/22 location cohort remains separately accepted; combine only independently accepted later deltas through reviewed fixed-map CLI cohort refresh before packing/integration."
       ],
       "verification": [
         {
@@ -4977,7 +4993,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted81 Personal technical candidate obligations, four original Personal records/input JSON/canonical bytes in frozen personal-codecs-vectors.ts raw274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a and committed accepted codec09e0df.../receiptc627...; exact inventory/domain/selection/capture/source/grant/coverage locators resolved into complete independent literal vectors/interface before implementation. No legacy exporter or native profile/producer consumer bytes altered.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4989,19 +5005,63 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 81,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/operations/personal-slice.ts",
+          "packages/healthmd-core-ts/tests/combined-slice.test.ts",
+          "packages/healthmd-core-ts/tests/combined-slice-vectors.ts",
+          "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "private-combined-personal-operation-interface"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/android_release_host",
+        "fingerprint": "62a1547eb6c856c55ca5731e20de7f27cef27fe7+99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
-      }
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+        ]
+      },
+      "source_reconciliation": "Coordinator narrowed wildcard to exact4file paths and added exclusive commonbuilder/interface resources BEFORE dispatch. Stage1 write only complete literal vector and receipt; no implementation/tests/build/npm/common output reads until independent fixture/interface review. Nativecold source corrections/review precede independent common bundling window using unchanged corecap/UI bytes; common builder work waits frozen nativeasset input window. Current private source/profile/records/adapters notpublic admission. USfirst cloudregion owner preference recorded, no credentials/provider or external actions authorized by this fake slice.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+        "vector_path": "packages/healthmd-core-ts/tests/combined-slice-vectors.ts",
+        "vector_sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "stage1_patch_sha256": "f021b8d5e350b2ec6e1ef68f25e496f0935baf159553de55c0ad042707198417",
+        "evidence": "ROOT reviewed complete typed factory/authority/source scoped lease/fake atomic delivery interfaces, all59 scenarios/expectations and rules. Independent read-only Python verified all17 exact current+assigned Git pins and9 immutable selected semantic pointers, exact81 accepted obligations and4original input/record/canonical encodings,16full literal two-artifact bytes, counts/UTF8/order/selection/partial coverage/no archive completeness claim, exact rational mixed-epoch1+2^-52 membership,24large record bytes1479830 while raw records<65536 and8recordpages<1MiB. Actual frozen typed output and16success literals both PersonalSliceCompleted; earlier ROOT read sampled an unfinished draft, no frozen vector change required. Trusted current grant/suppression checks before source and commit, no caller flags as authority, cancel != rollback and commitment ambiguity retained. Synthetic scoped operation only; native/privacy/durable/public/export-format/CLI/cloud/whole-history qualification remains separate."
+      },
+      "implementation_clearance": "Exact vector/interface independently accepted before code. Implement/test only declared personal-slice.ts and combined-slice.test.ts; frozen vector bytes unchanged. No index/exports/lock/guard/native/public edits. Common build waits iOS dedicated bundle complete or explicitly suspended frozen-input lease; no CLI/make while34/20 guard is stale. Preserve entire37/22 existing common location cohort and all old318 tests.",
+      "component_build_window": {
+        "status": "completed_released",
+        "reviewer": "/root",
+        "evidence": "Third iOS bundle-only process completed, asset/graph frozen and common read lease finished. Author may apply sole current-job-after-source authority check correction and supplemental test in two already claimed files, preserve literalvector2a877, then one isolated core npm run check; refresh actual40/24 maps/receipt and retain previous430result/reproduction as resolved evidence. No CLI/make/native/install/exports/locks/guard.",
+        "actual_result": "Author executed pinned isolated npm run check:430 tests=364 retained+66 Combined; fail/cancel/skip0,19 portability negatives. No install/CLI/make/native/guard/lock/public changes. ROOT rehashed selected common capability/fault outputs unchanged; complete40/24 maps/final receipt independently reviewed separately."
+      },
+      "independent_review_correction": {
+        "status": "resolved_by_independent_actual_reproduction",
+        "reviewer": "/root/android_release_host",
+        "source_patch_sha256": "65af0ea3cc265c8c3766b2b357abf760efeaeb2d86500d636a9c97c5c1d885ce",
+        "emitted_operation_sha256": "d573daa5aa5e97c1f35582d3ea9e5b51faa44cf76424e9476c843292317c6bf5",
+        "reproduction_path": "/private/tmp/healthmd-combined-review-reentry.mjs",
+        "reproduction_sha256": "21f3b699e36d76a406ee48ff13954bd2432678cd187e728b9d68a374344a00c9",
+        "evidence": "Actual independent emitted-JS reproduction: trusted source/detail before_page check revoked distinct destination and returned source permitted. Existing helper checked destination only before callback:one page/payload materialization occurred before later fixed scope_not_authorized;source releaseACK1/codec0/delivery0. Add current destination check after successful source/detail callback and deterministic supplemental zero-read/materialization regression. Frozen59literal vector/interface unchanged; no native/durable malicious-adapter authority claim.",
+        "accepted_patch_sha256": "99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1"
+      },
+      "accepted_receipt_sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f"
     },
     {
       "id": "HOSTED-FAKE-SOURCE",
@@ -7283,8 +7343,7 @@
       "shared_resources": [
         "android-candidate-gradle-graph",
         "android-candidate-js-lock",
-        "android-candidate-bridge",
-        "native-candidate-build"
+        "android-candidate-bridge"
       ],
       "source_inputs": [
         {
@@ -7512,7 +7571,7 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
+      "status": "done",
       "blocker": null,
       "claim": {
         "agent": "/root/android_release_host",
@@ -7520,21 +7579,23 @@
         "worktree": "/Users/codybontecou/dev/health-md",
         "write_paths": [
           "apps/android/effect-host-candidate/app/proguard-rules.pro",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
           "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
         ],
         "reserved_resources": [
           "android-candidate-gradle-graph",
           "android-candidate-js-lock",
-          "android-candidate-bridge",
-          "native-candidate-build"
+          "android-candidate-bridge"
         ]
       },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 202,
       "qualification": {
         "proof_class": "host_integration",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json"
+        ]
       },
       "read_required": [
         "AGENTS.md",
@@ -7543,8 +7604,8 @@
       ],
       "review": {
         "status": "accepted",
-        "reviewer": "/root",
-        "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+df583e192379d35d64ce51f7c99c4c740a30e125c5fd6ee2e5d9a824320420aa"
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5"
       },
       "expansion_input": {
         "task_id": "SPLIT-NATIVE-HOSTS",
@@ -7676,7 +7737,84 @@
           "current_cumulative_patch_digest": "e4e72f47fbc1d1f883651c0d6a93c1e488c32eb6534516551af1de3a3034b6b9",
           "evidence": "ROOT inspected exact explanatorycomment+one-class/memberkeep diff and current32cumulativepatch; all31othercurrent/Gitfiles unchanged. Ownprocess fatalNoClassDef tracing/runner startup plusDEXclassdefinition absence/R8removedshareddependency pins provide cause. Previous failedAPKs/runtime11files preserved; original10fixture/JSbundle/graph/testcert unchanged. No build/runtime/OSqualification inferred."
         }
-      }
+      },
+      "finite_shared_test_abi_policy_review": {
+        "status": "accepted_before_source_mutation",
+        "reviewer": "/root/personal_codecs",
+        "coordinator_review": "/root independently read finite rules/reasons, verified corrected manifest changes only inventory provenance/summary; no rule/reference changes.",
+        "manifest_path": "apps/android/effect-host-candidate/dist/audit/shared-test-abi-closure-complete-inventory-fourth.json",
+        "manifest_sha256": "f8d02e453ea7cb619ac9e43f45cba5c0e334d956ecbbc5dbdefee382e924ec7e",
+        "manifest_bytes": 299249,
+        "complete_original_class_inventory": 7735,
+        "actual_shared_type_roots": 66,
+        "actual_method_references": 60,
+        "actual_field_references": 17,
+        "currently_unavailable_method_references": 46,
+        "currently_unavailable_field_references": 8,
+        "finite_literal_keep_classes": 112,
+        "existing_kept_trace_classes": 1,
+        "authorized_literal_additions": 111,
+        "source_before_rule_sha256": "b7b1a882ab0f2e049a949ac9db3ed3249b805dde1e80f7c5f72c12c4e68aeb44",
+        "evidence": "Independent reviewer parsed both actual APK DEX and R8 mapping, verified all77 normalized original member signatures, all112 literal class headers/artifact provenance, recursive declaring-owner/descriptor/superclass/interface/facade closure with no extra/missing rules. Complete AAR embedded49 provenance and all1305 test type IDs/main aliases zero intersection bound corrected manifest. Runtime annotation roots conservatively kept, not claimed executed. Only exact111 additional class rules plus concise source comment are authorized in existing private Proguard path; no wildcard package/global optimizer disable/dependency change. Freeze new exact source and cumulative32-file patch for ROOT prebuild review before strict build/device execution.",
+        "proof_class": "source_artifact_policy_only"
+      },
+      "finite_abi_keep_prebuild_review": {
+        "status": "accepted_before_fifth_build",
+        "reviewer": "/root",
+        "source_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+        "proguard_sha256": "ca61dfb1f62290d0bd699021f91e4055131e5e94977104e1b349deecec2fd77e",
+        "scoped_git_diff_sha256": "6842195229291997522a0ece240c18f21eba53dcab4b59915a22cdc9b108f7a8",
+        "cumulative32_source_patch_sha256": "4c4bb80e4caffb19934451b1a1380b303dccdd8fc4a80680a46fb4f51a5ec17f",
+        "manifest_sha256": "f8d02e453ea7cb619ac9e43f45cba5c0e334d956ecbbc5dbdefee382e924ec7e",
+        "evidence": "ROOT verified exact b7b1 prior Proguard bytes retained as prefix and exactly111 additional literal manifest rules, original four candidate host keeps unchanged and Trace retained once; no deletions. Exact scoped7067 B diff and cumulative32 hash verified, all other31 source/lock/tool files byte identical to prior checkpoint. Same strict offline bounded build may execute, then artifact/DEX/identity validation before exact private Pixel7 harness. No runtime qualification inferred."
+      },
+      "active_host_lifecycle_amendment": {
+        "status": "approved_before_source_mutation",
+        "reviewer": "/root",
+        "affected_source_paths": [
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt"
+        ],
+        "evidence": "Actual fifth Pixel7 test loaded Hermes/JS host but awaited completed for30s with no case report. Exact RN0.87.1 bridgeless ReactInstance uses JavaTimerManager paused=true/no headless task; start() alone leaves lifecycle BEFORE_CREATE so JS timers are paused. ROOT read nullable UI-thread ReactHost.onHostResume API, init-only-if-resumed branch and paired destroy lifecycle RESUMED->pause->destroy plus JavaTimerManager callback/listener removal. Approve sole main-thread onHostResume(null) before start plus concise private active-host comment; no Activity/surface/JS/bundle/fixture/test/graph changes. Current32 source patch must freeze and be reviewed before another strict build/device attempt.",
+        "qualification_limits": "Private explicit active no-surface engine/resource host only. Does not qualify actual OS background/wake/service scheduling, Activity lifecycle or HeadlessJsTask execution."
+      },
+      "active_host_prebuild_review": {
+        "status": "accepted_before_sixth_build",
+        "reviewer": "/root",
+        "source_revision": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+        "application_sha256": "1c33d3a991e39a93cf980887d35fc91d3921db2399ab99fcb4f46a6e90ab9547",
+        "scoped_diff_sha256": "e965de56816e3dc1e7f2189578724719e4eeb542e34ac85aa18a7791a78fffda",
+        "cumulative32_source_patch_sha256": "967318817d0a8160478da46b645017c3d375b0fd7b6484cb988f3ae3a71d58cf",
+        "evidence": "ROOT rehashed exact32 source map and all30 unchanged prior checkpoint bytes plus frozen ca61 Proguard; actual900 B diff contains only approved supported nullable main-thread active-host resume and qualification comment before start. Sixth same strict offline bounded build and exact pinned own-Pixel7 harness may execute after artifact/identity/shared-DEX validation. Explicit private active no-surface engine/resource host only; no OS background/wake/service/Activity/HeadlessJsTask qualification."
+      },
+      "own_getter_keep_policy_review": {
+        "status": "approved_before_source_mutation",
+        "reviewer": "/root",
+        "audit_path": "apps/android/effect-host-candidate/dist/audit/own-candidate-abi-sixth.json",
+        "audit_sha256": "f4770600935e0e0aa0ab3ba2c768e450b9c1a15616bde2c7f0b8fcca1805fef2",
+        "proposed_rule": "-keepclassmembers class com.healthmd.effecthostcandidate.HostProbeApplication { public com.facebook.react.ReactHost getReactHost(); }",
+        "evidence": "Actual sixth test reached completed and case assertions then NoSuchMethodError on getReactHost at teardown; no emitted case report or destroy ACK qualifies runtime. ROOT inspected exact nine actual own-candidate test references, single unresolved getter, unchanged test getter call and R8 inline-only getter mapping. Approve sole literal member rule in existing Proguard path plus concise rationale; class already manifest retained and ReactHost descriptor covered by112-class dependency policy. Freeze source32 map/diff before same strict bounded build/device attempt; no new graph/JS/fixture/test/class wildcard/dependency/minify change."
+      },
+      "own_getter_prebuild_review": {
+        "status": "accepted_before_seventh_build",
+        "reviewer": "/root",
+        "proguard_sha256": "dd0df21dd79e1a2fed363807c49e12e07455b8ff3c09d35f23138d0888d68706",
+        "cumulative32_source_patch_sha256": "ce88b9f4894b8295cfef6654000660e3e6dc8d7b33f4b23f7154d831512ce7a5",
+        "scoped_diff_sha256": "f1202a90b1bf9512e0ae257059ea3f829dad724c1ca6af3c844675b9177cb232",
+        "evidence": "ROOT verified ca61 complete112-rule prior Proguard exact byte prefix plus sole three-line comment/literal own getter addition. Active-host application1c33 and other30 source files unchanged; exact32 map/diff bound. Seventh same strict offline supervised build may execute, then all actual dependency+own test DEX references/identity/asset guards before original pinned own-target harness. No additional source mutation or runtime qualification inferred."
+      },
+      "native_resource_release": {
+        "status": "released_after_actual_native_pass",
+        "receipt_sha256": "3e0a5370427a8e26b2b204c1ae394cefcc881eec7fa45567363b83a6fabaa5d5",
+        "evidence": "Two actual fresh-process Pixel7 runs emitted ten cases each and acknowledged complete teardown. Author froze native receipt and released builder; no further Android native/device execution required. Overall narrow task pending fresh common checks and independent final review.",
+        "previous_declared_resources": [
+          "android-candidate-gradle-graph",
+          "android-candidate-js-lock",
+          "android-candidate-bridge",
+          "native-candidate-build"
+        ],
+        "current_scope": "Native build/runtime phase closed and artifacts frozen. Remaining task work is source/common-evidence reconciliation and independent review; native-candidate-build resource removed from current declared/claimed review scope together. Any new native execution requires explicit reservation before action."
+      },
+      "accepted_receipt_sha256": "a2c6efb5924723ff7af1310d20b31bf3768fbcc8d7a009d48ae37e39ead39299"
     },
     {
       "id": "NATIVE-FDROID-GRAPH-PROBE",
@@ -8491,7 +8629,74 @@
         "source_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
         "evidence": "ROOT read5full independent literalcases and completeclosedprivatecanonicalASCII request/native monotonicdeadlines/headlessoneengine/credits+queue/ownedcancel+ack/fixederrors/interface/separatebundle/OSingress limits; actual15historicalcurrentGitpins+21predecessorfiles+2installedSDKhashes+acceptedpredecessor/old10fixtureunchanged verified. ExactprivateColdBridgeandbuildseams accepted. ActualSiri OSingress/OS cancellation/systemnetworking/iOS17/support unqualified; directperform/URL/applaunch/counters cannot substitute actualOSproof."
       },
-      "implementation_clearance": "Frozen literal vectors/interface independently accepted beforecode. Exactallowed implementationpaths may nowbe written; no public/native/profile/exports/sourceadmission or immutablefixture changes. Exclusive generatedcommon builder window coordinated separately."
+      "implementation_clearance": "Frozen literal vectors/interface independently accepted beforecode. Exactallowed implementationpaths may nowbe written; no public/native/profile/exports/sourceadmission or immutablefixture changes. Exclusive generatedcommon builder window coordinated separately.",
+      "source_preflight_review": {
+        "status": "accepted_source_only_with_new_supervisor_runtime_finding",
+        "reviewer": "/root/donor_mac_review",
+        "source_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+        "patch_sha256": "12d56c721debc96ece90413252682017e0ebf4dc7e8ba7991df99de2bbf535bc",
+        "fixture_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+        "evidence": "Independent corrected ten-file source review accepted required argv, owned finite supervisor and fresh case/sequence/native invocation witness/PID guards. Source-only acceptance does not establish native compilation, real OS ingress or execution fault paths. ROOT executed exact extracted supervisor helpers with private temporary output directory; success, nonzero and TERM-ignoring own parent/descendant cleanup passed. Output-flood actual evidence retained command_deadline because later deadline overwrote first output_limit. Minimal preserve-first-failure correction and re-review required before bundle; no native execution occurred."
+      },
+      "common_bundle_window": {
+        "status": "bundle_passed_frozen_common_read_lease_released",
+        "selected_immutable_inputs": {
+          "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+          "packages/healthmd-core-ts/dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0"
+        },
+        "evidence": "Actual third exact supervised bundle-only process exit0; no native/simulator command. Author froze sourcef241bab, asset004761a7/67esbuild/582physicalMetro+248Bvirtualprelude c118cbe, both selectedcommonbytes unchanged. ROOT graph review and native-purpose preparation reservation remain separate; no additional common dist reads until later explicit lease.",
+        "argv": [
+          "./scripts/run-cold-intent-probe.sh",
+          "--release",
+          "--offline",
+          "--fresh-process"
+        ],
+        "env_phase": "HEALTHMD_COLD_PHASE=bundle"
+      },
+      "supervisor_fault_path_review": {
+        "status": "accepted_before_bundle_only",
+        "reviewer": "/root",
+        "source_patch_sha256": "14dd4554be6395680f676f274147dc2aae35a2e39be6c91ab4882f345af4c5e1",
+        "runner_sha256": "5d696caf109d69d0136b1d4fb6e111e14e83c9335bbf071c19637dfd38bdb30b",
+        "fixture_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+        "summary_path": "/private/tmp/healthmd-cold-supervisor-corrected-check/summary.json",
+        "summary_sha256": "e638e9b56584e420da4763841aa4a54a2720d81a9acb6d27accdc973be81cdcf",
+        "evidence": "Actual exact extracted run/signal/stop helpers (test output path relocated only) passed5 own-child cases: success, nonzero, TERM-ignoring parent+descendant timeout,4096 B output flood preserving first output_limit, spawn error. Both timeout/flood SIGKILL cleanup completed, tracked ownership cleared and own descendant verified absent. ROOT rehashed ten source files and patch; only deadline/log preserve-first-failure assignments changed. No native/Siri/OS or candidate bundle proof."
+      },
+      "bundle_retry_source_review": {
+        "status": "accepted_before_retry_bundle_only",
+        "reviewer": "/root",
+        "patch_sha256": "f0cb8c30f95c9ccf85a270b408f8dde819b3ff63f9338b65aef81e3be0f98d95",
+        "builder_sha256": "2786ef6f0e14a2a896ec132bd845ed4f30060bfb7d6f8b1f1d585b7d96103d4c",
+        "evidence": "ROOT verified precise configured watchFolders preservation plus Set append of sole pinned common folder, ten source hashes, unchanged runner5d696/fixture9bbb and current exact capabilities/faults bytes. Actual Metro failure evidence retained under dedicated ignored bundle-attempt-1. One supervised bundle-only retry may execute; no cache reset/install/common rebuild/native/simulator/old autorun or production asset change."
+      },
+      "virtual_prelude_source_review": {
+        "status": "accepted_before_third_bundle_only",
+        "reviewer": "/root",
+        "source_patch_sha256": "f241bab676c0b0f26d19ced277d279f4733b79a3942a2a1bb9ef1a05aff9bf5f",
+        "builder_sha256": "3feda7fd53587d799786d161411d4c8b303d3fa45d8850b48799b3bf6855f544",
+        "sdk_generator_sha256": "9f1d9bdc49529b24329164ea7c83e985dcc45ebc587528f5bd99cbbd5ee0e10a",
+        "sdk_prepend_factory_sha256": "087a6f30ca2d8411d98de75feaabf27d34ec09266932dc8cadfd1bfeba8cd633",
+        "evidence": "ROOT read actual installed SDK generator/factory and entire corrected builder; independently rehashed ten-source patch, both SDK pins and unchanged fixture/runner. Exactly one dependency-free prepend __prelude__, exact production pinned generator code/getSource bytes and sole expected virtual script type; unknown virtual modules rejected and every other prepend/dependency retains strict physical root/hash audit. Prior failures retained; no native/runtime proof."
+      },
+      "bundle_artifact_review": {
+        "status": "accepted_for_private_preparation_only",
+        "reviewer": "/root",
+        "source_patch_sha256": "f241bab676c0b0f26d19ced277d279f4733b79a3942a2a1bb9ef1a05aff9bf5f",
+        "receipt_sha256": "75c74e74b73bf36ef9003ff1560c6506ee933bb29bb78ea0652cdfeb81d8a07c",
+        "audit_path": "/private/tmp/healthmd-cold-bundle-root-review.json",
+        "audit_sha256": "3958f310c523b14a49c138f5c50ada285bd9e6ecb7d7f99d8a9303ec8b97fdb0",
+        "evidence": "ROOT independently rehashed all seven frozen bundle files,582unique admittedphysicalMetro and67esbuild inputs againstactualcurrentfiles, strictprivate-root/sole2externalcommon/no oldautorun,248Bsolevirtualmetadata+2pinnedSDKsources. Combined431componentcheckcompleted, currentcap/faultstillimmutable. Actualbundlepassedwithoutnative/simulator; noOSingressorengineproof."
+      },
+      "purpose_tool_prepare_clearance": {
+        "status": "source_amendment_only_before_execution_review",
+        "reviewer": "/root",
+        "allowed_edit_paths": [
+          "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+        ],
+        "evidence": "Approve exact prepare phase source only:reuse and hardpin seven frozen thirdbundlefiles/fixture/582+solevirtual/oneReactEffect roots and selectedcommonclaims from frozenmanifestwithoutcommonreads; no bundle,simulatorinventory,xcodebuild/test in prepare. Reuse originalworkspace/scheme generation and ownedHermes30s/1MiB helper, hardpin existingcompiler459d352c9a3cfdbe9289a167d93f7e30700c6ee591dfee3a4d52dc26eb8548cb BEFORErun. Retain JSoriginalandnewHermesasset separately pluspreparehashproof;exitbeforeXcode CLI. Rootsource re-review beforeexecution. XcodeBuildMCP callable; actualshowdefaultsoldHostProbewrongforcold,selectedexistingBooted26.5target03AE614E confirmedpurposeinventory. Separateprivateprofile/preparedworkspace/scheme and buildForTesting/test_simroute afterasset/source/preparation reviews; no foreground launch/directperform fallback."
+      }
     },
     {
       "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",

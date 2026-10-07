@@ -6,3 +6,123 @@
 # ErrorProne test annotations retain javac Modifier[] metadata at CLASS retention only.
 # The private test APK never executes this unavailable Java compiler enum.
 -dontwarn javax.lang.model.element.Modifier
+
+# AndroidJUnitRunner directly uses this shared app class at instrumentation startup.
+-keep class androidx.tracing.Trace { *; }
+
+# The separate minified test APK links these exact shared runtime classes and members.
+# Preserve the reviewed finite ABI and its descriptor/superclass/interface/facade closure.
+-keep class androidx.concurrent.futures.AbstractResolvableFuture { *; }
+-keep class androidx.concurrent.futures.CallbackToFutureAdapter$Completer { *; }
+-keep class androidx.concurrent.futures.CallbackToFutureAdapter$Resolver { *; }
+-keep class androidx.concurrent.futures.CallbackToFutureAdapter { *; }
+-keep class androidx.concurrent.futures.DirectExecutor { *; }
+-keep class androidx.concurrent.futures.ResolvableFuture { *; }
+-keep class androidx.lifecycle.Lifecycle$State { *; }
+-keep class com.facebook.react.ReactHost { *; }
+-keep class com.facebook.react.interfaces.TaskInterface { *; }
+-keep class com.google.common.util.concurrent.ListenableFuture { *; }
+-keep class kotlin.Deprecated { *; }
+-keep class kotlin.Function { *; }
+-keep class kotlin.Lazy { *; }
+-keep class kotlin.LazyKt { *; }
+-keep class kotlin.LazyKt__LazyJVMKt { *; }
+-keep class kotlin.LazyKt__LazyKt { *; }
+-keep class kotlin.Metadata { *; }
+-keep class kotlin.Result$Companion { *; }
+-keep class kotlin.Result { *; }
+-keep class kotlin.ResultKt { *; }
+-keep class kotlin.Unit { *; }
+-keep class kotlin.collections.CollectionsKt { *; }
+-keep class kotlin.collections.CollectionsKt__CollectionsJVMKt { *; }
+-keep class kotlin.collections.CollectionsKt__CollectionsKt { *; }
+-keep class kotlin.collections.CollectionsKt__IterablesKt { *; }
+-keep class kotlin.collections.CollectionsKt__IteratorsJVMKt { *; }
+-keep class kotlin.collections.CollectionsKt__IteratorsKt { *; }
+-keep class kotlin.collections.CollectionsKt__MutableCollectionsJVMKt { *; }
+-keep class kotlin.collections.CollectionsKt__MutableCollectionsKt { *; }
+-keep class kotlin.collections.CollectionsKt__ReversedViewsKt { *; }
+-keep class kotlin.collections.CollectionsKt___CollectionsJvmKt { *; }
+-keep class kotlin.collections.CollectionsKt___CollectionsKt { *; }
+-keep class kotlin.collections.IntIterator { *; }
+-keep class kotlin.coroutines.AbstractCoroutineContextElement { *; }
+-keep class kotlin.coroutines.Continuation { *; }
+-keep class kotlin.coroutines.ContinuationInterceptor { *; }
+-keep class kotlin.coroutines.ContinuationKt { *; }
+-keep class kotlin.coroutines.CoroutineContext$Element { *; }
+-keep class kotlin.coroutines.CoroutineContext { *; }
+-keep class kotlin.coroutines.EmptyCoroutineContext { *; }
+-keep class kotlin.coroutines.intrinsics.IntrinsicsKt { *; }
+-keep class kotlin.coroutines.intrinsics.IntrinsicsKt__IntrinsicsJvmKt { *; }
+-keep class kotlin.coroutines.intrinsics.IntrinsicsKt__IntrinsicsKt { *; }
+-keep class kotlin.coroutines.jvm.internal.BaseContinuationImpl { *; }
+-keep class kotlin.coroutines.jvm.internal.ContinuationImpl { *; }
+-keep class kotlin.coroutines.jvm.internal.CoroutineStackFrame { *; }
+-keep class kotlin.coroutines.jvm.internal.DebugMetadata { *; }
+-keep class kotlin.coroutines.jvm.internal.DebugProbesKt { *; }
+-keep class kotlin.coroutines.jvm.internal.SuspendFunction { *; }
+-keep class kotlin.coroutines.jvm.internal.SuspendLambda { *; }
+-keep class kotlin.io.CloseableKt { *; }
+-keep class kotlin.io.TextStreamsKt { *; }
+-keep class kotlin.jvm.JvmStatic { *; }
+-keep class kotlin.jvm.functions.Function0 { *; }
+-keep class kotlin.jvm.functions.Function1 { *; }
+-keep class kotlin.jvm.functions.Function2 { *; }
+-keep class kotlin.jvm.internal.CallableReference { *; }
+-keep class kotlin.jvm.internal.FunctionBase { *; }
+-keep class kotlin.jvm.internal.FunctionReference { *; }
+-keep class kotlin.jvm.internal.FunctionReferenceImpl { *; }
+-keep class kotlin.jvm.internal.Intrinsics { *; }
+-keep class kotlin.jvm.internal.Lambda { *; }
+-keep class kotlin.jvm.internal.Ref$BooleanRef { *; }
+-keep class kotlin.jvm.internal.Ref$ObjectRef { *; }
+-keep class kotlin.jvm.internal.StringCompanionObject { *; }
+-keep class kotlin.jvm.internal.markers.KMappedMarker { *; }
+-keep class kotlin.ranges.ClosedRange { *; }
+-keep class kotlin.ranges.IntProgression { *; }
+-keep class kotlin.ranges.IntRange { *; }
+-keep class kotlin.ranges.OpenEndRange { *; }
+-keep class kotlin.ranges.RangesKt { *; }
+-keep class kotlin.ranges.RangesKt__RangesKt { *; }
+-keep class kotlin.ranges.RangesKt___RangesKt { *; }
+-keep class kotlin.reflect.KAnnotatedElement { *; }
+-keep class kotlin.reflect.KCallable { *; }
+-keep class kotlin.reflect.KFunction { *; }
+-keep class kotlin.text.Charsets { *; }
+-keep class kotlin.text.StringsKt { *; }
+-keep class kotlin.text.StringsKt__AppendableKt { *; }
+-keep class kotlin.text.StringsKt__IndentKt { *; }
+-keep class kotlin.text.StringsKt__RegexExtensionsJVMKt { *; }
+-keep class kotlin.text.StringsKt__RegexExtensionsKt { *; }
+-keep class kotlin.text.StringsKt__StringBuilderJVMKt { *; }
+-keep class kotlin.text.StringsKt__StringBuilderKt { *; }
+-keep class kotlin.text.StringsKt__StringNumberConversionsJVMKt { *; }
+-keep class kotlin.text.StringsKt__StringNumberConversionsKt { *; }
+-keep class kotlin.text.StringsKt__StringsJVMKt { *; }
+-keep class kotlin.text.StringsKt__StringsKt { *; }
+-keep class kotlin.text.StringsKt___StringsJvmKt { *; }
+-keep class kotlin.text.StringsKt___StringsKt { *; }
+-keep class kotlin.time.Duration$Companion { *; }
+-keep class kotlin.time.Duration { *; }
+-keep class kotlin.time.DurationKt { *; }
+-keep class kotlin.time.DurationUnit { *; }
+-keep class kotlinx.coroutines.BuildersKt { *; }
+-keep class kotlinx.coroutines.CancellableContinuation$DefaultImpls { *; }
+-keep class kotlinx.coroutines.CancellableContinuation { *; }
+-keep class kotlinx.coroutines.CancellableContinuationImpl { *; }
+-keep class kotlinx.coroutines.CoroutineDispatcher { *; }
+-keep class kotlinx.coroutines.CoroutineScope { *; }
+-keep class kotlinx.coroutines.CoroutineStart { *; }
+-keep class kotlinx.coroutines.Deferred { *; }
+-keep class kotlinx.coroutines.DispatchedTask { *; }
+-keep class kotlinx.coroutines.Dispatchers { *; }
+-keep class kotlinx.coroutines.ExecutorsKt { *; }
+-keep class kotlinx.coroutines.Job$DefaultImpls { *; }
+-keep class kotlinx.coroutines.Job { *; }
+-keep class kotlinx.coroutines.MainCoroutineDispatcher { *; }
+-keep class kotlinx.coroutines.TimeoutKt { *; }
+-keep class kotlinx.coroutines.Waiter { *; }
+-keep class kotlinx.coroutines.scheduling.Task { *; }
+
+# The separate test APK calls this manifest-retained Application getter during teardown.
+-keepclassmembers class com.healthmd.effecthostcandidate.HostProbeApplication { public com.facebook.react.ReactHost getReactHost(); }

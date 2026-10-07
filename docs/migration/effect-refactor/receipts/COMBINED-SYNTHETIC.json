@@ -1,0 +1,1176 @@
+{
+  "task_id": "COMBINED-SYNTHETIC",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+  "patch_digest": "99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1",
+  "patch_digest_method": "SHA256 sorted3 nonreceipt repo-relative pathUTF8 + NUL + rawfilebytes + NUL; exact src/operations/personal-slice.ts,tests/combined-slice.test.ts,tests/combined-slice-vectors.ts. Receipt excluded; review remains pending.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/src/operations/personal-slice.ts",
+    "packages/healthmd-core-ts/tests/combined-slice.test.ts",
+    "packages/healthmd-core-ts/tests/combined-slice-vectors.ts",
+    "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "source_pins": [
+        {
+          "path": "AGENTS.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606"
+        },
+        {
+          "path": "docs/migration/effect-refactor/personal-data.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "0c50c6d13e48026c9ed81f0325fea73050d52d7b1aa744eb905eae4884b0349d"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "4a6b1ccbe61e33f3e2ae983a2d0172cd55144147bee9d6a533449792a38ca9fb"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/personal-slice.ts",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/personal-codecs-vectors.ts",
+          "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "raw_sha256": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a"
+        }
+      ],
+      "semantic_evidence": [
+        {
+          "id": "domain-lineage",
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "json_pointer": "/common_contract_and_authority",
+          "canonical_selected_value_sha256": "4222dc72cf198669bffe8b291b1abe1d2aa5f149ebb2e5af3f9bbecd944a059b",
+          "meaning": "Separate source/purpose/detail/destination capability; one logical dataset."
+        },
+        {
+          "id": "domain-transfer",
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "json_pointer": "/complete_transfer_requirements",
+          "canonical_selected_value_sha256": "3f8144234a6219c9bf98cb7d51860dd793dc4d685985c1f3d0644886f15b31c7",
+          "meaning": "Complete retained-state transfer separate from summary/record slice."
+        },
+        {
+          "id": "domain-grants",
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "json_pointer": "/grant_handoff_sequence",
+          "canonical_selected_value_sha256": "bca432135f9a6c0bbd821643a93b1106cfa473974f57a04dfa229f7d4bdc57c1",
+          "meaning": "No automatic grant, schedule or credential handoff."
+        },
+        {
+          "id": "domain-coverage",
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "json_pointer": "/coverage",
+          "canonical_selected_value_sha256": "25704cafb28483d05069b44bbda041177e5ed1d5e2ad27267005e673c8b04ca1",
+          "meaning": "Accepted281route rows,1141semantic leaves; not repeated audit."
+        },
+        {
+          "id": "location-point",
+          "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+          "json_pointer": "/native_history/models/0",
+          "canonical_selected_value_sha256": "5a3c5a8d15e24cd0189251ad7286520d5ec08f645a0ff972afcaf19fb48464f0",
+          "meaning": "UUID/Date/Double and accuracy; absent original lineage cannot be invented."
+        },
+        {
+          "id": "mac-clock",
+          "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+          "json_pointer": "/history/collector",
+          "canonical_selected_value_sha256": "47315115a2cb2690a09e1d9a1db731648161bb69d68378f6985072659f3f30b6",
+          "meaning": "Double wall-clock/source_timestamp versus second text; sub2s/crash gaps not recoverable."
+        },
+        {
+          "id": "mobile-history",
+          "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+          "json_pointer": "/history_and_precision",
+          "canonical_selected_value_sha256": "bf03ac325fd5fc8c738deb13563a5ca95163de708440224a0fee31ffcfb4518e",
+          "meaning": "370snapshots/rounding/source flags do not establish complete precise source history."
+        },
+        {
+          "id": "health-precision",
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "json_pointer": "/exact_policies",
+          "canonical_selected_value_sha256": "065e4579b93a31175865fbf16ff8339dad500861fa11559af51da332f7107a73",
+          "meaning": "Native health exact units/owner dates/profile identity preserved."
+        },
+        {
+          "id": "health-fixtures",
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+          "raw_file_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "json_pointer": "/frozen_fixtures",
+          "canonical_selected_value_sha256": "2769d77c553c95f17faa6619db50bcbf65fb441c913562702d1348593793e202",
+          "meaning": "Frozen health/export differential bytes remain authority."
+        }
+      ],
+      "vector_raw_sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+      "accepted_obligation_count": 81,
+      "original_record_count": 4,
+      "combined_original_indices": [
+        0,
+        1,
+        2
+      ],
+      "literal_case_count": 59
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "effect": "4.0.1",
+      "runtime_bin": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin",
+      "cache": "/private/tmp/healthmd-effect-npm-cache",
+      "execution": "ROOT explicitly granted exclusivecorebuilder beforeexecution; offline=true ignore_scripts=true; no install/CLI/make/native/locks/exports/guardchanges.",
+      "core_package_sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "core_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e"
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/src/operations/personal-slice.ts": {
+          "sha256": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+          "bytes": 30880
+        },
+        "packages/healthmd-core-ts/tests/combined-slice-vectors.ts": {
+          "sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+          "bytes": 345676
+        },
+        "packages/healthmd-core-ts/tests/combined-slice.test.ts": {
+          "sha256": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+          "bytes": 22476
+        }
+      },
+      "complete_current_input_count": 40,
+      "complete_current_input_pins": {
+        ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+        "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "src/contracts/personal-slice.ts": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+        "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+        "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "src/location/point-projection.ts": "ca9fffbc5bdb1af9c261cd084251ad905f2cd911173d4792b482bb8c499aa7d3",
+        "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "src/operations/personal-slice.ts": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+        "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "src/serialization/exact-json-numbers.ts": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+        "tests/combined-slice-vectors.ts": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "tests/combined-slice.test.ts": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+        "tests/exact-json-numbers-vectors.ts": "3da51631a58425a061c4f386a88ab22457af855e914775fb77233358c0c4b1e8",
+        "tests/exact-json-numbers.test.ts": "9415b3d8ab923ef905fe8e35d01fc4df47fd23516c3d54072713fefd50e10810",
+        "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+        "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "tests/location-point-projection-vectors.ts": "d31fdc8ca3e964384e5da4a6b0c9b2d6875d932ee0bd1d9c0eef4d70192d7595",
+        "tests/location-point-projection.test.ts": "4e84fce04de24da82c3d00905ba0daf6757fc256aee461b539cc86ec6d7894da",
+        "tests/personal-codecs-vectors.ts": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+        "tests/personal-codecs.test.ts": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+        "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+        "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+        "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+        "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "complete_emitted_count": 24,
+      "complete_emitted_pins": {
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/location/point-projection.js": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a",
+        "dist/core/location/point-projection.d.ts": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477",
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/personal-slice.d.ts": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373",
+        "dist/core/contracts/personal-slice.js": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/serialization/exact-json-numbers.d.ts": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335",
+        "dist/core/serialization/exact-json-numbers.js": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/personal-slice.d.ts": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/core/operations/personal-slice.js": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef"
+      },
+      "old37_input_bytes_retained": true,
+      "old22_emitted_bytes_retained": true,
+      "historical_input_basis": {
+        "source_revision": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+        "input_count": 37,
+        "authority_receipt": "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json",
+        "method": "Exact37paths/hashes from assignedGit tree independently equal accepted receipt, current40exactfilesystem set is historical37plus3claimed additions; no discovery-based adoption."
+      },
+      "compiled_existing_tests": 364,
+      "compiled_combined_tests": 67,
+      "compiled_total_tests": 431,
+      "compiled_literal_combined_tests": 59,
+      "supplemental_combined_tests": 8,
+      "source_modules": 12,
+      "physical_effect_installations": 1,
+      "portable_boundary_negative_cases": 19,
+      "selected_cold_modules_retained": {
+        "capabilities": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "faults": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0"
+      },
+      "compiled_combined_artifacts": {
+        "dist/tests/combined-slice.test.js": "81dcf8c1197c10658e5bfac43378c054d9a090a48a6ddaad4ae62f1487b4225c"
+      },
+      "scoped_ownership_contract": "Coarse trusted source/delivery open effects own completed allocations in provided Scope before return; interruption waits acknowledged fake cleanup. Sources close before delivery; commitment masked until terminal fakeledger acknowledgment, no cancel=rollback. Failed cancellation cleanup returns fresh interrupt plus fixedcleanup_unacknowledged; no original provider causes/annotations/interruptreasonidentity forwarded.",
+      "descriptor_profile_limit": "Early descriptor binds active lease dataset/source/revision/purpose/device/install/domain/kind and fixed existingcodec detail mapping; pageprofile checked beforedecode. Descriptor lacks payloadprofile/statistic; acceptedcodec validates fixed payload literals before callback and fullboundRecord validates defensively afterdecode. Native/sourceprofile admission is not proven."
+    },
+    "policy_migration_key_versions": {
+      "public_names_profiles": "unselected",
+      "USfirst": "recorded owner preference; no provider/region/deployed policy selected"
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "One health fact, location point and usage aggregate preserve their distinct source/coverage/profile meaning.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Health-only/location-only/usage-only/combined and denied/strict/partial cases use one frozen selection and bounded ordered artifacts.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Fake delivery has one job/accounting/cancel outcome and no credential/network/native acquisition side effect.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Freeze full exact typed common operation/source/delivery interfaces and independent literal input/expected artifacts before implementation; retain all81 Personal obligations and original record/encoding bytes. Public caller objects/flags are not source/grant/deletion authority; verify current trusted source/detail/destination grants before personal materialization and again before publication/commit.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Use one scoped common operation for selected/combined planning and fake delivery, owned same-factory Personal records, bounded original precision/time/identity/profile/coverage and fixed sanitized failures. Strict source requirements fail before delivery; partial results explicitly preserve missing/unavailable coverage and never infer full history from source exhaustion.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Current suppression and atomic committed/definitely-not-committed/ambiguous delivery outcomes survive cancellation correctly; cancel is not rollback after possible commit. Owned allocation/finalizer acknowledgments precede completion; fake durable/storage/cloud/auth/source/channel guarantees remain unqualified.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    },
+    {
+      "criterion": "Limit implementation to exact4candidate files; no index/package/exports/lock/cohortguard/native/public contracts. Complete source37/22 location cohort remains separately accepted; combine only independently accepted later deltas through reviewed fixed-map CLI cohort refresh before packing/integration.",
+      "result": "passed",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice.test.ts; unchanged immutable vector2a877; actual59literal+8supplemental emittedtests and full core431/19guard pass in /private/tmp/healthmd-combined-synthetic-check-reentry-final.log"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "environment": {
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin",
+        "npm_config_cache": "/private/tmp/healthmd-effect-npm-cache",
+        "npm_config_offline": "true",
+        "npm_config_ignore_scripts": "true"
+      },
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log",
+      "log_raw_sha256": "8334711f0293d4bae35e90bca5d6c0768a8b6b9206dbbdd583e99c992a874f24",
+      "test_counts": {
+        "tests": 431,
+        "pass": 431,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "test_duration_ms": 512.487,
+      "boundary_checks": {
+        "source_modules": 12,
+        "effect_installations": 1,
+        "negative_cases": 19
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-combined-reentry-finalize.py"
+      ],
+      "result": "passed",
+      "evidence": "receipt#/inputs/artifact_and_native_interface",
+      "proof_scope": "Exact fixed40inputs/24outputs; all37priorinputs/22prioroutputs/vector retained; independent reviewer original reproduction provenance and actual431log verified. No build or native action in auditor."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "receipt#/independent_final_review; exact corrected source and independently executed emitted67tests/original reentry reproduction; no rebuild/output mutation."
+    }
+  ],
+  "inspection_summary": "ROOT-approved bounded correction adds distinct current destination recheck after trusted source/detail callback; deterministic source before_page reentry test proves0reads/0payloadmaterialization/1acknowledgedrelease/0codec/0delivery. Actual431tests=364old+59immutableliteral+8supplemental,19guard negatives passed under explicit isolated core check window. Exact40/24maps preserve37/22 and vector2a877; independent final review pending.",
+  "observations": [
+    {
+      "result": "passed",
+      "case_id": "stage1-personal-authority-preserved",
+      "procedure": "Parse accepted vector JSON literal declarations using Python JSON, compare originals to accepted draft and canonical string specification; validate referenced immutable raw/selected-value hashes.",
+      "expected": "81 obligations,4original inputs+record+canonical strings preserved; selected3 domains retain original source/profile/time semantics.",
+      "observed": "81 and4 preserved;9semantic selected-value hashes matched;17assignedGit raw input pins matched.",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice-vectors.ts#combinedSliceAcceptedObligations/#combinedSliceOriginalRecords/#combinedSliceSemanticEvidence"
+    },
+    {
+      "result": "passed",
+      "case_id": "stage1-independent-expected-bytes-and-bounds",
+      "procedure": "Read-only Python literal validator compared every expected canonical manifest and NDJSON row against frozen originals, counted unique cases, checked exact mixed-epoch rational inequality and independently constructed bounded large record recipe.",
+      "expected": "59unique cases; canonical map/record bytes; large24record output exceeds1MiB while rawrecords and8recordpages stay within bounds.",
+      "observed": "59cases; exact literal artifact rows; location978307201+2^-52 lies strictly within0..1ns interval; large24record minimum1,479,854bytes.",
+      "evidence": "/private/tmp/healthmd-combined-stage1-validation.log"
+    },
+    {
+      "result": "passed",
+      "case_id": "stage1-output-tag-reconciliation",
+      "procedure": "Read frozen raw vector, assert its exact SHA, interface tag and all successful expected.result tags; reject any PersonalSliceDelivered occurrence.",
+      "expected": "PersonalSliceCompleted consistently in typed output and successful literals; unchanged vector/patch.",
+      "observed": "16 successful literals and interface match; zero PersonalSliceDelivered occurrences; vector and patch unchanged.",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice-vectors.ts:80"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-original-three",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal combined-original-three"
+    },
+    {
+      "result": "passed",
+      "case_id": "health-only-same-dataset",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal health-only-same-dataset"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-only-same-dataset",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-only-same-dataset"
+    },
+    {
+      "result": "passed",
+      "case_id": "usage-only-same-dataset",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal usage-only-same-dataset"
+    },
+    {
+      "result": "passed",
+      "case_id": "selector-order-canonical",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal selector-order-canonical"
+    },
+    {
+      "result": "passed",
+      "case_id": "empty-selector-selects-nothing",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal empty-selector-selects-nothing"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-denied-strict",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-denied-strict"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-unavailable-strict",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-unavailable-strict"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-unknown-strict",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-unknown-strict"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-denied-allow_partial",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-denied-allow_partial"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-unavailable-allow_partial",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-unavailable-allow_partial"
+    },
+    {
+      "result": "passed",
+      "case_id": "location-unknown-allow_partial",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal location-unknown-allow_partial"
+    },
+    {
+      "result": "passed",
+      "case_id": "strict-requires-complete-evidence",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal strict-requires-complete-evidence"
+    },
+    {
+      "result": "passed",
+      "case_id": "partial-bucket-strict",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal partial-bucket-strict"
+    },
+    {
+      "result": "passed",
+      "case_id": "partial-bucket-allow_partial",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal partial-bucket-allow_partial"
+    },
+    {
+      "result": "passed",
+      "case_id": "whole-bucket-original-600-seconds",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal whole-bucket-original-600-seconds"
+    },
+    {
+      "result": "passed",
+      "case_id": "half-open-health-at-end-excluded",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal half-open-health-at-end-excluded"
+    },
+    {
+      "result": "passed",
+      "case_id": "mixed-epoch-point-between-two-nanos",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal mixed-epoch-point-between-two-nanos"
+    },
+    {
+      "result": "passed",
+      "case_id": "destination-denied",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal destination-denied"
+    },
+    {
+      "result": "passed",
+      "case_id": "detail-denied-before-source",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal detail-denied-before-source"
+    },
+    {
+      "result": "passed",
+      "case_id": "external-frontier-absent",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal external-frontier-absent"
+    },
+    {
+      "result": "passed",
+      "case_id": "external-frontier-stale",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal external-frontier-stale"
+    },
+    {
+      "result": "passed",
+      "case_id": "source-purpose-denied",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal source-purpose-denied"
+    },
+    {
+      "result": "passed",
+      "case_id": "source-binding-crosswire",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal source-binding-crosswire"
+    },
+    {
+      "result": "passed",
+      "case_id": "revoke-before-page",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal revoke-before-page"
+    },
+    {
+      "result": "passed",
+      "case_id": "delete-before-commit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal delete-before-commit"
+    },
+    {
+      "result": "passed",
+      "case_id": "backup-regrant-does-not-resurrect",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal backup-regrant-does-not-resurrect"
+    },
+    {
+      "result": "passed",
+      "case_id": "delivery-definitely_not_committed",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal delivery-definitely_not_committed"
+    },
+    {
+      "result": "passed",
+      "case_id": "delivery-ambiguous",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal delivery-ambiguous"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-before-source",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-before-source"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-completed-allocation-handoff",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-completed-allocation-handoff"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-during-page",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-during-page"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-during-source-release",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-during-source-release"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-before-commit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-before-commit"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-during-commit-committed",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-during-commit-committed"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-during-commit-ambiguous",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-during-commit-ambiguous"
+    },
+    {
+      "result": "passed",
+      "case_id": "cancel-during-delivery-release",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal cancel-during-delivery-release"
+    },
+    {
+      "result": "passed",
+      "case_id": "source-cleanup-defect",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal source-cleanup-defect"
+    },
+    {
+      "result": "passed",
+      "case_id": "record-conflict",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal record-conflict"
+    },
+    {
+      "result": "passed",
+      "case_id": "page-limit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal page-limit"
+    },
+    {
+      "result": "passed",
+      "case_id": "record-limit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal record-limit"
+    },
+    {
+      "result": "passed",
+      "case_id": "page-byte-limit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal page-byte-limit"
+    },
+    {
+      "result": "passed",
+      "case_id": "record-byte-limit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal record-byte-limit"
+    },
+    {
+      "result": "passed",
+      "case_id": "wrong-snapshot",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal wrong-snapshot"
+    },
+    {
+      "result": "passed",
+      "case_id": "title-source-denied-before-observation",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal title-source-denied-before-observation"
+    },
+    {
+      "result": "passed",
+      "case_id": "record-identical-replay-once",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal record-identical-replay-once"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-duplicate-key",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-duplicate-key"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-noncanonical-revision",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-noncanonical-revision"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-unknown-field",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-unknown-field"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-empty-interval",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-empty-interval"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-duplicate-selector",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-duplicate-selector"
+    },
+    {
+      "result": "passed",
+      "case_id": "request-title-detail",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal request-title-detail"
+    },
+    {
+      "result": "passed",
+      "case_id": "primitive-request-rejects-object",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal primitive-request-rejects-object"
+    },
+    {
+      "result": "passed",
+      "case_id": "primitive-request-rejects-array",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal primitive-request-rejects-array"
+    },
+    {
+      "result": "passed",
+      "case_id": "primitive-request-rejects-proxy",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal primitive-request-rejects-proxy"
+    },
+    {
+      "result": "passed",
+      "case_id": "primitive-request-rejects-accessor",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal primitive-request-rejects-accessor"
+    },
+    {
+      "result": "passed",
+      "case_id": "primitive-request-rejects-foreign_owned_record",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal primitive-request-rejects-foreign_owned_record"
+    },
+    {
+      "result": "passed",
+      "case_id": "output-byte-limit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal output-byte-limit"
+    },
+    {
+      "result": "passed",
+      "case_id": "delivery-cleanup-defect-after-commit",
+      "procedure": "Execute emitted combined literal test with fakeLayer, scoped source/delivery and deterministic cancellation gates when selected.",
+      "expected": "Exact frozen scenario result/artifact bytes, fixed failures and declared grant/bounds/accounting/ownership/cancellation behavior; no native/network/credential work.",
+      "observed": "Literal assertions passed; operation values/accounting or fixed failure/interrupt and owned cleanup assertions matched immutableexpectations.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined literal delivery-cleanup-defect-after-commit"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-immutable-Personal-authority-and-frozen-vector-provenance",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined immutable Personal authority and frozen vector provenance"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-interruption-with-failed-cleanup-reports-unavailable-acknowledgment-without-provider-cause",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined interruption with failed cleanup reports unavailable acknowledgment without provider cause"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-distinct-job-only-revocation-before_page",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined distinct job-only revocation before_page"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-distinct-job-only-revocation-before_record",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined distinct job-only revocation before_record"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-distinct-job-only-revocation-before_encode",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined distinct job-only revocation before_encode"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-distinct-job-only-revocation-inside_codec_callback",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined distinct job-only revocation inside_codec_callback"
+    },
+    {
+      "result": "passed",
+      "case_id": "combined-crosswired-source-record-refuses-metadata-before-globally-permitted-codec-authorization",
+      "procedure": "Execute emitted supplemental immutable/ownedcleanup/current-job-only/reentrant/crosswired-source test.",
+      "expected": "Frozen authority preserved; failed cleanup acknowledgment fixed and sanitized; distinct currentjob grant and currentlease metadata reject before later payloadmaterialization, with ownedrelease and no delivery.",
+      "observed": "Supplemental assertions passed, including zero later codec/delivery callbacks and acknowledged owned releases where permitted; unacknowledgedcleanup remains fixed failure.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined crosswired source record refuses metadata before globally permitted codec authorization"
+    },
+    {
+      "result": "passed",
+      "case_id": "complete-cohort-and-cold-module-retention",
+      "procedure": "Read exact37committed baseline input blobs and current fixed40file set; hash24coreoutputs and compare22accepted outputs; hash selectedcoldcapabilities/faults.",
+      "expected": "All37prior inputbytes and22prior outputbytes retained; only3claimed inputfiles and2new coreoutputs added; selectedcoldmodulebytes unchanged.",
+      "observed": "40inputs/24coreoutputs match exact historicalplusclaimed set;37/22unchanged; capabilitiesae1516... andfaults662d61... unchanged.",
+      "evidence": "receipt#/inputs/artifact_and_native_interface"
+    },
+    {
+      "result": "passed",
+      "case_id": "source-before-page-destination-reentry",
+      "procedure": "Execute deterministic supplemental source before_page callback revoking only destination while returning source/detail permitted.",
+      "expected": "Fixed scope_not_authorized;0pageReads/0payloadMaterializations/0codec/0delivery;1sourceAcquire/1acknowledgedRelease.",
+      "observed": "All exact counter/error assertions passed against corrected emitted source.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-reentry-final.log#combined source authority reentry revokes destination before page materialization"
+    }
+  ],
+  "limitations": [
+    "Trusted synthetic source catalog/current external suppression/source/detail/destination/codec callbacks and atomicdelivery guard are fake capability authorities, not authentication of caller claims/realgrants/nativeprofile admission.",
+    "Actualfake scoped acquisition/finalization/interruption and terminalledger decisions proven; no durable/storage/crypto/remote/native crash/cancel/transaction guarantee. No automatic retry or rollbackclaim for possiblecommit.",
+    "Sourcepage byte bound measures actualrawrecordUTF8 plus fixedmetadataJSON, not realnative/frame/transport serializer/memoryproof; guardbudgets are candidate/unmeasured.",
+    "Personal descriptor lacks payloadprofile/statistic; earlycurrentlease metadata binding plus accepted fixedcodec grammar/pageprofile admission is boundedsynthetic source precondition; no native/SDK/fullpublicprofile qualification.",
+    "Only selectedhealthfact/locationpoint/usageaggregate originalrecords in same dataset; no aggregate-derived exactsessions, crosssource totals, civil/clipped/context/title/query/fullhistory/archive/import/sourcepurpose/publicnamespace/consumer qualification. All81immutableobligations and4originals retained.",
+    "ExistingRust/native/frozen Apple8 Android4/5 and donorreaders/state remain authority. No providers/credentials/network/native/sourceadoption/userdata/OSgrants/policydeployment touched.",
+    "Private operation has no index/exports/lock/guard/cohort binding or CLI/MCP/UI/current nativehost integration. Later independently reviewed fixed40/24cohort refresh must precede packing; existing downstream34/20or37/22metadata not silently rebound.",
+    "Review pending; passed bounded authorcheck is not independentacceptance or family/gate/native/distribution/deployed/retirement qualification."
+  ],
+  "remaining_qualification": [
+    "Independent final source/fixture/receipt/actualemitted ownership/authority review at exactsource+patch.",
+    "Separate exact40/24fixed-map cohort refresh and all downstreamaffected integration.",
+    "Native/physical/signed/sourcepurpose/profile/admission/auth/durable/cloud/consumer/fullarchive/scheduling/session/retirement tasks remain open."
+  ],
+  "rollback": "Remove only this new vector and planning receipt; all accepted Personal/Rust/native/public records, profiles, source authority, data and generated artifacts remain untouched.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/android_release_host",
+    "fingerprint": "62a1547eb6c856c55ca5731e20de7f27cef27fe7+99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1"
+  },
+  "stage1_correction_history": [
+    {
+      "case_id": "stage1-output-tag-reconciliation",
+      "result": "passed",
+      "reported_concern": "Coordinator observed PersonalSliceDelivered versus PersonalSliceCompleted in a previously inspected draft.",
+      "correction": "Before final Stage1 freeze, the private output tag had been reconciled to PersonalSliceCompleted. Current exact frozen vector line80 and every successful expected.result match; no literal/vector amendment was needed on this replay.",
+      "vector_raw_sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+      "successful_literal_count": 16,
+      "public_contract_impact": "none",
+      "evidence": "packages/healthmd-core-ts/tests/combined-slice-vectors.ts:80"
+    }
+  ],
+  "fixture_review_before_implementation": {
+    "status": "accepted",
+    "reviewer": "ROOT",
+    "source_sha": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+    "stage1_patch_digest": "f021b8d5e350b2ec6e1ef68f25e496f0935baf159553de55c0ad042707198417",
+    "vector_raw_sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+    "evidence": "ROOT explicitly accepted full59scenarios/16successful artifacts/81obligations/4originals/17pins/9semantic pointers before implementation; plan coordinator owns recorded acceptance."
+  },
+  "stage2_source_preparation": {
+    "status": "compiled_checked_frozen",
+    "source_files": {
+      "packages/healthmd-core-ts/src/operations/personal-slice.ts": {
+        "sha256": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+        "bytes": 30880
+      },
+      "packages/healthmd-core-ts/tests/combined-slice-vectors.ts": {
+        "sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+        "bytes": 345676
+      },
+      "packages/healthmd-core-ts/tests/combined-slice.test.ts": {
+        "sha256": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+        "bytes": 22476
+      }
+    },
+    "compiled_combined_tests": 67,
+    "compiled_total_tests": 431,
+    "builder_window": "ROOT explicitly granted beforeexecution; no further builds/edits planned pending independent review."
+  },
+  "resolved_attempts": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "failed",
+      "failure": "TypeScript closure could not retain unknown-parameter string narrowing.",
+      "resolution": "Captured validated primitive input as immutable text before nested parser closures.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-attempt1.log",
+      "log_raw_sha256": "89d604be9ba7e433e09c0cb9205fade00d877a1ab6254f339d1e2f84e948064d"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "failed",
+      "failure": "Accidental repository-root npm invocation returned ENOENT because root has no package.json; no component check ran.",
+      "resolution": "Immediately reran exact npm run check from core package, preserving component scope.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-attempt2.log",
+      "log_raw_sha256": "f5d6a4a10632c5997c7da000989eb013e427a67bc9c3d9a0df7c5c59689d8aa2"
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "failed",
+      "failure": "All430tests passed, but portability guard rejected runtime effect/Cause import.",
+      "resolution": "Removed forbidden runtime import; construct sanitized interruption/failed-cleanup through admitted Effect API; no guard change.",
+      "evidence": "/private/tmp/healthmd-combined-synthetic-check-attempt3.log",
+      "log_raw_sha256": "e5763b40f9ea44b1804000e20954419d6c60495ba4b4c891fe65651bfde03486"
+    }
+  ],
+  "receipt_audit_resolved_attempts": [
+    {
+      "result": "failed",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-combined-finalize.py"
+      ],
+      "failure": "Audit helper expected a separate compiled vectorJS; test build actually bundles fixture into compiled testJS.",
+      "resolution": "Pin only actual compiled combined-slice.test.js; frozen source vector remains2a877 and actual test provenance check passed."
+    }
+  ],
+  "resolved_review_attempts": [
+    {
+      "source_patch_digest": "65af0ea3cc265c8c3766b2b357abf760efeaeb2d86500d636a9c97c5c1d885ce",
+      "receipt_raw_sha256": "a68d43ea38a700f953ca113485d9c23140f74fe59b9472bf0dc8d7a4847d09d2",
+      "checks": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "/private/tmp/healthmd-combined-stage1-validate.py"
+          ],
+          "result": "passed",
+          "evidence": "/private/tmp/healthmd-combined-stage1-validation.log",
+          "log_raw_sha256": "1e65bf28c169aad2212bbdbb98f960e071b07560de78dcb2279294ed3aebda69",
+          "proof_scope": "Read-only planning literal/provenance/math validation; no core compilation or product tests."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "result": "passed",
+          "environment": {
+            "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin",
+            "npm_config_cache": "/private/tmp/healthmd-effect-npm-cache",
+            "npm_config_offline": "true",
+            "npm_config_ignore_scripts": "true"
+          },
+          "evidence": "/private/tmp/healthmd-combined-synthetic-check-final.log",
+          "log_raw_sha256": "46fea2245b5f64c61a668b3f4f593f472462cae31006d36b4e86ec866e1560f1",
+          "test_counts": {
+            "tests": 430,
+            "pass": 430,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "test_duration_ms": 544.25175,
+          "boundary_checks": {
+            "source_modules": 12,
+            "effect_installations": 1,
+            "negative_cases": 19
+          }
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "/private/tmp/healthmd-combined-finalize.py"
+          ],
+          "result": "passed",
+          "evidence": "receipt#/inputs/artifact_and_native_interface",
+          "proof_scope": "Exact40fixed currentinputs/24outputs with all37/22retained; hashes only, no build or product execution."
+        }
+      ],
+      "inspection_summary": "Independent59literal/81obligation/4original freeze acceptedbyROOT beforecode; actual final430tests/19guard negatives passed under grantedcore-only window. Source/test edits corrected currentjob grant and active-lease metadata preflight, compiler narrowing and forbidden Cause import without guard/literal changes. Exact40inputs/24outputs preserve historical37/22. No native/CLI/public/cohort integration undertaken.",
+      "result": "passed",
+      "qualification": "Historical430checks passed but independent source-authority reentry reproduction established in-scope pre-materialization blocker; superseded by corrected431check."
+    },
+    {
+      "result": "failed",
+      "case_id": "source-before-page-destination-reentry",
+      "procedure": "Independent reviewer executed frozen emitted source with trusted source callback revoking destination during before_page.",
+      "expected": "Zero later page reads or payload materialization, acknowledged owned release, fixed scope_not_authorized.",
+      "observed": "Prior helper reported1pageRead/1payloadMaterialization,1acquire/1release,0codec/0delivery and eventual fixed refusal.",
+      "evidence": "/private/tmp/healthmd-combined-review-reentry.mjs",
+      "sha256": "21f3b699e36d76a406ee48ff13954bd2432678cd187e728b9d68a374344a00c9",
+      "resolution": "Recheck current null job/destination after successful source/detail callback, before helper returns; added deterministic supplemental regression without vector/interface changes."
+    }
+  ],
+  "independent_final_review": {
+    "receipt_before_review_sha256": "ffa9e4cb55bbe658b45011e88268a3aeed5a9f218343f7f0bb25c12dd00f4709",
+    "evidence": "Independent reviewer rehashed exact3source/patch/vector/current40/24 and retained37/22 maps,17current+assignedGit pins and9semantic pointers. Actual pinnedNode24 emitted67test replay passed0fail/cancel/skip; same original temporary reentry reproduction21f3b6 on new JSd88b66 observed0page/payloadmaterialization/codec/delivery,1acquire/ackrelease and fixedscope_not_authorized. Prior blocker resolved; no new material findings. ROOT independently rehashed exactcurrent40/24/sourcepatch and actual author431/19guard log8334711f. Original81obligations/4payloads/59literalcases preserved; no native/durable/public/fullarchive authority proof."
+  }
+}
