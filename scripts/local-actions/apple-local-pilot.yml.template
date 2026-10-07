@@ -1,0 +1,158 @@
+name: Apple Local Pilot
+
+run-name: Apple local pilot for ${{ inputs.source_sha || 'current health-md main' }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Optional full commit SHA reachable from main; defaults to health-md main'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+# This optional experiment is serialized independently of required Apple CI.
+concurrency:
+  group: apple-local-pilot
+  cancel-in-progress: false
+
+jobs:
+  resolve:
+    name: Resolve trusted pilot source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      source_sha: ${{ steps.source.outputs.source_sha }}
+    steps:
+      - name: Checkout public main source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CodyBontecou/health-md
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Require main dispatch and resolve exact main-reachable source
+        id: source
+        shell: bash
+        env:
+          REQUESTED_SHA: ${{ inputs.source_sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REPOSITORY" != CodyBontecou/health-md-local-ci || "$GITHUB_REF" != refs/heads/main ]]; then
+            echo "::error::Dispatch this pilot from the private health-md-local-ci main branch."
+            exit 1
+          fi
+          requested="${REQUESTED_SHA:-$(git rev-parse HEAD)}"
+          if [[ ! "$requested" =~ ^[0-9a-fA-F]{40}$ ]]; then
+            echo "::error::source_sha must be a full 40-character commit SHA."
+            exit 1
+          fi
+          if [[ "$(git cat-file -t "$requested")" != commit ]]; then
+            echo "::error::source_sha must identify an existing commit."
+            exit 1
+          fi
+          source_sha=$(git rev-parse --verify "${requested}^{commit}")
+          if ! git merge-base --is-ancestor "$source_sha" refs/remotes/origin/main; then
+            echo "::error::source_sha must be reachable from origin/main."
+            exit 1
+          fi
+          if ! git cat-file -e "${source_sha}:apps/apple/scripts/run-local-actions-pilot.sh"; then
+            echo "::error::The selected commit predates the local pilot script. Select a main commit containing apps/apple/scripts/run-local-actions-pilot.sh."
+            exit 1
+          fi
+          echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
+          printf 'Resolved trusted pilot source: %s\n' "$source_sha"
+
+      - name: Verify local runner tooling safety
+        run: |
+          python3 -m unittest \
+            apps/apple/scripts/tests/test_local_actions_pilot.py \
+            scripts/tests/test_setup_local_actions_runner.py
+
+  pilot:
+    name: Mac pilot (non-required)
+    needs: resolve
+    # Repository-scoped registration belongs ONLY to the private controller.
+    # Labels route jobs; the private repository provides the access boundary.
+    runs-on: [healthmd-local-pilot-macos-arm64]
+    timeout-minutes: 75
+    defaults:
+      run:
+        working-directory: apps/apple
+        shell: bash
+    env:
+      PILOT_SOURCE_SHA: ${{ needs.resolve.outputs.source_sha }}
+    steps:
+      - name: Prepare attempt-specific diagnostics directory
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          output="$RUNNER_TEMP/apple-local-pilot-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          mkdir -p "$output"
+          echo "PILOT_OUTPUT_DIR=$output" >> "$GITHUB_ENV"
+
+      - name: Checkout exact trusted source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: CodyBontecou/health-md
+          ref: ${{ needs.resolve.outputs.source_sha }}
+          persist-credentials: false
+
+      - name: Verify checkout and installed native Apple toolchain
+        run: |
+          set -euo pipefail
+          mkdir -p "$PILOT_OUTPUT_DIR"
+          exec > >(tee "$PILOT_OUTPUT_DIR/checkout-preflight.log") 2>&1
+          test "$(git rev-parse HEAD)" = "$PILOT_SOURCE_SHA"
+          test -f scripts/run-local-actions-pilot.sh
+          if [[ "$(uname -s)" != Darwin || "$(uname -m)" != arm64 || "$(sysctl -in sysctl.proc_translated 2>/dev/null || true)" == 1 ]]; then
+            echo "::error::This pilot requires a native arm64 macOS runner."
+            exit 1
+          fi
+          for tool in xcodebuild xcrun swift python3 cargo rustup; do
+            command -v "$tool"
+          done
+          xcodebuild -version
+          swift_output=$(swift --version)
+          printf '%s\n' "$swift_output"
+          SWIFT_VERSION_OUTPUT="$swift_output" python3 - <<'PY'
+          import os
+          import re
+          import sys
+          match = re.search(r"Swift version (\d+)\.(\d+)", os.environ["SWIFT_VERSION_OUTPUT"])
+          if not match or tuple(map(int, match.groups())) < (6, 3):
+              sys.exit("::error::The installed Apple toolchain must provide Swift 6.3 or newer.")
+          PY
+
+      - name: Run bounded unsigned local pilot
+        id: pilot
+        run: bash scripts/run-local-actions-pilot.sh
+
+      - name: Retain pilot diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: apple-local-pilot-${{ needs.resolve.outputs.source_sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ env.PILOT_OUTPUT_DIR }}/checkout-preflight.log
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/logs/
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/receipt.json
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/HealthMd-iOS.xcresult
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Summarize optional pilot
+        if: ${{ always() }}
+        env:
+          PILOT_OUTCOME: ${{ steps.pilot.outcome }}
+        run: |
+          {
+            echo '## Optional Apple local pilot'
+            printf '\nSource: %s\n' "$PILOT_SOURCE_SHA"
+            printf '\nPilot step: %s\n' "$PILOT_OUTCOME"
+            echo
+            echo 'This bounded experiment does not replace Apple CI or exact-SHA release qualification.'
+          } >> "$GITHUB_STEP_SUMMARY"
