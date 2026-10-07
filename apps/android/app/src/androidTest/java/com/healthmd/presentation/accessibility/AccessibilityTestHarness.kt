@@ -1,9 +1,11 @@
 package com.healthmd.presentation.accessibility
 
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
 import android.os.Build
+import android.os.PowerManager
 import android.view.WindowManager
 import android.view.inspector.WindowInspector
 import android.view.inputmethod.InputMethodManager
@@ -83,10 +85,36 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
     @Before
     fun keepTestActivityAwake() {
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
-        compose.activityRule.scenario.onActivity {
-            it.setShowWhenLocked(true)
-            it.setTurnScreenOn(true)
-            it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        withNativeInputDiagnostics("Native test activity could not prepare for input") {
+            compose.runOnUiThread {
+                val activity = compose.activity
+                activity.setShowWhenLocked(true)
+                activity.setTurnScreenOn(true)
+                activity.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                val keyguard = activity.getSystemService(KeyguardManager::class.java)
+                if (keyguard.isKeyguardLocked) {
+                    assertFalse(
+                        "Accessibility input requires an unlocked device; secure keyguard remains locked",
+                        keyguard.isKeyguardSecure,
+                    )
+                    keyguard.requestDismissKeyguard(activity, null)
+                }
+            }
+        }
+        awaitNativeInputReady()
+    }
+
+    /** Compose semantics can receive input before Android admits input to the native window. */
+    protected fun awaitNativeInputReady() {
+        withNativeInputDiagnostics("Native test activity did not become ready for input") {
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.runOnUiThread {
+                    val activity = compose.activity
+                    val decor = activity.window.decorView
+                    !activity.getSystemService(KeyguardManager::class.java).isKeyguardLocked &&
+                        decor.isAttachedToWindow && decor.hasWindowFocus()
+                }
+            }
         }
     }
 
@@ -169,7 +197,12 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
     }
 
     private fun nativeInputDiagnostics(): String = runCatching {
-        compose.runOnIdle {
+        // This also runs before setContent, when there is no Compose root to await.
+        compose.runOnUiThread {
+            val keyguard = compose.activity.getSystemService(KeyguardManager::class.java)
+            val power = compose.activity.getSystemService(PowerManager::class.java)
+            val state = "keyguard(locked=${keyguard.isKeyguardLocked}, secure=${keyguard.isKeyguardSecure}); " +
+                "display(interactive=${power.isInteractive}, state=${compose.activity.window.decorView.display?.state}); "
             val inputMethod = compose.activity.getSystemService(InputMethodManager::class.java)
             val owners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 WindowInspector.getGlobalWindowViews()
@@ -187,7 +220,7 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
                     "imeVisible=${insets?.isVisible(WindowInsetsCompat.Type.ime())}, " +
                     "imeBottom=${insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom}, " +
                     "size=${owner.width}x${owner.height}, softInputMode=${params?.softInputMode})"
-            }.joinToString(prefix = "nativeInput=", separator = "; ")
+            }.joinToString(prefix = state + "nativeInput=", separator = "; ")
         }
     }.getOrElse { "nativeInput unavailable: ${it.javaClass.simpleName}" }
 
