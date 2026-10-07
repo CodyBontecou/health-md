@@ -775,7 +775,10 @@
       "resolution": null,
       "record_path": null,
       "evidence": [],
-      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified."
+      "reconsideration_trigger": "A relevant source/runtime/API/policy/support input changes or proof fails; preserve previously accepted scope until requalified.",
+      "owner_selected_region": "US first",
+      "owner_selection_evidence": "Human async answer in this goal chat: US first, 2026-10-07.",
+      "resolution_progress": "Owner regional preference selected. Candidate topology and complete actual processing/data/keys/backups/subprocessor residency inventory still required before full decision acceptance or deployment qualification; no EU/both launch assumption."
     },
     {
       "id": "Q-CLOUD-TOPOLOGY",
@@ -8250,7 +8253,9 @@
         "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
         "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
         "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
-        "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+        "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
+        "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
+        "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm"
       ],
       "shared_resources": [
         "ios-candidate-project",
@@ -8391,7 +8396,9 @@
           "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
           "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
           "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
-          "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
+          "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
+          "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm"
         ],
         "reserved_resources": [
           "ios-candidate-project",
@@ -8437,7 +8444,7 @@
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       },
-      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing."
+      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing. Coordinator approved two precise additional private ColdProbeBridge.h/.mm seam paths BEFORE implementation; required to reach RCTHost from headless Swift intent target without mutating existing production/private AppDelegate auto-run or NativeProbe. Complete interface/fixture review still required before any implementation. SDK/API/actual OS ingress unqualified; no substitute direct perform(), URL or presentation launch proof."
     },
     {
       "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
@@ -17880,6 +17887,118 @@
         "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
         "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
         "child_pointer": "#/children/5"
+      }
+    },
+    {
+      "id": "MANAGE-BRIEF-STRUCTURED",
+      "title": "Render structured task consumers in agent briefs",
+      "stream": "foundation",
+      "phase": "M01",
+      "kind": "implementation",
+      "outcome": "Read-only manage.py brief renders accepted structured consumer metadata without TypeError, while preserving existing string fields and plan validation.",
+      "prerequisites": [
+        "SPLIT-LOCATION",
+        "SPLIT-USAGE-DESKTOP"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11"
+      ],
+      "risk_ids": [],
+      "read_required": [
+        "AGENTS.md",
+        "docs/migration/effect-refactor/templates.md"
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/manage.py",
+        "docs/migration/effect-refactor/receipts/MANAGE-BRIEF-STRUCTURED.json"
+      ],
+      "shared_resources": [
+        "execution-plan-inspector-source"
+      ],
+      "acceptance": [
+        "Render current list-valued consumer metadata in the read-only brief without a TypeError; preserve plain string display and every other action, blocker, validation, claim and authority behavior.",
+        "Execute existing string-task and current structured location/desktop task briefs plus structural plan validation; do not introduce dependencies or regenerate task/contract expectations.",
+        "Limit changes to the exact inspector source and receipt; no task admission, build, native, production or qualification behavior changes."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "brief",
+            "LOCATION-POINT-PROJECTION"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "brief",
+            "USAGE-DESKTOP-SESSION-PROJECTION"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "brief",
+            "CORE-COHORT-PERSONAL"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "check"
+          ],
+          "availability": "existing"
+        }
+      ],
+      "fixture_inputs": "Accepted task JSON LOCATION-POINT-PROJECTION/USAGE-DESKTOP-SESSION-PROJECTION list consumers and CORE-COHORT-PERSONAL plain strings at assigned4964c1857; actual existing brief TypeError at manage.py497 beforefix. No new fixture corpus needed for reversible read-only formatting fix.",
+      "consumers": "Coding agents reading existing exact approved task scopes through manage.py brief.",
+      "target": {
+        "platform": "source_only",
+        "channel": "development",
+        "profile": "read-only task inspector"
+      },
+      "rollback": "Revert exact inspector source formatting change; no product or user data effects.",
+      "deletion_gate": "No qualification, claim or production authority changes.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MANAGE-BRIEF-STRUCTURED.json",
+      "reviewer_role": "independent agent planning inspector reviewer",
+      "priority": 77,
+      "status": "done",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "4964c185716a18e1bf1f080092afb4e9f3a02328",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/manage.py",
+          "docs/migration/effect-refactor/receipts/MANAGE-BRIEF-STRUCTURED.json"
+        ],
+        "reserved_resources": [
+          "execution-plan-inspector-source"
+        ]
+      },
+      "blocker": null,
+      "review": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "4964c185716a18e1bf1f080092afb4e9f3a02328+9db04a268c509b2afd30e92a0e442bfa185aacb8dacd8fe72bf71cc86a077204"
+      },
+      "qualification": {
+        "status": "passed",
+        "proof_class": "portable_synthetic",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/MANAGE-BRIEF-STRUCTURED.json"
+        ]
       }
     }
   ]

@@ -494,7 +494,9 @@ def show_brief(task, plan, tasks, choices):
               + (" introduced_by=" + command["introduced_by"] if command.get("introduced_by") else ""))
     for label, key in (("Fixtures", "fixture_inputs"), ("Consumers", "consumers"), ("Rollback", "rollback"),
                        ("Deletion gate", "deletion_gate"), ("Receipt", "receipt_path"), ("Reviewer", "reviewer_role")):
-        print("\n" + label + ": " + task[key])
+        value = task[key]
+        rendered = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+        print("\n" + label + ": " + rendered)
     print("\nUse docs/migration/effect-refactor/templates.md for dispatch/review/receipt. Parent scope remains open.")
 
 

@@ -1,0 +1,210 @@
+{
+  "task_id": "MANAGE-BRIEF-STRUCTURED",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "4964c185716a18e1bf1f080092afb4e9f3a02328",
+  "patch_digest": "9db04a268c509b2afd30e92a0e442bfa185aacb8dacd8fe72bf71cc86a077204",
+  "patch_digest_method": "SHA256 raw git diff --binary 4964c185716a18e1bf1f080092afb4e9f3a02328 -- docs/migration/effect-refactor/manage.py; scoped tracked source only, receipt excluded to avoid self-reference.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/manage.py",
+    "docs/migration/effect-refactor/receipts/MANAGE-BRIEF-STRUCTURED.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "fixture_scope": "Existing accepted task metadata only; no new fixture or expected-value changes."
+    },
+    "locks_and_runtime": {
+      "runtime": "Existing Python3 standard library; no new dependencies or lock changes."
+    },
+    "artifact_and_native_interface": {
+      "inspector_before_sha256": "cb86c74e203b6d948508336984bb7a183e7bbd5666b0f203c67238810659b90d",
+      "inspector_assigned_git_sha256": "cb86c74e203b6d948508336984bb7a183e7bbd5666b0f203c67238810659b90d",
+      "inspector_after_sha256": "914c581901932c56a983d6ce73a44388859b184e11851854d2ba394a8e34f68e",
+      "patch_bytes": 966
+    },
+    "policy_migration_key_versions": {
+      "scope": "Read-only final brief field formatting only; validation, blockers, claim, admission and every other action unchanged."
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "read-only task inspector"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Render current list-valued consumer metadata in the read-only brief without a TypeError; preserve plain string display and every other action, blocker, validation, claim and authority behavior.",
+      "result": "passed",
+      "evidence": "Exact scoped diff replaces final string concatenation with preserved string or JSON-rendered structured value. Three required current briefs and structural check passed; two existing plain-string briefs are byte-identical."
+    },
+    {
+      "criterion": "Execute existing string-task and current structured location/desktop task briefs plus structural plan validation; do not introduce dependencies or regenerate task/contract expectations.",
+      "result": "passed",
+      "evidence": "Exact scoped diff replaces final string concatenation with preserved string or JSON-rendered structured value. Three required current briefs and structural check passed; two existing plain-string briefs are byte-identical."
+    },
+    {
+      "criterion": "Limit changes to the exact inspector source and receipt; no task admission, build, native, production or qualification behavior changes.",
+      "result": "passed",
+      "evidence": "Exact scoped diff replaces final string concatenation with preserved string or JSON-rendered structured value. Three required current briefs and structural check passed; two existing plain-string briefs are byte-identical."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "LOCATION-POINT-PROJECTION"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "stdout_sha256": "dbbf0c5b224f933b3cd2b5773c70eeea16117997ac54c76e67d391cd1a6d9d67",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 4441,
+        "stderr_bytes": 0,
+        "summary": "Actual current task brief rendered fully without TypeError."
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "USAGE-DESKTOP-SESSION-PROJECTION"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "stdout_sha256": "1a557b6edfc37379b7052f91ec3fe6df23a3c313a4547d52fa192ef29c704ca5",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 4709,
+        "stderr_bytes": 0,
+        "summary": "Actual current task brief rendered fully without TypeError."
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "CORE-COHORT-PERSONAL"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "stdout_sha256": "565b0effa2d1b1c6090875faf73536f9d1c945605fcdd84cee49764bdb1d6dcb",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 4755,
+        "stderr_bytes": 0,
+        "summary": "Actual current task brief rendered fully without TypeError."
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "exit_code": 0,
+      "evidence": {
+        "stdout_sha256": "fb62638782daed9dd9088e377a4677197394362229ada6b5e129a7c5d31725f0",
+        "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "stdout_bytes": 179,
+        "stderr_bytes": 0,
+        "summary": "PASS: 92 atomic tasks, 86 families, 16 choices; graph, pointers, state/evidence and claims valid.\nStructural validation only; no implementation or release qualification asserted."
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "LOCATION-POINT-PROJECTION"
+      ],
+      "result": "passed",
+      "evidence": "ROOT independently executed exact approved command successfully after inspecting formatter-only diff. stdoutSHA256 dbbf0c5b224f933b3cd2b5773c70eeea16117997ac54c76e67d391cd1a6d9d67"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "USAGE-DESKTOP-SESSION-PROJECTION"
+      ],
+      "result": "passed",
+      "evidence": "ROOT independently executed exact approved command successfully after inspecting formatter-only diff. stdoutSHA256 1a557b6edfc37379b7052f91ec3fe6df23a3c313a4547d52fa192ef29c704ca5"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "CORE-COHORT-PERSONAL"
+      ],
+      "result": "passed",
+      "evidence": "ROOT independently executed exact approved command successfully after inspecting formatter-only diff. stdoutSHA256 565b0effa2d1b1c6090875faf73536f9d1c945605fcdd84cee49764bdb1d6dcb"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "ROOT independently executed exact approved command successfully after inspecting formatter-only diff. stdoutSHA256 fb62638782daed9dd9088e377a4677197394362229ada6b5e129a7c5d31725f0"
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "structured_location_before_after",
+      "procedure": "Execute exact LOCATION-POINT-PROJECTION brief before and after scoped formatter fix.",
+      "expected": "Accepted list-valued consumers render without TypeError.",
+      "observed": "Before exit1: TypeError can only concatenate str (not list) to str. After exit0: JSON consumer array shown and all subsequent fields render; all pre-error stdout retained as exact prefix.",
+      "evidence": {
+        "before_stdout_sha256": "242f6c12a86efef408a9e953b2e11c7540951d618797d31257399335382382ce",
+        "before_stderr_sha256": "d8e7623c4a0f742396e53fe29c3f0cdeb61605ec54c60edc900ccac5d7e0e5d4",
+        "after_stdout_sha256": "dbbf0c5b224f933b3cd2b5773c70eeea16117997ac54c76e67d391cd1a6d9d67"
+      },
+      "result": "passed",
+      "coordinator_evidence": "ROOT independently reviewed exact formatter-only patch and executed all4required commands; see appendedcheckrecords."
+    },
+    {
+      "case_id": "existing_plain_strings_unchanged",
+      "procedure": "Compare actual before/after full stdout for USAGE-DESKTOP-SESSION-PROJECTION and CORE-COHORT-PERSONAL.",
+      "expected": "Existing strings retain exact formatting.",
+      "observed": "Both actual baseline briefs already exit0; their full stdout remains byte-identical. Desktop consumers currently string-valued, so no failed desktop baseline is claimed.",
+      "evidence": {
+        "desktop_stdout_sha256": "1a557b6edfc37379b7052f91ec3fe6df23a3c313a4547d52fa192ef29c704ca5",
+        "cohort_stdout_sha256": "565b0effa2d1b1c6090875faf73536f9d1c945605fcdd84cee49764bdb1d6dcb"
+      },
+      "result": "passed",
+      "coordinator_evidence": "ROOT independently reviewed exact formatter-only patch and executed all4required commands; see appendedcheckrecords."
+    }
+  ],
+  "inspection_summary": "Tiny reversible read-only display fix, no added tests that mirror formatting and no dependencies. Standard JSON handles non-string final values while original strings are printed unchanged. Scope excludes blocker/validation/claim/admission/action changes.",
+  "limitations": [
+    "Independent final source/receipt review pending; result partial until accepted.",
+    "Structural manage check does not prove product, native runtime, release or authority qualification.",
+    "No native builds/device polls/live user state or source/packet/plan edits performed."
+  ],
+  "remaining_qualification": [
+    "Independent root review of exact assigned-source + scoped patch, then coordinator integration."
+  ],
+  "rollback": "Revert exact inspector source formatting change; no product or user data effects.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "4964c185716a18e1bf1f080092afb4e9f3a02328+9db04a268c509b2afd30e92a0e442bfa185aacb8dacd8fe72bf71cc86a077204"
+  },
+  "coordinator_verification": "Exact3-line final-field formatter change only; strings retained, structured values use existingjson stdlib/ensure_asciiFalse. All3required briefs and92task validator independently executed byROOT; no blocker/state/admission/validation/action semantics changes. No product/native qualification."
+}
