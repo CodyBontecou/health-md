@@ -1,0 +1,1992 @@
+{
+  "schema": "candidate.personal_contract_cases",
+  "schema_version": 1,
+  "task_id": "PERSONAL-CONTRACT-DRAFT",
+  "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+  "proof_class": "planning",
+  "names_versions_status": "Private draft labels; no public schema/profile/version/product identity selected.",
+  "fixture_independence": "Literal synthetic expectations authored before any personal codec/repository/renderer. No candidate implementation evaluated or used to generate expectations.",
+  "source_pins": [
+    {
+      "path": "AGENTS.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "GLOSSARY.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "path": "docs/architecture/cross-platform-unification-policy.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc"
+    },
+    {
+      "path": "docs/migration/effect-refactor/personal-data.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0"
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a"
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974"
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/cloud-fault-model.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "4a6b1ccbe61e33f3e2ae983a2d0172cd55144147bee9d6a533449792a38ca9fb"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/contract.md",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+    }
+  ],
+  "semantic_evidence": [
+    {
+      "id": "domain-lineage",
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "json_pointer": "/common_contract_and_authority",
+      "canonical_selected_value_sha256": "4222dc72cf198669bffe8b291b1abe1d2aa5f149ebb2e5af3f9bbecd944a059b",
+      "meaning": "Separate source/purpose/detail/destination capability; one logical dataset."
+    },
+    {
+      "id": "domain-transfer",
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "json_pointer": "/complete_transfer_requirements",
+      "canonical_selected_value_sha256": "3f8144234a6219c9bf98cb7d51860dd793dc4d685985c1f3d0644886f15b31c7",
+      "meaning": "Complete retained-state transfer separate from summary/record slice."
+    },
+    {
+      "id": "domain-grants",
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "json_pointer": "/grant_handoff_sequence",
+      "canonical_selected_value_sha256": "bca432135f9a6c0bbd821643a93b1106cfa473974f57a04dfa229f7d4bdc57c1",
+      "meaning": "No automatic grant, schedule or credential handoff."
+    },
+    {
+      "id": "domain-coverage",
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "json_pointer": "/coverage",
+      "canonical_selected_value_sha256": "25704cafb28483d05069b44bbda041177e5ed1d5e2ad27267005e673c8b04ca1",
+      "meaning": "Accepted281route rows,1141semantic leaves; not repeated audit."
+    },
+    {
+      "id": "location-point",
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "json_pointer": "/native_history/models/0",
+      "canonical_selected_value_sha256": "5a3c5a8d15e24cd0189251ad7286520d5ec08f645a0ff972afcaf19fb48464f0",
+      "meaning": "UUID/Date/Double and accuracy; absent original lineage cannot be invented."
+    },
+    {
+      "id": "location-visit",
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "json_pointer": "/native_history/models/1",
+      "canonical_selected_value_sha256": "4431a0e88719cdde409ad5d2c37f63331374382d0dba5fe0b2c2db66a68b08a8",
+      "meaning": "Defaults/sentinels do not establish observed visit boundaries."
+    },
+    {
+      "id": "location-session",
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "json_pointer": "/native_history/models/2",
+      "canonical_selected_value_sha256": "d2b6d7a50907c4ca22f26c494e501777e0181be46e81c09308cc513f2e8a3bfe",
+      "meaning": "Explicit native recording versus inferred outing."
+    },
+    {
+      "id": "location-transfer",
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "json_pointer": "/formatted_exports",
+      "canonical_selected_value_sha256": "fa8afdc2eff9b29f8672bc186320c160eaa66caaea5e507c8c3b9255202a9613",
+      "meaning": "Eight formatted projections do not contain complete native UUID/state graph."
+    },
+    {
+      "id": "mac-history",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "json_pointer": "/history/primary",
+      "canonical_selected_value_sha256": "9350c299c38608fb23a938801dbb9ca439e257e21e10800cc41be7089aace71b",
+      "meaning": "All available native rows beyond mirror; no live contents/completeness assertion."
+    },
+    {
+      "id": "mac-clock",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "json_pointer": "/history/collector",
+      "canonical_selected_value_sha256": "47315115a2cb2690a09e1d9a1db731648161bb69d68378f6985072659f3f30b6",
+      "meaning": "Double wall-clock/source_timestamp versus second text; sub2s/crash gaps not recoverable."
+    },
+    {
+      "id": "mac-mirror",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "json_pointer": "/history/mirror",
+      "canonical_selected_value_sha256": "f2cba86e594a370d0353e6ce104a2eb1a86bbfca88c5811a8096e75bddf06dd2",
+      "meaning": "365day mirror continuation loss is not full source history."
+    },
+    {
+      "id": "mac-exclusions",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "json_pointer": "/exclusions",
+      "canonical_selected_value_sha256": "d7f552497a5cd52579620a360f123a91d2864fd5233f6330a4137d351da6b4af",
+      "meaning": "Browser/input and browser titles excluded before observation/persistence."
+    },
+    {
+      "id": "mobile-ios",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "json_pointer": "/ios",
+      "canonical_selected_value_sha256": "28a7f5e126404e3df96ab1019f5a9469f7a5874d18219510100b9268cb6b4a3a",
+      "meaning": "Hourly/daily SDK buckets, gated eligibility, descriptive devices not stable installation IDs."
+    },
+    {
+      "id": "mobile-history",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "json_pointer": "/history_and_precision",
+      "canonical_selected_value_sha256": "bf03ac325fd5fc8c738deb13563a5ca95163de708440224a0fee31ffcfb4518e",
+      "meaning": "370snapshots/rounding/source flags do not establish complete precise source history."
+    },
+    {
+      "id": "mobile-android",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "json_pointer": "/android_prototype",
+      "canonical_selected_value_sha256": "0697298983a10b61db3c9434b6ccd764849f942362ebde83c1720bbf91c8dd0e",
+      "meaning": "Deferred event-pair reconstruction with missing lookback/null/closure certainty."
+    },
+    {
+      "id": "mobile-exclusions",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "json_pointer": "/exclusions",
+      "canonical_selected_value_sha256": "206356e451b8fe18ba13de6a2c99bf41c640d08ae1f551e932c3c506f56b0a47",
+      "meaning": "Browser app duration allowed; opaque tokens and missing human labels do not establish identifiers/grants."
+    },
+    {
+      "id": "source-choices",
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "json_pointer": "/open_owner_choices",
+      "canonical_selected_value_sha256": "c149549b1e44770b627314c32123274739099e9efedf79ebe8cd9f799fc9f1c1",
+      "meaning": "Source/license/dirty/support/purpose/channel/product choices remain open."
+    },
+    {
+      "id": "health-precision",
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "json_pointer": "/exact_policies",
+      "canonical_selected_value_sha256": "065e4579b93a31175865fbf16ff8339dad500861fa11559af51da332f7107a73",
+      "meaning": "Native health exact units/owner dates/profile identity preserved."
+    },
+    {
+      "id": "health-fixtures",
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+      "raw_file_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "json_pointer": "/frozen_fixtures",
+      "canonical_selected_value_sha256": "2769d77c553c95f17faa6619db50bcbf65fb441c913562702d1348593793e202",
+      "meaning": "Frozen health/export differential bytes remain authority."
+    }
+  ],
+  "design_pins": [
+    {
+      "id": "C14",
+      "text": "| C14 | Personal Data envelope/domain/store/capabilities | Independently versioned health/location/device_usage payloads, source/device identity, exact time/quality/provenance, annotations/inference/tombstones, capture/display/query/export status, independent domain/detail/destination grants. |",
+      "sha256": "59e3c5408e401fbfa814909bc01fd00981189c08245fc534f7093b468b1538b1"
+    },
+    {
+      "id": "C15",
+      "text": "| C15 | Combined/selected export profiles and donor compatibility | New summary/records/archive manifests and selection, per-source coverage/snapshot identity, strict/partial rules, location/usage format fixtures, frozen historical health bytes and actual pinned consumers. |",
+      "sha256": "ce87dd7a5cf61283f49a220174feb7bd02f2cf8055314897b1c95b483ad9040d"
+    },
+    {
+      "id": "C16",
+      "text": "| C16 | Multi-source operations/protocol/catalog/schedules | New typed operations and negotiated wire capabilities, CLI/MCP/UI parity, source-local evaluation, mixed old/new health-only peers, caller/cursor binding, accepted scope/accounting/cancel and revision-aware merge/catch-up. |",
+      "sha256": "77461cb55855e9067e8cdddb45200d316307f26f61bf8780add81b038b396902"
+    },
+    {
+      "id": "P01",
+      "text": "| P01 — Personal dataset and repository | Common envelope/domain payloads, source catalog, scoped transactional repository, coverage/tombstone/correction/derivation contracts and retention policy. | C14 fixtures; annotations without invented timestamps, mixed aggregate/event precision, stable IDs, replay/rollback/deletion, encrypted/protected-data failure, exact health compatibility. |",
+      "sha256": "c3596921e4302e1ffadef4466454ab2fd4b863c5846f9a0915d78283a846a4e4"
+    },
+    {
+      "id": "P02",
+      "text": "| P02 — Unified queries, exports and schedules | Common multi-source operations, independent profile negotiation, summary/record/archive renderers, selected fields/detail and frozen schedule requests. | C15–C16 fixtures and UI/CLI/MCP parity; strict/partial handling, overlap/reducer rules, bounded large exports, correct merge/cursors, one accounting/cancel/recovery authority. |",
+      "sha256": "27be49c9194184153423b1a8def9fce181504ddf15de0a882c8003452af4c06f"
+    },
+    {
+      "id": "K06",
+      "text": "### K06: personal dataset and new-domain semantics\n\nImplement P01/P02 and L01/S03 portable responsibilities alongside K01–K05: tagged domain codecs, source catalog/coverage, scoped selection/repositories, location correction/session/outlier/outing algorithms, usage bucket/session/device/title models and reducers, explicit cross-domain association, and independently versioned summary/record/archive planning. C14–C17 fixtures cover exact source precision, corrections/deletions, overlap/replacement, aggregate boundaries, title escaping/redaction, source/destination admission and migration identity.\n\nKeep these inside the same portable package and operation catalog. A location ExportKit adapter, Swift usage CLI analytics implementation or mobile TypeScript exporter may supply source evidence, but none remains a second permanent business authority after qualification. Native durable capture/storage, entitlement/report views and privileged OS calls remain host interfaces. Retain golden source fixtures plus independent invariants rather than using a new implementation to approve its own outputs.",
+      "sha256": "662cb8c02b3042b2cc1cd68599578c01de19ecc78ef9307f260d97891e30ea4f"
+    },
+    {
+      "id": "F12",
+      "text": "| F12 | iOS usage production eligibility, purpose and export destinations | M02/S01 qualifies iOS 26.4+, entitlement, EU/device/account/one-app conditions and permitted destinations separately. Preserve report sandbox and display-only/unavailable outcomes; no development-profile proof or arbitrary MCP export claim. |",
+      "sha256": "d1889fe49eb9f064a13423b2e9101fd3fa7f97d744fda221af968dbf33854b91"
+    },
+    {
+      "id": "F15",
+      "text": "| F15 | False equivalence and duplicate totals across domains/devices | C14–C16/K06 fixtures preserve source aggregate/session/visit/inference kinds, overlapping devices, hourly/daily replacement and independent coverage. No aliased health/GPS distance or fabricated missing data. |",
+      "sha256": "d7aabaa19f34f1f9856585f65dab8184abaee74f226d98a5953db2a3ac30d495"
+    },
+    {
+      "id": "F16",
+      "text": "| F16 | Full history versus source/API losses | S02/S04 retains all observed sessions beyond summaries and imports every available source record, declaring donor short-session/clock/crash/deletion gaps. S01 preserves historical aggregates; S06 remains required because no exact iOS app-session API is established. Aggregate shipping does not close it. |",
+      "sha256": "3fead7f553a0240b96931d7c195743ace71d9a039a7817035fdf9250727696bd"
+    }
+  ],
+  "candidate_bounds": {
+    "record_raw_utf8_bytes": 65536,
+    "page_raw_utf8_bytes": 1048576,
+    "records_per_page": 4096,
+    "selectors_per_request": 512,
+    "pending_pages": 1,
+    "history_days_cap": null,
+    "status": "Proposed per-operation admission guards borrowed conservatively from semantic-input baseline; unmeasured, not production memory/storage/latency/retention budgets. Oversize archive/history splits into bounded partitions; no whole-lifetime in-memory document."
+  },
+  "candidate_grant_shape": {
+    "status": "private_proposed_not_authentication",
+    "fields": [
+      "grant_id",
+      "grant_revision",
+      "authenticated_principal_reference",
+      "operation:capture|display|query|export|agent_read",
+      "source_ids_and_revisions",
+      "device_installation_pairs",
+      "source_purposes",
+      "domains",
+      "payload_kinds",
+      "statistic_ids",
+      "detail_projection",
+      "time_or_civil_scope",
+      "recipient_destination_identity",
+      "not_before",
+      "expires_at",
+      "future_upload_selection:explicit_none_or_scoped",
+      "current_source_policy_evidence_reference"
+    ],
+    "rule": "Current independent authority must validate grant/principal/source-purpose/destination scope and revocation; body declarations or source hashes do not grant authority. Capture, report display, local query, export, enrollment and agent access each checked separately."
+  },
+  "records": [
+    {
+      "domain": "health",
+      "payload_kind": "health_fact",
+      "payload_revision": 1,
+      "record_id": "synthetic-health-1",
+      "lineage": {
+        "dataset_id": "synthetic-dataset-a",
+        "device": {
+          "state": "known",
+          "value": "synthetic-device-a"
+        },
+        "installation": {
+          "state": "known",
+          "value": "synthetic-install-a"
+        },
+        "source_id": "synthetic-source-a",
+        "source_revision": "synthetic-source-contract1",
+        "purpose": "synthetic_local_collection",
+        "original_record": {
+          "state": "known",
+          "value": "synthetic-health-original"
+        },
+        "record_revision": "1",
+        "acquisition": "synthetic_fixture",
+        "source_observation": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "integrity_binding": "fixture_only_not_authentication"
+      },
+      "time": {
+        "instant": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "0",
+          "nanoseconds": 1,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "source_utc_offset_seconds": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "calendar": {
+          "time_zone": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_date": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_rule": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "observed_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "captured_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "imported_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "uploaded_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      "payload": {
+        "semantic_id": "synthetic.health.exact_count",
+        "native_semantic_id": {
+          "state": "known",
+          "value": "synthetic.health.exact_count"
+        },
+        "statistic": "observation",
+        "value": {
+          "representation": "unsigned_integer",
+          "decimal": "9007199254740993",
+          "unit": "count"
+        },
+        "native_profile": "synthetic_only_not_metric_registry_admission",
+        "extensions": []
+      }
+    },
+    {
+      "domain": "location",
+      "payload_kind": "location_point",
+      "payload_revision": 1,
+      "record_id": "synthetic-location-1",
+      "lineage": {
+        "dataset_id": "synthetic-dataset-a",
+        "device": {
+          "state": "known",
+          "value": "synthetic-device-a"
+        },
+        "installation": {
+          "state": "known",
+          "value": "synthetic-install-a"
+        },
+        "source_id": "synthetic-source-a",
+        "source_revision": "synthetic-source-contract1",
+        "purpose": "synthetic_local_collection",
+        "original_record": {
+          "state": "known",
+          "value": "synthetic-location-uuid"
+        },
+        "record_revision": "1",
+        "acquisition": "synthetic_fixture",
+        "source_observation": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "integrity_binding": "fixture_only_not_authentication"
+      },
+      "time": {
+        "instant": {
+          "representation": "binary64_epoch_seconds",
+          "epoch": "apple_reference_2001",
+          "bits": "3ff0000000000001",
+          "source_resolution": "binary64_storage",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "source_utc_offset_seconds": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "calendar": {
+          "time_zone": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_date": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_rule": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "observed_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "captured_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "imported_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "uploaded_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      "payload": {
+        "latitude": {
+          "representation": "binary64",
+          "bits": "3ff0000000000000",
+          "unit": "degree"
+        },
+        "longitude": {
+          "representation": "binary64",
+          "bits": "c000000000000000",
+          "unit": "degree"
+        },
+        "horizontal_accuracy": {
+          "representation": "binary64",
+          "bits": "4000000000000000",
+          "unit": "meter"
+        },
+        "altitude": {
+          "state": "absent"
+        },
+        "speed": {
+          "state": "absent"
+        },
+        "quality": {
+          "source_is_outlier": false,
+          "certainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "recording_session": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      }
+    },
+    {
+      "domain": "device_usage",
+      "payload_kind": "usage_aggregate",
+      "payload_revision": 1,
+      "record_id": "synthetic-usage-aggregate-1",
+      "lineage": {
+        "dataset_id": "synthetic-dataset-a",
+        "device": {
+          "state": "known",
+          "value": "synthetic-device-b"
+        },
+        "installation": {
+          "state": "known",
+          "value": "synthetic-install-b"
+        },
+        "source_id": "synthetic-source-b",
+        "source_revision": "synthetic-source-contract1",
+        "purpose": "synthetic_local_collection",
+        "original_record": {
+          "state": "known",
+          "value": "synthetic-bucket-id"
+        },
+        "record_revision": "1",
+        "acquisition": "synthetic_fixture",
+        "source_observation": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "integrity_binding": "fixture_only_not_authentication"
+      },
+      "time": {
+        "instant": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "0",
+          "nanoseconds": 0,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "source_utc_offset_seconds": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "calendar": {
+          "time_zone": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_date": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_rule": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "observed_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "captured_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "imported_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "uploaded_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      "payload": {
+        "app": {
+          "identity": {
+            "state": "known",
+            "value": "synthetic-browser-app"
+          },
+          "identity_kind": "synthetic_application_id",
+          "app_class": "browser",
+          "display_label": {
+            "state": "unknown",
+            "reason": "withheld"
+          }
+        },
+        "bucket": {
+          "start": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "0",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "end": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "3600",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "boundaries": "half_open",
+          "calendar": {
+            "time_zone": {
+              "state": "known",
+              "value": "Etc/UTC"
+            },
+            "owner_date": {
+              "state": "known",
+              "value": "1970-01-01"
+            },
+            "owner_rule": "synthetic_source_bucket"
+          }
+        },
+        "statistic": "source_total_duration",
+        "duration": {
+          "representation": "binary64",
+          "bits": "4082c00000000000",
+          "unit": "second"
+        },
+        "resolution": "hourly_bucket",
+        "source_device_scope": "one_synthetic_device",
+        "observed_session_count": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "original_source_precision": {
+          "state": "known",
+          "value": "binary64_seconds"
+        },
+        "overlap_group": {
+          "state": "known",
+          "value": "synthetic-hourly-daily-group"
+        },
+        "derived": false
+      }
+    },
+    {
+      "domain": "device_usage",
+      "payload_kind": "foreground_app_session",
+      "payload_revision": 1,
+      "record_id": "synthetic-usage-session-1",
+      "lineage": {
+        "dataset_id": "synthetic-dataset-a",
+        "device": {
+          "state": "known",
+          "value": "synthetic-device-a"
+        },
+        "installation": {
+          "state": "known",
+          "value": "synthetic-install-a"
+        },
+        "source_id": "synthetic-source-a",
+        "source_revision": "synthetic-source-contract1",
+        "purpose": "synthetic_local_collection",
+        "original_record": {
+          "state": "known",
+          "value": "synthetic-session-original"
+        },
+        "record_revision": "1",
+        "acquisition": "synthetic_fixture",
+        "source_observation": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "integrity_binding": "fixture_only_not_authentication"
+      },
+      "time": {
+        "instant": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "0",
+          "nanoseconds": 1,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "source_utc_offset_seconds": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "calendar": {
+          "time_zone": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_date": {
+            "state": "unknown",
+            "reason": "not_reported"
+          },
+          "owner_rule": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "observed_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "captured_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "imported_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        },
+        "uploaded_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      "payload": {
+        "app": {
+          "identity": {
+            "state": "known",
+            "value": "synthetic-nonbrowser-app"
+          },
+          "identity_kind": "synthetic_application_id",
+          "app_class": "non_browser",
+          "display_label": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "start": {
+          "instant": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "0",
+            "nanoseconds": 1,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "certainty": "observed"
+        },
+        "end": {
+          "instant": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "1",
+            "nanoseconds": 1,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "certainty": "observed"
+        },
+        "duration": {
+          "representation": "binary64",
+          "bits": "3ff0000000000000",
+          "unit": "second"
+        },
+        "duration_basis": "synthetic_observation",
+        "observation_intervals": [],
+        "title": {
+          "state": "not_observed",
+          "reason": "no_title_grant"
+        },
+        "device_state": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      }
+    }
+  ],
+  "combined_manifest": {
+    "schema": "candidate.personal_manifest",
+    "revision": 1,
+    "public_admission": "unselected",
+    "dataset_id": "synthetic-dataset-a",
+    "dataset_revision": "synthetic-revision-a",
+    "selection": {
+      "dataset_id": "synthetic-dataset-a",
+      "dataset_revision": "synthetic-revision-a",
+      "domains": [
+        "health",
+        "location",
+        "device_usage"
+      ],
+      "source_ids": [
+        "synthetic-source-a",
+        "synthetic-source-b"
+      ],
+      "device_installation_pairs": [
+        {
+          "device_id": "synthetic-device-a",
+          "installation_id": "synthetic-install-a"
+        },
+        {
+          "device_id": "synthetic-device-b",
+          "installation_id": "synthetic-install-b"
+        }
+      ],
+      "payload_kinds": [
+        "health_fact",
+        "location_point",
+        "usage_aggregate"
+      ],
+      "time_scope": {
+        "start": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "0",
+          "nanoseconds": 0,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "end": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "1000000000",
+          "nanoseconds": 0,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "boundaries": "half_open"
+      },
+      "details": [
+        "health_value",
+        "location_exact_point",
+        "usage_app_duration"
+      ],
+      "destination": "synthetic-local-file",
+      "strictness": "strict",
+      "snapshot_id": "synthetic-snapshot-a"
+    },
+    "record_ids": [
+      "synthetic-health-1",
+      "synthetic-location-1",
+      "synthetic-usage-aggregate-1"
+    ],
+    "coverage": [
+      {
+        "domain": "health",
+        "source_id": "synthetic-source-a",
+        "device_scope": {
+          "state": "known",
+          "value": "synthetic-device-a"
+        },
+        "installation_scope": {
+          "state": "known",
+          "value": "synthetic-install-a"
+        },
+        "payload_kind": "health_fact",
+        "interval": {
+          "start": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "0",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "end": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "1000000000",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "boundaries": "half_open"
+        },
+        "status": "partial",
+        "reason_codes": [
+          "synthetic_only_no_source_completeness_evidence"
+        ],
+        "known_intervals": [],
+        "queried_scope": "fixture_scope_only_no_source_completion_proof",
+        "gaps": [],
+        "unaccounted_intervals": "not_established_no_gap_boundaries_invented",
+        "detail_status": "unknown",
+        "snapshot_id": "synthetic-snapshot-a",
+        "source_updated_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      {
+        "domain": "location",
+        "source_id": "synthetic-source-a",
+        "device_scope": {
+          "state": "known",
+          "value": "synthetic-device-a"
+        },
+        "installation_scope": {
+          "state": "known",
+          "value": "synthetic-install-a"
+        },
+        "payload_kind": "location_point",
+        "interval": {
+          "start": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "0",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "end": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "1000000000",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "boundaries": "half_open"
+        },
+        "status": "partial",
+        "reason_codes": [
+          "synthetic_only_no_source_completeness_evidence"
+        ],
+        "known_intervals": [],
+        "queried_scope": "fixture_scope_only_no_source_completion_proof",
+        "gaps": [],
+        "unaccounted_intervals": "not_established_no_gap_boundaries_invented",
+        "detail_status": "unknown",
+        "snapshot_id": "synthetic-snapshot-a",
+        "source_updated_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      },
+      {
+        "domain": "device_usage",
+        "source_id": "synthetic-source-b",
+        "device_scope": {
+          "state": "known",
+          "value": "synthetic-device-b"
+        },
+        "installation_scope": {
+          "state": "known",
+          "value": "synthetic-install-b"
+        },
+        "payload_kind": "usage_aggregate",
+        "interval": {
+          "start": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "0",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "end": {
+            "representation": "seconds_nanos",
+            "epoch": "unix",
+            "epoch_seconds": "1000000000",
+            "nanoseconds": 0,
+            "source_resolution": "nanosecond_representation_not_accuracy",
+            "uncertainty": {
+              "state": "unknown",
+              "reason": "not_reported"
+            }
+          },
+          "boundaries": "half_open"
+        },
+        "status": "partial",
+        "reason_codes": [
+          "synthetic_only_no_source_completeness_evidence"
+        ],
+        "known_intervals": [],
+        "queried_scope": "fixture_scope_only_no_source_completion_proof",
+        "gaps": [],
+        "unaccounted_intervals": "not_established_no_gap_boundaries_invented",
+        "detail_status": "unknown",
+        "snapshot_id": "synthetic-snapshot-a",
+        "source_updated_at": {
+          "state": "unknown",
+          "reason": "not_reported"
+        }
+      }
+    ],
+    "source_snapshot_ids": [
+      "synthetic-snapshot-a"
+    ],
+    "lossless_record_partition": {
+      "status": "candidate_fixture_only",
+      "record_count": 3,
+      "precision": "original_tagged_values",
+      "omitted_details": [
+        "desktop_window_title",
+        "browser_history",
+        "input_events"
+      ]
+    },
+    "completeness": "partial",
+    "summary_vs_archive": "selected_records_not_complete_native_archive",
+    "projection_policy_revision": "synthetic-projection-a",
+    "authority": "synthetic_planning_fixture_not_grant"
+  },
+  "cases": [
+    {
+      "case_id": "combined-three-domains",
+      "input": {
+        "manifest_ref": "#/combined_manifest",
+        "records": [
+          "synthetic-health-1",
+          "synthetic-location-1",
+          "synthetic-usage-aggregate-1"
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "domains": [
+          "health",
+          "location",
+          "device_usage"
+        ],
+        "record_count": 3,
+        "completeness": "partial",
+        "native_archive_complete": false
+      },
+      "evidence_refs": [
+        "domain-lineage",
+        "health-fixtures"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-scoped-same-dataset",
+      "input": {
+        "manifest_ref": "#/combined_manifest",
+        "selection_override": {
+          "domains": [
+            "health"
+          ]
+        }
+      },
+      "expected": {
+        "dataset_id": "synthetic-dataset-a",
+        "record_ids": [
+          "synthetic-health-1"
+        ],
+        "coverage_domains": [
+          "health"
+        ],
+        "no_location_or_usage_detail": true
+      },
+      "evidence_refs": [
+        "domain-lineage",
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "point-binary64-lossless",
+      "input": {
+        "record_ref": "#/records/1"
+      },
+      "expected": {
+        "timestamp_bits": "3ff0000000000001",
+        "epoch": "apple_reference_2001",
+        "invented_nanoseconds": false,
+        "latitude_bits": "3ff0000000000000",
+        "altitude_state": "absent"
+      },
+      "evidence_refs": [
+        "location-point"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-large-integer-lossless",
+      "input": {
+        "record_ref": "#/records/0"
+      },
+      "expected": {
+        "decimal": "9007199254740993",
+        "number_coercion": false,
+        "unit": "count"
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-negativezero-preserve",
+      "input": {
+        "value": {
+          "representation": "binary64",
+          "bits": "8000000000000000",
+          "unit": "count"
+        }
+      },
+      "expected": {
+        "bits": "8000000000000000",
+        "normalized_to_positive_zero": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "mixed-epoch-selection-precision",
+      "input": {
+        "record_ref": "#/records/1",
+        "selection_ref": "#/combined_manifest/selection"
+      },
+      "expected": {
+        "inside_requested_interval": true,
+        "point_bits_unchanged": "3ff0000000000001",
+        "comparison": "exact_binary_rational_epoch_conversion_required",
+        "round_timestamp_for_selection": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "timestamp-nanos-order",
+      "input": {
+        "left": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "9007199254740993",
+          "nanoseconds": 1,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "right": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "9007199254740993",
+          "nanoseconds": 2,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        }
+      },
+      "expected": {
+        "order": "left_before_right",
+        "Date_or_Number_ordering": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "native-calendar-not-inferred",
+      "input": {
+        "record_ref": "#/records/1"
+      },
+      "expected": {
+        "owner_date": "unknown",
+        "timezone": "unknown",
+        "derive_from_current_host_zone": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "mac-clock"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "aggregate-not-session",
+      "input": {
+        "record_ref": "#/records/2"
+      },
+      "expected": {
+        "kind": "usage_aggregate",
+        "duration_seconds": 600,
+        "bucket_seconds": 3600,
+        "synthesized_session": false,
+        "fill_whole_bucket": false
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "short-session-retained",
+      "input": {
+        "record_ref": "#/records/3"
+      },
+      "expected": {
+        "persist_future_observed": true,
+        "duration_seconds": 1,
+        "discard_below_two_seconds": false
+      },
+      "evidence_refs": [
+        "mac-clock"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "historical-donor-short-tail-gap",
+      "input": {
+        "donor_gap": [
+          "discarded_short",
+          "crash_unflushed",
+          "pre_collector"
+        ]
+      },
+      "expected": {
+        "reconstruct_exact_session": false,
+        "coverage": "partial",
+        "gap_retained": true
+      },
+      "evidence_refs": [
+        "mac-clock",
+        "mac-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "ios-exact-sessions-unestablished",
+      "input": {
+        "source": "ios_historical_usage_aggregate",
+        "requested_kind": "foreground_app_session"
+      },
+      "expected": {
+        "fabricate": false,
+        "outcome": "unavailable_for_this_source",
+        "S06": "required_open",
+        "aggregate_shipping_closes_S06": false
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "android-prototype-not-supported",
+      "input": {
+        "source": "donor_android_event_prototype"
+      },
+      "expected": {
+        "health_android_usage_state": "planned",
+        "native_build_capture_coverage_proof": "pending",
+        "claim_shared_support": false
+      },
+      "evidence_refs": [
+        "mobile-android"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unknown-empty-is-not-zero",
+      "input": {
+        "source_response": [],
+        "coverage": "unknown"
+      },
+      "expected": {
+        "known_usage_seconds": null,
+        "coverage": "unknown"
+      },
+      "evidence_refs": [
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unavailable-empty-is-not-zero",
+      "input": {
+        "source_response": [],
+        "coverage": "unavailable",
+        "reason": "source_policy_unavailable"
+      },
+      "expected": {
+        "known_usage_seconds": null,
+        "coverage": "unavailable",
+        "reason_preserved": true
+      },
+      "evidence_refs": [
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "observed-zero-only-evidence",
+      "input": {
+        "source_value": {
+          "representation": "unsigned_integer",
+          "decimal": "0",
+          "unit": "second"
+        },
+        "coverage": "complete",
+        "completion_evidence": "synthetic_source_receipt",
+        "scope": "synthetic_interval_only"
+      },
+      "expected": {
+        "known_zero": true,
+        "extend_to_other_period_device_detail": false
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "no-fabricated-completeness",
+      "input": {
+        "record_count": 0,
+        "source_observedSources_flag": true,
+        "source_receipt": null
+      },
+      "expected": {
+        "complete": false,
+        "coverage": "unknown"
+      },
+      "evidence_refs": [
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "hourly-daily-overlap",
+      "input": {
+        "hourly_duration_seconds": "600",
+        "daily_duration_seconds": "600",
+        "same_source_device_scope": true,
+        "same_overlap_group": "synthetic-hourly-daily-group"
+      },
+      "expected": {
+        "sum_seconds": "600",
+        "not_sum_seconds": "1200",
+        "method": "explicit_reviewed_projection_precedence",
+        "originals_retained": true
+      },
+      "evidence_refs": [
+        "mobile-history",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "cross-device-overlap",
+      "input": {
+        "source_a_total_seconds": "600",
+        "source_b_total_seconds": "600",
+        "identity_equivalence": "unknown"
+      },
+      "expected": {
+        "automatic_person_total_seconds": null,
+        "retain_separate_source_totals": true
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "same-key-same-bytes-replay",
+      "input": {
+        "lineage_key": "synthetic-key-a",
+        "original_bytes_digest": [
+          "synthetic-digest-a",
+          "synthetic-digest-a"
+        ]
+      },
+      "expected": {
+        "logical_records": 1,
+        "idempotent": true,
+        "source_lineage_retained": true
+      },
+      "evidence_refs": [
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "same-key-different-bytes-conflict",
+      "input": {
+        "lineage_key": "synthetic-key-a",
+        "original_bytes_digest": [
+          "synthetic-digest-a",
+          "synthetic-digest-b"
+        ]
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "record_identity_conflict",
+        "silent_replace": false
+      },
+      "evidence_refs": [
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "new-install-not-same-device-history",
+      "input": {
+        "device_id": "synthetic-device-a",
+        "installation_ids": [
+          "synthetic-install-a",
+          "synthetic-install-c"
+        ]
+      },
+      "expected": {
+        "preserve_two_installations": true,
+        "automatic_dedup": false
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "missing-donor-lineage",
+      "input": {
+        "original_device": "missing",
+        "source_record_id": "missing",
+        "import_artifact_id": "synthetic-artifact-a",
+        "partition": "synthetic-partition-a",
+        "ordinal": "0"
+      },
+      "expected": {
+        "original_identity": "unknown",
+        "import_identity": "stable_artifact_partition_ordinal",
+        "fabricated_device_or_session_link": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "correction-preserves-original",
+      "input": {
+        "original_record_id": "synthetic-location-1",
+        "correction_id": "synthetic-correction-a",
+        "correction_timestamp": "not_reported"
+      },
+      "expected": {
+        "original_immutable": true,
+        "correction_linked": true,
+        "timestamp_invented": false,
+        "undo": "append_reversal_preserving_original"
+      },
+      "evidence_refs": [
+        "location-visit",
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "visit-sentinel-not-observed",
+      "input": {
+        "arrival": "distantPast",
+        "departure": "distantFuture",
+        "donor_default": "automatic"
+      },
+      "expected": {
+        "sentinel_as_real_epoch": false,
+        "certainty": "unknown",
+        "default_proves_observation": false
+      },
+      "evidence_refs": [
+        "location-visit"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "outing-not-recording",
+      "input": {
+        "source_kind": "inferred_outing",
+        "summary_id": "synthetic-summary-a"
+      },
+      "expected": {
+        "recording_session_uuid": null,
+        "kind": "inferred_outing",
+        "inference_revision_required": true
+      },
+      "evidence_refs": [
+        "location-session"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "browser-app-duration-allowed",
+      "input": {
+        "record_ref": "#/records/2"
+      },
+      "expected": {
+        "app_duration_allowed_under_own_grants": true,
+        "window_title_or_domain_allowed": false,
+        "missing_human_label_omits_app": false
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "browser-title-before-observation",
+      "input": {
+        "app_class": "browser",
+        "requested_detail": "desktop_window_title",
+        "title_grant": true
+      },
+      "expected": {
+        "call_title_API": false,
+        "persist_title": false,
+        "queue_title": false,
+        "export_or_log_title": false,
+        "safe_code": "detail_excluded"
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unknown-app-class-title-fails-closed",
+      "input": {
+        "app_class": "unknown",
+        "requested_detail": "desktop_window_title"
+      },
+      "expected": {
+        "call_title_API": false,
+        "persist_title": false,
+        "safe_code": "detail_unadmitted"
+      },
+      "evidence_refs": [
+        "mac-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "excluded-import-before-staging",
+      "input": {
+        "incoming_fields": [
+          "browser_url",
+          "page_title",
+          "typed_text",
+          "mouse_coordinates"
+        ],
+        "migration_requested": true
+      },
+      "expected": {
+        "observe_payload": false,
+        "copy_to_staging_or_queue": false,
+        "quarantine_payload_copy": false,
+        "fixed_field_presence_report_only": true,
+        "source_donor_unchanged": true
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions",
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "capture-not-export-grant",
+      "input": {
+        "capture": "allowed",
+        "display": "allowed",
+        "query": "allowed",
+        "export": "not_authorized",
+        "destination": "synthetic-local-file"
+      },
+      "expected": {
+        "export": false,
+        "automatic_grant": false,
+        "safe_code": "export_not_authorized"
+      },
+      "evidence_refs": [
+        "domain-grants",
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "report-view-not-record-export",
+      "input": {
+        "source": "standard_ios_report_sandbox",
+        "display": "allowed",
+        "export_request": true
+      },
+      "expected": {
+        "export": false,
+        "report_sandbox_escape": false,
+        "capability": "display_only"
+      },
+      "evidence_refs": [
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "future-uploads-not-auto-agent-grant",
+      "input": {
+        "upload_enrollment": "allowed",
+        "agent_current_snapshot": "allowed",
+        "agent_future_uploads": "not_granted"
+      },
+      "expected": {
+        "agent_new_upload_read": false,
+        "grant_future_scope_inferred": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "title-query-not-agent-share",
+      "input": {
+        "desktop_title_capture": "allowed",
+        "desktop_title_local_query": "allowed",
+        "agent_detail_grant": "absent"
+      },
+      "expected": {
+        "agent_title": false,
+        "upload_enrollment_implies_read": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "strict-scope-denied-no-leak",
+      "input": {
+        "selection_ref": "#/combined_manifest/selection",
+        "denied_detail": "location_exact_point",
+        "strictness": "strict"
+      },
+      "expected": {
+        "publish_manifest_or_record": false,
+        "partial_deliverable": false,
+        "safe_code": "scope_not_authorized",
+        "raw_record_id_or_coordinate_in_error": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "partial-scope-explicit",
+      "input": {
+        "selection_ref": "#/combined_manifest/selection",
+        "denied_domain": "location",
+        "strictness": "allow_partial"
+      },
+      "expected": {
+        "deliverable_domains": [
+          "health",
+          "device_usage"
+        ],
+        "omitted_scope_status": "unavailable",
+        "omitted_personal_payload": true,
+        "manifest_complete": false
+      },
+      "evidence_refs": [
+        "domain-grants",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "grant-revoked-during-page",
+      "input": {
+        "grant_revision_before": "synthetic-grant1",
+        "grant_revision_now": "synthetic-revoked2"
+      },
+      "expected": {
+        "continue_page": false,
+        "publish_staged_results": false,
+        "recheck_source_purpose_destination": true
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "selector-cursor-crosswire",
+      "input": {
+        "requested_dataset": "synthetic-dataset-a",
+        "cursor_dataset": "synthetic-dataset-b"
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "scope_binding_mismatch",
+        "binding_required": [
+          "caller",
+          "dataset",
+          "revision",
+          "source",
+          "purpose",
+          "selection",
+          "snapshot",
+          "grant_revision",
+          "expiry"
+        ]
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "geographic-health-distance-distinct",
+      "input": {
+        "location_path_distance": "synthetic_location_distance",
+        "health_distance": "distance_walking_running"
+      },
+      "expected": {
+        "alias_semantic_id": false,
+        "sum_as_same_statistic": false
+      },
+      "evidence_refs": [
+        "health-precision",
+        "location-point"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "frozen-health-profiles",
+      "input": {
+        "requested_profiles": [
+          "apple_health_data_v8",
+          "android_frozen_v4",
+          "android_analytical_v5"
+        ]
+      },
+      "expected": {
+        "bytes_or_grammar_changed": false,
+        "personal_candidate_admitted": false
+      },
+      "evidence_refs": [
+        "health-fixtures"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "summary-not-complete-transfer",
+      "input": {
+        "donor_artifacts": [
+          "mac365daymirror",
+          "mobile370snapshot",
+          "location_formatted_export"
+        ]
+      },
+      "expected": {
+        "complete_native_archive": false,
+        "required_full_retained_history": "all_available_permitted_native_state",
+        "credentials_purchases_armed_schedules_adopted": false
+      },
+      "evidence_refs": [
+        "domain-transfer",
+        "mac-mirror",
+        "location-transfer",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "complete-history-no-dashboard-cap",
+      "input": {
+        "available_history_days": "synthetic-more-than-370",
+        "page_limit_records": 4096
+      },
+      "expected": {
+        "iterate_all_available_authorized_pages": true,
+        "global_history_cap_days": null,
+        "invent_unavailable_history": false
+      },
+      "evidence_refs": [
+        "mac-history",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "nonfinite-or-overprecision",
+      "input": {
+        "number_bits": "7ff0000000000000",
+        "timestamp_nanos": 1000000000
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "invalid_exact_value",
+        "coerce_or_round": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "bounded-page-admission",
+      "input": {
+        "candidate_record_raw_bytes": 65537,
+        "candidate_page_record_count": 4097
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "candidate_limit_exceeded",
+        "claim_production_budget": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    }
+  ],
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  }
+}

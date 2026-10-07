@@ -4299,7 +4299,8 @@
       "prerequisites": [
         "QUERY-TRAVERSAL",
         "CLI-CANDIDATE-HOST",
-        "PORTABLE-CI-CLI"
+        "PORTABLE-CI-CLI",
+        "CORE-CANDIDATE-API"
       ],
       "required_decisions": [],
       "coverage": [
@@ -4370,7 +4371,8 @@
       "prerequisites": [
         "QUERY-TRAVERSAL",
         "CLI-CANDIDATE-HOST",
-        "PORTABLE-CI-CLI"
+        "PORTABLE-CI-CLI",
+        "CORE-CANDIDATE-API"
       ],
       "required_decisions": [],
       "coverage": [
@@ -4568,7 +4570,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 32,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
@@ -4582,14 +4584,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_host",
+        "fingerprint": "56b0f6f892a8726f45ef5478d08262c8c2b04d03+6b20dc38ef5008d3e2c9f6bbe35eff3f265e2f69f8fd991e37b658f15c90a6fb"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json"
+        ]
       }
     },
     {
@@ -5606,7 +5610,7 @@
         "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted BASE-CORE raw56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7, CODEC-VALUES vectorsb64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954, accepted SPLIT-SEMANTICS raw6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e. Max6bounded render/serializer children with exactprivateAPI and independently reviewed expectedvectors beforecode: exactbinary64 formatting/-0/integer/UTF8keys/escaping/default/null/canonicalSemanticResult byte serializer first, preserve public8/4/5profiles and exhaustive remainingprofile/presentation/format/ZIP/archive/publishsource/hostconsumer proofs with owner nextpacket trigger. Historical core code/runtime/fixture pins assignedGit bytes; currently claimed CORE-CANDIDATE-API changes private exportmanifest/README/CLI checks only; note disjoint live metadata separately, no core/build/runtime writes.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -5618,8 +5622,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-RENDER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-render.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-RENDER.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -9350,6 +9363,140 @@
         "task_id": "SPLIT-SEMANTICS",
         "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
         "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e"
+      }
+    },
+    {
+      "id": "CORE-CANDIDATE-API",
+      "title": "Expose the qualified common operations to packed hosts",
+      "stream": "core_cli",
+      "phase": "M01",
+      "kind": "implementation",
+      "outcome": "Review explicit private package exports for accepted catalog, metric-chart normalization, traversal and registry interfaces, and prove packed CLI hosts import the exact shared code and service identities.",
+      "prerequisites": [
+        "OP-CATALOG",
+        "QUERY-TRAVERSAL",
+        "REGISTRY-READER",
+        "CLI-CANDIDATE-HOST",
+        "PORTABLE-CI-CLI"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O02",
+        "C01"
+      ],
+      "risk_ids": [
+        "F03",
+        "F08"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "apps/cli/docs/typescript-candidate.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/README.md",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tests/candidate-api-vectors.ts",
+        "apps/cli/tests/candidate-api.test.ts",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "acceptance": [
+        "Add explicit private candidate exports for existing qualified catalog, normalizer, traversal and registry modules; no hidden-path imports, duplicate implementation or added business behavior.",
+        "Independently reviewed literal export/identity/interface vectors precede implementation; compiled CLI tests import packaged JS and types and prove one Effect namespace/shared QuerySource and exact accepted operations.",
+        "Rebind only reviewed changed package/README input metadata while retaining exact qualified16common emitted artifact hashes and old code authority; all current source inputs, packed manifest, file-set and stale/unbuilt/symlink guards remain failclosed with new filesystem negatives as needed.",
+        "Run exact-runtime common core/UI/CLI integration, preserving old fixtures/public launchers/protocols; future semantic source additions require separate reviewed cohort rebinding before they qualify CLI integration."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": ".",
+          "argv": [
+            "make",
+            "test-portable"
+          ],
+          "availability": "existing"
+        }
+      ],
+      "fixture_inputs": "Accepted OP-CATALOG/QUERY-TRAVERSAL/REGISTRY-READER source/function/fixture pins. Current package exports only root and host-interfaces; modules already emitted but unexported. Define literal public-private candidate subpath and symbols/type/identity/excluded-internals/operation bounds expectations before code; get independent vector review and raw SHA. No catalog/network/auth completeness or direct JSON serialization claim.",
+      "consumers": "Packed CLI and future thin CLI/MCP candidates consume the exact portable operations. Current Apple/Android/public Rust CLI/MCP/export/website/plugin authority remains; this private export map changes no public wire/export contract.",
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "candidate only"
+      },
+      "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+      "reviewer_role": "independent core/cli reviewer",
+      "priority": 65,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/package.json",
+          "packages/healthmd-core-ts/README.md",
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/tests/candidate-api-vectors.ts",
+          "apps/cli/tests/candidate-api.test.ts",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
       }
     }
   ]

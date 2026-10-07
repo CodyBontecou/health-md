@@ -1,0 +1,153 @@
+{
+  "task_id": "PERSONAL-CONTRACT-DRAFT",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+  "patch_digest": "6b20dc38ef5008d3e2c9f6bbe35eff3f265e2f69f8fd991e37b658f15c90a6fb",
+  "patch_digest_method": "SHA256 concatenation of sorted two nonreceipt repo-relative UTF8 path + NUL + raw file bytes including newline + NUL; excludes receipt/plan/product files.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+    "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+    "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "GLOSSARY.md": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/architecture/cross-platform-unification-policy.md": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+      "docs/migration/effect-refactor/personal-data.md": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "docs/migration/effect-refactor/inventories/donors.json": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "docs/migration/effect-refactor/inventories/donor-location.json": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "docs/migration/effect-refactor/inventories/donor-usage-mac.json": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "docs/migration/effect-refactor/inventories/donor-usage-mobile.json": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601",
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d",
+      "docs/migration/effect-refactor/receipts/BASE-CORE.json": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+      "docs/migration/effect-refactor/decisions/cloud-fault-cases.json": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974",
+      "docs/migration/effect-refactor/decisions/cloud-fault-model.md": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d",
+      "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json": "4a6b1ccbe61e33f3e2ae983a2d0172cd55144147bee9d6a533449792a38ca9fb",
+      "packages/contracts/semantic-input/v1/contract.md": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "packages/contracts/semantic-input/v1/semantic-input.schema.json": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+    },
+    "locks_and_runtime": {
+      "installation_or_build": false,
+      "source_only": true
+    },
+    "artifact_and_native_interface": {
+      "candidate_cases": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+      "counts": {
+        "input_pins": 23,
+        "semantic_evidence_pointers": 19,
+        "design_references": 9,
+        "literal_cases": 44,
+        "synthetic_records": 4,
+        "combined_domains": 3
+      },
+      "native_admission": "None; accepted source-only inventories retained, no donor source re-audit/live data access."
+    },
+    "policy_migration_key_versions": {
+      "public_names_versions_product_identity": "unselected",
+      "frozen_health_profiles": "Apple8/Android4/5 unchanged",
+      "source_support_purpose_choices": "Q-DONOR-SOURCE/Q-DONOR-SUPPORT and native/channel/destination admission open",
+      "complete_donor_routes": 281,
+      "accepted_semantic_leaves": 1141,
+      "accepted_source_pins": 308
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Specify exact identity/time/provenance/observed-versus-aggregate/coverage and separate detail grants.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/personal-contract-candidate.md and docs/migration/effect-refactor/decisions/personal-contract-cases.json#/cases/combined_manifest/semantic_evidence"
+    },
+    {
+      "criterion": "Keep health frozen profiles unchanged; include one health fact, location point and usage aggregate in a selected/combined manifest.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/personal-contract-candidate.md and docs/migration/effect-refactor/decisions/personal-contract-cases.json#/cases/combined_manifest/semantic_evidence"
+    },
+    {
+      "criterion": "Mark public names/profile/version and unproven native/destination capability as candidate; no donor import or native permission claim.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/personal-contract-candidate.md and docs/migration/effect-refactor/decisions/personal-contract-cases.json#/cases/combined_manifest/semantic_evidence"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-personal-contract-author.py"
+      ],
+      "result": "passed",
+      "evidence": "Actual source-only assigned-Git raw pins/design/pointer hashes, literal uniqueness and fixture refs, three-domain manifest identity, synthetic binary64 duration1/600 and preserved source bits verified. {\"combined_domains\": 3, \"design_references\": 9, \"input_pins\": 23, \"literal_cases\": 44, \"semantic_evidence_pointers\": 19, \"synthetic_records\": 4}"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "PASS:65atomic tasks,86families,16choices. Structural validation only; no implementation or release qualification."
+    }
+  ],
+  "inspection_summary": "Bounded independent personal envelope/precision/lineage/coverage/selector/grant proposal and literal cases. Accepted donor/CORE/CLOUD-FAULT obligations retained; no implementation/build/product/runtime/permission/destination proof.",
+  "observations": [
+    {
+      "case_id": "personal-planning-provenance",
+      "procedure": "Read assigned Git blobs; hash raw files and canonical selected JSON evidence, read indexed design references.",
+      "expected": "Accepted source/design/semantic evidence unchanged and independently traceable.",
+      "observed": "{\"combined_domains\": 3, \"design_references\": 9, \"input_pins\": 23, \"literal_cases\": 44, \"semantic_evidence_pointers\": 19, \"synthetic_records\": 4}",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/personal-contract-cases.json#/source_pins/semantic_evidence/design_pins"
+    },
+    {
+      "case_id": "personal-planning-literal-fixtures",
+      "procedure": "Statically parse literal fixtures and resolve example pointers/unique IDs; verify synthetic bits without invoking future implementation.",
+      "expected": "One health/location/aggregate example in same dataset manifest; short session separate; no synthetic coverage guarantee.",
+      "observed": "3 selected records/domains,4 total synthetic records,44 independent positive/negative expectations; combined coverage partial.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/personal-contract-cases.json#/records/combined_manifest/cases"
+    },
+    {
+      "case_id": "independent-draft-source-and-resolution-frontier",
+      "procedure": "Independent native/contract reviewer and coordinator read draft plus44literalcases/4records, compare23assigned raw Git pins and19canonical selected pointers; review same-data combined/scoped manifest against accepted donor/native constraints.",
+      "expected": "Bounded planning draft with exactsource/time/grants/coverage and immutable healthprofiles; unresolved domainvalidity/replay/overlap/tombstone rules identified beforecodec.",
+      "observed": "All23rawpins/19pointers match,44unique literalcases and4records; combined health/location/usage aggregate explicitlypartial. Independent review accepted draft and identified formalresolutionfrontiers; no native/sourcepurpose/destination/publicprofile orcodec qualification.",
+      "evidence": "Accepted 56b0f6f892a8726f45ef5478d08262c8c2b04d03+6b20dc38ef5008d3e2c9f6bbe35eff3f265e2f69f8fd991e37b658f15c90a6fb; root source replay hashes verified.",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Planning only; source bindings/hashes do not authenticate callers or admit source/grants.",
+    "No codec/repository/serializer/native/runtime/physical/consumer/data/archive/cloud/endpoint/build/install executed.",
+    "Candidate names/revisions/bounds unselected/unmeasured for production; frozen health bytes untouched.",
+    "Source complete history means all available permitted retained state, with unavailable prior/discarded/deleted/clock/crash/source-policy losses explicit; iOS exact sessions S06 still required."
+  ],
+  "remaining_qualification": [
+    "Independent PERSONAL-CONTRACT-REVIEW; later scoped codecs/repository/source catalog/combined synthetic slice.",
+    "Full native/physical acquisition/source-purpose/detail/destination/signed-channel proofs and protected storage/recovery/corrections/retention.",
+    "Full complete donor archive/Undo/conflicts/queues/state/credentials/purchases/support and installed-user rollback gates.",
+    "Canonical serializer/public profile/identity/actual consumers and CLOUD-FAULT host/provider/grant/deletion/restore proof.",
+    "PERSONAL-CONTRACT-REVIEW must resolve coordinate/negative sensor sentinel/domain validity, duration/interval/clock inconsistency, lossless replay identity and stable import ordinal under repartition, exact mixed-epoch rational comparisons, partially overlapping aggregate selection and tombstone suppression/replay before codecs."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_host",
+    "fingerprint": "56b0f6f892a8726f45ef5478d08262c8c2b04d03+6b20dc38ef5008d3e2c9f6bbe35eff3f265e2f69f8fd991e37b658f15c90a6fb"
+  }
+}
