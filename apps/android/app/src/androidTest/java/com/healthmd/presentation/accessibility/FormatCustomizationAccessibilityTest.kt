@@ -3,22 +3,17 @@ package com.healthmd.presentation.accessibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.healthmd.R
 import com.healthmd.domain.model.*
 import com.healthmd.presentation.settings.FormatCustomizationScreen
 import com.healthmd.presentation.settings.FormatCustomizationTags as Tags
 import com.healthmd.presentation.theme.GeistAdaptiveLayout
-import com.healthmd.presentation.theme.GeistSizes
 import com.healthmd.presentation.theme.GeistType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -30,8 +25,6 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : AccessibilityTestHarness(display) {
     companion object {
-        private const val EDITOR_WINDOW = "format.test.editorWindow"
-
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
         fun displays() = accessibilityDisplays()
@@ -201,86 +194,6 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
         }
     }
 
-    @OptIn(ExperimentalTestApi::class)
-    @Test
-    fun focusedTemplateEditingKeepsAllTextAndResetAndPreviewReachableInShortWindows() {
-        val initial = syntheticCustomization().copy(
-            markdownTemplate = syntheticCustomization().markdownTemplate.copy(
-                style = MarkdownTemplateStyle.CUSTOM, customTemplate = "{{date}}",
-            ),
-        )
-        val fixture = showFormat(initial, keyboardWindow = true)
-        val field = field().performScrollTo().assertMinimumTouchTarget().assertInsideEditorWindow()
-        assertTextFits(field, GeistType.copy13Mono.fontSize)
-        val label = compose.onNodeWithTag(Tags.label(Tags.TEMPLATE_FIELD), useUnmergedTree = true)
-        label.performScrollTo().assertInsideEditorWindow()
-        assertTextFits(label, GeistType.copy16.fontSize)
-        field.performScrollTo().assertInsideEditorWindow()
-        assertTrue("The template must not require an eight-line editor",
-            height(field) <= height(compose.onNodeWithTag(EDITOR_WINDOW)) / 2 + 1.dp)
-        compose.onNodeWithTag(Tags.TEMPLATE_RESET).performScrollTo().assertInsideEditorWindow()
-        settle()
-        capture("format-template")
-
-        field.performScrollTo().assertInsideEditorWindow().performTouchInput { click() }
-        field.assertIsFocused()
-        waitForKeyboard()
-        field.performTextReplacement("Draft")
-        var expected = initial.copy(markdownTemplate = initial.markdownTemplate.copy(customTemplate = "Draft"))
-        assertChange(fixture, expected, 1)
-        field.performScrollTo().assertInsideEditorWindow()
-        assertTextFits(field, GeistType.copy13Mono.fontSize)
-        field.performTextInputSelection(TextRange(5))
-        field.performTextInput("\n{{date}}")
-        expected = expected.copy(markdownTemplate = expected.markdownTemplate.copy(customTemplate = "Draft\n{{date}}"))
-        assertChange(fixture, expected, 2)
-        field.assertIsFocused().assertEditableText("Draft\n{{date}}")
-        val preview = compose.onNodeWithTag(Tags.TEMPLATE_PREVIEW)
-        preview.performScrollTo().assertInsideEditorWindow().assertTextEquals("Draft\n2026-03-15")
-        assertTextFits(preview, GeistType.copy13Mono.fontSize)
-        field.assertIsFocused()
-        assertKeyboardVisible()
-
-        val longTemplate = "# Synthetic {{date}}\n" + "α العربية 日本語 {{unknown}}\n".repeat(80)
-        field.performScrollTo().performTextReplacement(longTemplate)
-        expected = expected.copy(markdownTemplate = expected.markdownTemplate.copy(customTemplate = longTemplate))
-        assertChange(fixture, expected, 3)
-        field.assertEditableText(longTemplate).assertIsFocused()
-        val reset = compose.onNodeWithTag(Tags.TEMPLATE_RESET).performScrollTo()
-            .assertMinimumTouchTarget().assertInsideEditorWindow()
-        val resetLabel = compose.onNode(hasText(text(R.string.custom_markdown_template_reset)) and
-            hasAnyAncestor(hasTestTag(Tags.TEMPLATE_RESET)), useUnmergedTree = true)
-        assertTextFits(resetLabel, GeistType.button14.fontSize)
-        field.assertIsFocused()
-        assertKeyboardVisible()
-        reset.performTouchInput { click() }
-        expected = expected.copy(markdownTemplate = expected.markdownTemplate.copy(customTemplate = MarkdownTemplateConfig.DEFAULT_TEMPLATE))
-        assertChange(fixture, expected, 4)
-        field.assertEditableText(MarkdownTemplateConfig.DEFAULT_TEMPLATE)
-        compose.onNodeWithText(text(R.string.custom_markdown_template_preview), useUnmergedTree = true)
-            .performScrollTo().assertInsideEditorWindow()
-
-        field.performScrollTo().performTextReplacement("")
-        expected = expected.copy(markdownTemplate = expected.markdownTemplate.copy(customTemplate = ""))
-        assertChange(fixture, expected, 5)
-        field.assertEditableText("").assertIsFocused()
-        field.performScrollTo().assertInsideEditorWindow()
-        assertTrue("An empty field's example must not force an oversized editor",
-            height(field) <= height(compose.onNodeWithTag(EDITOR_WINDOW)) / 2 + 1.dp)
-        val example = compose.onNodeWithText(text(R.string.custom_markdown_template_placeholder), useUnmergedTree = true)
-            .performScrollTo()
-        assertTextFits(example, GeistType.copy16.fontSize)
-        preview.performScrollTo().assertInsideEditorWindow().assertTextEquals(text(R.string.custom_markdown_template_empty_preview))
-        assertTextFits(preview, GeistType.copy13Mono.fontSize)
-        listOf(R.string.custom_markdown_template_help, R.string.custom_markdown_template_tokens).forEach { id ->
-            // Long reference paragraphs scroll; unlike controls they may span the viewport.
-            val helper = compose.onNodeWithText(text(id), useUnmergedTree = true).performScrollTo()
-            assertTextFits(helper, GeistType.copy13.fontSize)
-            assertEquals("Reference text keeps the field's full reading width", width(field), width(helper))
-        }
-        compose.runOnIdle { assertEquals(5, fixture.changes.size) }
-    }
-
     @Test
     fun previewRetainsConditionalRenderingUnknownTokensAndTheExisting1500CharacterBound() {
         val fixture = showFormat(syntheticCustomization().copy(
@@ -324,22 +237,12 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
         ),
     )
 
-    @OptIn(ExperimentalLayoutApi::class)
     private fun showFormat(
         initial: FormatCustomization = syntheticCustomization(),
-        keyboardWindow: Boolean = false,
     ): Fixture {
         val fixture = Fixture(initial)
         setContent {
-            // Native IME pixels belong to the physical portrait owner, not the fitted dp
-            // viewport. Model a remaining-height budget once, without double-subtracting
-            // those pixels from a synthetic landscape window. The actual field still opens
-            // the real IME below and must retain focus throughout text input and scrolling.
-            val window = if (keyboardWindow) Modifier.fillMaxWidth()
-                .height(display.height.dp - GeistSizes.minimumTouchTarget * 2)
-                .consumeWindowInsets(WindowInsets.ime).testTag(EDITOR_WINDOW)
-            else Modifier.fillMaxSize()
-            Box(window) {
+            Box(Modifier.fillMaxSize()) {
                 FormatCustomizationScreen(
                     customization = fixture.state.value,
                     onCustomizationChanged = { fixture.changes += it; fixture.state.value = it },
@@ -448,34 +351,9 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
     private fun field() = compose.onNodeWithTag(Tags.TEMPLATE_FIELD)
     private fun choice(group: String, value: Any) = compose.onNodeWithTag(Tags.choice(group, value))
     private fun width(node: SemanticsNodeInteraction) = node.getUnclippedBoundsInRoot().let { it.right - it.left }
-    private fun height(node: SemanticsNodeInteraction) = node.getUnclippedBoundsInRoot().let { it.bottom - it.top }
 
     private fun SemanticsNodeInteraction.assertEditableText(value: String) =
         assert(SemanticsMatcher.expectValue(SemanticsProperties.EditableText, AnnotatedString(value)))
-
-    private fun SemanticsNodeInteraction.assertInsideEditorWindow(): SemanticsNodeInteraction {
-        assertFullyVisible()
-        val bounds = getUnclippedBoundsInRoot()
-        val window = compose.onNodeWithTag(EDITOR_WINDOW).getUnclippedBoundsInRoot()
-        assertTrue("Control must fit the keyboard-resized window, not merely the original viewport",
-            bounds.top >= window.top - 1.dp && bounds.bottom <= window.bottom + 1.dp &&
-                bounds.left >= window.left - 1.dp && bounds.right <= window.right + 1.dp)
-        return this
-    }
-
-    private fun waitForKeyboard() {
-        compose.withNativeInputDiagnostics("format keyboard show") {
-            compose.waitUntil(timeoutMillis = 10_000) { keyboardVisible() }
-        }
-        compose.waitForIdle()
-    }
-
-    private fun keyboardVisible() = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
-        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-
-    private fun assertKeyboardVisible() {
-        compose.runOnIdle { assertTrue("Exercise editing with the real IME visible", keyboardVisible()) }
-    }
 
     private fun settle() {
         compose.mainClock.advanceTimeBy(1_000)

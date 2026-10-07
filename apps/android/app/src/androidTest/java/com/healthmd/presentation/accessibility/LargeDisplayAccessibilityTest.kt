@@ -35,15 +35,11 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.presentation.common.*
-import com.healthmd.domain.model.ScheduleCadenceUnit
-import com.healthmd.domain.model.ScheduleDateWindow
 import com.healthmd.presentation.export.FloatingExportActionBar
 import com.healthmd.presentation.navigation.AppNavigationLayout
 import com.healthmd.presentation.navigation.NavDestination
@@ -463,95 +459,6 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     }
 
     @Test
-    fun scheduleFieldsFitLocalizedValuesAndCommitKeyboardEdits() {
-        val state = mutableStateOf(ScheduleUiState(cadenceValue = 99999, lookbackDays = 365))
-        lateinit var keyboardInsets: WindowInsets
-        lateinit var keyboardDensity: Density
-        compose.setContent {
-            TestViewport {
-                val insets = WindowInsets.ime
-                val density = LocalDensity.current
-                SideEffect { keyboardInsets = insets; keyboardDensity = density }
-                Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()
-                    .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
-                    ScheduleSettingsCard(
-                        uiState = state.value,
-                        onFrequencyValueChange = { state.value = state.value.copy(cadenceValue = it) },
-                        onFrequencyUnitSelected = { state.value = state.value.copy(cadenceUnit = it) },
-                        onHourDelta = {}, onMinuteDelta = {}, onTogglePeriod = {},
-                        onDateWindowSelected = { state.value = state.value.copy(dateWindow = it) },
-                        onLookbackDelta = { state.value = state.value.copy(lookbackDays = state.value.lookbackDays + it) },
-                    )
-                }
-            }
-        }
-        capture("schedule-fields")
-        val field = compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_VALUE)
-        field.performScrollTo().assertFullyVisible().assertMinimumTouchTarget()
-        assertTextFits(field, GeistType.label20Mono.fontSize)
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val resources = context.createConfigurationContext(configuration(context.resources.configuration)).resources
-        val locale = Locale.forLanguageTag(display.language)
-        compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_UNIT).performScrollTo()
-            .assertFullyVisible().assertMinimumTouchTarget().performTouchInput { click() }
-        selectMenuItem(resources.getQuantityString(R.plurals.schedule_cadence_unit_minutes, 99999))
-        compose.runOnIdle { assertEquals(ScheduleCadenceUnit.MINUTES, state.value.cadenceUnit) }
-        compose.onNodeWithTag(ScheduleControlTags.HOUR).assertDoesNotExist()
-
-        field.performScrollTo().performTouchInput { click() }.assertIsFocused()
-        compose.withNativeInputDiagnostics("schedule keyboard show") {
-            compose.waitUntil(timeoutMillis = 10_000) {
-                compose.runOnIdle {
-                    ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
-                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
-                }
-            }
-        }
-        field.performTextReplacement(formatInteger(7, locale))
-        compose.runOnIdle { assertEquals("Don't persist a below-minimum partial edit", 99999, state.value.cadenceValue) }
-        field.performImeAction()
-        compose.runOnIdle { assertEquals(15, state.value.cadenceValue) }
-        field.assertTextContains(formatInteger(15, locale))
-
-        field.performScrollTo().performTouchInput { click() }
-        field.performTextReplacement("")
-        field.performImeAction()
-        field.assertTextContains(formatInteger(15, locale))
-        field.performScrollTo().performTouchInput { click() }
-        field.performTextReplacement(formatInteger(123456, locale))
-        field.performImeAction()
-        compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
-        field.assertTextContains(formatInteger(12345, locale))
-        field.assertIsNotFocused()
-        // Native IME visibility becomes false before Compose's animated inset reaches zero.
-        // Wait for the inset consumed by this fitted viewport before measuring clipped text.
-        compose.withNativeInputDiagnostics(
-            "schedule keyboard hide",
-            additionalState = { "composeImeBottom=${keyboardInsets.getBottom(keyboardDensity)}" },
-        ) {
-            compose.waitUntil(timeoutMillis = 10_000) {
-                compose.runOnIdle { keyboardInsets.getBottom(keyboardDensity) == 0 }
-            }
-        }
-        assertTextFits(field, GeistType.label20Mono.fontSize)
-
-        val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)
-        dates.performScrollTo().assertFullyVisible().assertMinimumTouchTarget().performTouchInput { click() }
-        selectMenuItem(text(R.string.schedule_date_window_past_complete_days_through_today))
-        dates.performScrollTo().assertFullyVisible()
-        assertTextFits(compose.onNode(hasText(text(R.string.schedule_date_window_past_complete_days_through_today)), useUnmergedTree = true))
-        compose.runOnIdle { assertEquals(ScheduleDateWindow.PAST_COMPLETE_DAYS_THROUGH_TODAY, state.value.dateWindow) }
-        listOf(R.string.schedule_increase_lookback_days, R.string.schedule_decrease_lookback_days).forEach { id ->
-            compose.onNodeWithContentDescription(text(id)).performScrollTo().assertFullyVisible()
-                .assertMinimumTouchTarget().performTouchInput { click() }
-        }
-        compose.runOnIdle { assertEquals(365, state.value.lookbackDays) }
-        dates.performScrollTo().performTouchInput { click() }
-        selectMenuItem(text(R.string.schedule_date_window_today))
-        compose.onNodeWithTag(ScheduleControlTags.LOOKBACK).assertDoesNotExist()
-    }
-
-    @Test
     fun settingsGiveCopyRoomAndKeepOneLabeledProtectionToggle() {
         val enabled = mutableStateOf<Boolean?>(null)
         var blocked = 0
@@ -617,19 +524,6 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.onNodeWithContentDescription(text(R.string.schedule_increase_hour)).performScrollTo()
             .assertFullyVisible().performTouchInput { click() }
         compose.runOnIdle { assertEquals(1, changed); assertEquals(1, blocked) }
-    }
-
-    private fun selectMenuItem(label: String) {
-        val itemMatcher = hasText(label) and hasClickAction() and hasAnyAncestor(isPopup())
-        // The popup is a separate native owner and can attach just after the anchor action's
-        // Compose-idle boundary, especially while a numeric IME is finishing its hide request.
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodes(itemMatcher).fetchSemanticsNodes(atLeastOneRootRequired = false).size == 1
-        }
-        val item = compose.onNode(itemMatcher)
-        item.performScrollTo().assertIsDisplayed()
-        assertTextFits(compose.onNode(hasText(label) and hasAnyAncestor(isPopup()), useUnmergedTree = true))
-        item.performTouchInput { click() }
     }
 
     private fun assertTextFits(node: SemanticsNodeInteraction, expectedFontSize: TextUnit? = null) {

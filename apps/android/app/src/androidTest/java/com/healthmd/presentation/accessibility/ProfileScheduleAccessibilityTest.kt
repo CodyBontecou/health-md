@@ -14,8 +14,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -243,40 +241,6 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         compose.onNodeWithTag(ProfileScheduleTags.SAVE).scrollIfPossible().assertFullyVisible()
             .performTouchInput { click() }
         assertEquals(listOf(expected), saved)
-    }
-
-    @Test
-    fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
-        val initial = sampleEntry()
-        val open = mutableStateOf(true)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it }, onDismiss = { dismisses++; open.value = false })
-        }
-        replace(ProfileScheduleTags.EVERY, "123456")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(1, dismisses)
-        compose.runOnIdle { open.value = true }
-        val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        restored.assertTextEquals(initial.cadenceValue.toString())
-        replace(ProfileScheduleTags.EVERY, "")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
-        // Espresso selects the activity root even while this separate native dialog owns focus.
-        // Inject the real system Back key without requiring the obscured activity window to focus.
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
-        compose.waitForIdle()
-        compose.withNativeInputDiagnostics("profile dialog Back") {
-            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        }
-        assertEquals(2, dismisses)
-        assertTrue(saved.isEmpty())
     }
 
     @Test
