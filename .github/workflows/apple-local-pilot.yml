@@ -66,6 +66,12 @@ jobs:
           echo "source_sha=$source_sha" >> "$GITHUB_OUTPUT"
           printf 'Resolved trusted pilot source: %s\n' "$source_sha"
 
+      - name: Verify local runner tooling safety
+        run: |
+          python3 -m unittest \
+            apps/apple/scripts/tests/test_local_actions_pilot.py \
+            scripts/tests/test_setup_local_actions_runner.py
+
   pilot:
     name: Mac pilot (non-required)
     needs: resolve
