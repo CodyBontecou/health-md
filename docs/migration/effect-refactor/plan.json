@@ -4556,7 +4556,7 @@
         "Mark public names/profile/version and unproven native/destination capability as candidate; no donor import or native permission claim."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted BASE-DOMAINS raw67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d, route ledger281rows/1141semantic leaves/308pins; donor location51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f, Mac5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c, mobilebbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d. Define bounded candidate facts, selection and explicit complete/partial/unavailable coverage, durable identity/source lineage/exact time/units, sourcepurpose/detail grants and combined/scoped exports. Independently literal synthetic cases before future implementation, frozen health profiles unchanged. No donor/native source/data admission/public schema or endpoint grant inheritance. Finalnames/profile/source/channel/nativeeligibility remain unselected.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -4568,8 +4568,18 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 32,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "56b0f6f892a8726f45ef5478d08262c8c2b04d03",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+          "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+          "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -6868,7 +6878,7 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
+      "status": "done",
       "blocker": null,
       "claim": {
         "agent": "/root/effect_base_host",
@@ -6909,8 +6919,10 @@
       "priority": 201,
       "qualification": {
         "proof_class": "host_integration",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json"
+        ]
       },
       "read_required": [
         "AGENTS.md",
@@ -6918,9 +6930,9 @@
         "apps/apple/AGENTS.md"
       ],
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "5ef9c8d814b23e6317a553b936ae41fa7d20b115+36030080ea1d47d01f636a76b84a778ae13f6f4702eb10aa0ce2203072cb1014"
       },
       "expansion_input": {
         "task_id": "SPLIT-NATIVE-HOSTS",

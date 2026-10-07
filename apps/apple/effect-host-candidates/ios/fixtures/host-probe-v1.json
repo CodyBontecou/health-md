@@ -1,0 +1,95 @@
+{
+  "schema": "healthmd.candidate_host_probe",
+  "version": 1,
+  "bounds": {
+    "frame_bytes": 65536,
+    "queued_frames": 4,
+    "unacknowledged_frames": 2,
+    "operation_ms": 5000,
+    "cleanup_ack_ms": 5000
+  },
+  "cases": [
+    {
+      "case_id": "offline_success",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "value": "ready"
+      }
+    },
+    {
+      "case_id": "cancel_before_acquire",
+      "expected": {
+        "acquired": 0,
+        "released": 0,
+        "active": 0
+      }
+    },
+    {
+      "case_id": "cancel_waits_release_ack",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "ack_before_completion": true
+      }
+    },
+    {
+      "case_id": "reentry_dispose_cancel_supersede",
+      "expected": {
+        "stale_reads": 0,
+        "released": 1
+      }
+    },
+    {
+      "case_id": "frame_limit",
+      "expected": {
+        "code": "frame_limit",
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "queue_backpressure",
+      "expected": {
+        "accepted": 6,
+        "rejected": 1,
+        "max_active": 2,
+        "max_queued": 4
+      }
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "expected": {
+        "code": "schema_invalid",
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "teardown_fresh_restart",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "private_state_writes": 0
+      }
+    },
+    {
+      "case_id": "single_react_effect_identity",
+      "expected": {
+        "react": "19.2.3",
+        "effect": "4.0.1",
+        "hermes": true,
+        "mounted_react": false
+      }
+    },
+    {
+      "case_id": "no_native_grant_expansion",
+      "expected": {
+        "health_permissions": 0,
+        "health_reads": 0,
+        "persistent_writes": 0
+      }
+    }
+  ]
+}

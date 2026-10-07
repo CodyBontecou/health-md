@@ -1,0 +1,16 @@
+require_relative '../node_modules/react-native/scripts/react_native_pods'
+platform :ios, '17.0'
+install! 'cocoapods', :deterministic_uuids => true, :warn_for_unused_master_specs_repo => false
+workspace 'build/HostProbe'
+project 'HostProbe.xcodeproj'
+target 'HostProbe' do
+  use_react_native!(:path => '../node_modules/react-native', :app_path => "#{Pod::Config.instance.installation_root}/..")
+  post_install do |installer|
+    react_native_post_install(installer, '../node_modules/react-native', :mac_catalyst_enabled => false)
+    installer.pods_project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+      end
+    end
+  end
+end
