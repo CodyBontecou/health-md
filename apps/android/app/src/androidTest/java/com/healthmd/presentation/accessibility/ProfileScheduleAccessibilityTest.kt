@@ -1,11 +1,18 @@
 package com.healthmd.presentation.accessibility
 
+import android.view.View
+import android.view.inputmethod.InputMethodManager
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.ViewRootForTest
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.semantics.Role
@@ -259,14 +266,78 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
         last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
         last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
-        last.scrollIfPossible().assertInNativeOwner()
-        assertAnchorLocals(last)
-        assertTextFits(last, GeistType.label20Mono.fontSize)
-        // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
-        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
-        assertEquals(0, dismisses)
+        withNativeSaveDiagnostics {
+            val (owner, editor) = nativeDialogInput(last)
+            // Admit the real tap-triggered IME before scrolling within its resized native owner.
+            // Visibility is an input precondition; strict bounds checks still follow immediately.
+            awaitNativeDialogIme(owner, editor)
+            last.scrollIfPossible().assertInNativeOwner()
+            last.assertIsFocused()
+            assertAnchorLocals(last)
+            assertTextFits(last, GeistType.label20Mono.fontSize)
+            assertTrue("Exercise Save with the real dialog IME visible", nativeDialogImeVisible(owner, editor))
+            // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
+            tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
+            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+            assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
+            assertEquals(0, dismisses)
+        }
+    }
+
+    private fun withNativeSaveDiagnostics(assertion: () -> Unit) {
+        try {
+            assertion()
+        } catch (failure: AssertionError) {
+            withNativeInputDiagnostics("Native Save reachability; ${nativeSaveGeometry()}") { throw failure }
+        }
+    }
+
+    private fun nativeSaveGeometry(): String = runCatching {
+        listOf(ProfileScheduleTags.EVERY, ProfileScheduleTags.SAVE, ProfileScheduleTags.DIALOG).joinToString { tag ->
+            val interaction = compose.onNodeWithTag(tag)
+            val node = interaction.fetchSemanticsNode()
+            val root = generateSequence(node) { it.parent }.last()
+            val scrolls = compose.runOnUiThread {
+                generateSequence(node.parent) { it.parent }.mapNotNull { ancestor ->
+                    if (ancestor.config.contains(SemanticsProperties.VerticalScrollAxisRange)) {
+                        val range = ancestor.config[SemanticsProperties.VerticalScrollAxisRange]
+                        "(value=${range.value()}, max=${range.maxValue()}, reversed=${range.reverseScrolling})"
+                    } else null
+                }.toList()
+            }
+            "$tag(clippedPx=${node.boundsInRoot}, unclippedDp=${interaction.getUnclippedBoundsInRoot()}, " +
+                "rootPx=${root.boundsInRoot}, density=${node.layoutInfo.density.density}, scrolls=$scrolls)"
+        }
+    }.getOrElse { "Save geometry unavailable: ${it.javaClass.simpleName}" }
+
+    private fun nativeDialogInput(field: SemanticsNodeInteraction): Pair<View, View> {
+        val root = field.fetchSemanticsNode().root as? ViewRootForTest
+        assertTrue("The focused field has an Android native owner", root != null)
+        return compose.runOnUiThread {
+            val editor = requireNotNull(root).view
+            val provider = generateSequence(editor) { it.parent as? View }
+                .filterIsInstance<DialogWindowProvider>().firstOrNull()
+            assertTrue("The focused field belongs to a native dialog", provider != null)
+            val owner = requireNotNull(provider).window.decorView
+            assertTrue("The native dialog and editor are attached", owner.isAttachedToWindow && editor.isAttachedToWindow)
+            assertEquals("Use the editor's own dialog window", editor.windowToken, owner.windowToken)
+            owner to editor
+        }
+    }
+
+    private fun awaitNativeDialogIme(owner: View, editor: View) {
+        withNativeInputDiagnostics("Real dialog keyboard did not appear after focusing the cadence field") {
+            compose.waitUntil(timeoutMillis = 10_000) { nativeDialogImeVisible(owner, editor) }
+        }
+        compose.waitForIdle()
+    }
+
+    private fun nativeDialogImeVisible(owner: View, editor: View): Boolean = compose.runOnUiThread {
+        val insets = ViewCompat.getRootWindowInsets(owner)
+        owner.hasWindowFocus() && editor.hasFocus() &&
+            owner.context.getSystemService(InputMethodManager::class.java).isActive(editor) &&
+            insets?.isVisible(WindowInsetsCompat.Type.ime()) == true &&
+            insets.getInsets(WindowInsetsCompat.Type.ime()).bottom > 0
     }
 
     @Test
