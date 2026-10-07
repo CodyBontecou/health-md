@@ -1,6 +1,6 @@
 # Health.md Effect refactor: agent execution plan
 
-**Status:** Execution kit prepared; product implementation and qualification have not started.
+**Status:** End-to-end goal active; baseline source inventories in progress. Product implementation and qualification have not started.
 
 **Design baseline:** 2026-10-07, repository revision `1b02fcc69f4706bca56de67698d2dc85996047b6`.
 
@@ -19,7 +19,7 @@ python3 docs/migration/effect-refactor/manage.py reference K01
 
 These commands inspect the execution kit; they neither claim tasks nor execute builds, launch agents or change state. The preferred starting agent profile is recorded in [plan.json](../migration/effect-refactor/plan.json). Use bounded assignments with that profile; exact checks and independent review establish correctness.
 
-The first recommended dispatch is `BASE-CORE`, `BASE-CLI` and `BASE-HOST`: three independent source/fixture/state inventories. Their accepted outputs enable the local successor decision, portable pins and first shared health-query slice. Native, donor and cloud inventories can follow in parallel within the configured writer limit. All tasks initially remain unstarted; “ready” means their declared dependencies permit assignment.
+The first recommended dispatch is `BASE-CORE`, `BASE-CLI` and `BASE-HOST`: three independent source/fixture/state inventories. Their accepted outputs enable the local successor decision, portable pins and first shared health-query slice. Native, donor and cloud inventories can follow in parallel within the configured writer limit. The manifest records current task progress; “ready” means declared dependencies permit assignment, and does not imply completion.
 
 ## Sources of truth
 
