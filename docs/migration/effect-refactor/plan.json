@@ -4098,7 +4098,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 60,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "6ee124c7ea0df91825c24d7105ef2f329ed18584",
@@ -4115,14 +4115,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "6ee124c7ea0df91825c24d7105ef2f329ed18584+dc880fd55b4df10bdcdf93a37553000667453ddc3b97ae64ce4d6c6f7d5f9021"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json"
+        ]
       }
     },
     {
@@ -5784,7 +5786,7 @@
         "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/native.json SHAa70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb, pinned Apple/Android source/state/channel/test maps, accepted UI-FOUNDATION source/interface/pins. Primary React/RN host tuple metadata inspected2026-10-07; full native engine/SDK/module/dependency/cold/physical/signed proofs remain open. Exact source/check/new-path/resource obligations for atmost6 atomic children; no host/runtime/source authority changes in packet.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -5796,8 +5798,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-NATIVE-HOSTS.json",
       "reviewer_role": "independent native/platform/UI reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-native-hosts.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-NATIVE-HOSTS.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",

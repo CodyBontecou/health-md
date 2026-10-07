@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "task_id": "QUERY-TRAVERSAL",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "6ee124c7ea0df91825c24d7105ef2f329ed18584",
+  "patch_digest": "dc880fd55b4df10bdcdf93a37553000667453ddc3b97ae64ce4d6c6f7d5f9021",
+  "patch_digest_method": "SHA256 over sorted three claimed operation/test/vector paths: UTF-8 repository-relative path + NUL + raw bytes + NUL for each. Excludes receipt, coordinator plan/state and ignored dist/build/node_modules/cache outputs. Raw patch/input/artifact SHA256 records included.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/src/operations/query.ts",
+    "packages/healthmd-core-ts/tests/query-traversal-vectors.ts",
+    "packages/healthmd-core-ts/tests/query-traversal.test.ts",
+    "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "apps/cli/crates/healthmd-operations/src/service.rs": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+      "apps/cli/crates/healthmd-operations/src/limits.rs": "2a5f0ea3854fdb54550a1e075195407141321cc2cc1edeb91c05a3f047485184",
+      "apps/cli/crates/healthmd-operations/src/backend.rs": "733d0e8ed94b17347a3308757d2da314c96fda1a88d0f9fa83350583b19e2845",
+      "apps/cli/crates/healthmd-operations/src/model.rs": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+      "apps/cli/crates/healthmd-mcp/src/application.rs": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "package_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "installation": "Existing exact scoped prerequisite install retained; no dependency/config/lock changes.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "inspected_effect_resource_implementation": {
+        "path": "packages/healthmd-core-ts/node_modules/effect/dist/internal/effect.js",
+        "sha256": "cd1d12a5d8336f65877efabc55301a97e526fc3397a1c21a798a4c268858746f",
+        "symbol": "acquireRelease",
+        "policy": "Installed Effect4.0.1 uses uninterruptibleMask protecting acquisition through scopeAddFinalizerExit. No installed dependency edits."
+      }
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea"
+      },
+      "emitted_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "dist/neutral-metafile.json": "abae7cd331e829e55e468926cfb76c8206e1d2c454860ed4297e0745ba763a71",
+        "dist/test-metafile.json": "c294606069c318e7fac84cd580f24f79366ab11db41f762c067c0f4ab002093c",
+        "dist/tests/catalog.test.js": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653",
+        "dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46",
+        "dist/tests/query-traversal.test.js": "4b7c0fc2023cf12782b4063c2d825732d6050b55617163581785103126b83171"
+      },
+      "expected_vectors": {
+        "path": "packages/healthmd-core-ts/tests/query-traversal-vectors.ts",
+        "sha256": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "page_cases": 8,
+        "authority_negative_cases": 7,
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root",
+          "fingerprint": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+          "method": "Root compared8 page/receipt cases and7 authority negatives against service.rs/limits.rs and separate K05/C13 binding obligations using independent Python literal simulation without candidate."
+        }
+      },
+      "source_mapping": [
+        "service.rs HealthOperations::query: initial cursor seen set, single-page direct response, fixed aggregate schema/receipt/counts, excluded-page cursor replay, bytes/page limit reasons",
+        "limits.rs: aggregate2097152 minus reserve16384, pages4096, page1048576/items1000",
+        "backend.rs: resolved CallContext caller/grants and coarse query_page",
+        "application.rs: healthmd:read and caller/filter admission before query",
+        "C13/K05: logical query/dataset/caller/source/cursor and coverage admission requirements beyond current Rust transport traversal"
+      ],
+      "query_source_contract": {
+        "service": "healthmd.candidate.QuerySource",
+        "open": "Scoped acquisition requiring the operation scope. Preparation is interruptible and rolls back partial state; final bounded allocation calls ownQueryResource, which atomically registers release before ownership returns. Full query/current authority/coverage/cursor admission remains adapter obligation.",
+        "resource": "Binding, immutable owned validated body + exact byte-count attestation + echoed requested cursor, Effect read and release acknowledgment.",
+        "binding_dimensions": [
+          "caller",
+          "source",
+          "profile",
+          "coverage",
+          "logicalQuery",
+          "dataset"
+        ],
+        "body_attribution": "Adapter must verify actual page source/coverage against admitted query; sidecars are synthetic crosswire checks only and are not native authentication.",
+        "cleanup": "ownQueryResource uses Effect.acquireRelease allocation+scope finalizer registration under uninterruptibleMask. Traversal consumes the already-owned scoped resource directly, with no outer interruptible ownership handoff. Deadline/read/error/interruption waits scope finalizers and adapter partial-preparation cleanup acknowledgment.",
+        "scope_type": "Effect.Success<typeof Effect.scope> derives the scope requirement through existing admitted Effect module; no new runtime/type module import or boundary-policy change."
+      },
+      "native_interfaces_changed": []
+    },
+    "policy_migration_key_versions": {
+      "bounds": {
+        "aggregate_bytes": 2097152,
+        "receipt_reserve_bytes": 16384,
+        "admitted_page_budget": 2080768,
+        "maximum_pages": 4096,
+        "maximum_page_bytes": 1048576,
+        "maximum_page_items": 1000,
+        "test_byte_accounting": "Controlled adapter encodedBytes attestations, not runtime canonical serialization/frame/memory proof."
+      },
+      "receipt_fields": [
+        "schema",
+        "schema_version",
+        "pages",
+        "receipt.page_count",
+        "receipt.item_count",
+        "receipt.packet_fact_count",
+        "receipt.traversal_complete",
+        "receipt.next_cursor",
+        "receipt.limit_reason"
+      ],
+      "continuation": "Excluded page is not retained; receipt repeats its requested opaque cursor. Page cap repeats next requested cursor. Single page returns original body/next_cursor verbatim. No cursor decoding/reconstruction.",
+      "completion": "Traversal completion only; empty/unavailable/partial coverage remains source-produced and unchanged.",
+      "deadline": "Explicit caller/adapter supplied logical-operation duration; not reset per page. No new native/public wire default deadline or code promised.",
+      "failure_policy": "Fixed content-free code only; typed backend extras and defects discarded. Binding/deadline errors are candidate-internal additions, not claimed frozen native/public errors.",
+      "state_impact": "No public schema/fixture/contract/native evaluator/grant/crypto/persisted state changes."
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Validate caller/source/profile/coverage attribution and logical-query cursor binding.",
+      "result": "passed",
+      "evidence": "7 reviewed authority negatives plus acquired-resource binding/requested-cursor mismatches and fake admission replay/body attribution negatives pass. Own operation verifies all6 binding dimensions; resolved grants/cursor crypto/full body validation are trusted adapter prerequisites, not authenticated proof."
+    },
+    {
+      "criterion": "Exercise empty/unavailable/partial, wrong-source/cursor cycle, bytes/pages/deadline and interruption cases at current bounds.",
+      "result": "passed",
+      "evidence": "Reviewed8 page cases preserve empty/unavailable/partial and cycle behavior. Exact4096 cap,2080768/+1 aggregate/excluded replay, first/single-page overflow,1MiB/1000 bounds, virtual logical deadline during reads/admission and gated interruption cleanup pass. Pending interruption at completed allocation regression now releases owned resource exactlyonce via atomic scoped handoff."
+    },
+    {
+      "criterion": "Fake source supplies reviewed pages; this slice does not implement or qualify the complete native evaluator.",
+      "result": "passed",
+      "evidence": "Coarse Effect QuerySource fake Layers supply reviewed pages and byte attestations. Frozen Swift reference response passes unchanged single-page body; no native evaluator, actual exact serializer/crypto/frame/grant or host integration claimed."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exact Node24.21.0/npm11.19.0; exit0 in 0.5s;162 discovered emitted-JS tests passed,0 failures/cancellations/skips;19 boundary negatives;7 own source modules/1 Effect. Strict ES-only own source/test typecheck and build passed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Assigned-base input raw bytes verified unchanged; independently accepted vector fingerprint unchanged; frozen Swift/reference mirror digests25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2 retained; sorted3-file patch/artifact hashes computed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0; no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "node",
+        "--input-type=module"
+      ],
+      "result": "passed",
+      "evidence": "Standard independent Deferred/Fiber pending-interrupt-at-allocation probe replayed against emitted query module with scoped ownQueryResource acquisition; acquired1/openCompleted1/released1/interruptedtrue. Exact Node24 selected; no unsafe runtime hook."
+    }
+  ],
+  "inspection_summary": "Read task/component/root/entrypoint/core branch and scoped C13/K05/O02/F05 obligations with accepted cli inventory. Inspected actual service/limits/backend/model/application sources and frozen Swift reference. Operation consumes already-normalized query but performs independent page-control/authority admission, then delegates complete grammar and authenticated native capture/body/cursor admission to coarse QuerySource. Internal operation remains unexported by package manifest. Existing native/CLI/MCP query consumers retain current authority; no React/adapter-owned traversal introduced. Inspected installed Effect4.0.1 acquireRelease implementation: uninterruptibleMask protects allocation and scopeAddFinalizerExit; scoped source acquisition prevents pending interruption escaping between completed allocation and finalizer registration. All fake successful adapters register ownership through ownQueryResource.",
+  "observations": [
+    {
+      "case_id": "reviewed-pages-and-authority",
+      "procedure": "Execute unchanged8 fixed fake-page cases and7 authority negatives after independent expected review.",
+      "expected": "Source receipt/single-page/replay/cycle semantics; content-free failures on read grant and6 mismatched binding dimensions.",
+      "observed": "All15 pass at accepted vector SHA; owned resources released exactlyonce; read-grant rejection acquires no resource.",
+      "evidence": "packages/healthmd-core-ts/tests/query-traversal-vectors.ts @ ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+      "result": "passed"
+    },
+    {
+      "case_id": "current-capacity-and-replay",
+      "procedure": "Run4096-page source; exact aggregate2080768 and+1; replay excluded cursor; first/single overflow and pagecontrol/response1MiB/items1000 negatives.",
+      "expected": "Current caps preserved; no excluded page in result; continuation cursor resumes correct requested page.",
+      "observed": "Exactly4096 calls then maximum_pages receipt; exact byte sum accepted,+1 partial with maximum_aggregate_bytes; replay completes; invalid controls acquire nothing; overlarge response releases.",
+      "evidence": "packages/healthmd-core-ts/tests/query-traversal.test.ts capacity cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "admission-attribution-and-sanitized-errors",
+      "procedure": "Fake adapter rejects wrong captured coverage/source before return, wrong owned binding, logical-query cursor replay, wrong echoed requested cursor and backend extra cause.",
+      "expected": "Admission remains distinct; self-reported sidecar is not native authentication; safe failures retain no parser/provider cause.",
+      "observed": "Synthetic admission failures pass; changed logical replay calls no read; failure output only fixed code and resource cleanup observed.",
+      "evidence": "packages/healthmd-core-ts/tests/query-traversal.test.ts admission/cursor/error cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "deadline-and-interruption-acknowledgment",
+      "procedure": "Virtual-clock two6s reads under10s total; blocked admission under1s; interrupt blocked read with gated asynchronous release acknowledgement. Scoped source ownership registered via ownQueryResource; blocked preparation remains outside atomic allocation.",
+      "expected": "Logical deadline not extended perpage; opening interruptible; completion waits partial/owned cleanup; interruption remains interrupt exit.",
+      "observed": "Readdeadline after first page, releaseonce; admission interrupted and partial cleanuponce; interrupted result waits explicit releaseack and repeated interruption causes no secondrelease.",
+      "evidence": "packages/healthmd-core-ts/tests/query-traversal.test.ts TestClock/Deferred cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "frozen-reference-body",
+      "procedure": "Hash-check Swift fixture and traverse query_response.queryResponse._0.response with fake single-page resource.",
+      "expected": "Original query_response body unchanged.",
+      "observed": "Deep equality pass; no whole-frame serializer/native evaluator claim.",
+      "evidence": "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+      "result": "passed"
+    },
+    {
+      "case_id": "atomic-ownership-handoff",
+      "procedure": "Hold final allocation behind Deferred gate inside ownQueryResource; fork Fiber.interrupt after allocated signal; allow completed owned allocation return; await interrupted scope close. Also independently replay reviewer standard probe adapted to scoped acquisition against emitted JS.",
+      "expected": "Completed ownership always has registered cleanup before pending interruption can escape; read never starts; final resource releases exactlyonce.",
+      "observed": "acquired1/openCompleted1/released1/reads0; interrupted exit true. Repeated interruption does not release twice. Independent standard replay acquired1/openCompleted1/released1/interruptedtrue.",
+      "evidence": "packages/healthmd-core-ts/tests/query-traversal.test.ts pending interruption at completed allocation regression; reviewer-standard probe procedure",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Synthetic trusted adapter accounting/bindings only. Actual grant authentication/revocation, signed native cursor bytes/crypto/dataset/query binding, coverage/body attribution and native protocol frame/serializer byte/memory bounds remain unqualified adapter obligations.",
+    "Full query grammar/date/metric/source semantics and native evaluator are not implemented here. QuerySource.open must validate them before owned page delivery; normalization remains an opaque earlier boundary.",
+    "Owned bodies must be immutable validated adapter snapshots. Incorrect sidecars, underreported encodedBytes or unbounded malformed body objects are not made safe by this traversal interface; supported adapter admission is required.",
+    "No complete exact query number serializer/public wire result envelopes, health/evidence evaluator, native request-ID handling, actual phone capture or Android typed-query parity proved.",
+    "Deadline interrupts preparation/read work and waits cleanup acknowledgment; final allocation+registration is deliberately uninterruptible and must be a small bounded adapter step. Real allocation/preparation/cancellation budgets require host proof; cleanup cannot be forcibly abandoned safely.",
+    "Only exact Node24 darwin-arm64 synthetic environment; CLI/MCP/React/native/browser/GitHub/physical/external/signed integration unrun."
+  ],
+  "remaining_qualification": [
+    "Independent exact implementation/source+patch review pending; fixed expected corpus accepted separately.",
+    "Admit real QuerySource adapters with actual current grants, full query/body validation, native crypto/cursor/byte/memory and cancellation acknowledgment evidence.",
+    "Later CLI/MCP slice adapters must call this common operation and prove canonical envelopes/source calls/results without becoming alternate traversal owners.",
+    "C13/K05/O02/F05 and broader host/native/phase obligations remain open."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "6ee124c7ea0df91825c24d7105ef2f329ed18584+dc880fd55b4df10bdcdf93a37553000667453ddc3b97ae64ce4d6c6f7d5f9021"
+  },
+  "independent_review": {
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "6ee124c7ea0df91825c24d7105ef2f329ed18584+dc880fd55b4df10bdcdf93a37553000667453ddc3b97ae64ce4d6c6f7d5f9021",
+    "result": "passed",
+    "evidence": "Independently replayed original standard Effect/Deferred/Fiber allocation-handoff probe against emitted JavaScript: acquired1/released1/openCompleted1/interruptedtrue. Second gated asynchronous release probe acknowledged cancellation before completion, release exactly once and reads0. Pinned Node24.21.0/npm11.19.0 rebuilt and passed162 tests/19 boundary negatives; verified3 patch/16 input/20 rebuilt artifact hashes. Actual native adapter admission, authentication/evaluator/cursor crypto/byte-memory/public consumers remain unqualified."
+  }
+}
