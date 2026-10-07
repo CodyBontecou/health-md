@@ -43,12 +43,16 @@ const coreInputAuthority = {
   sourceSha: "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
   patchDigest: "110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
 };
+// Two metadata pins reviewed by CORE-CANDIDATE-API; old receipt remains historical code authority.
+const coreMetadataAuthority = { taskId: "CORE-CANDIDATE-API", sourceSha: "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
+  historicalManifestSha256: "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+  emittedArtifactMapSha256: "7845384cd4a0c8fb493651100d97159ecb7d269875fb62b0f7ecef2e92c8bbc4" };
 const coreInputPins = {
   ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
   "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
-  "README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+  "README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
   "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
-  "package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+  "package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
   "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
   "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
   "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
@@ -82,8 +86,10 @@ assert.equal(receipt.source_sha, coreInputAuthority.sourceSha, "qualified_core_s
 assert.equal(receipt.patch_digest, coreInputAuthority.patchDigest, "qualified_core_patch_authority_drift");
 const qualified = receipt.inputs.artifact_and_native_interface.emitted_artifacts;
 const artifacts = Object.fromEntries(Object.entries(qualified).filter(([path]) => path.startsWith("dist/core/")));
-assert.ok(Object.keys(artifacts).length > 0, "qualified_core_artifacts_missing");
-assert.equal(hash(sourceManifest), receipt.inputs.contract_and_fixture_digests["packages/healthmd-core-ts/package.json"]);
+assert.equal(Object.keys(artifacts).length, 16, "qualified_core_artifact_cohort_drift");
+assert.equal(hash(JSON.stringify(Object.entries(artifacts).sort(([a], [b]) => a.localeCompare(b)))), coreMetadataAuthority.emittedArtifactMapSha256, "qualified_core_artifact_authority_drift");
+assert.equal(receipt.inputs.contract_and_fixture_digests["packages/healthmd-core-ts/package.json"], coreMetadataAuthority.historicalManifestSha256, "historical_core_manifest_authority_drift");
+assert.equal(hash(sourceManifest), coreInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 async function tree(directory, skipBins = false) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -135,6 +141,15 @@ try {
   await assert.rejects(auditCoreInputs(inputCopy), /core_input_file_set_drift/);
   const linked = join(temporary, "linked"); await symlink(installed, linked, "dir");
   await assert.rejects(auditCore(linked), /install_packed_core_with_install_links/);
+  await rm(join(inputCopy, "src/unbuilt-extra.ts"));
+  await writeFile(join(inputCopy, "README.md"), "unreviewed metadata\n");
+  await assert.rejects(auditCoreInputs(inputCopy), /core_input_bytes_drift/);
+  await writeFile(join(inputCopy, "README.md"), await readFile(join(source, "README.md")));
+  const altered = join(temporary, "altered"); await cp(installed, altered, { recursive: true });
+  const alteredManifest = JSON.parse(await readFile(join(altered, "package.json"), "utf8"));
+  alteredManifest.exports["./candidate/unreviewed"] = "./dist/core/index.js";
+  await writeFile(join(altered, "package.json"), JSON.stringify(alteredManifest));
+  await assert.rejects(auditCore(altered), /core_manifest_drift/);
   const stale = join(temporary, "stale"); await cp(installed, stale, { recursive: true });
   await writeFile(join(stale, "dist/core/index.js"), "export {};\n");
   await assert.rejects(auditCore(stale), /core_build_bytes_drift/);
@@ -142,7 +157,8 @@ try {
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
 const actualEffect = await realpath(fileURLToPath(import.meta.resolve("effect/Effect")));
-for (const url of [coreUrl, hostUrl]) {
+const candidateUrls = ["catalog", "normalize", "query", "registry"].map((name) => import.meta.resolve(`@healthmd/core-ts/candidate/${name}`));
+for (const url of [coreUrl, hostUrl, ...candidateUrls]) {
   assert.ok((await realpath(fileURLToPath(url))).startsWith((await realpath(installed)) + "/"), "core_export_escaped_packed_package");
   assert.equal(await realpath(createRequire(url).resolve("effect/Effect")), actualEffect, "effect_physical_identity_drift");
 }
@@ -162,7 +178,7 @@ assert.equal(effects.length, 1, "duplicate_effect_installation");
 const core = await import(coreUrl); const host = await import(hostUrl);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
 console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(artifacts).length, qualifiedCoreInputs: Object.keys(coreInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file"] }));
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases: ["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export"] }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));

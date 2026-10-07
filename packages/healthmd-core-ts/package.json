@@ -7,7 +7,11 @@
   "packageManager": "npm@11.19.0",
   "exports": {
     ".": { "types": "./dist/core/index.d.ts", "import": "./dist/core/index.js" },
-    "./host-interfaces": { "types": "./dist/core/host-interfaces/capabilities.d.ts", "import": "./dist/core/host-interfaces/capabilities.js" }
+    "./host-interfaces": { "types": "./dist/core/host-interfaces/capabilities.d.ts", "import": "./dist/core/host-interfaces/capabilities.js" },
+    "./candidate/catalog": { "types": "./dist/core/operations/catalog.d.ts", "import": "./dist/core/operations/catalog.js" },
+    "./candidate/normalize": { "types": "./dist/core/operations/normalize.d.ts", "import": "./dist/core/operations/normalize.js" },
+    "./candidate/query": { "types": "./dist/core/operations/query.d.ts", "import": "./dist/core/operations/query.js" },
+    "./candidate/registry": { "types": "./dist/core/contracts/registry.d.ts", "import": "./dist/core/contracts/registry.js" }
   },
   "files": ["dist/core"],
   "scripts": {

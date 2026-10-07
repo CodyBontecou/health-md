@@ -4630,7 +4630,7 @@
         "Record Q-PERSONAL-CONTRACT resolution from the appropriate contract/architecture role."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted draft source56b0f6f892a8726f45ef5478d08262c8c2b04d03+6b20dc38ef5008d3e2c9f6bbe35eff3f265e2f69f8fd991e37b658f15c90a6fb and unchanged44literalcases/fourrecords. Resolve domain-validity/sensor-sentinel/source-clock consistency, source record equality versus raw artifact evidence and stable import identities independent of repartitioning, exact rational Unix/Apple binary64/i64nano comparisons withoutloss, partial-overlap aggregates versus observed session clipping, current suppression/tombstone/replay precedence. Add literal boundary fixtures as Markdown JSON tables/fences within allowedresolutionfile; do not edit accepted draftcases. Q-PERSONAL-CONTRACT limited to synthetic candidate technicalscope; public identity/names/profile/source-purpose/channel/OS eligibility/destination rules unselected, physical/deployed/complete sourcearchive/native session/native collection unproved.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -4642,8 +4642,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 33,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "02988490309f45a913d14a802f7e421a6de27d26",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+          "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -9467,7 +9476,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 65,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
@@ -9489,14 +9498,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6+a848efb5a5a6d1a09fbcab31cf753ecc40e856afd1921a4f94374adf1fc037a0"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json"
+        ]
       }
     }
   ]
