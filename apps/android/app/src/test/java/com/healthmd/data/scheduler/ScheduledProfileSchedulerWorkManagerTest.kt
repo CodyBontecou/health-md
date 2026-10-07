@@ -5,20 +5,26 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequest
 import androidx.work.Operation
+import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import com.google.common.truth.Truth.assertThat
 import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.SettableFuture
 import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.ExportTarget
 import com.healthmd.domain.repository.SettingsRepository
+import java.util.UUID
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.runCurrent
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -236,6 +242,14 @@ class ScheduledProfileSchedulerWorkManagerTest {
         val events = mutableListOf<String>()
         val requests = mutableListOf<OneTimeWorkRequest>()
         val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        val finishedExportId = UUID.randomUUID()
+        every { manager.getWorkInfosForUniqueWorkFlow(ScheduledProfileScheduler.exportWorkName("alpha")) } returns flowOf(
+            listOf(
+                mockk<WorkInfo> { every { id } returns oldExportId; every { state } returns WorkInfo.State.ENQUEUED },
+                mockk<WorkInfo> { every { id } returns finishedExportId; every { state } returns WorkInfo.State.SUCCEEDED },
+            ),
+        )
         every { manager.cancelUniqueWork(any()) } answers {
             events += "cancel:${firstArg<String>()}"
             successfulOperation()
@@ -245,29 +259,37 @@ class ScheduledProfileSchedulerWorkManagerTest {
             requests += thirdArg<OneTimeWorkRequest>()
             successfulOperation()
         }
-        val cleared = ScheduledProfileEntry(
+        var current = ScheduledProfileEntry(
             profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
-            recoveryGeneration = 1L,
         )
         val entryStore = mockk<ScheduledProfileEntryStore>()
-        coEvery { entryStore.discardPendingRecovery("alpha") } answers { events += "discard"; true }
-        coEvery { entryStore.entry("alpha") } returns cleared
-        val scheduler = scheduler(manager, listOf(cleared), listOf(profile("alpha")), entryStore)
+        coEvery { entryStore.discardPendingRecovery("alpha") } answers {
+            events += "discard"
+            current = current.copy(pendingExports = emptyList(), recoveryGeneration = current.recoveryGeneration + 1)
+            true
+        }
+        coEvery { entryStore.entry("alpha") } answers { current }
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")), entryStore)
 
         assertThat(scheduler.discardPendingRecovery("alpha")).isTrue()
 
         assertThat(events).containsExactly(
-            "discard", "cancel:profile-export-alpha", "cancel:scheduled_profile_trigger_work_alpha",
+            "enqueue:profile-schedule-reconcile-alpha", "discard", "cancel:profile-export-alpha", "cancel:scheduled_profile_trigger_work_alpha",
             "enqueue:scheduled_profile_trigger_work_alpha",
         ).inOrder()
-        assertThat(requests).hasSize(1)
-        assertThat(requests.single().workSpec.input.getLong(ScheduledProfileTriggerWorker.INPUT_RECOVERY_GENERATION, -1L))
+        assertThat(requests).hasSize(2)
+        val repair = requests.first().workSpec
+        assertThat(repair.workerClassName).isEqualTo(ScheduledProfileReconcileWorker::class.java.name)
+        assertThat(repair.input.getLong(ScheduledProfileReconcileWorker.INPUT_RECOVERY_GENERATION, -1L)).isEqualTo(1L)
+        assertThat(repair.input.getStringArray(ScheduledProfileReconcileWorker.INPUT_OLD_EXPORT_WORK_IDS)?.toList())
+            .containsExactly(oldExportId.toString())
+        assertThat(requests.last().workSpec.input.getLong(ScheduledProfileTriggerWorker.INPUT_RECOVERY_GENERATION, -1L))
             .isEqualTo(1L)
         verify(exactly = 0) {
             manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>())
         }
 
-        scheduler.handleAlarm("alpha", cleared.recoveryGeneration)
+        scheduler.handleAlarm("alpha", current.recoveryGeneration)
 
         assertThat(requests.last().workSpec.input.getLong(ScheduledProfileExportWorker.INPUT_RECOVERY_GENERATION, -1L))
             .isEqualTo(1L)
@@ -297,31 +319,295 @@ class ScheduledProfileSchedulerWorkManagerTest {
     fun `failed discard neither acknowledges success nor cancels runtime`() = runTest {
         val manager = workManager()
         val entryStore = mockk<ScheduledProfileEntryStore>()
+        coEvery { entryStore.entry("alpha") } returns ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+        )
         coEvery { entryStore.discardPendingRecovery("alpha") } returns false
         val scheduler = scheduler(manager, emptyList(), emptyList(), entryStore)
 
         assertThat(scheduler.discardPendingRecovery("alpha")).isFalse()
 
         verify(exactly = 0) { manager.cancelUniqueWork(any()) }
-        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) }
+        verify(exactly = 1) {
+            manager.enqueueUniqueWork("profile-schedule-reconcile-alpha", any(), any<OneTimeWorkRequest>())
+        }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
     }
 
     @Test
     fun `discard keeps a disabled profile disabled without arming work`() = runTest {
         val manager = workManager()
         val entryStore = mockk<ScheduledProfileEntryStore>()
-        coEvery { entryStore.discardPendingRecovery("alpha") } returns true
-        coEvery { entryStore.entry("alpha") } returns ScheduledProfileEntry(
+        var current = ScheduledProfileEntry(
             profileId = "alpha", isEnabled = false, anchorEpochDay = 20_000, zoneId = "UTC",
-            recoveryGeneration = 1L,
         )
+        coEvery { entryStore.discardPendingRecovery("alpha") } answers {
+            current = current.copy(pendingExports = emptyList(), recoveryGeneration = current.recoveryGeneration + 1)
+            true
+        }
+        coEvery { entryStore.entry("alpha") } answers { current }
         val scheduler = scheduler(manager, emptyList(), emptyList(), entryStore)
 
         assertThat(scheduler.discardPendingRecovery("alpha")).isTrue()
 
         verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha")) }
         verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.fallbackName("alpha")) }
-        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any<ExistingWorkPolicy>(), any<OneTimeWorkRequest>()) }
+        assertThat(current.isEnabled).isFalse()
+        verify(exactly = 1) {
+            manager.enqueueUniqueWork("profile-schedule-reconcile-alpha", any(), any<OneTimeWorkRequest>())
+        }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
+    }
+
+    @Test
+    fun `discard repair cancels only export UUIDs pinned before the discard`() = runTest {
+        val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        val freshExports = mutableListOf<OneTimeWorkRequest>()
+        every {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        } answers {
+            freshExports += thirdArg<OneTimeWorkRequest>()
+            successfulOperation()
+        }
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        scheduler.handleAlarm("alpha", recoveryGeneration = 1L)
+        val newExportId = freshExports.single().id
+        scheduler.finishRecoveryDiscard("alpha", 1L, listOf(oldExportId))
+
+        verify(exactly = 1) { manager.cancelWorkById(oldExportId) }
+        verify(exactly = 0) { manager.cancelWorkById(newExportId) }
+        // The unique chain may now contain a fresh occurrence; cancel it only by the old UUID.
+        verify(exactly = 0) { manager.cancelUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha")) }
+        verify(exactly = 1) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), ExistingWorkPolicy.REPLACE, any<OneTimeWorkRequest>())
+        }
+        verify(exactly = 1) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), ExistingWorkPolicy.KEEP, any<OneTimeWorkRequest>())
+        }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun `delayed repair preserves a running current generation trigger waiting for the scheduler lock`() = runTest {
+        val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        val cancellation = SettableFuture.create<Operation.State.SUCCESS>()
+        every { manager.cancelWorkById(oldExportId) } returns mockk<Operation>(relaxed = true) {
+            every { result } returns cancellation
+        }
+        every { manager.getWorkInfosForUniqueWorkFlow(ScheduledProfileScheduler.fallbackName("alpha")) } returns flowOf(
+            listOf(mockk<WorkInfo> {
+                every { state } returns WorkInfo.State.RUNNING
+                every { tags } returns setOf("scheduled_profile_trigger_generation_alpha_1")
+            }),
+        )
+        val exports = mutableListOf<OneTimeWorkRequest>()
+        every {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        } answers {
+            exports += thirdArg<OneTimeWorkRequest>()
+            successfulOperation()
+        }
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        val repair = launch { scheduler.finishRecoveryDiscard("alpha", 1L, listOf(oldExportId)) }
+        runCurrent()
+        val trigger = launch { scheduler.handleAlarm("alpha", recoveryGeneration = 1L) }
+        runCurrent()
+        assertThat(repair.isActive).isTrue()
+        assertThat(trigger.isActive).isTrue()
+        assertThat(exports).isEmpty()
+
+        cancellation.set(Operation.SUCCESS)
+        repair.join()
+        trigger.join()
+
+        verify(exactly = 1) { manager.cancelWorkById(oldExportId) }
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
+        assertThat(exports).hasSize(1)
+        assertThat(exports.single().workSpec.input.getLong(ScheduledProfileExportWorker.INPUT_RECOVERY_GENERATION, -1L))
+            .isEqualTo(1L)
+    }
+
+    @Test
+    fun `delayed repair preserves an enqueued current generation fallback`() = runTest {
+        val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        every { manager.getWorkInfosForUniqueWorkFlow(ScheduledProfileScheduler.fallbackName("alpha")) } returns flowOf(
+            listOf(mockk<WorkInfo> {
+                every { state } returns WorkInfo.State.ENQUEUED
+                every { tags } returns setOf("scheduled_profile_trigger_generation_alpha_1")
+            }),
+        )
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        scheduler.finishRecoveryDiscard("alpha", 1L, listOf(oldExportId))
+
+        verify(exactly = 1) { manager.cancelWorkById(oldExportId) }
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
+    }
+
+    @Test
+    fun `discard repair replaces a fallback belonging to the discarded generation`() = runTest {
+        val manager = workManager()
+        every { manager.getWorkInfosForUniqueWorkFlow(ScheduledProfileScheduler.fallbackName("alpha")) } returns flowOf(
+            listOf(mockk<WorkInfo> {
+                every { state } returns WorkInfo.State.ENQUEUED
+                every { tags } returns setOf("scheduled_profile_trigger_generation_alpha_0")
+            }),
+        )
+        val replacements = mutableListOf<OneTimeWorkRequest>()
+        every {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), ExistingWorkPolicy.REPLACE, any<OneTimeWorkRequest>())
+        } answers {
+            replacements += thirdArg<OneTimeWorkRequest>()
+            successfulOperation()
+        }
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        scheduler.finishRecoveryDiscard("alpha", 1L, emptyList())
+
+        assertThat(replacements).hasSize(1)
+        assertThat(replacements.single().workSpec.input.getLong(ScheduledProfileTriggerWorker.INPUT_RECOVERY_GENERATION, -1L))
+            .isEqualTo(1L)
+        assertThat(replacements.single().tags).contains("scheduled_profile_trigger_generation_alpha_1")
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
+    }
+
+    @Test
+    fun `discard repair from an older generation leaves the current occurrence untouched`() = runTest {
+        val manager = workManager()
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 2L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        scheduler.finishRecoveryDiscard("alpha", 1L, listOf(UUID.randomUUID()))
+
+        verify(exactly = 0) { manager.cancelWorkById(any()) }
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
+    }
+
+    @Test
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    fun `discard repair stops when its generation changes during old export cancellation`() = runTest {
+        val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        val cancellation = SettableFuture.create<Operation.State.SUCCESS>()
+        every { manager.cancelWorkById(oldExportId) } returns mockk<Operation>(relaxed = true) {
+            every { result } returns cancellation
+        }
+        val original = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val store = mockk<ScheduledProfileEntryStore> {
+            coEvery { entry("alpha") } returnsMany listOf(original, original.copy(recoveryGeneration = 2L))
+        }
+        val scheduler = scheduler(manager, listOf(original), listOf(profile("alpha")), store)
+
+        val repair = launch { scheduler.finishRecoveryDiscard("alpha", 1L, listOf(oldExportId)) }
+        runCurrent()
+        assertThat(repair.isActive).isTrue()
+        coVerify(exactly = 1) { store.entry("alpha") }
+
+        cancellation.set(Operation.SUCCESS)
+        repair.join()
+
+        coVerify(exactly = 2) { store.entry("alpha") }
+        verify(exactly = 1) { manager.cancelWorkById(oldExportId) }
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
+    }
+
+    @Test
+    fun `discard repair preserves a disabled entry without arming a replacement`() = runTest {
+        val manager = workManager()
+        val oldExportId = UUID.randomUUID()
+        val current = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = false, anchorEpochDay = 20_000, zoneId = "UTC",
+            recoveryGeneration = 1L,
+        )
+        val scheduler = scheduler(manager, listOf(current), listOf(profile("alpha")))
+
+        scheduler.finishRecoveryDiscard("alpha", 1L, listOf(oldExportId))
+
+        verify(exactly = 1) { manager.cancelWorkById(oldExportId) }
+        verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.exportWorkName("alpha")) }
+        verify(exactly = 1) { manager.cancelUniqueWork(ScheduledProfileScheduler.fallbackName("alpha")) }
+        verify(exactly = 0) { manager.enqueueUniqueWork(any<String>(), any(), any<OneTimeWorkRequest>()) }
+    }
+
+    @Test
+    fun `repair admission failure preserves recovery and the existing runtime`() = runTest {
+        val manager = workManager()
+        every {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.reconcileWorkName("alpha"), any(), any<OneTimeWorkRequest>())
+        } returns mockk<Operation>(relaxed = true) {
+            every { result } returns Futures.immediateFailedFuture(IllegalStateException("WorkManager database unavailable"))
+        }
+        val original = ScheduledProfileEntry(
+            profileId = "alpha", isEnabled = true, anchorEpochDay = 20_000, zoneId = "UTC",
+            pendingExports = listOf(ScheduledProfilePendingExport(
+                id = "pending", ownerEpochDays = listOf(19_999L), fireAtMillis = 1_000L,
+                settingsSnapshotJson = "frozen-settings", target = ExportTarget.DEVICE_FOLDER, profileName = "Alpha",
+            )),
+        )
+        var current = original
+        val store = mockk<ScheduledProfileEntryStore> {
+            coEvery { entry("alpha") } answers { current }
+            coEvery { discardPendingRecovery("alpha") } answers {
+                current = current.copy(pendingExports = emptyList(), recoveryGeneration = 1L)
+                true
+            }
+        }
+        val scheduler = scheduler(manager, listOf(original), listOf(profile("alpha")), store)
+
+        assertThat(runCatching { scheduler.discardPendingRecovery("alpha") }.isFailure).isTrue()
+
+        assertThat(current).isEqualTo(original)
+        coVerify(exactly = 0) { store.discardPendingRecovery(any()) }
+        verify(exactly = 0) { manager.cancelUniqueWork(any()) }
+        verify(exactly = 0) { manager.cancelWorkById(any()) }
+        verify(exactly = 0) {
+            manager.enqueueUniqueWork(ScheduledProfileScheduler.fallbackName("alpha"), any(), any<OneTimeWorkRequest>())
+        }
     }
 
     private fun scheduler(
@@ -364,6 +650,8 @@ class ScheduledProfileSchedulerWorkManagerTest {
     )
 
     private fun workManager(): WorkManager = mockk(relaxed = true) {
+        every { getWorkInfosForUniqueWorkFlow(any()) } returns flowOf(emptyList())
+        every { cancelWorkById(any()) } returns successfulOperation()
         every { cancelUniqueWork(any<String>()) } returns successfulOperation()
         every {
             enqueueUniqueWork(
