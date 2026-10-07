@@ -1,0 +1,333 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DONOR-USAGE-MOBILE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+  "patch_digest": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+  "patch_digest_method": "SHA256 exact raw UTF-8 donor-usage-mobile.json bytes INCLUDING trailing newline. Excludes this receipt, coordinator plan/state and unrelated changes.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+    "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "GLOSSARY.md": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/personal-data.md": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "docs/migration/effect-refactor/inventories/donor-usage-mac.json": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "docs/migration/effect-refactor/inventories/native.json": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "apps/android/AGENTS.md": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+    },
+    "locks_and_runtime": {
+      "mobile/app.json": "d530bc67a91d58a744398d8258d27c08e5773c4095613683e167ed5632e12461",
+      "mobile/modules/scrollcost-screen-time/android/build.gradle": "a798026fe21ff6629565564db796cae08559d2d5952dd95a8b9da1cff51cd187",
+      "mobile/modules/scrollcost-screen-time/app.plugin.js": "3e48739de8c36fb31b205422088acef79c460b4b6f4ff002c332bbd71ae8439e",
+      "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTime.podspec": "42433ec804be08d3d153d373adc86193c160dac6186652f90f9f5bba0f772e58",
+      "mobile/modules/scrollcost-screen-time/package.json": "57cd27186a3e60ac7165be9ea365e75651da75ca352155268a673739c8805f8d",
+      "mobile/package-lock.json": "4b3d8d0e1c51745b1cf06a78ac115ba4b947d86bf9c9019fbbe09adbf82fad67",
+      "mobile/package.json": "4d390fcc2f458a6d8188e5c2e4f1feb2f13246d858d8ae3e458de2c30b55883f",
+      "package-lock.json": "3674257eed01116011c17dad799d7d5a457b48c1f3eb4d964c4674a98fefd065",
+      "package.json": "6bbcd7b7e864b37d1122697fcb958f8ec6c7ebe2560eba92df094810eb67c1eb",
+      "sync-worker/package-lock.json": "2c64e80133d5c0dcdeb6d2735695bf366d659a01779209920dfddd970da5f57c",
+      "sync-worker/package.json": "9cfff8c743a10d4884023cfc2cbf0eb27ed8bc1f09c616ed030e8c566f8834bf"
+    },
+    "artifact_and_native_interface": {
+      "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "license_sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "candidate_tracked_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "nonignored_donor_status": "clean; unchanged",
+      "source_graph": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/source_records",
+      "symbol_graph": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/source_symbol_locators",
+      "fixture_case_index": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/independent_checks/case_index",
+      "native_check_ids": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/independent_checks/native_case_ids",
+      "signed_or_installed_artifacts_inspected": false,
+      "runtime_executed": false,
+      "Q-DONOR-SOURCE": "open"
+    },
+    "policy_migration_key_versions": {
+      "mobile_settings": 4,
+      "mobile_usage_export_profile": 3,
+      "daily_snapshot": 1,
+      "encrypted_daily_snapshot": 1,
+      "pairing": 1,
+      "initial_key_version": 1,
+      "key_material_read": false,
+      "schema_or_policy_changed": false
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Map iOS supported aggregate/report/data-access and Android prototype behavior, source gaps/lookback and historical snapshots.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/ios, history_and_precision, android_prototype, independent_checks: iOS daily/hourly source facts, absent report/monitor extension, currentday raw export/backfill gaps,370key retention, Android event pairing/finite unlocked source gaps and deferred snapshots; no false exact sessions."
+    },
+    {
+      "criterion": "Record current build/entitlement/purpose/export/region/account/one-app proof gaps; exact iOS sessions remain S06.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/ios, official_api_evidence, exports, remaining_qualification: source podspec15.1 vs actual26.4data path, signed capability/profile distinction, officialEUaccount/device/one-app status and standard report sandbox, separate purpose/destination qualification; owner historicalaggregate first-release exception and requiredS06 follow-up explicit."
+    },
+    {
+      "criterion": "Separate donor egress/services/commerce/retention from selected product scope; inspect no live device/session/history/token.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json#/egress_and_services, exclusions, feature_successors, producer_consumers: optionalCloudKit and retained plaintext/deferredencrypted relay, sourceIDs/limits/rebinding, native name-lookup egress, absentmobilecommerce versusMac authority, browser/input exclusionsbeforeobservation/persistence/transfer; no device/default/store/keychain/account/service/data actions."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-DONOR-USAGE-MOBILE"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed exact bounded task/write scope/source-only target/acceptance."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C14"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C15"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C17"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P03"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S00"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S01"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S04"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "S06"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F11"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F12"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F13"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F14"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F15"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F16"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped design read and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed repository-root wrappers use subprocess git -C /Users/codybontecou/dev/time.md show/ls-tree and safe rev-parse/status/diff metadata. Immutable source/license/mobile bridge/types/App/archive/export/snapshot/service/test/native metadata inspected. Final assertions verify110 source SHA256 pins,545 declaration locators,36 literal TS test titles and6 exactnative check IDs/lines; source_paths exist; candidateclean unchanged; raw inventory newline and digest verified. No ignored files/live data/runtime/build access."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "grep",
+        "-n",
+        "-E",
+        "UsageStatsManager|UsageEvents|PACKAGE_USAGE_STATS|DeviceActivity|FamilyControls",
+        "24d37c2ce5a76a4138e4780b95e29f840d679713",
+        "--",
+        "apps/android/*.kt",
+        "apps/android/*.xml",
+        "apps/apple/*.swift"
+      ],
+      "result": "passed",
+      "evidence": "Actually invoked via root Python subprocess wrapper; grep exit1/zero matches is expected absence in pinned recipient source pathspec, alongside independently accepted native intent inventory. No Android usage implementation/profile parity inferred."
+    }
+  ],
+  "inspection_summary": "Read root/entrypoint/personal-data/GLOSSARY/full-historicalusage section and scoped C14/C15/C17/P03/S00/S01/S04/S06/F11-F16, accepted donorMac lineage and current immutable donor mobile code/tests. Recorded all available aggregate/state projections and native/data-access/report/monitor gaps; native source installation/model identity, precision, grouping, missing-data/reconciliation/rawhistory/fullarchive gates explicit. Official Apple/Android documentation bodies verified where available via web only, no account access or ownereligibility inferred. Numerical iOS lookback/exactsession/API-policy proof remains open. Read-only source checks do not prove observed native behavior.",
+  "observations": [
+    {
+      "case_id": "independent-immutable-mobile-baseline",
+      "procedure": "Repository-root Python git -C show/status/diff wrappers independently verify all immutable source hashes, declaration/test/native-check locators, then inspect Swift identifier guards and optional label projection.",
+      "expected": "110 immutable source hashes,545 declarations,36 literal test cases,6 native check locators; clean unchanged donor; identified unlabeled apps retained.",
+      "observed": "Verified 110 sources, 545 symbols, 36 cases and 6 native IDs; all byte/line assertions pass and clean metadata unchanged. Corrected only missing-label narrative; no runtime qualification.",
+      "evidence": "donor-usage-mobile.json#/source_records, source_symbol_locators, independent_checks, exclusions; Swift197-211/229-231/302-310/379-388",
+      "result": "passed"
+    }
+  ],
+  "official_documentation_checks": {
+    "checked_date": "2026-10-07",
+    "successful_primary_documents": [
+      "https://developer.apple.com/documentation/FamilyControls/AuthorizationStatus/approvedWithDataAccess?changes=__3",
+      "https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.family-controls.app-and-website-usage?changes=_7",
+      "https://developer.apple.com/documentation/deviceactivity/deviceactivityreport?language=objc",
+      "https://developer.apple.com/support/terms/apple-developer-program-license-agreement/",
+      "https://developer.android.com/reference/android/app/usage/UsageStatsManager?authuser=1"
+    ],
+    "method": "web search/open official documentation body and agreement section; raw byte fingerprint unavailable, no copy of full documentation persisted. No third-party/forum claim used.",
+    "unavailable_supplemental": "Some Apple JS pages/Markdown/JSON policy/missingData/entitlement-request full bodies not retrievable through web parser; attempted public-doc Python retrieval failed local DNS. No escalation/credential/network-service workaround. Existing exactdesign constraints remain qualification requirements, not newproof."
+  },
+  "limitations": [
+    "Q-DONOR-SOURCE open: immutable history/license/dependency/source acceptance distinct from clean metadata; noimport.",
+    "iOS build SDK/signature/profiles/distribution/release/one-app/account/region/purpose/destination andactualnativepermissions/report background/battery unqualified.",
+    "No numericaliOS lifetime/lookback or supportedexact historical per-app session guarantee established; S06required, owner aggregate shipping exception explicit.",
+    "Full historicalaggregate retention/backfill/raw bucket precision/sourceidentity/coverage andcompletearchive migration notqualified by this source inventory.",
+    "Healthusage currentplanned: assigned-base nativeAPI scan findsnoUsageStatsManager/UsageEvents/PACKAGE_USAGE_STATS/DeviceActivity/FamilyControls in selected Swift/Kotlin/manifest sourcepathspec; acceptednativeinventory independent supportsplanned. No mobilefeaturecontract parity changed.",
+    "Supplemental Apple JSON/Markdown documentation fetch unavailable (web parser and localDNS); policy/missingData/entitlement-request pages notfullyretrieved here. No rawwebbytehash claimed; scopeddesign rows preserved as reviewedrequirement rather thannewnativeproof.",
+    "No device/user report/history/defaults/DB/token/keychain/account/provisioning/ignorednativeartifact read; all sourceconstants arecode, no tests/build/deploy/data actions."
+  ],
+  "remaining_qualification": [
+    "Q-DONOR-SOURCE open: immutable history/license/dependency/source acceptance distinct from clean metadata; noimport.",
+    "iOS build SDK/signature/profiles/distribution/release/one-app/account/region/purpose/destination andactualnativepermissions/report background/battery unqualified.",
+    "No numericaliOS lifetime/lookback or supportedexact historical per-app session guarantee established; S06required, owner aggregate shipping exception explicit.",
+    "Full historicalaggregate retention/backfill/raw bucket precision/sourceidentity/coverage andcompletearchive migration notqualified by this source inventory.",
+    "Healthusage currentplanned: assigned-base nativeAPI scan findsnoUsageStatsManager/UsageEvents/PACKAGE_USAGE_STATS/DeviceActivity/FamilyControls in selected Swift/Kotlin/manifest sourcepathspec; acceptednativeinventory independent supportsplanned. No mobilefeaturecontract parity changed.",
+    "Supplemental Apple JSON/Markdown documentation fetch unavailable (web parser and localDNS); policy/missingData/entitlement-request pages notfullyretrieved here. No rawwebbytehash claimed; scopeddesign rows preserved as reviewedrequirement rather thannewnativeproof.",
+    "No device/user report/history/defaults/DB/token/keychain/account/provisioning/ignorednativeartifact read; all sourceconstants arecode, no tests/build/deploy/data actions."
+  ],
+  "rollback": "Current Health/native/Macdonor authority unchanged. Remove/revert only this inventory/receipt; no records/source/destinations/grants migrated or deleted.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "24d37c2ce5a76a4138e4780b95e29f840d679713+bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d"
+  },
+  "prior_reviewed_patch_digest": "7e13d697bc639ae82e52f3d3d1856fb6e8a38ebe01026df56d350e18ff93eb45",
+  "review_corrections": [
+    {
+      "reviewer": "/root/donor_mac_review",
+      "field": "exclusions.tokens",
+      "reason": "Pinned Swift excludes missing identifiers/domains but retains apps whose labels fall back to bundle ID or whose optional labels are omitted. No missing-label omission policy inferred."
+    }
+  ]
+}

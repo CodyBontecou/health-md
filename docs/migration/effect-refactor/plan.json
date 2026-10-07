@@ -3280,7 +3280,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 24,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
@@ -3293,14 +3293,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "24d37c2ce5a76a4138e4780b95e29f840d679713+bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json"
+        ]
       }
     },
     {
@@ -6646,7 +6648,8 @@
         "apps/apple/effect-host-candidates/ios/ios/Info.plist",
         "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift",
         "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh",
-        "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json"
+        "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
+        "apps/apple/effect-host-candidates/ios/babel.config.cjs"
       ],
       "shared_resources": [
         "ios-candidate-project",
@@ -6719,27 +6722,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/apple_lifecycle"
-        ],
-        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json",
-        "introduced_case_ids": [
-          "offline_success",
-          "cancel_before_acquire",
-          "cancel_waits_release_ack",
-          "reentry_dispose_cancel_supersede",
-          "frame_limit",
-          "queue_backpressure",
-          "unknown_schema_before_acquire",
-          "teardown_fresh_restart",
-          "single_react_effect_identity",
-          "no_native_grant_expansion"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/0/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -6835,9 +6818,42 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "not_started",
+      "status": "in_progress",
       "blocker": null,
-      "claim": null,
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "5ef9c8d814b23e6317a553b936ae41fa7d20b115",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/apple/effect-host-candidates/ios/package.json",
+          "apps/apple/effect-host-candidates/ios/package-lock.json",
+          "apps/apple/effect-host-candidates/ios/.node-version",
+          "apps/apple/effect-host-candidates/ios/tsconfig.json",
+          "apps/apple/effect-host-candidates/ios/metro.config.cjs",
+          "apps/apple/effect-host-candidates/ios/src/probe.ts",
+          "apps/apple/effect-host-candidates/ios/src/HostProbe.tsx",
+          "apps/apple/effect-host-candidates/ios/scripts/build.mjs",
+          "apps/apple/effect-host-candidates/ios/scripts/check.mjs",
+          "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json",
+          "apps/apple/effect-host-candidates/ios/ios/Podfile",
+          "apps/apple/effect-host-candidates/ios/ios/Podfile.lock",
+          "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj",
+          "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+          "apps/apple/effect-host-candidates/ios/ios/AppDelegate.swift",
+          "apps/apple/effect-host-candidates/ios/ios/NativeProbe.mm",
+          "apps/apple/effect-host-candidates/ios/ios/Info.plist",
+          "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift",
+          "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh",
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
+          "apps/apple/effect-host-candidates/ios/babel.config.cjs"
+        ],
+        "reserved_resources": [
+          "ios-candidate-project",
+          "ios-candidate-pods-lock",
+          "ios-candidate-js-lock",
+          "ios-candidate-bridge"
+        ]
+      },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 201,
       "qualification": {
@@ -6859,6 +6875,28 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "execution_environment": "Root discovered existing booted iOS26.5 simulators via XcodeBuildMCP list_sims2026-10-07. Transient target selected at execution; no private UDIDs in receipts. ios-debugger-agent skill read; prefer XcodeBuildMCP, session_show_defaults before any build/run/test and explicit private candidate scheme/Release/deriveddata. No production app/state/dependency graph changes. Bounded path amendment babel.config.cjs for exact official @react-native/babel-preset0.87.1 Metro transform; audit lock-only resolved source/license/no-Rust graph before install/execute. Native SDK/engine proof remains actual child obligation.",
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/apple_lifecycle"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     },
     {
@@ -7018,27 +7056,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/android_generation"
-        ],
-        "introduced_path": "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
-        "introduced_case_ids": [
-          "offline_success",
-          "cancel_before_acquire",
-          "cancel_waits_release_ack",
-          "reentry_dispose_cancel_supersede",
-          "frame_limit",
-          "queue_backpressure",
-          "unknown_schema_before_acquire",
-          "teardown_fresh_restart",
-          "single_react_effect_identity",
-          "no_native_grant_expansion"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/1/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -7176,6 +7194,27 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/android_generation"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     },
     {
@@ -7298,22 +7337,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/fdroid_policy"
-        ],
-        "introduced_path": "apps/android/effect-host-candidate/fixtures/fdroid-exclusions-v1.json",
-        "introduced_case_ids": [
-          "no_forbidden_dependency_graph",
-          "no_forbidden_dex_js_identity",
-          "billing_remove_actual_merged_manifest",
-          "generic_api_not_prohibited",
-          "unsigned_candidate_abi_graph"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/2/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -7411,6 +7435,22 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/fdroid_policy"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/fdroid-exclusions-v1.json",
+        "introduced_case_ids": [
+          "no_forbidden_dependency_graph",
+          "no_forbidden_dex_js_identity",
+          "billing_remove_actual_merged_manifest",
+          "generic_api_not_prohibited",
+          "unsigned_candidate_abi_graph"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     },
     {
@@ -7548,27 +7588,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/mac_context"
-        ],
-        "introduced_path": "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
-        "introduced_case_ids": [
-          "offline_success",
-          "cancel_before_acquire",
-          "cancel_waits_release_ack",
-          "reentry_dispose_cancel_supersede",
-          "frame_limit",
-          "queue_backpressure",
-          "unknown_schema_before_acquire",
-          "teardown_fresh_restart",
-          "single_react_effect_identity",
-          "no_native_grant_expansion"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/3/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.0",
         "react-native": "0.83.10",
@@ -7691,6 +7711,27 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/mac_context"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+        "introduced_case_ids": [
+          "offline_success",
+          "cancel_before_acquire",
+          "cancel_waits_release_ack",
+          "reentry_dispose_cancel_supersede",
+          "frame_limit",
+          "queue_backpressure",
+          "unknown_schema_before_acquire",
+          "teardown_fresh_restart",
+          "single_react_effect_identity",
+          "no_native_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     },
     {
@@ -7804,23 +7845,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/apple_lifecycle",
-          "#/fixture_catalog/apple_intent"
-        ],
-        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
-        "introduced_case_ids": [
-          "actual_ingress_no_view",
-          "unknown_schema_before_acquire",
-          "expiry_before_acquire",
-          "cancel_waits_native_ack",
-          "restart_no_grant_expansion"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/4/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -7906,6 +7931,23 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/apple_lifecycle",
+          "#/fixture_catalog/apple_intent"
+        ],
+        "introduced_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+        "introduced_case_ids": [
+          "actual_ingress_no_view",
+          "unknown_schema_before_acquire",
+          "expiry_before_acquire",
+          "cancel_waits_native_ack",
+          "restart_no_grant_expansion"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     },
     {
@@ -8031,22 +8073,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": {
-        "existing_case_set_refs": [
-          "#/fixture_catalog/core_scope",
-          "#/fixture_catalog/ui_lifecycle",
-          "#/fixture_catalog/android_generation"
-        ],
-        "introduced_path": "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
-        "introduced_case_ids": [
-          "actual_schedule_no_activity",
-          "unknown_schema_before_acquire",
-          "expiry_before_acquire",
-          "stop_waits_native_ack",
-          "duplicate_request_no_double_acquire"
-        ],
-        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      },
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/5/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -8135,6 +8162,22 @@
         "task_id": "SPLIT-NATIVE-HOSTS",
         "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
         "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+      },
+      "fixture_input_map": {
+        "existing_case_set_refs": [
+          "#/fixture_catalog/core_scope",
+          "#/fixture_catalog/ui_lifecycle",
+          "#/fixture_catalog/android_generation"
+        ],
+        "introduced_path": "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+        "introduced_case_ids": [
+          "actual_schedule_no_activity",
+          "unknown_schema_before_acquire",
+          "expiry_before_acquire",
+          "stop_waits_native_ack",
+          "duplicate_request_no_double_acquire"
+        ],
+        "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       }
     }
   ]

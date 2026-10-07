@@ -1,0 +1,3998 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DONOR-USAGE-MOBILE",
+  "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+  "design_ids": [
+    "C14",
+    "C15",
+    "C17",
+    "P03",
+    "S00",
+    "S01",
+    "S04",
+    "S06",
+    "F11",
+    "F12",
+    "F13",
+    "F14",
+    "F15",
+    "F16"
+  ],
+  "proof_class": "planning",
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "scope": "Committed source/license/tests/metadata only; no histories/reports/defaults/keychain/ignored generated native trees/device/signing/account/service access, no builds/import/source adoption.",
+  "source_identity": {
+    "candidate_locator": "/Users/codybontecou/dev/time.md",
+    "candidate_repository": "CodyBontecou/time.md (design locator; no remote contacted)",
+    "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+    "observed_HEAD": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+    "status_porcelain_v1": [],
+    "tracked_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "patch_method": "SHA256 raw git diff --binary HEAD bytes. Nonignored status only; no ignored runtime files inspected. No dirty adoption.",
+    "license": {
+      "path": "LICENSE",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "text_identity": "GNU Affero General Public License Version3; native module declares AGPL-3.0-only",
+      "reuse_admission": "Owner legal/source/dependency/history map selection remains separate; no legal conclusion/import."
+    },
+    "nearest_instructions": "No tracked AGENTS.md in immutable donor tree. No donor writes.",
+    "Q-DONOR-SOURCE": {
+      "state": "open",
+      "accepted_here": false
+    },
+    "accepted_mac_lineage": "donor-usage-mac.json same candidate revision; full native Mac sessions versus bounded summary mirror authority retained."
+  },
+  "source_records": [
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "LICENSE",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "docs/cross-platform-sync.md",
+      "sha256": "0dd0d50811b0d9673f8ec608793201efac219ebbe61ea12f00ebfdaa68cc16cb"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/App.tsx",
+      "sha256": "37b97a86f4f98fd068f2513714580702d3b8871dbd3fb24df6a41d4b22ec1a72"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/README.md",
+      "sha256": "fc567928e1bd9aa9f5420454b31f67348f43be7783569c9a85e7420d4819c7bc"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/app.json",
+      "sha256": "d530bc67a91d58a744398d8258d27c08e5773c4095613683e167ed5632e12461"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/babel.config.js",
+      "sha256": "c27c3e8f3470c96cfa6f165c5ada8dcd66b1db7556c22c31cb8f0450babdf209"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/chrome-extension/README.md",
+      "sha256": "2fa9984c1c19bae71870f44353371802f58ef89baa323a3cbe501af37e5c804e"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/chrome-extension/background.js",
+      "sha256": "d7d8b5c5a9225080160ede2686d12e5f303f9e1c8591355daaf726248744d69c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/chrome-extension/manifest.json",
+      "sha256": "bf94a6cb052577bae1bd03cfcdd7732b6089e309ba6ed7c71e451e82f3c922d0"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/chrome-extension/popup.js",
+      "sha256": "8031a4504c534e37a5b8a5a828f203e5234c87b3f6286e979fdb0b39cc0498f9"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/macos-tracker/Package.swift",
+      "sha256": "00c5ea1a335ebc1509e3a02b5a0204899fdb43e75c7cf8e7708beb84696baf36"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/macos-tracker/README.md",
+      "sha256": "8811d86eaf7abf8f8771b1b9a5c6aedcd4c89d5cb3577c21e55ee9c06b39dd85"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "sha256": "64549206a26b4089db0ccb5f34ff3b2d12da69f350e41b288e2cf45620d74929"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/macos-tracker/install-launch-agent.sh",
+      "sha256": "3c62d635ff2bc4bbe4185eb2f9e9e5fac816bc249f203f462c72db178f6da58e"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/clients/macos-tracker/uninstall-launch-agent.sh",
+      "sha256": "70b8a68838f3d18d30b030bea2572f0c53739b039d804df04e630630c2df8e7c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/cloudflare/README.md",
+      "sha256": "d612d820ff6b0ff1f708dccda1eae22f83a126af751385e3731c18f52b775823"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/cloudflare/migrations/0001_initial.sql",
+      "sha256": "9cea5796f84c6fdead6ff6232162f026ddfee3e179ca8211d4786066dcc8c31c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/cloudflare/src/index.ts",
+      "sha256": "2c54e29478fbab3f7d71a36558f5201971fa7a99acff0b7bb7b26a37c184c5b6"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/cloudflare/wrangler.toml",
+      "sha256": "8000b4ae5945898d2d1fbc72fa08dce32538db57d6bd4af695c5b0c07182bd5d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/e2e/device/README.md",
+      "sha256": "cd3145e958aad39b8b6a017f4febd4b12efc53309464136663ed59d59305a1a2"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/e2e/device/run-android.sh",
+      "sha256": "bfe00cdf2436d961ef8871c9114d9f076064e4dd190a18493e3100c62f008212"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/e2e/device/run-ios.sh",
+      "sha256": "1ec53fa22fcd3b57875552772738d7d98f28bce849e907a2241242222d20fd2d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/e2e/device/validate-result.mjs",
+      "sha256": "70e68d396589d777cd4b889e533f724b075114c38ebbf929b3b8bd49594201e7"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/build.gradle",
+      "sha256": "a798026fe21ff6629565564db796cae08559d2d5952dd95a8b9da1cff51cd187"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/AndroidManifest.xml",
+      "sha256": "41659d58198a58d3b7c16a0075ba33e7e8cb591e6b3aac6887fc911224d01161"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/BootReceiver.kt",
+      "sha256": "a08ba297ea8c2cb8b5ce120e98321e947baf2fb51e0a7b890946a0da6bd57f5d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "sha256": "4a90a53735da3dffbe16f20192e2a8519944ddba7b6719f944cd417f758938c1"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "sha256": "03129bc59a8cd6281a1b2efab84f8c94837e94d3d581419d48f9d45b967706c7"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "sha256": "354661d19b738167dd150c1fb4bdb0004a2b3c16a5b863e31a2b060e032c5f3c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "sha256": "4ee09e0a0e44c62a15c77bbab4971d4654aa964f91b0c660b16b6cfaf5aba901"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/app.plugin.js",
+      "sha256": "3e48739de8c36fb31b205422088acef79c460b4b6f4ff002c332bbd71ae8439e"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/expo-module.config.json",
+      "sha256": "82f9459bafa2caa73d5531a75b9cfda04a093da27a19f610ccd95c645a15c5d3"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTime.podspec",
+      "sha256": "42433ec804be08d3d153d373adc86193c160dac6186652f90f9f5bba0f772e58"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "sha256": "0cdfc76b5ac4cef45dcc0f76f30b16fbd4870f0d80971218655a4c2282911392"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/package.json",
+      "sha256": "57cd27186a3e60ac7165be9ea365e75651da75ca352155268a673739c8805f8d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "sha256": "20c7a10353294b0301a57235334648a76d2cfb518c6e15397756a2bcf5317069"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/package-lock.json",
+      "sha256": "4b3d8d0e1c51745b1cf06a78ac115ba4b947d86bf9c9019fbbe09adbf82fad67"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/package.json",
+      "sha256": "4d390fcc2f458a6d8188e5c2e4f1feb2f13246d858d8ae3e458de2c30b55883f"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/plugins/with-fmt-xcode-26-workaround.js",
+      "sha256": "4e182741d47b2fa268c455159cbc6a1e27d636a37f09f3928ee85e93c8531a81"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/plugins/with-ios-debug-bundle-fallback.js",
+      "sha256": "d1447713145ebd1d628edabaf6d95380d0a04ffd15e956364c11c288cc30d238"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/BottomTabBar.tsx",
+      "sha256": "d6a6ebca8875f3de5ea7635f44309e8bfdee7f9c05da3dc0f409c03c2bbd5e9a"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/Button.tsx",
+      "sha256": "8ad23a5d346b9cb9f8e2f444179376b6890e162dbd555177732c3604f94b5f54"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/Card.tsx",
+      "sha256": "c568b5565a735fb1ee0ab6941350ad270341529973d0dd57faca2063b0598097"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "sha256": "bf8a049e77b91074799b36cb8d25d0df9bd72b8578f1fc53f4be8ac594d68416"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/DashboardFilters.tsx",
+      "sha256": "611027a0ef1109abfcde2bad34cbe2de1cf2f12cea54055ed07b6861047ce23c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/ExportView.tsx",
+      "sha256": "217088461ec59703f19024922b101d20a5eea5827086963aba6c0638aa20520d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/PairingScanner.tsx",
+      "sha256": "49e5758143ae54ff2358e9c8a22f0d715f14d079e282926922189a3f731c58c7"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/SectionHeader.tsx",
+      "sha256": "073d79cf12233756756b155fa8dda6472b752b20cc37f3a3c2d0db2f98ef1ce3"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/Toggle.tsx",
+      "sha256": "b55e225f3a140491592dde90b3e60bf774316405e2d1c8942b3e7d62b228f6f6"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "sha256": "327cea3fef21b2e23bd072b68f9b946da92651fec198d583b32b4128a84fe8a7"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/data/trackedTargets.ts",
+      "sha256": "11ea909d363fd4ee6a85f3c413d26503139228f67e9141e68a2873bf047a7f52"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/domain/exports.test.ts",
+      "sha256": "38cda5e73d6d1d944aa34af96a6daa1e77d17c32f13c71c83a568775cac07a9f"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/domain/exports.ts",
+      "sha256": "2a5a2cdd358a84bc7508aaad2a919d2ee31c21a498e2000378852b2398bac80b"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/domain/time.ts",
+      "sha256": "972580033c715cfdf65ced273daa07110ddbdab11999057ef4e6b9219989f451"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/domain/usageFilters.test.ts",
+      "sha256": "5eeae80f517f5ddf4d95f4d8c3af4607d3e76800240aa7e7f1b32db8fbce4448"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/domain/usageFilters.ts",
+      "sha256": "5ecb5919ed70b56438e574cf3c7f3295dcded86f6dfba7bbcb3fc7282e2b22fd"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "sha256": "a4bcaadb062491e6a455f0bef0e07468138a1b5d46bddde8eab14e787d4d5775"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/integration/deviceIntegration.test.ts",
+      "sha256": "83d08d91d656d1c5cdc3c49387758f0f264389d1481c64ba21ee2a4ffd96e06d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "sha256": "5dc2c529a3cd9209c8e92d7395947d72b6eacc45b78475e2214544619bf2b30b"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/browserHistory/importer.ts",
+      "sha256": "019815603aeace01bebd2e12c28b3fd37cc7ddf2444e13c178e54e3aba34ea88"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/browserHistory/index.ts",
+      "sha256": "f1dd5cc2a639b1256a994dbf53daeb5fa993819a64f84a5047fbd39f2e06e45a"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "sha256": "fb56348de34a741a3fc5e99e22ac64cc71c1f35b558a4cc921cf64491b2125ef"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "sha256": "18a501b7cf428d5d92eac1cb97944e67566dfeb851f247787279650c6647d78c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "sha256": "d3c6128fbcf5fc372f05feb039b2a27755e09f01ddee60877b6190a1b9a03dbe"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/crossPlatformSync/protocol.test.ts",
+      "sha256": "a4b672b4ed5d3737c845f39fe5a4899af8a89484ced026ad6dd1e2c440d6d6b8"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "sha256": "be2f1a208a8182b1243bdf911b00ce2b229539c96b4b65f7cf305b9ac119f549"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/dailySnapshots/index.test.ts",
+      "sha256": "4476a0dd67bb80a62b6cde23f52d2af904b301cb41fb086ea4dd0b4fb83d413b"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "sha256": "2a791db5cafb5bce4a4566aa66a047a0a373ebb0cb9c5050ee03f65691ec00a7"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "sha256": "2dfedafede0f1c50de25934b56209883ef3850610029bf825d797d93db151bc8"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/notifications.ts",
+      "sha256": "d18abc6752807e97b2df8ddcbff6481c63a223a49d0cab198989b72df55508e1"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/appNameResolver.test.ts",
+      "sha256": "0722ef453e9203240cab8f11a408533812bd7d47d295bcf00158a5486e3447b1"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "sha256": "a18b0e7b311ffd61907936146fb1789767350d06eec758a3cacc55bdf4028a6b"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/index.ts",
+      "sha256": "bc60d1e44e0d99d55e195dc9e1dcc063fb9358c75f71ed7d7e7b7fc6e75e9f2e"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/mockProvider.ts",
+      "sha256": "f62a4549e900675cd5d331b7de69fb5b0b39490fe14432c12d7031d0c0ce588d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "sha256": "cd283408daab34c14788e8b957e2bb1ab264ae92e556043bad9f604c13ab0112"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/screenTime/types.ts",
+      "sha256": "26d084ec117318b0b01baaa396ef24616586a129c9b21b06c57b1e4f6f2aea44"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/sync/client.ts",
+      "sha256": "46ebf21c0a0f3f2c6be6f9ed11010429df3d59d0d54019b138340bc340e6e702"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/services/sync/index.ts",
+      "sha256": "a3fa4373171a3684e69fe2220ca3ab5caecce14d3bb929a1c1191cbb4e264c8c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/theme/geist.ts",
+      "sha256": "348f3b5fc05707b2c61ff5ed87fcd8cf6078f323e7708ca5d1b55579fd55bf26"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/src/types/index.ts",
+      "sha256": "4357d9091c674f49fea6b93d97b11d1599e48c415844a939104d70ee4bbee089"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "mobile/tsconfig.json",
+      "sha256": "129ce57a949e89406ba9ec61ce7a111c51039affc1575dd2b8fdc0f81728fef3"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "package-lock.json",
+      "sha256": "3674257eed01116011c17dad799d7d5a457b48c1f3eb4d964c4674a98fefd065"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "package.json",
+      "sha256": "6bbcd7b7e864b37d1122697fcb958f8ec6c7ebe2560eba92df094810eb67c1eb"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/README.md",
+      "sha256": "65b4ab517c4140c3f5ba310240963bf34e303dd3f4ab1314a81f491bc1b905e3"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/migrations/0001_sync.sql",
+      "sha256": "702d7f313af308de6646694ddfb7e34865d990b929bcd634e77822b2be536d89"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/package-lock.json",
+      "sha256": "2c64e80133d5c0dcdeb6d2735695bf366d659a01779209920dfddd970da5f57c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/package.json",
+      "sha256": "9cfff8c743a10d4884023cfc2cbf0eb27ed8bc1f09c616ed030e8c566f8834bf"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/auth.ts",
+      "sha256": "66828d8a35080f2ee895b1867d7e647a088f99162ca5f6f918806dc6e95825a8"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/cleanup.ts",
+      "sha256": "fc52a80b9d6612fa33906b30dc217a393195f097e73146a95994c6ab03e246e4"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/crypto.ts",
+      "sha256": "222a53c9c5c07e53535d8c7c44180a696bcf6eb951cfbe8a87103ae1854fcf15"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/http.ts",
+      "sha256": "d252e9cd7a061da08017371ee17b11ac2fc2b03432b616191777c679a2a19062"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/index.ts",
+      "sha256": "e1fdbd1cb563f101c4cfad3414d9461eadd3dcb38cf1f0d2717a19100cf4be68"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/types.ts",
+      "sha256": "9a9116d65e36f56697eacfc173bd7d025a6f4c8c6f52e76fe255e5ba13e8b3cd"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/src/validation.ts",
+      "sha256": "995df8ba58b927afe0739da3e41e9443b6526d033105edec58078806e722089d"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/test/d1.ts",
+      "sha256": "7b26632a8f38dd2efb8f3f4bdd4e16753f6261cc59dc62d6a491ba5028c7e497"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/test/worker.test.ts",
+      "sha256": "8dd56b953524f438ad28bba9943e40e70dfb39f8a0963770809790d711dca20f"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/tsconfig.json",
+      "sha256": "7df16a1a79e2ae8719a49b063593f8a395db3e2140b6af1c75e3b62ad9a9c394"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "sync-worker/wrangler.toml",
+      "sha256": "19bb03f132ee4018c283cbac5fcc070b6fa319f3a0c4610027682226ce55bf8c"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "sha256": "e202d8b0254c7e0ee8727453feee6daee0434de7316e5e3c2bb39141ba4610ad"
+    },
+    {
+      "repository": "time.md candidate",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "sha256": "95fcd345b1062abd6dd05e566f0b1a07075dcb7ddcbc7b8be6bd033bc420a7c4"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "GLOSSARY.md",
+      "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/migration/effect-refactor/personal-data.md",
+      "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/migration/effect-refactor/templates.md",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "docs/migration/effect-refactor/inventories/native.json",
+      "sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "packages/contracts/product-capabilities.json",
+      "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc"
+    },
+    {
+      "repository": "Health.md recipient",
+      "source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+      "path": "apps/android/AGENTS.md",
+      "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+    }
+  ],
+  "source_symbol_locators": [
+    {
+      "path": "mobile/App.tsx",
+      "line": 39,
+      "symbol": "UsageArchive"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 49,
+      "symbol": "ExportDateRange"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 50,
+      "symbol": "ExportFormat"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 51,
+      "symbol": "ExportMode"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 52,
+      "symbol": "ExportRangePreset"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 53,
+      "symbol": "ExportSection"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 57,
+      "symbol": "BrowserHistoryImportSummary"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 58,
+      "symbol": "BrowserHistoryTargetEstimate"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 68,
+      "symbol": "ScreenTimeAuthorization"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 69,
+      "symbol": "ScreenTimeDetailedUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 70,
+      "symbol": "ScreenTimeUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 78,
+      "symbol": "RemoteDailyUsageResponse"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 79,
+      "symbol": "RemoteDailyUsageTotal"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 87,
+      "symbol": "ICloudAccountStatus"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 88,
+      "symbol": "ICloudSnapshotEnvelope"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 107,
+      "symbol": "PersistedTarget"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 109,
+      "symbol": "PersistedSettings"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 130,
+      "symbol": "ScreenTimeExportSummary"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 136,
+      "symbol": "ICloudSyncSummary"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 144,
+      "symbol": "TimeMdCloudSyncUsageEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 157,
+      "symbol": "TimeMdCloudSyncDailySnapshot"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 169,
+      "symbol": "parsePositiveNumber"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 174,
+      "symbol": "parseDigestTime"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 188,
+      "symbol": "exportFileName"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 194,
+      "symbol": "isCurrentLocalDay"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 198,
+      "symbol": "withDailyTotal"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 204,
+      "symbol": "hourlyMinutesFromDetailedUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 250,
+      "symbol": "normalizeDomainName"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 259,
+      "symbol": "domainMatches"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 265,
+      "symbol": "matchedTargetIdsForDetailedUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 296,
+      "symbol": "mergePersistedTargets"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 310,
+      "symbol": "normalizePersistedTarget"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 341,
+      "symbol": "localDeviceMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 345,
+      "symbol": "totalTargetMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 355,
+      "symbol": "localShareableMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 363,
+      "symbol": "withDeviceMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 376,
+      "symbol": "withHistoryMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 384,
+      "symbol": "withRemoteMinutes"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 399,
+      "symbol": "withoutDailyUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 412,
+      "symbol": "compareTargets"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 419,
+      "symbol": "targetFromScreenTimeUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 443,
+      "symbol": "mergeDeviceUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 473,
+      "symbol": "targetFromHistoryEstimate"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 491,
+      "symbol": "mergeBrowserHistory"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 508,
+      "symbol": "authorizationLabel"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 527,
+      "symbol": "canReadNativeUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 531,
+      "symbol": "screenTimeAccessMessage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 543,
+      "symbol": "remoteSourceMinutesForEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 574,
+      "symbol": "remoteUsageByTarget"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 581,
+      "symbol": "remoteTargetFromEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 608,
+      "symbol": "mergeRemoteTargets"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 622,
+      "symbol": "sourceSummary"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 632,
+      "symbol": "buildICloudDailySnapshot"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 677,
+      "symbol": "parseICloudSnapshot"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 734,
+      "symbol": "isUnknownRecord"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 738,
+      "symbol": "iCloudSourceForEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 754,
+      "symbol": "iCloudMinutesByTarget"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 827,
+      "symbol": "iCloudTargetIdForEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 835,
+      "symbol": "iCloudTargetFromEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 859,
+      "symbol": "mergeICloudTargets"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 873,
+      "symbol": "iCloudStatusLabel"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 894,
+      "symbol": "targetIdForICloudEntry"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 933,
+      "symbol": "MainApp"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1011,
+      "symbol": "targetsForCurrentDay"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1027,
+      "symbol": "hydrateSettings"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1245,
+      "symbol": "refreshDeviceUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1306,
+      "symbol": "autoPullCloudUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1354,
+      "symbol": "autoSyncICloud"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1409,
+      "symbol": "pullCloudUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1419,
+      "symbol": "syncUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1481,
+      "symbol": "handleEnableAccess"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1505,
+      "symbol": "markUsageSourcesObserved"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1509,
+      "symbol": "selectAllUsageSources"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1513,
+      "symbol": "toggleUsageSource"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1533,
+      "symbol": "toggleTarget"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1539,
+      "symbol": "handleImportBrowserHistory"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1564,
+      "symbol": "handleCreateSyncToken"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1582,
+      "symbol": "handlePullCloudUsage"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1608,
+      "symbol": "handleCheckICloudStatus"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1627,
+      "symbol": "handlePushICloudSnapshot"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1656,
+      "symbol": "handlePullICloudSnapshots"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1692,
+      "symbol": "handleExportRangePresetChange"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1697,
+      "symbol": "handleExportScreenTimeData"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1780,
+      "symbol": "handleScheduleDigest"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 1816,
+      "symbol": "handleSendPreview"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2152,
+      "symbol": "StatProps"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2158,
+      "symbol": "Stat"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2168,
+      "symbol": "FieldProps"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2178,
+      "symbol": "Field"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2198,
+      "symbol": "TargetRowProps"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2204,
+      "symbol": "TargetRow"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2238,
+      "symbol": "ConnectorRowProps"
+    },
+    {
+      "path": "mobile/App.tsx",
+      "line": 2243,
+      "symbol": "ConnectorRow"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 4,
+      "symbol": "Config"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 10,
+      "symbol": "FileConfig"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 17,
+      "symbol": "load"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 37,
+      "symbol": "printUsage"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 54,
+      "symbol": "argument"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 62,
+      "symbol": "loadFileConfig"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 68,
+      "symbol": "configuredDeviceId"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 87,
+      "symbol": "applicationSupportDirectory"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 94,
+      "symbol": "UsageTotal"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 103,
+      "symbol": "UsageDescriptor"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 110,
+      "symbol": "TargetRule"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 127,
+      "symbol": "UsageStore"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 128,
+      "symbol": "Payload"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 140,
+      "symbol": "add"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 160,
+      "symbol": "entries"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 166,
+      "symbol": "load"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 171,
+      "symbol": "save"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 177,
+      "symbol": "PushDailyUsageRequest"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 185,
+      "symbol": "SyncClient"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 192,
+      "symbol": "push"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 218,
+      "symbol": "SyncError"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 232,
+      "symbol": "UsageTracker"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 245,
+      "symbol": "start"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 269,
+      "symbol": "switchTo"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 276,
+      "symbol": "flushCurrent"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 293,
+      "symbol": "syncToday"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 310,
+      "symbol": "descriptor"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 336,
+      "symbol": "localDateKey"
+    },
+    {
+      "path": "mobile/clients/macos-tracker/Sources/ScrollCostMacTracker/main.swift",
+      "line": 345,
+      "symbol": "sanitizeIdentifier"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 1,
+      "symbol": "D1Result"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 2,
+      "symbol": "D1PreparedStatement"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 8,
+      "symbol": "D1Database"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 13,
+      "symbol": "Env"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 17,
+      "symbol": "UsageSource"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 18,
+      "symbol": "TargetType"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 20,
+      "symbol": "PushUsageEntry"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 30,
+      "symbol": "PushDailyUsageRequest"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 39,
+      "symbol": "Account"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 94,
+      "symbol": "createSyncToken"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 107,
+      "symbol": "pushDailyUsage"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 158,
+      "symbol": "getDailyUsage"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 225,
+      "symbol": "requireAccount"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 243,
+      "symbol": "normalizeEntry"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 269,
+      "symbol": "syncTokenFromRequest"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 278,
+      "symbol": "readJson"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 286,
+      "symbol": "cleanSource"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 293,
+      "symbol": "cleanDate"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 300,
+      "symbol": "cleanIdentifier"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 311,
+      "symbol": "optionalString"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 319,
+      "symbol": "localDateKey"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 326,
+      "symbol": "sha256"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 332,
+      "symbol": "randomToken"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 338,
+      "symbol": "base64Url"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 346,
+      "symbol": "json"
+    },
+    {
+      "path": "mobile/cloudflare/src/index.ts",
+      "line": 356,
+      "symbol": "HttpError"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/BootReceiver.kt",
+      "line": 7,
+      "symbol": "BootReceiver"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/BootReceiver.kt",
+      "line": 8,
+      "symbol": "onReceive"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "line": 13,
+      "symbol": "DailyDigestReceiver"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "line": 14,
+      "symbol": "onReceive"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "line": 65,
+      "symbol": "postNotification"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "line": 96,
+      "symbol": "formatDuration"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 19,
+      "symbol": "saveConfig"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 45,
+      "symbol": "hasConfig"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 49,
+      "symbol": "schedule"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 65,
+      "symbol": "cancel"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 70,
+      "symbol": "loadDigestConfig"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 77,
+      "symbol": "pendingIntent"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 85,
+      "symbol": "nextTriggerMillis"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 100,
+      "symbol": "parseTargets"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 119,
+      "symbol": "stringList"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 123,
+      "symbol": "numberValue"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "line": 131,
+      "symbol": "jsonStringList"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 17,
+      "symbol": "ScrollCostScreenTimeModule"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 21,
+      "symbol": "definition"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 144,
+      "symbol": "authorizationStatus"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 146,
+      "symbol": "encodeBase64Url"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 149,
+      "symbol": "decodeBase64Url"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 152,
+      "symbol": "openUsageAccessSettings"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "line": 159,
+      "symbol": "appLabel"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 24,
+      "symbol": "hasUsageStatsPermission"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 40,
+      "symbol": "foregroundUsageByPackage"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 48,
+      "symbol": "foregroundSessions"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 76,
+      "symbol": "addSession"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 92,
+      "symbol": "isForegroundEvent"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "line": 99,
+      "symbol": "isBackgroundEvent"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 16,
+      "symbol": "ScrollCostScreenTimeModule"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 17,
+      "symbol": "definition"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 138,
+      "symbol": "authorizationStatusString"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 176,
+      "symbol": "deviceActivityUsage"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 278,
+      "symbol": "detailedDeviceActivityUsage"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 357,
+      "symbol": "detailRecord"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 392,
+      "symbol": "dateMilliseconds"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 397,
+      "symbol": "deviceModelString"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 415,
+      "symbol": "cloudKitAccountStatusString"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 443,
+      "symbol": "pushCloudKitDailySnapshot"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 476,
+      "symbol": "fetchCloudKitDailySnapshots"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 515,
+      "symbol": "runCloudKitIntegrationTest"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 592,
+      "symbol": "cloudKitEncryptedPayload"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 603,
+      "symbol": "cloudKitQueryFindsIntegrationRecord"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 646,
+      "symbol": "cloudKitMatchResults"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 658,
+      "symbol": "cloudKitIntegrationErrorCode"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 667,
+      "symbol": "ensureCloudKitZone"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 672,
+      "symbol": "cloudKitZoneID"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 676,
+      "symbol": "cloudKitContainerIdentifier"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 680,
+      "symbol": "cloudKitRecordName"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 684,
+      "symbol": "sanitizeCloudKitRecordNameComponent"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 690,
+      "symbol": "stringArray"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "line": 694,
+      "symbol": "normalizedDomain"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 3,
+      "symbol": "ScreenTimeAuthorization"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 5,
+      "symbol": "NativeTargetGroup"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 18,
+      "symbol": "NativeUsage"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 31,
+      "symbol": "NativeDetailedUsage"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 46,
+      "symbol": "CloudKitIntegrationProbe"
+    },
+    {
+      "path": "mobile/modules/scrollcost-screen-time/src/index.ts",
+      "line": 55,
+      "symbol": "ScrollCostScreenTimeModule"
+    },
+    {
+      "path": "mobile/src/components/BottomTabBar.tsx",
+      "line": 5,
+      "symbol": "AppTab"
+    },
+    {
+      "path": "mobile/src/components/BottomTabBar.tsx",
+      "line": 7,
+      "symbol": "BottomTabBarProps"
+    },
+    {
+      "path": "mobile/src/components/BottomTabBar.tsx",
+      "line": 20,
+      "symbol": "BottomTabBar"
+    },
+    {
+      "path": "mobile/src/components/Button.tsx",
+      "line": 5,
+      "symbol": "ButtonVariant"
+    },
+    {
+      "path": "mobile/src/components/Button.tsx",
+      "line": 7,
+      "symbol": "ButtonProps"
+    },
+    {
+      "path": "mobile/src/components/Button.tsx",
+      "line": 14,
+      "symbol": "Button"
+    },
+    {
+      "path": "mobile/src/components/Card.tsx",
+      "line": 5,
+      "symbol": "CardProps"
+    },
+    {
+      "path": "mobile/src/components/Card.tsx",
+      "line": 9,
+      "symbol": "Card"
+    },
+    {
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "line": 10,
+      "symbol": "CrossPlatformSyncSummary"
+    },
+    {
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "line": 17,
+      "symbol": "CrossPlatformSyncCardProps"
+    },
+    {
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "line": 30,
+      "symbol": "CrossPlatformSyncCard"
+    },
+    {
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "line": 44,
+      "symbol": "pair"
+    },
+    {
+      "path": "mobile/src/components/CrossPlatformSyncCard.tsx",
+      "line": 121,
+      "symbol": "SyncStat"
+    },
+    {
+      "path": "mobile/src/components/DashboardFilters.tsx",
+      "line": 10,
+      "symbol": "DashboardFiltersProps"
+    },
+    {
+      "path": "mobile/src/components/DashboardFilters.tsx",
+      "line": 20,
+      "symbol": "DashboardFilters"
+    },
+    {
+      "path": "mobile/src/components/DashboardFilters.tsx",
+      "line": 76,
+      "symbol": "SourceChip"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 7,
+      "symbol": "ExportDateRange"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 8,
+      "symbol": "ExportFormat"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 9,
+      "symbol": "ExportMode"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 10,
+      "symbol": "ExportRangePreset"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 11,
+      "symbol": "ExportSection"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 21,
+      "symbol": "ExportViewProps"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 55,
+      "symbol": "ChoiceChip"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 68,
+      "symbol": "ExportView"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 69,
+      "symbol": "selectMode"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 75,
+      "symbol": "toggleSource"
+    },
+    {
+      "path": "mobile/src/components/ExportView.tsx",
+      "line": 81,
+      "symbol": "toggleSection"
+    },
+    {
+      "path": "mobile/src/components/PairingScanner.tsx",
+      "line": 7,
+      "symbol": "PairingScannerProps"
+    },
+    {
+      "path": "mobile/src/components/PairingScanner.tsx",
+      "line": 14,
+      "symbol": "PairingScanner"
+    },
+    {
+      "path": "mobile/src/components/PairingScanner.tsx",
+      "line": 19,
+      "symbol": "handleBarcode"
+    },
+    {
+      "path": "mobile/src/components/SectionHeader.tsx",
+      "line": 4,
+      "symbol": "SectionHeaderProps"
+    },
+    {
+      "path": "mobile/src/components/SectionHeader.tsx",
+      "line": 10,
+      "symbol": "SectionHeader"
+    },
+    {
+      "path": "mobile/src/components/Toggle.tsx",
+      "line": 4,
+      "symbol": "ToggleProps"
+    },
+    {
+      "path": "mobile/src/components/Toggle.tsx",
+      "line": 10,
+      "symbol": "Toggle"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 8,
+      "symbol": "UsageVisualizationsProps"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 17,
+      "symbol": "DistributionItem"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 24,
+      "symbol": "ChartPanelProps"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 38,
+      "symbol": "stableColor"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 46,
+      "symbol": "hourLabel"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 56,
+      "symbol": "ChartPanel"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 68,
+      "symbol": "MetricCard"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 81,
+      "symbol": "TrendChart"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 182,
+      "symbol": "DistributionChart"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 264,
+      "symbol": "TopUsageChart"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 302,
+      "symbol": "HourlyActivity"
+    },
+    {
+      "path": "mobile/src/components/UsageVisualizations.tsx",
+      "line": 362,
+      "symbol": "UsageVisualizations"
+    },
+    {
+      "path": "mobile/src/domain/exports.test.ts",
+      "line": 18,
+      "symbol": "payload"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 9,
+      "symbol": "UsageArchive"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 16,
+      "symbol": "ExportFormat"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 17,
+      "symbol": "ExportMode"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 18,
+      "symbol": "ExportRangePreset"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 19,
+      "symbol": "ExportSection"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 41,
+      "symbol": "ExportDateRange"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 43,
+      "symbol": "ExportConfiguration"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 51,
+      "symbol": "ExportTargetRow"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 60,
+      "symbol": "ExportTrendRow"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 61,
+      "symbol": "ExportHourlyRow"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 63,
+      "symbol": "ExportPayload"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 99,
+      "symbol": "BuildExportPayloadInput"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 114,
+      "symbol": "exportDateRangeForPreset"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 123,
+      "symbol": "isValidExportDateRange"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 133,
+      "symbol": "dayKeys"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 143,
+      "symbol": "selectedSourceMinutes"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 151,
+      "symbol": "rawRecordSource"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 156,
+      "symbol": "recordMatchedTargetIds"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 174,
+      "symbol": "buildUsageExportPayload"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 290,
+      "symbol": "scalar"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 297,
+      "symbol": "yaml"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 317,
+      "symbol": "csvCell"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 322,
+      "symbol": "csvTable"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 328,
+      "symbol": "markdownTable"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 335,
+      "symbol": "payloadTables"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 346,
+      "symbol": "renderUsageExport"
+    },
+    {
+      "path": "mobile/src/domain/exports.ts",
+      "line": 366,
+      "symbol": "exportExtension"
+    },
+    {
+      "path": "mobile/src/domain/time.ts",
+      "line": 1,
+      "symbol": "sumMinutes"
+    },
+    {
+      "path": "mobile/src/domain/time.ts",
+      "line": 5,
+      "symbol": "formatDuration"
+    },
+    {
+      "path": "mobile/src/domain/time.ts",
+      "line": 21,
+      "symbol": "dailyProjection"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.test.ts",
+      "line": 13,
+      "symbol": "target"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.test.ts",
+      "line": 31,
+      "symbol": "sources"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 31,
+      "symbol": "ArchivedTargetUsage"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 38,
+      "symbol": "DailyUsageSnapshot"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 46,
+      "symbol": "UsageArchive"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 48,
+      "symbol": "FilteredUsage"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 64,
+      "symbol": "emptySourceMinutes"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 68,
+      "symbol": "normalizeSourceMinutes"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 110,
+      "symbol": "BrowserTargetIdentity"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 115,
+      "symbol": "isBrowserTarget"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 133,
+      "symbol": "attributeBrowserMinutesToWeb"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 146,
+      "symbol": "sourceMinutesForTarget"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 198,
+      "symbol": "sumSourceMinutes"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 202,
+      "symbol": "minutesForSources"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 213,
+      "symbol": "createDailyUsageSnapshot"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 248,
+      "symbol": "withUsageSnapshot"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 258,
+      "symbol": "sanitizeUsageArchive"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 323,
+      "symbol": "localDayKey"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 330,
+      "symbol": "localDayKeysForRange"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 340,
+      "symbol": "parseLocalDay"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 346,
+      "symbol": "aggregateFilteredUsage"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 545,
+      "symbol": "sourceFilterLabel"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 555,
+      "symbol": "buildTrendPoints"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 589,
+      "symbol": "finiteMinutes"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 593,
+      "symbol": "finiteNumber"
+    },
+    {
+      "path": "mobile/src/domain/usageFilters.ts",
+      "line": 597,
+      "symbol": "isRecord"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 22,
+      "symbol": "DeviceIntegrationCheck"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 23,
+      "symbol": "DeviceIntegrationRequest"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 24,
+      "symbol": "DeviceIntegrationResult"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 29,
+      "symbol": "RequestState"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 31,
+      "symbol": "DeviceIntegrationGate"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 79,
+      "symbol": "DeviceIntegrationDiagnostics"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 161,
+      "symbol": "runDeviceIntegration"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 254,
+      "symbol": "ensureCheck"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 264,
+      "symbol": "addProbeCheck"
+    },
+    {
+      "path": "mobile/src/integration/DeviceIntegrationGate.tsx",
+      "line": 277,
+      "symbol": "sanitizeProbeErrorCode"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 3,
+      "symbol": "DeviceIntegrationCheckStatus"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 5,
+      "symbol": "DeviceIntegrationCheck"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 11,
+      "symbol": "DeviceIntegrationRequest"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 17,
+      "symbol": "DeviceIntegrationResult"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 29,
+      "symbol": "parseDeviceIntegrationRequest"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 62,
+      "symbol": "overallDeviceIntegrationStatus"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 74,
+      "symbol": "validateScreenTimeUsage"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 156,
+      "symbol": "nonEmpty"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 160,
+      "symbol": "finiteNumber"
+    },
+    {
+      "path": "mobile/src/integration/deviceIntegration.ts",
+      "line": 164,
+      "symbol": "finiteNonnegative"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/importer.ts",
+      "line": 6,
+      "symbol": "BrowserHistoryPickerResult"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/importer.ts",
+      "line": 10,
+      "symbol": "importBrowserHistoryFile"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 14,
+      "symbol": "parseBrowserHistory"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 44,
+      "symbol": "detectSource"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 61,
+      "symbol": "parseVisits"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 74,
+      "symbol": "parseJsonVisits"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 84,
+      "symbol": "flattenJsonRecords"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 101,
+      "symbol": "parseCsvVisits"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 125,
+      "symbol": "parseHtmlVisits"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 148,
+      "symbol": "parseTextVisits"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 153,
+      "symbol": "visitFromRecord"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 170,
+      "symbol": "normalizeRecord"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 177,
+      "symbol": "estimateHistoryMinutes"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 204,
+      "symbol": "inferVisitDuration"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 217,
+      "symbol": "visitsForDate"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 238,
+      "symbol": "parseCsv"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 288,
+      "symbol": "parseDateValue"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 315,
+      "symbol": "dateFromNumber"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 337,
+      "symbol": "parseDurationValue"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 351,
+      "symbol": "domainFromUrl"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 359,
+      "symbol": "normalizeDomain"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 363,
+      "symbol": "normalizeHeader"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 367,
+      "symbol": "firstValue"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 371,
+      "symbol": "firstString"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 376,
+      "symbol": "firstNonEmptyLine"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 380,
+      "symbol": "attributeValue"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 385,
+      "symbol": "stripHtml"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 389,
+      "symbol": "decodeHtml"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 398,
+      "symbol": "cleanUrl"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 402,
+      "symbol": "isHttpUrl"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/parser.ts",
+      "line": 406,
+      "symbol": "isRecord"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "line": 1,
+      "symbol": "BrowserHistoryVisit"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "line": 8,
+      "symbol": "BrowserHistoryTargetEstimate"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "line": 15,
+      "symbol": "BrowserHistoryImportSummary"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "line": 27,
+      "symbol": "BrowserHistoryImportResult"
+    },
+    {
+      "path": "mobile/src/services/browserHistory/types.ts",
+      "line": 33,
+      "symbol": "BrowserHistoryParserInput"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 7,
+      "symbol": "TimeMdDailyUsageSnapshot"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 19,
+      "symbol": "EncryptedDailySnapshotEnvelope"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 27,
+      "symbol": "EncryptedDailySnapshotEnvelope"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 28,
+      "symbol": "TimeMdPairingBundle"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 33,
+      "symbol": "CrossPlatformSyncConfiguration"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 43,
+      "symbol": "CrossPlatformDevice"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 50,
+      "symbol": "CrossPlatformSyncResult"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 58,
+      "symbol": "NativeCryptoModule"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 74,
+      "symbol": "nativeModule"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 89,
+      "symbol": "isCrossPlatformSyncAvailable"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 94,
+      "symbol": "loadCrossPlatformConfiguration"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 107,
+      "symbol": "pairAndroidWithMac"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 147,
+      "symbol": "disconnectCrossPlatformSync"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 166,
+      "symbol": "listCrossPlatformDevices"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 174,
+      "symbol": "syncAndroidToday"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 262,
+      "symbol": "requiredConfiguration"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 270,
+      "symbol": "validateConfiguration"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 296,
+      "symbol": "authenticatedRequest"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 312,
+      "symbol": "CrossPlatformSyncRequestError"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 319,
+      "symbol": "jsonRequest"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/index.ts",
+      "line": 344,
+      "symbol": "isRecord"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.test.ts",
+      "line": 5,
+      "symbol": "pairingCode"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 4,
+      "symbol": "TimeMdPairingBundle"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 14,
+      "symbol": "EncryptedDailySnapshotEnvelope"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 26,
+      "symbol": "parsePairingCode"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 73,
+      "symbol": "authenticatedData"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 92,
+      "symbol": "validateEnvelope"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 114,
+      "symbol": "normalizeEndpoint"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 141,
+      "symbol": "isBase64URLBytes"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 148,
+      "symbol": "validOpaqueValue"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 152,
+      "symbol": "normalizePlatform"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 160,
+      "symbol": "decodeBase64URLString"
+    },
+    {
+      "path": "mobile/src/services/crossPlatformSync/protocol.ts",
+      "line": 183,
+      "symbol": "isRecord"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 6,
+      "symbol": "TimeMdDailyUsageEntry"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 19,
+      "symbol": "TimeMdDailyUsageSnapshot"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 31,
+      "symbol": "buildAndroidDailySnapshot"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 89,
+      "symbol": "parseDailySnapshot"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 166,
+      "symbol": "detailedEntries"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 193,
+      "symbol": "normalizedIdentifier"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 197,
+      "symbol": "streamType"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 204,
+      "symbol": "normalizePlatform"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 212,
+      "symbol": "localDateKey"
+    },
+    {
+      "path": "mobile/src/services/dailySnapshots/index.ts",
+      "line": 219,
+      "symbol": "isRecord"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 8,
+      "symbol": "ICloudAccountStatus"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 10,
+      "symbol": "ICloudSnapshotEnvelope"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 16,
+      "symbol": "ICloudIntegrationProbe"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 25,
+      "symbol": "NativeICloudSyncModule"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 39,
+      "symbol": "nativeModule"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 57,
+      "symbol": "isICloudSyncAvailable"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 62,
+      "symbol": "getICloudDeviceId"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 79,
+      "symbol": "getICloudAccountStatus"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 87,
+      "symbol": "pushICloudDailySnapshot"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 108,
+      "symbol": "fetchICloudDailySnapshots"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 121,
+      "symbol": "runICloudIntegrationTest"
+    },
+    {
+      "path": "mobile/src/services/iCloudSync/index.ts",
+      "line": 134,
+      "symbol": "randomId"
+    },
+    {
+      "path": "mobile/src/services/notifications.ts",
+      "line": 15,
+      "symbol": "DigestInput"
+    },
+    {
+      "path": "mobile/src/services/notifications.ts",
+      "line": 21,
+      "symbol": "ensureNotificationPermissions"
+    },
+    {
+      "path": "mobile/src/services/notifications.ts",
+      "line": 38,
+      "symbol": "cancelScheduledDigests"
+    },
+    {
+      "path": "mobile/src/services/notifications.ts",
+      "line": 42,
+      "symbol": "scheduleDailyDigest"
+    },
+    {
+      "path": "mobile/src/services/notifications.ts",
+      "line": 65,
+      "symbol": "sendTestDigest"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 8,
+      "symbol": "CachedAppName"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 13,
+      "symbol": "AppNameCache"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 15,
+      "symbol": "AppStoreLookupResult"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 20,
+      "symbol": "AppStoreLookupResponse"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 86,
+      "symbol": "normalizedBundleIdentifier"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 107,
+      "symbol": "validName"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 115,
+      "symbol": "sanitizeCache"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 134,
+      "symbol": "loadCache"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 143,
+      "symbol": "chunks"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 148,
+      "symbol": "appStoreNamesFromLookupResponse"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 163,
+      "symbol": "fetchAppStoreNames"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 187,
+      "symbol": "resolveIOSAppNames"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 247,
+      "symbol": "friendlyAppNameFromBundleIdentifier"
+    },
+    {
+      "path": "mobile/src/services/screenTime/appNameResolver.ts",
+      "line": 274,
+      "symbol": "isBundleIdentifierLabel"
+    },
+    {
+      "path": "mobile/src/services/screenTime/index.ts",
+      "line": 7,
+      "symbol": "getScreenTimeProvider"
+    },
+    {
+      "path": "mobile/src/services/screenTime/mockProvider.ts",
+      "line": 3,
+      "symbol": "seededOffset"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 7,
+      "symbol": "NativeTargetGroup"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 20,
+      "symbol": "NativeScreenTimeModule"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 36,
+      "symbol": "getNativeModule"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 54,
+      "symbol": "dayRange"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 64,
+      "symbol": "toNativeTargets"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 79,
+      "symbol": "readNativeScreenTimeForIntegration"
+    },
+    {
+      "path": "mobile/src/services/screenTime/nativeProvider.ts",
+      "line": 101,
+      "symbol": "createNativeScreenTimeProvider"
+    },
+    {
+      "path": "mobile/src/services/screenTime/types.ts",
+      "line": 3,
+      "symbol": "ScreenTimeAuthorization"
+    },
+    {
+      "path": "mobile/src/services/screenTime/types.ts",
+      "line": 5,
+      "symbol": "ScreenTimeUsage"
+    },
+    {
+      "path": "mobile/src/services/screenTime/types.ts",
+      "line": 18,
+      "symbol": "ScreenTimeDetailedUsage"
+    },
+    {
+      "path": "mobile/src/services/screenTime/types.ts",
+      "line": 33,
+      "symbol": "NativeDigestSchedule"
+    },
+    {
+      "path": "mobile/src/services/screenTime/types.ts",
+      "line": 39,
+      "symbol": "ScreenTimeProvider"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 3,
+      "symbol": "RemoteUsageSource"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 5,
+      "symbol": "RemoteDailyUsageTotal"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 15,
+      "symbol": "RemoteDailyUsageResponse"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 21,
+      "symbol": "CreateSyncTokenResponse"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 26,
+      "symbol": "SyncClientConfig"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 31,
+      "symbol": "hasSyncConfig"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 35,
+      "symbol": "localDateKey"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 42,
+      "symbol": "createSyncToken"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 51,
+      "symbol": "fetchRemoteDailyUsage"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 59,
+      "symbol": "remoteMinutes"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 66,
+      "symbol": "authorizationHeaders"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 77,
+      "symbol": "readJsonResponse"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 96,
+      "symbol": "normalizeApiUrlOrThrow"
+    },
+    {
+      "path": "mobile/src/services/sync/client.ts",
+      "line": 104,
+      "symbol": "normalizeApiUrl"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 1,
+      "symbol": "TargetType"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 3,
+      "symbol": "UsageRange"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 5,
+      "symbol": "UsageSource"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 7,
+      "symbol": "UsageSourceMinutes"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 9,
+      "symbol": "TrackedTarget"
+    },
+    {
+      "path": "mobile/src/types/index.ts",
+      "line": 32,
+      "symbol": "UsagePoint"
+    },
+    {
+      "path": "sync-worker/src/auth.ts",
+      "line": 5,
+      "symbol": "AuthRow"
+    },
+    {
+      "path": "sync-worker/src/auth.ts",
+      "line": 14,
+      "symbol": "authenticate"
+    },
+    {
+      "path": "sync-worker/src/auth.ts",
+      "line": 47,
+      "symbol": "requireOwner"
+    },
+    {
+      "path": "sync-worker/src/cleanup.ts",
+      "line": 4,
+      "symbol": "cleanupExpiredData"
+    },
+    {
+      "path": "sync-worker/src/crypto.ts",
+      "line": 3,
+      "symbol": "bytesToBase64Url"
+    },
+    {
+      "path": "sync-worker/src/crypto.ts",
+      "line": 9,
+      "symbol": "randomSecret"
+    },
+    {
+      "path": "sync-worker/src/crypto.ts",
+      "line": 15,
+      "symbol": "hashSecret"
+    },
+    {
+      "path": "sync-worker/src/http.ts",
+      "line": 1,
+      "symbol": "HttpError"
+    },
+    {
+      "path": "sync-worker/src/http.ts",
+      "line": 16,
+      "symbol": "jsonResponse"
+    },
+    {
+      "path": "sync-worker/src/http.ts",
+      "line": 20,
+      "symbol": "errorResponse"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 18,
+      "symbol": "DeviceRow"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 25,
+      "symbol": "SnapshotRow"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 37,
+      "symbol": "nowSeconds"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 41,
+      "symbol": "isoTime"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 45,
+      "symbol": "createSpace"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 80,
+      "symbol": "createPairingToken"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 101,
+      "symbol": "addDevice"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 215,
+      "symbol": "listDevices"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 232,
+      "symbol": "putSnapshot"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 296,
+      "symbol": "getSnapshots"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 329,
+      "symbol": "deleteDevice"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 358,
+      "symbol": "deleteCurrentSpace"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 366,
+      "symbol": "route"
+    },
+    {
+      "path": "sync-worker/src/index.ts",
+      "line": 386,
+      "symbol": "handleRequest"
+    },
+    {
+      "path": "sync-worker/src/types.ts",
+      "line": 1,
+      "symbol": "Env"
+    },
+    {
+      "path": "sync-worker/src/types.ts",
+      "line": 6,
+      "symbol": "AuthenticatedDevice"
+    },
+    {
+      "path": "sync-worker/src/types.ts",
+      "line": 13,
+      "symbol": "SnapshotEnvelope"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 26,
+      "symbol": "readJsonObject"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 49,
+      "symbol": "requireDeviceId"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 61,
+      "symbol": "requirePlatform"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 73,
+      "symbol": "requireSpaceId"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 80,
+      "symbol": "requirePairingToken"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 87,
+      "symbol": "requireLocalDay"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 108,
+      "symbol": "requireRetainedLocalDay"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 124,
+      "symbol": "decodedBase64UrlLength"
+    },
+    {
+      "path": "sync-worker/src/validation.ts",
+      "line": 131,
+      "symbol": "requireSnapshotEnvelope"
+    },
+    {
+      "path": "sync-worker/test/d1.ts",
+      "line": 6,
+      "symbol": "TestD1Statement"
+    },
+    {
+      "path": "sync-worker/test/d1.ts",
+      "line": 44,
+      "symbol": "TestD1Database"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 9,
+      "symbol": "DeviceCredentials"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 15,
+      "symbol": "PairingResponse"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 24,
+      "symbol": "authHeaders"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 32,
+      "symbol": "envelope"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 70,
+      "symbol": "api"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 86,
+      "symbol": "json"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 90,
+      "symbol": "createSpace"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 96,
+      "symbol": "createPairing"
+    },
+    {
+      "path": "sync-worker/test/worker.test.ts",
+      "line": 102,
+      "symbol": "pairDevice"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 4,
+      "symbol": "TimeMdCloudSyncSnapshotBuilder"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 5,
+      "symbol": "snapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 30,
+      "symbol": "localDayString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 39,
+      "symbol": "dayRange"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 46,
+      "symbol": "databaseDateString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 55,
+      "symbol": "dateFromDatabaseString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 64,
+      "symbol": "readUsageEntries"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 145,
+      "symbol": "columnText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "line": 154,
+      "symbol": "bindText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 4,
+      "symbol": "TimeMdCloudSyncSnapshotImporter"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 9,
+      "symbol": "importSnapshots"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 25,
+      "symbol": "importDailySnapshots"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 88,
+      "symbol": "removeImportedDeviceDays"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 142,
+      "symbol": "validate"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 173,
+      "symbol": "localDayDate"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 187,
+      "symbol": "deleteExistingSnapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 215,
+      "symbol": "insertSnapshot"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 263,
+      "symbol": "normalizedStreamType"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 288,
+      "symbol": "normalizedPlatform"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 296,
+      "symbol": "databaseDateString"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 305,
+      "symbol": "sqliteError"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 309,
+      "symbol": "bindText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 314,
+      "symbol": "bindOptionalText"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotImporter.swift",
+      "line": 323,
+      "symbol": "SyncImportError"
+    }
+  ],
+  "design_mapping": {
+    "C14": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C14 | Personal Data envelope/domain/store/capabilities | Independently versioned health/location/device_usage payloads, source/device identity, exact time/quality/provenance, annotations/inference/tombstones, capture/display/query/export status, independent domain/detail/destination grants. |",
+    "C15": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C15 | Combined/selected export profiles and donor compatibility | New summary/records/archive manifests and selection, per-source coverage/snapshot identity, strict/partial rules, location/usage format fixtures, frozen historical health bytes and actual pinned consumers. |",
+    "C17": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C17 | Donor migration archive and settings/state handoff | Complete IDs/precision/lineage/settings/annotations/queue schema, manifests and safe import, browser exclusions, overlap/replacement/empty-day rules, rollback and inaccessible-grant/entitlement disclosure. |",
+    "P03": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| P03 \u2014 Donor installed-user migration | Accepted source/history/license maps; complete migration archives/readers, preview/conflict/Undo, source grants/destination handoff and entitlement/support plan. | Exact donor-to-new round trips including IDs, corrections, sessions/places/category assignments/queues; unknown legacy boundary certainty, discarded sessions and time precision preserved; repeat/interrupted import, browser exclusions and actual sandbox/purchase limits. |",
+    "S00": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S00 \u2014 Usage source inventory | time.md features/state/export/sync/commerce mapping, accepted source and explicit browser exclusions. | Every retained feature has a shared successor; donor minimum-session filtering and missing/title/browser behavior documented. |",
+    "S01": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S01 \u2014 Mobile usage | iOS eligible historical aggregate/report adapters, multi-day backfill/durable reconciliation and qualified Android UsageStats/UsageEvents checkpoints. | Exact entitlement/purpose/destination matrix, production EU/region/one-app authorization, display-only fallback, past-date/full retained-range exports and source lookback/gaps, no today-only detail or false sessions. |",
+    "S04": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S04 \u2014 Usage exports and migration | Browser-free typed/summary and full retained-history profiles, complete available donor import, common schedules and optional reviewed sync compatibility. | JSON/CSV/YAML/Markdown/Obsidian/archive fixtures, past-range/session detail, title escaping/redaction, daily/hourly replacement, retention/partial receipts, dedup and P03 recovery. |",
+    "S06": "Source: docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages\n\n| S06 \u2014 Required exact iOS historical sessions | Follow-up exact per-app session/history contract and supported-source feasibility; implement when a permitted API can supply it. | Public API/purpose/destination proof, true observed app-session identities/boundaries/coverage, backfill and retained-range parity. Initial labeled aggregates do not close this row; unavailable API is explicitly recorded. |",
+    "F11": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F11 | macOS title/collector permission and sandbox/channel incompatibility | M02/S02 proves a supported signed collector/API and explicit installation/grants. Resolve channel/helper architecture before promising titles; no assumed Accessibility-in-sandbox or inherited-helper escape. |",
+    "F12": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F12 | iOS usage production eligibility, purpose and export destinations | M02/S01 qualifies iOS 26.4+, entitlement, EU/device/account/one-app conditions and permitted destinations separately. Preserve report sandbox and display-only/unavailable outcomes; no development-profile proof or arbitrary MCP export claim. |",
+    "F13": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F13 | Lossless donor identity/history/entitlement migration | P03/L05/S04 proves complete archive transfer with original precision/unknown provenance, transactional replay/Undo and rebind/support policy. Legacy exports/snapshot mirrors are accurately scoped and donor stores remain readable. |",
+    "F14": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F14 | Continuous capture energy, storage and retention | M00 sets device-specific numerical budgets; M02/M05/V10 measures background GPS/watch/Mac title/idle and mobile checkpoint cost with large synthetic histories. Bound queues/storage/indexes and tune capture while preserving declared coverage. |",
+    "F15": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F15 | False equivalence and duplicate totals across domains/devices | C14\u2013C16/K06 fixtures preserve source aggregate/session/visit/inference kinds, overlapping devices, hourly/daily replacement and independent coverage. No aliased health/GPS distance or fabricated missing data. |",
+    "F16": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F16 | Full history versus source/API losses | S02/S04 retains all observed sessions beyond summaries and imports every available source record, declaring donor short-session/clock/crash/deletion gaps. S01 preserves historical aggregates; S06 remains required because no exact iOS app-session API is established. Aggregate shipping does not close it. |"
+  },
+  "ios": {
+    "source_paths": [
+      "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "mobile/modules/scrollcost-screen-time/app.plugin.js",
+      "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTime.podspec",
+      "mobile/app.json",
+      "mobile/src/services/screenTime/nativeProvider.ts",
+      "mobile/src/services/screenTime/types.ts"
+    ],
+    "native_bridge": "Expo module ScrollCostScreenTime 0.1.0: requestAuthorization individual at iOS16+, authorization mapping at15+; native module deployment podspec15.1/Swift5.4 is not data-access minimum. Daily/detail reads require compile imports and iOS26.4+ approvedWithDataAccess; denied/limited/unavailable returns empty arrays. Unsupported cannot be relabeled zero usage.",
+    "authorization": {
+      "approvedWithDataAccess": "authorized",
+      "approved": "authorizedLimited",
+      "denied": "denied",
+      "notDetermined": "notDetermined",
+      "unknown": "unavailable"
+    },
+    "entitlements": [
+      "com.apple.developer.family-controls",
+      "com.apple.developer.family-controls.app-and-website-usage",
+      "com.apple.developer.icloud-services=CloudKit",
+      "com.apple.developer.icloud-container-identifiers=iCloud.com.bontecou.time.md"
+    ],
+    "app_identity": {
+      "iOS": "com.bontecou.time.md.mobile",
+      "Android": "com.bontecou.timemd.mobile",
+      "scheme": "timemd",
+      "mobile_version": "0.1.0",
+      "dependencies": "Expo53/React19.0.0/RN0.79.6 donor lock, not Health Effect/React admitted host tuple"
+    },
+    "daily": "DeviceActivityData.activityData filtered daily requested interval using .live. Positive app totalActivityDuration grouped by lowercase bundleidentifier, Mac vs mobile model classification; optional displayName. Positive web domains grouped separately. Raw milliseconds Double from source seconds; native rounded Int minutes, JS daily provider prefers raw ms and returns fractional minutes. Duration descending then targetID ordering. No opaque token serialized by this data-access path.",
+    "hourly": "Detailed .hourly segments produce application/webDomain records with segment start/end Double Unix ms, total durationMs, rounded minutes, category/deviceName/deviceModel plus application pickups/notifications. These are bucket boundaries and counts, never launch/close sessions. No record UUID, original device installation identity, lastUpdatedDate/source completeness or source query receipt persisted.",
+    "device_identity": "Daily sourceMinutes collapses all devices to mac/mobile per app. Detailed deviceName/model are descriptive, not durable unique source IDs. No data.user/lastUpdatedDate retained. Multiple-device overlap cannot be admitted as a single-device timeline.",
+    "standard_report": "No tracked DeviceActivityReport or DeviceActivityMonitor extension target/implementation, report context or FamilyActivityPicker/token persistence discovered in committed mobile tree. Limited approved status currently has no report fallback implementation; proposed native display-only report must stay within sandbox. Importing framework does not create an extension.",
+    "monitoring": "scheduleDailyDigest returns false; cancel native digest no-op. Comment explicitly requires future DeviceActivityMonitor extension. Expo local notification fallback captures duration at scheduling time, not dynamic daily recomputation.",
+    "retrospective": "JS native provider accepts any Date and native filter accepts supplied range, but committed UI refresh/sync reads today only; no historical backfill coordinator/durable bucket reconciliation/checkpoint. No numerical iOS lookback established; live/cached/missing-data/native runtime behavior unqualified."
+  },
+  "history_and_precision": {
+    "source_paths": [
+      "mobile/App.tsx",
+      "mobile/src/domain/usageFilters.ts",
+      "mobile/src/services/dailySnapshots/index.ts"
+    ],
+    "retained": "AsyncStorage settings timemd.mobile.settings.v4 plus fallback v3/v2/v1/scrollcost.settings.v1. usageArchive stores DailyUsageSnapshot keyed localDay: target id/type/name/subtitle/icon/accent/enabled/sourceMinutes,24 hourlyMobileMinutes,observedSources,updatedAtMs. withUsageSnapshot replaces whole day and retains last370 sorted keys; sanitize caps370 too. withDailyTotal updates/prunes370 on writes; hydrate legacy totals accepts valid numbers, so available older aggregate-only legacy keys can remain until pruning. No native mobile event history store.",
+    "persistence": "Whole settings JSON async setItem with caught warning; no transaction/checksum/import journal/full-state manifest or crash recovery guarantee. Today provider polling every5min/active throttle30s; auto iCloud5min/active45s, legacycloud2min/active30s ifconfigured. App-active timers are not background execution guarantees.",
+    "gaps": "Empty native results may mean permission/region/missing source, but UI can mark allSources observed after successful empty iOS read. Source coverage flags do not prove every device/day detail present. Hourly transform uses segment start/end overlap rather than proportional totalActivityDuration and rounds24 totals: e.g.10min in1hour bucket can count60min; fixed24h day endpoint also has DST boundary gap. These derived hours are not raw precise source facts.",
+    "retention": "370-key archive and400day encrypted relay are bounded summaries; neither covers full available historical source automatically. Source-retained snapshots/settings beyond views must be mapped deliberately. No invented pre-install, deleted, unavailable or uncheckpointed records.",
+    "full_archive": "Current outputs omit complete installation/device lineage, query policy/coverage/lastUpdatedDate, bucket versions, durable raw detailed history, correction/tombstone/replay state, native grants, settings migration receipts and queues. Browser-excluded archive requires validation before observation/persistence/transfer. P03/S04 transaction/repeat/Undo proof not established."
+  },
+  "exports": {
+    "source_paths": [
+      "mobile/src/domain/exports.ts",
+      "mobile/src/domain/exports.test.ts",
+      "mobile/App.tsx",
+      "mobile/src/components/ExportView.tsx"
+    ],
+    "schema": "tech.isolated.timemd.mobile.usage-export.v3; formats json/csv/yaml/markdown/obsidian; range today/week/month/year/custom inclusive localdays; general/extensive/custom sections summary/apps/websites/trends/hourlyActivity/rawScreenTime; source mac/web/mobile; includeExcludedTargets selector.",
+    "range": "Past dates consume retained aggregate archive only. handleExportScreenTimeData requests detailed usage only for today when requested range includes today and raw section is selected; no past raw reads even though provider accepts past Date. Pure builder receives no legacyDailyTotals, so dashboard legacy unattributed history is not exported by this archive-only builder.",
+    "coverage": "coveredDays counts any selected observed source rather than all requested sources; missing daily snapshots still produce zero trends. Must add strict/partial/source-specific coverage before calling full export. Total excludes domain breakdown where recognizable enabled browser-app Web duration exists, otherwise domains are fallback. This donor browser model is not initial Health browser acquisition policy.",
+    "formats": {
+      "json": "Pretty JSON full payload and selected settings/config/provider/auth fields",
+      "yaml": "Recursive scalar JSON quoting, excludes undefined keys, newline",
+      "obsidian": "Full YAML payload wrapped frontmatter, .md",
+      "csv": "Section-commented quoted tables; object cells JSON, quote escaping; metadata generatedAt/sources",
+      "markdown": "Selected tables plus generated/source/range; pipe escape/newline flatten; .md"
+    },
+    "destination": "Writes UTF8 Expo documentDirectory file and invokes Share.share native URL. File/share code exists; entitlement/purpose/destination eligibility, recipient leakage/redaction and CLI/MCP/cloud forwarding are unqualified. rawScreenTime is a donor label for aggregate segments, not exact sessions; do not relabel report-only data as exportable."
+  },
+  "android_prototype": {
+    "source_paths": [
+      "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/UsageStatsReader.kt",
+      "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/ScrollCostScreenTimeModule.kt",
+      "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestScheduler.kt",
+      "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/DailyDigestReceiver.kt",
+      "mobile/modules/scrollcost-screen-time/android/src/main/java/tech/isolated/scrollcost/screentime/BootReceiver.kt",
+      "mobile/modules/scrollcost-screen-time/android/src/main/AndroidManifest.xml",
+      "mobile/src/services/dailySnapshots/index.ts"
+    ],
+    "status": "Deferred donor prototype; source/native bridge available if built, not MVP admitted/shipped production Android capability. Android Health.md remains planned for usage sources underS01 with concrete Usage Access/event checkpoint/channel proof; no shared metrics classification/profile changed.",
+    "permissions": "PACKAGE_USAGE_STATS via AppOps user Usage Access settings; requestAuthorization opens Settings.ACTION_USAGE_ACCESS_SETTINGS rather than granting. Q/API29 unsafeCheckOpNoThrow vs older checkOpNoThrow; fallback manifest permission if MODE_DEFAULT. POST_NOTIFICATIONS/RECEIVE_BOOT_COMPLETED source config. Actual minimum SDK inherited Expo toolchain, not declared in this module Gradle; generated native app/profile not inspected.",
+    "pairing": "queryEvents(start,end) without pre-range lookback, map package->first foreground timestamp. MOVE_TO_FOREGROUND/BACKGROUND and API29 ACTIVITY_RESUMED/PAUSED; duplicate foreground ignored by putIfAbsent, unmatched background dropped; remaining opens closed at queryEnd. Clip start/end and retain positive intervals sorted start. No raw-event UUID/activity-instance/task key, monotonic clock, reboot/reset marker, unknown boundary flags, screen-on/idle/device-active stream or durable replay checkpoint. Simultaneous resumed activities remain package intervals; cannot assume one foreground app.",
+    "source_loss": "Android system event retention a few days, unlocked-state null possible; source dereferences events.hasNextEvent without explicit null coverage outcome. No polling checkpoint before expiry or immutable raw event store. Unmatched start-before-window dropped and open query-end inferred as closure without certainty. Permission empty results not observed zero.",
+    "daily": "Aggregates sum paired foreground intervals by package; own app excluded, labelsPackageManager fallback package; detailed includes modelAndroid/start/end/duration Doublems and roundedminutes. No separate UsageStats coarse-bucket query implemented.",
+    "snapshot": "buildAndroidDailySnapshot native-only daily+detail; deterministic android-session:identifier:roundedstart:end IDs and sub1second details discarded, dedup byID; nonnegative daily remainder>=1s as android-aggregate atdayStart. Version1 entries DoubledurationSeconds/ISO start, sourceDeviceID passed; aggregate vs event-derived distinction not explicit typedrecordkind. Browser app remains app_usage wire row.",
+    "scheduler": "Inexact RTC_WAKEUP daily alarm, prefs scrollcost_daily_digest clamped hour0..23/minute0..59 andserializedtargets; BootReceiver reschedules saved config. Receiver sums currentday usage plus persisted importedhistory/remote totals, roundsminutes. No exactly-once/DST/reboot/update/permission-loss/future background or complete-history guarantee."
+  },
+  "exclusions": {
+    "source_paths": [
+      "mobile/src/services/browserHistory/parser.ts",
+      "mobile/src/services/browserHistory/importer.ts",
+      "mobile/clients/chrome-extension/background.js",
+      "mobile/App.tsx",
+      "mobile/src/domain/usageFilters.ts"
+    ],
+    "browser": "Donor includes browser-history CSV/JSON/HTML/text import, webDomain native breakdown, Chromeextension and legacy websync. These are deferred for Health first expansion. Exclude browser URLs/domains/page titles/history/extension events and input capture before observation, persistence, archive materialization and egress, not just UI hiding. No browser payloads were inspected.",
+    "duration": "Allowed browser APPLICATION duration stays app/device usage; human app label is not page/window title. Domain fallback/dedup in donor cannot authorize browser acquisition. Android snapshot title is app displayName, iCloud target title is app/website display label; discriminate kind before transfer.",
+    "tokens": "Ordinary Family Controls opaque tokens/display labels are not stable human bundle IDs or transferable source grants. Donor skips missing identifiers/domains; human labels may fall back to bundle ID or remain omitted. Missing labels do not exclude an otherwise identified app. App Store resolver is separate network name derivation, not token de-anonymization authority. Missing/withheld labels stay explicit. No title/key/content capture admitted here."
+  },
+  "egress_and_services": {
+    "source_paths": [
+      "mobile/src/services/iCloudSync/index.ts",
+      "mobile/modules/scrollcost-screen-time/ios/ScrollCostScreenTimeModule.swift",
+      "mobile/src/services/crossPlatformSync/index.ts",
+      "mobile/src/services/crossPlatformSync/protocol.ts",
+      "mobile/cloudflare/src/index.ts",
+      "sync-worker/src/index.ts",
+      "sync-worker/src/validation.ts",
+      "docs/cross-platform-sync.md",
+      "mobile/src/services/screenTime/appNameResolver.ts"
+    ],
+    "icloud": "Opt-in defaultfalse; native privateCloudDatabase containeriCloud.com.bontecou.time.md zoneTimeMdSync recordTypeTimeMdDailyUsageSnapshot/schema tech.isolated.timemd.cloudkit.daily-usage.v1/version1. Routing fields schema/version/localDay/sourceDeviceId/sourcePlatform/generatedAt unencrypted; payloadJSON CKRecord.encryptedValues Data. This is source coding, not proven ADP/production/privacy entitlement. record daily_day_sanitizedDevice withcomponentlimit160, fetch localDay resultsLimit200 drops failures and does not follow queryCursor in production fetch (Debugprobe does).",
+    "snapshot": "Mobile iCloud builder target-id daily aggregates atlocaldaystart, duration roundedseconds, localShareableMinutes excludes remote to avoidecho; owninstallation ID filtered onpull. SourceID SecureStore AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY withlegacyAsyncStorage mirror; ios-random identity not actual measured-device source namespace. Pulls sum snapshots/roundtargetminutes/rescale sourceparts; overlap/Apple across-device plus Mac snapshots not independently dedupqualified. Auto/manualpush/pull today only; empty snapshot skipped, leaving possible stale positive remote state.",
+    "legacy_worker": "Retained plaintext Worker/D1 GET/health POST/v1/sync-tokens POST+GET/v1/usage/daily; bearer token client exists. App initializes URL/token empty, v3 credentials deliberately not migrated; currentUI no serverconfig card found, functions/source remain. Do not conflate retained code with production service or automatically enable destinations.",
+    "encrypted_android": "Separate deferred Mac<->Android protocol: pairing.v1/encrypted-daily-snapshot.v1/version1/A256GCM keyversion1 initially; native32byteAES key/12byte nonce/128bit tag, newline AAD(schema/version/space/sourceID/platform/day/keyversion/algorithm); secure configuration native store. Pair device ID android-companion-v1 constant. Currentdocs relay not shipped/exposed, no production Worker proof. Routes /v1/spaces,/v1/pairing-tokens,/v1/devices,/v1/snapshots/day plus owner revoke/delete; TTL10min pairing,8deviceidentities,512KiB ciphertext/50MiBspace/768KiBrequest/400dayretention. No account/key/payload/service touched.",
+    "name_resolution": "AppStore itunes lookup sends bundle IDs only, batches20/timeouts5s; knownlabels +ondevice30day cache includingmisses; successful missingnames/failuregrants distinct. Production resolver is invoked automatically oneligible usage; integrationread explicitly bypasses it. Source policy not inherited: explicit purpose/network grant and zero unexpected egress need separate proof.",
+    "commerce_analytics": "No mobile purchase/StoreKit/license activation/telemetry client found in selected mobile implementation. Mac commerce/update and donor browser/sync clients remain separate accepted Mac inventory authorities; no entitlement/support/analytics/default credential policy transfer. Console warning/error paths may contain raw source error messages; content-free Health diagnostics need independent adaptation.",
+    "health": "Health.md common source/grant/export/job/schedule operations remain authority. Donor local notification and optionalCloudKit/relay != Health cloud/provider broker; Practice/website/Wake remain isolated, Wake notification-only never usage payloads."
+  },
+  "feature_successors": [
+    {
+      "outcome": "historical aggregate dashboard/source/range filters/apps/budget/hourly/trends",
+      "successor": "Shared React feature logic and Effect source-aware reducers with native eligible bucket acquisition, bounded disk paging/full retained ranges; current370day/currentday limits are gaps."
+    },
+    {
+      "outcome": "limited standard report",
+      "successor": "Planned coarse native report/context adapter only, with display-only status and no sandbox escape; not currently committed donor UI."
+    },
+    {
+      "outcome": "exact iOS sessions",
+      "successor": "RequiredS06 supported-source follow-up; initial labeled aggregates accepted by owner, no exact sessions reconstructed fromsegments/polling/thresholds/longest-device interval."
+    },
+    {
+      "outcome": "permissions/native notifications/device-level scheduling",
+      "successor": "Native SDK/security/lifecycle seam, production purposes/destination/channel gates distinct."
+    },
+    {
+      "outcome": "selected exports/complete archive/donor transition",
+      "successor": "Common operations and typed P/S source/grant/contracts; original available state/precision/categories/queue references and rollback required; browser/input exclusions applied beforepersistence."
+    },
+    {
+      "outcome": "Android event-derived intervals",
+      "successor": "PlannedS01 checkpoint/permission/unlocked/OEM/channel qualification; prototype not promoted."
+    }
+  ],
+  "producer_consumers": [
+    {
+      "producer": "eligible iOS DeviceActivity data",
+      "consumer": "NativeExpo provider -> discoveredtargets/dailysettings/archive -> UI/export/share/optionalCloudKit",
+      "authority": "Hourly/daily buckets not sessions; each destination/purpose separatelyunqualified"
+    },
+    {
+      "producer": "AndroidUsageEvents",
+      "consumer": "prototypepairedintervals/dailytotals -> nativebridge/snapshots/digest/encryptedrelay",
+      "authority": "Finite source/permission/unlocked boundaries anddeferred product"
+    },
+    {
+      "producer": "Macsnapshot/history",
+      "consumer": "CloudKit mobiletargetmerge/legacy worker / deferredAndroidrelay",
+      "authority": "Macnative fullsessionauthority preserved; mobile summaries loseidentity/time precision"
+    },
+    {
+      "producer": "donor browser/domain import",
+      "consumer": "legacyUI/archive/export/webfallback",
+      "authority": "Excluded initial Health acquisition/materialization/transfer; browser appduration retained separately"
+    }
+  ],
+  "independent_checks": {
+    "case_index": [
+      {
+        "path": "mobile/src/domain/exports.test.ts",
+        "line": 31,
+        "case_id": "source combinations only contribute selected usage",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/exports.test.ts",
+        "line": 39,
+        "case_id": "mobile-only sections are omitted when mobile is not selected",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/exports.test.ts",
+        "line": 45,
+        "case_id": "web exports do not double-count browser duration and domain breakdowns",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/exports.test.ts",
+        "line": 65,
+        "case_id": "date presets and custom date validation use inclusive calendar days",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/exports.test.ts",
+        "line": 74,
+        "case_id": "exports contain screen-time data without monetary fields",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 35,
+        "case_id": "builds trailing local-calendar ranges across a DST boundary",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 48,
+        "case_id": "classifies local and remote target minutes without changing reconciled totals",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 102,
+        "case_id": "filters a daily snapshot by Mac, Web, and Mobile attribution",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 175,
+        "case_id": "uses browser app duration as Web without double-counting domain breakdowns",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 222,
+        "case_id": "uses legacy daily totals only for the All-sources view",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 255,
+        "case_id": "does not count an unobserved empty snapshot as coverage",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/domain/usageFilters.test.ts",
+        "line": 270,
+        "case_id": "groups a year trend into monthly buckets",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/integration/deviceIntegration.test.ts",
+        "line": 14,
+        "case_id": "accepts only the debug integration deep-link shape",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/integration/deviceIntegration.test.ts",
+        "line": 28,
+        "case_id": "validates aggregate and detailed native usage without recording private values",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/integration/deviceIntegration.test.ts",
+        "line": 61,
+        "case_id": "fails malformed native records and a missing deterministic probe",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/integration/deviceIntegration.test.ts",
+        "line": 89,
+        "case_id": "marks an authorized but empty device read as inconclusive",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/crossPlatformSync/protocol.test.ts",
+        "line": 11,
+        "case_id": "parses the Mac pairing bundle without changing secrets",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/crossPlatformSync/protocol.test.ts",
+        "line": 28,
+        "case_id": "rejects insecure production pairing endpoints",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/crossPlatformSync/protocol.test.ts",
+        "line": 40,
+        "case_id": "AAD format matches the Swift implementation",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/dailySnapshots/index.test.ts",
+        "line": 45,
+        "case_id": "builds deterministic Android session and aggregate entries from native-only data",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/dailySnapshots/index.test.ts",
+        "line": 57,
+        "case_id": "rejects duplicate or out-of-day entries in a decrypted snapshot",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/screenTime/appNameResolver.test.ts",
+        "line": 10,
+        "case_id": "extracts canonical App Store names by normalized bundle identifier",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/screenTime/appNameResolver.test.ts",
+        "line": 25,
+        "case_id": "resolves known bundle identifiers without a network lookup",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/screenTime/appNameResolver.test.ts",
+        "line": 31,
+        "case_id": "extracts readable fallback names for private and sideloaded apps",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "mobile/src/services/screenTime/appNameResolver.test.ts",
+        "line": 39,
+        "case_id": "detects when Screen Time returned the bundle identifier as its label",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 118,
+        "case_id": "creates a space while persisting only the credential hash",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 134,
+        "case_id": "requires all authentication factors and rejects header spoofing",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 163,
+        "case_id": "stores pairing-token hashes and enforces one-use and expiry",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 212,
+        "case_id": "lists paired devices without returning secrets",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 229,
+        "case_id": "rejects source spoofing, route-day mismatch, and plaintext envelope fields",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 267,
+        "case_id": "deterministically upserts snapshots and excludes the requesting device",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 307,
+        "case_id": "replaces a stale identity on the same platform and allows self-revocation",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 341,
+        "case_id": "caps retained device identities per sync space",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 359,
+        "case_id": "enforces request, ciphertext, nonce, calendar-date, and creation-rate limits",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 410,
+        "case_id": "allows only the owner to delete the complete space",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      },
+      {
+        "path": "sync-worker/test/worker.test.ts",
+        "line": 429,
+        "case_id": "cleans expired tokens and snapshots older than 400 days",
+        "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+        "executed": false
+      }
+    ],
+    "qualification": "All literal TS test/it titles pinned withline/sourceSHA; unrun. Dynamic cases not exhaustively expanded; no Kotlin/native source unit tests found for pairing routine itself. No frozen fullarchive/eligible historical multi-day/standardreport fixture proof established here.",
+    "availability": {
+      "mobile": "mobile/package.json: npm test tsx --test src/**/*.test.ts andtypecheck; notrun/notinstalled",
+      "physical": "mobile/e2e/device/run-ios.sh/run-android.sh +validate-result.mjs, Debug DeviceIntegrationGate: actual native/auth/CloudKitprobe or Android20sSettingsprobe; notrun. Result0passed/1fail/2inconclusive/124timeout, cannot substitute simulator/mock forphysical.",
+      "relay": "sync-worker package scripts/worker.test.ts sources retained; notrun/nodeploy"
+    },
+    "native_case_ids": [
+      {
+        "id": "screenTime.aggregateStructure",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 92
+      },
+      {
+        "id": "screenTime.detailStructure",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 114
+      },
+      {
+        "id": "screenTime.expectedAggregateProbe",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 130
+      },
+      {
+        "id": "screenTime.expectedDetailedProbe",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 135
+      },
+      {
+        "id": "screenTime.dataAvailability",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 142
+      },
+      {
+        "id": "screenTime.detailedAvailability",
+        "path": "mobile/src/integration/deviceIntegration.ts",
+        "executed": false,
+        "line": 147
+      }
+    ],
+    "proposed_cases": [
+      {
+        "case_id": "MOBILE-historical-bucket-full-retained-source-backfill-reconcile",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-empty-missingData-limited-revoked-region-not-zero",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-ios-one-app-production-purpose-per-destination",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-segment10min-vs-hour60min-DST-rendering",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-CloudKit-more-than200records-cursor-empty-replacement-overlap",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-complete-archive-originalids-precision-settings-repeat-Undo",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-Android-prewindow-unmatched-open-reboot-unlocked-retention",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-browser-exclusion-before-observation-persistence-egress",
+        "status": "required_not_created_or_executed"
+      },
+      {
+        "case_id": "MOBILE-S06-exact-session-source-feasibility",
+        "status": "required_not_created_or_executed"
+      }
+    ]
+  },
+  "official_api_evidence": [
+    {
+      "url": "https://developer.apple.com/documentation/FamilyControls/AuthorizationStatus/approvedWithDataAccess?changes=__3",
+      "checked_date": "2026-10-07",
+      "retrieval": "Official documentation indexed body verified via web; raw byte digest unavailable",
+      "facts": "Data-access status exposes non-tokenized activity and activityData; one app per device, replacement reverts old app to notDetermined. Development provisioning can test all regions; customer device locationEU and AppleAccount EU region required. Product/device/account eligibility nottested."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/bundleresources/entitlements/com.apple.developer.family-controls.app-and-website-usage?changes=_7",
+      "checked_date": "2026-10-07",
+      "facts": "Capability plus explicit userauthorization required; source entitlement booleans notsigned profile admission."
+    },
+    {
+      "url": "https://developer.apple.com/documentation/deviceactivity/deviceactivityreport?language=objc",
+      "checked_date": "2026-10-07",
+      "facts": "Report extension provides privacy-preserving view; sandbox forbids network and sensitivecontent escape; display-only contents cannotbeCLI/MCP export."
+    },
+    {
+      "url": "https://developer.apple.com/support/terms/apple-developer-program-license-agreement/",
+      "checked_date": "2026-10-07",
+      "locator": "3.3.3(P) Family Controls Framework",
+      "facts": "Primary family/individual device-management purpose and sharing restrictions require separate local/file/paired-device/CLI/MCP/cloud/agent destination review; productapproval notasserted."
+    },
+    {
+      "url": "https://developer.android.com/reference/android/app/usage/UsageStatsManager?authuser=1",
+      "checked_date": "2026-10-07",
+      "locator": "queryEvents(long,long), API21",
+      "facts": "Events retained fewdays, rangebegininclusive/endexclusive; API30locked state returnsnull; PACKAGE_USAGE_STATS required."
+    }
+  ],
+  "remaining_qualification": [
+    "Q-DONOR-SOURCE open: immutable history/license/dependency/source acceptance distinct from clean metadata; noimport.",
+    "iOS build SDK/signature/profiles/distribution/release/one-app/account/region/purpose/destination andactualnativepermissions/report background/battery unqualified.",
+    "No numericaliOS lifetime/lookback or supportedexact historical per-app session guarantee established; S06required, owner aggregate shipping exception explicit.",
+    "Full historicalaggregate retention/backfill/raw bucket precision/sourceidentity/coverage andcompletearchive migration notqualified by this source inventory.",
+    "Healthusage currentplanned: assigned-base nativeAPI scan findsnoUsageStatsManager/UsageEvents/PACKAGE_USAGE_STATS/DeviceActivity/FamilyControls in selected Swift/Kotlin/manifest sourcepathspec; acceptednativeinventory independent supportsplanned. No mobilefeaturecontract parity changed.",
+    "Supplemental Apple JSON/Markdown documentation fetch unavailable (web parser and localDNS); policy/missingData/entitlement-request pages notfullyretrieved here. No rawwebbytehash claimed; scopeddesign rows preserved as reviewedrequirement rather thannewnativeproof.",
+    "No device/user report/history/defaults/DB/token/keychain/account/provisioning/ignorednativeartifact read; all sourceconstants arecode, no tests/build/deploy/data actions."
+  ],
+  "rollback": "Current Health/native/Macdonor authority unchanged. Remove/revert only this inventory/receipt; no records/source/destinations/grants migrated or deleted."
+}
