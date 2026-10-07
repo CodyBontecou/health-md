@@ -283,7 +283,9 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
         compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
         tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        withNativeInputDiagnostics("Schedule dialog remained after the native Cancel tap") {
+            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        }
         assertEquals(1, dismisses)
         compose.runOnIdle { open.value = true }
         val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
@@ -296,7 +298,9 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         // Inject the real system Back key without requiring the obscured activity window to focus.
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
         compose.waitForIdle()
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        withNativeInputDiagnostics("Schedule dialog remained after one system Back key") {
+            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        }
         assertEquals(2, dismisses)
         assertTrue(saved.isEmpty())
     }

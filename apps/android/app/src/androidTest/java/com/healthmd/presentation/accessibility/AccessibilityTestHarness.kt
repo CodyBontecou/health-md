@@ -3,7 +3,10 @@ package com.healthmd.presentation.accessibility
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.os.Build
 import android.view.WindowManager
+import android.view.inspector.WindowInspector
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -31,6 +34,8 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -151,6 +156,40 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
         }
         compose.waitForIdle()
     }
+
+    /** Failure-only facts from this test process's native owners; never read editor contents. */
+    protected fun withNativeInputDiagnostics(stage: String, assertion: () -> Unit) {
+        try {
+            assertion()
+        } catch (failure: AssertionError) {
+            throw AssertionError("$stage; ${nativeInputDiagnostics()}", failure)
+        } catch (failure: ComposeTimeoutException) {
+            throw AssertionError("$stage; ${nativeInputDiagnostics()}", failure)
+        }
+    }
+
+    private fun nativeInputDiagnostics(): String = runCatching {
+        compose.runOnIdle {
+            val inputMethod = compose.activity.getSystemService(InputMethodManager::class.java)
+            val owners = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                WindowInspector.getGlobalWindowViews()
+            } else {
+                listOf(compose.activity.window.decorView)
+            }
+            owners.mapIndexed { index, owner ->
+                val focused = owner.findFocus()
+                val insets = ViewCompat.getRootWindowInsets(owner)
+                val params = owner.layoutParams as? WindowManager.LayoutParams
+                "owner[$index](class=${owner.javaClass.simpleName}, " +
+                    "attached=${owner.isAttachedToWindow}, windowFocus=${owner.hasWindowFocus()}, " +
+                    "focusedView=${focused?.javaClass?.simpleName}, " +
+                    "inputActive=${focused?.let { inputMethod?.isActive(it) }}, " +
+                    "imeVisible=${insets?.isVisible(WindowInsetsCompat.Type.ime())}, " +
+                    "imeBottom=${insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom}, " +
+                    "size=${owner.width}x${owner.height}, softInputMode=${params?.softInputMode})"
+            }.joinToString(prefix = "nativeInput=", separator = "; ")
+        }
+    }.getOrElse { "nativeInput unavailable: ${it.javaClass.simpleName}" }
 
     protected fun assertTextFits(node: SemanticsNodeInteraction, expectedFontSize: TextUnit? = null) {
         val results = mutableListOf<TextLayoutResult>()

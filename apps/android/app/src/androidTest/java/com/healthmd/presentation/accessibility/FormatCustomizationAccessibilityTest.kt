@@ -464,7 +464,9 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
     }
 
     private fun waitForKeyboard() {
-        compose.waitUntil(timeoutMillis = 10_000) { keyboardVisible() }
+        withNativeInputDiagnostics("Real software keyboard did not become visible after focusing the template") {
+            compose.waitUntil(timeoutMillis = 10_000) { keyboardVisible() }
+        }
         compose.waitForIdle()
     }
 
