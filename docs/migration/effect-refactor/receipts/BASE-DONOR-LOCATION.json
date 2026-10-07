@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-DONOR-LOCATION",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735",
+  "patch_digest": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "included_paths": [
+      "docs/migration/effect-refactor/inventories/donor-location.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+      "docs/migration/effect-refactor/plan.json",
+      "coordinator state and other workers changes"
+    ],
+    "scope": "Exact raw UTF-8 donor-location.json bytes INCLUDING trailing newline, excludes receipt/coordinator state.",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/inventories/donor-location.json').read_bytes()).hexdigest())"
+    ]
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/donor-location.json",
+    "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "artifact_and_native_interface": {
+      "candidate_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd",
+      "source_graph": "docs/migration/effect-refactor/inventories/donor-location.json#/source_records",
+      "candidate_tracked_patch_sha256": "bb59cbaa224e710fb534d7b5fd6b2db9dccfebde2d8255b1f93ef7a602a3f62e",
+      "license_sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "Q-DONOR-SOURCE": "open",
+      "untracked_debug_contents": "not inspected or hash-pinned",
+      "signed_or_installed_artifacts_inspected": false
+    },
+    "locks_and_runtime": {
+      "committed_dependency_resolution": "See source_records Package.resolved; ExportKit/Notelet commits in export_and_schedule_policy/dependency_pins. Dirty lock not adopted.",
+      "runtime_executed": false
+    },
+    "contract_and_fixture_digests": {
+      "independent_case_index": "docs/migration/effect-refactor/inventories/donor-location.json#/independent_checks/case_index",
+      "complete_transfer_fixtures": "not established; required proposed cases explicit",
+      "wire_version": 1,
+      "watch_pending_state": "Version1 source fields; no full graph promotion"
+    },
+    "policy_migration_key_versions": {
+      "schema_or_policy_changed": false,
+      "key_material_read": false,
+      "native_archive_version": "not established"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Pin observed source/dirty patch/license metadata, source-backed iOS/watch/Live Activity behavior and every retained/deferred outcome.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-location.json#/source_identity, native_history, watch_and_system_surfaces, feature_successors, successor_source_admission: immutable candidate/AGPL/dirty metadata separate from open owner admission; watch queue/ack and stop paths pinned, native delivery proof unrun."
+    },
+    {
+      "criterion": "Identify missing UUID/precision/boundary/session/place/photo/queue completeness in legacy exports versus native state.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-location.json#/native_history, formatted_exports, independent_checks/proposed_cases: all eight formats, coordinate/time/unit rounding and import subset, explicit/inferred outings, source/UUID/photo/place/correction/queue transfer gaps; unavailable/deleted observations remain absent."
+    },
+    {
+      "criterion": "Map format/schedule/webhook/analytics/service authority without reading user databases/photos/tokens or importing dirty patches.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/donor-location.json#/export_and_schedule_policy, webhooks, service_and_product_boundaries, producer_consumer_map: current source transitions/limits, routing-only donor endpoints, separate grants/analytics/commerce and retained Health/Wake authority; source-only inspections."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-DONOR-LOCATION"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed; exact source-only target, two writes, acceptance, proof and no-deletion boundary inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C14"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C15"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C17"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "P03"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L00"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L01"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L02"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L03"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L04"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "L05"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F11"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F12"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F13"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F14"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F15"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F16"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed via root Python subprocess wrapper; exact scoped reference inspected and stored in design_mapping."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actually executed root Python source/metadata wrapper reads Git committed blobs via subprocess git -C /Users/codybontecou/dev/iso.me show/ls-tree and safe rev-parse/status/diff metadata. Read root instructions/entrypoint/personal-data/GLOSSARY/templates. Final immutable-source rehash verified135 pins,424 semantic symbols,218 literal case locators and donor referenced paths. Expected untracked debug metadata excluded from committed-path assertion, never read/hash-pinned. Corrected StoreKit locator to committed IsoMe.storekit; final assertions pass. Donor HEAD/tracked patch/status unchanged; inventory newline present."
+    }
+  ],
+  "inspection_summary": {
+    "source_pins": 135,
+    "semantic_symbol_locators": 424,
+    "literal_case_ids": 218,
+    "executed_product_tests": [],
+    "method": "Metadata/committed-source/test-declaration inspection from repository-root Python wrappers; no donor absolute cwd checks, builds or native execution.",
+    "test_availability": "docs/migration/effect-refactor/inventories/donor-location.json#/independent_checks/availability"
+  },
+  "limitations": [
+    "Q-DONOR-SOURCE deliberately remains open: AGPL/source/history/dependency license and tracked/untracked patch choice need owner acceptance.",
+    "No complete-state archive/import/rollback/parent-source admission fixture exists here; current native state remains authority.",
+    "Native/device/permission/headless/background/watch/Live Activity/battery/signed artifact/runtime proof unrun.",
+    "Eight format bytes, precision, identity, boundary certainty, queue durability, ordering/clock/crash, import/export and current consumer compatibility require independent synthetic fixtures.",
+    "No personal history/photos/defaults/keychain/config secrets/service/deployment/account state accessed; source values are code constants only."
+  ],
+  "remaining_qualification": [
+    "Q-DONOR-SOURCE deliberately remains open: AGPL/source/history/dependency license and tracked/untracked patch choice need owner acceptance.",
+    "No complete-state archive/import/rollback/parent-source admission fixture exists here; current native state remains authority.",
+    "Native/device/permission/headless/background/watch/Live Activity/battery/signed artifact/runtime proof unrun.",
+    "Eight format bytes, precision, identity, boundary certainty, queue durability, ordering/clock/crash, import/export and current consumer compatibility require independent synthetic fixtures.",
+    "No personal history/photos/defaults/keychain/config secrets/service/deployment/account state accessed; source values are code constants only."
+  ],
+  "rollback": "Current Health.md and donor production/native records unchanged; no authority promotion or retained reference/state deletion. Revert/remove these two planning records only; no live-data/source rollback required.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735+51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f"
+  },
+  "coordinator_corrections": {
+    "reviewer": "/root/donor_mac_review",
+    "result": "passed",
+    "evidence": "Targeted source review corrected CSV outings support/summary identity/precision using ExportService.swift1021..1022 and1051..1086, and Markdown .markdown extension alias using ImportService.swift151..219. Root actually executed repository-root Python subprocess git show of immutable08029281... source; KML/GeoJSON extension recognition does not grant import support (both throw unsupportedFormat at207/218). Existing source pins unchanged; no product/fixture/state changes."
+  },
+  "independent_review": {
+    "reviewer": "/root/donor_mac_review",
+    "result": "passed",
+    "fingerprint": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735+51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+    "evidence": "Independent targeted source/fixture/donor-metadata review accepted corrected CSV outings identity/precision and Markdown extension aliases; immutable source/parent/subject/dirty status/full tracked and3per-path dirty digests verified, nine targeted test files checked. Root independently verified135 source hashes424symbol lines218literal cases. Source/license/dirty adoption and native/full-transfer qualification remain open."
+  },
+  "inspection_notes": {
+    "candidate_source_acceptance": "Q-DONOR-SOURCE open; inventory neither adopts dirty tracked/untracked source nor establishes legal reuse.",
+    "deployment_compatibility": "Source routes/constants/test existence are evidence only; no authenticated integration or deployment compatibility inferred.",
+    "scope": "Only two claimed records written; no plan/source/product/fixture/lock edits, Git commit/push or external service access."
+  },
+  "observations": []
+}

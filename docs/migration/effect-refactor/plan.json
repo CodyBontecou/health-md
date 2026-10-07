@@ -3108,7 +3108,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 22,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735",
@@ -3121,14 +3121,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735+51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json"
+        ]
       }
     },
     {
@@ -3924,7 +3926,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/core.json canonical registry authority packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json; existing registry.rs projections/generator/native baseline/crosswalk records and root cross-platform policy. Independently review exact byte SHA, IDs/order/platform classifiers/units/availability/defaults/schema versions and malformed-boundary literals before implementing candidate projection. Immutable reviewed build/static injection; no authority relocation/runtime filesystem or network; retain all native/website generators and registry contract sources.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -3936,8 +3938,19 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 51,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/contracts/registry.ts",
+          "packages/healthmd-core-ts/tests/registry.test.ts",
+          "packages/healthmd-core-ts/tests/registry-vectors.ts",
+          "docs/migration/effect-refactor/receipts/REGISTRY-READER.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
