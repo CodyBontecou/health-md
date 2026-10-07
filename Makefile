@@ -4,6 +4,7 @@ ANDROID_HOME ?= $(HOME)/Library/Android/sdk
 CORE_RUST_DIR := packages/healthmd-core-rust
 CORE_TS_DIR := packages/healthmd-core-ts
 UI_TS_DIR := packages/healthmd-ui
+CLI_TS_DIR := apps/cli
 CORE_BINDINGS_DIR ?= $(CURDIR)/$(CORE_RUST_DIR)/target/generated-bindings
 
 .PHONY: test test-portable test-contracts test-product-parity test-core check-core-registry core-bindings check-core-bindings \
@@ -21,6 +22,9 @@ test-portable:
 	cd $(UI_TS_DIR) && test "$$(node --version)" = v24.21.0 && test "$$(npm --version)" = 11.19.0
 	cd $(UI_TS_DIR) && npm ci --engine-strict --no-audit --no-fund
 	cd $(UI_TS_DIR) && npm run check
+	cd $(CLI_TS_DIR) && test "$$(node --version)" = v24.21.0 && test "$$(npm --version)" = 11.19.0
+	cd $(CLI_TS_DIR) && npm ci --install-links --engine-strict --no-audit --no-fund
+	cd $(CLI_TS_DIR) && npm run check
 
 test-contracts:
 	python3 packages/contracts/validate.py

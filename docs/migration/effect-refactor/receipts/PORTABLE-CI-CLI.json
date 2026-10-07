@@ -1,0 +1,1036 @@
+{
+  "schema_version": 1,
+  "task_id": "PORTABLE-CI-CLI",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "a6f9f77754561e1f8a092161df134a828c3074e5",
+  "patch_digest": "016d7a8e487535e6f674faff0ac3a78a025cec74f101efefbcdab4b183304f28",
+  "patch_digest_method": "SHA256 over sorted two claimed non-receipt repository-relative UTF8 paths + NUL + raw file bytes + NUL. Excludes receipt/coordinator state and ignored outputs.",
+  "changed_paths": [
+    ".github/workflows/core-typescript-ci.yml",
+    "Makefile",
+    "docs/migration/effect-refactor/receipts/PORTABLE-CI-CLI.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "source_and_build_digests": {
+      ".github/actions/component-changes/action.yml": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5",
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/cli/docs/typescript-candidate.md": "52fb658133c5841150b49d6a23a85ca36f378729f5bf79af7b704c7b0bc7d3a5",
+      "apps/cli/package-lock.json": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "apps/cli/package.json": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+      "apps/cli/scripts/build-candidate.mjs": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+      "apps/cli/scripts/check-candidate.mjs": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+      "apps/cli/src/candidate-host.ts": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+      "apps/cli/tests/candidate-host.test.ts": "ec424cd4d5653b8c03400c70320770353afcecdd3251a14739479b75de74d88f",
+      "apps/cli/tsconfig.build.json": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+      "apps/cli/tsconfig.json": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+      "apps/cli/tsconfig.test.json": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "docs/migration/effect-refactor/inventories/ci.json": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+      "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json": "54f660c295832cafaee2b7cbc4f876ee9320db811066d29e11bf7e712f453032",
+      "docs/migration/effect-refactor/receipts/PORTABLE-CI-UI.json": "13724c7bbd2144a05f637d0a8ba7d146af2e95c8848470eeb3903d8282a62791",
+      "docs/migration/effect-refactor/receipts/PORTABLE-CI.json": "42c4713bc1f9ead814f09b8c99e2388294035c3abfce9ee7bb6fe300c2e2018f",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+      "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+      "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+      "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+      "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+      "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+      "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+      "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+      "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+      "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5",
+      "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+      "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+      "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+      "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+      "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+      "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+      "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+      "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+      "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+      "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0"
+    },
+    "runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_executable_sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "dependency_graph": "Three unchanged scoped locks pinned above. CoreEffect4.0.1;TS7.0.2/esbuild0.28.2 Go tools;compiledNode:test JS;UI React peers remain uninstalled. CLI packed local core with install-links,onephysicalEffect;no native/Rust toolchain. npm skipped unapproved esbuild postinstall; locked optional Go platform binary completed actual build; no policy/global edits."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        ".github/workflows/core-typescript-ci.yml": "4b00466ec6571377065ff2550c302839ed270a12c126ef12fc3ef5261095bbcb",
+        "Makefile": "704ba9cc151facf36b16d0d62d25c7317c0bf31b059adfcf9aa73532baf664d3"
+      },
+      "built_artifact_digests": {
+        "packages/healthmd-core-ts/dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "packages/healthmd-core-ts/dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "packages/healthmd-core-ts/dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "packages/healthmd-core-ts/dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "packages/healthmd-core-ts/dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "packages/healthmd-core-ts/dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "packages/healthmd-core-ts/dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "packages/healthmd-core-ts/dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "packages/healthmd-core-ts/dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "packages/healthmd-core-ts/dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "packages/healthmd-core-ts/dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "packages/healthmd-core-ts/dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "packages/healthmd-core-ts/dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e",
+        "packages/healthmd-core-ts/dist/neutral-metafile.json": "34908db6cd8e7e5cbe4b2850e17df6d811380d2e524afd3fd29ff329f22bbaaf",
+        "packages/healthmd-core-ts/dist/test-metafile.json": "81cf4ac59385425cb005144003a6dd766a5910eb08592f2f770a333201137302",
+        "packages/healthmd-core-ts/dist/tests/catalog.test.js": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653",
+        "packages/healthmd-core-ts/dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "packages/healthmd-core-ts/dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46",
+        "packages/healthmd-core-ts/dist/tests/query-traversal.test.js": "4b7c0fc2023cf12782b4063c2d825732d6050b55617163581785103126b83171",
+        "packages/healthmd-core-ts/dist/tests/registry.test.js": "b658b988e46ed6185ade3b90ae4405c8da91f02fad2730cfd1bff87e4ceff3ec",
+        "packages/healthmd-ui/dist/model/index.d.ts": "237b829c85532ece48d90c1fba1b784f998c8f7bf3e02ee400f041321a5bed28",
+        "packages/healthmd-ui/dist/model/index.js": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "packages/healthmd-ui/dist/model-metafile.json": "c114fae73a3d859995ce640117417604636fa4af59dbc31b6a5d6ab7399717fb",
+        "packages/healthmd-ui/dist/model.bundle.js": "66ca058af12d1c00811f1a2daf6ee2a9caca2b920c7f5b75c7d438fc7fa17870",
+        "packages/healthmd-ui/dist/test-metafile.json": "5a8c83dbd94ac54fbff53618e2eb73e00952242fe7515c3430e835ec64e66f7b",
+        "packages/healthmd-ui/dist/tests/foundation.test.js": "6b2cfd7b151526933d56bdf9e8e0f1ec29a69b9b7614fb00a9de9e5282dda0f8",
+        "apps/cli/dist/candidate/candidate-host.d.ts": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+        "apps/cli/dist/candidate/candidate-host.js": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+        "apps/cli/dist/test-metafile.json": "522efe326cdeba5e8c2d8502586b9f480ac9ae9eb5ffeefa6c954c4087f3423d",
+        "apps/cli/dist/tests/candidate-host.test.js": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f"
+      }
+    },
+    "replay_provenance": {
+      "script_sha256": "a7fdb635f734b1ff55a0d56a34c6f1354e1f87fe571b4993461969529722c7cc",
+      "result_sha256": "a463b5359e541646f44190d2b5fe02ab637310419fd0bc387ba3915c1ed1c72f",
+      "make_log_sha256": "e1cce95c6f063ee058f43fa6f310831b630923db6cc1139965f8fadcae2ab0aa"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Add the component's verified check script and relevant source/lock/contract path inputs to the portable router.",
+      "result": "passed",
+      "evidence": "Explicit CLI detector/push inputs include CLI/core/contract/qualified registry receipt/lock/pins/action changes. Fresh CLI job builds qualified core in same checkout before install-links; caches and exact-SHA artifacts scoped. make router invokes accepted component checks."
+    },
+    {
+      "criterion": "Exercise the expanded router without a native toolchain, preserving stable aggregate/existing consumer contexts.",
+      "result": "passed",
+      "evidence": "Actual pinned make191/14/12 and guards pass. Local25paths/20source/24runtime/16368gate cases pass. Stableaggregate plus7oldcontexts,26workflowbytes and22Make recipes retained."
+    },
+    {
+      "criterion": "Record any remaining exact-SHA/remote CI/admin integration qualification separately.",
+      "result": "passed",
+      "evidence": "Exact40SHA and HEAD checks retained and locally exercised across4jobs; real GitHub/Linux/events/admin/cache/upload/actionSHA proof separately open."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 5.595,
+      "evidence": "Exit0 on exact Node24.21.0/npm11.19.0; fresh scoped npm ci installs;191core/14UI/12CLI tests,0fail/cancel/skip;19core/22UI boundary negatives;4 actual CLI filesystem negatives and1physical Effect/service identity. LogSHA256 e1cce95c6f063ee058f43fa6f310831b630923db6cc1139965f8fadcae2ab0aa."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/opt/homebrew/bin/actionlint",
+        ".github/workflows/core-typescript-ci.yml"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no diagnostics after grouping full-output writes; YAML expressions and shell lint checked."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Extracted actual workflow shell/action matcher replay:25fixed path/20source/24runtime cases;16,368 gate vectors,8pass. MatrixSHA256 86e52919406f257d72bc22db352245808fe1e132287c403286a0a3c2d87a4d2c. Script/result raw hashes below; temporary replay script supplied to independent reviewer."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "-n",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Nine scoped commands: each candidate exact-version preflight/install/check; CLI install-links; no native/Rust target."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Supplemental installed Node26 host rejection: expected exit2 at first exact-runtime preflight, before any installation."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "check-ignore",
+        "packages/healthmd-core-ts/dist/core/index.js",
+        "packages/healthmd-core-ts/build/npm-cache/probe",
+        "packages/healthmd-ui/dist/model/index.js",
+        "packages/healthmd-ui/build/npm-cache/probe",
+        "apps/cli/dist/candidate-host.js",
+        "apps/cli/build/npm-cache/probe"
+      ],
+      "result": "passed",
+      "evidence": "Exit0; all6 scoped cache/output paths ignored."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "63 tracked source/build/instruction/receipt inputs equal assigned historical source bytes;26old workflows byte-identical and22old Make recipes unchanged. Fresh artifact hashes captured."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0:58atomic tasks/86families/16choices;graph/pointers/state/evidence/claims valid. Structural only, no release qualification."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Root independent final exact-runtime rebuild:191core/14UI/12CLI, zero failures/cancellations/skips;63source and33freshartifacts hashes match. Final local log SHA256 f80f98cbf6c5dd32e4001e6f6ffab5e3898657c9822c5da4dc6029c6d222c791. Node spec reporter \u2139 totals were parsed after correcting an initial TAP-prefix-only parser; no build failure."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "fresh-component-router",
+      "procedure": "Run make test-portable with pinned runtime and retained download cache.",
+      "expected": "Fresh scoped installs, compiled tests and guards pass.",
+      "observed": "191core/14UI/12CLI,19/22boundaries,4CLI filesystem guards passed in5.595seconds.",
+      "evidence": "checks and configuration_results with pinned source/input/artifact hashes",
+      "result": "passed"
+    },
+    {
+      "case_id": "fixed-gate-corpus",
+      "procedure": "Run actual gate shell against deduplicated frozen prior core/UI corpus with valid CLI plus full CLI decision/result combinations against valid core/UI.",
+      "expected": "Only successful detector plus each true/success or false/skipped passes.",
+      "observed": "16368cases,8accepted; missing/invalid/failure/cancel/timeouts fail.",
+      "evidence": "checks and configuration_results with pinned source/input/artifact hashes",
+      "result": "passed"
+    },
+    {
+      "case_id": "fresh-cli-bootstrap",
+      "procedure": "Inspect actual job ordered steps/cwd/cache and execute equivalent local router.",
+      "expected": "Qualified core built before packed CLI dependency; separate locks and oneEffect identity.",
+      "observed": "Core install/check then CLI install-links/check;28source/16output guards and1physicalEffect/service identity pass.",
+      "evidence": "checks and configuration_results with pinned source/input/artifact hashes",
+      "result": "passed"
+    },
+    {
+      "case_id": "path-source-runtime",
+      "procedure": "Run actual local matcher against25fixed paths; extracted source/runtime scripts20/24fixed cases.",
+      "expected": "Core fans out CLI;UI/CLI leaves distinct;exactSHA/runtime failclosed.",
+      "observed": "All69cases passed;push union mirrors3detectors;fulldispatch/reusable produces3true outputs.",
+      "evidence": "checks and configuration_results with pinned source/input/artifact hashes",
+      "result": "passed"
+    },
+    {
+      "case_id": "retained-production",
+      "procedure": "Compare assigned source other workflow bytes and old Make target bodies.",
+      "expected": "No oldrequiredcontext or native/release router removed.",
+      "observed": "26unchanged workflows,22unchanged target bodies,7contexts retained.",
+      "evidence": "checks and configuration_results with pinned source/input/artifact hashes",
+      "result": "passed"
+    },
+    {
+      "procedure": "Independent final common-checkout make under exact Node24.21.0/npm11.19.0; reviewer independently extracts actual workflow matcher/gates/source/runtime preflights without reusing author expectations.",
+      "expected": "191core14UI12CLI pass, qualified source and33generated hashes stable; gate failclosed; earlier26workflowbytes22recipes7contexts retained.",
+      "observed": "All217pass with0fail/cancel/skip;63input/33artifacthashes match. Independent reviewer16368gate8passing25paths20source24runtime; actionlint and full fanout outputs pass.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-portable-ci-cli-root-replay.json rawSHA256 68b6391b9f4be66c72b8c1e852f02377dc47f9e07f9039ec4803f6b9f7fd4bca; reviewer accepted a6f9f77754561e1f8a092161df134a828c3074e5+016d7a8e487535e6f674faff0ac3a78a025cec74f101efefbcdab4b183304f28",
+      "case_id": "root-final-common-checkout"
+    }
+  ],
+  "configuration_results": {
+    "result": "passed",
+    "gate_cases": 16368,
+    "gate_matrix_sha256": "86e52919406f257d72bc22db352245808fe1e132287c403286a0a3c2d87a4d2c",
+    "gate_pass_vectors": 8,
+    "gate_strategy": "All7776 prior core/UI cases with two legitimate CLI decisions plus all CLI decision/result pairs with four legitimate core/UI pairs; deduplicated16368 vectors. Independently fixed success-or-explicit-unaffected oracle.",
+    "path_cases": [
+      {
+        "path": "packages/healthmd-core-ts/src/index.ts",
+        "expected": [
+          1,
+          0,
+          1
+        ],
+        "observed": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "packages/healthmd-core-ts/package-lock.json",
+        "expected": [
+          1,
+          0,
+          1
+        ],
+        "observed": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "packages/healthmd-core-ts/tests/registry.test.ts",
+        "expected": [
+          1,
+          0,
+          1
+        ],
+        "observed": [
+          1,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/src/index.ts",
+        "expected": [
+          0,
+          1,
+          0
+        ],
+        "observed": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/package-lock.json",
+        "expected": [
+          0,
+          1,
+          0
+        ],
+        "observed": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui/.node-version",
+        "expected": [
+          0,
+          1,
+          0
+        ],
+        "observed": [
+          0,
+          1,
+          0
+        ]
+      },
+      {
+        "path": "apps/cli/src/candidate-host.ts",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "apps/cli/package-lock.json",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "apps/cli/scripts/check-candidate.mjs",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "apps/cli/tests/candidate-host.test.ts",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "apps/cli/Cargo.lock",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "packages/contracts/product-capabilities.json",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": "packages/contracts/fixtures/health-query.json",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
+        "expected": [
+          0,
+          0,
+          1
+        ],
+        "observed": [
+          0,
+          0,
+          1
+        ]
+      },
+      {
+        "path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": "AGENTS.md",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": "Makefile",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": ".github/actions/component-changes/action.yml",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": ".github/workflows/core-typescript-ci.yml",
+        "expected": [
+          1,
+          1,
+          1
+        ],
+        "observed": [
+          1,
+          1,
+          1
+        ]
+      },
+      {
+        "path": "apps/apple/HealthMd/Example.swift",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "path": "apps/android/build.gradle.kts",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "path": "docs/unrelated.md",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "path": "apps/cli-adjacent/index.ts",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "path": "packages/healthmd-ui-adjacent/index.ts",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      },
+      {
+        "path": "packages/healthmd-core-ts-adjacent/index.ts",
+        "expected": [
+          0,
+          0,
+          0
+        ],
+        "observed": [
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "source_cases": [
+      [
+        "changes",
+        "a6f9f77754561e1f8a092161df134a828c3074e5",
+        true,
+        0
+      ],
+      [
+        "changes",
+        "",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "main",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "changes",
+        "A6F9F77754561E1F8A092161DF134A828C3074E5",
+        false,
+        1
+      ],
+      [
+        "check",
+        "a6f9f77754561e1f8a092161df134a828c3074e5",
+        true,
+        0
+      ],
+      [
+        "check",
+        "",
+        false,
+        1
+      ],
+      [
+        "check",
+        "main",
+        false,
+        1
+      ],
+      [
+        "check",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "check",
+        "A6F9F77754561E1F8A092161DF134A828C3074E5",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "a6f9f77754561e1f8a092161df134a828c3074e5",
+        true,
+        0
+      ],
+      [
+        "ui-check",
+        "",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "main",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "A6F9F77754561E1F8A092161DF134A828C3074E5",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "a6f9f77754561e1f8a092161df134a828c3074e5",
+        true,
+        0
+      ],
+      [
+        "cli-check",
+        "",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "main",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "0000000000000000000000000000000000000000",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "A6F9F77754561E1F8A092161DF134A828C3074E5",
+        false,
+        1
+      ]
+    ],
+    "runtime_cases": [
+      [
+        "check",
+        "v24.21.0",
+        "11.19.0",
+        true,
+        0
+      ],
+      [
+        "check",
+        "v24.20.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v24.21.0",
+        "11.18.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v26.8.1",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v24.21.0",
+        "",
+        false,
+        1
+      ],
+      [
+        "check",
+        "24.21.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "check",
+        "v24.21.0",
+        "11.19",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "11.19.0",
+        true,
+        0
+      ],
+      [
+        "ui-check",
+        "v24.20.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "11.18.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v26.8.1",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "24.21.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "ui-check",
+        "v24.21.0",
+        "11.19",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "v24.21.0",
+        "11.19.0",
+        true,
+        0
+      ],
+      [
+        "cli-check",
+        "v24.20.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "v24.21.0",
+        "11.18.0",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "v26.8.1",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "v24.21.0",
+        "",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "24.21.0",
+        "11.19.0",
+        false,
+        1
+      ],
+      [
+        "cli-check",
+        "v24.21.0",
+        "11.19",
+        false,
+        1
+      ]
+    ],
+    "unchanged_workflows": {
+      ".github/workflows/release-macos.yml": "78931cc58aae4b4fa724b4daf1d7e779fd4b065cdd7142915544548ceab3b823",
+      ".github/workflows/cli-release.yml": "c22fdfabb2f6c052e6ab0ef8176f8ef98c6f084405af7e717ca20a028474900b",
+      ".github/workflows/android-promote-production-recover.yml": "b07edc41845cca78ca42d88c680a57d183bfc04b75bfdf41ef232951934afe38",
+      ".github/workflows/cli-publish-crates.yml": "c206798617f42e7d9021bfb0518f6c26b7cfd6adb9a527ba7fdc4780b5766d79",
+      ".github/workflows/wake-ci.yml": "65f18d3d1d48c8c3fc321f4d0966750aee51400a568fd7137f305ba29b61b6c0",
+      ".github/workflows/cli-ci.yml": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+      ".github/workflows/apple-review-status.yml": "97efa23cc30c52fc0d1c4c7a0b55af8e83dcb27c9fef6b117b208489f2cffdbe",
+      ".github/workflows/android-wear-evidence.yml": "3edfca72c5a5845ff1383c943706ca8b32f84311f8344756eb201837d7392650",
+      ".github/workflows/android-promote-production.yml": "337d15f9ec1f3d8d36f0411c5ac0dbac25a4ee82107a28334b5813919996d4a7",
+      ".github/workflows/android-wear-screenshots.yml": "10ae659d28a029c7dd09dac7bce8dcf43d68e0b8e5396e15ddb349b70c406c3b",
+      ".github/workflows/apple-submit-version.yml": "07427a47022a18d4b051724b611e21868cc6cbd5810188612ee1c5bc381cb34c",
+      ".github/workflows/apple-ci.yml": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+      ".github/workflows/android-ci.yml": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+      ".github/workflows/release-ios.yml": "96489fa745a3128a7752d5490d62ade62bfd137a0b0c81467f65dbbea0030e9b",
+      ".github/workflows/apple-nightly.yml": "989f496524b59ff6d582232934d84ede4e4eb0f76623a6eb473eb13013ff6bde",
+      ".github/workflows/core-rust-ci.yml": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+      ".github/workflows/apple-cancel-review-submission.yml": "a9809688fdccb63b34edbb7dadaefba92339cf2c6ff42fc5a2ac1b7c32152dd3",
+      ".github/workflows/website-ci.yml": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a",
+      ".github/workflows/android-announce.yml": "ff43a2bd458678f5db9bacec9b912d654a032292f20a4f062061899704cfb0ee",
+      ".github/workflows/cli-sbom.yml": "927daad16dd0c0f3397520a7ae780a35641299209657cafcd53ba6462547f178",
+      ".github/workflows/apple-announce.yml": "806e72c1309cff4965fb82957260400cda78fec2519b81112a5aa80ab6b96460",
+      ".github/workflows/practice-ci.yml": "3d3121fcb6f7664424478112f36f497c0da46c6bb88a9c17a799bbae32ee0923",
+      ".github/workflows/apple-review-state.yml": "3f44dbec7fc4e8051f9156e4d6b01548f70cb6536e9a0c55d8efa51dd682addd",
+      ".github/workflows/android-release.yml": "b37c468f5ff225cebaff365c78c6a904a3369d5abbbbd2960bb2ee02c177fa27",
+      ".github/workflows/android-wear-evidence-submit.yml": "035b82a9adb9f143ee636251e957b921765e7da5aa4217a302bf14e43377c30f",
+      ".github/workflows/android-google-play-access-audit.yml": "001712d2875c739233f14a12dd2b1fb3af1f71706ce6f1d864a8149f7d4e437b"
+    },
+    "unchanged_make_targets": [
+      "test: test-contracts test-core test-apple test-android test-cli test-practice test-wake test-website",
+      "test-contracts:",
+      "test-product-parity:",
+      "test-core: check-core-registry",
+      "check-core-registry:",
+      "core-bindings:",
+      "check-core-bindings:",
+      "test-apple:",
+      "test-android:",
+      "test-cli:",
+      "test-practice:",
+      "test-wake:",
+      "test-website:",
+      "apple-ios:",
+      "apple-macos:",
+      "cli-build:",
+      "android-build: android-play-debug",
+      "android-play-debug:",
+      "android-fdroid-debug:",
+      "android-fdroid-release:",
+      "practice-build:",
+      "website-build:"
+    ],
+    "cli_sequential_bootstrap": [
+      [
+        "packages/healthmd-core-ts",
+        "npm ci --engine-strict --no-audit --no-fund"
+      ],
+      [
+        "packages/healthmd-core-ts",
+        "npm run check"
+      ],
+      [
+        "apps/cli",
+        "npm ci --install-links --engine-strict --no-audit --no-fund"
+      ],
+      [
+        "apps/cli",
+        "npm run check"
+      ]
+    ],
+    "stable_context": "Core TypeScript CI / Core TypeScript CI",
+    "explicit_full_output": [
+      "run=true",
+      "ui_run=true",
+      "cli_run=true"
+    ],
+    "limits": "Local extracted actual shell and unchanged matcher only; no GitHub events/Linux/cache/upload/admin/API qualification."
+  },
+  "preserved_contexts": [
+    "Apple CI / Apple CI",
+    "Android CI / Android CI",
+    "Core Rust CI / Core Rust CI",
+    "CLI CI / CLI CI",
+    "Website CI / Website CI",
+    "Practice CI / Practice CI",
+    "Wake CI / Wake CI"
+  ],
+  "limitations": [
+    "Local Darwin-arm64 portable synthetic execution only; actual GitHub/Linux exact runtime and optional tool binaries, PR/push/reusable/manual event routing, API/actionSHA provenance, cache hit/restore/upload, admin/ruleset required-context integration remain unqualified.",
+    "Workflow builds core independently in CLI job; local make executes equivalent dependency order on one checkout. Runtime source/build guard remains failclosed if another host produces different qualified bytes; Linux emitted-byte identity is unrun.",
+    "Retained action @v4 references from accepted baseline; no new actions. No native/Rust/public launcher/source/fixture/lock/deployment or health/user data changed.",
+    "Existing7production contexts retained by unchanged bytes; their native/security/release checks were not rerun. UI is currently independent; future consumer integration must extend maps. No C01/C11/H09/F08/F09 or parent/family/promotion/retirement qualification closure."
+  ],
+  "remaining_qualification": [
+    "Actual remote Linux/GitHub/actionSHA/cache/artifact/admin evidence and native/consumer/release matrices."
+  ],
+  "rollback": "Revert the two router/workflow files to a6f9f77754561e1f8a092161df134a828c3074e5 and remove this receipt. Earlier core/UI portable checks and existing production/native/Rust workflows/targets remain authority; no public launcher, data or state authority changed.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_cli",
+    "fingerprint": "a6f9f77754561e1f8a092161df134a828c3074e5+016d7a8e487535e6f674faff0ac3a78a025cec74f101efefbcdab4b183304f28"
+  }
+}

@@ -5289,7 +5289,7 @@
           "introduced_by": "PORTABLE-CI"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted PORTABLE-CI-UI workflow/Makefile receipt and exact CLI-CANDIDATE-HOST edbcfd44 patch at a6f9f77754561e1f8a092161df134a828c3074e5. Current core REGISTRY-READER 28source inputs/16emitted files, UI14cases, CLI12compiledcases/4actualfilesystem negatives. Exact Node24.21.0/npm11.19.0 packed local core requires --install-links; fresh CI checkout must bootstrap same qualified core sequentially before CLI install/check. Preserve stable aggregate, dual core/UI detectors, old7consumercontexts/alluntouchedworkflowbytes/targets and exactSHA fail-closed rules; add explicit CLI dependency fanout/cache/lock/artifact paths; no root/native/Rust tooling. Native current common checks finished; generated outputs free, synchronize any same-resource builds before replay. Real remote Linux/events/admin/artifact upload remains independent.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -5301,18 +5301,33 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/PORTABLE-CI-CLI.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 64,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          ".github/workflows/core-typescript-ci.yml",
+          "Makefile",
+          "docs/migration/effect-refactor/receipts/PORTABLE-CI-CLI.json"
+        ],
+        "reserved_resources": [
+          "root-makefile",
+          "portable-ci-workflow"
+        ]
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "a6f9f77754561e1f8a092161df134a828c3074e5+016d7a8e487535e6f674faff0ac3a78a025cec74f101efefbcdab4b183304f28"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PORTABLE-CI-CLI.json"
+        ]
       }
     },
     {
@@ -5505,7 +5520,7 @@
         "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted CORE raw56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7; CODEC-VALUES 100literal fixed vectors; REGISTRY-READER exact canonical registry56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99 and strictregistry reader versus semantic.rs Raw registry leniency recorded; semantic session/config/batch/records themselves deny_unknown_fields. Plan up to6 bounded children for strict semantic codec, transactional batch/session/cancellation and first scalar reducers. Exact source/symbol/fixture/case/bound/version/profile/runtime pins from accepted baseline, no whole-family closure. Preserve negativezero/bigint/nanoseconds/reductionorder/SDK aggregate meaning, every64 cooperativecancellation/native ack/invalid-batch no advancement/terminal/rechunk identity. Wholecanonicalserializer/BMI/pairs/rollups/native acquisition/actualhost/public exports/retirement each independently scoped child or explicit next-packet owner/trigger. No core/package/publicfixture/plan edits; raw packet SHA includes newline.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -5517,8 +5532,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "a6f9f77754561e1f8a092161df134a828c3074e5",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",

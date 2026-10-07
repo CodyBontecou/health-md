@@ -8,6 +8,8 @@ on:
     paths:
       - 'packages/healthmd-core-ts/**'
       - 'packages/healthmd-ui/**'
+      - 'apps/cli/**'
+      - 'docs/migration/effect-refactor/receipts/REGISTRY-READER.json'
       - 'packages/contracts/**'
       - 'docs/migration/effect-refactor/decisions/portable-pins.json'
       - 'AGENTS.md'
@@ -48,6 +50,7 @@ jobs:
     outputs:
       run: ${{ steps.full.outputs.run || steps.detect.outputs.run }}
       ui_run: ${{ steps.full.outputs.ui_run || steps.detect-ui.outputs.run }}
+      cli_run: ${{ steps.full.outputs.cli_run || steps.detect-cli.outputs.run }}
     steps:
       - name: Check out exact source for the local detector
         uses: actions/checkout@v4
@@ -65,8 +68,11 @@ jobs:
         if: ${{ inputs.release_sha != '' }}
         shell: bash
         run: |
-          echo 'run=true' >> "$GITHUB_OUTPUT"
-          echo 'ui_run=true' >> "$GITHUB_OUTPUT"
+          {
+            echo 'run=true'
+            echo 'ui_run=true'
+            echo 'cli_run=true'
+          } >> "$GITHUB_OUTPUT"
       - name: Detect whether the portable candidate must run
         id: detect
         if: ${{ inputs.release_sha == '' }}
@@ -91,6 +97,23 @@ jobs:
           paths: |
             packages/healthmd-ui/**
             packages/contracts/**
+            docs/migration/effect-refactor/decisions/portable-pins.json
+            AGENTS.md
+            Makefile
+            .github/actions/component-changes/**
+            .github/workflows/core-typescript-ci.yml
+
+      - name: Detect whether the CLI candidate consumer must run
+        id: detect-cli
+        if: ${{ inputs.release_sha == '' }}
+        uses: ./.github/actions/component-changes
+        with:
+          component: CLI candidate
+          paths: |
+            apps/cli/**
+            packages/healthmd-core-ts/**
+            packages/contracts/**
+            docs/migration/effect-refactor/receipts/REGISTRY-READER.json
             docs/migration/effect-refactor/decisions/portable-pins.json
             AGENTS.md
             Makefile
@@ -201,10 +224,86 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  cli-check:
+    name: CLI candidate Node 24
+    needs: changes
+    if: ${{ needs.changes.outputs.cli_run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: apps/cli
+        shell: bash
+    env:
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/apps/cli/build/npm-cache
+    steps:
+      - name: Check out exact qualification source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source and expose artifact identity
+        id: source
+        run: |
+          set -euo pipefail
+          [[ "$QUALIFICATION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SHA"
+          echo "sha=$QUALIFICATION_SHA" >> "$GITHUB_OUTPUT"
+      - name: Set up exact portable Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          check-latest: false
+      - name: Verify Node and bundled npm pins
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+      - name: Cache only prerequisite core npm downloads
+        uses: actions/cache@v4
+        with:
+          path: packages/healthmd-core-ts/build/npm-cache
+          key: core-typescript-${{ runner.os }}-${{ runner.arch }}-node24.21.0-npm11.19.0-${{ hashFiles('packages/healthmd-core-ts/package-lock.json') }}
+      - name: Cache only CLI npm downloads
+        uses: actions/cache@v4
+        with:
+          path: apps/cli/build/npm-cache
+          key: cli-candidate-${{ runner.os }}-${{ runner.arch }}-node24.21.0-npm11.19.0-${{ hashFiles('apps/cli/package-lock.json', 'packages/healthmd-core-ts/package-lock.json') }}
+      # Each job has a fresh checkout. Build the qualified core before packing the local dependency.
+      - name: Install the independently locked prerequisite core
+        working-directory: packages/healthmd-core-ts
+        env:
+          NPM_CONFIG_CACHE: ${{ github.workspace }}/packages/healthmd-core-ts/build/npm-cache
+        run: npm ci --engine-strict --no-audit --no-fund
+      - name: Build and qualify the prerequisite core
+        working-directory: packages/healthmd-core-ts
+        env:
+          NPM_CONFIG_CACHE: ${{ github.workspace }}/packages/healthmd-core-ts/build/npm-cache
+        run: npm run check
+      - name: Install the independently locked packed CLI candidate
+        run: npm ci --install-links --engine-strict --no-audit --no-fund
+      - name: Typecheck, build, discovered tests and source/module identity
+        run: npm run check
+      - name: Retain scoped candidate build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-candidate-${{ steps.source.outputs.sha }}-${{ github.run_attempt }}
+          path: apps/cli/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Retain the scoped prerequisite core build identity
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-prerequisite-core-${{ steps.source.outputs.sha }}-${{ github.run_attempt }}
+          path: packages/healthmd-core-ts/dist/core/
+          if-no-files-found: error
+          retention-days: 7
+
   gate:
     name: Core TypeScript CI
     if: ${{ always() }}
-    needs: [changes, check, ui-check]
+    needs: [changes, check, ui-check, cli-check]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -216,6 +315,8 @@ jobs:
           CHECK_RESULT: ${{ needs.check.result }}
           UI_RUN: ${{ needs.changes.outputs.ui_run }}
           UI_RESULT: ${{ needs.ui-check.result }}
+          CLI_RUN: ${{ needs.changes.outputs.cli_run }}
+          CLI_RESULT: ${{ needs.cli-check.result }}
         run: |
           set -euo pipefail
           test "$CHANGES_RESULT" = success
@@ -237,3 +338,4 @@ jobs:
           }
           require_component "$CHANGES_RUN" "$CHECK_RESULT" core
           require_component "$UI_RUN" "$UI_RESULT" UI
+          require_component "$CLI_RUN" "$CLI_RESULT" CLI
