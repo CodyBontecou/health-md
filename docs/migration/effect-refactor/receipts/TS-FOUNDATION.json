@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "task_id": "TS-FOUNDATION",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+  "patch_digest": "a13e671fe90311be29d4c1e5c70588ab0d754d4f69dd6e9959ef9c6204777dff",
+  "patch_digest_method": "SHA-256 over sorted claimed candidate source/config/lock/document paths, each encoded as UTF-8 repository-relative path + NUL + exact raw file bytes + NUL. Excludes receipt itself, coordinator plan/state and ignored dist/node_modules/cache outputs. Claimed files and individual raw SHA256 listed in inputs.artifact_and_native_interface.patch_files.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/.node-version",
+    "packages/healthmd-core-ts/AGENTS.md",
+    "packages/healthmd-core-ts/README.md",
+    "packages/healthmd-core-ts/package-lock.json",
+    "packages/healthmd-core-ts/package.json",
+    "packages/healthmd-core-ts/scripts/build.mjs",
+    "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+    "packages/healthmd-core-ts/scripts/check.mjs",
+    "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+    "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+    "packages/healthmd-core-ts/src/index.ts",
+    "packages/healthmd-core-ts/tests/foundation.test.ts",
+    "packages/healthmd-core-ts/tsconfig.build.json",
+    "packages/healthmd-core-ts/tsconfig.json",
+    "packages/healthmd-core-ts/tsconfig.test.json",
+    "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/adr-0007-effect-typescript-unified-layer.md": "3124c18acf2be991af16af3eb492fe4e155e6f12437c80836e1369efc85477d3",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_archive_source": "https://nodejs.org/dist/v24.21.0/node-v24.21.0-darwin-arm64.tar.gz",
+      "archive_verification": "Downloaded official pinned archive into task temporary cache; raw SHA256 matched accepted portable-pins record before extraction; signed checksum provenance not independently verified.",
+      "package_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "locked_package_records": 51,
+      "installed_package_count": 7,
+      "installed_platform_binary_digests": {
+        "node_modules/@typescript/typescript-darwin-arm64/lib/tsc": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2",
+        "node_modules/@esbuild/darwin-arm64/bin/esbuild": "10b6243df618d374bb2d5c9cfbe7052e1405f6aa4e53a6164f11a91b9f2e1384"
+      },
+      "runtime_dependencies": {
+        "effect": "4.0.1"
+      },
+      "development_dependencies": {
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "@types/node": "24.19.1"
+      },
+      "undici_types": "7.24.6"
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+        "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+        "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+        "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "1f70daf4005a031b4e179c98b90bc687a543a490db0597abff91aeb119fd2f70",
+        "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+        "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+        "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+        "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+        "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+        "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+        "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+      },
+      "reproducible_build": {
+        "result": "passed",
+        "artifact_count": 9,
+        "artifact_digests": {
+          "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+          "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+          "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+          "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+          "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+          "dist/neutral-metafile.json": "47a510bef7aeec8041d2029b5e8de52f91c8bf273459fbdbd6b70bdcb14e62a2",
+          "dist/test-metafile.json": "7affcce911041a27ce0cc1251b818b295f29459f4cb52722232f1f567a4e9847",
+          "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+        }
+      },
+      "test_discovery": {
+        "source_entries": [
+          "tests/foundation.test.ts"
+        ],
+        "compiled_entries": [
+          "dist/tests/foundation.test.js"
+        ],
+        "policy": "recursive sorted .test.ts/.test.js discovery; no foundation-only hardcoded runner"
+      },
+      "scope": "Three own portable source modules; no native interface or production consumer modification."
+    },
+    "policy_migration_key_versions": {
+      "authority": "private candidate package only; current production authorities retained",
+      "public_contract_changes": "none",
+      "D01": "Locked allowlisted Effect + TypeScript/esbuild Go/native platform packages and Node types only; emitted-JS builtin tests, no Rust-backed addon/helper dependency selected."
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Pinned install/typecheck/test/build/check scripts run from a fresh component setup.",
+      "result": "passed",
+      "evidence": "Fresh npm ci on exact pinned Node24.21.0/npm11.19.0 passed; npm run check passed source/test typechecks, ESM/declaration/test build,8 discovered compiled-JS tests and19 negative boundary cases. Rebuild produced9 byte-identical emitted/metafile artifacts."
+    },
+    {
+      "criterion": "Boundary/import checks exclude Node/React/native/DOM/env APIs from portable entrypoints and require one Effect module identity.",
+      "result": "passed",
+      "evidence": "ES-only own source tsconfig (types:[],lib:ES2022), conservative source guards plus neutral esbuild graph over all3 own modules reject Node/React/native/DOM/env imports/globals.13 unit rejections and6 in-memory full-graph transitive/export/dynamic escape cases pass. Lock/install/export resolution has one Effect4.0.1; candidate/host exports share the same service class."
+    },
+    {
+      "criterion": "Document candidate entrypoints and fake capabilities without modifying production build/link/public launchers.",
+      "result": "passed",
+      "evidence": "README/AGENTS document candidate entrypoints, same injected CandidateSession seam and fake Layers; tests prove success/typed error/acquire error/concurrent isolation, interruption/async cleanup and virtual clock. No production build/link/launcher/schema/fixture edits."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "ci",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 1.3307,
+      "evidence": "Fresh pinned install reported7 packages; scoped lock/runtime and selected platform binaries verified."
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.7697,
+      "evidence": "8 compiled-JS tests,19 boundary rejections, strict typechecks, build and one Effect identity passed; independently reproduced by coordinator."
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.2153,
+      "evidence": "Recursive test build and ESM/declaration output passed;9 emitted artifact digests matched repeat build and independent check."
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check:boundaries"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.1178,
+      "evidence": "3 own source modules,1 Effect identity,13 direct and6 full-graph negative cases passed."
+    },
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.2583,
+      "evidence": "8 discovered compiled-JS foundation tests passed,0 failed/cancelled/skipped."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "TS-FOUNDATION"
+      ],
+      "result": "passed",
+      "evidence": "Bounded task/claim inspected before implementation."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Verified selected published direct/platform package integrity metadata against actual lock, all15 source files trailing whitespace, pinned source inputs and patch digest method; ignored component outputs confirmed."
+    }
+  ],
+  "inspection_summary": "Applied writing-for-agents skill for short component instructions. Read exact task/base, current root/entrypoint/core-cli, ADR0007 and accepted toolchain/core source pins. Obtained official Node24 temporary archive with matching accepted SHA256; installed scoped lock with task cache and no global changes. Existing npm11.19 policy skipped esbuild postinstall pending allowScripts, but exact optional Go binary was installed and successfully used by all builds; no need to weaken policy. All checks execute emitted JS; no Node TypeScript stripping, Cargo, native SDK, data or external product operations.",
+  "observations": [
+    {
+      "case_id": "foundation-suite",
+      "procedure": "npm run check / emitted JS node:test discovery",
+      "expected": "8 foundation cases across identical capability interface pass",
+      "observed": "8 passed,0 failed/cancelled/skipped; virtual-clock and gated cleanup cases use no wall-clock sleeps",
+      "evidence": "packages/healthmd-core-ts/tests/foundation.test.ts",
+      "result": "passed"
+    },
+    {
+      "case_id": "boundary-negative-suite",
+      "procedure": "scripts/check-boundaries.mjs lexical/import validators and in-memory mutations through same module walker/resolver",
+      "expected": "Reject13 direct boundary violations and6 own-module graph escapes; allow current graph",
+      "observed": "19 rejections passed;3 own portable modules,1 Effect installation",
+      "evidence": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+      "result": "passed"
+    },
+    {
+      "case_id": "deterministic-repeat-build",
+      "procedure": "Compare raw SHA256 of all emitted core/declarations/tests/metafiles across clean dist builds",
+      "expected": "Same bytes for same locked source/tool/runtime",
+      "observed": "9 artifacts identical; digests recorded in inputs",
+      "evidence": "inputs.artifact_and_native_interface.reproducible_build",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Only exact Node24.21.0/npm11.19.0 on darwin-arm64 synthetic foundation qualified; native JS engines, browser, Linux/Windows, signed distributions, frozen codec/profile contracts and production consumers remain unrun.",
+    "Effect dependency declaration checks are skipped because they refer to host type names; own portable source remains strict with ES-only ambient types. Dependency-level host-global/runtime compatibility needs separate admitted-host evidence.",
+    "Conservative lexical guard intentionally rejects host words even in comments/strings; neutral own-module graph checks are not a general security sandbox against adversarial reflection or a full third-party/native VM audit. New module/tool dependencies require scoped review.",
+    "Node archive hash matched published accepted pin; signature verification and supply-chain attestation checks are not established by this foundation receipt.",
+    "Cold/warm check measurements are local samples, not proven CI/test/disk benefit or one/three-worktree/native performance evidence.",
+    "npm ci emits an esbuild postinstall policy warning; selected optional esbuild binary is present and all real builds pass without postinstall execution."
+  ],
+  "remaining_qualification": [
+    "Independent exact source+patch review accepted. Parent K01/F03/F06/F08 and phase qualification remain open.",
+    "PORTABLE-CI must run the admitted checks from fresh supported checkout on its exact runtime; cross-platform optional packages and native Release module/global identity remain separate.",
+    "Implement exact codecs and bounded operation slices with independent frozen/negative expectations; foundation asserts no complete semantics/query/protocol/render parity."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+a13e671fe90311be29d4c1e5c70588ab0d754d4f69dd6e9959ef9c6204777dff"
+  },
+  "independent_review": {
+    "scope": "All15 claimed component source/config/lock/document files and receipt reviewed against accepted source and task obligations. No blocking findings.",
+    "checks": [
+      {
+        "cwd": "packages/healthmd-core-ts",
+        "argv": [
+          "npm",
+          "ci",
+          "--offline",
+          "--engine-strict",
+          "--no-audit",
+          "--no-fund"
+        ],
+        "result": "passed",
+        "evidence": "Pinned Node24.21.0/npm11.19.0; fresh component reinstall from scoped cache;7 actual packages."
+      },
+      {
+        "cwd": "packages/healthmd-core-ts",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ],
+        "result": "passed",
+        "evidence": "8 tests and19 boundary negatives; strict source/test typechecks, recursive discovery, build and one Effect identity."
+      }
+    ],
+    "fingerprint_evidence": "Recomputed exact15-file path+NUL+bytes+NUL patch digest,4 accepted baseline input digests and9 emitted artifact digests; all matched."
+  }
+}

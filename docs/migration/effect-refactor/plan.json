@@ -3698,7 +3698,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 40,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
@@ -3728,14 +3728,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+a13e671fe90311be29d4c1e5c70588ab0d754d4f69dd6e9959ef9c6204777dff"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json"
+        ]
       }
     },
     {
