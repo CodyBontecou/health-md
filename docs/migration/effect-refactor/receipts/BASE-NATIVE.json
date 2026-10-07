@@ -1,0 +1,307 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-NATIVE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337",
+  "patch_digest": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+  "patch_digest_method": "SHA-256 raw UTF-8 inventories/native.json bytes including final newline; only inventory is patch input; excludes receipt and coordinator plan/review state.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/native.json",
+    "docs/migration/effect-refactor/receipts/BASE-NATIVE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "docs/migration/effect-refactor/inventories/native-apple.json": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "docs/migration/effect-refactor/inventories/native-android.json": "3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7"
+    },
+    "locks_and_runtime": {
+      "portable_pin_record": "docs/migration/effect-refactor/decisions/portable-pins.json",
+      "native_versions": "unresolved; no portable Node proof promoted to RN/Hermes/Mac"
+    },
+    "artifact_and_native_interface": {
+      "accepted_native_receipts": [
+        {
+          "receipt": "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json",
+          "receipt_sha256": "c496d2c13501a6d1f29d46c8a83480e5d4bc23ea58c1574653cc94e94e97e7f1",
+          "accepted_fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834"
+        },
+        {
+          "receipt": "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json",
+          "receipt_sha256": "6427b62823d2d2baf88d29e0e320ec7803cd101093dfc58f1208365bfc5b1e5e",
+          "accepted_fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7"
+        }
+      ],
+      "artifact_execution": "none; host/channel obligations explicit"
+    },
+    "policy_migration_key_versions": {
+      "required_reads": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+        },
+        {
+          "path": "apps/apple/AGENTS.md",
+          "sha256": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13"
+        },
+        {
+          "path": "apps/android/AGENTS.md",
+          "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc"
+        },
+        {
+          "path": "docs/migration/effect-refactor/native-ui.md",
+          "sha256": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05"
+        },
+        {
+          "path": "docs/features/feature-inventory.md",
+          "sha256": "0b9c208d1bc70709dbf2d938038b67cb87022b25558c96411226acaa47e04712"
+        },
+        {
+          "path": "docs/features/feature-parity.md",
+          "sha256": "5a8667685bf5eae42cf61c2ced73b285bafafc5734913efae3b6049a998a65ca"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+          "sha256": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/local-architecture.md",
+          "sha256": "e39461a77779bca6e1a42439d60df2342b92182514f514fe956700915d0ac569"
+        }
+      ],
+      "selected_design_rows": [
+        {
+          "id": "C10",
+          "row_sha256": "ac3d0d733f17c0b16df8e842cbb9ff5cf7e36425a1dc05875a5851e44206479a",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "C12",
+          "row_sha256": "1c97e2437330a3480f368a9f7ec8c09471f85fcff08e290f9ef7c62e2b52f087",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U01",
+          "row_sha256": "29b8187397b06bcf12ea507006939a26aad5034c1338518fb6c7fb907b92d03e",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U02",
+          "row_sha256": "7407c3b96ba626de07242906c8415fa785593735ced647c5ff62355eb0f5a258",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U03",
+          "row_sha256": "66aeb537b0276ec1101c5aba1cbfcef5dc6759ff25d8011a6dc97c72b9ed181d",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U04",
+          "row_sha256": "8f126076b8e98d93d539b3a4e0a5099b2bacaca259cfe0139ae5b39d5c85ae31",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U05",
+          "row_sha256": "125200755b22e61ff7f1769dbb6c3690ab3cc99b46cf82ca6f0fdc63c0066398",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U06",
+          "row_sha256": "753e88c3fa336d8863622b3bad85752f59f4710fdde6e19b9959f255e8aa74c6",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U07",
+          "row_sha256": "47fb787e3a8ec42cac3a174ea47ec2ab700bbb7a863877f33fae0e85166d033b",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U08",
+          "row_sha256": "73b5290edf2763459a8e21c8430b461274073ea6435d4c2746295e1c36a339c4",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U09",
+          "row_sha256": "598fda618558b399920f3580ad8e10ed9df8d7858028220f91d78c6e52e5e442",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U10",
+          "row_sha256": "0ee21375c3b8d736d9d4b8868e7d8dafae80fcb6d989db776f7860a7af4d07fc",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U11",
+          "row_sha256": "3e348817a3fcf9a55963b7d2354767dde08b5d0aff557d314ba9773639f7de17",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U12",
+          "row_sha256": "58ece5bff4181047a5538cbeadbce77e9ab5b6f79b1f4f52befd2220ddb245e1",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U13",
+          "row_sha256": "449ff0d7e29ed7b665e9f8c8fc37bfab5fb02f650956adcaab7bb4d5bd916da6",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U14",
+          "row_sha256": "26e28c575d86c4416296a149d6e58ef8ba46ab4e2b6407ada89d691b3cb21e0f",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U15",
+          "row_sha256": "a82296ce52841482871fe3c2a7a0220d2735105a4a4ba404e336ded80f61136e",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U16",
+          "row_sha256": "bd7fb1b2e4578e255d044a7634290ca8000e13a029592fc83bbb3d2a77308a77",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U17",
+          "row_sha256": "7c4d11f7dbcea596f1ccacc11276a11cd453fe6ab356d9d5af60207a968efa69",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "U18",
+          "row_sha256": "510bffa5357cfa18668233d826b63a87b6292eb04192dc563c005573f6b0704a",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "F03",
+          "row_sha256": "0cc84da4f2dbd4c9e1a947eef335d20e97c530d8f7452a6054fb578a54ab2c3e",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "F04",
+          "row_sha256": "8416c41eadbf79e80566e821309e3d3e2c367f6c712a406396863f11f2a403e8",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "F06",
+          "row_sha256": "94b01427ac75d227e46be11e6dcc6711324e563346e2c0df0d2bb2d39da964bf",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        },
+        {
+          "id": "F10",
+          "row_sha256": "abd75804ba37548db20c1a2ff486085af50b37a393fbbc901c3f24eed468f33b",
+          "method": "UTF-8 exact indexed table row without newline at assigned source."
+        }
+      ],
+      "retained_state": "Apple journal6/readers1..6/schema8/context1; Android journal3/readers1..3/Room6/scheduledAPI1/frozenv4+analyticalv5;Setupv2; native current secret namespaces retained"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Reconcile every U/extension outcome from the two inventories without re-auditing both platforms.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native.json#feature_reconciliation/extension_reconciliation/explicit_outcome_differences"
+    },
+    {
+      "criterion": "Assign shared/native/planned/unavailable scope and concrete host/physical/signing/state proof tasks.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native.json#host_proof_catalog/proof_obligations/next_bounded_target/packet_sequence"
+    },
+    {
+      "criterion": "Record actual instruction conflicts or runtime choices; do not infer implementation parity from source count.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/native.json#instruction_and_evidence_conflicts/runtime_and_source_choices/classification_policy"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-NATIVE"
+      ],
+      "result": "passed",
+      "evidence": "Exact task acceptance/target/two-file write scope read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Scoped accepted inventory projections and required design/instruction reads via git show at assigned source; accepted receipt/digest identity verified. No both-platform source/test pin re-audit."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Validated18unique U rows,11unique extension rows, all concrete host/packet/family references, exact target/write scope, JSON and raw inventory digest."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Inspected all cloud/F-Droid/provider wording in reconciliation. Narrowed exclusions to current third-party provider OAuth/Play Billing/telemetry/Wear graphs; preserved generic API Endpoint and native Health Connect; optional hosted F-Droid admission remains open to Q-CLOUD-COMMERCE and channel/consent proofs. Revalidated JSON/18 U/11 extension/8 host counts and raw digest."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Corrected U11 design evidence pointer to real #workstream-acceptance-ledger anchor with explicit U11 row label/manage.py reference U11 authority; revalidated raw inventory digest."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "Independent accepted inventory/reconciliation review; recomputed raw patch digest and2 input hashes, verified18 U rows/11 extension rows/8 host profiles and bounded packet references. Resolved overbroad F-Droid cloud exclusion and invalid U11 anchor; generic API export retained, future hosted-channel admission open. Planning only, no runtime/native/physical/signing parity claimed."
+    }
+  ],
+  "inspection_summary": "Accepted source inventories reconciled through scoped semantic fields, preserving exact fixture/test provenance by digest references rather than duplicating their lists. All U/extension outcomes receive state/permission/admission/cold/physical/runtime/signing obligations and a bounded next packet/family target. Source presence/counts are not runtime/parity proof.",
+  "observations": [],
+  "limitations": [
+    "No native build, Gradle/Xcode/test/device/app/user-data/provider/credential/signing/artifact/release operation.",
+    "All successor host/physical/signed/client/deployed qualification remains unexecuted.",
+    "No manifest/product/component instructions/fixture/lock/dependency/plan edits; no retirement or phase closure.",
+    "Proposed row/extension child scopes require accepted decomposition and coordinator claims before implementation."
+  ],
+  "remaining_qualification": [
+    "SPLIT-NATIVE-HOSTS and SPLIT-NATIVE-FEATURES accepted bounded packets, followed by exact host runtime/artifact/cold/physical/state admission receipts.",
+    "Remaining U/extensions and future P/L/S/H source/client/service capabilities with per-row proof and complete family matrices.",
+    "Exact committed integration/consumer fixtures/gates plus separately authorized promotion/retirement after all required source/profile/channel proofs."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337+a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb"
+  }
+}

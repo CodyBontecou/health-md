@@ -3025,7 +3025,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 29,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_host",
         "base_revision": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337",
@@ -3038,14 +3038,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337+a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-NATIVE.json"
+        ]
       }
     },
     {
@@ -3177,8 +3179,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 23,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+          "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -3827,7 +3838,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 50,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93",
@@ -3845,14 +3856,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93+0ef4466305be5d34130f09a049709b7f6b236760f5599479d656212a8b68ea5f"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CODEC-VALUES.json"
+        ]
       }
     },
     {

@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "task_id": "CODEC-VALUES",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93",
+  "patch_digest": "0ef4466305be5d34130f09a049709b7f6b236760f5599479d656212a8b68ea5f",
+  "patch_digest_method": "SHA256 over sorted four claimed candidate module/test/vector/boundary paths, each encoded UTF-8 repository-relative path + NUL + exact raw bytes + NUL. Excludes receipt, coordinator plan/state and ignored build/dist/node_modules/cache outputs. Raw digests in inputs.artifact_and_native_interface.patch_files.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+    "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+    "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+    "packages/healthmd-core-ts/tests/exact-values.test.ts",
+    "docs/migration/effect-refactor/receipts/CODEC-VALUES.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "packages/contracts/semantic-input/v1/contract.md": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "package_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "installation": "Existing exact scoped7-package installation from freshly qualified PORTABLE-CI retained; no dependency/lock changes.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+        "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+        "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5"
+      },
+      "emitted_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/neutral-metafile.json": "41ac6f1dde6d1acc6cccb4cd4c94420a588f457de1d4e72d87cd039a2f61793d",
+        "dist/test-metafile.json": "6aa7b09fab1d5ce9aef1b9e677226cb0ac3d4ce195eee63a73762de247f0f337",
+        "dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+      },
+      "expected_vectors": {
+        "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+        "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+        "literal_case_count": 100,
+        "positive": 29,
+        "negative": 71,
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root",
+          "fingerprint": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "method": "Root independently checked all100 literal acceptance/canonical encoding expectations against source, Python integer bounds, IEEE exponent bits and Gregorian dates; no candidate decoder used."
+        }
+      },
+      "source_case_mapping": [
+        {
+          "vector_groups": [
+            "binary64 positives/nonfinite/malformed",
+            "number tag/shape/unknown/version-extra"
+          ],
+          "source_symbols": [
+            "ExactNumber",
+            "validate_number",
+            "exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits"
+          ],
+          "frozen_case": "semantic-input differential-v1 rejection_cases/nonfinite-binary64"
+        },
+        {
+          "vector_groups": [
+            "signed_integer/unsigned_integer extrema",
+            "noncanonical decimal syntax",
+            "ordinal/epoch extrema"
+          ],
+          "source_symbols": [
+            "canonical_unsigned",
+            "canonical_signed",
+            "parse_canonical_u128",
+            "parse_canonical_i128",
+            "parse_canonical_u64",
+            "parse_canonical_i64"
+          ]
+        },
+        {
+          "vector_groups": [
+            "timestamps",
+            "nanos/offset bounds",
+            "missing-source-null"
+          ],
+          "source_symbols": [
+            "ExactTimestamp",
+            "validate_timestamp",
+            "valid_offset"
+          ],
+          "frozen_case": "semantic-input differential-v1 cases/android-fraction-and-exact-time"
+        },
+        {
+          "vector_groups": [
+            "civil/leap dates"
+          ],
+          "source_symbols": [
+            "parse_date"
+          ],
+          "classification": "Source-derived strict canonical Gregorian math, not frozen whole-envelope vectors."
+        }
+      ],
+      "frozen_scalar_counts": {
+        "numbers": 25,
+        "timestamps": 8,
+        "owner_dates": 26,
+        "source_ordinals": 26
+      },
+      "boundary_policy_delta": "Admit exactly effect/Schema and effect/Result in existing import/module-graph allowlist and positive import sanity checks; retain every forbidden import/global and19 negatives.",
+      "native_interfaces_changed": []
+    },
+    "policy_migration_key_versions": {
+      "scalar_version_policy": "ExactNumber/ExactTimestamp have no independent version member. Extra version fields reject as unknown per serde deny_unknown_fields. No global envelope/version policy added.",
+      "shape_policy": "Already-parsed number/timestamp boundary shapes reject unknown fields via Effect Schema onExcessProperty:error; stable invalid_semantic_batch failure discards issues and input.",
+      "numeric_policy": "Canonical i128/u128 decimal strings, ordinalu64, epochsecondsi64; length admission before regex/BigInt conversion. Raw finite lowercase16hex binary64 preserves -0; explicit DataView conversion finite-only.",
+      "time_policy": "Nanos0..999999999 and integer source/calendar offsets inclusive\u00b164800; omitted/null source canonicalizes to null. Civil canonical YYYY-MM-DD actual Gregorian year1..9998 independent of instants/timezones.",
+      "state_impact": "No public profile/contract/fixture/persisted state or production authority changes."
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Frozen positive/negative cases preserve finite binary64 including negative zero, canonical integers beyond safe range and exact seconds/nanoseconds/civil dates.",
+      "result": "passed",
+      "evidence": "100 independently reviewed literal tests (29 positive/71 negative), exact JSON field/lexeme encode expectations, explicit IEEE rawbits/-0 conversion and frozen fixture scalar checks pass. i128/u128 extrema and i64/u64 limits retain precision."
+    },
+    {
+      "criterion": "Reject invalid/nonfinite/overflow/version inputs per source policy; Date/JSON defaults cannot silently lose precision.",
+      "result": "passed",
+      "evidence": "Shape/unknown version-extra, nonfinite/overflow/bounds/civil/leap tests pass. No scalar version invented. Integer admission bounds input before parse; timestamps/civil helpers use no Date/IANA inference; rounded numeric integer input rejects. Whole JSON byte/version parsing remains deferred."
+    },
+    {
+      "criterion": "Expected vectors are independently reviewed and identified by digest; broader semantic/render codecs remain open.",
+      "result": "passed",
+      "evidence": "Root accepted literal vector fingerprint b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954 before final implementation checks using independent source/math. Broader semantic/result/render/envelope/duplicate-key/raw lexical compatibility remains open."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exact Node24.21.0/npm11.19.0; exit0 in 0.503s.114 tests passed,0 failed/cancelled/skipped; recursive discovery executes exact-values and foundation suites;19 boundary negatives,4 own modules,1 Effect installation. Strict own ES-only source/test typechecks and compiled JS build passed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Pinned source bytes compared with assigned base; vector SHA matches independently reviewed fingerprint;3 relevant semantic fixture SHA256s match accepted inventory; frozen scalar counts25 numbers/8 timestamps/26 owner dates/26 ordinals."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0, no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "Independent source/implementation/test review; recomputed all4 patch files and12 input hashes, accepted100 literal expectations unchanged. Independently ran exact Node24.21.0/npm11.19.0 npm run check:114 tests/19 boundary negatives/4 own modules/1 Effect passed. Frozen public fixtures remain unchanged; scalar-only and host proof limits retained."
+    }
+  ],
+  "inspection_summary": "Read scoped root/component instructions, core branch, semantic-input contract, accepted inventory and K01/C02/F05 rows. Inspected Rust ExactNumber/ExactTimestamp serde shape/serialization fields, canonical integer validators, finitebit validation, timestamp/offset validation and strict parse_date. Implementation module remains an explicit internal file; no package public export or consumer launchers modified. Existing Apple/Android/Rust/CLI/website/external public consumers continue using current production authority and require later integration qualification.",
+  "observations": [
+    {
+      "case_id": "independent-literal-corpus",
+      "procedure": "Root source/math review of fixed literal file; then execute candidate tests against unchanged accepted100-vector file.",
+      "expected": "29 accepted literal encodings/71 rejected inputs according to exact source policy.",
+      "observed": "All100 pass; reviewed raw SHA unchanged.",
+      "evidence": "packages/healthmd-core-ts/tests/exact-values-vectors.ts @ b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "result": "passed"
+    },
+    {
+      "case_id": "bounded-lossless-and-sanitized",
+      "procedure": "Execute6 supplemental exact suite tests: raw finite/-0 conversion, million-character decimal and huge bigint rejection, invalid encode paths, nonfinite fields, sanitized issues/accessor failures, frozen scalar checks.",
+      "expected": "Exact precision/bounds preserved, invalid values reject without payload/cause, frozen bytes/scalars admitted.",
+      "observed": "6 supplemental cases pass; giant strings rejected before conversion; safe frozen failure contains only tag/code; frozen25/8/26/26 scalar facts admitted.",
+      "evidence": "packages/healthmd-core-ts/tests/exact-values.test.ts",
+      "result": "passed"
+    },
+    {
+      "case_id": "integrated-portable-check",
+      "procedure": "npm run check on selected Node24; typecheck/build/discover emittedJS tests/boundary module graph.",
+      "expected": "Both exact and foundation suites and all original boundary checks pass with one Effect identity.",
+      "observed": "114 passed;13 lexical+6 graph negatives;4 own modules/1 Effect; no native toolchain invoked.",
+      "evidence": "packages/healthmd-core-ts/scripts/check.mjs; output SHA256 14ef4a509b3d8294f5f52137e407d488b9e11994ba4cccc577e2bbacaa3ff829",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Only parsed scalar boundary objects/strings and fixed canonical scalar encodings qualified. Raw whole-JSON lexical/duplicate-field/byte ordering/version envelope behavior is not established.",
+    "No complete semantic/result/render codec, registry/build identity, reducer/rechunk/query/protocol/public profile or operation compatibility implemented.",
+    "Local exact Node24 darwin-arm64 only; browser/mobile/native JS engines/Linux/GitHub/signed distributions and public consumers unrun.",
+    "Effect Schema/Result imports are neutral admitted package modules in unchanged single Effect4.0.1 graph; third-party native-VM/host/global behavior still requires admitted-host proof.",
+    "Schema shape objects are not an adversarial sandbox; enclosing contract decoder must supply byte/record/session budgets. Scalar integer length admission does not qualify complete envelope bounds."
+  ],
+  "remaining_qualification": [
+    "Later complete semantic codec must qualify raw JSON bytes/duplicate keys/version/unknown policy, native fixtures and every affected consumer.",
+    "K01/C02/F05 and parent phases remain open; no production authority promotion or Rust retirement authorized."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93+0ef4466305be5d34130f09a049709b7f6b236760f5599479d656212a8b68ea5f"
+  }
+}

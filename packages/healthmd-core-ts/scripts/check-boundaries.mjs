@@ -7,7 +7,7 @@ import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const sourceRoot = path.join(root, "src");
-const allowedEffect = new Set(["effect/Context", "effect/Effect", "effect/Data"]);
+const allowedEffect = new Set(["effect/Context", "effect/Effect", "effect/Data", "effect/Schema", "effect/Result"]);
 const builtins = new Set(builtinModules.map((name) => name.replace(/^node:/, "")));
 
 /** Conservative admission lexer: rejects even comments/string mentions of host names. */
@@ -125,6 +125,8 @@ export function checkNegativeCases() {
   for (const [, run] of cases) assert.throws(run);
   auditImport("./host-interfaces/capabilities.js");
   auditImport("effect/Effect");
+  auditImport("effect/Schema");
+  auditImport("effect/Result");
   auditSourceText('export const value = "ready";');
   return cases.map(([id]) => id);
 }

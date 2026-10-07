@@ -1,0 +1,1728 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-NATIVE",
+  "source_revision": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337",
+  "design_ids": [
+    "C10",
+    "C12",
+    "U01",
+    "U02",
+    "U03",
+    "U04",
+    "U05",
+    "U06",
+    "U07",
+    "U08",
+    "U09",
+    "U10",
+    "U11",
+    "U12",
+    "U13",
+    "U14",
+    "U15",
+    "U16",
+    "U17",
+    "U18",
+    "F03",
+    "F04",
+    "F06",
+    "F10"
+  ],
+  "proof_class": "planning",
+  "outcome": "Reconcile accepted Apple/Android inventories into one truthful host/channel/feature and admission map.",
+  "scope": "Reconciliation of accepted planning inventories; no platform source/fixture/test pin re-audit, native build/device/user-data/credential/provider/artifact execution. Current authority remains.",
+  "accepted_input_pins": [
+    {
+      "inventory": "docs/migration/effect-refactor/inventories/native-apple.json",
+      "sha256": "5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "inventory_source_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+      "integrated_revision": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337",
+      "receipt": "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json",
+      "receipt_sha256": "c496d2c13501a6d1f29d46c8a83480e5d4bc23ea58c1574653cc94e94e97e7f1",
+      "accepted_fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+5d9eec2353103b30bf708ef5085907656efbd4c59259612d3c75ffbc88ef8834",
+      "proof_class": "planning",
+      "scoped_fields_used": [
+        "design_mapping",
+        "target_graph",
+        "surface_extensions",
+        "local_api",
+        "versions",
+        "installed_state_source",
+        "commerce",
+        "contract_mapping",
+        "native_lifecycle_policy",
+        "qualification_gates",
+        "report_metrics"
+      ],
+      "fixture_and_test_identity_policy": "Exact source/test/fixture/case IDs remain in accepted inventory; dereference this pin before coding, do not regenerate frozen expectations."
+    },
+    {
+      "inventory": "docs/migration/effect-refactor/inventories/native-android.json",
+      "sha256": "3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7",
+      "inventory_source_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+      "integrated_revision": "f2bc8aedcd4bbcee121ef7019e29f54d55fb4337",
+      "receipt": "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json",
+      "receipt_sha256": "6427b62823d2d2baf88d29e0e320ec7803cd101093dfc58f1208365bfc5b1e5e",
+      "accepted_fingerprint": "36244fd0a543456cfd7e2487d790ebe2fce2c19e+3918959c8548fc9f49f123642c7b71fb0052ad172ee75b4e2a86a7799ac03ac7",
+      "proof_class": "planning",
+      "scoped_fields_used": [
+        "feature_rows",
+        "channels",
+        "native_state_and_ports",
+        "authority_and_upgrade",
+        "capability_subset",
+        "manifest_permission_merge_audit",
+        "remaining_qualification"
+      ],
+      "fixture_and_test_identity_policy": "Exact source/test/fixture/case IDs remain in accepted inventory; dereference this pin before coding, do not regenerate frozen expectations."
+    }
+  ],
+  "required_read_pins": [
+    {
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "apps/apple/AGENTS.md",
+      "sha256": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13"
+    },
+    {
+      "path": "apps/android/AGENTS.md",
+      "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "path": "docs/architecture/cross-platform-unification-policy.md",
+      "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc"
+    },
+    {
+      "path": "docs/migration/effect-refactor/native-ui.md",
+      "sha256": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05"
+    },
+    {
+      "path": "docs/features/feature-inventory.md",
+      "sha256": "0b9c208d1bc70709dbf2d938038b67cb87022b25558c96411226acaa47e04712"
+    },
+    {
+      "path": "docs/features/feature-parity.md",
+      "sha256": "5a8667685bf5eae42cf61c2ced73b285bafafc5734913efae3b6049a998a65ca"
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+      "sha256": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85"
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/local-architecture.md",
+      "sha256": "e39461a77779bca6e1a42439d60df2342b92182514f514fe956700915d0ac569"
+    }
+  ],
+  "selected_design_row_pins": [
+    {
+      "id": "C10",
+      "row_sha256": "ac3d0d733f17c0b16df8e842cbb9ff5cf7e36425a1dc05875a5851e44206479a",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "C12",
+      "row_sha256": "1c97e2437330a3480f368a9f7ec8c09471f85fcff08e290f9ef7c62e2b52f087",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U01",
+      "row_sha256": "29b8187397b06bcf12ea507006939a26aad5034c1338518fb6c7fb907b92d03e",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U02",
+      "row_sha256": "7407c3b96ba626de07242906c8415fa785593735ced647c5ff62355eb0f5a258",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U03",
+      "row_sha256": "66aeb537b0276ec1101c5aba1cbfcef5dc6759ff25d8011a6dc97c72b9ed181d",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U04",
+      "row_sha256": "8f126076b8e98d93d539b3a4e0a5099b2bacaca259cfe0139ae5b39d5c85ae31",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U05",
+      "row_sha256": "125200755b22e61ff7f1769dbb6c3690ab3cc99b46cf82ca6f0fdc63c0066398",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U06",
+      "row_sha256": "753e88c3fa336d8863622b3bad85752f59f4710fdde6e19b9959f255e8aa74c6",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U07",
+      "row_sha256": "47fb787e3a8ec42cac3a174ea47ec2ab700bbb7a863877f33fae0e85166d033b",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U08",
+      "row_sha256": "73b5290edf2763459a8e21c8430b461274073ea6435d4c2746295e1c36a339c4",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U09",
+      "row_sha256": "598fda618558b399920f3580ad8e10ed9df8d7858028220f91d78c6e52e5e442",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U10",
+      "row_sha256": "0ee21375c3b8d736d9d4b8868e7d8dafae80fcb6d989db776f7860a7af4d07fc",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U11",
+      "row_sha256": "3e348817a3fcf9a55963b7d2354767dde08b5d0aff557d314ba9773639f7de17",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U12",
+      "row_sha256": "58ece5bff4181047a5538cbeadbce77e9ab5b6f79b1f4f52befd2220ddb245e1",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U13",
+      "row_sha256": "449ff0d7e29ed7b665e9f8c8fc37bfab5fb02f650956adcaab7bb4d5bd916da6",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U14",
+      "row_sha256": "26e28c575d86c4416296a149d6e58ef8ba46ab4e2b6407ada89d691b3cb21e0f",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U15",
+      "row_sha256": "a82296ce52841482871fe3c2a7a0220d2735105a4a4ba404e336ded80f61136e",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U16",
+      "row_sha256": "bd7fb1b2e4578e255d044a7634290ca8000e13a029592fc83bbb3d2a77308a77",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U17",
+      "row_sha256": "7c4d11f7dbcea596f1ccacc11276a11cd453fe6ab356d9d5af60207a968efa69",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "U18",
+      "row_sha256": "510bffa5357cfa18668233d826b63a87b6292eb04192dc563c005573f6b0704a",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "F03",
+      "row_sha256": "0cc84da4f2dbd4c9e1a947eef335d20e97c530d8f7452a6054fb578a54ab2c3e",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "F04",
+      "row_sha256": "8416c41eadbf79e80566e821309e3d3e2c367f6c712a406396863f11f2a403e8",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "F06",
+      "row_sha256": "94b01427ac75d227e46be11e6dcc6711324e563346e2c0df0d2bb2d39da964bf",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    },
+    {
+      "id": "F10",
+      "row_sha256": "abd75804ba37548db20c1a2ff486085af50b37a393fbbc901c3f24eed468f33b",
+      "method": "UTF-8 exact indexed table row without newline at assigned source."
+    }
+  ],
+  "classification_policy": {
+    "shared": "Equivalent current consumer outcome/contract intent; not successor runtime qualification. Per-row native boundaries and subtype differences remain explicit.",
+    "planned": "Proposed successor or current staged capability lacking required admission; concrete bounded packet/family target required.",
+    "unavailable": "Explicit OS/current producer absence with reason, no fabricated parity.",
+    "platform_distinct": "Related outcome/data identity/mechanism tracked separately, not a substitute for machine capability or registry classification.",
+    "native": "SDK/security/persistence/background/signed system capabilities retain native ownership.",
+    "proof": "Input source/test counts are not parity or executed product evidence."
+  },
+  "host_proof_catalog": [
+    {
+      "id": "ios-phone",
+      "target": {
+        "platform": "iOS",
+        "channel": "App Store",
+        "profile": "Release; iOS17+"
+      },
+      "current": "Swift HealthMd main; HealthKit capture, native SDK/security/lifecycle; React Native phone presentation selected successor only",
+      "cold": "AppDelegate/BGTask registration before startup; dependency readiness; AppIntent, notification/URL/document ingress without mounted React screen",
+      "runtime": "SPLIT-NATIVE-HOSTS: one packaged offline synthetic operation, exact RN/React/Effect/Hermes bridge/globals/bundle versions, cancel/backpressure/teardown and measured startup/resources",
+      "physical": "First unlock/protected data/revoke/kill/reboot/background expiry/APNs and actual health availability",
+      "signing": "Exact committed App Store archive, entitlements/SDK/minimum OS/privacy/helper/bundle dependencies; store synchronization distinct",
+      "admission": "Native type availability/HealthKit protectedDataAvailable+authorization, operation-specific grant and purchase/quota rules; foreground direct query only"
+    },
+    {
+      "id": "ios-ipad",
+      "target": {
+        "platform": "iPadOS",
+        "channel": "App Store",
+        "profile": "Release; iOS17+"
+      },
+      "current": "Same main binary, native split navigation/adaptive layouts retained",
+      "cold": "Same iOS cold contracts plus split navigation/deep-link restoration",
+      "runtime": "Qualified ios-phone runtime reused only with iPad packaged integration, keyboard/focus/large text/adaptive proof",
+      "physical": "iPad supported health/capture availability and document routes require device receipts, not assumed from phone",
+      "signing": "Same archive plus supported iPad target/resources and exact entitlement inspection",
+      "admission": "OS/device availability is explicit; no health capability inferred from presentation"
+    },
+    {
+      "id": "mac-appstore",
+      "target": {
+        "platform": "macOS",
+        "channel": "App Store",
+        "profile": "Release; macOS14+"
+      },
+      "current": "Native Home/CLI/Settings, receiver/agent/helper/menu bar/loopback/encrypted context; app lives after last window",
+      "cold": "Launch helper/listener/receiver without view; background/last-window/menu-bar/power assertions",
+      "runtime": "SPLIT-NATIVE-HOSTS: candidate RN macOS or reviewed supported alternative; signed packaged offline synthetic operation plus actual existing Mac semantics",
+      "physical": "Real Mac sandbox bookmarks/protected-key/unavailable destination/context/cursor/concurrent generation recovery",
+      "signing": "App Store sandbox/network/bookmarks/keychain/helper code signatures/cross-process identity in exact archive",
+      "admission": "Loopback peer+HTTP Host+Origin and request scope, paired direct trust separately; no obsolete credential/grant state; Release commerce-free"
+    },
+    {
+      "id": "mac-developerid",
+      "target": {
+        "platform": "macOS",
+        "channel": "Developer ID",
+        "profile": "Release; macOS14+"
+      },
+      "current": "Same current Mac outcome; signing channel separately qualified",
+      "cold": "Same listener/helper/menu-bar/receiver cold outcome, with channel-specific executable/identity boundaries",
+      "runtime": "Same candidate Mac presentation decision, own exact signed bundle/runtime receipt",
+      "physical": "Actual installed Developer ID helper/permissions/bookmarks/encrypted-state/upgrade/downgrade checks",
+      "signing": "Exact Developer ID/notarized app and nested helpers/entitlements/install identity; no App Store proof substitution",
+      "admission": "Same local request scope, no new title capture permission inferred from collector/presentation choice"
+    },
+    {
+      "id": "android-play",
+      "target": {
+        "platform": "Android phone",
+        "channel": "Google Play",
+        "profile": "Release; minSdk28 target36; four ABIs"
+      },
+      "current": "Kotlin/Compose :app, HC/SAF/Room/DataStore/AndroidKeyStore/Worker; legacy engine defaults and Rust UniFFI retained",
+      "cold": "HealthMdApplication Hilt Worker factory, exact alarms/boot/update/time/cancel receivers, dataSync services and Play OAuth callback",
+      "runtime": "SPLIT-NATIVE-HOSTS: exact packaged offline RN/Hermes/Effect host, one bounded Worker operation, bridge cancel/expiry/backpressure/teardown, no Metro dependency",
+      "physical": "HC absent/outdated/grants/history/background/route consent, reboot/force-stop/first-unlock/battery/notification/exact alarm/foreground limits",
+      "signing": "Exact Play Release artifact/manifest/DEX/four ABI libraries, signing/install/upgrade identity; real Billing receipts separate",
+      "admission": "Native SDK/special grants/request scope + Play manual10 quota and paid automation; provider feature/configuration scope explicit"
+    },
+    {
+      "id": "android-fdroid",
+      "target": {
+        "platform": "Android phone",
+        "channel": "F-Droid",
+        "profile": "Release; minSdk28 target36; four ABIs"
+      },
+      "current": "Full access; no billing/counter/paywall/third-party provider OAuth/telemetry/Wear; BILLING declaration removed via tools:node. Generic user-directed API Endpoint export remains current; Health Connect remains native.",
+      "cold": "Same allowed Worker/receiver/system routes; no forbidden provider callback or attribution initializer",
+      "runtime": "SPLIT-NATIVE-HOSTS: independent F-Droid JS/native dependency graph/licensing/reproducibility and packaged offline operation",
+      "physical": "Same HC/SAF/Worker/notification lifecycle plus physical full-access/channel downgrade behavior",
+      "signing": "Exact F-Droid APK/merged manifest/DEX+JS bundle dependency/identity exclusions and four ABI libraries; source removal directives alone insufficient",
+      "admission": "Full access still requires native health/destination/request grants. Current generic user-directed API Endpoint exports remain available. Current excluded graphs are third-party provider OAuth, Play commerce, telemetry and Wear; current hosted-account/remote-agent implementation is absent across Android. Future optional hosted cloud on F-Droid is not prohibited by these exclusions: Q-CLOUD-COMMERCE and separate channel/source-purpose/consent/runtime/artifact proofs decide its admission."
+    },
+    {
+      "id": "watchos",
+      "target": {
+        "platform": "watchOS",
+        "channel": "Apple companion distribution",
+        "profile": "Release; watchOS10+"
+      },
+      "current": "Independent native WatchHealthSnapshot HealthKit capture, watch app group, snapshot v1/default freshness4h; ten native widget families",
+      "cold": "Watch app/extensions capture/read snapshot without iPhone React/runtime; disconnected watch behavior explicit",
+      "runtime": "Native capture retained; any projected model bridge must remain bounded/offline and independent of phone UI",
+      "physical": "Actual watch revoke/disconnect/reboot/locked availability/expiry/coverage/energy and queue continuity",
+      "signing": "Exact watch app+widget signed binaries/HealthKit/watch app-group entitlements/install versions",
+      "admission": "Watch-local authorization/availability; phone cannot grant capture or substitute missing snapshot"
+    },
+    {
+      "id": "wear-play",
+      "target": {
+        "platform": "Wear OS",
+        "channel": "Google Play",
+        "profile": "Deferred companion; target1.10.0"
+      },
+      "current": "Phone-authoritative :wear/:wearable-contract; unpublished, not runtime-advertised; native tiles/complications; no independent HC sensor/capture authority",
+      "cold": "Phone transport/snapshot refresh, watch disconnected/stale/reboot/restore and complication lifecycle without mounted phone screen",
+      "runtime": "Any shared snapshot projection preserves native Wear transport/expiry/phone authority; not enabled by phone RN success",
+      "physical": "Pending Pixel Watch and Samsung Galaxy Watch cases; source/emulator counts cannot admit hardware",
+      "signing": "Separate signed Wear bundle/install/store publication gates; not included in F-Droid graph",
+      "admission": "Phone authorization and bounded accepted snapshot only; publication/runtime advertisement remains deferred"
+    }
+  ],
+  "feature_reconciliation": [
+    {
+      "design_id": "U01",
+      "outcome": "Setup, onboarding, permission education, navigation",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Readiness/routes/config protection candidate; preserve native prompts/tab/sidebar/Back/adaptive semantics",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/0",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/0"
+      ],
+      "current_apple": "iPhone four tabs, iPad split navigation, native onboarding/readiness/protected configuration; scene activation drains pending work.",
+      "current_android": "shared readiness/navigation/configuration-protection model; native authorization, rationale, document/camera/notification launches and cold intents",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Fresh/upgrade/onboarded/skip folder/first preview and offers; configuration lock survives restarts",
+        "permissions_and_admission": "HealthKit denied-read uncertainty; HC absent/outdated vs unavailable/revoked; notification/camera/document permissions",
+        "physical_feature_cases": "Cold/warm URL/document/notification and permission-return, TalkBack/VoiceOver/keyboard/RTL/large text/iPad split",
+        "cold_entrypoint": "Route dispatch and readiness before mounted React; no direct external pairing link admission",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U01"
+        ],
+        "outcome": "One readiness route projection with old navigation/state fixtures",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U02",
+      "outcome": "Metric selection and health capture",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Selection/registry IDs/ordering/canonical reducers only for proven equivalence; SDK capture stays native",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/1",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/1"
+      ],
+      "current_apple": "Native HealthKit registry summary/granular/workout/raw-public-record capture. Unsupported/no-record limitations must not assert denied-read certainty.",
+      "current_android": "registry/selection/capture-status projection shareable; HC SDK reads, feature-gated history/background and per-session exercise-route consent remain native",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Partial/cancel/missing/provenance/exact timestamps and paired/workout/attachment records; HRV SDNN/RMSSD, wrist/skin temperature and PHR/clinical keep distinct IDs",
+        "permissions_and_admission": "OS type/public-record availability, Android history/background feature grants and route per-session consent; no denied HealthKit read implies no records",
+        "physical_feature_cases": "Revoke mid-capture, Android exercise-route consent, supported OS versions and honest coverage under real reads",
+        "cold_entrypoint": "Capture operations independent of view; cancel/query teardown obey native lifecycle",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U02"
+        ],
+        "outcome": "One registry selection/capture-status model; leave native capture intact",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U03",
+      "outcome": "Export configuration and previews",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Profiles/date/format/template/frontmatter/path/merge/preview logic candidate; immutable Applev8 and Androidv4/v5 remain distinct public bytes",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/2",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/2"
+      ],
+      "current_apple": "Profiles/date/format/unit/template/frontmatter/preview/rollup/individual/ZIP/write/daily-note native features.",
+      "current_android": "profile/date/format/snapshot/path/preview logic shareable; SAF grants and renderer remain native; preview cannot account quota; zip unsupported and common rollup parity not presumed",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Independent frozen bytes/paths/defaults/timezone/DST/merge/collision/overlap/large-day tests; preview never writes/spends quota",
+        "permissions_and_admission": "Native picker/security-scoped lease vs SAF durable grant; local profile/destination rebind",
+        "physical_feature_cases": "Open/share preview access revoked/unavailable; locales/large text/adaptive date ranges",
+        "cold_entrypoint": "Frozen settings resolution reused for cold caller; UI cannot change accepted snapshot",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U03"
+        ],
+        "outcome": "One frozen profile preview with independent byte expectations",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U04",
+      "outcome": "Export execution, destinations, history and recovery",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Progress/cancel/history/recovery candidate operations; native destinations/spools/commit/account barriers retained; Connected Mac Apple-only, Android CLI separate",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/3",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/3"
+      ],
+      "current_apple": "Durable Files/API/Connected Mac execution/history/retry/cancel/frozen recovery; cancel preserves completed/residual dates; quota once per accepted workflow.",
+      "current_android": "operation/progress/cancel/frozen-request/retry logic shareable; ContentResolver/SAF/atomic publication/private journals/Room/TLS custom headers and foreground coordination native",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Completed dates/residual exact failed dates/source-engine-protocol pins/history readability/once-only quota; crash before/after commit+ack; low disk and cancelled partial publication",
+        "permissions_and_admission": "Granted Files/bookmarks/SAF endpoint/custom headers; native awake/foreground/protected files; no overwrite outside grant",
+        "physical_feature_cases": "Restart/resume/revoke/provider-unavailable/low-disk/foreground expiry and actual installed old-state recovery",
+        "cold_entrypoint": "Cold native recovery opens original journals and reconciles commit+ack before mounting UI",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U04"
+        ],
+        "outcome": "One export progress + cancellation projection preserving frozen residual-date recovery",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U05",
+      "outcome": "Scheduling and automations",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Occurrence/date math and frozen retry decisions shareable; platform scheduling mechanism distinct",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/4",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/4"
+      ],
+      "current_apple": "BGTask registration before startup/APNs scheduled-export wake/foreground catch-up/stable pending notification routing/completed-day and today-refresh/frozen scope and rebind.",
+      "current_android": "occurrence/lookback/frozen residual dates and once-only admission shareable; exact alarms/WorkManager/boot/clock receivers/foreground notifications stay native and screen-independent",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Completed lookback+Today Refresh, DST/midnight/delay/time change/duplicates/disabled/stale workers; cancel retains completed+frozen residual dates",
+        "permissions_and_admission": "iOS scheduling/APNs/notification/protected health policy vs Android alarms/background/exact-alarm/notification grants; wake never unlocks health reads",
+        "physical_feature_cases": "Reboot/update/first unlock/force-stop/clock shift/notification route/expiry; semantic Today Refresh windows not identical mechanism",
+        "cold_entrypoint": "BGTask registered first/readiness waits vs Hilt Worker/BootReceiver; bounded execution without React/Metro",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U05",
+          "C12"
+        ],
+        "outcome": "One schedule configuration plus one cold occurrence, separate lifecycle registration",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U06",
+      "outcome": "Direct CLI/MCP and connected Mac",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Protocol/pairing/jobs/raw transfer/query policy common candidate; Apple query available foreground, Android typed query unavailable; app-protocol profiles distinct",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/5",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/5"
+      ],
+      "current_apple": "Foreground iPhone direct pairing/trust/query/export; native query/context/evidence authority retained. Portable Rust CLI/MCP distinct from bundled Swift Mac local clients.",
+      "current_android": "protocol/job/progress/ack policies shareable; listening/trust/crypto/service lifecycle native; Android typed query unavailable; Android wake channel capabilities not inferred from iPhone APNs",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Selector3 + old Apple1/Android2 pairing/application fixtures; peer-bound checksum/sequence/ack-frontier/retention/expiry/cancel/cursor/source pins",
+        "permissions_and_admission": "Native trust/keychain/keystore/network/listening; explicit request authorization; Android unavailable typed query honest",
+        "physical_feature_cases": "Manual IP/Tailscale/reconnect/process kill/key-protected/foreground loss and old peer interoperability",
+        "cold_entrypoint": "iPhone native foreground direct-start gates; Android dataSync service; Mac receiver/helper lifecycle; no mounted UI dependency",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U06",
+          "C12"
+        ],
+        "outcome": "One direct job/progress policy with old-peer/frozen journal preservation",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U07",
+      "outcome": "Mac companion, agent API, helper and encrypted context",
+      "host_targets": [
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "apple_only",
+      "scope_and_native_boundary": "Current Mac receiver/Home/CLI/Settings/local agent operations candidate; no Android Mac-context implementation; historical exporter/onboarding screens excluded",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/6",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/6"
+      ],
+      "current_apple": "Production Mac Home/CLI/Settings is destination/connection/agent/localAPI/helper/menu-bar receiver. Old exporter/history/metric/schedule/onboarding source not current navigation. App remains alive after last window.",
+      "current_android": "Mac-only native producer outside Android scope; no current Android encrypted Mac context/helper/API authority",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "AES-GCM encrypted context schema1 atomic generations/cursor tamper+stale/concurrent generation/failclosed/readability/crypto-erasure; helper identity and request-scoped routes",
+        "permissions_and_admission": "Loopback-only127.0.0.1/[::1]:17645 peer/Host/Origin, bookmarks/key provider; removed credential/grant/access-activity/profile routes not reinstated",
+        "physical_feature_cases": "Last window/menu bar/helper process restart/key/destination loss/context corruption and actual channel upgrade/downgrade",
+        "cold_entrypoint": "Cold helper/listener/receiver query/evidence startup and expiry without rendering; no unlimited iPhone background query",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-HOSTS",
+        "families": [
+          "U07",
+          "C12"
+        ],
+        "outcome": "One current Mac Home/readiness projection; signed collector/title capability remains separate",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U08",
+      "outcome": "Provider integrations and raw archives",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Common provider status/OAuth policy/raw-corpus projection candidate; Apple feature-gated typed WHOOP vs Android provider-native snapshots/change chain are related distinct products; F-Droid third-party provider OAuth/raw adapters unavailable; generic API Endpoint export and native Health Connect are separate current capabilities",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/7",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/7"
+      ],
+      "current_apple": "Feature-gated WHOOP/provider policy/native OAuth/tokens; Apple typed integration distinct from Android snapshots.",
+      "current_android": "provider policy/status/bounded raw-corpus/provenance shareable; Play-only browser callbacks, tokens, API capture and HC change tokens native; provider-native raw snapshots do not fill primary health summaries",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Replay/refresh/revoke/offline/bounded completeness/manifests/checksums/deletion tombstones/resume; no raw provider replaces primary summary",
+        "permissions_and_admission": "Native secure OAuth browser callback/tokens + caller-selected scopes; Play configured adapters Fitbit/Withings/Oura/WHOOP; Polar/Samsung/Huawei/Garmin raw unsupported; F-Droid has no third-party provider OAuth/native raw adapter implementation; this does not prohibit generic API exports or decide optional successor hosted cloud",
+        "physical_feature_cases": "Cold callback/revoke/token loss/offline/refresh races under explicitly authorized provider qualification; no live connections in inventory",
+        "cold_entrypoint": "Native callback journaling/return can run before UI, state replay fails closed",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U08"
+        ],
+        "outcome": "One provider status projection with native callback adapter, retaining flavor exclusions",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U09",
+      "outcome": "Share My Setup",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Existing common v2 transaction contract can share codec/review/Add/Replace/Undo; availability remains planned on both",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/8",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/8"
+      ],
+      "current_apple": "SharedSetup v2 codec/mapper/Add/Replace/Undo transaction/blocked rebind gates exist; v1 unsupported; device/accessibility/rollback qualification pending.",
+      "current_android": "v2 review/Add/Replace/Undo and destination rebinding shareable; DataStore/document grant/share/open transaction seams native; v1 unsupported; capability remains planned pending physical interoperability/accessibility",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Pinned v2 field-coverage+canonical fixtures; bounded future/v1 rejection; transaction rollback/Undo/unsupported meanings; destination blocked until local rebind; no secret/health/purchase/grant/runtime in file",
+        "permissions_and_admission": "Native Files/AirDrop/share/open vs Sharesheet/OpenDocument/CreateDocument; local protection/destination binding",
+        "physical_feature_cases": "Apple Messages/AirDrop/Files and Android Share/Open/Create cold/warm cross-device matrix plus VoiceOver/TalkBack/large fonts/RTL/rollback",
+        "cold_entrypoint": "Incoming document staged/reviewed before mounted React; safe cancellation and re-entry",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U09",
+          "C10"
+        ],
+        "outcome": "One v2 review/Undo model with frozen field-coverage scenarios",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U10",
+      "outcome": "Clinician PDF reports",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Existing v1 11-metric factual report/reducers/chart/templates candidate; native tagged PDF render/share retain local-only authority",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/9",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/9"
+      ],
+      "current_apple": "Independent local-only 11-metric native clinician PDF:paired BP/calendar/DST/missingness/factual copy/ephemeral name/share/temp teardown; no exporthistory/Practice/cloud/network.",
+      "current_android": "11-metric factual report/time-window/coverage/paired BP model shareable; tagged PDFBox renderer/temp cleanup/FileProvider sharing native; display name ephemeral, no diagnosis or Practice/network/history admission",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Paired BP/calendar/DST/missingness/coverage; ephemeral name absent filename/storage; cancel removes partial file; logical PDF tags; no history/Practice/network/analytics effects",
+        "permissions_and_admission": "Native authorized capture/temporary-file/FileProvider/share grants; no remote clinical admission",
+        "physical_feature_cases": "Actual PDF accessibility/readability/share/cancel/temp cleanup and metric pairing on supported devices",
+        "cold_entrypoint": "Bounded report operation and cancellation cleanup before screen disposal; no background capture implied",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U10"
+        ],
+        "outcome": "One factual report model differential, retaining both native tagged renderers",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U11",
+      "outcome": "Purchases, free-use ledger and channel policy",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Entitlement presentation/admission interface candidate; commerce/accounting remain platform/channel distinct",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/10",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/10"
+      ],
+      "current_apple": "10 free accepted export workflows/lifetime individual-family-upgrade/restore/legacy entitlements. macOS&&!DEBUG free companion no StoreKit initialization.",
+      "current_android": "capability/entitlement presentation and idempotent admission interfaces shareable; real Play Billing price/purchase/restore and persistent quota native; Play manual10 distinct from paid automation; F-Droid unlocked no counter/paywall",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Apple10 accepted workflows individual/family/upgrade/legacy/restore; Play10 manual actions legacy3 cutoff migration lifetime reset; once-only retry/direct IDs; F-Droid no counter; Mac Release no StoreKit",
+        "permissions_and_admission": "Actual native StoreKit/Play product price/receipt/transaction authority; purchase never expands source/health/cloud grants",
+        "physical_feature_cases": "Pending/revoked/offline entitlement/restore/upgrade/downgrade/counter crash consistency and native purchase sheets; real store receipts separate",
+        "cold_entrypoint": "Cold ledger admission and restoration before operation, no purchase bootstrap in Mac/F-Droid host",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U11"
+        ],
+        "outcome": "One channel-aware admission projection with exact old ledger policy",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U12",
+      "outcome": "Privacy, diagnostics, community and release notes",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "shared",
+      "scope_and_native_boundary": "Safe status/error codes/redacted help/localization/release notes candidate; native review/mail/share/external links and channel telemetry policies preserved",
+      "shareability_evidence": "Current contract/outcome compatibility recorded in accepted source inventories only; successor implementation and host parity not proven.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/11",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/11"
+      ],
+      "current_apple": "SettingsTabView is declared in ContentView.swift, with native appearance/privacy/support/release/provider/diagnostics. Allowlisted pricing and safe HK logging source; runtime log absence unverified.",
+      "current_android": "safe status/error/localization/release-note model shareable; external navigation and allowlisted Play telemetry native; F-Droid dependencies/source/identities excluded by artifact gate",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Allowlisted content-free diagnostics, retained release presentation state; raw values/token/folder/provider/Effect errors absent logs/traces/crash/fixtures",
+        "permissions_and_admission": "User-triggered external navigation; native secret/error redaction; Play attribution/privacy policy; F-Droid excluded provider OAuth/Play Billing/telemetry/Wear graphs and their identities absent; no claim that all network/API exports or future cloud are excluded",
+        "physical_feature_cases": "Actual log/support capture sanitization and OS link/review/email affordances with accessibility/localization",
+        "cold_entrypoint": "Cold safe error classification before UI and native startup telemetry flavor exclusion",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U12"
+        ],
+        "outcome": "One privacy/help projection plus forbidden F-Droid bundle identity checks",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U13",
+      "outcome": "Personal data/source readiness and combined timeline",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed P source/domain/detail selectors and cross-domain timeline; existing health app not relabeled",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/12",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/12"
+      ],
+      "current_apple": "PersonalData domain/source readiness and timeline is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed P interfaces only; no existing Android combined personal-domain timeline producer",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Health-only upgrade, overlap/device provenance/freshness/coverage/aggregate-no-event-times/bounded pages/partial gaps",
+        "permissions_and_admission": "Opt-in independent capture/display/query/export/domain/detail grants; no grant expansion/browser acquisition",
+        "physical_feature_cases": "Qualified source access/revoke/device coverage and multi-year accessible bounded timeline after operation proof",
+        "cold_entrypoint": "Independent source service state remains available with no mounted UI",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-DATASTORE",
+        "families": [
+          "U13",
+          "P01"
+        ],
+        "outcome": "One source readiness selector over synthetic provenance/coverage",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U14",
+      "outcome": "Location acquisition/maps/visits/places/outings",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "watchos"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed L maps/visits/places/correction/outing models; workout routes do not establish collector; independent watch queue retained as obligation",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/13",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/13"
+      ],
+      "current_apple": "location maps/visits/watch-session is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed L interfaces only; HC workout route consent is not a background location collector",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Raw-vs-snapped routes/map presentation bound/full export separate/correction+Undo/checkpoint/queue ack",
+        "permissions_and_admission": "Native location accuracy/background/revoke/photo Maps/watch grants; capture and display independent",
+        "physical_feature_cases": "Real mobile/watch background/accuracy/reboot/revoke/battery/coverage and stopped-session behavior",
+        "cold_entrypoint": "Collector/watch queued points and Stop Live Activity without phone React startup",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-LOCATION",
+        "families": [
+          "U14",
+          "L01",
+          "L02",
+          "L03"
+        ],
+        "outcome": "One mobile point inbox/checkpoint or watch acknowledgment, separate physical proof",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U15",
+      "outcome": "Screen Time apps/device states/window titles",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed S usage/title/category/history models; macOS-first collector; iOS historical aggregates admitted only by separate proof, S06 exact sessions pending; Android separate qualification",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/14",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/14"
+      ],
+      "current_apple": "usage Mac titles/full sessions/iOS aggregates is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed S interfaces only; Android collection/qualification pending, no current Android UI producer for these outcomes",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "All available donor historical sessions plus all future observed sessions; aggregate/session/title/exclusion identities explicit; no fabricated sessions from totals",
+        "permissions_and_admission": "Mac supported APIs/permission/sandbox title authorization separate from UI; iOS display/report eligibility versus export; Android usage permission",
+        "physical_feature_cases": "Signed Mac title/idle/transition capture and privacy exclusions; real iOS report/export eligibility; real Android checkpoint/revoke",
+        "cold_entrypoint": "Native collector/checkpoints/cold restart/all-session continuity without React; limited report remains native",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-USAGE-DESKTOP",
+        "families": [
+          "U15",
+          "S01",
+          "S02",
+          "S03",
+          "S06"
+        ],
+        "outcome": "One Mac transition/checkpoint or one mobile aggregate adapter, distinct packets",
+        "status": "proposed child scope; not yet claimed/created/qualified",
+        "additional_decomposition_tasks": [
+          "SPLIT-USAGE-MOBILE"
+        ]
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U16",
+      "outcome": "Combined/selected export, import and schedule configuration",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed P combined/selected export/import/schedule preview, not current health-only exporter/setup importer",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/15",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/15"
+      ],
+      "current_apple": "combined exports/import/schedules is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed P interfaces only; existing health-only exports/setup imports do not establish combined donor/history import authority",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Stable accepted scope/strict-partial receipts/history coverage/import repeat-crash/identity/conflict/Undo/legacy disclosure",
+        "permissions_and_admission": "Per-source-domain-detail permission/donor authorization/destination grant; UI/CLI/MCP/schedule same operations",
+        "physical_feature_cases": "Real archive/donor staging handoff/revoke/retry/low-disk and exact old health-only upgrade",
+        "cold_entrypoint": "Frozen source scope and atomic import/Undo recovery without UI",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-MIGRATION",
+        "families": [
+          "U16",
+          "P02",
+          "P03"
+        ],
+        "outcome": "One donor archive validator/staging/conflict preview with independent fixtures",
+        "status": "proposed child scope; not yet claimed/created/qualified",
+        "additional_decomposition_tasks": [
+          "SPLIT-DATASTORE",
+          "SPLIT-NATIVE-FEATURES"
+        ]
+      },
+      "proof_status": "unqualified; planning reconciliation only"
+    },
+    {
+      "design_id": "U17",
+      "outcome": "Cloud account, destination and retained archive",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed H account/destination/archive UI + separately authenticated hosted dashboard; local account-free remains",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/16",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/16"
+      ],
+      "current_apple": "cloud account/destination/archive is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed H interfaces only; existing local API endpoint/provider OAuth does not establish hosted account/upload/archive grants",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Enrollment/account-region switch/frozen jobs/retention/archive/indexing readiness/storage/portability and retry receipt states",
+        "permissions_and_admission": "Secure system-auth/device credentials, explicit source-purpose upload/server-readable consent; no upload on sign-in or purchase; public website no payload authority",
+        "physical_feature_cases": "Actual authenticated device background retry/account switch/source revoke and separate deployed tenant/archive receipts",
+        "cold_entrypoint": "Native queued upload frozen credentials/source identity and bounded cold retry independent of UI",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-CLOUD-INGEST",
+        "families": [
+          "U17",
+          "H05"
+        ],
+        "outcome": "One frozen Cloud destination/account-state preview over synthetic ingest receipts",
+        "status": "proposed child scope; not yet claimed/created/qualified"
+      },
+      "proof_status": "unqualified; planning reconciliation only",
+      "channel_admission_status": "Proposed host targets identify proof scope only. F-Droid optional hosted-cloud/agent channel policy remains open under Q-CLOUD-COMMERCE with independent source-purpose/owner/device/client consent and artifact/runtime qualification; current provider/billing graph exclusions do not establish a blanket cloud prohibition."
+    },
+    {
+      "design_id": "U18",
+      "outcome": "Agent connections, consent and lifecycle",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid",
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "public_outcome_classification": "planned",
+      "scope_and_native_boundary": "Proposed H named-client consent/revoke/lifecycle UI; local pairing/loopback does not qualify remote agents",
+      "shareability_evidence": "Design proposal only; no current producer admitted.",
+      "accepted_evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/17",
+        "docs/migration/effect-refactor/inventories/native-android.json#/feature_rows/17"
+      ],
+      "current_apple": "cloud agent consent/grant/revoke is successor intent, not established shipped Apple UI/API. Current Health.md/localAPI must not be relabeled.",
+      "current_android": "proposed H interfaces only; direct pairing authorization does not establish hosted named-client consent/refresh/revoke/erasure qualification",
+      "proof_obligations": {
+        "runtime_and_signing": "Apply exact host_targets runtime/signing obligations in host_proof_catalog; each channel gets independent artifact fingerprint.",
+        "state_and_frozen_expectations": "Exact-client auth/expiry/renewal/restart/step-up/current grant, narrow/denied/full artifact, audit/revoke/retention/delete/backup status; downstream copies honest",
+        "permissions_and_admission": "Owner/device/source/recipient grants independent; OAuth/refresh only as actual client requires; effective detail/precision/future scope explicit",
+        "physical_feature_cases": "Actual named-client read/renewal/revoke/erasure and accessible notification flows; external client/deployed gates separate",
+        "cold_entrypoint": "Revocation/current-grant enforcement independent of UI/cached view and server restart",
+        "portable_feature_check": "Independent operation/model/frozen fixture assertions before host integration; test/fixture identities dereferenced from accepted input pins.",
+        "accessibility": "Observable action wiring, both themes/large text/RTL/reduced motion/screen reader/keyboard+Back+focus/adaptive layouts as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-CLOUD-GRANTS",
+        "families": [
+          "U18",
+          "H05",
+          "H06"
+        ],
+        "outcome": "One effective grant/consent preview for a named client with synthetic denied/narrow fixtures",
+        "status": "proposed child scope; not yet claimed/created/qualified",
+        "additional_decomposition_tasks": [
+          "SPLIT-CLOUD-LIFECYCLE"
+        ]
+      },
+      "proof_status": "unqualified; planning reconciliation only",
+      "channel_admission_status": "Proposed host targets identify proof scope only. F-Droid optional hosted-cloud/agent channel policy remains open under Q-CLOUD-COMMERCE with independent source-purpose/owner/device/client consent and artifact/runtime qualification; current provider/billing graph exclusions do not establish a blanket cloud prohibition."
+    }
+  ],
+  "explicit_outcome_differences": [
+    {
+      "rows": [
+        "U02"
+      ],
+      "classification": "platform_distinct",
+      "outcomes": "HK HRV SDNN vs HC/WHOOP RMSSD; wrist vs skin temperature; HK clinical/medication/mood/archive vs HC PHR/FHIR/activity intensity/planned workouts/native context",
+      "rule": "Use distinct identities/platform sections; equivalence classes remain registry platform_exact_or_unavailable/mapped_alias/platform_distinct, never invented placeholders."
+    },
+    {
+      "rows": [
+        "U03"
+      ],
+      "classification": "apple_only",
+      "outcomes": "Current Apple ZIP; Android loose files",
+      "future": "No Android ZIP target invented; capability gap explicit."
+    },
+    {
+      "rows": [
+        "U03"
+      ],
+      "classification": "planned",
+      "outcomes": "Apple range summary available; Android planned first unifiedv9 writer",
+      "future": "U03/render packet must keep frozenv4/v5 unchanged and independently version new profile."
+    },
+    {
+      "rows": [
+        "U03",
+        "U04"
+      ],
+      "classification": "platform_distinct",
+      "outcomes": "Apple healthmd.health_data v8 vs Android frozenv4/analyticalv5; APIv1 frozenv4 vs reviewed Apple profile; commonv9 proposal",
+      "rule": "Existing exact bytes/versioned profiles stay authoritative; renderer extraction is separate from public profile convergence."
+    },
+    {
+      "rows": [
+        "U04",
+        "U06"
+      ],
+      "classification": "apple_only",
+      "outcomes": "Connected Mac destination/agent API and encrypted context",
+      "android": "Android desktop route is portable CLI/direct phone; no Connected Mac destination inferred."
+    },
+    {
+      "rows": [
+        "U06"
+      ],
+      "classification": "unavailable",
+      "outcomes": "Android typed query",
+      "reason": "Current Android application authority does not implement it; separate U06/protocol/query child required."
+    },
+    {
+      "rows": [
+        "U05",
+        "U06"
+      ],
+      "classification": "planned",
+      "outcomes": "Android FCM direct push wake and Play/F-Droid degradation",
+      "future": "Separate source/transport/physical proof; existing APNs wake stays health-free and cannot authorize reads."
+    },
+    {
+      "rows": [
+        "U08"
+      ],
+      "classification": "platform_distinct",
+      "outcomes": "Apple feature-gated typed WHOOP sidecar versus Play provider-native raw snapshots/change tokens/tombstones",
+      "fdroid": "Unavailable compiled provider/telemetry source; no OAuth client or identity in candidate bundle."
+    },
+    {
+      "rows": [
+        "U09"
+      ],
+      "classification": "planned",
+      "outcomes": "Common v2 contract and native transaction seams exist but physical interoperability/accessibility outstanding",
+      "rule": "Prose shared outcome is not available capability; v1 unsupported and destinations blocked until local rebind."
+    },
+    {
+      "rows": [
+        "U11"
+      ],
+      "classification": "platform_distinct",
+      "outcomes": "Apple10 accepted workflows with individual/family/upgrade/restore; Play10 manual actions with legacy3 migration/lifetime reset and paid automation; F-Droid full-access/no ledger; Mac Release no StoreKit",
+      "rule": "Do not merge counters/purchase policies or infer price/receipt availability."
+    }
+  ],
+  "extension_reconciliation": [
+    {
+      "id": "EXT-PHONE-WIDGETS",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "classification": "shared",
+      "current_or_proposed_scope": "Apple four WidgetKit families vs Android four Glance families; Steps vs Stand Hours distinct; Android has no Apple lock-screen measurement/redaction equivalent",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Native snapshot schema/group/no-backup storage, freshness/partial/unavailable fallback and metric semantics",
+        "permissions_admission": "Native HK/HC grants; Android missing background grant uses retained foreground snapshot",
+        "physical_and_cold": "Cold refresh/locale/timezone/date changes without app view; stale/redacted/locked/revoke real devices",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U02",
+          "U12"
+        ],
+        "outcome": "One widget projection/family preserving native family IDs",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-WATCH-CAPTURE",
+      "host_targets": [
+        "watchos"
+      ],
+      "classification": "apple_only",
+      "current_or_proposed_scope": "Independent watch native HealthKit dashboard/snapshot v1, separate watch appgroup/default freshness4h; no iPhone runtime dependence",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Watch-local snapshot expiry/queue/state across disconnect/reboot",
+        "permissions_admission": "Watch-local authorized public records and availability; no phone-authority substitution",
+        "physical_and_cold": "Real watch isolated capture/disconnect/revoke/locked/reboot/battery; native launch without phone UI",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U02"
+        ],
+        "outcome": "One independent watch snapshot model boundary",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-WATCH-WIDGETS",
+      "host_targets": [
+        "watchos"
+      ],
+      "classification": "apple_only",
+      "current_or_proposed_scope": "Ten watch widget families retain native HealthKit/app-group/WidgetKit lifecycles",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Each existing family identifier/metric/snapshot and freshness preserved",
+        "permissions_admission": "Watch-local data grants/complication eligibility explicit",
+        "physical_and_cold": "Cold widget timeline refresh/offline/stale/expiry/coverage and accessibility on actual watch",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U02",
+          "U12"
+        ],
+        "outcome": "One watch widget family over retained snapshot",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-WEAR-SNAPSHOT",
+      "host_targets": [
+        "wear-play"
+      ],
+      "classification": "planned",
+      "current_or_proposed_scope": "Tiles + ten complications source exists; phone-authoritative; published=false/runtimeAdvertised=false; target1.10.0; F-Droid excluded",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Native wearable-contract snapshot/version/expiry/phone transport sequencing and stale/disconnect states",
+        "permissions_admission": "Accepted phone health grants; no independent Wear capture claim",
+        "physical_and_cold": "Cold phone/watch reboot/disconnect/missing snapshot; Pixel Watch and Samsung real hardware; separate signed artifact/store gates",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U02",
+          "U12"
+        ],
+        "outcome": "One phone-authoritative Wear snapshot adapter, keep publication deferred",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-PROGRESS",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "classification": "apple_only",
+      "current_or_proposed_scope": "Apple CLI export ActivityKit Live Activity; Android dataSync foreground-service notification is a related distinct mechanism",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Stable activity/channel IDs, progress/job binding/cancel/completion/privacy/expiry",
+        "permissions_admission": "Notification/Live Activity policy and bounded foreground service authority",
+        "physical_and_cold": "Cold notification tap/cancel/expiry/locale change/app-kill; no payload leak or permission-derived health authority",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U04",
+          "U05"
+        ],
+        "outcome": "One progress projection retaining native ActivityKit/notification registration",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-AUTOMATION",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "classification": "shared",
+      "current_or_proposed_scope": "Seven actual accepted Apple AppIntent operation names; Android AutomationReceiver explicit broadcasts/launcher affordances; distinct native arguments/results",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Named-profile trimmed/case-insensitive resolution, missing/rebind no fallback; native quota/history/frozen state",
+        "permissions_admission": "Explicit request/current native health/destination/paid automation policies",
+        "physical_and_cold": "One cold AppIntent and one cold Android Worker/broadcast without React/Metro; locked/reboot/first-unlock/expiry/retry",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-HOSTS",
+        "families": [
+          "U05",
+          "C12"
+        ],
+        "outcome": "Separate one native automation operation per host",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-SCHEDULE-WAKE",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "classification": "shared",
+      "current_or_proposed_scope": "Strong existing completed-day/TodayRefresh/missed-date/recovery/native notification routing retained; APNs health-free; Android direct push planned",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Frozen occurrence/residual dates/accounting/duplicate/disable/stale worker, notification pending routes",
+        "permissions_admission": "iOS APNs/native permission/available health; Android alarm/background/notification grants",
+        "physical_and_cold": "Cold BGTask+dependency readiness, boot/update/clock alarms, delivery expiry/first-unlock/force-stop physical cases",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U05",
+          "C12"
+        ],
+        "outcome": "One frozen scheduled occurrence with native route adapter",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-DOCUMENT-URL",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad",
+        "android-play",
+        "android-fdroid"
+      ],
+      "classification": "shared",
+      "current_or_proposed_scope": "Current Shared Setup v2 document ingress, native QR/camera pairing and Play OAuth callbacks retained with flavor boundaries",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Bounded staged document/transaction/Undo and OAuth callback replay; reject v1/unapproved direct external pairing routes",
+        "permissions_admission": "Local destination/secure callback/current grants; imported setup cannot transfer secrets or authority",
+        "physical_and_cold": "Cold/warm open/document/share/notification route before React; Android F-Droid absent OAuth; physical accessibility",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-FEATURES",
+        "families": [
+          "U01",
+          "U08",
+          "U09",
+          "C10"
+        ],
+        "outcome": "One cold document review ingress without automatic mutation",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-MAC-HELPER",
+      "host_targets": [
+        "mac-appstore",
+        "mac-developerid"
+      ],
+      "classification": "apple_only",
+      "current_or_proposed_scope": "Native menu-bar/last-window background receiver/bundled Swift healthmd and healthmd-mcp/local loopback/encrypted context remain separate from portable Rust CLI",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Cross-process signed/install identity/listener/helper restart/atomic context generations/retained reader and cleanup",
+        "permissions_admission": "Loopback peer/HTTPHost/Origin/bookmark/keychain admission; no obsolete token/profile/credential/grant reconstruction",
+        "physical_and_cold": "Cold helper/listener without window; channel-specific signed sandbox, key/destination denial and upgrade/downgrade",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-NATIVE-HOSTS",
+        "families": [
+          "U07",
+          "C12"
+        ],
+        "outcome": "One signed helper/receiver startup proof distinct from Mac presentation",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-LOCATION-WATCH-STOP",
+      "host_targets": [
+        "ios-phone",
+        "watchos"
+      ],
+      "classification": "planned",
+      "current_or_proposed_scope": "Proposed independent location watch queue/ack and native Stop Live Activity; existing health widget/activity not collector proof",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "Bounded point queue/ack/checkpoint/session stop/raw-vs-snapped recovery",
+        "permissions_admission": "Independent watch/mobile location grants/background/accuracy/source scope",
+        "physical_and_cold": "Cold capture/Stop without React; disconnect/kill/reboot/revoke/battery and actual queue continuity",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-LOCATION",
+        "families": [
+          "U14",
+          "L03"
+        ],
+        "outcome": "One watch queue acknowledgment or one native Stop action",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    },
+    {
+      "id": "EXT-LIMITED-USAGE-REPORT",
+      "host_targets": [
+        "ios-phone",
+        "ios-ipad"
+      ],
+      "classification": "planned",
+      "current_or_proposed_scope": "Proposed native iOS Screen Time limited report; historical aggregate/display/export eligibility separate; S06 exact historical sessions stays pending",
+      "evidence": [
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "proof_obligations": {
+        "runtime_signing": "Exact host runtime/signing proof catalog applies; native extension bundle remains independently qualified.",
+        "state": "No events fabricated from totals; safe eligible export versus display-only aggregate completeness",
+        "permissions_admission": "Real system entitlement/permission/source eligibility; app acquisition/browser/input exclusions",
+        "physical_and_cold": "Cold limited-report extension and actual signed eligibility/revoke/display/export checks",
+        "accessibility": "Native extension action/labels/themes/large text/readability/screen-reader integration as applicable."
+      },
+      "next_bounded_target": {
+        "existing_decomposition_task": "SPLIT-USAGE-MOBILE",
+        "families": [
+          "U15",
+          "S06"
+        ],
+        "outcome": "One native limited aggregate report adapter",
+        "status": "proposed child scope, no implementation or qualification"
+      },
+      "proof_status": "unqualified"
+    }
+  ],
+  "instruction_and_evidence_conflicts": [
+    {
+      "id": "INSTRUCTION-SUCCESSOR",
+      "kind": "staged implementation tension, no present conflict",
+      "evidence": [
+        "AGENTS.md",
+        "docs/migration/effect-refactor/native-ui.md",
+        "docs/migration/effect-refactor/decisions/local-architecture.md"
+      ],
+      "issue": "Current component rules retain Rust/Swift/Kotlin/build/schema authorities; selected successor removes maintained Rust and uses RN phone UI only after scoped proof/retirement gates. Cross-platform policy allows native conventions while native-ui selects shared RN presentation.",
+      "resolution": "Retain current native SDK/lifecycle/security/token/font/contract rules; deliberate future component instruction updates and independently qualified successor required. No exemption or source deletion in this task.",
+      "affected": [
+        "F03",
+        "F06",
+        "U01",
+        "U02",
+        "U03"
+      ]
+    },
+    {
+      "id": "DOCUMENTATION-MAC",
+      "kind": "source/documentation discrepancy",
+      "evidence": [
+        "docs/features/feature-inventory.md",
+        "docs/migration/effect-refactor/inventories/native-apple.json#/design_mapping/6"
+      ],
+      "issue": "Feature inventory lists historical Mac exporter/history/metric/schedule/onboarding source as product surfaces. Accepted actual Mac navigation is Home/CLI/Settings receiver/agent.",
+      "resolution": "U07 preserves actual navigation and local helper/context; historical source presence is not authority to reinstate screens.",
+      "affected": [
+        "U07"
+      ]
+    },
+    {
+      "id": "DOCUMENTATION-SETUP",
+      "kind": "availability discrepancy",
+      "evidence": [
+        "docs/features/feature-parity.md",
+        "docs/migration/effect-refactor/inventories/native-android.json#/capability_subset"
+      ],
+      "issue": "Prose labels shared outcome but machine capability and accepted qualification remain planned.",
+      "resolution": "Preserve planned availability, v2-only/blocked rebind until exact physical/accessibility/rollback receipts.",
+      "affected": [
+        "C10",
+        "U09"
+      ]
+    },
+    {
+      "id": "DOCUMENTATION-WATCH",
+      "kind": "authority discrepancy",
+      "evidence": [
+        "docs/features/feature-parity.md",
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions/watch",
+        "docs/migration/effect-refactor/inventories/native-android.json#/channels/wear"
+      ],
+      "issue": "Broad wearable prose obscures independent Watch HealthKit versus phone-authoritative/deferred Wear.",
+      "resolution": "Independent native watch capture and Wear publication/phone authority remain separate, no sensing parity.",
+      "affected": [
+        "U02",
+        "F10"
+      ]
+    },
+    {
+      "id": "DOCUMENTATION-AUTOMATION-COMMERCE",
+      "kind": "prose/source detail discrepancy",
+      "evidence": [
+        "docs/features/feature-parity.md",
+        "docs/migration/effect-refactor/inventories/native-apple.json#/surface_extensions/app_intents",
+        "docs/migration/effect-refactor/inventories/native-apple.json#/commerce"
+      ],
+      "issue": "Prose cites nine intents and subscriptions; accepted producer list has seven actual AppIntent operations and enumerated lifetime individual/family/upgrade products.",
+      "resolution": "Preserve exact accepted source entrypoint/product identities; broader counts or product shapes require separate source/commerce evidence, not inferred support.",
+      "affected": [
+        "U05",
+        "U11"
+      ]
+    },
+    {
+      "id": "QUOTA-RESET-SCOPE",
+      "kind": "design/source accounting distinction requiring precise successor test",
+      "evidence": [
+        "docs/architecture/javascript-unified-layer-design-reference.md#workstream-acceptance-ledger",
+        "docs/migration/effect-refactor/inventories/native-android.json#/native_state_and_ports"
+      ],
+      "issue": "U11 requires no quota reset/double count on upgrade/retry; accepted Android FreemiumPolicy deliberately resets accumulated free usage on lifetime purchase. These must not be conflated with an accidental app-upgrade/retry counter reset.",
+      "resolution": "Preserve intentional current lifetime-purchase reset and once-only action/job ledger. The bounded U11 admission child must pin the explicit purchase transition separately from app upgrade/retry/downgrade tests; changing commerce semantics requires deliberate scoped authority.",
+      "affected": [
+        "U11"
+      ],
+      "blocks": "Only unresolved U11 ledger policy changes, not other source/model work.",
+      "design_row_label": "U11: Purchases, free-use ledger and channel policy; exact row authority: python3 docs/migration/effect-refactor/manage.py reference U11"
+    }
+  ],
+  "runtime_and_source_choices": [
+    {
+      "id": "RN-HERMES-HOST",
+      "status": "unresolved native compatibility",
+      "required": "Exact React/RN/Hermes/Effect versions, SDK/bridge/global/Release bundle/packaged offline/cancellation/backpressure/teardown and cold runtime entrypoints per host/channel. Portable Node pins are not native host pins.",
+      "next": "SPLIT-NATIVE-HOSTS",
+      "affected": [
+        "F03",
+        "F04",
+        "U01",
+        "U05"
+      ],
+      "blocks": "Only dependent native host/presentation admission; portable core/model/synthetic work continues."
+    },
+    {
+      "id": "MAC-PRESENTATION",
+      "status": "RN macOS candidate requiring proof",
+      "required": "Candidate shared presentation or concrete supported alternative preserving Home/CLI/Settings/menu bar/helper/loopback/encrypted state under both signed channels; minimum OS changes need separate decision.",
+      "next": "SPLIT-NATIVE-HOSTS",
+      "affected": [
+        "U07",
+        "F03"
+      ],
+      "blocks": "Mac presentation/retirement only."
+    },
+    {
+      "id": "MAC-TITLE-SOURCE",
+      "status": "unresolved source/API/permission/channel admission",
+      "required": "Signed macOS collector supported title/idle/transition APIs and sandbox permissions independently of presentation; do not infer title capture from RN success.",
+      "next": "SPLIT-USAGE-DESKTOP",
+      "affected": [
+        "U15",
+        "S01",
+        "S02"
+      ],
+      "blocks": "Title/source capability only, no unrelated UI/core work."
+    },
+    {
+      "id": "NATIVE-COLD-RUNTIME",
+      "status": "entrypoint-specific design/proof required",
+      "required": "Bounded native host runtime that starts without React/Metro and respects AppIntent/BGTask/Worker/foreground limits/protected data/expiry/cancel/recovery; native registration remains owner.",
+      "next": "SPLIT-NATIVE-HOSTS",
+      "affected": [
+        "F04",
+        "U04",
+        "U05",
+        "U06"
+      ],
+      "blocks": "Cold successor operations only; existing native production paths retained."
+    },
+    {
+      "id": "FDROID-JS-GRAPH",
+      "status": "unqualified exclusions/licensing/reproducibility",
+      "required": "Prove RN/JS/native/bundle dependencies and identifiers exclude billing/telemetry/provider OAuth/Wear; merged artifact permissions remain unrun, BILLING source directive removal does not prove artifact.",
+      "next": "SPLIT-NATIVE-HOSTS",
+      "affected": [
+        "F06",
+        "U08",
+        "U11",
+        "U12"
+      ],
+      "blocks": "F-Droid host admission only."
+    },
+    {
+      "id": "FUTURE-SOURCE-ADMISSION",
+      "status": "proposed only",
+      "required": "Separate health/location/usage capture-display-query-export grants, iOS S06 historical session follow-up, Android usage/location qualification, optional H cloud owner/device/client auth and real client/service receipts.",
+      "next": "SPLIT-DATASTORE / SPLIT-LOCATION / SPLIT-USAGE-MOBILE / SPLIT-CLOUD-GRANTS",
+      "affected": [
+        "U13",
+        "U14",
+        "U15",
+        "U16",
+        "U17",
+        "U18"
+      ],
+      "blocks": "Only specific new source/client/product admission; existing health/local operations remain account-free."
+    },
+    {
+      "id": "FDROID-OPTIONAL-CLOUD",
+      "status": "open channel/commercial/source-purpose admission",
+      "required": "Q-CLOUD-COMMERCE must resolve future optional hosted-account/archive/agent channel policy for F-Droid separately from current third-party provider OAuth/Play Billing/telemetry/Wear exclusions. Retain generic current API Endpoint export. No automatic upload/read grant or inherited donor-channel prohibition.",
+      "next": "Q-CLOUD-COMMERCE; U17/H05 and U18/H05/H06 bounded channel/consent proof",
+      "affected": [
+        "U17",
+        "U18",
+        "F06"
+      ],
+      "blocks": "Only future hosted F-Droid channel admission; generic API export, native health and unrelated portable work continue."
+    }
+  ],
+  "authority_and_state_retention": {
+    "Apple": "Swift/Rust current implementation; schema8/export profiles/queryfamily1/encryptedcontext1; iPhone journal6 readers1..6; keychain/bookmarks/protected data/local API/native schedules/notifications/AppIntents preserved.",
+    "Android": "Kotlin legacy default modes with packaged Rust reference/UniFFI, debug override excluded Release; frozenv4/analyticalv5/APIv1frozenv4, directjournal3 readers1..3, Room6, scheduledAPIjournal1, DataStore/KeyStore/Wear native snapshot remain.",
+    "SharedSetup": "v2 only; v1 unsupported; canonical field coverage/frozen scenarios remain independently pinned in accepted inventories; no portable secrets/grants or unbound destination admission.",
+    "durability": "Do not relocate stores, merge quota ledgers, change public bytes/entrypoints, erase Rust/reference readers or delete old journals on source reconciliation; same commit+ack/frozen request/idempotent admission/recovery authority until separately proved.",
+    "reports": "Both local-only tagged native PDFs, shared factual11-metric spec/paired BP/ephemeral name/temp cleanup; no Practice/cloud/history/network/analytics admission."
+  },
+  "packet_sequence": {
+    "first_host_packet": "SPLIT-NATIVE-HOSTS at most six children: iOS Release, Android Play Release, F-Droid graph, Mac candidate host, one cold AppIntent, one cold Android Worker. Physical/signed/store matrices separate.",
+    "first_feature_packet": "SPLIT-NATIVE-FEATURES at most six initial selection/export-progress/recovery/schedule outcomes; stable native operation/port wiring first. Other U/extensions remain explicit follow-on coverage.",
+    "future_packets": "Per-row existing decomposition/family targets describe bounded next scope, not created tasks or implementation authorization. Each packet must declare remaining coverage/next trigger.",
+    "reservation_policy": "Future single writer for each Xcode/Gradle graph, lockfile, generated bridge/public primitive/interface; none reserved by this inventory."
+  },
+  "consumers": [
+    "Apple iPhone/iPad/macOS/watch/widgets/ActivityKit/AppIntents/native API/bundled Swift helper clients",
+    "Android Play/F-Droid phone/Glance/HC/Workers/receivers and deferred Wear/native contract",
+    "packages/healthmd-core-rust/current Rust UniFFI/reference and portable apps/cli protocol/MCP clients",
+    "packages/contracts independent registry/capability/profile/protocol/setup/report fixtures",
+    "website generated docs/capabilities and pinned external Obsidian export consumer",
+    "Practice isolated clinical boundary; Wake notification-only; future cloud/dashboard/named clients separately admitted"
+  ],
+  "measurements": {
+    "native_startup_bridge_memory_energy_cold_limits": "unmeasured",
+    "budgets": "proposed; per-host runtime physical measurements and artifact graph proof required"
+  },
+  "qualification_status": {
+    "reconciliation": "planning complete pending independent review",
+    "native_runtime": "unqualified",
+    "host_integration": "unqualified",
+    "physical_device": "unqualified",
+    "signed_distribution": "unqualified",
+    "store_publication": "unqualified",
+    "new_sources_cloud_clients": "proposed/unqualified",
+    "parent_families_phase_retirement": "remain open; inventory cannot close them"
+  },
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data."
+}
