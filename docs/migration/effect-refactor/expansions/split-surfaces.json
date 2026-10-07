@@ -1,0 +1,3022 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-SURFACES",
+  "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+  "proof_class": "planning",
+  "status": "pending_independent_review",
+  "outcome": "Six bounded next CLI/MCP surface boundaries; one common operation owner and current production surface semantics retained.",
+  "max_children": 6,
+  "selected_design_ids": [
+    "C11",
+    "O01",
+    "O03",
+    "O07",
+    "F01",
+    "F09"
+  ],
+  "input_pins": [
+    {
+      "path": "AGENTS.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 6129,
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "GLOSSARY.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3868,
+      "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 13361,
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 284562,
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "path": "docs/migration/effect-refactor/core-cli.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 5578,
+      "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749"
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 10054,
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/cli.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 347600,
+      "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 95633,
+      "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 12304,
+      "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 26431,
+      "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a"
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 145883,
+      "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 33855,
+      "sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 27886,
+      "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4"
+    },
+    {
+      "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 34945,
+      "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 124059,
+      "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602"
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 139864,
+      "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f"
+    },
+    {
+      "path": "packages/healthmd-core-ts/AGENTS.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 860,
+      "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67"
+    },
+    {
+      "path": "apps/cli/docs/typescript-candidate.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 7580,
+      "sha256": "1b7898390cf04c276a285b60fee5c09215640ca95618b94c9abb73f756c3490b"
+    },
+    {
+      "path": "apps/cli/package.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 880,
+      "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2"
+    },
+    {
+      "path": "apps/cli/package-lock.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 28291,
+      "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf"
+    },
+    {
+      "path": "apps/cli/scripts/build-candidate.mjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 1574,
+      "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa"
+    },
+    {
+      "path": "apps/cli/scripts/check-candidate.mjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 35746,
+      "sha256": "aca2e32e0047fc397c9bde572f3464b17a4482589d6a1a986a6b0bda3efd8de3"
+    },
+    {
+      "path": "apps/cli/tsconfig.build.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 144,
+      "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b"
+    },
+    {
+      "path": "apps/cli/tsconfig.test.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 123,
+      "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 110543,
+      "sha256": "7f6be243c49085ea188adf739b829d968d8330b196a7e2317a043d4a8e2ddf32"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 42824,
+      "sha256": "f71d47555df981fbbc27f70bec6746a40846b6287f3f1200f2d9a6aac95456e0"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 27301,
+      "sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 17008,
+      "sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 29781,
+      "sha256": "7ffedba6a33ee4111a993c5b6091da1b309d6e3ccc02d7a3ed64374b42e62afb"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 17363,
+      "sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 2531,
+      "sha256": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-operations/src/registry.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 52174,
+      "sha256": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/application.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 58209,
+      "sha256": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-operations/src/model.rs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 1129,
+      "sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad"
+    },
+    {
+      "path": "apps/cli/src/cli/query.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 7155,
+      "sha256": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2"
+    },
+    {
+      "path": "apps/cli/src/mcp/query.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 6487,
+      "sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/operations/normalize.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 2808,
+      "sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/operations/query.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 8929,
+      "sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 116261,
+      "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d"
+    },
+    {
+      "path": "apps/cli/tests/cli-query-vectors.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 4412,
+      "sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2"
+    },
+    {
+      "path": "apps/cli/tests/mcp-query-vectors.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3586,
+      "sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154"
+    },
+    {
+      "path": "apps/cli/tests/candidate-api-vectors.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3176,
+      "sha256": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6"
+    }
+  ],
+  "source_symbol_locators": [
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 105,
+      "symbol": "enum Command",
+      "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 136,
+      "symbol": "enum McpCommand",
+      "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 70,
+      "symbol": "struct Cli",
+      "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 97,
+      "symbol": "enum Transport",
+      "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 218,
+      "symbol": "struct SetupCodexArgs",
+      "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+      "line": 1087,
+      "symbol": "async fn setup_codex",
+      "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 252,
+      "symbol": "fn query(",
+      "line_sha256": "66071374dc5ff4ed7f345f7607cf1adfd9a3bc88dd232f83b668e0b505132b5d",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 375,
+      "symbol": "fn group(",
+      "line_sha256": "86cdbda91f0db9c5849ffb6f1c5ab81d0e78ed1aabbdcb0e1270b2a244cc2d1c",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 502,
+      "symbol": "fn command_error(",
+      "line_sha256": "0d538218a16468541dd4bd9a570bbca2628bae29da5e9fc9e1a587cc9c45549c",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 551,
+      "symbol": "fn parser_error(",
+      "line_sha256": "62cf753feaf302afa842be02c798c6fb4f666d54c6ea14e2b17ddfe743083718",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 852,
+      "symbol": "fn command_path(",
+      "line_sha256": "1a1c6cf9b0a086b1077aa000ce86d12e7857fe25e574fd4148fae678728de90f",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 18,
+      "symbol": "MAXIMUM_INPUT_BYTES",
+      "line_sha256": "81383545dfe0ccd3eb21b763bd550565ba3bd099ade263e4f5d1b123b83b35ce",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 19,
+      "symbol": "MAXIMUM_IN_FLIGHT_REQUESTS",
+      "line_sha256": "ccd1e59284f5c0c09ff5b6f6782a1b6d90292d2910583da4133ce7084b7482ca",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 202,
+      "symbol": "fn stdio_dispatcher(",
+      "line_sha256": "236706db6cf36c0d251a03ebce42a15be15df453f7bdcd5412ba5187090d2540",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 243,
+      "symbol": "async fn serve_stdio(",
+      "line_sha256": "0af080862a4752c03c344c3de39a58302948a8b2de8a19208f05604f7d01bb27",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 491,
+      "symbol": "async fn write_line(",
+      "line_sha256": "59c74bd5eb283413afe47f6753516aa638d4cbdc20279b00921f3565bac516ee",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 505,
+      "symbol": "fn rpc_error_response(",
+      "line_sha256": "ba4f487dba2c5f6bd9eb070701d1faeb82fcceaa374803abe65b5767c97c200f",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 516,
+      "symbol": "fn at_capacity(",
+      "line_sha256": "6b47f66bbf2586733ba3320627c6b0a8d4d489561c894c5764f237971f9b889b",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 11,
+      "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+      "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 12,
+      "symbol": "MAXIMUM_USED_REQUEST_IDS",
+      "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 13,
+      "symbol": "const PROTOCOLS",
+      "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 60,
+      "symbol": "async fn handle_with_caller(",
+      "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 199,
+      "symbol": "fn initialize(",
+      "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 263,
+      "symbol": "fn request_id_key(",
+      "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 280,
+      "symbol": "fn response_success(",
+      "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 286,
+      "symbol": "fn response_error(",
+      "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "line": 22,
+      "symbol": "fn resolve(",
+      "line_sha256": "5d1a55fac568d0e6f2702d7d94ebbeefd63b5a0bea438a974d0b6cc300c129d9",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "line": 42,
+      "symbol": "fn render(",
+      "line_sha256": "16dddc8f29953c415b5c0195d128bf8046ee8ae3a391b2b299eca7c59b4a3276",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "line": 218,
+      "symbol": "fn render_error(",
+      "line_sha256": "327e7abc7c573a4767a5b07b0c8345472f2b413d63fbe6122f8575f495568aa4",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 15,
+      "symbol": "MAXIMUM_CODEX_CONFIG_BYTES",
+      "line_sha256": "fc50a2fc0e59988bca49ef04b374293cefb070f9b416d1ef35f49f9faf1c053e",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 147,
+      "symbol": "fn configure_codex_at(",
+      "line_sha256": "73044f9a114088ece530b76489f69eb719fd9181a79243e3ed4ee2b3c1cc8f29",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 207,
+      "symbol": "fn update_locked_config(",
+      "line_sha256": "94de98cd16f5246fae13fb258468bd8695c5709799cde4b617872a7c49d1c098",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 309,
+      "symbol": "fn write_atomic(",
+      "line_sha256": "b3b27a74244f53d5e33fd0481fa1419a8218dde1a221a776be86756f37a2b798",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 297,
+      "symbol": "fn mcp_arguments(",
+      "line_sha256": "36fdbfecd84dc1ad2f10464e6f984bdbf18d63f908f26620cd23efd038eeca42",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+      "line": 66,
+      "symbol": "fn tool_result(",
+      "line_sha256": "06cdbfd62b664e1cd1fdd429aa6e76a8f444f64080389284640bf72690558964",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+      "line": 15,
+      "symbol": "fn query_tool_result(",
+      "line_sha256": "2fce152496c2b5688355d0caa5b3211bbd00348d96db71e411f327740412ce4f",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+      "line": 39,
+      "symbol": "fn pairing_start_tool_result(",
+      "line_sha256": "c8d66a0253cbd9d1cc35171514ce1a926a6f0491ef46b8e43ab0dbf340e91bae",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    }
+  ],
+  "source_test_case_locators": [
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 916,
+      "case_id": "query_guidance_embeds_schema_and_executable_argv",
+      "line_sha256": "f6caa22d383b58aac276ac4cecb452302d6033b80bac7b0d4eb11616b551ba57",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 939,
+      "case_id": "parser_errors_never_echo_user_values",
+      "line_sha256": "895011203ae4163d65f9449d25babf8b8c0a62dec6bd2e2604412517a15c36cd",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 958,
+      "case_id": "incomplete_export_guidance_explains_both_safe_modes",
+      "line_sha256": "0c77bff68232b68e80769d67e239c80bd7b0508abb15dc0923409491e1df4801",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+      "line": 1062,
+      "case_id": "reset_trust_guidance_is_non_mutating",
+      "line_sha256": "514f70d51a76a6beb29ea19fa8fa3600a349b5e8ded53ecb13fff747df1faf1f",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 573,
+      "case_id": "stdio_admission_is_bounded",
+      "line_sha256": "83eb84c34728199466d12dfbc543adb44c24021fa34ab5e329f7678f34c3f685",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 580,
+      "case_id": "read_only_stdio_dispatcher_is_fail_closed_and_cloud_free",
+      "line_sha256": "ec2c8ad5f5dc8da602e6de587f35bbef17ccd4dbe8beaea372fae5f3dda1f51c",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 638,
+      "case_id": "every_query_operation_has_cli_and_mcp_canonical_parity",
+      "line_sha256": "830512c0d190a4bc0cfcb0f2870535139651d62216b4c07b3f6da981f7080ea8",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+      "line": 714,
+      "case_id": "schema_catalog_is_local_exact_and_tool_scoped",
+      "line_sha256": "4668040eb9741b2dd83e45e30bcb4c6baaee44142367fb49940efb0eb7a71c52",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 356,
+      "case_id": "initializes_and_returns_the_shared_catalog",
+      "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 388,
+      "case_id": "forwards_bounded_mcp_progress_notifications",
+      "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+      "line": 424,
+      "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+      "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "line": 734,
+      "case_id": "automatic_output_is_human_only_for_a_terminal",
+      "line_sha256": "f4f22b15fd8a09a8371a9477370cc09e701c529e68373d30a06feee15810cdc8",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+      "line": 822,
+      "case_id": "errors_show_recovery_without_nested_json",
+      "line_sha256": "f618c76d778d3b4e56a483c53d10a496aa0023f277579471eebf610299d14d9d",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 361,
+      "case_id": "codex_configuration_is_idempotent_and_preserves_unrelated_values",
+      "line_sha256": "1f53952eeb2497925eab4e1e67531223972a3d7f1200ba7538365d08568fe085",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 388,
+      "case_id": "codex_configuration_pins_explicit_device_and_nondefault_port",
+      "line_sha256": "f6e18ac9e7e39780a0df4416dee0c8046402f2b874258e8b2974551137f3e03e",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 437,
+      "case_id": "concurrent_config_change_fails_without_overwrite",
+      "line_sha256": "35e6134eebb7dd780a943d73ad30077ef7c9ded4cf9e012c6c45692baf4349e4",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "line": 454,
+      "case_id": "stable_invocation_symlink_is_not_collapsed_to_versioned_target",
+      "line_sha256": "4387c4eab8ac480f0fee4b0631f4d6457aef949677fec0453dace311172bfcec",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "executed_during_planning": false
+    }
+  ],
+  "selected_design_row_pins": [
+    {
+      "id": "C11",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#contract-and-compatibility-coverage\n\n| C11 | CLI guidance/error/result and MCP catalogs/resources | Surface envelopes and exit behavior, local discovery, existing command/tool identities, Apps/PNG negotiation, concurrency/cancellation and authorization. |",
+      "reference_utf8_sha256": "276a1d34d0d27e699779b8a8d7981f523e54660ea9a6c108d69f512fb819f693",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "id": "O01",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#canonical-operations-and-caller-authority\n\n| O01 | `healthmd_status`, `healthmd_doctor`, `healthmd_capabilities`, `healthmd_metrics`; CLI status/schema/guidance | Readiness, safe recovery guidance, source capabilities, local catalog discovery. |",
+      "reference_utf8_sha256": "0286e6205111bd9dba6434343457750cc57f66923a47c7003f0f42942efa2b4d",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "id": "O03",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#canonical-operations-and-caller-authority\n\n| O03 | `healthmd_pairing_start`, `healthmd_pairing_status`; CLI direct pair/devices/unpair/reset-trust | Explicit source selection, permitted pairing lifecycle, trust mutation and short-lived QR handling. |",
+      "reference_utf8_sha256": "d8e80f979f7f8f74773e1b628f29e689594ca31508706d610842be75b9d520ab",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "id": "O07",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#canonical-operations-and-caller-authority\n\n| O07 | CLI `setup codex` and existing native local integration setup | Narrow locked configuration transaction and same-executable identity, with unrelated settings preserved. |",
+      "reference_utf8_sha256": "ecbc9d62f7c6d2d5078db88e97b0c6d8f31e2552c85ec47b25a5fc2dcf578991",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "id": "F01",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F01 | Signed Node distribution and OS credential principal | M02 proves all supported targets, legacy service/account continuity and bounded helper/native ABI. Stop desktop cutover if packaging observes a different unhandled principal or requires Rust. |",
+      "reference_utf8_sha256": "104f7f7b30148a3bec72b91ae844381f931f22963431e93176343ed9d783493f",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    },
+    {
+      "id": "F09",
+      "reference": "Source: docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register\n\n| F09 | Public Rust consumer/install retirement and external CI settings | M00/M08 inventories users/channels/required contexts and documents replacement/support transition; M10 waits for concrete reconciliation evidence. |",
+      "reference_utf8_sha256": "321740633cbc30153d86c25a7f2486f0ee5b2555f7d72bff711dff1bd759753f",
+      "source_path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+    }
+  ],
+  "source_reconciliation": {
+    "nearest_cli_instructions": "RootAGENTS; no tracked apps/cli descendantAGENTS at assigned revision",
+    "accepted_core_cohort": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+    "complete_core_inputs": 40,
+    "complete_core_outputs": 24,
+    "packed_core_outputs": 24,
+    "historical_cli_tests": 105,
+    "mutable_generated_files_read": false,
+    "catalog_counts": {
+      "ordinary_health_cli_paths": 14,
+      "feature_gated_http_extra": true,
+      "full_mcp_tools": 21,
+      "read_only_mcp_tools": 13,
+      "time_md_donor_tools_separate": 40
+    },
+    "catalog_authority": {
+      "cli_paths": [
+        "status",
+        "export",
+        "extract",
+        "query",
+        "resume",
+        "cancel",
+        "direct pair",
+        "direct devices",
+        "direct unpair",
+        "direct reset-trust",
+        "mcp serve",
+        "mcp serve-read-only",
+        "mcp schema",
+        "setup codex"
+      ],
+      "full_operation_ids": [
+        "healthmd_status",
+        "healthmd_doctor",
+        "healthmd_capabilities",
+        "healthmd_metrics",
+        "healthmd_metric_chart",
+        "healthmd_sleep_sessions",
+        "healthmd_training_alignment",
+        "healthmd_workouts",
+        "healthmd_coverage",
+        "healthmd_compare_periods",
+        "healthmd_training_evidence",
+        "healthmd_query",
+        "healthmd_evidence_packet",
+        "healthmd_pairing_start",
+        "healthmd_pairing_status",
+        "healthmd_export_files",
+        "healthmd_export_raw",
+        "healthmd_raw_artifact_read",
+        "healthmd_export_job_status",
+        "healthmd_export_job_resume",
+        "healthmd_export_job_cancel"
+      ],
+      "read_only_operation_ids": [
+        "healthmd_status",
+        "healthmd_doctor",
+        "healthmd_capabilities",
+        "healthmd_metrics",
+        "healthmd_metric_chart",
+        "healthmd_sleep_sessions",
+        "healthmd_training_alignment",
+        "healthmd_workouts",
+        "healthmd_coverage",
+        "healthmd_compare_periods",
+        "healthmd_training_evidence",
+        "healthmd_query",
+        "healthmd_evidence_packet"
+      ]
+    },
+    "count_clarification": "Designline17940defines time.md Swift donor tools; ROOT confirmed shorthand correction. Health14(+featureHTTP)/21full/13readonly remain exact baseline; donor40ledger separatelyretained.",
+    "source_adoption_or_public_changes": false
+  },
+  "candidate_grammar": {
+    "all_current_profiles_preserved": "JSONRPC outerleniency/serdeinteger IDs/profile-specific duplicatekeys; strict inneroperation schemas remain independent currentnormalizerauthority. New private structs may be closed without rewriting publicgrammar.",
+    "source_id_exactness": "Exact i64 numeric IDlexemes versus strings, serializedrequest-key UTF8<=128; no Number/JSONparse lossless claim. Originalobjectresult order/numberlexemes require independentcodec/serializer/sourcefixtures before byteparity.",
+    "surface_isolation": "Stdio stdout onlyJSONRPC; rawvalidatedCLIartifact bypass; TTY human default; discovery/parse/operational exit0/2/1 distinct. No diagnostic/sourcepayload leakage.",
+    "owned_capabilities": "Coarse trustedcommonoperationdispatcher/ownedinputoutput/session/configlease; currentauthority beforematerialization/commit and callback reentry, no primitivecredential/file/pipe/crypto tools leaked into operationinterface.",
+    "bounds": "Retain source2MiBinputframe/2MiBconfig,64inflight,32inputqueue,64notifications,128encodedIDbytes/16384usedIDs. Onependingoutputsink. Exactprotocol/grants/profileguards preserved; new wallclock/outputbudget proposals require separate independently reviewed synthetic interface and host measurements.",
+    "independence": "Source-only literal expectations before code; current accepted105CLItests/40input24output/sourcepackedcohort evidence read via immutable receipt, no mutable dist/node_modules reads."
+  },
+  "children": [
+    {
+      "id": "CLI-DISCOVERY-NORMALIZER",
+      "title": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "outcome": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI",
+        "OP-CATALOG"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/discovery-normalizer.ts",
+        "apps/cli/tests/surfaces/discovery-normalizer.test.ts",
+        "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-discovery-normalizer-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic discovery-normalizer"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 252,
+          "symbol": "fn query(",
+          "line_sha256": "66071374dc5ff4ed7f345f7607cf1adfd9a3bc88dd232f83b668e0b505132b5d",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 375,
+          "symbol": "fn group(",
+          "line_sha256": "86cdbda91f0db9c5849ffb6f1c5ab81d0e78ed1aabbdcb0e1270b2a244cc2d1c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 502,
+          "symbol": "fn command_error(",
+          "line_sha256": "0d538218a16468541dd4bd9a570bbca2628bae29da5e9fc9e1a587cc9c45549c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 551,
+          "symbol": "fn parser_error(",
+          "line_sha256": "62cf753feaf302afa842be02c798c6fb4f666d54c6ea14e2b17ddfe743083718",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 852,
+          "symbol": "fn command_path(",
+          "line_sha256": "1a1c6cf9b0a086b1077aa000ce86d12e7857fe25e574fd4148fae678728de90f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/cli",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/0",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+        "introduced_case_ids": [
+          "discovery-query-no-operation",
+          "discovery-query-synopsis-no-arguments",
+          "discovery-reset-trust-incomplete",
+          "discovery-json-human-conflict",
+          "discovery-fixed-defaults",
+          "discovery-unknown-operation-not-echoed"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "discovery-query-no-operation",
+            "input": {
+              "argv": [
+                "query"
+              ],
+              "tty": false
+            },
+            "expected": {
+              "kind": "local_catalog",
+              "exit": 0,
+              "credentials": 0,
+              "network": 0,
+              "mutations": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-query-synopsis-no-arguments",
+            "input": {
+              "argv": [
+                "query",
+                "healthmd_sleep_sessions"
+              ]
+            },
+            "expected": {
+              "kind": "local_operation_schema",
+              "operation": "healthmd_sleep_sessions",
+              "exit": 0,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-reset-trust-incomplete",
+            "input": {
+              "argv": [
+                "direct",
+                "reset-trust"
+              ]
+            },
+            "expected": {
+              "kind": "non_mutating_guidance",
+              "trust_writes": 0,
+              "exit": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-json-human-conflict",
+            "input": {
+              "argv": [
+                "status",
+                "--json",
+                "--human"
+              ]
+            },
+            "expected": {
+              "error": "invalid_request",
+              "exit": 2,
+              "request_sent": false,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-fixed-defaults",
+            "input": {
+              "argv": [
+                "status"
+              ],
+              "tty": false
+            },
+            "expected": {
+              "transport": "manual-ip",
+              "port": 17647,
+              "output": "json",
+              "authority_granted": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-unknown-operation-not-echoed",
+            "input": {
+              "argv": [
+                "query",
+                "SYNTHETIC_SECRET_UNKNOWN"
+              ]
+            },
+            "expected": {
+              "kind": "local_query_catalog",
+              "exit": 0,
+              "recognized_operation": false,
+              "request_sent": false,
+              "echo_unknown": false,
+              "fixed_catalog_only": true,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 916,
+            "case_id": "query_guidance_embeds_schema_and_executable_argv",
+            "line_sha256": "f6caa22d383b58aac276ac4cecb452302d6033b80bac7b0d4eb11616b551ba57",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 939,
+            "case_id": "parser_errors_never_echo_user_values",
+            "line_sha256": "895011203ae4163d65f9449d25babf8b8c0a62dec6bd2e2604412517a15c36cd",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 958,
+            "case_id": "incomplete_export_guidance_explains_both_safe_modes",
+            "line_sha256": "0c77bff68232b68e80769d67e239c80bd7b0508abb15dc0923409491e1df4801",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 1062,
+            "case_id": "reset_trust_guidance_is_non_mutating",
+            "line_sha256": "514f70d51a76a6beb29ea19fa8fa3600a349b5e8ded53ecb13fff747df1faf1f",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Discovery route is non-network/non-credential/non-mutating. Full command/date/selection/pairing lexemes/default aliases remain immutable catalog authorities; this child handles local discovery edge only. Complete query/export normalizers and actual pairing mutation separately assigned."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    },
+    {
+      "id": "CLI-RESULT-ENVELOPE",
+      "title": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "outcome": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "CLI-DISCOVERY-NORMALIZER",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/result-envelope.ts",
+        "apps/cli/tests/surfaces/result-envelope.test.ts",
+        "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-result-envelope-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic result-envelope"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 252,
+          "symbol": "fn query(",
+          "line_sha256": "66071374dc5ff4ed7f345f7607cf1adfd9a3bc88dd232f83b668e0b505132b5d",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 375,
+          "symbol": "fn group(",
+          "line_sha256": "86cdbda91f0db9c5849ffb6f1c5ab81d0e78ed1aabbdcb0e1270b2a244cc2d1c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 502,
+          "symbol": "fn command_error(",
+          "line_sha256": "0d538218a16468541dd4bd9a570bbca2628bae29da5e9fc9e1a587cc9c45549c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 551,
+          "symbol": "fn parser_error(",
+          "line_sha256": "62cf753feaf302afa842be02c798c6fb4f666d54c6ea14e2b17ddfe743083718",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 852,
+          "symbol": "fn command_path(",
+          "line_sha256": "1a1c6cf9b0a086b1077aa000ce86d12e7857fe25e574fd4148fae678728de90f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 22,
+          "symbol": "fn resolve(",
+          "line_sha256": "5d1a55fac568d0e6f2702d7d94ebbeefd63b5a0bea438a974d0b6cc300c129d9",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 42,
+          "symbol": "fn render(",
+          "line_sha256": "16dddc8f29953c415b5c0195d128bf8046ee8ae3a391b2b299eca7c59b4a3276",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 218,
+          "symbol": "fn render_error(",
+          "line_sha256": "327e7abc7c573a4767a5b07b0c8345472f2b413d63fbe6122f8575f495568aa4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/discovery",
+        "docs/migration/effect-refactor/inventories/cli.json#/schemas",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/0"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+        "introduced_case_ids": [
+          "cli-envelope-auto-terminal",
+          "cli-envelope-auto-pipe",
+          "cli-envelope-operation-failure",
+          "cli-envelope-parse-failure",
+          "cli-envelope-raw-bypass",
+          "cli-envelope-wake-code-alias"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "cli-envelope-auto-terminal",
+            "input": {
+              "force_json": false,
+              "force_human": false,
+              "tty": true
+            },
+            "expected": {
+              "mode": "human",
+              "structured_only": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-auto-pipe",
+            "input": {
+              "force_json": false,
+              "force_human": false,
+              "tty": false
+            },
+            "expected": {
+              "mode": "json",
+              "stdout_diagnostic": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-operation-failure",
+            "input": {
+              "outcome": "operational_failure",
+              "code": "runtime_unavailable",
+              "provider_message": "SYNTHETIC_SECRET"
+            },
+            "expected": {
+              "schema": "healthmd.cli_error",
+              "schema_version": 1,
+              "exit": 1,
+              "request_sent": false,
+              "provider_echo": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-parse-failure",
+            "input": {
+              "outcome": "parse_failure",
+              "raw_arguments": [
+                "SYNTHETIC_SECRET"
+              ]
+            },
+            "expected": {
+              "schema": "healthmd.cli_error",
+              "schema_version": 1,
+              "error": "invalid_request",
+              "exit": 2,
+              "raw_echo": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-raw-bypass",
+            "input": {
+              "outcome": "owned_validated_artifact",
+              "artifact_utf8": "{}\n",
+              "mode": "json"
+            },
+            "expected": {
+              "stdout_utf8": "{}\n",
+              "structured_wrapper": false,
+              "exit": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-wake-code-alias",
+            "input": {
+              "internal_code": "direct_wake_window_expired",
+              "wake_window_seconds": 30
+            },
+            "expected": {
+              "public_code": "direct_source_unavailable",
+              "wake_window_seconds": 30,
+              "exit": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 916,
+            "case_id": "query_guidance_embeds_schema_and_executable_argv",
+            "line_sha256": "f6caa22d383b58aac276ac4cecb452302d6033b80bac7b0d4eb11616b551ba57",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 939,
+            "case_id": "parser_errors_never_echo_user_values",
+            "line_sha256": "895011203ae4163d65f9449d25babf8b8c0a62dec6bd2e2604412517a15c36cd",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 958,
+            "case_id": "incomplete_export_guidance_explains_both_safe_modes",
+            "line_sha256": "0c77bff68232b68e80769d67e239c80bd7b0508abb15dc0923409491e1df4801",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 1062,
+            "case_id": "reset_trust_guidance_is_non_mutating",
+            "line_sha256": "514f70d51a76a6beb29ea19fa8fa3600a349b5e8ded53ecb13fff747df1faf1f",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+            "line": 734,
+            "case_id": "automatic_output_is_human_only_for_a_terminal",
+            "line_sha256": "f4f22b15fd8a09a8371a9477370cc09e701c529e68373d30a06feee15810cdc8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+            "line": 822,
+            "case_id": "errors_show_recovery_without_nested_json",
+            "line_sha256": "f618c76d778d3b4e56a483c53d10a496aa0023f277579471eebf610299d14d9d",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "One machine JSON/error/exit selection edge; preserve discoveryexit0/parseexit2/operationalexit1, TTYhuman default, json/humanconflict and validatedraw bypass. Fullhuman/color rendering and complete request/report/receipt families remain separately assigned. Bind original fixed guidance error values, never arbitrary provider.message."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    },
+    {
+      "id": "MCP-JSONRPC-ENVELOPE",
+      "title": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "outcome": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+        "apps/cli/tests/surfaces/jsonrpc-envelope.test.ts",
+        "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-jsonrpc-envelope-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic jsonrpc-envelope"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 11,
+          "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+          "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 12,
+          "symbol": "MAXIMUM_USED_REQUEST_IDS",
+          "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 13,
+          "symbol": "const PROTOCOLS",
+          "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 60,
+          "symbol": "async fn handle_with_caller(",
+          "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 199,
+          "symbol": "fn initialize(",
+          "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "fn request_id_key(",
+          "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 280,
+          "symbol": "fn response_success(",
+          "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 286,
+          "symbol": "fn response_error(",
+          "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "fn tool_result(",
+          "line_sha256": "06cdbfd62b664e1cd1fdd429aa6e76a8f444f64080389284640bf72690558964",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 15,
+          "symbol": "fn query_tool_result(",
+          "line_sha256": "2fce152496c2b5688355d0caa5b3211bbd00348d96db71e411f327740412ce4f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 39,
+          "symbol": "fn pairing_start_tool_result(",
+          "line_sha256": "c8d66a0253cbd9d1cc35171514ce1a926a6f0491ef46b8e43ab0dbf340e91bae",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog",
+        "docs/migration/effect-refactor/inventories/cli.json#/schemas"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "introduced_case_ids": [
+          "rpc-ping-exact-bytes",
+          "rpc-parse-error-exact-bytes",
+          "rpc-i64-id-lossless",
+          "rpc-fraction-id-invalid",
+          "rpc-encoded-id-bound",
+          "rpc-outer-unknown-field-policy",
+          "rpc-notification-no-response"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "rpc-ping-exact-bytes",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-parse-error-exact-bytes",
+            "input": {
+              "frame": "{"
+            },
+            "expected": {
+              "response_utf8": "{\"error\":{\"code\":-32700,\"message\":\"Parse error\"},\"id\":null,\"jsonrpc\":\"2.0\"}",
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-i64-id-lossless",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":9223372036854775807,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":9223372036854775807,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "id_number_rounding": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-fraction-id-invalid",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1.0,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "error_code": -32600,
+              "dispatch_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-encoded-id-bound",
+            "input": {
+              "id_utf8": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "id_raw_utf8_bytes": 129
+            },
+            "expected": {
+              "error_code": -32600,
+              "dispatch_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-outer-unknown-field-policy",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"extra\":true}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "unknown_outer_field": "ignored"
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-notification-no-response",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}"
+            },
+            "expected": {
+              "response": null,
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 356,
+            "case_id": "initializes_and_returns_the_shared_catalog",
+            "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 388,
+            "case_id": "forwards_bounded_mcp_progress_notifications",
+            "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 424,
+            "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+            "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Source JSONRPC2.0 outerunknown fields ignored, serde duplicate-key last-value semantics retained; request IDs strings or exacti64 numbers, canonical encoded key<=128UTF8bytes, no reuse. Float1.0/exponent numeric IDs noti64. Preserve initialized-notification noresponse and existing protocols; no newly invented initialize-before-ping requirement. Bytes/schemas require accepted lossless parser/serializer interface before implementation."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    },
+    {
+      "id": "MCP-STDIO-FRAMING",
+      "title": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "outcome": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "MCP-JSONRPC-ENVELOPE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/stdio-framing.ts",
+        "apps/cli/tests/surfaces/stdio-framing.test.ts",
+        "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-stdio-framing-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic stdio-framing"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 18,
+          "symbol": "MAXIMUM_INPUT_BYTES",
+          "line_sha256": "81383545dfe0ccd3eb21b763bd550565ba3bd099ade263e4f5d1b123b83b35ce",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 19,
+          "symbol": "MAXIMUM_IN_FLIGHT_REQUESTS",
+          "line_sha256": "ccd1e59284f5c0c09ff5b6f6782a1b6d90292d2910583da4133ce7084b7482ca",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 202,
+          "symbol": "fn stdio_dispatcher(",
+          "line_sha256": "236706db6cf36c0d251a03ebce42a15be15df453f7bdcd5412ba5187090d2540",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 243,
+          "symbol": "async fn serve_stdio(",
+          "line_sha256": "0af080862a4752c03c344c3de39a58302948a8b2de8a19208f05604f7d01bb27",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 491,
+          "symbol": "async fn write_line(",
+          "line_sha256": "59c74bd5eb283413afe47f6753516aa638d4cbdc20279b00921f3565bac516ee",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 505,
+          "symbol": "fn rpc_error_response(",
+          "line_sha256": "ba4f487dba2c5f6bd9eb070701d1faeb82fcceaa374803abe65b5767c97c200f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 516,
+          "symbol": "fn at_capacity(",
+          "line_sha256": "6b47f66bbf2586733ba3320627c6b0a8d4d489561c894c5764f237971f9b889b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope/jsonrpc",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds",
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/launcher"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "introduced_case_ids": [
+          "stdio-split-line",
+          "stdio-empty-trimmed-lines",
+          "stdio-input-overflow-drain",
+          "stdio-eof-unterminated-line",
+          "stdio-slow-sink-owned-cancel"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "stdio-split-line",
+            "input": {
+              "chunks_utf8": [
+                "{\"jsonrpc\":\"2.0\",",
+                "\"id\":1,\"method\":\"ping\"}\n"
+              ]
+            },
+            "expected": {
+              "frames": 1,
+              "raw_stdout_only_jsonrpc": true,
+              "flushes": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-empty-trimmed-lines",
+            "input": {
+              "chunks_utf8": [
+                " \r\n\n"
+              ]
+            },
+            "expected": {
+              "frames": 0,
+              "stdout_utf8": ""
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-input-overflow-drain",
+            "input": {
+              "content_bytes": 2097153,
+              "newline": true
+            },
+            "expected": {
+              "sentinel_utf8": "{",
+              "parse_error_code": -32700,
+              "next_line_usable": true,
+              "buffer_max_bytes": 2097152
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-eof-unterminated-line",
+            "input": {
+              "chunks_utf8": [
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"
+              ],
+              "eof": true
+            },
+            "expected": {
+              "frames": 1,
+              "response_lines": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-slow-sink-owned-cancel",
+            "input": {
+              "input_frames": 2,
+              "sink_ack": "blocked",
+              "cancel": "while_pending"
+            },
+            "expected": {
+              "pending_sink_calls_max": 1,
+              "cleanup_ack_required": true,
+              "closed_sink_error_fixed": true,
+              "real_pipe_qualification": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 573,
+            "case_id": "stdio_admission_is_bounded",
+            "line_sha256": "83eb84c34728199466d12dfbc543adb44c24021fa34ab5e329f7678f34c3f685",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 580,
+            "case_id": "read_only_stdio_dispatcher_is_fail_closed_and_cloud_free",
+            "line_sha256": "ec2c8ad5f5dc8da602e6de587f35bbef17ccd4dbe8beaea372fae5f3dda1f51c",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 638,
+            "case_id": "every_query_operation_has_cli_and_mcp_canonical_parity",
+            "line_sha256": "830512c0d190a4bc0cfcb0f2870535139651d62216b4c07b3f6da981f7080ea8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 714,
+            "case_id": "schema_catalog_is_local_exact_and_tool_scoped",
+            "line_sha256": "4668040eb9741b2dd83e45e30bcb4c6baaee44142367fb49940efb0eb7a71c52",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Preserve exact2MiBlinecontent bound, overflow drains throughLF and feeds { parse-error sentinel, EOFpartialline, trim/emptyline behavior and legacy lossyUTF8 conversion beforeJSON parsing. Stdout onlyJSONRPC response+LF/flush, diagnostics separate. Source ignores write failures; candidate safe owned-sink fault status is private and must not invent public response after failedpipe. Native pipe/lifecycle proof separate."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    },
+    {
+      "id": "MCP-STDIO-CONTROL",
+      "title": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "outcome": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "MCP-STDIO-FRAMING",
+        "MCP-JSONRPC-ENVELOPE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/stdio-control.ts",
+        "apps/cli/tests/surfaces/stdio-control.test.ts",
+        "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-stdio-control-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic stdio-control"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 18,
+          "symbol": "MAXIMUM_INPUT_BYTES",
+          "line_sha256": "81383545dfe0ccd3eb21b763bd550565ba3bd099ade263e4f5d1b123b83b35ce",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 19,
+          "symbol": "MAXIMUM_IN_FLIGHT_REQUESTS",
+          "line_sha256": "ccd1e59284f5c0c09ff5b6f6782a1b6d90292d2910583da4133ce7084b7482ca",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 202,
+          "symbol": "fn stdio_dispatcher(",
+          "line_sha256": "236706db6cf36c0d251a03ebce42a15be15df453f7bdcd5412ba5187090d2540",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 243,
+          "symbol": "async fn serve_stdio(",
+          "line_sha256": "0af080862a4752c03c344c3de39a58302948a8b2de8a19208f05604f7d01bb27",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 491,
+          "symbol": "async fn write_line(",
+          "line_sha256": "59c74bd5eb283413afe47f6753516aa638d4cbdc20279b00921f3565bac516ee",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 505,
+          "symbol": "fn rpc_error_response(",
+          "line_sha256": "ba4f487dba2c5f6bd9eb070701d1faeb82fcceaa374803abe65b5767c97c200f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 516,
+          "symbol": "fn at_capacity(",
+          "line_sha256": "6b47f66bbf2586733ba3320627c6b0a8d4d489561c894c5764f237971f9b889b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 11,
+          "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+          "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 12,
+          "symbol": "MAXIMUM_USED_REQUEST_IDS",
+          "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 13,
+          "symbol": "const PROTOCOLS",
+          "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 60,
+          "symbol": "async fn handle_with_caller(",
+          "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 199,
+          "symbol": "fn initialize(",
+          "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "fn request_id_key(",
+          "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 280,
+          "symbol": "fn response_success(",
+          "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 286,
+          "symbol": "fn response_error(",
+          "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope/jsonrpc",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog/read_only_operation_ids",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/1"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+        "introduced_case_ids": [
+          "control-ping-while-operation-blocked",
+          "control-request-id-type-bound",
+          "control-duplicate-session-id",
+          "control-capacity-bound",
+          "control-used-id-limit",
+          "control-cancel-awaits-owned-finalizer",
+          "control-readonly-no-pairing",
+          "control-eof-owned-operation"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "control-ping-while-operation-blocked",
+            "input": {
+              "pending_operation": "synthetic-query",
+              "next_method": "ping",
+              "id": 2
+            },
+            "expected": {
+              "ping_before_operation_release": true,
+              "common_operation_owners": 1,
+              "duplicate_engine": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-request-id-type-bound",
+            "input": {
+              "used_ids": [
+                "1"
+              ],
+              "incoming_id": 1
+            },
+            "expected": {
+              "duplicate": false,
+              "string_numeric_id_distinct": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-duplicate-session-id",
+            "input": {
+              "used_ids": [
+                1
+              ],
+              "incoming_id": 1
+            },
+            "expected": {
+              "error_code": -32600,
+              "message": "Duplicate request identifier",
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-capacity-bound",
+            "input": {
+              "in_flight": 64,
+              "incoming_request_id": 65
+            },
+            "expected": {
+              "error_code": -32001,
+              "message": "Server overloaded",
+              "new_operations": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-used-id-limit",
+            "input": {
+              "used_request_count": 16384,
+              "incoming_new_id": 7
+            },
+            "expected": {
+              "error_code": -32001,
+              "message": "Session request limit exceeded",
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-cancel-awaits-owned-finalizer",
+            "input": {
+              "active_id": 1,
+              "notification": {
+                "method": "notifications/cancelled",
+                "params": {
+                  "requestId": 1
+                }
+              },
+              "cleanup": "gated_ack"
+            },
+            "expected": {
+              "response_before_release_ack": false,
+              "owned_releases": 1,
+              "durable_job_cancelled_claim": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-readonly-no-pairing",
+            "input": {
+              "surface": "local_read_only",
+              "tool": "healthmd_pairing_start"
+            },
+            "expected": {
+              "advertised": false,
+              "pairing_calls": 0,
+              "source_authority_expanded": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-eof-owned-operation",
+            "input": {
+              "active_ids": [
+                1,
+                2
+              ],
+              "eof": true
+            },
+            "expected": {
+              "cancel_signals": 2,
+              "termination_after_ack": true,
+              "one_process_session": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 573,
+            "case_id": "stdio_admission_is_bounded",
+            "line_sha256": "83eb84c34728199466d12dfbc543adb44c24021fa34ab5e329f7678f34c3f685",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 580,
+            "case_id": "read_only_stdio_dispatcher_is_fail_closed_and_cloud_free",
+            "line_sha256": "ec2c8ad5f5dc8da602e6de587f35bbef17ccd4dbe8beaea372fae5f3dda1f51c",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 638,
+            "case_id": "every_query_operation_has_cli_and_mcp_canonical_parity",
+            "line_sha256": "830512c0d190a4bc0cfcb0f2870535139651d62216b4c07b3f6da981f7080ea8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 714,
+            "case_id": "schema_catalog_is_local_exact_and_tool_scoped",
+            "line_sha256": "4668040eb9741b2dd83e45e30bcb4c6baaee44142367fb49940efb0eb7a71c52",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 356,
+            "case_id": "initializes_and_returns_the_shared_catalog",
+            "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 388,
+            "case_id": "forwards_bounded_mcp_progress_notifications",
+            "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 424,
+            "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+            "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Initialize serially; concurrent ping/cancellation/progress remain control path while operation blocked. Source64inflight/32inputqueue/64notifications and16384used IDs retained, identifier type distinct, read-only surface denies mutation. Cancel fakeoperation finalization acknowledged without claiming durablejob cancelled; pairing/QR/trust and HTTP/OAuth/sourceauth remain own tasks."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    },
+    {
+      "id": "CLI-SETUP-CONFIG-TRANSACTION",
+      "title": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "outcome": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "proposed",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "O07",
+        "C11"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/setup-config-transaction.ts",
+        "apps/cli/tests/surfaces/setup-config-transaction.test.ts",
+        "apps/cli/tests/surfaces/setup-config-transaction-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-SETUP-CONFIG-TRANSACTION.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-setup-config-transaction-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic setup-config-transaction"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 15,
+          "symbol": "MAXIMUM_CODEX_CONFIG_BYTES",
+          "line_sha256": "fc50a2fc0e59988bca49ef04b374293cefb070f9b416d1ef35f49f9faf1c053e",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 147,
+          "symbol": "fn configure_codex_at(",
+          "line_sha256": "73044f9a114088ece530b76489f69eb719fd9181a79243e3ed4ee2b3c1cc8f29",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 207,
+          "symbol": "fn update_locked_config(",
+          "line_sha256": "94de98cd16f5246fae13fb258468bd8695c5709799cde4b617872a7c49d1c098",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 309,
+          "symbol": "fn write_atomic(",
+          "line_sha256": "b3b27a74244f53d5e33fd0481fa1419a8218dde1a221a776be86756f37a2b798",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 297,
+          "symbol": "fn mcp_arguments(",
+          "line_sha256": "36fdbfecd84dc1ad2f10464e6f984bdbf18d63f908f26620cd23efd038eeca42",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/6",
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/commands",
+        "docs/migration/effect-refactor/inventories/cli.json#/durable_state"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/setup-config-transaction-vectors.ts",
+        "introduced_case_ids": [
+          "setup-preserves-unrelated-settings",
+          "setup-repeat-noop",
+          "setup-concurrent-edit-conflict",
+          "setup-byte-limit",
+          "setup-stable-symlink-identity",
+          "setup-cancel-after-possible-persist"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "setup-preserves-unrelated-settings",
+            "input": {
+              "original_utf8": "model = \"synthetic-model\"\n",
+              "host_prepared_update": "synthetic_owned_TOML_transform",
+              "executable": "synthetic_stable_invocation"
+            },
+            "expected": {
+              "model_value": "synthetic-model",
+              "startup_timeout_sec": 10,
+              "tool_timeout_sec": 1200,
+              "default_tools_approval_mode": "prompt",
+              "port": 17647,
+              "source_grant": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-repeat-noop",
+            "input": {
+              "original_matches_update": true,
+              "same_executable": true
+            },
+            "expected": {
+              "changed": false,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-concurrent-edit-conflict",
+            "input": {
+              "original_utf8": "A",
+              "current_utf8_before_commit": "B",
+              "prepared_utf8": "C"
+            },
+            "expected": {
+              "result": "ConfigChanged",
+              "overwrite": false,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-byte-limit",
+            "input": {
+              "config_utf8_bytes": 2097153
+            },
+            "expected": {
+              "result": "ConfigTooLarge",
+              "parse_calls": 0,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-stable-symlink-identity",
+            "input": {
+              "invocation": "synthetic-stable-link",
+              "resolved_target": "synthetic-versioned-binary",
+              "validated_same_file": true
+            },
+            "expected": {
+              "recorded_command": "synthetic-stable-link",
+              "collapse_to_versioned_target": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-cancel-after-possible-persist",
+            "input": {
+              "persist_ack": "ambiguous",
+              "cancel": "after_possible_commit"
+            },
+            "expected": {
+              "result": "reconcile_required",
+              "rollback_claim": false,
+              "automatic_retry": false,
+              "owned_lock_release_ack_required": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 361,
+            "case_id": "codex_configuration_is_idempotent_and_preserves_unrelated_values",
+            "line_sha256": "1f53952eeb2497925eab4e1e67531223972a3d7f1200ba7538365d08568fe085",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 388,
+            "case_id": "codex_configuration_pins_explicit_device_and_nondefault_port",
+            "line_sha256": "f6e18ac9e7e39780a0df4416dee0c8046402f2b874258e8b2974551137f3e03e",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 437,
+            "case_id": "concurrent_config_change_fails_without_overwrite",
+            "line_sha256": "35e6134eebb7dd780a943d73ad30077ef7c9ded4cf9e012c6c45692baf4349e4",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 454,
+            "case_id": "stable_invocation_symlink_is_not_collapsed_to_versioned_target",
+            "line_sha256": "4387c4eab8ac480f0fee4b0631f4d6457aef949677fec0453dace311172bfcec",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Coarse fake locked configuration port supplies reviewed owned TOML update; this task proves one transaction orchestration, not fullTOML parser. Before interface freeze, identify a reviewed serializer/parser/capability contract retaining comments/unrelated inline tables/current repeated config. Original read/fence immediately beforewrite;2MiBconfig cap, stable sameexecutable path, defaults and four approvalprompt tool rows. Atomic persist/fsync/permissions/Windows principal/native setup require separate host proofs."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-SETUP-CONFIG-TRANSACTION.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      }
+    }
+  ],
+  "dependency_edges": [
+    [
+      "CLI-DISCOVERY-NORMALIZER",
+      "CLI-RESULT-ENVELOPE"
+    ],
+    [
+      "MCP-JSONRPC-ENVELOPE",
+      "MCP-STDIO-FRAMING"
+    ],
+    [
+      "MCP-STDIO-FRAMING",
+      "MCP-STDIO-CONTROL"
+    ],
+    [
+      "MCP-JSONRPC-ENVELOPE",
+      "MCP-STDIO-CONTROL"
+    ]
+  ],
+  "selected_outcome_map": {
+    "C11": [
+      "CLI-DISCOVERY-NORMALIZER",
+      "CLI-RESULT-ENVELOPE",
+      "MCP-JSONRPC-ENVELOPE",
+      "MCP-STDIO-FRAMING",
+      "MCP-STDIO-CONTROL",
+      "CLI-SETUP-CONFIG-TRANSACTION",
+      "apps_resources_png",
+      "stdio_real_host",
+      "real_mcp_clients_phone",
+      "http_oauth_hosted"
+    ],
+    "O01": [
+      "CLI-DISCOVERY-NORMALIZER",
+      "CLI-RESULT-ENVELOPE",
+      "MCP-JSONRPC-ENVELOPE",
+      "full_common_operations",
+      "real_mcp_clients_phone"
+    ],
+    "O03": [
+      "CLI-DISCOVERY-NORMALIZER",
+      "MCP-STDIO-CONTROL",
+      "pairing_trust_qr"
+    ],
+    "O07": [
+      "CLI-SETUP-CONFIG-TRANSACTION",
+      "setup_real_config"
+    ],
+    "F01": [
+      "five_os_signed_principal",
+      "stdio_real_host",
+      "setup_real_config"
+    ],
+    "F09": [
+      "rollout_retirement",
+      "real_mcp_clients_phone",
+      "donor_40_tools"
+    ]
+  },
+  "full_remaining_scope": [
+    "full_common_operations",
+    "pairing_trust_qr",
+    "apps_resources_png",
+    "stdio_real_host",
+    "five_os_signed_principal",
+    "real_mcp_clients_phone",
+    "http_oauth_hosted",
+    "setup_real_config",
+    "donor_40_tools",
+    "rollout_retirement"
+  ],
+  "remaining_family_work": [
+    {
+      "id": "full_common_operations",
+      "outcomes": "Complete readiness/query/public normalizers/semantic/render/export/raw/extract/resume/cancel journals",
+      "owner_role": "Common core/operations owner",
+      "next_packet": "surface-public-operation-families",
+      "trigger": "After each exact common operation and independent source/profile corpus accepted",
+      "required_proof": "Whole native evaluator/full fixed query families, complete health8/4/5, product registry, raw archives and durable job/cancel/once-only source proofs; current fake chart does not qualify remaining tools.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "pairing_trust_qr",
+      "outcomes": "O03 actualpairing/device/trust/short-livedQR",
+      "owner_role": "Protocol/native credential owner",
+      "next_packet": "surface-pairing-trust-qr",
+      "trigger": "After strict paired-protocol codecs/current host credential principal review",
+      "required_proof": "Actual source selection/authenticated start/status/cancel/reconnect/unpair/reset-trust/QR lifetime/private PNG disposal, no secret in text/structured/logs, no caller strings granting trust or legacy fallback.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "apps_resources_png",
+      "outcomes": "C11 Apps/resources/fullresult envelopes",
+      "owner_role": "MCP Apps/UI/renderer owner",
+      "next_packet": "surface-apps-resources-png",
+      "trigger": "After independently frozen catalog/resource/result codec and actual client negotiation",
+      "required_proof": "Exact21/13catalogs, HTML/CSP/MIME/resource URIs, per-session Apps extension, PNGfallback pairing protection, full export structured wrappers/textbytes and client UX/accessibility; no externalconnect/arbitrarySQL/file/shell.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "stdio_real_host",
+      "outcomes": "C11/O01 realstdioandoneprocesslifecycle",
+      "owner_role": "Node host/stdio owner",
+      "next_packet": "surface-stdio-host",
+      "trigger": "After portable frame/control interfaces and supportedOS admission",
+      "required_proof": "Real pipes/slowreader/EOF/signals/standardstreamdiagnostic isolation/process cleanup/asyncalloc/cancellation acknowledgment across actual fiveOS targets; no listener or productionlaunch change in portable child.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "five_os_signed_principal",
+      "outcomes": "F01 signed binary/OScredentialprincipal",
+      "owner_role": "CLI distribution/credential owner",
+      "next_packet": "surface-node-five-os-distribution",
+      "trigger": "Before any replacement installed public launcher",
+      "required_proof": "Exact supportedOS/architecture matrix asacceptedBASECLI/platform hostinventory, reproducible signed Node/runtime/binary/nativehelperABI, same legacy service/account principal and package-manager/executablecontinuity; stopcutover on mismatch/Rustrequirement.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "real_mcp_clients_phone",
+      "outcomes": "C11 externalMCPclient/actualphone/native service",
+      "owner_role": "Client/native interoperability owner",
+      "next_packet": "surface-real-client-phone",
+      "trigger": "After common operation and full source-purpose/profile/nativechannel accepted",
+      "required_proof": "NamedrealMCPclients + actualApple/Android direct source currentprotocol/auth/grant behavior; full public consumers/website/Obsidian/core/native/CLI gates, no fakebackend qualification.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "http_oauth_hosted",
+      "outcomes": "C11 secureHTTP/OAuth/cloudsource",
+      "owner_role": "Security/HTTP/cloud owner",
+      "next_packet": "surface-http-oauth-admission",
+      "trigger": "After retained source-purpose/caller policy and endpoint admission reviewed",
+      "required_proof": "Current feature-gated loopback Host/Origin/TLSreverseproxy/OAuthsessionowner profiles remain; hostedsource/database/cloud/account/grants externalfrontier and arbitrary URL/SQL/files forbidden. Wake remains notification-only.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "setup_real_config",
+      "outcomes": "O07 realconfigurationtransactionandnative integration",
+      "owner_role": "Node setup/credential/platform owner",
+      "next_packet": "surface-setup-host",
+      "trigger": "After reviewed TOML/executable/fake transaction interface accepted",
+      "required_proof": "Real locked2MiBTOML preserves comments/unrelated settings, stablepackage-manager symlink, ownerpermissions, fsync/persist/conflict/ambiguouspostrename rollback Windowsdifferences; no credential pairing/grants autoenabled by config.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "donor_40_tools",
+      "outcomes": "Separatetime.md40donorqueries",
+      "owner_role": "Desktop usage/contracts owner",
+      "next_packet": "usage-desktop-query-families",
+      "trigger": "After accepteddesktopsource/profile/history contracts",
+      "required_proof": "Preserve40definitions/outcome ledger fromacceptedMacinventory asdistinct donor scope, no arbitrarySQL/browser/media/input inheritance or wideningHealth14/21/13catalogs.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    },
+    {
+      "id": "rollout_retirement",
+      "outcomes": "F09 publicRust consumers/install/CI/rollback/retirement",
+      "owner_role": "Coordinator/distribution/externalconsumer owner",
+      "next_packet": "surface-public-rollout-retirement",
+      "trigger": "Only after full currentconsumer/state/sourcepurpose/physical/signed/externalclient matrix and rollbackwindow",
+      "required_proof": "Keep Rust comparators/reference/native paths/readers, all supportchannels/existing installations/requiredCIcontexts, exactreplacement users/checks and maintained rollback. Nofamily/gate closed by thispacket.",
+      "status": "unassigned_next_packet",
+      "qualified": false
+    }
+  ],
+  "choice_dependencies": {
+    "Q-CLI-DISTRIBUTION": "Future fiveOS/signed/nativeprincipal/product promotion proof required; private portable fixtures allowed before distribution selection.",
+    "public_contracts": "No silentversion/default/policy/lock/profile/sourcechannel choices. Public source grammar remains exact; unknown parser/serializer prerequisites resolved before claiming bytes.",
+    "donor_source": "Q-DONOR-SOURCE independent; donor40reference acceptedinventory only, no sourceimport/adoption."
+  },
+  "resource_policy": "Cards are unclaimed proposals. Stage1 vector+receipt only, full interface/literal independentreview BEFORE source/test/build. Exactfourfiles perchild. CLI/component outputs builder exclusive and qualified-core sourceinputs read lease claimed before checks; any core additions require separate fixedcohort review. Current mobile eligibility commonbuilder and cold native diagnosis never touched.",
+  "consumer_proof_policy": "Only private synthetic candidate proof. Complete commonoperations/nativephone/protocol/credential/sourcepurpose/currenthealth8/4/5/fiveOS/signed/publicCLI/MCP realclient/consumer/channel/durable/retirement assignednextpacket owner+trigger.",
+  "qualification": {
+    "status": "pending",
+    "proof_class": "planning",
+    "families_closed": false,
+    "public_native_qualified": false
+  },
+  "rollback": "Revert only packet/receipt/privatefuturefiles; retain current Rust/native/public launchers, credentials/config/readable jobs, supportedinstallations and immutable corecohort authority.",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  }
+}

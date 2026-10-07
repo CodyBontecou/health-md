@@ -67,6 +67,8 @@
 			isa = PBXGroup;
 			children = (
 				8DD4A8799FCF1DBC595F6BD4 /* HostProbe.app */,
+				E26366F796D17184CE878F6F,
+				E2E59CA8B70F963AC7D15F1C,
 				66581E2AE2F539D63925361D /* HostProbeTests.xctest */,
 			);
 			name = Products;
@@ -78,6 +80,12 @@
 				81D6A57A908A92779DDAB393 /* Products */,
 				EF13FA7D02AC47BCBFF7FC33 /* Frameworks */,
 				FAD39A83F943FD20D5FE8DC6 /* AppDelegate.swift */,
+				926F7546D525B70EBEB215C8,
+				67B234B6662BC42E987A4720,
+				81321664CA9E5C3E66E407C4,
+				1E2118A9A257165F9EE4AE89,
+				765D6F7682CD3A73C3154A5E,
+
 				7CAF197386BE3DB8171B1A10 /* NativeProbe.mm */,
 				0EC082B156C3AC612DA4415B /* Info.plist */,
 				75B8B20AD55B178E8947F066 /* main.jsbundle */,
@@ -181,6 +189,8 @@
 			targets = (
 				050E15E72540013DA4CFB18D /* HostProbe */,
 				B9C350980581D8D11F66CF2A /* HostProbeTests */,
+				64D8139A69CBD01BBD0A99B0,
+				AD6522D201900DF3C36DA830,
 			);
 		};
 /* End PBXProject section */
@@ -553,6 +563,167 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+/* Private cold-intent target; inherited target objects retained. */
+		926F7546D525B70EBEB215C8 /* ColdIntent */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColdProbeIntent.swift; sourceTree = "<group>"; };
+		67B234B6662BC42E987A4720 /* ColdBridge */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ColdProbeBridge.mm; sourceTree = "<group>"; };
+		81321664CA9E5C3E66E407C4 /* ColdHeader */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ColdProbeBridge.h; sourceTree = "<group>"; };
+		1E2118A9A257165F9EE4AE89 /* ColdTests */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColdProbeIntentTests.swift; sourceTree = "<group>"; };
+		765D6F7682CD3A73C3154A5E /* ColdBundle */ = {isa = PBXFileReference; lastKnownFileType = file; path = build/cold-intent/main.jsbundle; sourceTree = "<group>"; };
+		E26366F796D17184CE878F6F /* ColdProduct */ = {isa = PBXFileReference; explicitFileType = wrapper.application; path = ColdHostProbe.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		E2E59CA8B70F963AC7D15F1C /* ColdTestProduct */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; path = ColdProbeIntentUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AF7FC52A46BD42BE6348C73D /* ColdIntentBuild */ = {isa = PBXBuildFile; fileRef = 926F7546D525B70EBEB215C8; };
+		27B7640E8B2D5220ABE71645 /* ColdBridgeBuild */ = {isa = PBXBuildFile; fileRef = 67B234B6662BC42E987A4720; };
+		ED8E1D15E1CD93B833D68B38 /* ColdTestsBuild */ = {isa = PBXBuildFile; fileRef = 1E2118A9A257165F9EE4AE89; };
+		449EC501BCDE091ED5E30F09 /* ColdBundleBuild */ = {isa = PBXBuildFile; fileRef = 765D6F7682CD3A73C3154A5E; };
+		D182277A13F1DE032D630B11 /* ColdNativeBuild */ = {isa = PBXBuildFile; fileRef = 7CAF197386BE3DB8171B1A10; };
+		0D15EAFE11E9AFC87EF5E54D /* ColdSources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (AF7FC52A46BD42BE6348C73D,27B7640E8B2D5220ABE71645,D182277A13F1DE032D630B11); runOnlyForDeploymentPostprocessing = 0; };
+		9B9925AC3E9D00AD8A89F41E /* ColdTestSources */ = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (ED8E1D15E1CD93B833D68B38); runOnlyForDeploymentPostprocessing = 0; };
+		31C81BCE72EDB89C54874A27 /* ColdResources */ = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (449EC501BCDE091ED5E30F09); runOnlyForDeploymentPostprocessing = 0; };
+		6675B920B6B10E07D1BB4034 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				37F21E268E99285C7B8872DA /* Foundation.framework in Frameworks */,
+				21CE6BF2D05C481F43B59A04 /* libPods-HostProbe.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B20C340033C0972A674EEFB3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C568CF73B989FEFF6DDA485D /* Foundation.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		D0D9BB032428B12AAD7F9A8D /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-HostProbe-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		BE352B7E1D5447E32A66C869 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-HostProbe/Pods-HostProbe-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermesvm.framework/hermesvm",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermesvm.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HostProbe/Pods-HostProbe-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		6AA9B069A87E3CECD0F7EE4B /* [CP] Copy Pods Resources */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-HostProbe/Pods-HostProbe-resources.sh",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-cxxreact/React-cxxreact_privacy.bundle",
+				"${PODS_CONFIGURATION_BUILD_DIR}/React-timing/React-timing_privacy.bundle",
+			);
+			name = "[CP] Copy Pods Resources";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-cxxreact_privacy.bundle",
+				"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/React-timing_privacy.bundle",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-HostProbe/Pods-HostProbe-resources.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		199FBF9CF451D6BEDA77436C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 47A28CC916AE649481D52623 /* Pods-HostProbe.debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ColdHostProbe;
+				INFOPLIST_KEY_RCTNewArchEnabled = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.healthmd.effecthost.ioscandidate.cold;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = ColdProbeBridge.h;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D6EC9C74487B5E85F555667C /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 1D99633E87E8EEDD381641F9 /* Pods-HostProbe.release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CLANG_CXX_LANGUAGE_STANDARD = "c++20";
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGNING_ALLOWED = NO;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ColdHostProbe;
+				INFOPLIST_KEY_RCTNewArchEnabled = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-ObjC",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.healthmd.effecthost.ioscandidate.cold;
+				SDKROOT = iphoneos;
+				SWIFT_OBJC_BRIDGING_HEADER = ColdProbeBridge.h;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		979C312752C86E9A91329134 /* ColdTestDebug */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.healthmd.effecthost.ioscandidate.cold.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; SDKROOT = iphoneos; TEST_TARGET_NAME = ColdHostProbe; }; name = Debug; };
+		76CAD4131435818CEF8447A1 /* ColdTestRelease */ = {isa = XCBuildConfiguration; buildSettings = {CODE_SIGNING_ALLOWED = NO; GENERATE_INFOPLIST_FILE = YES; IPHONEOS_DEPLOYMENT_TARGET = 17.0; PRODUCT_BUNDLE_IDENTIFIER = com.healthmd.effecthost.ioscandidate.cold.uitests; PRODUCT_NAME = "$(TARGET_NAME)"; SWIFT_VERSION = 5.0; SDKROOT = iphoneos; TEST_TARGET_NAME = ColdHostProbe; }; name = Release; };
+		B5A58A4E6AC1512DD5DD3CE0 /* ColdConfig */ = {isa = XCConfigurationList; buildConfigurations = (199FBF9CF451D6BEDA77436C,D6EC9C74487B5E85F555667C); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		AFF5605C6D4027BC1CB9E001 /* ColdTestConfig */ = {isa = XCConfigurationList; buildConfigurations = (979C312752C86E9A91329134,76CAD4131435818CEF8447A1); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+		38A759D62955701EADAA52D1 /* ColdDependency */ = {isa = PBXTargetDependency; target = 64D8139A69CBD01BBD0A99B0; };
+		64D8139A69CBD01BBD0A99B0 /* ColdTarget */ = {isa = PBXNativeTarget; buildConfigurationList = B5A58A4E6AC1512DD5DD3CE0; buildPhases = (D0D9BB032428B12AAD7F9A8D,0D15EAFE11E9AFC87EF5E54D,6675B920B6B10E07D1BB4034,31C81BCE72EDB89C54874A27,BE352B7E1D5447E32A66C869,6AA9B069A87E3CECD0F7EE4B); buildRules = (); dependencies = (); name = ColdHostProbe; productName = ColdHostProbe; productReference = E26366F796D17184CE878F6F; productType = "com.apple.product-type.application"; };
+		AD6522D201900DF3C36DA830 /* ColdTestTarget */ = {isa = PBXNativeTarget; buildConfigurationList = AFF5605C6D4027BC1CB9E001; buildPhases = (9B9925AC3E9D00AD8A89F41E,B20C340033C0972A674EEFB3); buildRules = (); dependencies = (38A759D62955701EADAA52D1); name = ColdProbeIntentUITests; productName = ColdProbeIntentUITests; productReference = E2E59CA8B70F963AC7D15F1C; productType = "com.apple.product-type.bundle.ui-testing"; };
 	};
 	rootObject = 610181B37B21095E07497EF4 /* Project object */;
 }

@@ -1119,7 +1119,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-SURFACES",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+          "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "C12",
@@ -1827,7 +1836,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-SURFACES",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+          "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "O02",
@@ -1865,7 +1883,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-SURFACES",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+          "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "O04",
@@ -1941,7 +1968,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-SURFACES",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+          "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "O08",
@@ -6178,7 +6214,17 @@
         "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
         "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family."
       ],
-      "verification": [],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "/private/tmp/healthmd-split-surfaces-validate.py"
+          ],
+          "availability": "created_by_this_task",
+          "scope": "Actual source-only planning validator; temporary exact validator/report source pinned in receipt. No product tests implied."
+        }
+      ],
       "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
@@ -6191,20 +6237,39 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-SURFACES.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-surfaces.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-SURFACES.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "scope": "Bounded source-only planning and corrected exact local discovery guidance behavior; no implementation/native/public/source/profile/distribution/retirement qualification.",
+        "evidence": {
+          "path": "/private/tmp/healthmd-split-surfaces-independent-personal-recheck.json",
+          "sha256": "db3679f4c49d12c01eedb62f13c096fd19b8debaa05c6904e46a7d9d9eb1358e",
+          "prior_full_review_sha256": "d97c038bd7ac8de101bbf637c73c2b94a0b4dcd25a46be3bd75cff5f55cd2685",
+          "reviewed_receipt_sha256": "2757989751ab8813cca7db0e7eb17576037c9e85275017c274e60a1f53a3810f"
+        }
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-SURFACES.json"
+        ]
       },
-      "max_children": 6
+      "max_children": 6,
+      "source_reconciliation": "Source-only bounded next CLI/MCP adapter expansion, reuse accepted CORE/CLI/protocol/public baseline/current203c82f fixed40/24 core/packedcohort and105tests evidence. No common generated output reads/build/install/runtime/livephone/userdata/sourceadoption; pin current/Git ownedsource/contracts and exact existing fixtures. Common operations remain solebehavior; CLI/MCP normalizer/envelope/stdio/control edges exactcurrentbytes preserved. Source planning not fiveOS/signed/realclient/service/native/durable qualification; maxsixfourfilechildren, source/interface/frozenvectorsbeforeimplementation and completeconsumer/cohort rebind separately assigned. NativecoldactualOSfailed isseparatereadonlydiagnosis, mobileEligibilityownscommonbuilder."
     },
     {
       "id": "SPLIT-NATIVE-HOSTS",
@@ -8476,11 +8541,7 @@
         "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
         "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
       ],
-      "shared_resources": [
-        "ios-candidate-project",
-        "ios-candidate-bridge",
-        "native-candidate-build"
-      ],
+      "shared_resources": [],
       "source_inputs": [
         {
           "path": "packages/healthmd-core-ts/src/index.ts",
@@ -8613,8 +8674,14 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
-      "blocker": null,
+      "status": "blocked",
+      "blocker": {
+        "condition": "Actual cold Siri/AppShortcut ingress failed to produce any strict response. Full five-case run failed; diagnostic first-case run failed with candidate NotRunning, Siri BackgroundSuspended, no prefix labels. Cause not established.",
+        "unblock": "Human target preference for current Simulator Siri/App Shortcuts qualification, Siri-ready physical iPhone, or explicit deferral; then separately scoped target review/resource claim and actual OS ingress proof.",
+        "question_pending": true,
+        "source_artifacts_reviewed": true,
+        "runtime_qualified": false
+      },
       "claim": {
         "agent": "/root/personal_codecs",
         "base_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
@@ -8632,18 +8699,16 @@
           "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
           "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
         ],
-        "reserved_resources": [
-          "ios-candidate-project",
-          "ios-candidate-bridge",
-          "native-candidate-build"
-        ]
+        "reserved_resources": []
       },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 205,
       "qualification": {
         "proof_class": "host_integration",
-        "status": "pending",
-        "receipts": []
+        "status": "failed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+        ]
       },
       "read_required": [
         "AGENTS.md",
@@ -8651,9 +8716,28 @@
         "apps/apple/AGENTS.md"
       ],
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "535a21322f7cb1d8106abeb123e72b40b27de30f+1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+        "scope": "Source, artifact provenance and honest partial checkpoint only; actual OS ingress failed and host_integration remains failed/unqualified.",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cold-final-partial-independent.json",
+          "sha256": "978707c554c2e54a58b86e284648698b42dfd882754ddac0038099387bc38860",
+          "reviewed_receipt_sha256": "d95f8a9c3495ebc16c158ddb5b67bc0f2d69ae4f027e02d557c5c162f9920c87",
+          "source_files": 10,
+          "current_product_records": 162,
+          "raw_file_verifications": 307,
+          "failed_runtime_runs": {
+            "full_matrix": {
+              "failed": 5,
+              "passed": 0
+            },
+            "diagnostic_first_case": {
+              "failed": 1,
+              "passed": 0
+            }
+          }
+        }
       },
       "expansion_input": {
         "task_id": "SPLIT-NATIVE-HOSTS",
@@ -8677,7 +8761,7 @@
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       },
-      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing. Coordinator approved two precise additional private ColdProbeBridge.h/.mm seam paths BEFORE implementation; required to reach RCTHost from headless Swift intent target without mutating existing production/private AppDelegate auto-run or NativeProbe. Complete interface/fixture review still required before any implementation. SDK/API/actual OS ingress unqualified; no substitute direct perform(), URL or presentation launch proof. Coordinator approved exact additional scripts/build-cold-intent.mjs private entry/asset separation path before code; no existingbuild/HostProbe/oldtenfixture/assets maychange. Nativebuild window currently held by requiredPixel7 resumedruntime, iOS implementation/build awaits fixture review and exclusive runtime build slot.",
+      "source_reconciliation": "Private cold AppIntent interface/fixture and supported actual OS ingress feasibility first. Preserve existing private frozen host10cases/core/UI bytes and production native IDs/state/permissions. Exact source/current receipt/source inputs reviewed before code. Write only introduced fixture and task receipt initially; no native project/scheme/bridge/JS/build changes before independent fixture/interface review. CORE-COHORT-PERSONAL reserves common core/CLI inputs/build; native task must wait frozen input window before common reads/bundling/checks. Actual AppIntent OS ingress cannot be replaced with direct perform() test or URL callback. Reconcile narrow allowed bridge seam/path changes with coordinator before writing. Coordinator approved two precise additional private ColdProbeBridge.h/.mm seam paths BEFORE implementation; required to reach RCTHost from headless Swift intent target without mutating existing production/private AppDelegate auto-run or NativeProbe. Complete interface/fixture review still required before any implementation. SDK/API/actual OS ingress unqualified; no substitute direct perform(), URL or presentation launch proof. Coordinator approved exact additional scripts/build-cold-intent.mjs private entry/asset separation path before code; no existingbuild/HostProbe/oldtenfixture/assets maychange. Nativebuild window currently held by requiredPixel7 resumedruntime, iOS implementation/build awaits fixture review and exclusive runtime build slot. Final source/build/partial receipt independently reviewed at535a213+1d4ca45; actual OS ingress failed, no inferred cause or substitute route. Native lease released until target-specific next action is selected/reviewed.",
       "fixture_review_before_implementation": {
         "status": "accepted",
         "reviewer": "/root",
@@ -8816,6 +8900,43 @@
           "source_patch_sha256": "4c274e95e030eca19739dbefe07fa6e82fcea07aba3fa82742ef75cd2ab9d8c1",
           "receipt_sha256": "b8e6a7c4f2d20e47a11aeeaa0df04458739032172515e86704f52adabdee3e93",
           "evidence": "ROOT read actual compile log6522-6529 and installed public header/implementation56d8ead8/30980a6a: property reactHost public but cannot import incomplete forwarddeclared RCTHost into Swift. Reviewed exact3file correction within admitted private h/mm/Swift: bridge receives complete-importable factory; ObjC imports public headers, calls original public initializeReactHostWithLaunchOptions/bundle/dev menu defaultConfiguration and retains public factory.reactHost through existing setHost; Swift replaces only2handoff lines. Same retained factory/delegate, mainqueue/lazy1headlessengine, zero views. Other7source files/fixture/runner/builder/frozenJS/Hermes untouched. One same exact escalated supervised build-only retry granted. Artifact/Siri ingress qualification separate; no directperform/privateKVC/test/cache/permission or source profile changes."
+        },
+        "built_artifact_review": {
+          "status": "accepted_before_first_prepared_purpose_test",
+          "reviewer": "/root",
+          "source_patch_sha256": "4c274e95e030eca19739dbefe07fa6e82fcea07aba3fa82742ef75cd2ab9d8c1",
+          "receipt_sha256": "49dd6307d57dbc4381567ea8b8cd0c73f7c5e437879fc717ddec5af43fed7d8e",
+          "report_path": "/private/tmp/healthmd-cold-built-root-review.json",
+          "report_sha256": "7779f86a78a9f74947e7c6e78e4eeda02eb7d028a83ac4fa5725e0393c7968e6",
+          "evidence": "ROOT independently rehashed162packagedapp/UITestrunner files and exactxctestrun771586a4, parsed privatecold ID/min17metadata/actualSDKiphonesimulator26.5+23F81a, exact frozenHermes495a bytecode98/executablec943b8. Actualbuildexit0/ownedbounds only, noOSproof. Xctestrun points only private app/UIrunner; actualSiri XCUITest sources independentlyread: appnotRunning beforeactivation, freshcase/sequence/nativeUUID/PID response required, no app.launch/directperform/URL substitution. First supported purpose test_sim with preparedxctestrun may nowexecute, ownexplicitOS testtimeout args; no permission/Siri settings/account/SDK/cache/production changes. No CLI ingress until actual purpose result."
+        },
+        "actual_ingress_diagnosis": {
+          "status": "failed_runtime_readonly_diagnosis_granted",
+          "evidence": "Purposepreparedtest_sim executed actualfiveSiriXCUITests. Preserve rawtool/log/result and inspect only privateColdProbe response/structureddiagnostics read-only. No source correction/rebuild/retest/Siri settings/foreground app/directperform/URL substitute until concrete sourcefinding reviewed.",
+          "diagnostic_source_clearance": {
+            "status": "source_only_instrumentation_granted_review_before_build",
+            "allowed_edit_paths": [
+              "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
+              "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+            ],
+            "evidence": "Actual rawtoolc6f253/log8c582d/firstprivateSiriAX01f9cb establish5failed0pass and no firstmatchingresponse; zeroSiriStaticTexts/ColdProbe labels do not prove wrong-case or actualstale response. Later waiter failure labels currently overclaim stale absence. Author may add bounded failure diagnostics only: exactapp/siri processstate, waiterresult/prior.exists, fixedprefixColdProbe labels with strictcount/bytecaps; distinguish wait-unavailable from observed actualstale. No broad UI dump/recording interaction. Preserve fullstrict absent/freshcase/seq/nativeUUID/PID/headless/assertions/timeouts/sourcefixture/OSactivation path, all engine/request/bridge/JS/bundle/runner bytes unchanged. No build/test untilROOTsource re-review. Buildmetadataactions5bdee30 currentlyrequiredrequestJSON/fiveautoreferences/no obviousdefaultvalues; inference only, no change toOSparameterbinding without supportedsource/evidence. ActualAppShortcutmetadata exists; generatedtoolversion17F113. Appleofficial docs AppShortcut preconfigured and parameters required/optional consulted, no proof initializedvalue survivedSiri."
+          },
+          "diagnostic_source_review": {
+            "status": "source_reviewed_one_build_only_granted",
+            "reviewer": "/root",
+            "source_patch_sha256": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+            "test_source_sha256": "bc9977a0dcef3dae024fcdf218c1844ba388040ff04336743130ab2e89ed50ad",
+            "receipt_sha256": "0dcb1f8bca7828464b04ab08b1aaf6e5490b897a1c156972e0cfd2ca5abdad31",
+            "evidence": "ROOT read complete diagnostic amendedtest and independently rehashed10sourcepatch. Onlyprivate-prefix failure diagnostics/accuratewait-versus-stale labels added; cap4x256outputUTF8bytes/8192serializedattachment after completeCharactertrim fixed replacement expansion. Strict prior absence/freshcase+seq/nativeUUID+PID/headless/full5fixture5s/15s assertions and actualOSXCUISiriService path unchanged; engine/intent/bridge/JS/runner/builder/frozenasset unchanged. One exact escalated supervised build-only mayexecute; no OSretst before artifactreview. Later diagnostic firstcase-only purpose test mustnotclaim otherfourpassed or wholehostqualification. No directperform/UIsettings/permission/account/URL/appforeground workaround."
+          },
+          "diagnostic_artifact_review": {
+            "status": "accepted_one_firstcase_purpose_test_granted",
+            "reviewer": "/root",
+            "source_patch_sha256": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+            "receipt_sha256": "69424b63a16e62d2b35c6845b340f68be0e21bb22850255671b6e130c3fe0df4",
+            "product_evidence_sha256": "f6e6271c479e9748f64450da755e1c0c9a0d00db220da592e2851ed707f1cbfa",
+            "evidence": "ROOT independently rehashed162newproduct records; actualprivateapp/exe/Hermes/Info/SDK/builtartifact652aef andxctestrun771586 byteidentical, onlynewdiagnosticUITest+associatednativebuildproducts changed. Supportedpreparedpurpose test_sim mayexecute ONEfirstcase with60spertestallowance/new PurposeSiriDiagnosticFirst.xcresult. Preserve first5failedOSrun. No replay ofknownfourfailures now; cannot qualifywholehost/fivecase set fromone diagnostic run. No CLI ingress substitute, appforeground/directperform/URL or settings/account/permissions changes."
+          }
         }
       },
       "unsupported_tool_route": {
@@ -8843,10 +8964,30 @@
           ]
         },
         "test_sim": {
-          "status": "still_required_first_supported_prepared_product_attempt_before_CLI_ingress",
-          "evidence": []
+          "status": "supported_prepared_product_route_executed_actual_tests_failed",
+          "evidence": [
+            {
+              "path": "/private/tmp/healthmd-cold-purpose-test-first.json",
+              "sha256": "c6f253dcd0891f813a89660d3d55455b4d1a0b615c22e9b45f05ca9f9e317d26",
+              "bytes": 9162,
+              "outcome": "Actual49.173s5failed0passed. Firstexpectedcase/sequence response absent; four laterprior response absence guards failed. Supportedpurpose route; no automaticCLI substitute/retry."
+            }
+          ]
         }
-      }
+      },
+      "resource_release_history": [
+        {
+          "resources": [
+            "ios-candidate-project",
+            "ios-candidate-bridge",
+            "native-candidate-build"
+          ],
+          "assigned_source": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+          "patch_digest": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+          "reason": "All processes idle after reviewed native build and two actual failed OS ingress runs. Native/project/bridge leases released while target clarification remains pending; must reacquire before any new native/source execution.",
+          "review_report_sha256": "978707c554c2e54a58b86e284648698b42dfd882754ddac0038099387bc38860"
+        }
+      ]
     },
     {
       "id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
@@ -8898,7 +9039,8 @@
       ],
       "shared_resources": [
         "android-candidate-gradle-graph",
-        "android-candidate-bridge"
+        "android-candidate-bridge",
+        "native-candidate-build"
       ],
       "source_inputs": [
         {
@@ -9036,9 +9178,28 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "not_started",
+      "status": "in_progress",
       "blocker": null,
-      "claim": null,
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+          "apps/android/effect-host-candidate/app/build.gradle.kts",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+          "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+          "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+          "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+          "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+        ],
+        "reserved_resources": [
+          "android-candidate-gradle-graph",
+          "android-candidate-bridge",
+          "native-candidate-build"
+        ]
+      },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 206,
       "qualification": {
@@ -9076,7 +9237,15 @@
           "duplicate_request_no_double_acquire"
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
-      }
+      },
+      "card_review_before_claim": {
+        "reviewer": "/root",
+        "status": "accepted",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "canonical_card_sha256": "b54d76f2532d62d7adb5f35586f7ce5f67fb96d1cdb2f22ecf2aa70ef54f3f34",
+        "scope": "Stage1 complete closed private Worker/interface and independent five-case literal fixture only before code; actual cold WorkManager OS scheduling semantics and current Play host preserved. No native process, build/install/device/common-output read until independent freeze and separately scoped clearance. Read nearest AGENTS/native-ui/accepted32source Play receipt/fixture and exact source inputs; reconcile unsupported paths/API/resource seams before edits."
+      },
+      "source_reconciliation": "Initial phase ONLY fixtures/cold-worker-v1.json and task receipt, with full closed TypeScript/Kotlin/private WorkData/result/scheduling/cancel/cleanup and source/graph proposition frozen before implementation. Five independent IDs from accepted native packet. Existing accepted ten Play cases/source/bridge remain immutable unless explicit additive seam approved. No direct Worker.doWork/test driver substitute for actual cold OS WorkManager execution, no mounted activity/React, no production IDs/security/state/data. Read only committed source current/Git pins; common core/CLI build held by IOS-USAGE-ELIGIBILITY, so no common generated output reads/bundling/install/native execution. Later native slot is reserved; native checks need root-specific input/graph/fixture review and no common builder conflict. Technical choices resolve supported API/source before code; no speculative dependency or unscoped path changes."
     },
     {
       "id": "CODEC-SEMANTIC-INPUT",
@@ -18603,8 +18772,22 @@
       "stream": "personal_data",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/usage-mobile/ios-eligibility.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility.test.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility-vectors.ts",
+          "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "private-ios-eligibility-interface"
+        ]
+      },
       "prerequisites": [
         "BASE-DONOR-USAGE-MOBILE",
         "PERSONAL-CONTRACT-REVIEW"
@@ -19201,6 +19384,44 @@
         "source_revision": "37580ca24a6d352d0ee2d8df2eca58e64e316d49",
         "packet_sha256": "b4583feb5118bcb5d0ed7db36369219cc418017e5415f240614eb516a5b8c572",
         "child_pointer": "#/children/0"
+      },
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "canonical_card_sha256": "018421f1613de9e122444f7e064aeb0e024928f6d6041ae191a086ecc1cb17cd",
+        "evidence": "Exact accepted mobile expansion b4583feb child0 reviewed/frozen; complete typed interface/literalvector stage must be independently reviewed before implementation. Narrow portable coarse eligibility open/ownedreport-or-datahandoff only; no native SDK/channel/source/profile/public admission. Root reviewed required source references via accepted21pins/12donorblobs/81obligations and currentCLI40/24 cohort. Source-only planning corpus not runtime eligibility proof."
+      },
+      "source_reconciliation": "Only introduced vector+receipt may be written in Stage1. Reuse accepted immutable Personal81/four originals, exact mobile packet child0. Freeze complete closed bounded primitive request/interface, trusted source eligibility/current source-purpose-detail and independent destination/delete-revoke authority, atomic Scope ownership/cleanup ACK, fixed errors and exact independent full case matrix before implementation/test source/build. Native iOS16/26.4 eligibility/account/region/signing/public source profiles never admitted by fake Layers. No index/package/exports/locks/CLI guard/cohort/native/public/source adoption changes. Core builder reserved, no component builds until independent Stage1 acceptance; native cold uses only frozen preparedasset and does not read common.",
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+ad0b0f883ef5b8caccde4d7146eb18af80f16cc5221e31d0e7b8aa47c1a52973",
+        "vector_raw_sha256": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "vector_bytes": 582206,
+        "literal_count": 154,
+        "scope": "Complete closed typed gate interface, independent literals/provenance and original obligation preservation; metadata handoff only, native/export/history/profile/public admission unqualified. Initial current grant/frontier revisions pinned privately, any permitted change rejects; denial precedence and captured service/Scope liveness clarified before implementation.",
+        "evidence": {
+          "path": "/private/tmp/healthmd-ios-eligibility-root-stage1-clarified-review.json",
+          "sha256": "92492d4add134ecb3417723140aeac627ea66de236f41a458a525869686efd14",
+          "prior_original140_unchanged": true,
+          "added_revision_liveness_cases": 14
+        }
+      },
+      "implementation_clearance": {
+        "status": "approved",
+        "by": "/root",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "source_paths": [
+          "packages/healthmd-core-ts/src/usage-mobile/ios-eligibility.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility.test.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility-vectors.ts",
+          "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json"
+        ],
+        "frozen_vector_sha256": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "permission": "Implement private gate and independent harness against frozen154 literals; exclusive core npm run check with pinned Node24 and installed dependencies allowed. No dependency/lock/package/index/export/cohort/CLI/native/data/API/profile/admission changes. Record actual physical cwd+argv/log digests including failures. Frozen original fixtures must not change to match implementation. Final source/test/evidence needs independent reviewer before done.",
+        "native_execution": false,
+        "common_admission": false
       }
     },
     {
@@ -22276,6 +22497,2099 @@
         "source_revision": "37580ca24a6d352d0ee2d8df2eca58e64e316d49",
         "packet_sha256": "b4583feb5118bcb5d0ed7db36369219cc418017e5415f240614eb516a5b8c572",
         "child_pointer": "#/children/5"
+      }
+    },
+    {
+      "id": "CLI-DISCOVERY-NORMALIZER",
+      "title": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "outcome": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI",
+        "OP-CATALOG"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/discovery-normalizer.ts",
+        "apps/cli/tests/surfaces/discovery-normalizer.test.ts",
+        "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-discovery-normalizer-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic discovery-normalizer"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Discovery.normalize(primitive argv, declared catalog) -> Effect<local guidance request | fixed parse failure>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 252,
+          "symbol": "fn query(",
+          "line_sha256": "66071374dc5ff4ed7f345f7607cf1adfd9a3bc88dd232f83b668e0b505132b5d",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 375,
+          "symbol": "fn group(",
+          "line_sha256": "86cdbda91f0db9c5849ffb6f1c5ab81d0e78ed1aabbdcb0e1270b2a244cc2d1c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 502,
+          "symbol": "fn command_error(",
+          "line_sha256": "0d538218a16468541dd4bd9a570bbca2628bae29da5e9fc9e1a587cc9c45549c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 551,
+          "symbol": "fn parser_error(",
+          "line_sha256": "62cf753feaf302afa842be02c798c6fb4f666d54c6ea14e2b17ddfe743083718",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 852,
+          "symbol": "fn command_path(",
+          "line_sha256": "1a1c6cf9b0a086b1077aa000ce86d12e7857fe25e574fd4148fae678728de90f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/cli",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/0",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+        "introduced_case_ids": [
+          "discovery-query-no-operation",
+          "discovery-query-synopsis-no-arguments",
+          "discovery-reset-trust-incomplete",
+          "discovery-json-human-conflict",
+          "discovery-fixed-defaults",
+          "discovery-unknown-operation-not-echoed"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "discovery-query-no-operation",
+            "input": {
+              "argv": [
+                "query"
+              ],
+              "tty": false
+            },
+            "expected": {
+              "kind": "local_catalog",
+              "exit": 0,
+              "credentials": 0,
+              "network": 0,
+              "mutations": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-query-synopsis-no-arguments",
+            "input": {
+              "argv": [
+                "query",
+                "healthmd_sleep_sessions"
+              ]
+            },
+            "expected": {
+              "kind": "local_operation_schema",
+              "operation": "healthmd_sleep_sessions",
+              "exit": 0,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-reset-trust-incomplete",
+            "input": {
+              "argv": [
+                "direct",
+                "reset-trust"
+              ]
+            },
+            "expected": {
+              "kind": "non_mutating_guidance",
+              "trust_writes": 0,
+              "exit": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-json-human-conflict",
+            "input": {
+              "argv": [
+                "status",
+                "--json",
+                "--human"
+              ]
+            },
+            "expected": {
+              "error": "invalid_request",
+              "exit": 2,
+              "request_sent": false,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-fixed-defaults",
+            "input": {
+              "argv": [
+                "status"
+              ],
+              "tty": false
+            },
+            "expected": {
+              "transport": "manual-ip",
+              "port": 17647,
+              "output": "json",
+              "authority_granted": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "discovery-unknown-operation-not-echoed",
+            "input": {
+              "argv": [
+                "query",
+                "SYNTHETIC_SECRET_UNKNOWN"
+              ]
+            },
+            "expected": {
+              "kind": "local_query_catalog",
+              "exit": 0,
+              "recognized_operation": false,
+              "request_sent": false,
+              "echo_unknown": false,
+              "fixed_catalog_only": true,
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 916,
+            "case_id": "query_guidance_embeds_schema_and_executable_argv",
+            "line_sha256": "f6caa22d383b58aac276ac4cecb452302d6033b80bac7b0d4eb11616b551ba57",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 939,
+            "case_id": "parser_errors_never_echo_user_values",
+            "line_sha256": "895011203ae4163d65f9449d25babf8b8c0a62dec6bd2e2604412517a15c36cd",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 958,
+            "case_id": "incomplete_export_guidance_explains_both_safe_modes",
+            "line_sha256": "0c77bff68232b68e80769d67e239c80bd7b0508abb15dc0923409491e1df4801",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 1062,
+            "case_id": "reset_trust_guidance_is_non_mutating",
+            "line_sha256": "514f70d51a76a6beb29ea19fa8fa3600a349b5e8ded53ecb13fff747df1faf1f",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Discovery route is non-network/non-credential/non-mutating. Full command/date/selection/pairing lexemes/default aliases remain immutable catalog authorities; this child handles local discovery edge only. Complete query/export normalizers and actual pairing mutation separately assigned."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 70,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/0",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "id": "CLI-RESULT-ENVELOPE",
+      "title": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "outcome": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "CLI-DISCOVERY-NORMALIZER",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/result-envelope.ts",
+        "apps/cli/tests/surfaces/result-envelope.test.ts",
+        "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-result-envelope-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic result-envelope"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "CliEnvelope.render(common owned outcome, output mode) -> Effect<owned bytes and exit decision>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 252,
+          "symbol": "fn query(",
+          "line_sha256": "66071374dc5ff4ed7f345f7607cf1adfd9a3bc88dd232f83b668e0b505132b5d",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 375,
+          "symbol": "fn group(",
+          "line_sha256": "86cdbda91f0db9c5849ffb6f1c5ab81d0e78ed1aabbdcb0e1270b2a244cc2d1c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 502,
+          "symbol": "fn command_error(",
+          "line_sha256": "0d538218a16468541dd4bd9a570bbca2628bae29da5e9fc9e1a587cc9c45549c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 551,
+          "symbol": "fn parser_error(",
+          "line_sha256": "62cf753feaf302afa842be02c798c6fb4f666d54c6ea14e2b17ddfe743083718",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+          "line": 852,
+          "symbol": "fn command_path(",
+          "line_sha256": "1a1c6cf9b0a086b1077aa000ce86d12e7857fe25e574fd4148fae678728de90f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 22,
+          "symbol": "fn resolve(",
+          "line_sha256": "5d1a55fac568d0e6f2702d7d94ebbeefd63b5a0bea438a974d0b6cc300c129d9",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 42,
+          "symbol": "fn render(",
+          "line_sha256": "16dddc8f29953c415b5c0195d128bf8046ee8ae3a391b2b299eca7c59b4a3276",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+          "line": 218,
+          "symbol": "fn render_error(",
+          "line_sha256": "327e7abc7c573a4767a5b07b0c8345472f2b413d63fbe6122f8575f495568aa4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/discovery",
+        "docs/migration/effect-refactor/inventories/cli.json#/schemas",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/0"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+        "introduced_case_ids": [
+          "cli-envelope-auto-terminal",
+          "cli-envelope-auto-pipe",
+          "cli-envelope-operation-failure",
+          "cli-envelope-parse-failure",
+          "cli-envelope-raw-bypass",
+          "cli-envelope-wake-code-alias"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "cli-envelope-auto-terminal",
+            "input": {
+              "force_json": false,
+              "force_human": false,
+              "tty": true
+            },
+            "expected": {
+              "mode": "human",
+              "structured_only": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-auto-pipe",
+            "input": {
+              "force_json": false,
+              "force_human": false,
+              "tty": false
+            },
+            "expected": {
+              "mode": "json",
+              "stdout_diagnostic": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-operation-failure",
+            "input": {
+              "outcome": "operational_failure",
+              "code": "runtime_unavailable",
+              "provider_message": "SYNTHETIC_SECRET"
+            },
+            "expected": {
+              "schema": "healthmd.cli_error",
+              "schema_version": 1,
+              "exit": 1,
+              "request_sent": false,
+              "provider_echo": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-parse-failure",
+            "input": {
+              "outcome": "parse_failure",
+              "raw_arguments": [
+                "SYNTHETIC_SECRET"
+              ]
+            },
+            "expected": {
+              "schema": "healthmd.cli_error",
+              "schema_version": 1,
+              "error": "invalid_request",
+              "exit": 2,
+              "raw_echo": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-raw-bypass",
+            "input": {
+              "outcome": "owned_validated_artifact",
+              "artifact_utf8": "{}\n",
+              "mode": "json"
+            },
+            "expected": {
+              "stdout_utf8": "{}\n",
+              "structured_wrapper": false,
+              "exit": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "cli-envelope-wake-code-alias",
+            "input": {
+              "internal_code": "direct_wake_window_expired",
+              "wake_window_seconds": 30
+            },
+            "expected": {
+              "public_code": "direct_source_unavailable",
+              "wake_window_seconds": 30,
+              "exit": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 916,
+            "case_id": "query_guidance_embeds_schema_and_executable_argv",
+            "line_sha256": "f6caa22d383b58aac276ac4cecb452302d6033b80bac7b0d4eb11616b551ba57",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 939,
+            "case_id": "parser_errors_never_echo_user_values",
+            "line_sha256": "895011203ae4163d65f9449d25babf8b8c0a62dec6bd2e2604412517a15c36cd",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 958,
+            "case_id": "incomplete_export_guidance_explains_both_safe_modes",
+            "line_sha256": "0c77bff68232b68e80769d67e239c80bd7b0508abb15dc0923409491e1df4801",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+            "line": 1062,
+            "case_id": "reset_trust_guidance_is_non_mutating",
+            "line_sha256": "514f70d51a76a6beb29ea19fa8fa3600a349b5e8ded53ecb13fff747df1faf1f",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+            "line": 734,
+            "case_id": "automatic_output_is_human_only_for_a_terminal",
+            "line_sha256": "f4f22b15fd8a09a8371a9477370cc09e701c529e68373d30a06feee15810cdc8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+            "line": 822,
+            "case_id": "errors_show_recovery_without_nested_json",
+            "line_sha256": "f618c76d778d3b4e56a483c53d10a496aa0023f277579471eebf610299d14d9d",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "One machine JSON/error/exit selection edge; preserve discoveryexit0/parseexit2/operationalexit1, TTYhuman default, json/humanconflict and validatedraw bypass. Fullhuman/color rendering and complete request/report/receipt families remain separately assigned. Bind original fixed guidance error values, never arbitrary provider.message."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 71,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/1",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "id": "MCP-JSONRPC-ENVELOPE",
+      "title": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "outcome": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+        "apps/cli/tests/surfaces/jsonrpc-envelope.test.ts",
+        "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-jsonrpc-envelope-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic jsonrpc-envelope"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "RpcEnvelope.handle(primitive bounded frame, fixed dispatcher) -> Effect<owned response | notification no-response>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 11,
+          "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+          "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 12,
+          "symbol": "MAXIMUM_USED_REQUEST_IDS",
+          "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 13,
+          "symbol": "const PROTOCOLS",
+          "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 60,
+          "symbol": "async fn handle_with_caller(",
+          "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 199,
+          "symbol": "fn initialize(",
+          "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "fn request_id_key(",
+          "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 280,
+          "symbol": "fn response_success(",
+          "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 286,
+          "symbol": "fn response_error(",
+          "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "fn tool_result(",
+          "line_sha256": "06cdbfd62b664e1cd1fdd429aa6e76a8f444f64080389284640bf72690558964",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 15,
+          "symbol": "fn query_tool_result(",
+          "line_sha256": "2fce152496c2b5688355d0caa5b3211bbd00348d96db71e411f327740412ce4f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 39,
+          "symbol": "fn pairing_start_tool_result(",
+          "line_sha256": "c8d66a0253cbd9d1cc35171514ce1a926a6f0491ef46b8e43ab0dbf340e91bae",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog",
+        "docs/migration/effect-refactor/inventories/cli.json#/schemas"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "introduced_case_ids": [
+          "rpc-ping-exact-bytes",
+          "rpc-parse-error-exact-bytes",
+          "rpc-i64-id-lossless",
+          "rpc-fraction-id-invalid",
+          "rpc-encoded-id-bound",
+          "rpc-outer-unknown-field-policy",
+          "rpc-notification-no-response"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "rpc-ping-exact-bytes",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-parse-error-exact-bytes",
+            "input": {
+              "frame": "{"
+            },
+            "expected": {
+              "response_utf8": "{\"error\":{\"code\":-32700,\"message\":\"Parse error\"},\"id\":null,\"jsonrpc\":\"2.0\"}",
+              "source_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-i64-id-lossless",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":9223372036854775807,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":9223372036854775807,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "id_number_rounding": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-fraction-id-invalid",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1.0,\"method\":\"ping\"}"
+            },
+            "expected": {
+              "error_code": -32600,
+              "dispatch_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-encoded-id-bound",
+            "input": {
+              "id_utf8": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+              "id_raw_utf8_bytes": 129
+            },
+            "expected": {
+              "error_code": -32600,
+              "dispatch_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-outer-unknown-field-policy",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\",\"extra\":true}"
+            },
+            "expected": {
+              "response_utf8": "{\"id\":1,\"jsonrpc\":\"2.0\",\"result\":{}}",
+              "unknown_outer_field": "ignored"
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "rpc-notification-no-response",
+            "input": {
+              "frame": "{\"jsonrpc\":\"2.0\",\"method\":\"notifications/initialized\"}"
+            },
+            "expected": {
+              "response": null,
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 356,
+            "case_id": "initializes_and_returns_the_shared_catalog",
+            "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 388,
+            "case_id": "forwards_bounded_mcp_progress_notifications",
+            "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 424,
+            "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+            "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Source JSONRPC2.0 outerunknown fields ignored, serde duplicate-key last-value semantics retained; request IDs strings or exacti64 numbers, canonical encoded key<=128UTF8bytes, no reuse. Float1.0/exponent numeric IDs noti64. Preserve initialized-notification noresponse and existing protocols; no newly invented initialize-before-ping requirement. Bytes/schemas require accepted lossless parser/serializer interface before implementation."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 72,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/2",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "id": "MCP-STDIO-FRAMING",
+      "title": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "outcome": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "MCP-JSONRPC-ENVELOPE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/stdio-framing.ts",
+        "apps/cli/tests/surfaces/stdio-framing.test.ts",
+        "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-stdio-framing-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic stdio-framing"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "StdioFrames.exchange(owned input chunks, acknowledged output sink) -> Effect<bounded frame lifecycle>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 18,
+          "symbol": "MAXIMUM_INPUT_BYTES",
+          "line_sha256": "81383545dfe0ccd3eb21b763bd550565ba3bd099ade263e4f5d1b123b83b35ce",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 19,
+          "symbol": "MAXIMUM_IN_FLIGHT_REQUESTS",
+          "line_sha256": "ccd1e59284f5c0c09ff5b6f6782a1b6d90292d2910583da4133ce7084b7482ca",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 202,
+          "symbol": "fn stdio_dispatcher(",
+          "line_sha256": "236706db6cf36c0d251a03ebce42a15be15df453f7bdcd5412ba5187090d2540",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 243,
+          "symbol": "async fn serve_stdio(",
+          "line_sha256": "0af080862a4752c03c344c3de39a58302948a8b2de8a19208f05604f7d01bb27",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 491,
+          "symbol": "async fn write_line(",
+          "line_sha256": "59c74bd5eb283413afe47f6753516aa638d4cbdc20279b00921f3565bac516ee",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 505,
+          "symbol": "fn rpc_error_response(",
+          "line_sha256": "ba4f487dba2c5f6bd9eb070701d1faeb82fcceaa374803abe65b5767c97c200f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 516,
+          "symbol": "fn at_capacity(",
+          "line_sha256": "6b47f66bbf2586733ba3320627c6b0a8d4d489561c894c5764f237971f9b889b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope/jsonrpc",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds",
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/launcher"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "introduced_case_ids": [
+          "stdio-split-line",
+          "stdio-empty-trimmed-lines",
+          "stdio-input-overflow-drain",
+          "stdio-eof-unterminated-line",
+          "stdio-slow-sink-owned-cancel"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "stdio-split-line",
+            "input": {
+              "chunks_utf8": [
+                "{\"jsonrpc\":\"2.0\",",
+                "\"id\":1,\"method\":\"ping\"}\n"
+              ]
+            },
+            "expected": {
+              "frames": 1,
+              "raw_stdout_only_jsonrpc": true,
+              "flushes": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-empty-trimmed-lines",
+            "input": {
+              "chunks_utf8": [
+                " \r\n\n"
+              ]
+            },
+            "expected": {
+              "frames": 0,
+              "stdout_utf8": ""
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-input-overflow-drain",
+            "input": {
+              "content_bytes": 2097153,
+              "newline": true
+            },
+            "expected": {
+              "sentinel_utf8": "{",
+              "parse_error_code": -32700,
+              "next_line_usable": true,
+              "buffer_max_bytes": 2097152
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-eof-unterminated-line",
+            "input": {
+              "chunks_utf8": [
+                "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"ping\"}"
+              ],
+              "eof": true
+            },
+            "expected": {
+              "frames": 1,
+              "response_lines": 1
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "stdio-slow-sink-owned-cancel",
+            "input": {
+              "input_frames": 2,
+              "sink_ack": "blocked",
+              "cancel": "while_pending"
+            },
+            "expected": {
+              "pending_sink_calls_max": 1,
+              "cleanup_ack_required": true,
+              "closed_sink_error_fixed": true,
+              "real_pipe_qualification": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 573,
+            "case_id": "stdio_admission_is_bounded",
+            "line_sha256": "83eb84c34728199466d12dfbc543adb44c24021fa34ab5e329f7678f34c3f685",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 580,
+            "case_id": "read_only_stdio_dispatcher_is_fail_closed_and_cloud_free",
+            "line_sha256": "ec2c8ad5f5dc8da602e6de587f35bbef17ccd4dbe8beaea372fae5f3dda1f51c",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 638,
+            "case_id": "every_query_operation_has_cli_and_mcp_canonical_parity",
+            "line_sha256": "830512c0d190a4bc0cfcb0f2870535139651d62216b4c07b3f6da981f7080ea8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 714,
+            "case_id": "schema_catalog_is_local_exact_and_tool_scoped",
+            "line_sha256": "4668040eb9741b2dd83e45e30bcb4c6baaee44142367fb49940efb0eb7a71c52",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Preserve exact2MiBlinecontent bound, overflow drains throughLF and feeds { parse-error sentinel, EOFpartialline, trim/emptyline behavior and legacy lossyUTF8 conversion beforeJSON parsing. Stdout onlyJSONRPC response+LF/flush, diagnostics separate. Source ignores write failures; candidate safe owned-sink fault status is private and must not invent public response after failedpipe. Native pipe/lifecycle proof separate."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 73,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/3",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "id": "MCP-STDIO-CONTROL",
+      "title": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "outcome": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "MCP-STDIO-FRAMING",
+        "MCP-JSONRPC-ENVELOPE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11",
+        "O01"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/stdio-control.ts",
+        "apps/cli/tests/surfaces/stdio-control.test.ts",
+        "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-stdio-control-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic stdio-control"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "ControlSession.run(owned stdio session, trusted common operation dispatcher) -> Effect<acknowledged session termination>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 18,
+          "symbol": "MAXIMUM_INPUT_BYTES",
+          "line_sha256": "81383545dfe0ccd3eb21b763bd550565ba3bd099ade263e4f5d1b123b83b35ce",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 19,
+          "symbol": "MAXIMUM_IN_FLIGHT_REQUESTS",
+          "line_sha256": "ccd1e59284f5c0c09ff5b6f6782a1b6d90292d2910583da4133ce7084b7482ca",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 202,
+          "symbol": "fn stdio_dispatcher(",
+          "line_sha256": "236706db6cf36c0d251a03ebce42a15be15df453f7bdcd5412ba5187090d2540",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 243,
+          "symbol": "async fn serve_stdio(",
+          "line_sha256": "0af080862a4752c03c344c3de39a58302948a8b2de8a19208f05604f7d01bb27",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 491,
+          "symbol": "async fn write_line(",
+          "line_sha256": "59c74bd5eb283413afe47f6753516aa638d4cbdc20279b00921f3565bac516ee",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 505,
+          "symbol": "fn rpc_error_response(",
+          "line_sha256": "ba4f487dba2c5f6bd9eb070701d1faeb82fcceaa374803abe65b5767c97c200f",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "line": 516,
+          "symbol": "fn at_capacity(",
+          "line_sha256": "6b47f66bbf2586733ba3320627c6b0a8d4d489561c894c5764f237971f9b889b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 11,
+          "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+          "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 12,
+          "symbol": "MAXIMUM_USED_REQUEST_IDS",
+          "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 13,
+          "symbol": "const PROTOCOLS",
+          "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 60,
+          "symbol": "async fn handle_with_caller(",
+          "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 199,
+          "symbol": "fn initialize(",
+          "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "fn request_id_key(",
+          "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 280,
+          "symbol": "fn response_success(",
+          "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 286,
+          "symbol": "fn response_error(",
+          "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope/jsonrpc",
+        "docs/migration/effect-refactor/inventories/cli.json#/catalog/read_only_operation_ids",
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/1"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+        "introduced_case_ids": [
+          "control-ping-while-operation-blocked",
+          "control-request-id-type-bound",
+          "control-duplicate-session-id",
+          "control-capacity-bound",
+          "control-used-id-limit",
+          "control-cancel-awaits-owned-finalizer",
+          "control-readonly-no-pairing",
+          "control-eof-owned-operation"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "control-ping-while-operation-blocked",
+            "input": {
+              "pending_operation": "synthetic-query",
+              "next_method": "ping",
+              "id": 2
+            },
+            "expected": {
+              "ping_before_operation_release": true,
+              "common_operation_owners": 1,
+              "duplicate_engine": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-request-id-type-bound",
+            "input": {
+              "used_ids": [
+                "1"
+              ],
+              "incoming_id": 1
+            },
+            "expected": {
+              "duplicate": false,
+              "string_numeric_id_distinct": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-duplicate-session-id",
+            "input": {
+              "used_ids": [
+                1
+              ],
+              "incoming_id": 1
+            },
+            "expected": {
+              "error_code": -32600,
+              "message": "Duplicate request identifier",
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-capacity-bound",
+            "input": {
+              "in_flight": 64,
+              "incoming_request_id": 65
+            },
+            "expected": {
+              "error_code": -32001,
+              "message": "Server overloaded",
+              "new_operations": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-used-id-limit",
+            "input": {
+              "used_request_count": 16384,
+              "incoming_new_id": 7
+            },
+            "expected": {
+              "error_code": -32001,
+              "message": "Session request limit exceeded",
+              "operation_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-cancel-awaits-owned-finalizer",
+            "input": {
+              "active_id": 1,
+              "notification": {
+                "method": "notifications/cancelled",
+                "params": {
+                  "requestId": 1
+                }
+              },
+              "cleanup": "gated_ack"
+            },
+            "expected": {
+              "response_before_release_ack": false,
+              "owned_releases": 1,
+              "durable_job_cancelled_claim": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-readonly-no-pairing",
+            "input": {
+              "surface": "local_read_only",
+              "tool": "healthmd_pairing_start"
+            },
+            "expected": {
+              "advertised": false,
+              "pairing_calls": 0,
+              "source_authority_expanded": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "control-eof-owned-operation",
+            "input": {
+              "active_ids": [
+                1,
+                2
+              ],
+              "eof": true
+            },
+            "expected": {
+              "cancel_signals": 2,
+              "termination_after_ack": true,
+              "one_process_session": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 573,
+            "case_id": "stdio_admission_is_bounded",
+            "line_sha256": "83eb84c34728199466d12dfbc543adb44c24021fa34ab5e329f7678f34c3f685",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 580,
+            "case_id": "read_only_stdio_dispatcher_is_fail_closed_and_cloud_free",
+            "line_sha256": "ec2c8ad5f5dc8da602e6de587f35bbef17ccd4dbe8beaea372fae5f3dda1f51c",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 638,
+            "case_id": "every_query_operation_has_cli_and_mcp_canonical_parity",
+            "line_sha256": "830512c0d190a4bc0cfcb0f2870535139651d62216b4c07b3f6da981f7080ea8",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+            "line": 714,
+            "case_id": "schema_catalog_is_local_exact_and_tool_scoped",
+            "line_sha256": "4668040eb9741b2dd83e45e30bcb4c6baaee44142367fb49940efb0eb7a71c52",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 356,
+            "case_id": "initializes_and_returns_the_shared_catalog",
+            "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 388,
+            "case_id": "forwards_bounded_mcp_progress_notifications",
+            "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+            "line": 424,
+            "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+            "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Initialize serially; concurrent ping/cancellation/progress remain control path while operation blocked. Source64inflight/32inputqueue/64notifications and16384used IDs retained, identifier type distinct, read-only surface denies mutation. Cancel fakeoperation finalization acknowledged without claiming durablejob cancelled; pairing/QR/trust and HTTP/OAuth/sourceauth remain own tasks."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 74,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/4",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "id": "CLI-SETUP-CONFIG-TRANSACTION",
+      "title": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "outcome": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "BASE-CLI"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "O07",
+        "C11"
+      ],
+      "risk_ids": [
+        "F01",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/setup-config-transaction.ts",
+        "apps/cli/tests/surfaces/setup-config-transaction.test.ts",
+        "apps/cli/tests/surfaces/setup-config-transaction-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-SETUP-CONFIG-TRANSACTION.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-setup-config-transaction-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic setup-config-transaction"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "SetupTransaction.apply(owned locked config, executable binding) -> Effect<idempotent receipt | fixed conflict/ambiguous result>",
+      "source_input_refs": [
+        "#/input_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 105,
+          "symbol": "enum Command",
+          "line_sha256": "f23b4e0bbef9e6e728e608435b705edb236e2e001a407c60fc4e19caa04a1c55",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 136,
+          "symbol": "enum McpCommand",
+          "line_sha256": "da34555aac2cf2c0bd72d8a5dc325e483ba2612a88b9345f12abd16c94a4e565",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 70,
+          "symbol": "struct Cli",
+          "line_sha256": "9e032b78b869ff9489ade1c9b531aae208c48f2eed3461a6a419c16f8b1882c1",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 97,
+          "symbol": "enum Transport",
+          "line_sha256": "81c350381be718a8beb764b0a74e0e95a363edc8594839b5cfe926d6c0179e37",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 218,
+          "symbol": "struct SetupCodexArgs",
+          "line_sha256": "de4554b65cab5ce7545f0cdfe8df7170c8d515d1f65482577ffd0074a4c19d07",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+          "line": 1087,
+          "symbol": "async fn setup_codex",
+          "line_sha256": "973f3c90103169ed10eb3d66fa67f47b3cf42da1c427d0275ddc9253b727156b",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 15,
+          "symbol": "MAXIMUM_CODEX_CONFIG_BYTES",
+          "line_sha256": "fc50a2fc0e59988bca49ef04b374293cefb070f9b416d1ef35f49f9faf1c053e",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 147,
+          "symbol": "fn configure_codex_at(",
+          "line_sha256": "73044f9a114088ece530b76489f69eb719fd9181a79243e3ed4ee2b3c1cc8f29",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 207,
+          "symbol": "fn update_locked_config(",
+          "line_sha256": "94de98cd16f5246fae13fb258468bd8695c5709799cde4b617872a7c49d1c098",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 309,
+          "symbol": "fn write_atomic(",
+          "line_sha256": "b3b27a74244f53d5e33fd0481fa1419a8218dde1a221a776be86756f37a2b798",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+          "line": 297,
+          "symbol": "fn mcp_arguments(",
+          "line_sha256": "36fdbfecd84dc1ad2f10464e6f984bdbf18d63f908f26620cd23efd038eeca42",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/workflows/6",
+        "docs/migration/effect-refactor/inventories/cli.json#/cli/commands",
+        "docs/migration/effect-refactor/inventories/cli.json#/durable_state"
+      ],
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/setup-config-transaction-vectors.ts",
+        "introduced_case_ids": [
+          "setup-preserves-unrelated-settings",
+          "setup-repeat-noop",
+          "setup-concurrent-edit-conflict",
+          "setup-byte-limit",
+          "setup-stable-symlink-identity",
+          "setup-cancel-after-possible-persist"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "setup-preserves-unrelated-settings",
+            "input": {
+              "original_utf8": "model = \"synthetic-model\"\n",
+              "host_prepared_update": "synthetic_owned_TOML_transform",
+              "executable": "synthetic_stable_invocation"
+            },
+            "expected": {
+              "model_value": "synthetic-model",
+              "startup_timeout_sec": 10,
+              "tool_timeout_sec": 1200,
+              "default_tools_approval_mode": "prompt",
+              "port": 17647,
+              "source_grant": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-repeat-noop",
+            "input": {
+              "original_matches_update": true,
+              "same_executable": true
+            },
+            "expected": {
+              "changed": false,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-concurrent-edit-conflict",
+            "input": {
+              "original_utf8": "A",
+              "current_utf8_before_commit": "B",
+              "prepared_utf8": "C"
+            },
+            "expected": {
+              "result": "ConfigChanged",
+              "overwrite": false,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-byte-limit",
+            "input": {
+              "config_utf8_bytes": 2097153
+            },
+            "expected": {
+              "result": "ConfigTooLarge",
+              "parse_calls": 0,
+              "commit_calls": 0
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-stable-symlink-identity",
+            "input": {
+              "invocation": "synthetic-stable-link",
+              "resolved_target": "synthetic-versioned-binary",
+              "validated_same_file": true
+            },
+            "expected": {
+              "recorded_command": "synthetic-stable-link",
+              "collapse_to_versioned_target": false
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          },
+          {
+            "case_id": "setup-cancel-after-possible-persist",
+            "input": {
+              "persist_ack": "ambiguous",
+              "cancel": "after_possible_commit"
+            },
+            "expected": {
+              "result": "reconcile_required",
+              "rollback_claim": false,
+              "automatic_retry": false,
+              "owned_lock_release_ack_required": true
+            },
+            "status": "literal proposal before implementation; complete typed interface/full exact bytes require independent Stage1 freeze"
+          }
+        ],
+        "source_test_locators": [
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 361,
+            "case_id": "codex_configuration_is_idempotent_and_preserves_unrelated_values",
+            "line_sha256": "1f53952eeb2497925eab4e1e67531223972a3d7f1200ba7538365d08568fe085",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 388,
+            "case_id": "codex_configuration_pins_explicit_device_and_nondefault_port",
+            "line_sha256": "f6e18ac9e7e39780a0df4416dee0c8046402f2b874258e8b2974551137f3e03e",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 437,
+            "case_id": "concurrent_config_change_fails_without_overwrite",
+            "line_sha256": "35e6134eebb7dd780a943d73ad30077ef7c9ded4cf9e012c6c45692baf4349e4",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          },
+          {
+            "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+            "line": 454,
+            "case_id": "stable_invocation_symlink_is_not_collapsed_to_versioned_target",
+            "line_sha256": "4387c4eab8ac480f0fee4b0631f4d6457aef949677fec0453dace311172bfcec",
+            "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+            "executed_during_planning": false
+          }
+        ],
+        "independence": "Current source literals/pinned tests/profiles precede candidate implementation; no Rust/native/CLI product test executed during planning."
+      },
+      "acceptance": [
+        "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+        "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+        "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+        "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+        "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Coarse fake locked configuration port supplies reviewed owned TOML update; this task proves one transaction orchestration, not fullTOML parser. Before interface freeze, identify a reviewed serializer/parser/capability contract retaining comments/unrelated inline tables/current repeated config. Original read/fence immediately beforewrite;2MiBconfig cap, stable sameexecutable path, defaults and four approvalprompt tool rows. Atomic persist/fsync/permissions/Windows principal/native setup require separate host proofs."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+        }
+      ],
+      "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
+      "state_contract_impact": "No current config/credentials/listener/public launcher mutation. Candidate fake boundary only; real source/destination/public profile/grant policy separate.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-SETUP-CONFIG-TRANSACTION.json",
+      "reviewer_role": "independent core/cli/privacy reviewer",
+      "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+      "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 75,
+      "expansion_input": {
+        "task_id": "SPLIT-SURFACES",
+        "packet_path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "packet_sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61",
+        "child_pointer": "#/children/5",
+        "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
       }
     }
   ]

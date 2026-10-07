@@ -20,6 +20,7 @@
                ReferencedContainer = "container:HostProbe.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
+      <BuildActionEntry buildForTesting="NO" buildForRunning="NO" buildForProfiling="NO" buildForArchiving="NO" buildForAnalyzing="NO"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="64D8139A69CBD01BBD0A99B0" BuildableName="ColdHostProbe.app" BlueprintName="ColdHostProbe" ReferencedContainer="container:HostProbe.xcodeproj" /></BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
@@ -47,6 +48,7 @@
                ReferencedContainer = "container:HostProbe.xcodeproj">
             </BuildableReference>
          </TestableReference>
+      <TestableReference skipped="YES"><BuildableReference BuildableIdentifier="primary" BlueprintIdentifier="AD6522D201900DF3C36DA830" BuildableName="ColdProbeIntentUITests.xctest" BlueprintName="ColdProbeIntentUITests" ReferencedContainer="container:HostProbe.xcodeproj" /></TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction

@@ -1,0 +1,1984 @@
+{
+  "task_id": "NATIVE-IOS-COLD-INTENT-PROBE",
+  "result": "partial",
+  "proof_class": "source_preflight",
+  "source_sha": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+  "patch_digest": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+  "patch_digest_method": "Sorted ten nonreceipt allowed repo-relative paths + NUL + exact raw bytes + NUL. Includes introduced frozen fixture, excludes own receipt; no self-referential digest.",
+  "changed_paths": [
+    "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+    "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
+    "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
+    "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntent.swift",
+    "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift",
+    "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj",
+    "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+    "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs",
+    "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh",
+    "apps/apple/effect-host-candidates/ios/src/cold-intent-probe.ts",
+    "docs/migration/effect-refactor/receipts/NATIVE-IOS-COLD-INTENT-PROBE.json"
+  ],
+  "target": {
+    "platform": "iOS Simulator",
+    "channel": "development candidate",
+    "profile": "Release cold AppIntent synthetic; actual OS ingress required"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/apple/AGENTS.md": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/native-ui.md": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05",
+      "docs/migration/effect-refactor/expansions/split-native-hosts.json": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b",
+      "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json": "ec79d215fef6f0fba220bbfba603254bc7c5057209d5fdb2afe76276a669b030",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "apps/apple/HealthMd/iOS/AppIntents/ExportIntentRunner.swift": "db47706fc25fa2ba5f0b0abaceb12114ffea1d9e991ae94f7c03d70164ed1403",
+      "apps/apple/HealthMd/iOS/AppIntents/GetLastExportStatusIntent.swift": "6f8565d4b115813265ca704010f4f963f142d5631f6ad35076ed94cd6ee4a7bd",
+      "apps/apple/HealthMd/iOS/HealthMdApp.swift": "e8903d71a56c5f1f3877e7bd3f4bd18596c426ae9d6c710320d94f9d85ba7cc0"
+    },
+    "locks_and_runtime": {
+      "predecessor_accepted_raw_sha256": "ec79d215fef6f0fba220bbfba603254bc7c5057209d5fdb2afe76276a669b030",
+      "predecessor_source_sha": "5ef9c8d814b23e6317a553b936ae41fa7d20b115",
+      "predecessor_patch_digest": "36030080ea1d47d01f636a76b84a778ae13f6f4702eb10aa0ce2203072cb1014",
+      "predecessor_review": {
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "5ef9c8d814b23e6317a553b936ae41fa7d20b115+36030080ea1d47d01f636a76b84a778ae13f6f4702eb10aa0ce2203072cb1014"
+      },
+      "historical_runtime_only": {
+        "node": "24.21.0",
+        "npm": "11.19.0",
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "react": "19.2.3",
+        "react_native": "0.87.1",
+        "effect": "4.0.1",
+        "hermes_compiler": "250829098.0.17",
+        "metro": "0.87.1",
+        "babel_preset": "0.87.1",
+        "cocoapods": "1.17.0",
+        "npm_lock_sha256": "9714983f8de041cb65a280ed38d9d582f29e5308acf4c49401065bbde061ef41",
+        "pod_lock_sha256": "7a3e3ee9c2df24d98f1b9c8eb86c40fce8ee5d520526b40567617cac93115aef",
+        "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+        "sdk": {
+          "DTSDKName": "iphonesimulator26.5",
+          "DTSDKBuild": "23F81a",
+          "DTXcode": "2660",
+          "DTXcodeBuild": "17F113",
+          "MinimumOSVersion": "17.0"
+        },
+        "runtime": {
+          "platform": "iOS Simulator",
+          "os": "26.5",
+          "device_class": "generic iPhone17Pro",
+          "engine_release": "250829098.0.17",
+          "bytecode_version": 98,
+          "engine_build": "Release",
+          "candidate_abis_built": [
+            "arm64",
+            "x86_64"
+          ],
+          "actual_host": "arm64; x86_64 execution unrun"
+        },
+        "graphs": {
+          "lock_entries": 341,
+          "installed_packages": 297,
+          "npm_licenses": {
+            "MIT": 286,
+            "ISC": 17,
+            "BSD-3-Clause": 3,
+            "Apache-2.0": 29,
+            "CC-BY-4.0": 1,
+            "(MIT OR Apache-2.0)": 1,
+            "0BSD": 1,
+            "BSD-2-Clause": 2,
+            "(MIT OR CC0-1.0)": 1
+          },
+          "native_local_podspecs": 85,
+          "facade_license_declarations": {
+            "MIT": 84,
+            "Unlicense": 1
+          },
+          "vendored_component_license_scope": "Prebuilt facade MIT/Unlicense declarations do not flatten underlying components; pinned original podspecs declare Boost Software License/Apache2/MIT/Google(COPYING). Distribution notice/compliance gate remains separate.",
+          "original_third_party_podspec_sha256": {
+            "node_modules/react-native/third-party-podspecs/DoubleConversion.podspec": "807a5e38ab23d4c1bfdaf347c9a5440c943003f37e858a8484616a318af698e0",
+            "node_modules/react-native/third-party-podspecs/RCT-Folly.podspec": "869c583e9d17c0d3689b70b7b11f772767ceec2d20412f28f147b29b9218f24e",
+            "node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec": "a0f0e94502b436443b5b12938f470bf53435736789f34309ed1b5c06c74094f0",
+            "node_modules/react-native/third-party-podspecs/boost.podspec": "b2e45fe8e2ea15e9a6c9013bb9bf92c094ff0986de0420568a52523b009c177a",
+            "node_modules/react-native/third-party-podspecs/fast_float.podspec": "59294099215845fb148c7bc8ce189379504aabd4abf6d31f3da892bd2198fb34",
+            "node_modules/react-native/third-party-podspecs/fmt.podspec": "0131c09d7dbeec869a25c9089760d4fc3e0c3fbd1c53e6777c3628723fc6fa42",
+            "node_modules/react-native/third-party-podspecs/glog.podspec": "45d03a6b948bd0d81112b1958bd7a2511c91aebf233e404e05b888648ba49c01"
+          },
+          "release_and_debug_archive_sha256": {
+            "Pods/ReactNativeCore-artifacts/reactnative-core-0.87.1-debug.tar.gz": "ac8ff0e90096acaae396dd513b76aad8efaac91a81656f2d8dbd82bf84588821",
+            "Pods/ReactNativeCore-artifacts/reactnative-core-0.87.1-release.tar.gz": "56c4a9a53a698a9c055262589015963ea521123bee41a4891b9914accd3f308b",
+            "Pods/ReactNativeDependencies-artifacts/reactnative-dependencies-0.87.1-debug.tar.gz": "88c71d88d135cac07288aadca0d8e0dead4841d7fbdc965116fcd8cd6767d05e",
+            "Pods/ReactNativeDependencies-artifacts/reactnative-dependencies-0.87.1-release.tar.gz": "d5f4e5476c69bcbbd9ccf09166a047f798507fe957645fdfcaa81c804927406e",
+            "Pods/hermes-engine-artifacts/hermes-ios-250829098.0.17-debug.tar.gz": "01ff9328903b2d8e4184b6efd9003eb33959ba1c1913c13258fefc42e16c20c2",
+            "Pods/hermes-engine-artifacts/hermes-ios-250829098.0.17-release.tar.gz": "2967ee51b41bd433b3027dda875e96194354e2b4d715f9f186fd0c04ccef309d"
+          },
+          "no_rust_scope": "Resolved npm graph excludes Rust/SWC/OXC/NAPI/node-gyp identities; installed Pods source tree has no Cargo.toml/Cargo.lock/.rs files; RN/Hermes prebuilt vendor archives and inspected C++ podspec/scripts pinned. This is bounded candidate graph evidence, not a repository Rust-retirement proof.",
+          "native_scripts": "Only SDK-inspected codegen/configuration/copy scripts; no application Rust build invoked."
+        },
+        "primary_metadata": {
+          "registry": "https://registry.npmjs.org/react-native/0.87.1",
+          "registry_metadata_sha256": "3c2153f7c8f56a7377cf9c4fbd55b3c9fe4675d84950f2c43bb1274a69279818",
+          "npm_archive_sha256": "f686b91e4c59ba8010be1b4abfde0adc24f7f5aea95a6a28cf4d4ad2cc494bd8",
+          "npm_archive_registry_sha512_integrity": "matched before final source/artifact acceptance",
+          "integration_docs": "https://reactnative.dev/docs/integration-with-existing-apps",
+          "versioned_helpers": "https://raw.githubusercontent.com/facebook/react-native/v0.87.1/packages/react-native/scripts/cocoapods/helpers.rb",
+          "helpers_sha256": "963bfd52ed990f2608c1b20c667527e9df2bcfc67075eef5248016bb182eecbd"
+        }
+      },
+      "current_native_lock_source_pins": {
+        "apps/apple/effect-host-candidates/ios/package-lock.json": "9714983f8de041cb65a280ed38d9d582f29e5308acf4c49401065bbde061ef41",
+        "apps/apple/effect-host-candidates/ios/ios/Podfile.lock": "7a3e3ee9c2df24d98f1b9c8eb86c40fce8ee5d520526b40567617cac93115aef"
+      },
+      "runtime_execution": "Stage1 none; no commongeneratedoutputs read or builds/npm/native runtime invoked"
+    },
+    "artifact_and_native_interface": {
+      "fixture_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+      "fixture_raw_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+      "introduced_case_count": 5,
+      "fixture_case_ids": [
+        "actual_ingress_no_view",
+        "unknown_schema_before_acquire",
+        "expiry_before_acquire",
+        "cancel_waits_native_ack",
+        "restart_no_grant_expansion"
+      ],
+      "historical_source_reconciliation": [
+        {
+          "path": "packages/healthmd-core-ts/src/index.ts",
+          "historical_sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "current_sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "unchanged": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "historical_sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "current_sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "unchanged": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "historical_sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "current_sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "unchanged": true
+        },
+        {
+          "path": "packages/healthmd-ui/src/index.ts",
+          "historical_sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "current_sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+          "unchanged": true
+        },
+        {
+          "path": "packages/healthmd-ui/README.md",
+          "historical_sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "current_sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+          "unchanged": true
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/AppIntents/ExportIntentRunner.swift",
+          "historical_sha256": "db47706fc25fa2ba5f0b0abaceb12114ffea1d9e991ae94f7c03d70164ed1403",
+          "current_sha256": "db47706fc25fa2ba5f0b0abaceb12114ffea1d9e991ae94f7c03d70164ed1403",
+          "unchanged": true
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/AppIntents/GetLastExportStatusIntent.swift",
+          "historical_sha256": "6f8565d4b115813265ca704010f4f963f142d5631f6ad35076ed94cd6ee4a7bd",
+          "current_sha256": "6f8565d4b115813265ca704010f4f963f142d5631f6ad35076ed94cd6ee4a7bd",
+          "unchanged": true
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/HealthMdApp.swift",
+          "historical_sha256": "e8903d71a56c5f1f3877e7bd3f4bd18596c426ae9d6c710320d94f9d85ba7cc0",
+          "current_sha256": "e8903d71a56c5f1f3877e7bd3f4bd18596c426ae9d6c710320d94f9d85ba7cc0",
+          "unchanged": true
+        }
+      ],
+      "predecessor_candidate_source_reconciliation": {
+        "apps/apple/effect-host-candidates/ios/.node-version": {
+          "accepted_release_sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "current_sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/babel.config.cjs": {
+          "accepted_release_sha256": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b",
+          "current_sha256": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/fixtures/host-probe-v1.json": {
+          "accepted_release_sha256": "19dd3c9919384e81fea10c701af9f1985e685001de4a54f14867d0c15fc22f86",
+          "current_sha256": "19dd3c9919384e81fea10c701af9f1985e685001de4a54f14867d0c15fc22f86",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/AppDelegate.swift": {
+          "accepted_release_sha256": "89af2b5480569d4a94125d42821f63e359ddc6a0876f8dd3ccbae9e8c921a412",
+          "current_sha256": "89af2b5480569d4a94125d42821f63e359ddc6a0876f8dd3ccbae9e8c921a412",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj": {
+          "accepted_release_sha256": "c3eeb031355c5032b2ad04ea177cc60d49f4974d730971b863d913e91eb1aed9",
+          "current_sha256": "0b74a6885d398a1fbf2b0c6d69687fa637ec9e174f0d5b6cea10a9be402d94ba",
+          "unchanged": false
+        },
+        "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme": {
+          "accepted_release_sha256": "6da792b32194a7d86c930992737b32398f5796b17fe1fbc7d45a879ca5ad75a7",
+          "current_sha256": "09f866285c7da7046eff9b2faa5392593608337d66f1c83db8dafa0a5ad645de",
+          "unchanged": false
+        },
+        "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift": {
+          "accepted_release_sha256": "81fb8cdafb5470c92bddf567a8cad940c95bf862f79ff1f94ceb83faef399c34",
+          "current_sha256": "81fb8cdafb5470c92bddf567a8cad940c95bf862f79ff1f94ceb83faef399c34",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/Info.plist": {
+          "accepted_release_sha256": "9ed29118348c256ba195b6681d03d25b234c491c33971c1ed6cc6ef1bd063257",
+          "current_sha256": "9ed29118348c256ba195b6681d03d25b234c491c33971c1ed6cc6ef1bd063257",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/NativeProbe.mm": {
+          "accepted_release_sha256": "85fa2e8defa4c998bf3f944a0ddfe616093ac0a319b2ba076a90dbb8543868a6",
+          "current_sha256": "85fa2e8defa4c998bf3f944a0ddfe616093ac0a319b2ba076a90dbb8543868a6",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/Podfile": {
+          "accepted_release_sha256": "2765d0d39d59a270117fcee565ac4b32ddab836e7b2294cebee4f4e9106095d4",
+          "current_sha256": "2765d0d39d59a270117fcee565ac4b32ddab836e7b2294cebee4f4e9106095d4",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/Podfile.lock": {
+          "accepted_release_sha256": "7a3e3ee9c2df24d98f1b9c8eb86c40fce8ee5d520526b40567617cac93115aef",
+          "current_sha256": "7a3e3ee9c2df24d98f1b9c8eb86c40fce8ee5d520526b40567617cac93115aef",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/ios/PrivacyInfo.xcprivacy": {
+          "accepted_release_sha256": "590759b762398ab2ffe8e0d4dae6d61d6c202a2d6c3567eb90dcc6de9cd9c3c1",
+          "current_sha256": "590759b762398ab2ffe8e0d4dae6d61d6c202a2d6c3567eb90dcc6de9cd9c3c1",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/metro.config.cjs": {
+          "accepted_release_sha256": "dc326acc504f78db273f2bbcd4081f2e94ebb8d37ffa02e971a883201ea5df6b",
+          "current_sha256": "dc326acc504f78db273f2bbcd4081f2e94ebb8d37ffa02e971a883201ea5df6b",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/package-lock.json": {
+          "accepted_release_sha256": "9714983f8de041cb65a280ed38d9d582f29e5308acf4c49401065bbde061ef41",
+          "current_sha256": "9714983f8de041cb65a280ed38d9d582f29e5308acf4c49401065bbde061ef41",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/package.json": {
+          "accepted_release_sha256": "0cfedfb55482407dae6b02a39f4341280e32a8ca4c96551893a3fafff4db6843",
+          "current_sha256": "0cfedfb55482407dae6b02a39f4341280e32a8ca4c96551893a3fafff4db6843",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/scripts/build.mjs": {
+          "accepted_release_sha256": "c4a99d2711ace5e6cdc8c5db05e74e28311d0172961a7f7d7ec03a674072b9cd",
+          "current_sha256": "c4a99d2711ace5e6cdc8c5db05e74e28311d0172961a7f7d7ec03a674072b9cd",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/scripts/check.mjs": {
+          "accepted_release_sha256": "784a15b6993fba6ec0c462b0b7a7192dd7dae6fd4a233ee787e0e0e29047b91b",
+          "current_sha256": "784a15b6993fba6ec0c462b0b7a7192dd7dae6fd4a233ee787e0e0e29047b91b",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh": {
+          "accepted_release_sha256": "cf8c91c9dc29d30ab0a17947474226013fc26accbd6bed4fc8e67e4655dc2972",
+          "current_sha256": "cf8c91c9dc29d30ab0a17947474226013fc26accbd6bed4fc8e67e4655dc2972",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/src/HostProbe.tsx": {
+          "accepted_release_sha256": "1d539f734efc4f46185a7ca6f35e2c897b1903cad00f1b5ffa2649ef95a9bf2b",
+          "current_sha256": "1d539f734efc4f46185a7ca6f35e2c897b1903cad00f1b5ffa2649ef95a9bf2b",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/src/probe.ts": {
+          "accepted_release_sha256": "2aab2f43013658ac491b3053d955157bbefc5e4029a5cf0b36b749c50d4e95fc",
+          "current_sha256": "2aab2f43013658ac491b3053d955157bbefc5e4029a5cf0b36b749c50d4e95fc",
+          "unchanged": true
+        },
+        "apps/apple/effect-host-candidates/ios/tsconfig.json": {
+          "accepted_release_sha256": "90a66df3ba2ca8a1975bd883f818d54a773a3a0067f7975782b58c01f798b1ca",
+          "current_sha256": "90a66df3ba2ca8a1975bd883f818d54a773a3a0067f7975782b58c01f798b1ca",
+          "unchanged": true
+        }
+      },
+      "sdk_source_pins": {
+        "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator.sdk/System/Library/Frameworks/AppIntents.framework/Modules/AppIntents.swiftmodule/arm64-apple-ios-simulator.swiftinterface": "8543e3ae7b89d6dc8ee3fdec94968a2405aded07500a00d7d8a82e729dd33ca4",
+        "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUISiriService.h": "28eaac851c96835e0ed49a6e3ecf72bf7dd6f33c2be3ae5db668b48273d417e2"
+      },
+      "headless_interface_ref": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json#/interface",
+      "os_feasibility_ref": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json#/os_ingress",
+      "scope_amendment_proposal": [
+        {
+          "path": "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h",
+          "purpose": "Typed Objective-C async start/cancel/result API imported by Swift as bridging header; no generic hostcapability."
+        },
+        {
+          "path": "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm",
+          "purpose": "RCTHost headless runtime + private bounded RCT module mailbox/promise result callback; includes existingRN SDK APIs and no health/native source SDK."
+        },
+        {
+          "path": "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs",
+          "purpose": "Dedicated cold-only Metro/esbuild headless entry and graph verification; private ios/build/cold-intent assets; excludes old autorun entry and preserves historical dist assets."
+        }
+      ],
+      "artifact_proof": "Inherited immutable predecessor receipt only; no livegeneratedcommon/nativeartifact reads claimed.",
+      "scope_amendment_status": "ROOT approved ColdProbeBridge.h/.mm scope only; build-cold-intent.mjs exact path newly proposed. No implementation before independent fixture/interface review and frozen build-window approval."
+    },
+    "policy_migration_key_versions": {
+      "candidate_schema": "newprivate canonicalASCIIJSON v1; fixture/interface independentreviewpending",
+      "production_native_state_grants": "unchanged; healthfree synthetic only",
+      "latest_official_docs": [
+        "https://developer.apple.com/documentation/appintents/configuring-the-runtime-behavior-of-your-app-intents",
+        "https://developer.apple.com/documentation/xcuiautomation/xcuisiriservice",
+        "https://developer.apple.com/documentation/appintentstesting/testing-your-app-intents-code"
+      ],
+      "skill_paths": [
+        "/Users/codybontecou/.codex/plugins/cache/openai-curated-remote/build-ios-apps/0.1.2/skills/ios-app-intents/SKILL.md",
+        "/Users/codybontecou/.codex/plugins/cache/openai-curated-remote/build-ios-apps/0.1.2/skills/ios-debugger-agent/SKILL.md"
+      ]
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+      "result": "pending",
+      "evidence": "Stage1 independent literal fixture/interface/OS ingress feasibility; actual runtime proof unrun."
+    },
+    {
+      "criterion": "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+      "result": "pending",
+      "evidence": "Stage1 independent literal fixture/interface/OS ingress feasibility; actual runtime proof unrun."
+    },
+    {
+      "criterion": "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+      "result": "pending",
+      "evidence": "Stage1 independent literal fixture/interface/OS ingress feasibility; actual runtime proof unrun."
+    },
+    {
+      "criterion": "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+      "result": "pending",
+      "evidence": "Stage1 independent literal fixture/interface/OS ingress feasibility; actual runtime proof unrun."
+    },
+    {
+      "criterion": "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission.",
+      "result": "pending",
+      "evidence": "Stage1 independent literal fixture/interface/OS ingress feasibility; actual runtime proof unrun."
+    }
+  ],
+  "checks": [
+    {
+      "result": "passed",
+      "procedure": "ROOT inherited portable check and strict cold-entry TS check",
+      "evidence": "reportcbe60cad/logba925a; inherited10synthetic assertions; no native proof"
+    },
+    {
+      "result": "passed",
+      "procedure": "Supervised thirdbundle/secondprepare/correctedbuild-only fallback",
+      "evidence": "Retained bundle_result/prepare_result/native_build_result exactgraphs/assets/productpins; artifact-only"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual supported XcodeBuildMCP test_sim prepared product test-without-building on reviewed26.5target",
+      "evidence": "PurposeSiriIngress.xcresult:5testsfailed0passed;49.173s; actual matched private case response unavailable/unverified"
+    },
+    {
+      "result": "failed",
+      "procedure": "Singlefirstcase-only actualpurpose diagnostic retest",
+      "evidence": "18.976s1failed0passed; bounded248BJSON verifies appNotRunning/SiriBackgroundSuspended/zeroColdProberesponse; otherfournotrepeated"
+    }
+  ],
+  "inspection_summary": "Read root/Apple/source/native child4+fixturecatalog+predecessor acceptedreceipt andskills. Source-only inspected currentSDK AppIntents supportedModes/XCUISiriService and RN RCTHost/rootViewFactory native APIs. ExistingAppDelegate mountswindow/auto-starts10cases; proposed separateheadlessprivateapp/UItesttarget andtypednewbridge2pathamendment. AppIntentsTesting not present in searched installedSDK/Developer tree; XCUISiriService actualcoldOSroute proposed but unavailable/success not asserted.",
+  "observations": [
+    {
+      "case_id": "preimplementation-source-and-route-feasibility",
+      "procedure": "Compare acceptedhistorical/source pins to currentGit/source; inspect installedSDK/sourceheaders and officialprimarydocs.",
+      "expected": "No source drift or livegeneratedcommonreads; supportedAPI locators distinguish realOSroute fromdirectperform substitute.",
+      "observed": "8tasksourcepins/21predecessor candidate sourcefiles unchanged; native APIs declared; newerframework absent from searched trees; actualSiri/Shortcuts routing unrun.",
+      "evidence": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json#/os_ingress and receipt inputreconciliation",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Overall partial: source/portable/bundle/preparedHermes/nativebuilt artifact proof passed; actual OS AppIntent ingress attempt failed5tests0passed.",
+    "No actual case/sequence/native witness/process-bound ColdProbe response retained. No verified cold operation, native finalizer/cancellation/loading ownership/RSS/OSroute proof.",
+    "First retained Siri hierarchy contains no StaticText/ColdProbe response; wrong-case response or true stale response not established. Later absence-guard waiter failures alone do not prove prior response exists.",
+    "No CLI retry, directperform/URL/app.launch substitute, simulatorforeground/settings/permission/account/network changes or unrelated application interaction performed in diagnosis.",
+    "Health-free private target only; no HealthKit/source grants/user store/public identity/production/signed-device promotion.",
+    "Reviewed diagnostic source compiled successfully; one firstcase-only actual purpose retest failed, otherfour not repeated. CandidateNotRunning/SiriBackgroundSuspended/noColdProbelabels is observed; OSregistration/presetbinding/permissions causes not inferred."
+  ],
+  "remaining_qualification": [
+    "ROOT independently review final partial receipt/source/artifact and two actualfailedOSresult authorities; release runtime resource.",
+    "ActualcoldOSAppIntent/nativeoperation/cleanup/cancellation proof remains unavailable/unverified on current route; no correctable cause identified and no further test/source change selected."
+  ],
+  "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "535a21322f7cb1d8106abeb123e72b40b27de30f+1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+    "scope": "Source, artifact provenance and honest partial checkpoint only; actual OS ingress failed and host_integration remains failed/unqualified.",
+    "evidence": {
+      "path": "/private/tmp/healthmd-cold-final-partial-independent.json",
+      "sha256": "978707c554c2e54a58b86e284648698b42dfd882754ddac0038099387bc38860",
+      "reviewed_receipt_sha256": "d95f8a9c3495ebc16c158ddb5b67bc0f2d69ae4f027e02d557c5c162f9920c87",
+      "source_files": 10,
+      "current_product_records": 162,
+      "raw_file_verifications": 307,
+      "failed_runtime_runs": {
+        "full_matrix": {
+          "failed": 5,
+          "passed": 0
+        },
+        "diagnostic_first_case": {
+          "failed": 1,
+          "passed": 0
+        }
+      }
+    }
+  },
+  "fixture_review_before_implementation": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "vector_path": "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json",
+    "vector_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+    "source_revision": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+    "evidence": "ROOT read5full independent literalcases and completeclosedprivatecanonicalASCII request/native monotonicdeadlines/headlessoneengine/credits+queue/ownedcancel+ack/fixederrors/interface/separatebundle/OSingress limits; actual15historicalcurrentGitpins+21predecessorfiles+2installedSDKhashes+acceptedpredecessor/old10fixtureunchanged verified. ExactprivateColdBridgeandbuildseams accepted. ActualSiri OSingress/OS cancellation/systemnetworking/iOS17/support unqualified; directperform/URL/applaunch/counters cannot substitute actualOSproof."
+  },
+  "implementation_source_preflight": {
+    "status": "source_artifact_preflight_passed_actualOSrun_and_singlecase_diagnostic_failed_frozen",
+    "current_git_head_observed": "a7cb1c13d4c69e7b9e03b30e993f9d4593eb3768",
+    "source_files": {
+      "apps/apple/effect-host-candidates/ios/fixtures/cold-intent-v1.json": {
+        "sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+        "bytes": 12470
+      },
+      "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.h": {
+        "sha256": "f5924cbf6a3947f00758a77ca756235dabd1ddb21c4cc6e070d1695b62e53501",
+        "bytes": 528
+      },
+      "apps/apple/effect-host-candidates/ios/ios/ColdProbeBridge.mm": {
+        "sha256": "d8c0292d8a89d57dc4ab8ee755008af9cba94e2346e508cbcb3981e664991f9f",
+        "bytes": 9230
+      },
+      "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntent.swift": {
+        "sha256": "a110c1308e7b136db9f5e715cfd8a0bcf28cb5427ab3ebdee80edddea1a9ee49",
+        "bytes": 5146
+      },
+      "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntentTests.swift": {
+        "sha256": "bc9977a0dcef3dae024fcdf218c1844ba388040ff04336743130ab2e89ed50ad",
+        "bytes": 6446
+      },
+      "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj": {
+        "sha256": "0b74a6885d398a1fbf2b0c6d69687fa637ec9e174f0d5b6cea10a9be402d94ba",
+        "bytes": 32960
+      },
+      "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme": {
+        "sha256": "09f866285c7da7046eff9b2faa5392593608337d66f1c83db8dafa0a5ad645de",
+        "bytes": 4327
+      },
+      "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs": {
+        "sha256": "3feda7fd53587d799786d161411d4c8b303d3fa45d8850b48799b3bf6855f544",
+        "bytes": 7080
+      },
+      "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh": {
+        "sha256": "6762d7d5416b0e3d9d5dc5607245e898b2d933dcf6348404965236f6d27ebb16",
+        "bytes": 14578
+      },
+      "apps/apple/effect-host-candidates/ios/src/cold-intent-probe.ts": {
+        "sha256": "f6b3de45bdce9139839e429880677e2c7428def828397730cb6a6d1b20120f53",
+        "bytes": 5981
+      }
+    },
+    "fixture_raw_sha256": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064",
+    "target": "ColdHostProbe, bundle com.healthmd.effecthost.ioscandidate.cold, minimum17 metadata; actual26.5 execution unrun",
+    "headless_entry": "src/cold-intent-probe.ts; only callable mailbox registration; no AppDelegate.swift/HostProbe.tsx autorun/rootReact/view/window",
+    "native_bridge": "Closed ASCII canonical raw numeric tokens, UTF8 frame bound before engine; monotonic deadline/ownership; one serialized operation (within credit2 ceiling), queue4; current ticket late-callback rejection; unacknowledged host quarantined",
+    "cancellation_proof_separation": "Swift Task cancellation handler forwards owned ticket. Actual OS task cancellation unrun. Deterministic JS Fiber interruption inside real Siri operation is synthetic cancellation evidence only; loading cancellation subcase and raw malformed primitive cases require further actual checks, no current pass assertion.",
+    "bundle_and_graph": "Third authorized supervised bundle-only command passed. Separate cold entry: 582 unique physical Metro input pins, one exactly validated 248-byte virtual prelude, one physical React and Effect root; 67 esbuild input pins. No old autorun entry. Native/Hermes packaging and actual Siri ingress remain unrun.",
+    "native_ingress": "XCTest textual Siri API, notRunning guard, fixed private response matching, no direct perform/app.launch/URL/simctl-launch substitute. Siri unavailable/failure remains unsuccessful. No Siri/account/network/permission setting changed.",
+    "observations": [
+      {
+        "result": "passed",
+        "procedure": "Pinned Node24 --check scripts/build-cold-intent.mjs; bash -n scripts/run-cold-intent-probe.sh; plutil -lint ios/HostProbe.xcodeproj/project.pbxproj; Python source-only assertions/XML parsing",
+        "expected": "Sources parse under available basic parsers; accepted fixture and inherited target source objects unchanged; no old delegate in new cold source phase or app.launch in UI test",
+        "observed": "All four source-only procedures exit0; plist OK; exact fixture hash retained; five checked inherited PBX objects unchanged; scheme XML valid; source phase excludes old delegate; actual ingress test includes no app.launch",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argvs": [
+            [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "--check",
+              "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
+            ],
+            [
+              "bash",
+              "-n",
+              "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh"
+            ],
+            [
+              "plutil",
+              "-lint",
+              "apps/apple/effect-host-candidates/ios/ios/HostProbe.xcodeproj/project.pbxproj"
+            ],
+            [
+              "python3",
+              "source_only_frozen_fixture_git_target_xml_assertions"
+            ]
+          ],
+          "raw_output": "node/bash empty exit0; project.pbxproj: OK; Python result passed fixture_immutable/five_legacy_target_objects_unchanged/shared_scheme_xml_valid/cold_sources_exclude_old_delegate/no_app_launch_in_UItest true"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "Source-only pinned Node syntax check for builder and embedded runner JS, bash -n runner, Python required argv/supervision/witness/frozen fixture assertions",
+        "expected": "All source parsers pass; required release flags, explicit overall/per-command limits, own group cleanup, pre-log output cap, absent stale response guard and fresh witness/process binding present; fixture unchanged",
+        "observed": "Node syntax and Bash parsing exit0; Python policy assertions pass; fixture9bbb unchanged. No bundle/subprocess-supervisor/native execution occurred.",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argvs": [
+            [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "--check",
+              "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
+            ],
+            [
+              "bash",
+              "-n",
+              "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh"
+            ],
+            [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "--check",
+              "--input-type=module"
+            ],
+            [
+              "python3",
+              "source_only_required_argv_supervision_fresh_witness_fixture_assertions"
+            ]
+          ],
+          "output": "passed source-only policy/syntax assertions; no executed runner/runtime claims"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "Extract final runner embedded JavaScript to pinned Node --check --input-type=module; assert deadline/log error preserve-first-failure assignments",
+        "expected": "Corrected helper syntax valid and first output_limit cannot be overwritten by deadline/log error assignment",
+        "observed": "Syntax exit0; both failed??= assignments present. Actual supervisor fault-path rerun pending ROOT independent re-review.",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "--check",
+            "--input-type=module"
+          ],
+          "runner_raw_sha256": "5d696caf109d69d0136b1d4fb6e111e14e83c9335bbf071c19637dfd38bdb30b",
+          "output": "Minimal first-failure source syntax/assertions passed; no supervisor/bundle/native execution."
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "Pinned Node --check corrected build-cold-intent.mjs; preserve first actual failed bundle logs/supervision/esbuild manifests in own generated bundle-attempt-1 directory",
+        "expected": "One-line watchFolders correction parses; failed artifacts preserved before any rerun; fixture/common entry/graph admissions unchanged",
+        "observed": "Node syntax exit0; four exact failed-attempt bytes copied and verified; no cache reset/install/bundle retry/native command",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "--check",
+            "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
+          ],
+          "artifact_directory": "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/bundle-attempt-1",
+          "patch_digest": "f0cb8c30f95c9ccf85a270b408f8dde819b3ff63f9338b65aef81e3be0f98d95"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "Read installed Metro generator/prepend source and hash exact bytes; pinned Node24 --check amended builder",
+        "expected": "Narrow approved virtual module admission; builder parses; immutable fixture retained; no bundle/native/common generated reads",
+        "observed": "Syntax exit0; installed generator and prepend hashes frozen; ten-source digest updated and fixture9bbb unchanged. No bundle/native execution.",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "--check",
+            "apps/apple/effect-host-candidates/ios/scripts/build-cold-intent.mjs"
+          ],
+          "patch_digest": "f241bab676c0b0f26d19ced277d279f4733b79a3942a2a1bb9ef1a05aff9bf5f"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "bash -n runner; extract embedded JS to pinned Node24 --check --input-type=module",
+        "expected": "Approved prepare phase parses without execution and exits before all Xcode/simulator fragments",
+        "observed": "Both parsers exit0; prepare branch skips inventory and builder, pins7frozenbundle files/compiler before supervised Hermes, and exits before Xcode args. No runtime commands executed.",
+        "evidence": {
+          "cwd": "/Users/codybontecou/dev/health-md",
+          "argvs": [
+            [
+              "bash",
+              "-n",
+              "apps/apple/effect-host-candidates/ios/scripts/run-cold-intent-probe.sh"
+            ],
+            [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "--check",
+              "--input-type=module"
+            ]
+          ],
+          "patch_digest": "2374b3893049a6c33555d24fb71d095d6fd5faede3a9bc8db8cb494f0a81a514"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "bash -n runner and extracted embedded JS pinned Node24 --check --input-type=module after narrow optional faults correction",
+        "expected": "Exact seven hardpins/builder/fixture/workspace/compiler args/supervisor bounds unchanged; optional faults absence permitted with explicit provenance",
+        "observed": "Both syntax procedures exit0. Sole faults-required assertion replaced absent-or-exact, generated evidence records absent/not-used. No prepare/native execution.",
+        "evidence": {
+          "runner_sha256": "a8956a2146f2ead15022fc126a493cd07d63a0f409162e5637705f07a40d638e",
+          "patch_digest": "f862ca0dcf944670b261afe459c247207cf8dc259da071ff8c5b0038b1b3f546"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "ROOT actual inherited npm run check and additional strict cold-entry TypeScript project check",
+        "expected": "Inherited10portable assertions and cold-only TypeScript entry check pass without native proof",
+        "observed": "Both exact commands exit0; inherited check10portable assertions passed; cold TypeScript check empty exit0.",
+        "evidence": {
+          "report": "/private/tmp/healthmd-cold-portable-check-report.json",
+          "sha256": "cbe60cadcd3f37a87bcff5c3cf700944ccb85933e1dac50b84a440bddf2d2919",
+          "inherited_log_sha256": "ba925a279bbb798d596cfcc0b592bac480c3bbe1e8855c71e40501b1c471f6b6",
+          "cwd": "apps/apple/effect-host-candidates/ios"
+        }
+      },
+      {
+        "result": "passed",
+        "procedure": "bash -n runner; pinned Node24 --check extracted embedded JS after fallback phases",
+        "expected": "Frozen prepared inputs, exact SDK/target, bounded build/ingress branch parses; no execution",
+        "observed": "Both syntax commands exit0; only runner/receipt changed, helper unchanged; actual build/test remains unrun",
+        "evidence": {
+          "patch_digest": "ecb4fa07b5e16b2822a68d8059f14ca8ba78972b13c7d594b2e4f573b72c7955",
+          "runner_sha256": "6762d7d5416b0e3d9d5dc5607245e898b2d933dcf6348404965236f6d27ebb16"
+        }
+      }
+    ],
+    "unrun_checks": [
+      {
+        "procedure": "Verified actual OS AppIntent ingress/cold operation/cleanup/cancellation metrics",
+        "reason": "Supported purpose attempt failed5tests0passed; no expected private response/native invocation proven"
+      }
+    ],
+    "runner_policy": {
+      "required_argv": [
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "optional_phase": "HEALTHMD_COLD_PHASE=bundle runs supervised cold bundle only; prepare reuses seven hardpinned frozen files, validates manifest claims without common reads, generates existing private workspace/scheme and supervised Hermes asset then exits before inventory/xcodebuild/test; all requires ROOT native window.; build and ingress reuse six frozen prepared files plus fixture, exact26.5SDK/Booted target, skip bundle/Hermes/common. build exits after actual artifact check before test; ingress needs separate ROOT grant and purpose test_sim attempt.",
+      "limits_ms": {
+        "overall": 900000,
+        "target_inventory": 10000,
+        "bundle": 120000,
+        "Hermes": 30000,
+        "build_for_testing": 300000,
+        "test_without_building": 300000,
+        "plist_identity": 10000,
+        "termination_grace": 2000
+      },
+      "stream_caps_bytes": {
+        "target_inventory": 1048576,
+        "bundle": 8388608,
+        "Hermes": 1048576,
+        "each_xcodebuild": 16777216,
+        "plist_identity": 4096
+      },
+      "ownership": "Detached child process group per command; tracked owned groups only; SIGTERM then SIGKILL on timeout/output failure/parent signal; stream cap checked before log write. No global process kill, simulator shutdown/reset or other-app cleanup. Direct builder requires supervised runner marker.",
+      "native_execution_preference": "XcodeBuildMCP session_show_defaults/session_set_defaults/build_sim/test_sim are callable in current ALL_TOOLS. Use purpose tools first with exact private ColdHostProbe workspace/scheme/target and reviewed simulator when ROOT releases native window; no build_run or foreground launch as ingress. CLI fallback only if exact operation unsupported, with concrete tool outcome recorded."
+    },
+    "stale_response_binding": {
+      "before_activation": "Dismiss prior Siri surface via Home; wait for prior fixed ColdProbe response absent and assert absent before actual textual Siri activation",
+      "response": "Fixed case+sequence plus native-generated UUID invocation witness and private process counter; compare exact outcome/cleanup counters; reject any repeated invocation witness or process across fresh-process cases",
+      "authority": "Diagnostic witness has no source grant or authentication semantics. Strict admitted request shape unchanged; bounded version token inspected only to report fixed case/sequence on invalid-version refusal; version !=1 still refuses before engine.",
+      "proof_class": "source_preflight_only; actual Siri freshness/cold process route and OS task cancellation remain unrun"
+    },
+    "supervisor_independent_review": {
+      "result": "passed",
+      "reviewer": "ROOT",
+      "before_bundle": true,
+      "summary_path": "/private/tmp/healthmd-cold-supervisor-corrected-check/summary.json",
+      "summary_sha256": "e638e9b56584e420da4763841aa4a54a2720d81a9acb6d27accdc973be81cdcf",
+      "observed": "Actual extracted helpers pass success/nonzero/TERM-ignoring own parent+descendant timeout cleanup/output flood4096B first output_limit retained/spawn error. Test-only output relocation; no native proof."
+    },
+    "virtual_prelude_policy": {
+      "admission": "Exactly one prepend __prelude__, absent from dependency graph, zero dependencies, one js/script/virtual output, exact output.data.code and Buffer getSource bytes equal pinned installed getPreludeCode with isDev=false and actual config options. All other virtual outputs rejected; every other input strictly realpath/root/hash admitted.",
+      "SDK_physical_pins": {
+        "getPreludeCode.js": "9f1d9bdc49529b24329164ea7c83e985dcc45ebc587528f5bd99cbbd5ee0e10a",
+        "getPrependedScripts.js": "087a6f30ca2d8411d98de75feaabf27d34ec09266932dc8cadfd1bfeba8cd633"
+      },
+      "generator_options": "isDev=false; transformer.globalPrefix; resolver.requireCycleIgnorePatterns and unstable_forceFullRefreshPatterns; extraVars omitted exactly as installed getPrependedScripts. Option regex strings recorded in graph audit; virtual source byte length/hash separate from physical SDK pins.",
+      "execution": "unrun; common-output lease suspended for Combined core check; no mutable common dist reads in this source-only amendment"
+    },
+    "prepare_policy": {
+      "approval": "ROOT approved exact source-only proposal before mutation; bundle independent audit3958f310c523b14a49c138f5c50ada285bd9e6ecb7d7f99d8a9303ec8b97fdb0",
+      "inputs": "Seven exact frozen third-bundle raw hashes, fixture9bbb, graph582 unique physical+one248B virtualc118cbe,67esbuild input records and fixed React/Effect roots. Selected common capability/fault hash claims checked inside frozen graph only; no common files read.",
+      "Hermes": "Existing physical compiler hardpinned459d352c9a3cfdbe9289a167d93f7e30700c6ee591dfee3a4d52dc26eb8548cb before30s/1MiB owned-group supervised compiler. Original JS retained as metro-source.jsbundle; packaged Hermes hash/compiler hash separate.",
+      "outputs": "Existing exact private workspace/scheme; prepare-evidence.json binds frozen input pins, originalJS/Hermes/compiler/workspace/scheme hashes and native build/ingress unrun.",
+      "execution": "Second authorized prepare-only attempt passed; actual bounded Hermes exit0; no inventory/common/bundle/Xcode/default/simulator/test. Native build/ingress unrun pending ROOT artifact review.",
+      "actual_dependencies": "Frozen graph imports capabilities.js only; selected faults.js authority pin absent and unused, explicitly recorded in generated prepare evidence. No common source/output read."
+    },
+    "native_fallback_policy": {
+      "reason": "Three actual ROOT purpose build_sim attempts rejected missing scheme before compile despite reviewed named/global ColdHostProbe defaults; exact evidence retained. Tools exist; blanket unavailable claim not made.",
+      "scope": "Only actual xcodebuild build-for-testing in build phase under existing300s/16MiB helper. ingress phase separately gated by ROOT approval after artifact review and actual purpose test_sim attempt; test-without-building only, actual Siri route; no foreground substitute.",
+      "pins": "PreparedHermes495a516f/originalJS004761a7/workspace61259f6f/scheme257d2e65/prepare-evidenced9211a6b/asset-metadatae9ccdb9b plus fixture9bbb. ExplicitSDKiphonesimulator26.5; fixed alreadyBooted26.5 target03AE614E-7BA2-4B5A-8CEA-D3A3BC2404B0. No rebundle/Hermes/commonreads/cache/deps/settings.",
+      "execution": "Reviewed4c274e95complete-typeObjC seam build retry passed; native artifacts frozen for ROOT review; actual purpose test_sim attempt required before separately authorized CLI ingress fallback. Runtime unrun."
+    },
+    "host_type_seam": {
+      "procedure": "Source-only inspect actual compiler notes/header192 and installed configuration public headers; implement ROOT-approved existing ObjC bridge seam",
+      "expected": "Keep exact existing lazy headless host initializer/factory/delegate ownership; avoid Swift incompleteRCTHost member access",
+      "observed": "Swift invokes initializeAndSetHost(rootViewFactory); ObjC imports complete RCTHost and public factory/config headers, invokes public initializer/defaultConfiguration then public factory.reactHost handoff. No views/private APIs/KVC/source grants. No compiler rerun or runtime assertion.",
+      "result": "passed",
+      "evidence": {
+        "source_patch": "4c274e95e030eca19739dbefe07fa6e82fcea07aba3fa82742ef75cd2ab9d8c1",
+        "unchanged_runner": "6762d7d5416b0e3d9d5dc5607245e898b2d933dcf6348404965236f6d27ebb16",
+        "frozen_fixture": "9bbb60feafff21385987fe01b1605aa5674507d207d689dd1cfac0dede8e9064"
+      }
+    }
+  },
+  "source_review_resolutions": [
+    {
+      "finding": "Required --release flag rejected",
+      "resolution": "Exact runner argv includes --release --offline --fresh-process; source preflight only passed."
+    },
+    {
+      "finding": "Unbounded subprocess/output/overall execution",
+      "resolution": "Finite overall/per-command timers, owned detached groups, TERM/KILL cleanup and pre-write stream caps; bundle-only phase uses same supervisor and skips native commands. Actual supervisor fault-path/runtime checks unrun."
+    },
+    {
+      "finding": "Stale generic Siri response could pass",
+      "resolution": "Dismiss prior Siri and verify old fixed response absent; exact case/sequence/UUID invocation witness/process binding with reuse rejection; actual system route unrun."
+    },
+    {
+      "finding": "Output flood first output_limit overwritten by deadline before delayed KILL",
+      "resolution": "Minimal preserve-first-failure assignments failed ??= for deadline and log-write error; output_limit stays authoritative. ROOT actual fault-path evidence had4096B capped log and owned descendant cleanup. Corrected helper fault-path re-review required before bundle."
+    }
+  ],
+  "resolved_attempts": [
+    {
+      "result": "failed",
+      "procedure": "HEALTHMD_COLD_PHASE=bundle PATH pinned Node24 ./scripts/run-cold-intent-probe.sh --release --offline --fresh-process",
+      "expected": "Supervised120s/8MiB esbuild+Metro separate cold asset; no simulator/native commands",
+      "observed": "Runner/child exit1;2095output bytes; no timeout/cap failure; Metro SHA-1 computation for cold-intent-probe.ts failed. esbuild manifest completed; no Metro asset/graph qualified. Own child cleanup completed.",
+      "evidence": {
+        "cwd": "apps/apple/effect-host-candidates/ios",
+        "argv": [
+          "./scripts/run-cold-intent-probe.sh",
+          "--release",
+          "--offline",
+          "--fresh-process"
+        ],
+        "environment": {
+          "HEALTHMD_COLD_PHASE": "bundle",
+          "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+        },
+        "artifact_digests": {
+          "bundle.log": "ac463099c7ef180a7dbc81a95581e3842e08f4a63bfd86520051f1e4a1b79426",
+          "bundle-supervision.json": "94b105698a322bd7ad03e7028c477edf1ddaa81c491fec2dec6b87f3670eed9f",
+          "source-inputs.json": "327c6b5184771723046feda49acf26da47e1999d9e784237a17a4480ab426ac5",
+          "esbuild-metafile.json": "4131aaa47a2049abaf3fb87b2c56791fa3aadeccdaf8edc89cd7ca52b46d673b"
+        },
+        "diagnosis": "Loaded source config watchFolders includes ios root; cold script replaced it with core-only folder. Installed Metro createFileMap.js roots=config.watchFolders; private new entry was excluded.",
+        "correction": "Preserve configured watchFolders and append pinned core folder; no cache reset/new cache/source entry substitution.",
+        "retained_attempt_directory": "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/bundle-attempt-1"
+      },
+      "resolution_status": "watchFolders_correction_independently_approved_before_attempt2;entry_resolved"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT authorized exact supervised bundle-only retry after watchFolders source review",
+      "expected": "Dedicated cold graph and Metro asset; strict complete prepend/dependency audit",
+      "observed": "Entry resolved and transformed; serializer failed realpath __prelude__; exit1/3116B/no bounds exceeded; owned group cleanup completed. No Metro asset/native result.",
+      "evidence": {
+        "cwd": "apps/apple/effect-host-candidates/ios",
+        "argv": [
+          "./scripts/run-cold-intent-probe.sh",
+          "--release",
+          "--offline",
+          "--fresh-process"
+        ],
+        "environment": {
+          "HEALTHMD_COLD_PHASE": "bundle",
+          "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+        },
+        "retained_attempt_directory": "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/bundle-attempt-2",
+        "artifact_digests": {
+          "bundle.log": "eaf4a91466cd63fae32f2ced546f36eef395e5af93086265d02f9f6483f56c47",
+          "bundle-supervision.json": "e646e0269cdc8052fe6eb983b3cd513ad7f6a11651332c7dcb4892736d9b9bec",
+          "source-inputs.json": "327c6b5184771723046feda49acf26da47e1999d9e784237a17a4480ab426ac5",
+          "esbuild-metafile.json": "4131aaa47a2049abaf3fb87b2c56791fa3aadeccdaf8edc89cd7ca52b46d673b"
+        },
+        "source_patch_at_execution": "f0cb8c30f95c9ccf85a270b408f8dde819b3ff63f9338b65aef81e3be0f98d95",
+        "SDK_diagnosis": "Metro getPrependedScripts constructs one __prelude__ virtual module with js/script/virtual output; no physical file. Audit must validate exact known virtual node separately and retain all physical root/hash admission."
+      },
+      "resolution_status": "approved_virtual_prelude_correction_independently_reviewed_before_third_attempt; third_bundle_passed"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT-authorized exact prepare-only command after2374b389source review",
+      "expected": "Frozen third-bundle reuse, private workspace/scheme generation and bounded Hermes only; no common/simulator/build/test",
+      "observed": "Exit1 before workspace generation or Hermes; seven frozen input file hashes unchanged. Fixed cold_probe_command_failed emitted. Frozen Metro graph has capabilities authority module only; faults selected authority pin is not an actual imported graph dependency.",
+      "evidence": {
+        "cwd": "/Users/codybontecou/dev/health-md/apps/apple/effect-host-candidates/ios",
+        "argv": [
+          "./scripts/run-cold-intent-probe.sh",
+          "--release",
+          "--offline",
+          "--fresh-process"
+        ],
+        "environment": {
+          "HEALTHMD_COLD_PHASE": "prepare",
+          "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+        },
+        "source_patch": "2374b3893049a6c33555d24fb71d095d6fd5faede3a9bc8db8cb494f0a81a514",
+        "frozen_graph_sha256": "4342a2b21b8ed2e48cef35fe37d181c501282a395129cacedb01acd0d337359d",
+        "diagnosis": "Incorrect assertion required unused faults.js in frozen Metro graph; no dependency or byte drift."
+      },
+      "resolution_status": "narrow_optional_faults_correction_independently_reviewed_before_prepare_retry; retry_passed"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual XcodeBuildMCP build_sim buildForTesting with private defaults",
+      "expected": "Purpose native compilation for exact ColdHostProbe target",
+      "observed": "MISSING_REQUIRED_PARAMETERS scheme required before any native compilation; verified private defaults in second/third evidence.",
+      "evidence": {
+        "path": "/private/tmp/healthmd-cold-native-build-first.json",
+        "bytes": 788,
+        "sha256": "6110e3f7fce754d9e213981a0f9ce676f04ddb3b41340600b16144f5d7d17c0e"
+      },
+      "resolution_status": "actual_unsupported_purpose_route_recorded; bounded_source_fallback_authorized_before_mutation; execution_unrun"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual XcodeBuildMCP build_sim buildForTesting with private defaults",
+      "expected": "Purpose native compilation for exact ColdHostProbe target",
+      "observed": "MISSING_REQUIRED_PARAMETERS scheme required before any native compilation; verified private defaults in second/third evidence.",
+      "evidence": {
+        "path": "/private/tmp/healthmd-cold-native-build-second.json",
+        "bytes": 4665,
+        "sha256": "f1e94e7ca36eee2f99642a67f1c510eb756c0fd66deb802112b4cb0f689a8477"
+      },
+      "resolution_status": "actual_unsupported_purpose_route_recorded; bounded_source_fallback_authorized_before_mutation; execution_unrun"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual XcodeBuildMCP build_sim buildForTesting with private defaults",
+      "expected": "Purpose native compilation for exact ColdHostProbe target",
+      "observed": "MISSING_REQUIRED_PARAMETERS scheme required before any native compilation; verified private defaults in second/third evidence.",
+      "evidence": {
+        "path": "/private/tmp/healthmd-cold-native-build-third.json",
+        "bytes": 4656,
+        "sha256": "b44dd405625bc2870bc348a4fccd83acf77c7ce2234af6801c5655e37e802654"
+      },
+      "resolution_status": "actual_unsupported_purpose_route_recorded; bounded_source_fallback_authorized_before_mutation; execution_unrun"
+    },
+    {
+      "result": "failed",
+      "procedure": "One ROOT authorized exact supervised build-only fallback in workspace sandbox",
+      "expected": "SDK26.5/Booted reviewed target and bounded ColdHostProbe build-for-testing then artifact proof, no ingress",
+      "observed": "SDK26.5 check passed; target inventory exited1/2779B without bound failure, CoreSimulatorService connection invalid/refused. Failed before xcodebuild/compile. No build/test/install/reset/settings/common/bundle/Hermes actions.",
+      "evidence": {
+        "cwd": "apps/apple/effect-host-candidates/ios",
+        "argv": [
+          "./scripts/run-cold-intent-probe.sh",
+          "--release",
+          "--offline",
+          "--fresh-process"
+        ],
+        "environment": {
+          "HEALTHMD_COLD_PHASE": "build",
+          "HEALTHMD_PROBE_SIMULATOR_ID": "03AE614E-7BA2-4B5A-8CEA-D3A3BC2404B0",
+          "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+        },
+        "source_patch": "ecb4fa07b5e16b2822a68d8059f14ca8ba78972b13c7d594b2e4f573b72c7955",
+        "artifact_pins": {
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-1/sdk-version.log": {
+            "bytes": 5,
+            "sha256": "25205f2e2f02dc71036ee827e19c49b893b231a3d1af240e35a3ac55aa8cdcb6"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-1/sdk-version-supervision.json": {
+            "bytes": 304,
+            "sha256": "1902db9ca797d4d7b03f4a49b5bb9c51f59d6564c6c6c1cf838bca43aa0c1c5b"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-1/target-inventory.log": {
+            "bytes": 2779,
+            "sha256": "a6b8780366a5d53b5df8d2fce4957a35068cd895f1c9cf0d86907cbf0ef4825a"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-1/target-inventory-supervision.json": {
+            "bytes": 322,
+            "sha256": "103535f4579ab22ce414fd2e4b892936d4e35847baab41a783d8720f203fe950"
+          }
+        }
+      },
+      "resolution_status": "exact_same_bounded_command_with_service_access_proposed; ROOT_second_attempt_authorization_pending; no_source_change"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT-authorized same-source escalated build-only fallback after simulator service sandbox refusal",
+      "expected": "Actual bounded build-for-testing and private artifact proof; no test/ingress",
+      "observed": "SDK26.5/Booted exact target passed; actual xcodebuild exit65/1015459B under16MiB/no deadline failure. Swift error ColdProbeIntent.swift:29: public reactHost property cannot import because RCTHost interface incomplete/forward-declared. Header192 public property, compiler notes6522-6529. No test/ingress/install.",
+      "evidence": {
+        "source_patch": "ecb4fa07b5e16b2822a68d8059f14ca8ba78972b13c7d594b2e4f573b72c7955",
+        "preserved_logs": {
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/sdk-version.log": {
+            "bytes": 5,
+            "sha256": "25205f2e2f02dc71036ee827e19c49b893b231a3d1af240e35a3ac55aa8cdcb6"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/sdk-version-supervision.json": {
+            "bytes": 304,
+            "sha256": "1902db9ca797d4d7b03f4a49b5bb9c51f59d6564c6c6c1cf838bca43aa0c1c5b"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/target-inventory.log": {
+            "bytes": 4725,
+            "sha256": "9fb1f44ec8ebe16c199b0767e7a7afeaa21c392f8702e64a3f48987ac11282df"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/target-inventory-supervision.json": {
+            "bytes": 322,
+            "sha256": "0fe56c0b8336d0737492438ec5807cd37f41ffc6e37a3270fe7ac7374fa484b6"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/build.log": {
+            "bytes": 1015459,
+            "sha256": "1a6ef3eb832be5a5796f7b1e926e1615e92c56d96264c0e76016fee38adb8d63"
+          },
+          "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-attempt-2/build-supervision.json": {
+            "bytes": 861,
+            "sha256": "8f2874d7df35ebeb622b8951345b3117879d3ad45e00d7759396b0c9a3f054b6"
+          }
+        },
+        "SDK_pins": {
+          "apps/apple/effect-host-candidates/ios/node_modules/react-native/Libraries/AppDelegate/RCTRootViewFactory.h": "56d8ead8d11468e892ef204580487030f440ea6ef51904d0e5596fca756e3113",
+          "apps/apple/effect-host-candidates/ios/node_modules/react-native/Libraries/AppDelegate/RCTRootViewFactory.mm": "30980a6a8883ccb69c76aae0a9b7d11a083cd8892b2fd17d3c5098efbac6f34a"
+        },
+        "error_source": "apps/apple/effect-host-candidates/ios/ios/ColdProbeIntent.swift:29",
+        "proposed_correction": "ROOT-approved existing Objective-C bridge initializeAndSetHost accepts RCTRootViewFactory; public initializeReactHost plus factory.reactHost handoff entirely ObjC with complete RCTHost type. Swift calls only bridge method; same lazy factory/delegate/main-queue lifecycle/no view."
+      },
+      "resolution_status": "ROOT_reviewed_ObjC_complete_type_correction_before_one_retry; actual_build_passed"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual supported purpose test_sim preparedxctestrun",
+      "expected": "Actual OS AppIntent route five matching private cases",
+      "observed": "5failed0passed; first response missing, later guard failures; detailed evidence native_ingress_result. Tools route worked; CLI retry not justified.",
+      "evidence": {
+        "tool_result_sha256": "c6f253dcd0891f813a89660d3d55455b4d1a0b615c22e9b45f05ca9f9e317d26",
+        "xcresult_tree_sha256": "712282d0932e859d6326e0cd25a92be9128e7f004b081337d25d72e9b3696d55"
+      },
+      "resolution_status": "read_only_diagnosis_frozen; no_source_change_or_retest"
+    },
+    {
+      "result": "failed",
+      "procedure": "ROOT actual diagnostic firstcase-only purpose test_sim",
+      "expected": "Actual private response or bounded failure data",
+      "observed": "18.976s1failed0passed; candidateNotRunning/SiriBackgroundSuspended/noColdProbe labels/priorfalse; otherfour not repeated",
+      "evidence": {
+        "tool_result_sha256": "20a655fbedc435757f5db4dc9b4a047b2ba8c78b68098601a3fc0147dfb0fa32",
+        "diagnostic_sha256": "171cba8f128aa254b75013c747bc1a091215d3771760bc400be8040f6fb36194",
+        "xcresult_tree_sha256": "4dfdfcae7301d5d81629e56d1e475b9aa4f401fec3ad175c085214e176f2ff9f"
+      },
+      "resolution_status": "honest_partialfailedOSrun_frozen_for_review_resource_release; no furtherretry/sourceproposal"
+    }
+  ],
+  "bundle_result": {
+    "result": "passed",
+    "procedure": "ROOT-authorized third exact supervised bundle-only command; independently reread graph input hashes and packaged JS asset",
+    "expected": "Cold-only graph/asset, exact known virtual prelude, one physical React/Effect root, no old autorun; bounded process exits0",
+    "observed": "Exit0;1685 output bytes below8MiB;120s command bound not triggered. Metro asset1143045B;582 unique physical pins rehashed, one248B virtual prelude; React/Effect roots each one. No simulator/native command ran.",
+    "evidence": {
+      "cwd": "/Users/codybontecou/dev/health-md/apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "./scripts/run-cold-intent-probe.sh",
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "environment": {
+        "HEALTHMD_COLD_PHASE": "bundle",
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "source_patch": "f241bab676c0b0f26d19ced277d279f4733b79a3942a2a1bb9ef1a05aff9bf5f",
+      "artifacts": {
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/main.jsbundle": {
+          "bytes": 1143045,
+          "sha256": "004761a7f17afcc5672897c41f397ffdbd93893ee893ea70fc4db2f6f5610a44"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/metro-inputs.json": {
+          "bytes": 128699,
+          "sha256": "4342a2b21b8ed2e48cef35fe37d181c501282a395129cacedb01acd0d337359d"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/asset-sha256.json": {
+          "bytes": 399,
+          "sha256": "49fb2224c549b06a92cf00d0a437460b749c329b8baa5b45b4551bb6893a8413"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/source-inputs.json": {
+          "bytes": 12172,
+          "sha256": "327c6b5184771723046feda49acf26da47e1999d9e784237a17a4480ab426ac5"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/esbuild-metafile.json": {
+          "bytes": 63930,
+          "sha256": "4131aaa47a2049abaf3fb87b2c56791fa3aadeccdaf8edc89cd7ca52b46d673b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/bundle.log": {
+          "bytes": 1685,
+          "sha256": "ac611aa78c9e9e6d1be22caeb8eea61a7634e46830f9e17119f9b210b15a5ae3"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/bundle-supervision.json": {
+          "bytes": 347,
+          "sha256": "ebc4198f15006efc1a0f79305fe3d47c667157caa2a8dd0942d9ee66e69ab429"
+        }
+      },
+      "virtual_inputs": [
+        {
+          "path": "__prelude__",
+          "type": "js/script/virtual",
+          "bytes": 248,
+          "sha256": "c118cbe823031197e989134a0354275067d0f5c0157dde853f46dac3b132adc9",
+          "generator_options": {
+            "isDev": false,
+            "globalPrefix": "",
+            "requireCycleIgnorePatterns": [
+              "/(^|\\/|\\\\)node_modules($|\\/|\\\\)/"
+            ],
+            "unstable_forceFullRefreshPatterns": [],
+            "extraVars": "omitted_by_getPrependedScripts"
+          },
+          "generator_physical_inputs": [
+            {
+              "path": "apps/apple/effect-host-candidates/ios/node_modules/metro/src/lib/getPreludeCode.js",
+              "sha256": "9f1d9bdc49529b24329164ea7c83e985dcc45ebc587528f5bd99cbbd5ee0e10a"
+            },
+            {
+              "path": "apps/apple/effect-host-candidates/ios/node_modules/metro/src/lib/getPrependedScripts.js",
+              "sha256": "087a6f30ca2d8411d98de75feaabf27d34ec09266932dc8cadfd1bfeba8cd633"
+            }
+          ]
+        }
+      ],
+      "physical_roots": {
+        "react": [
+          "/Users/codybontecou/dev/health-md/apps/apple/effect-host-candidates/ios/node_modules/react"
+        ],
+        "effect": [
+          "/Users/codybontecou/dev/health-md/apps/apple/effect-host-candidates/ios/node_modules/effect"
+        ]
+      }
+    },
+    "qualification": "bundle_only; native build/install/OS ingress and cancellation remain unrun"
+  },
+  "prepare_result": {
+    "result": "passed",
+    "procedure": "ROOT-authorized one exact prepare-only retry after f862ca0d source review; reread generated artifacts and XML/Hermes header",
+    "expected": "Hardpinned third-bundle reuse, same private workspace/scheme and pinned bounded Hermes only, no common/native execution",
+    "observed": "Hermes exit0;539009B output under1MiB;30s bound not triggered. Original JS retained exact004761a7; packaged Hermes1828736B495a516f, bytecode98. Private generated workspace/scheme XML valid. No common/bundle/default/inventory/Xcode/simulator/test execution.",
+    "evidence": {
+      "cwd": "/Users/codybontecou/dev/health-md/apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "./scripts/run-cold-intent-probe.sh",
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "environment": {
+        "HEALTHMD_COLD_PHASE": "prepare",
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "source_patch": "f862ca0dcf944670b261afe459c247207cf8dc259da071ff8c5b0038b1b3f546",
+      "compiler_sha256": "459d352c9a3cfdbe9289a167d93f7e30700c6ee591dfee3a4d52dc26eb8548cb",
+      "artifacts": {
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/metro-source.jsbundle": {
+          "bytes": 1143045,
+          "sha256": "004761a7f17afcc5672897c41f397ffdbd93893ee893ea70fc4db2f6f5610a44"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/main.jsbundle": {
+          "bytes": 1828736,
+          "sha256": "495a516f6cd2d965c72ce5b0f8f8cb0fc8af84c1cc791062168a7f0bbcb2b7ae"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/prepare-evidence.json": {
+          "bytes": 1313,
+          "sha256": "d9211a6b49b2859257c09012dd05d8f727febe14b9a9a902925f037a0f6fa81f"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/asset-sha256.json": {
+          "bytes": 583,
+          "sha256": "e9ccdb9b2ee2893593f5d5cceb2163affe39908e7b683b7be0570f9c1c8bece0"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/hermes.log": {
+          "bytes": 539009,
+          "sha256": "3844f7e6f3a0ee3fa2006cadbf1c71754ceec182084eaf052f24c06fbf2d74ec"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/hermes-supervision.json": {
+          "bytes": 622,
+          "sha256": "93396e1a708223d816826604871d0a7613a63095d693a5dd24427a37d4234a88"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/ColdHostProbe.xcworkspace/contents.xcworkspacedata": {
+          "bytes": 310,
+          "sha256": "61259f6fa99ffdde10542da6bab8b0637239cee3c9288d1c9a8578b400866aa4"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/ColdHostProbe.xcworkspace/xcshareddata/xcschemes/ColdHostProbe.xcscheme": {
+          "bytes": 1093,
+          "sha256": "257d2e654f5125dffb5f4c3087e9fbe43aa78aaa61bb98d88710cf4a15893ba8"
+        }
+      }
+    },
+    "qualification": "prepared_artifact_only; native build/install/actual OS AppIntent ingress/cancellation remain unrun"
+  },
+  "native_build_result": {
+    "result": "passed",
+    "procedure": "One ROOT-authorized exact same escalated build-only command after diagnostic1d4ca45e source review; prior successful build evidence retained before overwrite",
+    "expected": "Exact private ColdHostProbe Release build-for-testing with prepared asset26.5SDK/reviewedtarget, fixedbounds; stop before test",
+    "observed": "Actual xcodebuild exit0;361421B under16MiB/300s bound not triggered. Only failure diagnostic test source changed; exact preparedHermes495a, privateID/SDK26.5 preserved. Full162 product records/xctestrun rehashed; prior successful evidence retained inbuild-attempt-3. No ingress/test/common/bundle/Hermes/settings.",
+    "evidence": {
+      "cwd": "apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "./scripts/run-cold-intent-probe.sh",
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "environment": {
+        "HEALTHMD_COLD_PHASE": "build",
+        "HEALTHMD_PROBE_SIMULATOR_ID": "03AE614E-7BA2-4B5A-8CEA-D3A3BC2404B0",
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "source_patch": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+      "artifact_pins": {
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/sdk-version.log": {
+          "bytes": 5,
+          "sha256": "25205f2e2f02dc71036ee827e19c49b893b231a3d1af240e35a3ac55aa8cdcb6"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/sdk-version-supervision.json": {
+          "bytes": 304,
+          "sha256": "1902db9ca797d4d7b03f4a49b5bb9c51f59d6564c6c6c1cf838bca43aa0c1c5b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/target-inventory.log": {
+          "bytes": 5375,
+          "sha256": "cb88a7019562e2428c502499bc0951fb967a77b023b895226d31dc01d6b6865f"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/target-inventory-supervision.json": {
+          "bytes": 322,
+          "sha256": "98f3cb2aa9e1ff41290c2a48c0f7f7c525a466ff1b63e25a78fcb81b6bf28f7d"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build.log": {
+          "bytes": 361421,
+          "sha256": "633cc9ad3ad98ae317a1e934471f291d5450ce1168646df0aa3f00b2a3581349"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-supervision.json": {
+          "bytes": 859,
+          "sha256": "23c3ca0695a5c3c109cf2618b45be32b6b1ee7b64bf740a7e47c14792ed90eff"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-identity.log": {
+          "bytes": 42,
+          "sha256": "0ee96ae486b71fb920fb102052ae6c87e2b2f9d54a7c6c87493364766710469e"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-identity-supervision.json": {
+          "bytes": 487,
+          "sha256": "0be4df08891d4a3c9e6a2b3afda6089a7dbe845c78979600c6d4c2ce9c7c2ee1"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-artifact.json": {
+          "bytes": 956,
+          "sha256": "652aefda98a77b210adaa86f029231ee8509b917427786357e616607ce6d835a"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-products-evidence.json": {
+          "bytes": 49716,
+          "sha256": "f6e6271c479e9748f64450da755e1c0c9a0d00db220da592e2851ed707f1cbfa"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/Info.plist": {
+          "bytes": 790,
+          "sha256": "ffe375d0cfcc5b94ca2b37f8a1cc78782b2f945f080179f0dcbc0d4fa3335e2b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/ColdHostProbe": {
+          "bytes": 375936,
+          "sha256": "c943b8211ef63403c16a7959f80c7c79d4c9e5d8a9f4debd9721c7e53f6fa6c4"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/main.jsbundle": {
+          "bytes": 1828736,
+          "sha256": "495a516f6cd2d965c72ce5b0f8f8cb0fc8af84c1cc791062168a7f0bbcb2b7ae"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/Info.plist": {
+          "bytes": 8355,
+          "sha256": "2463d60c6e3167a9ec52cfe90f31fa7584e95b748e3b4c8854c70ef74edca0f8"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/ColdProbeIntentUITests-Runner": {
+          "bytes": 179152,
+          "sha256": "0b2b1d93c8be1d082aaa2339d0f6f2e39784512a88fad696db667b4a7ab680e9"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest/ColdProbeIntentUITests": {
+          "bytes": 229192,
+          "sha256": "2a4d400dfd6086e48b80ed6f95ca5a1eacabfb5f366cffbbb148d42219bb4e9d"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest/Info.plist": {
+          "bytes": 734,
+          "sha256": "ddad0f801f8666ed6df5328b256eed52e8d13bd8ab014aa17df102b7f0d6f06f"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/ColdHostProbe_iphonesimulator26.5-arm64-x86_64.xctestrun": {
+          "bytes": 4902,
+          "sha256": "771586a4a92e186e7514ee98601f3949ada8660d4df9daa4cd3abbbdb7e9be4e"
+        }
+      },
+      "product_tree_sha256": "247c6ba7169fee357242943e3a2e5db1b9ea7f9d5b761e005a5a302c0a0d3a35",
+      "product_file_records": 162
+    },
+    "qualification": "artifact_only; diagnostic source compiled, no retest/actual OS response/native operation proof"
+  },
+  "predecessor_source_reconciliation_scope": "Current21predecessor files rehashed after additive cold-target amendments:19unchanged, project/scheme2changed only within declared scope. Historical accepted bytes retained separately.",
+  "historical_stage1_checks": [
+    {
+      "cwd": "apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "not_run",
+      "evidence": "Mandatory fixture/interface review and commonfrozenbuildwindow precede implementation/bundle/nativeexecution."
+    },
+    {
+      "cwd": "apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "./scripts/run-cold-intent-probe.sh",
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "result": "not_run",
+      "evidence": "Mandatory fixture/interface review and commonfrozenbuildwindow precede implementation/bundle/nativeexecution."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Confirmed currentGit/source taskpins and21predecessor candidate source files unchanged; authored5independentliteralcases and SDK source API/header pin inventory, no candidatebehavior."
+    }
+  ],
+  "historical_stage1_limitations": [
+    "Fixture/interface mandatoryindependentreviewpending; stage1 onlyfixture+receipt written.",
+    "CurrentSDK source declarations do not establish actualSiri resolver/Shortcuts availability, offline OSsurface network, cold execution, cancellation or nativefinalizer timing.",
+    "ROOT approved2bridgepath seam scope; implementation remains forbidden until independent fixture/interface review.",
+    "No commongeneratedoutputs read/npm/bundle/build/native SDK execution/install/signing/data/sourcepermission/public identity changes.",
+    "Inheritednative graph/artifact evidence remains historical; fresh exactbundle/engine/SDK/runtime/identity/native measurements required after approvedfrozenwindow.",
+    "Source parsing/preflight qualifies no Swift/ObjC/TS compilation, bundle graph, engine/runtime, Siri routing, installed artifact, cleanup timings, RSS, cold process or native cancellation.",
+    "No fresh dependency install, signing, permission/account/network setting change, user store/source/native data read, public identity or production integration.",
+    "Earlier unavailable XcodeBuildMCP claim superseded: current callable catalog includes session defaults/build_sim/test_sim. No native purpose-tool invocation or CLI fallback performed; exact target support not yet exercised."
+  ],
+  "historical_stage1_remaining_qualification": [
+    "Root independentlyreview frozen5literalcases/privateheadlessinterface/actualOSingress proposal and exactminimal2pathbridgeamendment.",
+    "After approval/frozencommonwindow implement boundedprivatecandidate target/bridge, attemptactualSiriOSingress; simulatorunavailability yieldspartial notdirectperform substitution.",
+    "Actualcoldprocess/offline/oneEffectReact/credits/expired/cancelreleaseack/loadingstale/runtimeartifact/bundleSDK measurements and affectedcandidate checks required; device/signed/productionintegration remains separate."
+  ],
+  "native_ingress_result": {
+    "result": "failed",
+    "procedure": "ROOT actual supported purpose test_sim on prepared xctestrun, structured xcresult read-only diagnosis",
+    "expected": "Five fixed cases with actual fresh case/sequence/native witness/process-bound Siri response; no mountedReact/foreground substitute",
+    "observed": "5testsfailed0passed0skipped in49.173s. First actual Siri phrase activated, no expected response15s; later four absence guard failed. Exported firstSiri AX hierarchy has only Window/Other/ScrollView, zeroStaticText/ColdProbe labels. No actual native invocation proven; wrong-case/stale text not established.",
+    "evidence": {
+      "source_patch": "4c274e95e030eca19739dbefe07fa6e82fcea07aba3fa82742ef75cd2ab9d8c1",
+      "raw_files": {
+        "/private/tmp/healthmd-cold-purpose-test-first.json": {
+          "bytes": 9162,
+          "sha256": "c6f253dcd0891f813a89660d3d55455b4d1a0b615c22e9b45f05ca9f9e317d26"
+        },
+        "/Users/codybontecou/Library/Developer/XcodeBuildMCP/workspaces/health-md-52f95bbd1475/logs/test_sim_2026-10-07T18-56-50-426Z_pid84761_1e797eef.log": {
+          "bytes": 14718,
+          "sha256": "8c582d1e6f42bbc8b6eebebff4d874c18539de4cb0a121fa268e393ce52c436f"
+        },
+        "/private/tmp/healthmd-cold-first-Siri-hierarchy.txt": {
+          "bytes": 2464,
+          "sha256": "01f9cb6355644b4c07b8781108488f3640feede197a60a6e90258eb26d2a3707"
+        },
+        "/private/tmp/healthmd-cold-first-query.txt": {
+          "bytes": 256,
+          "sha256": "b2564c9508e08c5ce567e596c6bdb9c707c6be89fb0870e8855b52317569845f"
+        },
+        "/private/tmp/healthmd-cold-first-Siri.mp4": {
+          "bytes": 2972379,
+          "sha256": "166c0644c064f5782f8f25fdd933cf099edcad115f1f521c6c84880861352cc5"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-artifact.json": {
+          "bytes": 956,
+          "sha256": "652aefda98a77b210adaa86f029231ee8509b917427786357e616607ce6d835a"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/ColdHostProbe_iphonesimulator26.5-arm64-x86_64.xctestrun": {
+          "bytes": 4902,
+          "sha256": "771586a4a92e186e7514ee98601f3949ada8660d4df9daa4cd3abbbdb7e9be4e"
+        }
+      },
+      "xcresult_path": "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/PurposeSiriIngress.xcresult",
+      "xcresult_tree_digest_method": "SHA256 canonical JSON sorted relative file rows with bytes/SHA256",
+      "xcresult_tree_sha256": "712282d0932e859d6326e0cd25a92be9128e7f004b081337d25d72e9b3696d55",
+      "xcresult_files": [
+        {
+          "path": "Data/data.0~2O2Epz7YhaNiyR-tvzNICQOyZc84pGGpz9sJFpFB_3px1YjL-CdqiHw-H3QQ3YO8Vfbz5reuYol-EquLz2Cihg==",
+          "bytes": 5589,
+          "sha256": "2a1332344b9a32cfc0a31a3e5aa71be759fe2d1ac7ec28542f01570b90b13731"
+        },
+        {
+          "path": "Data/data.0~4VqMqsI5lOfxRppnud6-VDWcNsU8J7VgFCJfW2dXPwOcAkvU-I8Um5yp9n0Zv6nr3VmcxYggaVMDFfR0U_vjKw==",
+          "bytes": 2,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "path": "Data/data.0~9F6Oyzm9InlFNbFDTZSTMyQWM2Ss5jlzbm60TbaMjrd7LIDOoGpxXUMTaIAUEv-Vxed4tEUjotPAifMt-SZR3A==",
+          "bytes": 2423,
+          "sha256": "9f5ab9fa47a8ad5f5f84f70a39a5be0fb13b97cd039480d16cd78ee96a8b7958"
+        },
+        {
+          "path": "Data/data.0~AP_DEZy6YFMQrBwpVGZUartE7xNENK1MNorI-Eqcw3MhTLimeD8Jhc9zijDMaw_PsSiqa53sq5MNx9m1EcM0PQ==",
+          "bytes": 447,
+          "sha256": "7f2cb67ce0846d331efcdca1f7463bd902af13ab66c94cb64df742186f169a26"
+        },
+        {
+          "path": "Data/data.0~C7XBLuBdUN9rRycNTKdf2FKKQQxY1fJDSVT8T3eWSPXQrr6w9teXspHbvIzBNDzwRjWoffBSNx4ztbTpe7DJ0g==",
+          "bytes": 192,
+          "sha256": "58cf03409d2ff1aeb63eadec535a925527fb0315d25e426489cb19ecc5c75992"
+        },
+        {
+          "path": "Data/data.0~HZP_O7-8CS75of_Q4q2TtGLUwfI7q2B-oAb1emQFkSZjRPk4vn2URIWEIHv-W7YEhncBtdz81jFtoQcXgW1XLg==",
+          "bytes": 7600,
+          "sha256": "c41a7f1ffa0b8aa8fa337d4d35c3af5f654530dbb2d0abea693b95590096c099"
+        },
+        {
+          "path": "Data/data.0~KjEJtq8J3qumRXZ1mKqn0uedU-8pR4fRsvhy7WWWZOVcxPZFKi_LyhWbeJCSiwVV5HqUD1Kdi-P65iTL1Y3JLw==",
+          "bytes": 2972379,
+          "sha256": "166c0644c064f5782f8f25fdd933cf099edcad115f1f521c6c84880861352cc5"
+        },
+        {
+          "path": "Data/data.0~N9js093oQYZ2HLrmBtA2CZqgJxMCA8qRVhrgEgxHMjRLYNs8sfS6RIDOMIosYYzivF6D4dX1Qn588kGbXyvcIA==",
+          "bytes": 1700,
+          "sha256": "8caf96c760ee6e76c7b19c7a6768a1dc5285df7c16a2611129f3ab5e16ce5b52"
+        },
+        {
+          "path": "Data/data.0~SSxHBncUwP16e1hACUQLsC9ISmXeIo7laWzmyZFtCE0BIWDCOr6oqQXFjHKUfMWO2Ik8Cq7QbyjOv_CcpD_Dwg==",
+          "bytes": 38,
+          "sha256": "0a3e38a7ee2f4a7971fb4853eb1fdbd6acbeae91d43fcf4a6e70f65e3371434d"
+        },
+        {
+          "path": "Data/data.0~T_90Bs0KTCcYpL0FrZdptkXIrdM01oyN-XvjtP-1broAQbZmV0jbFRxOb0PzmdLBQ-6LwOv6DI2TVuumtAXerA==",
+          "bytes": 80229,
+          "sha256": "5a9e9dd8276a0c4e28c4c1e2f4449d46ade62e49433bc7570f500ae67aa00d23"
+        },
+        {
+          "path": "Data/data.0~VP7wX_cmhT8yGoSoZk9x4M-0YY6VZcLaBe1ek4P_qkcjjjr8ShLMlVH5DTV7mFRBN4Ef-FV4mp-jVrsKh5oWlQ==",
+          "bytes": 123,
+          "sha256": "86e5bd8321f0716eb99dab48fd12c5492ed23f6135e7ecd65775af43496903cc"
+        },
+        {
+          "path": "Data/data.0~Y8b5iWbxbudPpWBb2hHF0WuzfHn7LeyNU-_ij1TWnlcT0shUihh_WGiRmyaiTjq_uK5auOtFE9RTHuZqCmNaWg==",
+          "bytes": 115,
+          "sha256": "08ff682a249b3327dc88bfb7f86cc7b833ebd1f20090229669c97d1c526272fb"
+        },
+        {
+          "path": "Data/data.0~Yt8V8f6l7zrOeyMtfBPpCdv6FdOZZSHqEj0WwZyl6OE5ou5MmlB_NfYMILK-fsauMJlDtxnRgkWf6XtTfsW7tg==",
+          "bytes": 292,
+          "sha256": "17e403d85a3c3b33e72b2d1d4fd483fe55acb63c9e00d39ecb8e688e0651dd92"
+        },
+        {
+          "path": "Data/data.0~_WpIjWCmioEmtPXKhiBPdO1G_G3mug-Qnt6GZ_Uz0pMYgH2pLyRktsVTtYeUVP2vVhJaJUexX3GSLJYB7cuRyQ==",
+          "bytes": 2196,
+          "sha256": "1e0060e42b7375d1744683b5de4a98cd5ef9b85159f39dd5b06ef824363d9ce7"
+        },
+        {
+          "path": "Data/data.0~b2Nv6NyGQ0cxqx75ADYFvQNlVzV7tTvKgagSTe6hN4tIlFmvFPjYQcNrul58fMlBGySg5Dmceu7WiWZW4q8fIw==",
+          "bytes": 1396,
+          "sha256": "b3bc482ca4e87ba68ee1b47a27ff86ef1374240680315f274db2d35d8d07efd3"
+        },
+        {
+          "path": "Data/data.0~cIS_y4H912nHAuPexuE-ODS33zSjROTeQ8kw1y4V_0jIDot7CfEjTjdMnDNVgit3huzz-Cti0Oz5uNCWa-Ufdw==",
+          "bytes": 330,
+          "sha256": "83fde8029f21a37d817afffc714e8bc2b6739dd6d39364bb375fefbbdc623f5a"
+        },
+        {
+          "path": "Data/data.0~cm8C8b7L2usa_Sum2Hv9S0u_f9N9ISxVvjnyT3Lzn7ItAyUw2eCWg3MBHgHCk6JIUM-0zLLxZqHKY2sWfxr8Sw==",
+          "bytes": 2430,
+          "sha256": "3439ec4b612b33a28af1702de2c5195c1a178fbbc263fce8aa1ed93f88a9d53c"
+        },
+        {
+          "path": "Data/data.0~h_naOa-s9PsZ8hyLVZSkDZ3fAFAuZ3Zb8lO9qGxfakDZH2tpbwE9i7o9U4ljk07WETkUND9n_QUzCYAc1v0VNQ==",
+          "bytes": 818,
+          "sha256": "ec2ea4a236a4024270e970496b41cd9609127f8a2b32d213f58c4976a2d14be8"
+        },
+        {
+          "path": "Data/data.0~jwPCiiUd3J5Ca0h8W3pMg8gckr6FHVkslnipQEA-fkfghC4HupL9S4JOCw-_zU6_8tzcbfnk7RUGCLTFsR9Dpg==",
+          "bytes": 179745,
+          "sha256": "2b90b1122b8b3704ea96776cea588e871608ecd67455b158897ff2cb8aa3f4c9"
+        },
+        {
+          "path": "Data/data.0~mNxga7OjokNhfME7TjHxHbaSXzYSR41hhFvz9kQsVSJXuZRFI-LBs2Atcx0TIOgbu2h3ZvRjQ4kw2eS_9CgI6A==",
+          "bytes": 4675,
+          "sha256": "33175a217ab5c1593aaa11a4a1043220e3a7dea6cda71681aa16f005361ac30f"
+        },
+        {
+          "path": "Data/data.0~mxM-8FjCaHgODOE9jPWBPQ03emhd8c3MaI-vRaWpKNk3TP2arqWNoZYSRCW6kyhZEewWbfNyT_grF7XKKYopAQ==",
+          "bytes": 2408030,
+          "sha256": "3cf2b5b3dfbe1db906bcbc46d674ca9475606dc2581c6d3829780c47662db19f"
+        },
+        {
+          "path": "Data/data.0~ocCZsKoJ-BmGHuvQiVhkOV3x3r9ezYhvixZYgl8SbCBbzfsOyngxTH54H7ApvULg5v810xYV8nNSmG05wClNAw==",
+          "bytes": 80229,
+          "sha256": "1c5d8221f209f14744aaef15d4fa4dc1f1c6d3a863eed95a36b930db3ea0996e"
+        },
+        {
+          "path": "Data/data.0~reXkUdbqNZqXVZ1A8cqJAiJWEYx77ltFEtX1nTuAFRoYDLAl-3Emuygsa9fFDWVw3vkJE7c_hZktHCiwn-wpoQ==",
+          "bytes": 2433,
+          "sha256": "e9a51a07fbc5505a04450083fba8d3cb9d3e51c734dfa89079506c73d400ae84"
+        },
+        {
+          "path": "Data/data.0~sPsMggY4y4dqK6uNoCOYCNqSFAgfVzIarQ5vifdbW7VqCg7sIBVMpnh00Gip2kGaE49jCbQlKDTKc7XkXYLxvA==",
+          "bytes": 2431,
+          "sha256": "cb1262bf8caa1521b5968829708afb63c2aa5bd32bb8f9b120af9d00dfe00a13"
+        },
+        {
+          "path": "Data/data.0~sh41lJ9NyGPHUV5cc4am4-KGlRxXVrOtLObhz9gWxWGdtFIMydxhr8Rq9YNoxMMEhj5xTTHQ56XUq9WQdlVhgQ==",
+          "bytes": 204,
+          "sha256": "29b96535d7bbf7682faf83f4b1ff710cc2ea26b6b96fe2fee5386ed4b02f5882"
+        },
+        {
+          "path": "Data/data.0~tXOGjV4lO2Q9keSLdlHdxn0J85ZqIcFqUf3JKIV6b3eION8bw3o5nKN0uwMKdwhxtMIVWy_ysOepRoPdvqhlpw==",
+          "bytes": 29760,
+          "sha256": "8ce32fd07575f46d9c2487d7b30fd39c8ed197470f194fd33d362bbfcb83c8f7"
+        },
+        {
+          "path": "Data/refs.0~2O2Epz7YhaNiyR-tvzNICQOyZc84pGGpz9sJFpFB_3px1YjL-CdqiHw-H3QQ3YO8Vfbz5reuYol-EquLz2Cihg==",
+          "bytes": 265,
+          "sha256": "b1336176450f20fe824902c3b53a4e5916b82c7064d3816e385b5700dc54884c"
+        },
+        {
+          "path": "Data/refs.0~4VqMqsI5lOfxRppnud6-VDWcNsU8J7VgFCJfW2dXPwOcAkvU-I8Um5yp9n0Zv6nr3VmcxYggaVMDFfR0U_vjKw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~9F6Oyzm9InlFNbFDTZSTMyQWM2Ss5jlzbm60TbaMjrd7LIDOoGpxXUMTaIAUEv-Vxed4tEUjotPAifMt-SZR3A==",
+          "bytes": 67,
+          "sha256": "27712bade99be89bbe25081c5fad98cc14f266c4b857c35e2eff7352dfc6fa30"
+        },
+        {
+          "path": "Data/refs.0~AP_DEZy6YFMQrBwpVGZUartE7xNENK1MNorI-Eqcw3MhTLimeD8Jhc9zijDMaw_PsSiqa53sq5MNx9m1EcM0PQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~C7XBLuBdUN9rRycNTKdf2FKKQQxY1fJDSVT8T3eWSPXQrr6w9teXspHbvIzBNDzwRjWoffBSNx4ztbTpe7DJ0g==",
+          "bytes": 199,
+          "sha256": "e7128475d5d8e6e84ed0ffc7fd10e858a6ee8c6523433d9b9a6319c9973da48b"
+        },
+        {
+          "path": "Data/refs.0~HZP_O7-8CS75of_Q4q2TtGLUwfI7q2B-oAb1emQFkSZjRPk4vn2URIWEIHv-W7YEhncBtdz81jFtoQcXgW1XLg==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~KjEJtq8J3qumRXZ1mKqn0uedU-8pR4fRsvhy7WWWZOVcxPZFKi_LyhWbeJCSiwVV5HqUD1Kdi-P65iTL1Y3JLw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~N9js093oQYZ2HLrmBtA2CZqgJxMCA8qRVhrgEgxHMjRLYNs8sfS6RIDOMIosYYzivF6D4dX1Qn588kGbXyvcIA==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~SSxHBncUwP16e1hACUQLsC9ISmXeIo7laWzmyZFtCE0BIWDCOr6oqQXFjHKUfMWO2Ik8Cq7QbyjOv_CcpD_Dwg==",
+          "bytes": 67,
+          "sha256": "8be24335a9e642fe83e04320c18f4df41fc59f019625b277b57a466dc469cf8f"
+        },
+        {
+          "path": "Data/refs.0~T_90Bs0KTCcYpL0FrZdptkXIrdM01oyN-XvjtP-1broAQbZmV0jbFRxOb0PzmdLBQ-6LwOv6DI2TVuumtAXerA==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~VP7wX_cmhT8yGoSoZk9x4M-0YY6VZcLaBe1ek4P_qkcjjjr8ShLMlVH5DTV7mFRBN4Ef-FV4mp-jVrsKh5oWlQ==",
+          "bytes": 133,
+          "sha256": "6337af487f6d8c727357fccfadd22b50471614a1c5d32949d99c9c14b9b11e55"
+        },
+        {
+          "path": "Data/refs.0~Y8b5iWbxbudPpWBb2hHF0WuzfHn7LeyNU-_ij1TWnlcT0shUihh_WGiRmyaiTjq_uK5auOtFE9RTHuZqCmNaWg==",
+          "bytes": 133,
+          "sha256": "f5ae2f586d7f9cdacef05ff27505261acac5f67994e9490dbdbe2483cf3f6100"
+        },
+        {
+          "path": "Data/refs.0~Yt8V8f6l7zrOeyMtfBPpCdv6FdOZZSHqEj0WwZyl6OE5ou5MmlB_NfYMILK-fsauMJlDtxnRgkWf6XtTfsW7tg==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~_WpIjWCmioEmtPXKhiBPdO1G_G3mug-Qnt6GZ_Uz0pMYgH2pLyRktsVTtYeUVP2vVhJaJUexX3GSLJYB7cuRyQ==",
+          "bytes": 265,
+          "sha256": "5698d2ed184cf43241bd94bff4b5ca80faefb157907df2c3f5b36028cdcf4d43"
+        },
+        {
+          "path": "Data/refs.0~b2Nv6NyGQ0cxqx75ADYFvQNlVzV7tTvKgagSTe6hN4tIlFmvFPjYQcNrul58fMlBGySg5Dmceu7WiWZW4q8fIw==",
+          "bytes": 331,
+          "sha256": "d1dce727261e91d003ccfe41812169669afbdbd65efe497109817f45e6d5ea3d"
+        },
+        {
+          "path": "Data/refs.0~cIS_y4H912nHAuPexuE-ODS33zSjROTeQ8kw1y4V_0jIDot7CfEjTjdMnDNVgit3huzz-Cti0Oz5uNCWa-Ufdw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~cm8C8b7L2usa_Sum2Hv9S0u_f9N9ISxVvjnyT3Lzn7ItAyUw2eCWg3MBHgHCk6JIUM-0zLLxZqHKY2sWfxr8Sw==",
+          "bytes": 67,
+          "sha256": "75ae9f3235e77c67d844ed934a9510264393a309e5ac164e53c285e94ea7c194"
+        },
+        {
+          "path": "Data/refs.0~h_naOa-s9PsZ8hyLVZSkDZ3fAFAuZ3Zb8lO9qGxfakDZH2tpbwE9i7o9U4ljk07WETkUND9n_QUzCYAc1v0VNQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~jwPCiiUd3J5Ca0h8W3pMg8gckr6FHVkslnipQEA-fkfghC4HupL9S4JOCw-_zU6_8tzcbfnk7RUGCLTFsR9Dpg==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~mNxga7OjokNhfME7TjHxHbaSXzYSR41hhFvz9kQsVSJXuZRFI-LBs2Atcx0TIOgbu2h3ZvRjQ4kw2eS_9CgI6A==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~mxM-8FjCaHgODOE9jPWBPQ03emhd8c3MaI-vRaWpKNk3TP2arqWNoZYSRCW6kyhZEewWbfNyT_grF7XKKYopAQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~ocCZsKoJ-BmGHuvQiVhkOV3x3r9ezYhvixZYgl8SbCBbzfsOyngxTH54H7ApvULg5v810xYV8nNSmG05wClNAw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~reXkUdbqNZqXVZ1A8cqJAiJWEYx77ltFEtX1nTuAFRoYDLAl-3Emuygsa9fFDWVw3vkJE7c_hZktHCiwn-wpoQ==",
+          "bytes": 67,
+          "sha256": "535c1e3cb536082cb9986e28b13fe4334b93b8d26bd60ae3ecb0e522fdc1b039"
+        },
+        {
+          "path": "Data/refs.0~sPsMggY4y4dqK6uNoCOYCNqSFAgfVzIarQ5vifdbW7VqCg7sIBVMpnh00Gip2kGaE49jCbQlKDTKc7XkXYLxvA==",
+          "bytes": 67,
+          "sha256": "7dd245b50e6cd8c04d32888118b2a5ca63c3fefd7f078fdedf90393afad007ca"
+        },
+        {
+          "path": "Data/refs.0~sh41lJ9NyGPHUV5cc4am4-KGlRxXVrOtLObhz9gWxWGdtFIMydxhr8Rq9YNoxMMEhj5xTTHQ56XUq9WQdlVhgQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~tXOGjV4lO2Q9keSLdlHdxn0J85ZqIcFqUf3JKIV6b3eION8bw3o5nKN0uwMKdwhxtMIVWy_ysOepRoPdvqhlpw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Info.plist",
+          "bytes": 715,
+          "sha256": "12c8f5194a18569f219e4ee5f5b8a0c8f76d52675535c2d700289559b2e576ff"
+        },
+        {
+          "path": "database.sqlite3",
+          "bytes": 299008,
+          "sha256": "433a7cbd7af71dbbd0bba56f42fef28387109ba79b11d4547cf22552dc3bd7b3"
+        }
+      ]
+    },
+    "diagnostic_proposal": "ROOT approved diagnostic-source-only change before mutation; failureattachments capture exact app/Siri state, absenceWaiter rawresult/prior.exists and onlyBEGINSWITH ColdProbe case= labels, countcap4/UTF8cap256/attachmentcap8192. Strict priorabsence/case/sequence/UUID/PID/headless/timebounds unchanged. Compiling/testing amended diagnostics unrun.",
+    "qualification": "actual OS route attempted unsuccessfully; no native operation/cleanup/cancellation/offline-source equivalence proof"
+  },
+  "independent_source_artifact_review": {
+    "reviewer": "donor_mac_review",
+    "result": "accepted",
+    "scope": "4c274e95source/bundlegraph/prepared/nativebuilt artifacts only; actual162productrecords/18artifactpins/21predecessors19unchanged2declared reviewed; no runtime pass claim",
+    "runtime": "subsequentactualOSrunfailed; pendingdiagnosis"
+  },
+  "diagnostic_source_change": {
+    "result": "passed",
+    "procedure": "Source-only fixed-prefix/count/byte-cap and invariant inspection; no compiler/native execution",
+    "expected": "Bounded failure evidence without general UI dump or weakening freshness/OSroute assertions",
+    "observed": "Only diagnostic test helper changed: decode at most256UTF8 input bytes then remove complete trailing Characters while outputUTF8count>256, so replacement expansion cannot exceed fixed256outputbytecap. Prefix4labels/8192attachment, strict full5cases/freshness/timebounds/OSroute unchanged. No compile/test.",
+    "evidence": {
+      "source_patch": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+      "test_source_sha256": "bc9977a0dcef3dae024fcdf218c1844ba388040ff04336743130ab2e89ed50ad"
+    },
+    "qualification": "source_only; diagnostic compiler/test run unrun pending independentROOTreview"
+  },
+  "diagnostic_primary_context": {
+    "refs": [
+      "https://developer.apple.com/documentation/appintents/appshortcut",
+      "https://developer.apple.com/documentation/appintents/adding-parameters-to-an-app-intent"
+    ],
+    "inference_limit": "Apple AppShortcut structure and nonoptional parameter requirements alone do not prove initializer presets survived actual Siri binding. Current built metadata contains requiredrequestJSON and5autoaction references; zero AX labels does not establish missingregistration/wrongbinding. No binding correction selected."
+  },
+  "historical_passed_native_build_result": {
+    "result": "passed",
+    "procedure": "One ROOT-authorized same bounded escalated build-only command after independent4c274e95ObjC seam review; read full built product trees/plists/assets/xctestrun",
+    "expected": "Exact private ColdHostProbe Release build-for-testing with prepared asset26.5SDK/reviewedtarget, fixedbounds; stop before test",
+    "observed": "Actual xcodebuild exit0;638175B under16MiB;300s bound not triggered. Builtapp privateID andSDK26.5 exact; packagedHermes495a516f preserved. UI test runner/bundle+xctestrun produced, complete file-tree pins frozen. No test/ingress/install/common/rebundle/Hermes/settings.",
+    "evidence": {
+      "cwd": "apps/apple/effect-host-candidates/ios",
+      "argv": [
+        "./scripts/run-cold-intent-probe.sh",
+        "--release",
+        "--offline",
+        "--fresh-process"
+      ],
+      "environment": {
+        "HEALTHMD_COLD_PHASE": "build",
+        "HEALTHMD_PROBE_SIMULATOR_ID": "03AE614E-7BA2-4B5A-8CEA-D3A3BC2404B0",
+        "PATH_prefix": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin"
+      },
+      "source_patch": "4c274e95e030eca19739dbefe07fa6e82fcea07aba3fa82742ef75cd2ab9d8c1",
+      "artifact_pins": {
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/sdk-version.log": {
+          "bytes": 5,
+          "sha256": "25205f2e2f02dc71036ee827e19c49b893b231a3d1af240e35a3ac55aa8cdcb6"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/sdk-version-supervision.json": {
+          "bytes": 304,
+          "sha256": "1902db9ca797d4d7b03f4a49b5bb9c51f59d6564c6c6c1cf838bca43aa0c1c5b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/target-inventory.log": {
+          "bytes": 4732,
+          "sha256": "4a466d8a5995705ff3aaba4f1582142f58edb3a98cc589b7fcb53bb5778ed3e9"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/target-inventory-supervision.json": {
+          "bytes": 322,
+          "sha256": "f330eb8848bea8ea68e1d8dff16abc5cc782d8a3159f7a7476fe50d28c8e3645"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build.log": {
+          "bytes": 638175,
+          "sha256": "8b198934ba82063dc12bd476c989b6b2b7e57f88adbc1cd29a57df8243ec8036"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/build-supervision.json": {
+          "bytes": 859,
+          "sha256": "7bbbdf3d7036075b4e3c7bb9c878364279e07fff0adac45f3456eaf213e95f7b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-identity.log": {
+          "bytes": 42,
+          "sha256": "0ee96ae486b71fb920fb102052ae6c87e2b2f9d54a7c6c87493364766710469e"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-identity-supervision.json": {
+          "bytes": 487,
+          "sha256": "0be4df08891d4a3c9e6a2b3afda6089a7dbe845c78979600c6d4c2ce9c7c2ee1"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-artifact.json": {
+          "bytes": 956,
+          "sha256": "652aefda98a77b210adaa86f029231ee8509b917427786357e616607ce6d835a"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/built-products-evidence.json": {
+          "bytes": 49716,
+          "sha256": "c2d94bb8d4ad2a19e00a1732b9408f03b688b6f4d96da26e03f58deb2ff3beb6"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/Info.plist": {
+          "bytes": 790,
+          "sha256": "ffe375d0cfcc5b94ca2b37f8a1cc78782b2f945f080179f0dcbc0d4fa3335e2b"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/ColdHostProbe": {
+          "bytes": 375936,
+          "sha256": "c943b8211ef63403c16a7959f80c7c79d4c9e5d8a9f4debd9721c7e53f6fa6c4"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdHostProbe.app/main.jsbundle": {
+          "bytes": 1828736,
+          "sha256": "495a516f6cd2d965c72ce5b0f8f8cb0fc8af84c1cc791062168a7f0bbcb2b7ae"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/Info.plist": {
+          "bytes": 8355,
+          "sha256": "2463d60c6e3167a9ec52cfe90f31fa7584e95b748e3b4c8854c70ef74edca0f8"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/ColdProbeIntentUITests-Runner": {
+          "bytes": 179152,
+          "sha256": "0b2b1d93c8be1d082aaa2339d0f6f2e39784512a88fad696db667b4a7ab680e9"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest/ColdProbeIntentUITests": {
+          "bytes": 187320,
+          "sha256": "1533aa57abf791316170422d32520be170ec78aa50f61b7791ec94d9e5931051"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest/Info.plist": {
+          "bytes": 734,
+          "sha256": "ddad0f801f8666ed6df5328b256eed52e8d13bd8ab014aa17df102b7f0d6f06f"
+        },
+        "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/DerivedData/Build/Products/ColdHostProbe_iphonesimulator26.5-arm64-x86_64.xctestrun": {
+          "bytes": 4902,
+          "sha256": "771586a4a92e186e7514ee98601f3949ada8660d4df9daa4cd3abbbdb7e9be4e"
+        }
+      },
+      "product_tree_sha256": "6814fbfe40a15a99a93edd76db3ac13ebda654426e243b2519e870031a2ffdcc",
+      "product_file_records": 162
+    },
+    "qualification": "artifact_only; actual OS AppIntent ingress/cleanup/cancellation runtime remain unrun"
+  },
+  "native_diagnostic_result": {
+    "result": "failed",
+    "procedure": "ROOT single firstcase-only purpose test_sim on reviewed diagnostic prepared product; read-only export ONLY named bounded private JSON and installed XCTest enum header",
+    "expected": "Actual case/sequence-bound ColdProbe response, or bounded concrete failure evidence; otherfour not repeated",
+    "observed": "Actual18.976s1failed0passed0skipped: expected response wait15s timedout. Candidate state1NotRunning, Siri state2RunningBackgroundSuspended, prior_exists=false, fixed_prefix_match_count0/labels[]. No stale private response/native invocation; no correctable cause identified. Otherfour tests not repeated.",
+    "evidence": {
+      "source_patch": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+      "test_source_sha256": "bc9977a0dcef3dae024fcdf218c1844ba388040ff04336743130ab2e89ed50ad",
+      "raw_files": {
+        "/private/tmp/healthmd-cold-purpose-test-diagnostic.json": {
+          "bytes": 3871,
+          "sha256": "20a655fbedc435757f5db4dc9b4a047b2ba8c78b68098601a3fc0147dfb0fa32"
+        },
+        "/private/tmp/healthmd-cold-bounded-diagnostic-first.json": {
+          "bytes": 248,
+          "sha256": "171cba8f128aa254b75013c747bc1a091215d3771760bc400be8040f6fb36194"
+        },
+        "/Users/codybontecou/Library/Developer/XcodeBuildMCP/workspaces/health-md-52f95bbd1475/logs/test_sim_2026-10-07T19-13-12-250Z_pid84761_ca163a53.log": {
+          "bytes": 9580,
+          "sha256": "37b3e98ee23c19869c3ab44043e0fceafe23e1090724e8d140efdbde2bc8de52"
+        },
+        "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/Library/Frameworks/XCUIAutomation.framework/Headers/XCUIApplication.h": {
+          "bytes": 6697,
+          "sha256": "ec506ad568f7ebf59992373e6d78e4cc6f03f03529ba15c519e9c7d988776b72"
+        }
+      },
+      "bounded_diagnostic": {
+        "app_state": 1,
+        "attachment_byte_cap": 8192,
+        "fixed_prefix_match_count": 0,
+        "label_count_cap": 4,
+        "label_utf8_byte_cap": 256,
+        "labels": [],
+        "labels_truncated_by_count": false,
+        "prior_exists": false,
+        "siri_state": 2,
+        "waiter_result": "expected_response_wait_timeout"
+      },
+      "installed_state_enum": "XCUIApplication.h lines12-19: Unknown0/NotRunning1/RunningBackgroundSuspended2/RunningBackground3/RunningForeground4",
+      "xcresult_path": "apps/apple/effect-host-candidates/ios/ios/build/cold-intent/PurposeSiriDiagnosticFirst.xcresult",
+      "xcresult_tree_sha256": "4dfdfcae7301d5d81629e56d1e475b9aa4f401fec3ad175c085214e176f2ff9f",
+      "xcresult_files": [
+        {
+          "path": "Data/data.0~4VqMqsI5lOfxRppnud6-VDWcNsU8J7VgFCJfW2dXPwOcAkvU-I8Um5yp9n0Zv6nr3VmcxYggaVMDFfR0U_vjKw==",
+          "bytes": 2,
+          "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        },
+        {
+          "path": "Data/data.0~6GwjutebOn1Y8XGP3D9lVmTi5Zud2QUfR_48DJapK1iRJ1-zRabcEeB5yFDgEeCSZBEyoedkrc48HSwjD_vSzQ==",
+          "bytes": 1461,
+          "sha256": "2bd9975f8670750b1bb670c444f82ccf6f984588553929eb1d4b43b0f48fcfac"
+        },
+        {
+          "path": "Data/data.0~7KtvjzwvC6G182Zx4su3LodCajIHoWTCmy_DsSACfXlu7Vtv1SC9EhMJ2E8GqEuTqOTTsz9Ys47h4mm5xepqzw==",
+          "bytes": 330,
+          "sha256": "53856aadc1e1399247c1e7bdca68e137b06bcf6b1cb0ae9ac2adb6a55d911a4f"
+        },
+        {
+          "path": "Data/data.0~82VboHHXUx2Gtq-KBqIIhkyalSf8Vw07zM8__D_6BPMpCdWtEkDtrULsbX6fB3K1KNRGDmVykO9wfj5FuaKBxA==",
+          "bytes": 5271435,
+          "sha256": "6cc85a7c870f060730971e6cbeb21296e45af3b92a8d2535e540670e34e31a61"
+        },
+        {
+          "path": "Data/data.0~D1QQklY7B0KxX8_UfQrCv_onAlIuOlA1TxZgKu_A6n4pbHM2w3QNbKL0fNhvVulspAQQNiCuyt7v2aDGkZ5jwQ==",
+          "bytes": 195,
+          "sha256": "db8a0975860465be3bf785dd9d61733f89580584a267241efb497b425632ba93"
+        },
+        {
+          "path": "Data/data.0~Gg2c9vKEVzC-ITg3_wzXmeoJhBSwnNH3ynophvUJ05LsWgrEwDxAU0GkyiWKNvyiomN0Lm1AUq9_Q4Rz3ZAdwQ==",
+          "bytes": 114,
+          "sha256": "0ebd87b542d56d0514a8964bd6437cba4e6a61dd052748b23cea09918c067a90"
+        },
+        {
+          "path": "Data/data.0~HcEAvJk-ZoP1LlpXACVeFljmfVFMZNX6ztJKSKYIlMsTHBzx_AXBS0mPiJJdqmq2hRuTrffoMBr-j3gb2mg_Mg==",
+          "bytes": 4074,
+          "sha256": "26bec38517f0f0d65bd5c9210bd027eb9d0a417febe7a3ab033389a6cd492ff4"
+        },
+        {
+          "path": "Data/data.0~QaKTJWBdqWdy4fdN_6b3mNQg4s79oO_dFEAs9GZnqblX_f6bdYjhOBJYAxEHoq_ZUnNYl0o_oQsG6RGZsydKEQ==",
+          "bytes": 289,
+          "sha256": "95f6eb81fed0ffd2cf0290974fbdb8697b803d24d4fc388dbccc44f2cef9c15c"
+        },
+        {
+          "path": "Data/data.0~c5XlUwwWS5l_YwfP92QW_0xDpGeIRsKGpK6LsMmQAsYZmRZ9qxAapwSDaShLvvEMEyFtF1uDdbzOH81YteUqUw==",
+          "bytes": 38,
+          "sha256": "c6734c8f2e683db7e43e46b1d0c7df5b7da705bb15c83ff1b119482849034e55"
+        },
+        {
+          "path": "Data/data.0~fOCbh0xVY-ZoQqATDOquSoZoaTXxjMvwCDsZ453l5JKSm4k6C-ngtPSJXW4PF3Sh20SsGH6_RSyF7Lm8We014g==",
+          "bytes": 864,
+          "sha256": "43d2f2bf255125d70185f611a9073eefdec8037f958cd73fc1127ad8637b5477"
+        },
+        {
+          "path": "Data/data.0~oRqy6r7JbNzQy7Ii1gbqp8On5g0R8rHyv2Uj3jgX12uRm3trIRy-ZZZsi6aTW-463C190oKcK4Wj_RrzY4ptEQ==",
+          "bytes": 121,
+          "sha256": "792d65ce455eab1b2fdce84a5cce4a559a8402962ceec3f213d703d5d654a527"
+        },
+        {
+          "path": "Data/data.0~rNrDWG-3tYyXlB84yuwtw1rrVVj2QcY3hNWsOh8zTTMdI8lY9KxDQ9k7sAI5_Z77NWxWdeFK0uJKMy5k2mkbPg==",
+          "bytes": 2022,
+          "sha256": "60385d3a0287f4132121f603842eef734db0033a221c2f240fdd9f0c936594e7"
+        },
+        {
+          "path": "Data/data.0~sh41lJ9NyGPHUV5cc4am4-KGlRxXVrOtLObhz9gWxWGdtFIMydxhr8Rq9YNoxMMEhj5xTTHQ56XUq9WQdlVhgQ==",
+          "bytes": 204,
+          "sha256": "29b96535d7bbf7682faf83f4b1ff710cc2ea26b6b96fe2fee5386ed4b02f5882"
+        },
+        {
+          "path": "Data/data.0~vQFYdrpsCnKZg5p7pkTy2hQR2QaS-zTG3UG_rbsgQUipEr5QPy_zdMwrA6WDoPj1aWOP-I9X4ohup57n3Z7gmw==",
+          "bytes": 5495,
+          "sha256": "249e3df062cb3a9ee547cb17dae8c024fc915c849c9c7fe8a305e5bc1463b724"
+        },
+        {
+          "path": "Data/data.0~wBKsCeDGKPeYo2fSziJrMcpAkLqwt9VM5-bKE3FC0ptfsDBoLUzgBgkO9j8jA-HyVlpVoz0o_r2q08oy3jj4OQ==",
+          "bytes": 22145,
+          "sha256": "99af0a0716f81d1aeadd55b18699ffb724bfd8285cb6f8c4916d230fc3efe920"
+        },
+        {
+          "path": "Data/data.0~xEydf3WLNyS25U6HqLmhrl84cPkxFC2bb_OSq0DfZ0ivkExuY9-1JyEoYwm4AIP7ZTP49KJmt_Rhe77-oct5Uw==",
+          "bytes": 173,
+          "sha256": "f08055841a29f0efc0374b01b932fe5f0ffbb82109905e04a9974aff36907041"
+        },
+        {
+          "path": "Data/data.0~yLc6FLPpbso2JREN86WqsL6KTrEArFbZObMRHlPUVGTmbAUnKFsiwmaOT3dwOhwq6CqfH3Q7-qaj63a01uDlTQ==",
+          "bytes": 808,
+          "sha256": "99f3cf9c58af11dcbff754135cf157834240d58fd6c5e62bb7b3a13829180822"
+        },
+        {
+          "path": "Data/refs.0~4VqMqsI5lOfxRppnud6-VDWcNsU8J7VgFCJfW2dXPwOcAkvU-I8Um5yp9n0Zv6nr3VmcxYggaVMDFfR0U_vjKw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~6GwjutebOn1Y8XGP3D9lVmTi5Zud2QUfR_48DJapK1iRJ1-zRabcEeB5yFDgEeCSZBEyoedkrc48HSwjD_vSzQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~7KtvjzwvC6G182Zx4su3LodCajIHoWTCmy_DsSACfXlu7Vtv1SC9EhMJ2E8GqEuTqOTTsz9Ys47h4mm5xepqzw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~82VboHHXUx2Gtq-KBqIIhkyalSf8Vw07zM8__D_6BPMpCdWtEkDtrULsbX6fB3K1KNRGDmVykO9wfj5FuaKBxA==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~D1QQklY7B0KxX8_UfQrCv_onAlIuOlA1TxZgKu_A6n4pbHM2w3QNbKL0fNhvVulspAQQNiCuyt7v2aDGkZ5jwQ==",
+          "bytes": 199,
+          "sha256": "9d2bace629cbdf80f07318b8d5180fa94856898057541c25b04c0fabd7ded66c"
+        },
+        {
+          "path": "Data/refs.0~Gg2c9vKEVzC-ITg3_wzXmeoJhBSwnNH3ynophvUJ05LsWgrEwDxAU0GkyiWKNvyiomN0Lm1AUq9_Q4Rz3ZAdwQ==",
+          "bytes": 133,
+          "sha256": "2c109cc8612fea59d4a55b34de9e564882c2147275a954a595fa84d48e53389f"
+        },
+        {
+          "path": "Data/refs.0~HcEAvJk-ZoP1LlpXACVeFljmfVFMZNX6ztJKSKYIlMsTHBzx_AXBS0mPiJJdqmq2hRuTrffoMBr-j3gb2mg_Mg==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~QaKTJWBdqWdy4fdN_6b3mNQg4s79oO_dFEAs9GZnqblX_f6bdYjhOBJYAxEHoq_ZUnNYl0o_oQsG6RGZsydKEQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~c5XlUwwWS5l_YwfP92QW_0xDpGeIRsKGpK6LsMmQAsYZmRZ9qxAapwSDaShLvvEMEyFtF1uDdbzOH81YteUqUw==",
+          "bytes": 67,
+          "sha256": "d37ceef5288d5dffce9a3df6a46b6505c5654dc08a776a63491a2c5daae73288"
+        },
+        {
+          "path": "Data/refs.0~fOCbh0xVY-ZoQqATDOquSoZoaTXxjMvwCDsZ453l5JKSm4k6C-ngtPSJXW4PF3Sh20SsGH6_RSyF7Lm8We014g==",
+          "bytes": 67,
+          "sha256": "ca9aa2ef7f845402fac6d27f699a05c9019c2b8a04397cab850e1870d775a82f"
+        },
+        {
+          "path": "Data/refs.0~oRqy6r7JbNzQy7Ii1gbqp8On5g0R8rHyv2Uj3jgX12uRm3trIRy-ZZZsi6aTW-463C190oKcK4Wj_RrzY4ptEQ==",
+          "bytes": 133,
+          "sha256": "8e22dafbe4ebeb6058687d494a44104472509d87488b3423ce58eaae15579fb6"
+        },
+        {
+          "path": "Data/refs.0~rNrDWG-3tYyXlB84yuwtw1rrVVj2QcY3hNWsOh8zTTMdI8lY9KxDQ9k7sAI5_Z77NWxWdeFK0uJKMy5k2mkbPg==",
+          "bytes": 265,
+          "sha256": "a91cc0b2aa31ec7d52f3c253fc7e3e2ad04ba2b2354d4495d2c639f4876ddf44"
+        },
+        {
+          "path": "Data/refs.0~sh41lJ9NyGPHUV5cc4am4-KGlRxXVrOtLObhz9gWxWGdtFIMydxhr8Rq9YNoxMMEhj5xTTHQ56XUq9WQdlVhgQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~vQFYdrpsCnKZg5p7pkTy2hQR2QaS-zTG3UG_rbsgQUipEr5QPy_zdMwrA6WDoPj1aWOP-I9X4ohup57n3Z7gmw==",
+          "bytes": 199,
+          "sha256": "e18fbe1b87bef5b004620b0c59efe0ba819aa8a3b2fedde3f058a7456b6c7140"
+        },
+        {
+          "path": "Data/refs.0~wBKsCeDGKPeYo2fSziJrMcpAkLqwt9VM5-bKE3FC0ptfsDBoLUzgBgkO9j8jA-HyVlpVoz0o_r2q08oy3jj4OQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~xEydf3WLNyS25U6HqLmhrl84cPkxFC2bb_OSq0DfZ0ivkExuY9-1JyEoYwm4AIP7ZTP49KJmt_Rhe77-oct5Uw==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Data/refs.0~yLc6FLPpbso2JREN86WqsL6KTrEArFbZObMRHlPUVGTmbAUnKFsiwmaOT3dwOhwq6CqfH3Q7-qaj63a01uDlTQ==",
+          "bytes": 1,
+          "sha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+        },
+        {
+          "path": "Info.plist",
+          "bytes": 715,
+          "sha256": "75e226436654075db77fa2898c38898fbf559a08b245f0e08fd1b6756bf0690d"
+        },
+        {
+          "path": "database.sqlite3",
+          "bytes": 266240,
+          "sha256": "4f36ba1ae07ee8c3d1a5c1dd0b2c9b4651245e793b54a147355821cc67821216"
+        }
+      ]
+    },
+    "qualification": "failed actualOSroute; source/SDK/build/portable/artifact proof only. No native operation/cleanup/OS cancellation/runtime metrics qualified.",
+    "source_proposal": "None: bounded fields do not identify correctable registration/preset/permission/Siri route defect. No settings/account/permission/foreground/CLI/directperform substitute or extra test selected."
+  },
+  "final_partial_checkpoint_review": {
+    "result": "source_artifact_partial_checkpoint_reviewed",
+    "reviewer": "/root/donor_mac_review",
+    "source": "535a21322f7cb1d8106abeb123e72b40b27de30f",
+    "patch": "1d4ca45ea9ba0a19a286df585c21e7ce8245e8821d2fbb95313cfc67a76edc76",
+    "receipt": "d95f8a9c3495ebc16c158ddb5b67bc0f2d69ae4f027e02d557c5c162f9920c87",
+    "source_files": 10,
+    "product_records": 162,
+    "raw_file_verifications": 307,
+    "first_xcresult_records": 54,
+    "diagnostic_xcresult_records": 36,
+    "diagnostic_bytes": 248,
+    "runtime_result": "failed/unqualified",
+    "native_actions": 0,
+    "common_output_reads": 0,
+    "recommendation": "Preserve partial result and failed runs; release idle native resource leases. No done/passed/runtime admission. Await human target clarification; no next native route selected.",
+    "retained_success_and_bundle_records_additionally_verified": 17,
+    "historical_product_records": 162,
+    "diagnostic_product_changes": [
+      "DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest/ColdProbeIntentUITests",
+      "DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest.dSYM/Contents/Resources/DWARF/ColdProbeIntentUITests",
+      "DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest.dSYM/Contents/Resources/Relocations/aarch64/ColdProbeIntentUITests.yml",
+      "DerivedData/Build/Products/Release-iphonesimulator/ColdProbeIntentUITests-Runner.app/PlugIns/ColdProbeIntentUITests.xctest.dSYM/Contents/Resources/Relocations/x86_64/ColdProbeIntentUITests.yml"
+    ],
+    "strict_matcher_review": "Exact case/sequence anchored complete response, UUID parse, unreused witness/process, no foreground/app-launch/direct-perform substitute retained. Synthetic cancellation remains distinct from OS cancellation.",
+    "diagnostic_cap_review": "Only fixed ColdProbe prefix; <=4 labels, UTF8-prefix followed by complete Character truncation ensures <=256 actual encoded bytes despite replacement expansion; serialized attachment <=8192. Actual diagnostic248B contains no labels.",
+    "findings": [],
+    "receipt_note": "Nested old Stage1/unrun observations and earlier bundle/native qualification strings remain chronological historical evidence; current top-level partial and both failed native authorities override them. Preserve that separation in checkpoint; do not reuse this partial receipt as passed task evidence."
+  },
+  "coordinator_checkpoint": {
+    "result": "partial",
+    "native_runtime": "failed_unqualified",
+    "next_action": "Await target clarification; review target-specific card and reacquire explicit native/project/bridge leases before any new execution. No speculative source or settings change selected.",
+    "resource_leases": "Idle resources released; original claim/source/evidence retained.",
+    "source_artifact_review_acceptance_is_runtime_qualification": false
+  }
+}
