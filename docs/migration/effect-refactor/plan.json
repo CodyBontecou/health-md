@@ -1184,6 +1184,13 @@
           "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
           "scope_complete": false,
           "remaining_ref": "#/remaining_family_work"
+        },
+        {
+          "task_id": "SPLIT-USAGE-DESKTOP",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
         }
       ]
     },
@@ -2133,7 +2140,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-USAGE-DESKTOP",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "S01",
@@ -2171,7 +2187,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-USAGE-DESKTOP",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "S03",
@@ -2190,7 +2215,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-USAGE-DESKTOP",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "S04",
@@ -6426,7 +6460,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-USAGE-DESKTOP.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
@@ -6439,14 +6473,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/android_release_host",
+        "fingerprint": "75d53472d73402cf3b3e210075ccd4e36e05cfde+8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f"
       },
       "qualification": {
+        "status": "passed",
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-USAGE-DESKTOP.json"
+        ]
       },
       "max_children": 6,
       "source_reconciliation": "Bounded accepted donor source/contract locator planning only; no repeated whole source audit, donor dirty/code/live-state adoption, native capture or permission. Personal codec author owns common source/build; Android owns nativebuild/privatefrozenasset. Plan at most6 exact4-file children with independent fixtures/interfaces beforecode, current title classification/grants beforeobservation and full observed short/long history; all remaining native/physical/archive/query/export/admission scope named."
@@ -14072,8 +14108,22 @@
       "phase": "M02",
       "kind": "implementation",
       "outcome": "Given an eligible source-profile point, preserve original exact fields and return canonical location point or fixed unavailable/outside-canonical status.",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "061afd67a77dca0316a5b3bbd6d5649d078d8186",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/location/point-projection.ts",
+          "packages/healthmd-core-ts/tests/location-point-projection.test.ts",
+          "packages/healthmd-core-ts/tests/location-point-projection-vectors.ts",
+          "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "private-location-point-projection-interface"
+        ]
+      },
       "prerequisites": [
         "BASE-DONOR-LOCATION",
         "PERSONAL-CONTRACT-REVIEW",
@@ -14299,7 +14349,8 @@
         "source_revision": "683acf1831d65feace61d3702d3b35f2838a42f6",
         "packet_sha256": "62276918cdfa9180a5ccc84c0eb4b0bdef8751103e59723dc16389b9b39cc1a7",
         "child_pointer": "#/children/0"
-      }
+      },
+      "source_reconciliation": "Accepted personal codec/cohort committed061afd67a before dispatch; exact source/pinned full34/20 builds currently frozen. Stage1 complete literal vector/interface only in allowedvector/receipt before independent review; no implementation/build/npm before clearance. Native cold AppIntent source feasibility only concurrent; coordinator supplies exclusive common source/build window after native asset inputs pinned. Preserve all81 private Personal obligations and immutable accepted source receipts. This private projection does not change profile/production/native acquisition admission; every future common module requires separately reviewed core/CLI cohort binding before integration."
     },
     {
       "id": "LOCATION-POINT-INBOX",
@@ -15693,6 +15744,2142 @@
         "sha256": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579",
         "source_revision": "ba5c644ebca4c028fe8d60feb580a5e668965341",
         "evidence": "Root independentlyverifiedexactcompletecurrentnon-symlink34inputset=committedGitset andeachbyte;20outputset/bytes;all31oldinputs18oldoutputsretained;5immutableacceptedrawreceipts/sourcepatch/reviewandoldcohort157b, numeric/historicalauthoritiesunchanged, no ownrefreshreceipt reversepin. Proposed24actualnegativecases retain16old IDs+8personal source/output/receipt cases; existing absent/tamper targetsnewcohort. No guard/build/npm yet."
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-SESSION-PROJECTION",
+      "title": "SessionProjector.project(eligibleOriginalFields, qualifiedClockProfile) -> Effect<owned session | fixed outside-profile evidence status>",
+      "outcome": "SessionProjector.project(eligibleOriginalFields, qualifiedClockProfile) -> Effect<owned session | fixed outside-profile evidence status>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "BASE-DONOR-USAGE-MAC",
+        "PERSONAL-CONTRACT-REVIEW",
+        "PERSONAL-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/session-projection.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-session-projection.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-session-projection-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop session-projection"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "SessionProjector.project(eligibleOriginalFields, qualifiedClockProfile) -> Effect<owned session | fixed outside-profile evidence status>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 9,
+          "symbol": "ActiveAppTracker",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 32,
+          "symbol": "CurrentAppSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 42,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 63,
+          "symbol": "start",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 124,
+          "symbol": "stop",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 142,
+          "symbol": "handleAppSwitch",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 174,
+          "symbol": "handleScreenInactive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 186,
+          "symbol": "handleScreenActive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 201,
+          "symbol": "finalizeCurrentSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 243,
+          "symbol": "writeCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 257,
+          "symbol": "clearCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 263,
+          "symbol": "writeSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 12,
+          "symbol": "HistoryStore",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 39,
+          "symbol": "webHistoryDatabaseURL",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 177,
+          "symbol": "ensureUsageRollupSchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 444,
+          "symbol": "backfillUsageRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 775,
+          "symbol": "ensureWebHistorySchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 971,
+          "symbol": "backfillWebHistoryRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1025,
+          "symbol": "webHistoryColumnExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1038,
+          "symbol": "webHistoryRollupMetaExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1055,
+          "symbol": "migrateWebHistoryFromMainDBIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+        "introduced_case_ids": [
+          "session-one-second",
+          "session-native-rounded-basis",
+          "session-donor-end-absent",
+          "session-negative-synthetic-clock",
+          "session-zero-observed"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "session-one-second",
+            "input": {
+              "basis": "synthetic_observation",
+              "start_seconds": "0",
+              "end_seconds": "1",
+              "duration_bits": "3ff0000000000000"
+            },
+            "expected": {
+              "canonical": true,
+              "discard_under_two": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "session-native-rounded-basis",
+            "input": {
+              "basis": "native_source_arithmetic",
+              "start_bits": "3fb999999999999a",
+              "end_bits": "3ff199999999999a",
+              "duration_bits": "3ff0000000000000"
+            },
+            "expected": {
+              "current_canonical": false,
+              "fixed_status": "outside_clock_profile",
+              "automatic_clock_inconsistent": false,
+              "original_bits_preserved": true
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "session-donor-end-absent",
+            "input": {
+              "source_start_present": true,
+              "source_duration_present": true,
+              "original_end_present": false
+            },
+            "expected": {
+              "original_end": "unknown",
+              "fabricated_observed_end": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "session-negative-synthetic-clock",
+            "input": {
+              "basis": "synthetic_observation",
+              "start_seconds": "2",
+              "end_seconds": "1"
+            },
+            "expected": {
+              "canonical": false,
+              "fixed_status": "clock_inconsistent",
+              "repair": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "session-zero-observed",
+            "input": {
+              "basis": "synthetic_observation",
+              "start_seconds": "0",
+              "end_seconds": "0",
+              "duration_bits": "0000000000000000"
+            },
+            "expected": {
+              "canonical": true,
+              "discard_under_two": false
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/9",
+            "case_id": "short-session-retained"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/10",
+            "case_id": "historical-donor-short-tail-gap"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/11",
+            "case_id": "ios-exact-sessions-unestablished"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/22",
+            "case_id": "missing-donor-lineage"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/6",
+            "case_id": "resolution-reversed-session"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/7",
+            "case_id": "resolution-duration-disagreement"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/8",
+            "case_id": "resolution-zero-session"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/12",
+            "case_id": "resolution-missing-stable-import-order"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/13",
+            "case_id": "resolution-apple-unix-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/14",
+            "case_id": "resolution-dyadic-subnanosecond"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/16",
+            "case_id": "resolution-negative-floor-nanos"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/32",
+            "case_id": "resolution-native-source-rounded-subtraction"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/36",
+            "case_id": "resolution-unrepresentable-clipped-duration"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "Preserve original device/install/source/row identity, start timestamp bits, native duration arithmetic basis, local whole-second text/offset unknowns and allowed categories/comments separately. Never fabricate an original end timestamp from start+duration. Import archive profiles/SQL readers deferred.",
+        "Exact synthetic_observation uses rational epoch comparison/duration equality; native_source_arithmetic is outside current Personal codec admission, not automatically clock-inconsistent. Keep original native evidence eligible for later reviewed profile without rounding or claiming current materialization."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 320,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/0"
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-TRANSITION",
+      "title": "UsageTransition.apply(ordered event, prior owned state, trusted source scope) -> Effect<one atomic event/session state commit>",
+      "outcome": "UsageTransition.apply(ordered event, prior owned state, trusted source scope) -> Effect<one atomic event/session state commit>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "USAGE-DESKTOP-SESSION-PROJECTION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/transition.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-transition.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-transition-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-TRANSITION.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-transition-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop transition"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "UsageTransition.apply(ordered event, prior owned state, trusted source scope) -> Effect<one atomic event/session state commit>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 9,
+          "symbol": "ActiveAppTracker",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 32,
+          "symbol": "CurrentAppSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 42,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 63,
+          "symbol": "start",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 124,
+          "symbol": "stop",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 142,
+          "symbol": "handleAppSwitch",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 174,
+          "symbol": "handleScreenInactive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 186,
+          "symbol": "handleScreenActive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 201,
+          "symbol": "finalizeCurrentSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 243,
+          "symbol": "writeCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 257,
+          "symbol": "clearCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 263,
+          "symbol": "writeSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-transition-vectors.ts",
+        "introduced_case_ids": [
+          "transition-short-switch",
+          "transition-sleep-close",
+          "transition-conflicting-replay",
+          "transition-cancel-beforecommit",
+          "transition-browser-duration",
+          "transition-invalid-batch-atomic"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "transition-short-switch",
+            "input": {
+              "generation": "1",
+              "event": "switch",
+              "observed_elapsed_seconds": "1"
+            },
+            "expected": {
+              "completed_sessions": 1,
+              "retained_seconds": "1",
+              "next_generation": "2"
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "transition-sleep-close",
+            "input": {
+              "event": "screen_sleep",
+              "observed_boundary": true
+            },
+            "expected": {
+              "foreground_closed": true,
+              "idle_inferred": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "transition-conflicting-replay",
+            "input": {
+              "same_event_id": true,
+              "changed_original_fields": true
+            },
+            "expected": {
+              "commit": false,
+              "overwrite": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "transition-cancel-beforecommit",
+            "input": {
+              "cancelled": true,
+              "commit_ack": false
+            },
+            "expected": {
+              "visible_partial": false,
+              "success_ack": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "transition-browser-duration",
+            "input": {
+              "authoritative_classification": "browser",
+              "capture_duration_grant": true
+            },
+            "expected": {
+              "app_duration_allowed": true,
+              "title_read_calls": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "transition-invalid-batch-atomic",
+            "input": {
+              "events": [
+                "valid_switch",
+                "invalid_event"
+              ],
+              "generation_before": 1
+            },
+            "expected": {
+              "fixed_status": "invalid_batch",
+              "generation_after": 1,
+              "committed_sessions": 0,
+              "hint_writes": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/9",
+            "case_id": "short-session-retained"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/19",
+            "case_id": "same-key-same-bytes-replay"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/20",
+            "case_id": "same-key-different-bytes-conflict"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/27",
+            "case_id": "browser-title-before-observation"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/30",
+            "case_id": "capture-not-export-grant"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/9",
+            "case_id": "resolution-original-record-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/11",
+            "case_id": "resolution-repartition-key"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "Explicit start/switch/screen-sleep/system-sleep/session-resign/wake/become-active/stop events preserve observed versus unknown boundaries. Complete all future observed sessions including0 and1second; no two-second donor filter or duration clamp.",
+        "Stable installation/event IDs and expected generation order are explicit trusted adapter inputs, not process UUID fallbacks. Same identity/same full eligible fields idempotent; conflict refuses overwrite; invalid batch/cancel-beforecommit exposes no partial session/event/hint state.",
+        "A coarse scoped TransitionJournal.commit(expectedGeneration, ownedBatch, currentAuthority) capability supplies an atomic committed/definitely-not-committed/ambiguous outcome. Cancellation before commit has no writes; interruption after an ambiguous commit must recover the same identities through checkpoint authority, never claim rollback from a cancellation flag. Native durability and actual host transaction proof remain separate."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-TRANSITION.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 321,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/1"
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-CHECKPOINT",
+      "title": "UsageCheckpoint.resume(bound checkpoint, latest independent frontier) -> Effect<recoverable state and explicit coverage gaps>",
+      "outcome": "UsageCheckpoint.resume(bound checkpoint, latest independent frontier) -> Effect<recoverable state and explicit coverage gaps>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "USAGE-DESKTOP-TRANSITION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/checkpoint.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-checkpoint.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-checkpoint-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-CHECKPOINT.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-checkpoint-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop checkpoint"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "UsageCheckpoint.resume(bound checkpoint, latest independent frontier) -> Effect<recoverable state and explicit coverage gaps>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 9,
+          "symbol": "ActiveAppTracker",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 32,
+          "symbol": "CurrentAppSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 42,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 63,
+          "symbol": "start",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 124,
+          "symbol": "stop",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 142,
+          "symbol": "handleAppSwitch",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 174,
+          "symbol": "handleScreenInactive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 186,
+          "symbol": "handleScreenActive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 201,
+          "symbol": "finalizeCurrentSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 243,
+          "symbol": "writeCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 257,
+          "symbol": "clearCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 263,
+          "symbol": "writeSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 12,
+          "symbol": "HistoryStore",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 39,
+          "symbol": "webHistoryDatabaseURL",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 177,
+          "symbol": "ensureUsageRollupSchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 444,
+          "symbol": "backfillUsageRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 775,
+          "symbol": "ensureWebHistorySchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 971,
+          "symbol": "backfillWebHistoryRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1025,
+          "symbol": "webHistoryColumnExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1038,
+          "symbol": "webHistoryRollupMetaExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1055,
+          "symbol": "migrateWebHistoryFromMainDBIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-checkpoint-vectors.ts",
+        "introduced_case_ids": [
+          "checkpoint-lost-ack",
+          "checkpoint-crash-open-tail",
+          "checkpoint-old-delete",
+          "checkpoint-authority-missing"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "checkpoint-lost-ack",
+            "input": {
+              "commit_generation": "2",
+              "ack_lost": true,
+              "same_original_key": true
+            },
+            "expected": {
+              "resume_generation": "2",
+              "duplicate_sessions": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "checkpoint-crash-open-tail",
+            "input": {
+              "checkpoint_open": true,
+              "crash_end_observed": false
+            },
+            "expected": {
+              "end": "unknown",
+              "coverage": "partial",
+              "fabricated_completion": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "checkpoint-old-delete",
+            "input": {
+              "checkpoint_frontier": "1",
+              "current_delete_frontier": "2",
+              "new_grant": true
+            },
+            "expected": {
+              "publish": false,
+              "restore": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "checkpoint-authority-missing",
+            "input": {
+              "current_frontier_available": false
+            },
+            "expected": {
+              "materialize": false,
+              "success": false
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/10",
+            "case_id": "historical-donor-short-tail-gap"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/16",
+            "case_id": "no-fabricated-completeness"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/36",
+            "case_id": "grant-revoked-during-page"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/40",
+            "case_id": "summary-not-complete-transfer"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/41",
+            "case_id": "complete-history-no-dashboard-cap"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/24",
+            "case_id": "resolution-delete-backup-regrant"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/33",
+            "case_id": "resolution-delete-restore-denied"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/34",
+            "case_id": "resolution-authoritative-frontier-restore-denied"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "Checkpoint binds dataset/source/install/clock profile/stable event order/current purpose/grant/frontier and committed generation; hint is never durable completed session. Recover commit-ack ambiguity by exact record identity.",
+        "Crash/unflushed/precollector/donor-discarded intervals remain partial/unknown evidence. No fabricated crash end, elapsed session or zero usage. Old backup/regrant/rename never overrides latest independent suppression authority; absent/stale authority fails closed."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-CHECKPOINT.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 322,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/2"
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-DEVICE-STATE",
+      "title": "DeviceStateProjector.project(qualified tagged native state event) -> Effect<owned observed state or unavailable/unknown>",
+      "outcome": "DeviceStateProjector.project(qualified tagged native state event) -> Effect<owned observed state or unavailable/unknown>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "PERSONAL-CONTRACT-REVIEW"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/device-state.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-device-state.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-device-state-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-DEVICE-STATE.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-device-state-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop device-state"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "DeviceStateProjector.project(qualified tagged native state event) -> Effect<owned observed state or unavailable/unknown>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 9,
+          "symbol": "ActiveAppTracker",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 32,
+          "symbol": "CurrentAppSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 42,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 63,
+          "symbol": "start",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 124,
+          "symbol": "stop",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 142,
+          "symbol": "handleAppSwitch",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 174,
+          "symbol": "handleScreenInactive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 186,
+          "symbol": "handleScreenActive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 201,
+          "symbol": "finalizeCurrentSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 243,
+          "symbol": "writeCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 257,
+          "symbol": "clearCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 263,
+          "symbol": "writeSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-device-state-vectors.ts",
+        "introduced_case_ids": [
+          "state-sleep-not-idle",
+          "state-idle-source-unavailable",
+          "state-missing-callback",
+          "state-cancel-channel"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "state-sleep-not-idle",
+            "input": {
+              "observed_kind": "system_sleep"
+            },
+            "expected": {
+              "kind": "system_sleep",
+              "idle_inferred": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "state-idle-source-unavailable",
+            "input": {
+              "idle_api_qualified": false
+            },
+            "expected": {
+              "idle": "unavailable",
+              "input_read_calls": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "state-missing-callback",
+            "input": {
+              "callback_observed": false
+            },
+            "expected": {
+              "state": "unknown",
+              "zero_usage": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "state-cancel-channel",
+            "input": {
+              "owned_channel": true,
+              "interrupted": true
+            },
+            "expected": {
+              "cleanup_ack_before_completion": true,
+              "postcancel_publish": false
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/10",
+            "case_id": "historical-donor-short-tail-gap"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/13",
+            "case_id": "unknown-empty-is-not-zero"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/14",
+            "case_id": "unavailable-empty-is-not-zero"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/28",
+            "case_id": "unknown-app-class-title-fails-closed"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/28",
+            "case_id": "resolution-unknown-source-field"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/30",
+            "case_id": "resolution-reasonless-sensor-absent"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "Idle is a separate supported-API observation; no keyboard/input/mouse materialization or inference from missing activation callbacks. Lock/sleep/idle/session inactive/denied/unavailable remain distinct. Current donor has no general idle API/durable state ledger.",
+        "Tagged state evidence may annotate session only under independently reviewed policy; no idle subtraction, foreground end fabrication, aggregate equivalence or battery guarantee. Owned fake source channel closes on interruption; native event registration/permissions/channel remains next owner."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-DEVICE-STATE.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 323,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/3"
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-TITLE",
+      "title": "DesktopTitleCapture.capture(trusted bound request scope) -> Effect<bounded granted nonbrowser detail or fixed redacted/unavailable status>",
+      "outcome": "DesktopTitleCapture.capture(trusted bound request scope) -> Effect<bounded granted nonbrowser detail or fixed redacted/unavailable status>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "USAGE-DESKTOP-DEVICE-STATE",
+        "PERSONAL-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/title.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-title.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-title-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-TITLE.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-title-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop title"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "DesktopTitleCapture.capture(trusted bound request scope) -> Effect<bounded granted nonbrowser detail or fixed redacted/unavailable status>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 9,
+          "symbol": "ActiveAppTracker",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 32,
+          "symbol": "CurrentAppSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 42,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 63,
+          "symbol": "start",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 124,
+          "symbol": "stop",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 142,
+          "symbol": "handleAppSwitch",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 174,
+          "symbol": "handleScreenInactive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 186,
+          "symbol": "handleScreenActive",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 201,
+          "symbol": "finalizeCurrentSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 243,
+          "symbol": "writeCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 257,
+          "symbol": "clearCurrentSessionFile",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ActiveAppTracker.swift",
+          "line": 263,
+          "symbol": "writeSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 12,
+          "symbol": "HistoryStore",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 39,
+          "symbol": "webHistoryDatabaseURL",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 177,
+          "symbol": "ensureUsageRollupSchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 444,
+          "symbol": "backfillUsageRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 775,
+          "symbol": "ensureWebHistorySchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 971,
+          "symbol": "backfillWebHistoryRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1025,
+          "symbol": "webHistoryColumnExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1038,
+          "symbol": "webHistoryRollupMetaExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1055,
+          "symbol": "migrateWebHistoryFromMainDBIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-title-vectors.ts",
+        "introduced_case_ids": [
+          "title-browser-preobservation",
+          "title-unknown-preobservation",
+          "title-nonbrowser-empty",
+          "title-revoked-beforecommit",
+          "title-cancel-owned-read"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "title-browser-preobservation",
+            "input": {
+              "trusted_app_class": "browser",
+              "detail_grant": true
+            },
+            "expected": {
+              "title_observation_calls": 0,
+              "persist_calls": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "title-unknown-preobservation",
+            "input": {
+              "trusted_app_class": "unknown",
+              "caller_nonbrowser": true
+            },
+            "expected": {
+              "title_observation_calls": 0,
+              "status": "not_authorized"
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "title-nonbrowser-empty",
+            "input": {
+              "trusted_app_class": "non_browser",
+              "detail_grant": true,
+              "observed_title": ""
+            },
+            "expected": {
+              "title_state": "observed_empty",
+              "title_observation_calls": 1
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "title-revoked-beforecommit",
+            "input": {
+              "initial_authorized": true,
+              "current_detail_grant": false
+            },
+            "expected": {
+              "persist_calls": 0,
+              "cleanup_ack": true
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "title-cancel-owned-read",
+            "input": {
+              "interrupted": true,
+              "owned_channel": true
+            },
+            "expected": {
+              "success": false,
+              "cleanup_ack_before_completion": true
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/17",
+            "case_id": "hourly-daily-overlap"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/18",
+            "case_id": "cross-device-overlap"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/27",
+            "case_id": "browser-title-before-observation"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/28",
+            "case_id": "unknown-app-class-title-fails-closed"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/29",
+            "case_id": "excluded-import-before-staging"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/30",
+            "case_id": "capture-not-export-grant"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/36",
+            "case_id": "grant-revoked-during-page"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/26",
+            "case_id": "resolution-recipient-copy-limit"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/28",
+            "case_id": "resolution-unknown-source-field"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/29",
+            "case_id": "resolution-archive-excluded-title"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "Trusted coarse TitleAuthority reconstructs application/source classification and current detail/capture/purpose/fence eligibility before acquiring/observing any title channel. Descriptor contains no title; caller browser flag/app name/bundle heuristic cannot authorize. Browser or unknown classification yields zero title observation calls.",
+        "Separately granted nonbrowser window title only; distinguish empty observed title/not_observed/redacted/unavailable. Exclude browser-derived URL/domain/path/visit/tab-title/window-title families and all keystroke/cursor/input telemetry BEFORE field observation and persistence; avoid hashing/logging excluded raw material. A title returned by an independently granted nonbrowser title API remains allowed even when its text contains a filename, path or URL-looking sequence; do not inspect and filter title content after native observation. Title permission grants no browser/history/input API access.",
+        "Acquire one coarse owned title channel under Effect scope after eligibility; bounded UTF8\u226465536/depth32nodes4096 private guards, max one pending detail, explicit failure and acknowledged cleanup. Recheck current authority before commit; revoked grant cannot persist an already observed eligible title. Actual signed AX/helper/sandbox/API/title privacy is unqualified."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-TITLE.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 324,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/4"
+      }
+    },
+    {
+      "id": "USAGE-DESKTOP-HISTORY",
+      "title": "UsageHistory.page(bound dataset/source/selection/cursor, current authority) -> Effect<full retained allowed history page and coverage receipt>",
+      "outcome": "UsageHistory.page(bound dataset/source/selection/cursor, current authority) -> Effect<full retained allowed history page and coverage receipt>",
+      "stream": "personal_data",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "USAGE-DESKTOP-CHECKPOINT",
+        "PERSONAL-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C14",
+        "S02",
+        "S03"
+      ],
+      "risk_ids": [
+        "F11",
+        "F14",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/apple/AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/usage-desktop/history.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-history.test.ts",
+        "packages/healthmd-core-ts/tests/usage-desktop-history-vectors.ts",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-HISTORY.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-history-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic desktop history"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "UsageHistory.page(bound dataset/source/selection/cursor, current authority) -> Effect<full retained allowed history page and coverage receipt>",
+      "source_input_refs": [
+        "#/input_pins",
+        "#/historical_donor_source_pins"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 12,
+          "symbol": "HistoryStore",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 39,
+          "symbol": "webHistoryDatabaseURL",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 177,
+          "symbol": "ensureUsageRollupSchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 444,
+          "symbol": "backfillUsageRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 775,
+          "symbol": "ensureWebHistorySchema",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 971,
+          "symbol": "backfillWebHistoryRollupsIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1025,
+          "symbol": "webHistoryColumnExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1038,
+          "symbol": "webHistoryRollupMetaExists",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/HistoryStore.swift",
+          "line": 1055,
+          "symbol": "migrateWebHistoryFromMainDBIfNeeded",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 287,
+          "symbol": "makeSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 349,
+          "symbol": "rawSessionAccumulators",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 381,
+          "symbol": "accumulatorsFromRollupRows",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 403,
+          "symbol": "addActiveSession",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 434,
+          "symbol": "buildSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 463,
+          "symbol": "parseSnapshotDay",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+          "line": 553,
+          "symbol": "ScreenTimeSnapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+          "line": 4,
+          "symbol": "TimeMdCloudSyncSnapshotBuilder",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        },
+        {
+          "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+          "line": 5,
+          "symbol": "snapshot",
+          "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5"
+        }
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/history",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/exclusions",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json#/future_native_proofs"
+      ],
+      "fixture_inputs": "Accepted donor source and immutable Personal cases; proposed independent literal vectors below require source/interface review before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/usage-desktop-history-vectors.ts",
+        "introduced_case_ids": [
+          "history-older-than-mirror",
+          "history-rechunk",
+          "history-mirror-continuation-gap",
+          "history-grant-revoked-nextpage",
+          "history-crosswired-cursor",
+          "history-nonadvancing-cursor"
+        ],
+        "literal_expected_vectors": [
+          {
+            "case_id": "history-older-than-mirror",
+            "input": {
+              "retained_allowed_record_age_days": 366
+            },
+            "expected": {
+              "returned": true,
+              "mirror_limit_applied": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "history-rechunk",
+            "input": {
+              "original_record_key": "synthetic-original1",
+              "transport_page_changed": true
+            },
+            "expected": {
+              "original_key_changed": false,
+              "duplicates": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "history-mirror-continuation-gap",
+            "input": {
+              "mirror_continuation_duration_seconds": 1800,
+              "session_count": 0
+            },
+            "expected": {
+              "mirror_completeness": false,
+              "raw_original_authority_retained": true
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "history-grant-revoked-nextpage",
+            "input": {
+              "current_grant": false
+            },
+            "expected": {
+              "materialize_calls": 0,
+              "page_published": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "history-crosswired-cursor",
+            "input": {
+              "cursor_dataset": "synthetic-a",
+              "request_dataset": "synthetic-b"
+            },
+            "expected": {
+              "read_calls": 0,
+              "success": false
+            },
+            "status": "proposed literal; independent approval before code"
+          },
+          {
+            "case_id": "history-nonadvancing-cursor",
+            "input": {
+              "previous_cursor": "owned-page-1",
+              "returned_cursor": "owned-page-1",
+              "has_more": true
+            },
+            "expected": {
+              "fixed_status": "nonadvancing_cursor",
+              "published_pages": 0
+            },
+            "status": "proposed literal; independent approval before code"
+          }
+        ],
+        "draft_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/5",
+            "case_id": "mixed-epoch-selection-precision"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/16",
+            "case_id": "no-fabricated-completeness"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/19",
+            "case_id": "same-key-same-bytes-replay"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/20",
+            "case_id": "same-key-different-bytes-conflict"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/37",
+            "case_id": "selector-cursor-crosswire"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/40",
+            "case_id": "summary-not-complete-transfer"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+            "pointer": "/cases/41",
+            "case_id": "complete-history-no-dashboard-cap"
+          }
+        ],
+        "resolution_case_refs": [
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/9",
+            "case_id": "resolution-original-record-equality"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/11",
+            "case_id": "resolution-repartition-key"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/15",
+            "case_id": "resolution-half-open-end"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/24",
+            "case_id": "resolution-delete-backup-regrant"
+          },
+          {
+            "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+            "embedded_json_pointer": "/25",
+            "case_id": "resolution-frontier-changes-before-commit"
+          }
+        ],
+        "independence": "Literal synthetic expectations before code; historical native test execution/SDK admission not inferred."
+      },
+      "acceptance": [
+        "Independent reviewer freezes the complete typed interface and literal input/expected corpus BEFORE implementation; candidate output never generates expectations. Preserve all44 draft and37 resolution obligations unchanged; only referenced subcases are implemented here.",
+        "Candidate-only imports in exact four allowed files; no index/package/lock/export/native launcher changes. New source requires separately reviewed complete core/CLI cohort refresh before packed integration.",
+        "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
+        "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
+        "No365-day mirror/dashboard limit. Trusted paged repository emits stable original exact start-time/identity ordering beyond mirror; source-specific sessions versus iOS aggregates and overlapping devices remain distinct. Rechunking never changes original record keys; no completeness guarantee from cursor exhaustion.",
+        "Bind cursors to dataset/device/install/source/profile/selection/grant/frontier and checkpoint generation; initial/nonadvancing/crosswired cursor rejects. Per-page eligibility before materialization and before publication, \u22641MiB/4096records/page/64KiBrecord/one pending page are private synthetic guards.",
+        "Mirror continuation-only positive duration rows can disappear due sessionCount0 filter; not raw-session archive or canonical reducer authority. Preserve exact original precision/categories/comments in authorized record fields; full legacy SQL/settings/queues/source archive/import readers remain separate. Native reader implementations not in this child."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "expected": "Exact pinned Node/npm emitted tests and source/build guards, independently fixed vectors; reserve builder only after source/interface freeze."
+        }
+      ],
+      "consumers": "Future common Personal operations and separate native Mac source only; Rust/Apple/Android/CLI/MCP/website/Obsidian production authority and frozen health8/4/5 remain.",
+      "state_contract_impact": "Private fake interface only; no native data, public source/profile, source eligibility or donor storage adoption.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-HISTORY.json",
+      "reviewer_role": "independent acquisition/contracts/privacy reviewer",
+      "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
+      "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
+      "qualification": {
+        "status": "pending",
+        "proof_class": "portable_synthetic",
+        "receipts": []
+      },
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "blocker": null,
+      "priority": 325,
+      "expansion_input": {
+        "task_id": "SPLIT-USAGE-DESKTOP",
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
+        "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "child_pointer": "#/children/5"
       }
     }
   ]
