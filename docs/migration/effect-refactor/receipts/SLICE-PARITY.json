@@ -1,0 +1,346 @@
+{
+  "schema_version": 1,
+  "task_id": "SLICE-PARITY",
+  "source_sha": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf",
+  "patch_digest": "11ca017c9965f3774219faf0034aa34b2ac473abfd512f9e4897f9bed8e506ad",
+  "patch_digest_method": "SHA256 lexically sorted two claimed nonreceipt UTF8 repository-relative paths + NUL + raw bytes + NUL; excludes receipt/coordinator state/ignored build outputs/logs.",
+  "changed_paths": [
+    "apps/cli/tests/shared-slice-parity-vectors.ts",
+    "apps/cli/tests/shared-slice-parity.test.ts",
+    "docs/migration/effect-refactor/receipts/SLICE-PARITY.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "inputs": {
+    "source_contract_and_build_pins": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+      "apps/cli/crates/healthmd-mcp/src/application.rs": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+      "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+      "apps/cli/crates/healthmd-mcp/src/result.rs": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f",
+      "apps/cli/crates/healthmd-operations/src/limits.rs": "2a5f0ea3854fdb54550a1e075195407141321cc2cc1edeb91c05a3f047485184",
+      "apps/cli/crates/healthmd-operations/src/model.rs": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+      "apps/cli/crates/healthmd-operations/src/receipt.rs": "82efc6d84d830cf4c4eb8cd83db2a7c74953e0ad028a5cb45bf51f923dd05a1b",
+      "apps/cli/crates/healthmd-operations/src/registry.rs": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+      "apps/cli/crates/healthmd-operations/src/service.rs": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+      "apps/cli/package-lock.json": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "apps/cli/package.json": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+      "apps/cli/scripts/build-candidate.mjs": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+      "apps/cli/scripts/check-candidate.mjs": "df45b92da8f6415231bfa78b7d4e516841d2a136bb4a1476ea99aac08c66fe00",
+      "apps/cli/src/candidate-host.ts": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+      "apps/cli/src/cli/query.ts": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+      "apps/cli/src/mcp/query.ts": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+      "apps/cli/tests/candidate-api.test.ts": "3ec07bd038a61561e902b3ef268c361d2791bebf80e6bce7f1cf9f0f44e59c63",
+      "apps/cli/tests/cli-query-vectors.ts": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+      "apps/cli/tests/cli-query.test.ts": "feedc7f5fde3340493335327d5176a63687c05630356c017322beee48f6dbbde",
+      "apps/cli/tests/mcp-query-vectors.ts": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+      "apps/cli/tests/mcp-query.test.ts": "48debe7308d79cea2c3894ff1a6d01f8cfe7f8f2d1dc0b23396808f65b1223d8",
+      "apps/cli/tsconfig.build.json": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+      "apps/cli/tsconfig.json": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+      "apps/cli/tsconfig.test.json": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "docs/migration/effect-refactor/receipts/BASE-CLI.json": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+      "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json": "ca663fb7c38549ac885086219955913eb82e97e1d89f354e3515b13db5118249",
+      "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+      "docs/migration/effect-refactor/receipts/MCP-QUERY-ADAPTER.json": "e47ae1b37a6b1284dd0eed803a803855360fd8a4ce01d8b1ec5330f430685a64",
+      "docs/migration/effect-refactor/receipts/OP-CATALOG.json": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+      "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json": "d78dcac7a562180f9a30ec4459b0bde53c7e7080cddcf44f6d2edd27d3a2b87d",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+      "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+      "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+      "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+      "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+      "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+      "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+      "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+      "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+      "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5",
+      "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+      "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+      "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+      "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+      "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+      "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+      "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+      "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+      "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+      "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0"
+    },
+    "expected_vectors": {
+      "path": "apps/cli/tests/shared-slice-parity-vectors.ts",
+      "sha256": "449fe744c8d9a6f68e4648c44fd59eaa0440161aae8136c5234ea3b9b0cb6001",
+      "independent_review": {
+        "reviewer": "/root",
+        "result": "passed",
+        "timing": "Fixture-first approval449fe744... received before test implementation.",
+        "scope": "All4literal flows/5lifecycle/4authority/catalog IDs/prooflimits independently checked against source and sortedASCIIpretty/compact literal value text. Test expectations unchanged after approval."
+      }
+    },
+    "locks_and_runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_executable_sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "graph": "Unchanged scoped core/CLI/UI locks; Effect4.0.1 one physical identity; TS7.0.2/esbuild0.28.2 Go tooling and compiled Node24 ESM tests. Existing packed core/28input/16artifact/manifest/module guards passed. No dependency install, core/UI build, policy/global edit in this task."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "apps/cli/tests/shared-slice-parity-vectors.ts": "449fe744c8d9a6f68e4648c44fd59eaa0440161aae8136c5234ea3b9b0cb6001",
+        "apps/cli/tests/shared-slice-parity.test.ts": "6afe9effd4834e42d671e034a8b7277343d9610a95ff5ba00b152cce41398f71"
+      },
+      "compiled_CLI_artifacts": {
+        "apps/cli/dist/candidate/candidate-host.d.ts": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+        "apps/cli/dist/candidate/candidate-host.js": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+        "apps/cli/dist/candidate/cli/query.d.ts": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d",
+        "apps/cli/dist/candidate/cli/query.js": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74",
+        "apps/cli/dist/candidate/mcp/query.d.ts": "f57542998729efec35101b721e065820878ab111c9e9ff4106df8fb6484a47fb",
+        "apps/cli/dist/candidate/mcp/query.js": "c9a5888069e5bb126bf6bbe4104b63cf192f6040a11b33817ea9dce99b72f423",
+        "apps/cli/dist/test-metafile.json": "dd896d3e91cd605f8e281296d042264c092600be39a5e6f7bec303614eaa5975",
+        "apps/cli/dist/tests/candidate-api.test.js": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+        "apps/cli/dist/tests/candidate-host.test.js": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+        "apps/cli/dist/tests/cli-query.test.js": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70",
+        "apps/cli/dist/tests/mcp-query.test.js": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240",
+        "apps/cli/dist/tests/shared-slice-parity.test.js": "e48f38575a3cf08ba19085259d9e36df3bb2842836fbfff266fbfdbfeb944a0c"
+      },
+      "unchanged_common_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+      },
+      "core_check_log_sha256": "bf6993993da2caf9671521a5ce26e83a838cebd6374da7cc226f8138b865fbc8",
+      "cli_check_log_sha256": "67caa6bfbedd4ab7b42c119fa40daaeac2f84bb768fc074113d29a5e9b83bd8e",
+      "initial_corrected_typecheck_log_sha256": "65512ab14fbc340312a3f0b6a21855a18d565f73b1716feddad98637d0714989",
+      "core_observed_tests": 191,
+      "CLI_observed_tests": 105,
+      "new_cross_adapter_tests": 26,
+      "core_modules": 8,
+      "physical_Effect_installations": 1,
+      "CLI_filesystem_guard_cases": 6
+    },
+    "policy_versions": {
+      "query_request": 1,
+      "traversal_receipt": 1,
+      "static_catalog": 1,
+      "trusted_mirror_sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+      "profiles": "local_direct/local_read_only/remote_read_only (static catalog counts21/13/13)"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Compare normalized commands, source calls, grants, bounds, partial receipts and interruption across adapters.",
+      "result": "passed",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts; immutable approved apps/cli/tests/shared-slice-parity-vectors.ts; actual emitted26new cross-adapter cases and logs pinned below."
+    },
+    {
+      "criterion": "Assert discovery has no source/secret/network/listener effects.",
+      "result": "passed",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts; immutable approved apps/cli/tests/shared-slice-parity-vectors.ts; actual emitted26new cross-adapter cases and logs pinned below."
+    },
+    {
+      "criterion": "Retain exact case/runtime/source evidence and limitations; no live device or distribution support claim.",
+      "result": "passed",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts; immutable approved apps/cli/tests/shared-slice-parity-vectors.ts; actual emitted26new cross-adapter cases and logs pinned below."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Granted exclusive sequential core window:191tests,0fail/cancel/skip;8modules/oneEffect and13source+6graph negative guards. Locked Node24.21.0/npm11.19.0 via retained runtime PATH; no install; logSHA bf6993993da2caf9671521a5ce26e83a838cebd6374da7cc226f8138b865fbc8"
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "After core completed:105tests (79accepted prior+26new),0fail/cancel/skip; emitted ESM/strict types,28core input/16artifact/packedbytes/oneEffect/six existing filesystem guards. LogSHA 67caa6bfbedd4ab7b42c119fa40daaeac2f84bb768fc074113d29a5e9b83bd8e"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Assigned source4db9d8a1ff90049377a1d35b9dca12d35e3893cf, 77unchanged source pins, approved raw449fe744...,16common artifacts in source and packed copies,12CLI artifacts, actual191/105log summaries, exact Node executable and sorted2filepatch digest verified."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "No whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "72atomic tasks/86families/16choices structural graph/pointers/evidence/claims pass; not release or family proof."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator fresh frozen common integration191 core+14 UI+105 CLI=310 tests passed, zero failures/cancelled/skipped/todo on pinned Node24.21.0/npm11.19.0;77 input pins,12 CLI outputs and16 common outputs in source/packed copies verified. LogSHA256 81cfb5d04638a9e659b528c54148fd4b317405df5afdfd581cc91d4df9b259c2."
+    }
+  ],
+  "corrected_attempts": [
+    {
+      "command": "apps/cli npm run check",
+      "result": "resolved_by_scoped_test_annotation_fix",
+      "initial_failure": "Strict typecheck: union of two Effects needed explicit common outcome union type on test helper/operation. No adapter or common business source change.",
+      "log_sha256": "65512ab14fbc340312a3f0b6a21855a18d565f73b1716feddad98637d0714989",
+      "final_result": "105compiled tests passed; unchanged core not rerun after test-only fix."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "actual-cross-adapter-profile-flow-matrix",
+      "procedure": "Run both actual adapters separately for4frozen flows\u00d73trusted profiles; capture actual host invocations, open requests, cursor order, grants/deadline, counts and release trace.",
+      "expected": "Same fixed normalized invocation/binding/grants/page requests/cursors/commonvalues; once-only acquisition/release. CLI prettyASCII+LF differs MCP compactASCII text.",
+      "observed": "12paired flow cases pass; exact sourcecalls and shared values match independent literals on both adapters; resolver/encoder only MCP; default1200s same1.2m deadline.",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts + frozen449fe744... +105compiled check log pinned in inputs.",
+      "result": "passed"
+    },
+    {
+      "case_id": "continuation-and-partial-receipt",
+      "procedure": "Observe summary continuation, two-page lossless receipt with packetfacts, and two1MiB attested pages against2MiB\u221216KiB aggregate budget.",
+      "expected": "Single summary retains opaque continuation; two-page complete receipt counts2items/2facts with partial coverage; over-budget second page excluded and previous cursor preserved.",
+      "observed": "Both adapters read identical cursors; bounded partial receipt has1retained page/1item/0facts, traversal_completefalse, maximum_aggregate_bytes and continuation; both release once. Complete traversal preserves partial health coverage.",
+      "evidence": "flowVectors summary-continuation/lossless-two-pages/aggregate-bound-partial; actual sourcecall matrix.",
+      "result": "passed"
+    },
+    {
+      "case_id": "pure-common-discovery-capability-absence",
+      "procedure": "Hash-bind trusted static mirror, invoke pure createStaticCatalog/normalizeDiscovery under offered QuerySource Layer, inspect3profile IDs/availability and read-profile local-only guesses.",
+      "expected": "IDs21/13/13, no executed host principal/decode/admit/open/read/release/encode, executionnot_implemented for allstatic metadata; no source authority granted.",
+      "observed": "Three pure catalog cases pass with all offered query/host counters0;8local-only IDs rejected in both read catalogs. Portable core boundary/graph guards pass; pure implementation has no secret/network/listener capability or host API.",
+      "evidence": "catalogmirror31377...; three pure tests;191core source/graph boundary checks. Public CLI/MCP discovery routes are absent and not tested.",
+      "result": "passed"
+    },
+    {
+      "case_id": "current-grants-binding-and-guess-denial",
+      "procedure": "Deny currenthost grants while injecting toolJSON authority, inject malformed admitted profile and wrongMCP caller, and guess8local-only tools in bothread profiles.",
+      "expected": "No acquired source from denied grants/profile/caller/tool guesses; private error differences explicit.",
+      "observed": "CLI host preparation runs then common grant denial; MCP denies beforedecode. Invalidprofile rejects both beforeopen; wrongMCP caller open0. All guessed tools fail before principal/source dispatch.",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts authority tests; unchanged adapter and common source pins.",
+      "result": "passed"
+    },
+    {
+      "case_id": "cross-adapter-error-sanitization",
+      "procedure": "Supply typed unavailable and defective source reads through once-owned shared source.",
+      "expected": "CLI fixed candidatefailure; MCP knowncode/fixedmessage or protocolfailure, no raw provider payload and one release.",
+      "observed": "Two paired error cases pass; sourceopen1/read1/release1, codec0; private fixed projections match approved literals.",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts error cases + existing frozen MCP unavailableResult corpus4fdd...;105testlog.",
+      "result": "passed"
+    },
+    {
+      "case_id": "dual-Fiber-interruption-ownership-barriers",
+      "procedure": "For both adapters interrupt actual Fiber during read, masked finalallocation, and hostadmission; hold Deferred releaseack; include cleanup defects on read and allocation.",
+      "expected": "Completion waits acknowledgment, acquiredhandle finalizes exactly once, pendingallocation interrupt reads0, hostadmission interrupt acquires0; cause containsinterrupt only.",
+      "observed": "Five paired lifecycle cases pass: readacq1/read1/release1; finalallocationacq1/read0/release1; admissionall0. Ackbarrier asserted before completion, mixedcleanup payload stripped and both observed outcomes agree.",
+      "evidence": "apps/cli/tests/shared-slice-parity.test.ts lifecycleVectors5 +105compiled log; no wall-clock sleeps/device/process/durablejob mutation.",
+      "result": "passed"
+    },
+    {
+      "case_id": "independent-review-and-fresh-integration",
+      "procedure": "Different-writer independent complete test/source/vector/receipt/artifact review and emitted105-test replay; coordinator fresh frozen common make and exact pin/patch verification.",
+      "expected": "Actual cross-adapter calls preserve fixed commands/cursors/grants/bounds/receipts and ownership barriers; pure catalog scope remains distinct from public route/authentication proof.",
+      "observed": "Reviewer accepted exact11ca... patch,105 tests pass. Root310 scoped tests pass;77 historical/current inputs,12 CLI outputs and16 common outputs in both source/packed copies match. Approved449fe... fixed before-test vectors unchanged; all private scope limitations retained.",
+      "evidence": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+11ca017c9965f3774219faf0034aa34b2ac473abfd512f9e4897f9bed8e506ad; root logSHA256 81cfb5d04638a9e659b528c54148fd4b317405df5afdfd581cc91d4df9b259c2.",
+      "result": "passed"
+    }
+  ],
+  "inspection_summary": {
+    "claim_paths": 3,
+    "nonreceipt_paths": 2,
+    "new_tests": 26,
+    "total_CLI_tests": 105,
+    "core_tests": 191,
+    "paired_flow_cases": 12,
+    "pure_catalog_cases": 3,
+    "paired_lifecycle_cases": 5,
+    "unchanged_common_artifacts": 16,
+    "compiled_CLI_artifacts": 12,
+    "frozen": "Vector449fe744... approved before tests and unchanged. Source/output frozen after successful checks; no repeats absent new failure."
+  },
+  "limitations": [
+    "One private metric_chart fake QuerySource and pure static catalog. Full public CLI/MCP discovery command/tool routing is unimplemented; pure Result API evidence does not qualify those routes.",
+    "Trusted current caller/grants/allowlist/grammar/binding/opaque cursor/page byte accounting and lossless raw decoder/encoder are test attestations. No real authorization, SDK evaluator, health readiness/completeness or exact native byte/frame/memory proof.",
+    "Only approved literal safe ASCII/integer common values and separately fixed CLI pretty/MCP compact output; no general serde/Number/Unicode/fraction/negative-zero/largeinteger/lexical codec equivalence.",
+    "Pure catalog has no offered source/host capability work and portable guards reject host APIs; no real network/credential/listener/device service was exercised. Static executionnot_implemented remains metadata, not runtime authority.",
+    "Actual Fiber/Deferred ownership only; no processSIGINT/transportJSONRPC/session/AppsPNG/concurrency/durable cancellation/native/physical/signed/deployed/channel proof.",
+    "Core/CLI checks ran sequentially with explicit root clearance and no installs/make/native/common business/package/lock/guard changes. UI not rebuilt here. Parent/family/O01/O02/C11/C13 qualification remains open."
+  ],
+  "remaining_qualification": [
+    "Complete raw serializers/grammar and native host current authentication/source policy; full public discovery/query/protocol/process/channel/signed distribution/real external client and family gates."
+  ],
+  "rollback": "Remove only the two private shared-slice-parity test/vector files and this receipt; rebuild scoped CLI candidate outputs if needed. Retain accepted adapters/common modules/locks/guards/public Rust/native launchers/frozen fixtures/state/user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_core",
+    "fingerprint": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+11ca017c9965f3774219faf0034aa34b2ac473abfd512f9e4897f9bed8e506ad"
+  }
+}

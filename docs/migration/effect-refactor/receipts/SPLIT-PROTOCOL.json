@@ -1,0 +1,638 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-PROTOCOL",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+  "patch_digest": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+  "patch_digest_method": "SHA256 raw split-protocol.json bytes, excluding receipt, coordinator plan/state, temporary validator and ignored outputs.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-protocol.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "source_pins": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingLink.kt",
+          "sha256": "b61a526f740e7981a693009431b0981d354c57ba10c3fadefec2d93dc920f637",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/app/src/test/java/com/healthmd/presentation/directcli/DirectCliPairingLinkTest.kt",
+          "sha256": "baed31b1718a0662bca413cf8576f28e338e8ab1b34df143979cd5bddf621f2c",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt",
+          "sha256": "aaf292a27bd7aec2ef0ebee6a6ae56e9e30741ac2c0995c30e798d2d3c268e5a",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectConnection.kt",
+          "sha256": "d0df01c6a403382b55b48db828aa36644ddd41642b8af76d89d25c9249cdf6f3",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCrypto.kt",
+          "sha256": "134550efd95a6ddfd2fbb72721bac7038e9e30fbdb0314c60817f07d1a514e23",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+          "sha256": "082ade5953c87e0ce17c1da2722612d4f37010c63eaafb76d3d628c1fe0b8b5f",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+          "sha256": "fa082aad6433140fcd5ee461f287202de685a6bafb75ebf3f2298bca9b975f08",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/SharedPairingV3InteropTest.kt",
+          "sha256": "bd2bbef81f95899e3172c69f20ef571eb2bb3bfced9fcbaea63f0aa744144114",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/IPhoneDirectCLIService.swift",
+          "sha256": "70431d6eb6b6b8df537a8d25ba7446e3da0034940012165f499b2948a4e3e6bc",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+          "sha256": "ad8a94dbdbe07b14a4a3fb9a3c80adb2dcc0c19eea06b4bfee256f4475d53619",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectPairingSecurity.swift",
+          "sha256": "c03505f599912b38be17587e4afafdb6a1db5b6dc6178493ec522dc5eed951f7",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectProtocol.swift",
+          "sha256": "528312a10fb90c60355e3e83bda856a23a9c41f393dd0bc39e6fc25e8763ccb5",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectSecureChannel.swift",
+          "sha256": "eac27b0569b4b8c68faead34692e2506948e448e7790f3e007bc0cd616e3e1ff",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectTransfer.swift",
+          "sha256": "1d7f27955216a0b78fcd1088a853a6029ed20e87cbeb8634699340b966d5a28f",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdCoreRust/Tests/HealthMdCoreRustTests/ProtocolFoundationTests.swift",
+          "sha256": "81f626e77def187a30b95168f6bb4378710fbb782174aec2a577cf8ee51f4032",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/credentials.rs",
+          "sha256": "4fced54da0f0b99440253add1b018edbcb44b375da688ee52a3015cb8a3bff2f",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/handshake.rs",
+          "sha256": "0e3e872bb04a0adc3cf97e54e2590ef0dd5701fbe713cbeeac3b204b3cc9dddd",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/packet.rs",
+          "sha256": "aacf215d9359bb2d67c9a7483bb1faf18c3e0b3bb5b674cf7f7e1f254fcb6557",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/secure_channel.rs",
+          "sha256": "adcc97283b8ab5dbf4d1156aca2754f2ace25929a865aa962dac2c4fbc4e7e81",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/protocol.md",
+          "sha256": "2d7b7458895343caec94a843ce7df80bd4667639e8794a02aaffd975ff72ecf3",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/protocol.md",
+          "sha256": "3cde3d6c5f5bef03b057c6a836eab29cdaf30f575ad2a697bf4111384193d050",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/protocol.md",
+          "sha256": "4333e4180247e9bbb0601b2f8ed452351fc773c3ad987aebbed6e46dca581e7c",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v3/protocol.md",
+          "sha256": "c2878bd91dd1bc6badc16f3946baba186969c2bbb4bdbfdf32baca2eb6c3bd65",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/crypto.rs",
+          "sha256": "6b7313a02ab68b4972dc2b2e92f7a16eb49c7ea21e39e9b8ddd437bd96a578ab",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/encoding.rs",
+          "sha256": "e6662e3cb35e4aebed3e4ccdcac4f76eaf9fdcd1a8269a2d205d6caa04a27bbe",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs",
+          "sha256": "07569320944eaf3dfa52902cd5b2fba2fafba025b18eedca00a3de92f226facb",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/wire.rs",
+          "sha256": "baf63a289b4245c8b3c38b73b169bd8fa2eab721491d40a544e57dcde8536f4d",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json",
+          "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+          "sha256": "380214d69140912b85d515b748f0dae7a24924281b9771090dcd5e8927c22d36",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/shared_pairing_v3_vectors.rs",
+          "sha256": "91be62274fb240d36871879f341734f9d04ce7fe879e008d12b1ec3a6c147007",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v1_vectors.rs",
+          "sha256": "ab4ec277c94794e5c44b499a7ce2f8eca44d1f52ad813fc0109d84c694861de2",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "case_ids": [
+            "/schema",
+            "/schema_version",
+            "/pairing_protocol_version",
+            "/pairing_code",
+            "/client_installation_id",
+            "/client_public_key_hex",
+            "/client_nonce_hex",
+            "/server_installation_id",
+            "/server_public_key_hex",
+            "/server_nonce_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_code_key_hex",
+            "/pairing_client_verifier_hex",
+            "/pairing_server_verifier_hex",
+            "/qr_payload"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "mirror_sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+          "case_ids": [
+            "/profile_request_fingerprint",
+            "/profile_request_json_base64",
+            "/profile_request_message_json_base64",
+            "/profile_request_unnamed_reference_json_base64",
+            "/schema",
+            "/schema_version"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "mirror_sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "case_ids": [
+            "/binary_frame_base64",
+            "/pairing_packet_json_base64",
+            "/pairing_verifier_hex",
+            "/request_fingerprint",
+            "/request_json_base64",
+            "/request_message_json_base64"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "mirror_sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "case_ids": [
+            "/client_private_key_hex",
+            "/client_public_key_hex",
+            "/server_private_key_hex",
+            "/server_public_key_hex",
+            "/shared_secret_hex",
+            "/client_nonce_hex",
+            "/server_nonce_hex",
+            "/reconnect_secret_hex",
+            "/pairing_code",
+            "/pairing_code_key_hex",
+            "/pairing_verifier_hex",
+            "/session_key_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_server_verifier_hex",
+            "/android_pairing_code",
+            "/android_pairing_verifier_hex",
+            "/android_pairing_server_verifier_hex",
+            "/trusted_client_verifier_hex",
+            "/trusted_server_verifier_hex",
+            "/request_json_base64",
+            "/request_fingerprint",
+            "/status_request_envelope_json_base64"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "mirror_sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "case_ids": [
+            "/schema",
+            "/schema_version",
+            "/request_json_base64",
+            "/envelope_json_base64",
+            "/request_fingerprint",
+            "/request_unnamed_reference_json_base64"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "mirror_sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+          "case_ids": [
+            "/hello",
+            "/query_rejected",
+            "/query_request",
+            "/query_response",
+            "/schema",
+            "/schema_version"
+          ],
+          "mirror_path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json",
+          "mirror_sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2"
+        }
+      ]
+    },
+    "locks_and_runtime": {
+      "runtime_execution": "None. Planning only; Node/native/Rust/npm/crypto toolchains not executed. Proposed childchecks use accepted exact Node24.21.0/npm11.19.0 compiledJS check pipeline, not direct TS stripping.",
+      "dependency_change": "None; actual host cryptographic primitives/secret lifetime and graph selection remain separately qualified."
+    },
+    "artifact_and_native_interface": {
+      "patch_file": {
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      },
+      "native_artifacts": "No native artifact build/readqualification, installation or runtime claimed. Source-only Swift/Kotlin boundary evidence pinned.",
+      "existing_MCP_outputs": "Author performed no build/install or mutation; previously frozen MCP source/receipt and existing core/UI outputs retained."
+    },
+    "policy_migration_key_versions": {
+      "versions": {
+        "pairing_legacy_apple": 1,
+        "pairing_legacy_android": 2,
+        "pairing_shared": 3,
+        "ios_exports": 1,
+        "android_application": 2,
+        "ios_query": 3,
+        "binary_frame": 1,
+        "internal_foundation_api": 1
+      },
+      "scope": "Separate selectors/application/query/frame/internal API versions; no public version/schema/credential principal/state change."
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "Packet children six; each has one boundary, four exactwrite paths, prerequisite inputs, fixture/vector/check/resource/interface and proof limits;147 exact historical/current child pin checks passed."
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "Two child dependency edges plus existingBASECLI/BASEHOST/TSFOUNDATION accepted prerequisites; acyclic and pathsdisjoint. Host crypto/credentials/purpose/retirement and separately reviewed newcore cohort export/input refresh explicit."
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "selected_outcome_map maps six initial outcomes and C07/C08/K04; remaining_family_work lists seven owner/trigger follow-on scopes covering full contracts/crypto/lifecycle/query/transport/durable/public release/retirement."
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "Packet and receipt pending independent review; no plan edits or implementation qualification/family closure. manage.py validates existing72task graph only; coordinator proposed card merge remains required."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "SPLIT-PROTOCOL"
+      ],
+      "result": "passed",
+      "evidence": "Exact assigned scope/acceptance/prerequisites/design/fixture and target read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": {
+        "procedure": "Read-only JSON/path/pointer/DAG/source pin validator; each child dependency exists or is one of six cards, every claimed path unique, every source input SHA and current bytes equal assigned gitshow, symbols/testcase locators exact, all frozen mirrors equal. All three F01 remaining-record references resolve to existing record IDs, rejecting dangling references.",
+        "validator_sha256": "f53865b047a2e3a697b14e585e4f2cce070d9f12d3a554b9fa5248dc6eb1b13d",
+        "observed": {
+          "children": 6,
+          "disjoint_paths": 24,
+          "child_input_pin_checks": 147,
+          "symbols": 27,
+          "source_cases": 18,
+          "fixture_families": 6,
+          "fixture_case_pointers": 65,
+          "remaining_owner_trigger_records": 7,
+          "remaining_record_refs_checked": 3
+        }
+      }
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0; no whitespace errors."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0:72atomic tasks,86families,16choices; structure only, proposed packet not merged."
+    }
+  ],
+  "inspection_summary": {
+    "method": "Task-scoped accepted inventories plus actual cited Rust/Swift/Kotlin source and frozen contract metadata; no full donor/base re-audit, generated codec implementation or expectation regeneration.",
+    "unique_input_pins": 61,
+    "children": 6,
+    "new_implementation_paths": 18,
+    "future_receipt_paths": 6,
+    "symbol_locators": 27,
+    "source_test_cases": 18,
+    "frozen_fixture_families": 6,
+    "fixture_case_pointers": 65,
+    "product_checks_run": 0,
+    "coordinator_merge": {
+      "children": 6,
+      "merged_task_total": 78,
+      "semantic_card_changes": false,
+      "operational_defaults": "proposed becomes not_started; null claim/blocker, pending independent implementation review/qualification, private portable proof, priority300..305, exact expansion hash. Existing-pipeline prose retained as availability_note with machine enumexisting."
+    }
+  },
+  "observations": [
+    {
+      "case_id": "versions_separate",
+      "result": "passed",
+      "procedure": "Inspect lib.rs/protocolREADME/pairing-v3 spec and BASECLI protocol pointers.",
+      "expected": "Selectors distinct from application/query/frame/API versions.",
+      "observed": "Pairing1/2/3, Apple application1, Android2, query3, frame1, internalAPI1 preserved.",
+      "evidence": "#/version_policy and source_pins in packet."
+    },
+    {
+      "case_id": "no_false_native_parity",
+      "result": "passed",
+      "procedure": "Inspect actual secure channel counters and native transfer codecs.",
+      "expected": "Record implementation divergences; initial common subset not fullparity.",
+      "observed": "Rust u64 wrap vs Swift UInt64.max/Kotlin Long.MAX_VALUE rejection; frame u32 vs Kotlin positiveInt; common subset explicitly scoped with later reconciliation.",
+      "evidence": "Packet #/source_reconciliation and #/source_symbols."
+    },
+    {
+      "case_id": "frozen_independent_inputs",
+      "result": "passed",
+      "procedure": "Rehash six neutral fixture families and their Rust mirrors; inspect field pointers.",
+      "expected": "Unchanged rawbytes and all namedcase fields exist.",
+      "observed": "Six mirrors byteidentical,65top-level casepointers exist; no actual credential/private data accessed.",
+      "evidence": "Packet #/fixture_catalog; literal expectations independently reviewed before each futureimplementation."
+    },
+    {
+      "case_id": "current_core_guard_preserved",
+      "result": "passed",
+      "procedure": "Read acceptedCORECANDIDATEAPI/CLI cohort scope and proposed sourceclaims.",
+      "expected": "New source modules must not bypass existing cohort guards.",
+      "observed": "All cards internal; index/package/locks/guards unchanged. Each integration needs separate reviewed exactcohort/export refresh; existing numericCORECOHORTREFRESH not blanket permission.",
+      "evidence": "Packet #/resource_policy, allchildren details.integration."
+    },
+    {
+      "case_id": "remaining_F01_references",
+      "result": "passed",
+      "procedure": "Validate selected_outcome_map.F01 list against remaining_family_work record IDs.",
+      "expected": "All references resolve without invented aliases.",
+      "observed": "server_session_crypto, device_pairing_state, consumers_release_retirement all exist;3references checked.",
+      "evidence": "Read-only temporary validator; packet selected_outcome_map.F01."
+    },
+    {
+      "case_id": "coordinator-merged-private-protocol-children",
+      "procedure": "Replay inspected read-only source/card/pin validator; independently review corrected F01 references; merge six unchanged semantic cards with standard operational state defaults and exact source-packet binding.",
+      "expected": "Six atomic cards/24 disjoint paths/two acyclic child edges; all selected remaining references resolve and none of the protocol families close.",
+      "observed": "147 assigned/current child pin checks,27 symbols,18 source cases,6 fixture families/65 fields and all3 retained F01 record IDs pass. Six unstarted children added to78-task plan; canonical availability enumexisting preserves original pipeline explanation; seven remaining owner/trigger groups retained.",
+      "evidence": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67; root read-only validator output and structural plan check.",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Planning only; no new source implementation, expected vector generation, crypto/Rust/native/product check, network or credential/userdata access.",
+    "Known stale v3 Compatibility pairing prose preserved as explicit source reconciliation, no public contract/spec edited.",
+    "Pure framing/transcript fake ports do not authenticate a peer, establish real digest/crypto primitive correctness or validate nonce/RNG/secret lifetime.",
+    "Initial sequence and frame common ranges retain native differences; no exhaustion/rollover/generalcrossplatform parity claimed.",
+    "Coordinator merged six independently reviewed children as unstarted private tasks; each still requires its own claim, preimplementation vector review and executed proof."
+  ],
+  "remaining_qualification": [
+    "message_codecs: Accepted packet/framing interfaces and exact numeric serializer cohort",
+    "server_session_crypto: Accepted client transcript bytes and independently reviewed host capability/primitive graph",
+    "device_pairing_state: Qualified crypto plus actual purpose/current local admission",
+    "hello_query_negotiation: Complete message and current peer/source proof interfaces",
+    "transport_concurrency: Accepted structural frames and crypto; source exhaustion policy independently reconciled",
+    "durable_transfer: Qualified transport/admission and separately accepted durable operation journals",
+    "consumers_release_retirement: All complete protocol families/current exact host+consumer matrices",
+    "Complete C07/C08/K04/F01/F05/native/consumer/signed/release/retirement matrices remain open."
+  ],
+  "rollback": "Delete only expansions/split-protocol.json and receipts/SPLIT-PROTOCOL.json if rejected; no coordinator plan integration or product/native/public/credential/fixture state was changed.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+  }
+}

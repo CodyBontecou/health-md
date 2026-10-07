@@ -1022,7 +1022,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-PROTOCOL",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+          "packet_sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "C08",
@@ -1041,7 +1050,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-PROTOCOL",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+          "packet_sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "C09",
@@ -1576,7 +1594,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-PROTOCOL",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+          "packet_sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "K05",
@@ -4542,7 +4569,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 80,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf",
@@ -4559,14 +4586,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_core",
+        "fingerprint": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+11ca017c9965f3774219faf0034aa34b2ac473abfd512f9e4897f9bed8e506ad"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SLICE-PARITY.json"
+        ]
       }
     },
     {
@@ -5763,7 +5792,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
@@ -5776,14 +5805,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "6b0b2d928c35893b4b91a74ab81fe663b3af9789+a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json"
+        ]
       },
       "max_children": 6
     },
@@ -11892,6 +11923,1861 @@
         "reviewer": "/root/effect_base_cli",
         "fingerprint": "4e5615e12660857cf07b8c7f74a31226a0795b2f4458966024bc249338f98516",
         "fingerprint_method": "SHA256 canonical task JSON before card_review insertion; sort_keys=True,separators=(comma,colon),ensure_ascii=False,UTF8. Exclude this metadata field when replaying the card digest. Implementation review remains pending."
+      }
+    },
+    {
+      "id": "PROTOCOL-PAIRING-GRAMMAR",
+      "title": "Strict selector-bound code and shared QR admission -> parsed connection hint or fixed failure",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Strict selector-bound code and shared QR admission -> parsed connection hint or fixed failure",
+      "prerequisites": [
+        "BASE-CLI",
+        "BASE-HOST",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C08",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/pairing-grammar.ts",
+        "packages/healthmd-core-ts/tests/pairing-grammar.test.ts",
+        "packages/healthmd-core-ts/tests/pairing-grammar-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-PAIRING-GRAMMAR.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/presentation/directcli/DirectCliPairingLink.kt",
+          "sha256": "b61a526f740e7981a693009431b0981d354c57ba10c3fadefec2d93dc920f637",
+          "bytes": 3074,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/app/src/test/java/com/healthmd/presentation/directcli/DirectCliPairingLinkTest.kt",
+          "sha256": "baed31b1718a0662bca413cf8576f28e338e8ab1b34df143979cd5bddf621f2c",
+          "bytes": 3404,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/HealthMd/iOS/IPhoneDirectCLIService.swift",
+          "sha256": "70431d6eb6b6b8df537a8d25ba7446e3da0034940012165f499b2948a4e3e6bc",
+          "bytes": 53007,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+          "sha256": "ad8a94dbdbe07b14a4a3fb9a3c80adb2dcc0c19eea06b4bfee256f4475d53619",
+          "bytes": 35920,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/handshake.rs",
+          "sha256": "0e3e872bb04a0adc3cf97e54e2590ef0dd5701fbe713cbeeac3b204b3cc9dddd",
+          "bytes": 20586,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/schema",
+            "/schema_version",
+            "/pairing_protocol_version",
+            "/pairing_code",
+            "/client_installation_id",
+            "/client_public_key_hex",
+            "/client_nonce_hex",
+            "/server_installation_id",
+            "/server_public_key_hex",
+            "/server_nonce_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_code_key_hex",
+            "/pairing_client_verifier_hex",
+            "/pairing_server_verifier_hex",
+            "/qr_payload"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": "healthmd.direct_pairing_interop",
+          "schema_version": 1,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/0",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+            "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+            "bytes": 1252,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/client_private_key_hex",
+            "/client_public_key_hex",
+            "/server_private_key_hex",
+            "/server_public_key_hex",
+            "/shared_secret_hex",
+            "/client_nonce_hex",
+            "/server_nonce_hex",
+            "/reconnect_secret_hex",
+            "/pairing_code",
+            "/pairing_code_key_hex",
+            "/pairing_verifier_hex",
+            "/session_key_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_server_verifier_hex",
+            "/android_pairing_code",
+            "/android_pairing_verifier_hex",
+            "/android_pairing_server_verifier_hex",
+            "/trusted_client_verifier_hex",
+            "/trusted_server_verifier_hex",
+            "/request_json_base64",
+            "/request_fingerprint",
+            "/status_request_envelope_json_base64"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": null,
+          "schema_version": null,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/3",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+            "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+            "bytes": 2775,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/0",
+        "#/source_symbols/1",
+        "#/source_symbols/2",
+        "#/source_symbols/3"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/0",
+        "#/source_test_cases/1",
+        "#/source_test_cases/2"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/pairing-grammar-vectors.ts",
+        "introduced_case_ids": [
+          "selectors_1_2_3_exact_digits",
+          "ascii_normalization_separate",
+          "qr_frozen",
+          "qr_parameter_reorder",
+          "duplicate_unknown_fields",
+          "private_ipv4_boundaries",
+          "host_leading_zero_reject",
+          "port1_65535_0_65536",
+          "port_leading_zero_source_review",
+          "unicode_percent_fragment_credentials",
+          "payload512_513"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/0",
+          "#/fixture_catalog/3"
+        ],
+        "interface_ref": "#/candidate_interfaces/0"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "Exactly6 ASCII digits for1;20 for2/3; no inference from code length; selected QR always shared3. RFC1918/100.64/10 dotted decimal only; precisely3 unique fields,512 ASCII-byte maximum.",
+        "Inspect both native parsers for parameter ordering and leading-zero port acceptance; pin literal accepted/rejected expectations before code; no generic URL parser normalization.",
+        "Normalization utility is separate optional CLI entry helper; strict admission rejects whitespace, Unicode digits and punctuation rather than silently normalizing.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Explicit selector and raw ASCII pairing-code/URI -> exact digits plus host/port hint. URI parsing grants no trust, consent, pairing lifecycle or fallback.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No RNG/code generation, QR PNG, external handler, in-app consent, host authentication, device trust mutation or real pairing.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-PAIRING-GRAMMAR.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 300,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "PROTOCOL-PACKET-FRAMING",
+      "title": "Bounded length-prefixed byte fragments -> one opaque packet plus unconsumed remainder",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Bounded length-prefixed byte fragments -> one opaque packet plus unconsumed remainder",
+      "prerequisites": [
+        "BASE-CLI",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C07",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/packet-framing.ts",
+        "packages/healthmd-core-ts/tests/packet-framing.test.ts",
+        "packages/healthmd-core-ts/tests/packet-framing-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-PACKET-FRAMING.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectConnection.kt",
+          "sha256": "d0df01c6a403382b55b48db828aa36644ddd41642b8af76d89d25c9249cdf6f3",
+          "bytes": 16357,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectSecureChannel.swift",
+          "sha256": "eac27b0569b4b8c68faead34692e2506948e448e7790f3e007bc0cd616e3e1ff",
+          "bytes": 12842,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/packet.rs",
+          "sha256": "aacf215d9359bb2d67c9a7483bb1faf18c3e0b3bb5b674cf7f7e1f254fcb6557",
+          "bytes": 6525,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/binary_frame_base64",
+            "/pairing_packet_json_base64",
+            "/pairing_verifier_hex",
+            "/request_fingerprint",
+            "/request_json_base64",
+            "/request_message_json_base64"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": null,
+          "schema_version": null,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/2",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+            "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+            "bytes": 2164,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/4",
+        "#/source_symbols/5",
+        "#/source_symbols/6"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/3",
+        "#/source_test_cases/4"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/packet-framing-vectors.ts",
+        "introduced_case_ids": [
+          "prefix_big_endian",
+          "all_prefix_splits",
+          "zero_reject",
+          "maximum2097152",
+          "maximum_plus_one",
+          "u64huge_before_allocate",
+          "truncated_payload",
+          "two_packets_remainder",
+          "timeout_retained_bytes"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/2"
+        ],
+        "interface_ref": "#/candidate_interfaces/1"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "u64be eight-byte prefix;1..2097152 before payload allocation and before converting huge values to Number. All split positions and consumed/remainder bytes exact.",
+        "Never allocate proportionally to an arbitrary fragment containing many packets; caller-owned input view and one bounded pending packet only. Timeout marker retains partial data as Kotlin poll contract; EOF caller signal reports truncation.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Pure fragment feeder with explicit bounded state -> need-more/complete/error; packet body opaque, no JSON decode or I/O.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No TCP/socket options, runtime timeout, encryption, control JSON/model grammar, transport resource/cancellation/concurrency or real memory proof.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-PACKET-FRAMING.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 301,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "PROTOCOL-CLIENT-TRANSCRIPT",
+      "title": "Strict pairing client public fields and selector -> exact code-key and client-proof preimage bytes",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Strict pairing client public fields and selector -> exact code-key and client-proof preimage bytes",
+      "prerequisites": [
+        "PROTOCOL-PAIRING-GRAMMAR",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C08",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/client-transcript.ts",
+        "packages/healthmd-core-ts/tests/client-transcript.test.ts",
+        "packages/healthmd-core-ts/tests/client-transcript-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-CLIENT-TRANSCRIPT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCrypto.kt",
+          "sha256": "134550efd95a6ddfd2fbb72721bac7038e9e30fbdb0314c60817f07d1a514e23",
+          "bytes": 12528,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/SharedPairingV3InteropTest.kt",
+          "sha256": "bd2bbef81f95899e3172c69f20ef571eb2bb3bfced9fcbaea63f0aa744144114",
+          "bytes": 2058,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectPairingSecurity.swift",
+          "sha256": "c03505f599912b38be17587e4afafdb6a1db5b6dc6178493ec522dc5eed951f7",
+          "bytes": 9844,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdCoreRust/Tests/HealthMdCoreRustTests/ProtocolFoundationTests.swift",
+          "sha256": "81f626e77def187a30b95168f6bb4378710fbb782174aec2a577cf8ee51f4032",
+          "bytes": 8288,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/schema",
+            "/schema_version",
+            "/pairing_protocol_version",
+            "/pairing_code",
+            "/client_installation_id",
+            "/client_public_key_hex",
+            "/client_nonce_hex",
+            "/server_installation_id",
+            "/server_public_key_hex",
+            "/server_nonce_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_code_key_hex",
+            "/pairing_client_verifier_hex",
+            "/pairing_server_verifier_hex",
+            "/qr_payload"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": "healthmd.direct_pairing_interop",
+          "schema_version": 1,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/0",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+            "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+            "bytes": 1252,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/client_private_key_hex",
+            "/client_public_key_hex",
+            "/server_private_key_hex",
+            "/server_public_key_hex",
+            "/shared_secret_hex",
+            "/client_nonce_hex",
+            "/server_nonce_hex",
+            "/reconnect_secret_hex",
+            "/pairing_code",
+            "/pairing_code_key_hex",
+            "/pairing_verifier_hex",
+            "/session_key_hex",
+            "/sealed_nonce_hex",
+            "/sealed_ciphertext_hex",
+            "/sealed_tag_hex",
+            "/pairing_server_verifier_hex",
+            "/android_pairing_code",
+            "/android_pairing_verifier_hex",
+            "/android_pairing_server_verifier_hex",
+            "/trusted_client_verifier_hex",
+            "/trusted_server_verifier_hex",
+            "/request_json_base64",
+            "/request_fingerprint",
+            "/status_request_envelope_json_base64"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": null,
+          "schema_version": null,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/3",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+            "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+            "bytes": 2775,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/crypto.rs",
+          "sha256": "6b7313a02ab68b4972dc2b2e92f7a16eb49c7ea21e39e9b8ddd437bd96a578ab",
+          "bytes": 18560,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+          "sha256": "380214d69140912b85d515b748f0dae7a24924281b9771090dcd5e8927c22d36",
+          "bytes": 8106,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/shared_pairing_v3_vectors.rs",
+          "sha256": "91be62274fb240d36871879f341734f9d04ce7fe879e008d12b1ec3a6c147007",
+          "bytes": 2991,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/7",
+        "#/source_symbols/8",
+        "#/source_symbols/9",
+        "#/source_symbols/10",
+        "#/source_symbols/11",
+        "#/source_symbols/12",
+        "#/source_symbols/13"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/5",
+        "#/source_test_cases/6",
+        "#/source_test_cases/7",
+        "#/source_test_cases/8",
+        "#/source_test_cases/9"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/client-transcript-vectors.ts",
+        "introduced_case_ids": [
+          "domain1_2_3_distinct",
+          "lowercase_uuid",
+          "u64byte_field_lengths",
+          "client_fields_order",
+          "publickey_nonce32",
+          "strict_code_not_length_selected",
+          "mutated_nonce_preimage",
+          "trustedclient_domain_separate"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/0",
+          "#/fixture_catalog/3"
+        ],
+        "interface_ref": "#/candidate_interfaces/2"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "F bytes uses eight-byte unsigned big endian length and unchanged byte concatenation; lowercase UUID ASCII, no UUID wirecase confusion.",
+        "Use frozen legacy/shared client proof inputs and independent literal full preimage bytes reviewed from crypto.rs/Swift/Kotlin. Primitive expected hashes/HMAC remain frozen future host obligations, not falsely claimed by pure byte tests.",
+        "No server sealed secret/session key/KDF API bundled into this task; secret-bearing buffers/zeroization and real code handling remain host proof.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Explicit profile, code and client UUID/publickey32/nonce32 -> bounded typed preimages; F(value) field primitive; trusted-client public preimage separate. No hash/HMAC execution.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No SHA256/HMAC/X25519/AEAD/RNG/constant-time proof, secret lifetime or credential storage. Server proofs, session-key preimage and derivation remain later packet.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-CLIENT-TRANSCRIPT.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 302,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "PROTOCOL-TRANSFER-FRAME",
+      "title": "Opaque transfer chunk -> deployed binary frame or fixed structure/digest failure",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Opaque transfer chunk -> deployed binary frame or fixed structure/digest failure",
+      "prerequisites": [
+        "BASE-CLI",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C07",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/transfer-frame.ts",
+        "packages/healthmd-core-ts/tests/transfer-frame.test.ts",
+        "packages/healthmd-core-ts/tests/transfer-frame-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-TRANSFER-FRAME.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectConnection.kt",
+          "sha256": "d0df01c6a403382b55b48db828aa36644ddd41642b8af76d89d25c9249cdf6f3",
+          "bytes": 16357,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+          "sha256": "fa082aad6433140fcd5ee461f287202de685a6bafb75ebf3f2298bca9b975f08",
+          "bytes": 7782,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectTransfer.swift",
+          "sha256": "1d7f27955216a0b78fcd1088a853a6029ed20e87cbeb8634699340b966d5a28f",
+          "bytes": 24173,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdCoreRust/Tests/HealthMdCoreRustTests/ProtocolFoundationTests.swift",
+          "sha256": "81f626e77def187a30b95168f6bb4378710fbb782174aec2a577cf8ee51f4032",
+          "bytes": 8288,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+          "case_ids": [
+            "/binary_frame_base64",
+            "/pairing_packet_json_base64",
+            "/pairing_verifier_hex",
+            "/request_fingerprint",
+            "/request_json_base64",
+            "/request_message_json_base64"
+          ],
+          "case_id_kind": "JSON top-level field pointer; synthetic frozen reference, never device data",
+          "schema": null,
+          "schema_version": null,
+          "inventory_pointer": "docs/migration/effect-refactor/inventories/cli.json#/fixtures/2",
+          "authority": "Unchanged independently frozen bytes; no candidate-derived regeneration",
+          "mirror": {
+            "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+            "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+            "bytes": 2164,
+            "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+          }
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs",
+          "sha256": "07569320944eaf3dfa52902cd5b2fba2fafba025b18eedca00a3de92f226facb",
+          "bytes": 7392,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v1_vectors.rs",
+          "sha256": "ab4ec277c94794e5c44b499a7ce2f8eca44d1f52ad813fc0109d84c694861de2",
+          "bytes": 5604,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/14",
+        "#/source_symbols/15",
+        "#/source_symbols/16",
+        "#/source_symbols/17"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/10",
+        "#/source_test_cases/11",
+        "#/source_test_cases/12",
+        "#/source_test_cases/13",
+        "#/source_test_cases/14"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/transfer-frame-vectors.ts",
+        "introduced_case_ids": [
+          "frozen_binary_frame",
+          "magic_version_uuid_raw",
+          "sequence0_1_u32max",
+          "kotlin_intmax_boundary_distinct",
+          "payload0_524288_524289",
+          "header_truncation_every_byte",
+          "payload_length_mismatch",
+          "digest_mismatch",
+          "trailing_bytes"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/2"
+        ],
+        "interface_ref": "#/candidate_interfaces/3"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "66-byte header HMDDIRCT/u16be1/rawUUID16/u32besequence/u32be length/digest32, positive sequence and <=524288 opaque payload. No health payload interpretation.",
+        "Fixed frame byte corpus pinned from Swift reference and independent raw field literals; digest mismatch tested with deterministic fake port. Do not accept an arbitrary caller-reported digest as proof of authentic payload.",
+        "Rust/Swift u32 bound and Kotlin signed Int subset recorded explicitly. Preserve native differences rather than modifying deployed frame/fixture.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Exact structural frame codec with injected trusted SHA256 byte port; fake port only for portable tests, real primitive/host integrity separately required.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No real SHA primitive, authenticated frame bytes/peer proof, partition persistence/ack/finalization, native caller integration or transport throughput.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-TRANSFER-FRAME.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 303,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "PROTOCOL-TRANSFER-NEGOTIATION",
+      "title": "Two validated owned transfer capabilities -> exact common bounded parameters or failure",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Two validated owned transfer capabilities -> exact common bounded parameters or failure",
+      "prerequisites": [
+        "BASE-CLI",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C07",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/transfer-negotiation.ts",
+        "packages/healthmd-core-ts/tests/transfer-negotiation.test.ts",
+        "packages/healthmd-core-ts/tests/transfer-negotiation-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-TRANSFER-NEGOTIATION.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectTransfer.swift",
+          "sha256": "1d7f27955216a0b78fcd1088a853a6029ed20e87cbeb8634699340b966d5a28f",
+          "bytes": 24173,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdCoreRust/Tests/HealthMdCoreRustTests/ProtocolFoundationTests.swift",
+          "sha256": "81f626e77def187a30b95168f6bb4378710fbb782174aec2a577cf8ee51f4032",
+          "bytes": 8288,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/transfer.rs",
+          "sha256": "07569320944eaf3dfa52902cd5b2fba2fafba025b18eedca00a3de92f226facb",
+          "bytes": 7392,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/18",
+        "#/source_symbols/19",
+        "#/source_symbols/20",
+        "#/source_symbols/21"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/15",
+        "#/source_test_cases/16"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/transfer-negotiation-vectors.ts",
+        "introduced_case_ids": [
+          "current48mib_window4",
+          "highest_common_versions",
+          "no_common_version",
+          "disjoint_partition_range",
+          "preferred_clamped",
+          "window0_clamp1_oversize8",
+          "bridge_i32_i64_edges",
+          "empty_version_lists",
+          "minimum_zero_reject"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [],
+        "interface_ref": "#/candidate_interfaces/4"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "Highest intersecting protocol and frame version independently, max minima/min maxima, max preferred clamped interval, min windows clamped1..8. Constants32/48/64MiB and4 preferred.",
+        "Match source validator, including empty lists/min0/invalidrange and signed bridge bounds; do not invent rejection for preferred outside range or zero in-flight if source admits/clamps.",
+        "No inferred source/product, pairing selector or query support. Fake capability objects do not authenticate a peer.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Strict owned capability bridge -> pure transfer negotiation; explicit u32/i32/u64/i64 domains matching foundation.rs; no source/selector/application negotiation.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No hello negotiation, Android fail-closed appversion policy, query capability intersection, dynamic maxpage/frame authority, durable identity/admission or actual peer capability authenticity.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-TRANSFER-NEGOTIATION.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 304,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      }
+    },
+    {
+      "id": "PROTOCOL-SEQUENCE-ENVELOPE",
+      "title": "Common-range secure plaintext envelope plus expected counter -> exact payload and next counter",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Common-range secure plaintext envelope plus expected counter -> exact payload and next counter",
+      "prerequisites": [
+        "PROTOCOL-PACKET-FRAMING",
+        "TS-FOUNDATION"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C07",
+        "C08",
+        "K04"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/direct-protocol/README.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/protocol/sequence-envelope.ts",
+        "packages/healthmd-core-ts/tests/sequence-envelope.test.ts",
+        "packages/healthmd-core-ts/tests/sequence-envelope-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PROTOCOL-SEQUENCE-ENVELOPE.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private protocol candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectConnection.kt",
+          "sha256": "d0df01c6a403382b55b48db828aa36644ddd41642b8af76d89d25c9249cdf6f3",
+          "bytes": 16357,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/apple/Packages/HealthMdConnectivity/Sources/HealthMdConnectionCore/DirectSecureChannel.swift",
+          "sha256": "eac27b0569b4b8c68faead34692e2506948e448e7790f3e007bc0cd616e3e1ff",
+          "bytes": 12842,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/secure_channel.rs",
+          "sha256": "adcc97283b8ab5dbf4d1156aca2754f2ace25929a865aa962dac2c4fbc4e7e81",
+          "bytes": 7527,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-render.json",
+          "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+          "bytes": 192926,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json",
+          "sha256": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+          "bytes": 34548,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
+          "sha256": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+          "bytes": 16161,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/contracts/direct-protocol/README.md",
+          "sha256": "354e00c30c03934aaa43db8d9334b2fa37a42e5f6e728b17397687e0cafe9699",
+          "bytes": 4553,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/foundation.rs",
+          "sha256": "2f10429abf1e318bd74b946174603a835e6cb0b353933695cfb44caf4749ba94",
+          "bytes": 33800,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "source_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/22",
+        "#/source_symbols/23",
+        "#/source_symbols/24",
+        "#/source_symbols/25",
+        "#/source_symbols/26"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/17"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/cli.json#/protocol",
+        "docs/migration/effect-refactor/inventories/hosts.json#/secret_boundaries",
+        "docs/migration/effect-refactor/inventories/cli.json#/bounds"
+      ],
+      "fixture_inputs": "Frozen input references plus independently approved new literal vector corpus; no native execution implied.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/sequence-envelope-vectors.ts",
+        "introduced_case_ids": [
+          "magic8_header16",
+          "initial0",
+          "independent_directions",
+          "control_binary_increment",
+          "duplicate_skipped_out_of_order",
+          "plaintext_reject",
+          "truncation",
+          "common_longmax_minus1",
+          "rollover_not_qualified"
+        ],
+        "policy": "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "existing_input_pointers": [],
+        "interface_ref": "#/candidate_interfaces/5"
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "All existing and new discovered tests pass; fixed corpus/hash and unrelated inputs unchanged. Actual command/count/artifact hashes go in child receipt.",
+          "availability_note": "Existing exact Node24.21.0/npm11.19.0 pipeline; compiled JS Node:test, source/build/import guards, no Rust; run only after claimed core-component-build resource and vector approval."
+        }
+      ],
+      "acceptance": [
+        "Every child submits small immutable literal expected vectors and proposed typed interface for independent source/fixture review BEFORE implementation. Whole frozen asset bytes remain unchanged; candidate output is never its own oracle. No new public versions or legacy state changes.",
+        "Every control or binary message uses one sequence; both directions begin0; wrong magic/truncation/replay/skipped mismatch fixed failure without counter mutation.",
+        "Use exact big integer counter, no Number rounding. Initial corpus permits counters0..9223372036854775806 and successor<=9223372036854775807; behavior outside common range is explicitly unqualified, never a public downgrade/exhaustion policy.",
+        "Record Rust wrapping, Swift UInt64.max rejection, Kotlin Long.MAX_VALUE rejection with exact locators. Coordinator reconciliation plus independent vectors required before exhaustion/rollover/fullhost promotion.",
+        "No Node/Date/crypto/fs/network/process/credentials or Rust add-on in portable source; stable content-free errors; bounded admission and explicit integer conversion without JS rounding.",
+        "Preserve public authority/fixtures/deployed versions; exact source+vector+artifact proof only portable_synthetic pending independent review."
+      ],
+      "details": {
+        "boundary": "Pure HMDSC001/u64be sequence framing and expected-counter transition over common supported range; not secure channel, no sealing/opening. Explicit counter input/output is owned by later serialized host.",
+        "integration": "Internal src/protocol module only, no index/package export/script/lock/source-guard edits allowed. New modules deliberately make accepted CLI28input/16artifact cohort stale; before any packed CLI integration, coordinator must dispatch separately reviewed cohort/export refresh for these exact modules. Existing CORE-COHORT-REFRESH is specifically exact-number cohort, not blanket approval for protocol additions."
+      },
+      "consumers": "Future private common operations only until separate producer/consumer integration. Rust CLI/client/listeners, Swift Apple services, Kotlin Android direct protocol, contract manifests, website docs and external consumer compatibility retain current authority.",
+      "proof_limits": "No encryption/authentication/AAD/random nonce/session lifecycle, replay persistence, concurrent allocator/lock/once-only send, real cancellation/host I/O or cross-platform exhaustion parity.",
+      "rollback": "Remove only proposed candidate module/test/vector and task receipt; retained Rust/Swift/Kotlin protocol, public launchers, credential principals, frozen contracts and user state remain authority.",
+      "deletion_gate": "No production promotion, legacy credential/account or comparator/state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PROTOCOL-SEQUENCE-ENVELOPE.json",
+      "reviewer_role": "independent core/protocol/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 305,
+      "expansion_input": {
+        "task_id": "SPLIT-PROTOCOL",
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
       }
     }
   ]
