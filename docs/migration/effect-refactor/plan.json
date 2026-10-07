@@ -3985,7 +3985,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/cli.json catalog/packaged_mirror at SHA31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d, registry.rs/model.rs/normalize.rs/application normalization source pins, full21/read-only13 identities; freeze expected query normalization literals from source before candidate implementation.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -3997,8 +3997,20 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/OP-CATALOG.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 52,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "3c9c520762e55324e2904955429496574b8ba292",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/operations/catalog.ts",
+          "packages/healthmd-core-ts/src/operations/normalize.ts",
+          "packages/healthmd-core-ts/tests/catalog.test.ts",
+          "packages/healthmd-core-ts/tests/catalog-vectors.ts",
+          "docs/migration/effect-refactor/receipts/OP-CATALOG.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -4849,7 +4861,12 @@
         "packages/healthmd-ui/AGENTS.md",
         "packages/healthmd-ui/src/index.ts",
         "packages/healthmd-ui/tests/foundation*",
-        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json"
+        "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json",
+        "packages/healthmd-ui/.node-version",
+        "packages/healthmd-ui/README.md",
+        "packages/healthmd-ui/scripts/build.mjs",
+        "packages/healthmd-ui/scripts/check.mjs",
+        "packages/healthmd-ui/scripts/check-boundaries.mjs"
       ],
       "shared_resources": [
         "ui-package-lock",
@@ -4871,7 +4888,7 @@
           "availability": "created_by_this_task"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/native.json raw SHAa70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb, exact portable pins/core package source; synthetic readiness/source-domain model using injected fake operation, no fabricated native capability. Record independently sourced exact React/RN candidate metadata without treating portable checks as native runtime proof.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4883,8 +4900,32 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 63,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "3c9c520762e55324e2904955429496574b8ba292",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-ui/package.json",
+          "packages/healthmd-ui/package-lock.json",
+          "packages/healthmd-ui/tsconfig.json",
+          "packages/healthmd-ui/tsconfig.build.json",
+          "packages/healthmd-ui/tsconfig.test.json",
+          "packages/healthmd-ui/AGENTS.md",
+          "packages/healthmd-ui/.node-version",
+          "packages/healthmd-ui/README.md",
+          "packages/healthmd-ui/src/index.ts",
+          "packages/healthmd-ui/tests/foundation.test.ts",
+          "packages/healthmd-ui/scripts/build.mjs",
+          "packages/healthmd-ui/scripts/check.mjs",
+          "packages/healthmd-ui/scripts/check-boundaries.mjs",
+          "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json"
+        ],
+        "reserved_resources": [
+          "ui-package-lock",
+          "ui-public-interface"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
