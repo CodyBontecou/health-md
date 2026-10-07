@@ -123,6 +123,7 @@ def run_pilot(output: Path, source_sha: str | None) -> int:
                 "-configuration", "Debug-iOS", "-destination", f"platform=iOS Simulator,id={simulator}",
                 "-derivedDataPath", str(output / "DerivedData"), "-resultBundlePath", str(result),
                 "-parallel-testing-enabled", "NO", "-maximum-concurrent-test-simulator-destinations", "1",
+                "-collect-test-diagnostics", "never",
                 "-test-timeouts-enabled", "YES", "-default-test-execution-time-allowance", "120",
                 "-maximum-test-execution-time-allowance", "300", "CODE_SIGNING_ALLOWED=NO",
                 "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=",
