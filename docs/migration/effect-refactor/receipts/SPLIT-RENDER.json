@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-RENDER",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
+  "patch_digest": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de",
+  "patch_digest_method": "SHA256 raw UTF-8 expansions/split-render.json including final newline; excludes receipt/coordinator state/product/ignored artifacts.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-render.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-RENDER.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+      "packages/contracts/render-input/v1/contract.md": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+      "docs/architecture/cross-platform-unification-policy.md": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+      "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "docs/migration/effect-refactor/receipts/BASE-CORE.json": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+      "docs/migration/effect-refactor/expansions/split-semantics.json": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+      "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+      "docs/migration/effect-refactor/receipts/CODEC-VALUES.json": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "packages/healthmd-core-rust/Cargo.toml": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+      "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "apps/cli/scripts/check-candidate.mjs": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+      "packages/contracts/render-input/v1/fixtures/differential-v1.json": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+      "packages/contracts/render-input/v1/fixtures/native-apple-v7.json": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+      "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/render-input/v1/render-input.schema.json": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+      "packages/contracts/render-input/v1/artifact-plan.schema.json": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+      "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+      "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec"
+    },
+    "locks_and_runtime": {
+      "primary_crates": [
+        {
+          "crate": "serde_json",
+          "version": "1.0.151",
+          "archive_sha256": "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14"
+        },
+        {
+          "crate": "zmij",
+          "version": "1.0.23",
+          "archive_sha256": "29666d0abbfad1e3dc4dcf6144730dd3a3ab225bbbdac83319345b1b44ccfc1b"
+        },
+        {
+          "crate": "itoa",
+          "version": "1.0.18",
+          "archive_sha256": "8f42a60cbdf9a97f5d2305f08a87dc4e09308d1276d28c869c684d7777685682"
+        }
+      ],
+      "policy": "Pinned candidate runtime source inspected; no installs/builds/adoption."
+    },
+    "artifact_and_native_interface": {
+      "packet": "docs/migration/effect-refactor/expansions/split-render.json",
+      "counts": {
+        "pinned_git_inputs": 48,
+        "symbols": 38,
+        "literal_rust_tests": 51,
+        "primary_crates": 3,
+        "primary_files": 16,
+        "children": 6,
+        "edges": 8,
+        "child_paths": 24,
+        "remaining_groups": 7,
+        "introduced_cases": 39
+      }
+    },
+    "policy_migration_key_versions": {
+      "core_api": 4,
+      "canonical_model": 1,
+      "semantic_result": 3,
+      "render_input": 1,
+      "artifact_plan": 1,
+      "profile_revision": 2,
+      "Apple_public": 8,
+      "Android_frozen": 4,
+      "Android_analytical": 5
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-render.json#/children"
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-render.json#/dependency_edges"
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-render.json#/remaining_family_work"
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/expansions/split-render.json#/qualification"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "SPLIT-RENDER"
+      ],
+      "result": "passed",
+      "evidence": "Exact scope/acceptance read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/opt/homebrew/bin/python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Actual root Python Git blob, primary archive checksum/member equality, literal locators, frozen base64 SHA/length, disjoint24 child paths and six-child DAG inspection: {\"child_paths\": 24, \"children\": 6, \"edges\": 8, \"introduced_cases\": 38, \"literal_rust_tests\": 51, \"pinned_git_inputs\": 43, \"primary_crates\": 3, \"primary_files\": 15, \"remaining_groups\": 7, \"symbols\": 38}"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C03"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C04"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C05"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K03"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F02"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F05"
+      ],
+      "result": "passed",
+      "evidence": "Exact output/row digest pinned."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "65 atomic tasks,86 families,16 choices; structural graph/pointers/state/claims only."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "/opt/homebrew/bin/python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Final actual source-pin/symbol/line/primary cache locator/internal JSON-pointer/count/raw newline digest audit: {\"child_paths\": 24, \"children\": 6, \"edges\": 8, \"git_pins\": 48, \"internal_refs\": 94, \"introduced_cases\": 39, \"literal_tests\": 51, \"primary_files\": 16, \"primary_locators\": 5, \"remaining_groups\": 7, \"source_symbols\": 38}"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator read6cards/7remaininggroups, verified rawnewlinepacket digest and all48assignedGit rawinputpins (41source-arrayentries plus7fixturecatalogfiles), merges6exactchildren. Independentreview source38symbols51Rusttests94refs3checksummedarchives16source-licensefiles5locators8frozenartifacthashes8DAGedges24paths39fixturefirstcases; no runtime/family/wholeprofile proof."
+    }
+  ],
+  "inspection_summary": "Source/fixture/primary dependency metadata only; fixture/interface review before code. No product/native/npm/Cargo/data/service/Git mutations. Default Python lacks tomllib; source inspection uses existing Homebrew Python3.14.7 with no install. Corrected initially mistaken CLI script locator to actual apps/cli/scripts/check-candidate.mjs.",
+  "observations": [
+    {
+      "case_id": "coordinator-merge-render-six-boundaries",
+      "procedure": "Read independentlyreviewed source-pinned numeric/tree/result/syntax/Apple8JSONday/Android4JSONday cards, compare48historicalinputs and rawpacket digest, merge children thenvalidatewholeDAG.",
+      "expected": "Atmost6one-boundary cards, originalpublicversionsbytes retained, expectedvectorsbeforeruntimeimplementation; allotherfamily/admission/profile/archive/host/consumer/retirement groups assignednextpacketownertrigger.",
+      "observed": "6cards merged; historical serde_json1.0.151+zmij1.0.23 finiteformatting/sourcebranches remain pinned, fixed Foundation versus shortest serde distinction retained;39proposedfixturecases awaitindependentreviewbeforecode. All7remaininggroups open.",
+      "evidence": "Accepted c306053b9cb7bcb65ebdcc0789ddad9bc56652d6+019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de; coordinator48rawhistoricalpins matched.",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Child runtime commands not run by planning.",
+    "Primary numeric source identity not TypeScript/runtime equivalence.",
+    "Disjoint metadata drift not adopted; cohort rebind after integration."
+  ],
+  "remaining_qualification": [
+    "Full semantic output-key attestation/native extension tokens/source/purpose grants, cumulative ordering/rechunk/batches, invalid rollback/cancel/terminal session, NFKC casefold paths/collisions and artifact IDs/plans.",
+    "Apple8/Android4/5 Markdown/Bases/CSV/YAML, rich individual/daily/frontmatter/media/diagnostics/order/null; idempotent merge preserving unknown content and every unselected frozen artifact.",
+    "Android5 distinct discriminator/profile never alias4; Apple period8/range9 historical7 compatibility/revision/coverage/metadata; native SDK/civil/calendar aggregate authority retained.",
+    "AppleAPI envelopes1/2; AndroidAPIv1 frozen4 even local5; exact encoded-byte grouping/failure-only days/indivisible record/sidecars; publish/scheduler/retry/ack/authentication/tenant/source/selection/purpose grants separate host tasks.",
+    "All stream formats RFC4180CRLF versus profileCSV LF; lossless/raw numeric JSON arrays; ZIP/archive/exact originals/media/path/copy limits; CLI raw/export/resume/context/evidence; never whole2GiB buffering.",
+    "Swift/Kotlin adapters/native source oracles and actual SDK/civil/calendar/purpose/eligibility; Rust/UniFFI/CLI/MCP/NodeCLI/website/Obsidian complete public8/frozen4/separate5 fixtures, each VM/host/destination/lifecycle independently.",
+    "Persisted-state admission/migrations/upgrade/downgrade/rollback, signed offline release/headless/native bridge/device/external clients; promotion/reference/old-state deletion separately authorized."
+  ],
+  "rollback": "Retain production Rust/native consumers, frozen schema/fixtures/state and launchers. Revert only private candidate artifacts without data migration.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6+019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+  }
+}

@@ -4317,7 +4317,9 @@
         "apps/cli/tests/cli-query*",
         "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json"
       ],
-      "shared_resources": [],
+      "shared_resources": [
+        "cli-candidate-build"
+      ],
       "acceptance": [
         "Arguments normalize into the shared command and call the same operation in-process.",
         "Exact canonical receipts and CLI errors/raw output semantics match scoped fixtures.",
@@ -4335,7 +4337,7 @@
           "introduced_by": "CLI-CANDIDATE-HOST"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted BASE-CLI rawd013 baseline/actual Rust cli query/main/registry source pins, OP-CATALOG14vectorsa28c.../QUERY-TRAVERSAL15vectors ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a, CORE-CANDIDATE-API sourcec306053b9cb7bcb65ebdcc0789ddad9bc56652d6+a848efb5a5a6d1a09fbcab31cf753ecc40e856afd1921a4f94374adf1fc037a0/actual4privateexports, immutable vectors e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6. Review exact initial CLI interface/argv/caller-admission/profile/detail/allpages/error/raw scoped literal expectations before source implementation. Actualcommon normalize+traverse operation only; trusted adapter completegrammar/currentgrants/serialization attestations explicit, no public launcher or lossless/raw numeric byte equivalence inference. Interrupt scope awaitsownednative-likeack and sanitizer neverexposesmixed cleanup-defect cause or argument/provider payload. Both thinCLIMCPmust consumesameexportedsharedfunctions.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4347,8 +4349,21 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 70,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/cli/query.ts",
+          "apps/cli/tests/cli-query-vectors.ts",
+          "apps/cli/tests/cli-query.test.ts",
+          "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json"
+        ],
+        "reserved_resources": [
+          "cli-candidate-build"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -5631,7 +5646,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-RENDER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6",
@@ -5644,14 +5659,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6+019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-RENDER.json"
+        ]
       },
       "max_children": 6
     },
@@ -9508,6 +9525,2165 @@
         "receipts": [
           "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json"
         ]
+      }
+    },
+    {
+      "id": "SERIALIZE-EXACT-NUMBERS",
+      "title": "Exact serde numeric lexeme UTF-8 bytes or fixed typed error",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Finite binary64 bit token; canonical i64/u64 decimal integer token -> Exact serde numeric lexeme UTF-8 bytes or fixed typed error",
+      "prerequisites": [
+        "CODEC-VALUES",
+        "BASE-CORE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+        "packages/healthmd-core-ts/tests/exact-json-numbers.test.ts",
+        "packages/healthmd-core-ts/tests/exact-json-numbers-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [],
+      "source_test_case_refs": [],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/exact-json-numbers-vectors.ts",
+        "introduced_case_ids": [
+          "serialize-exact-numbers_signed_zero",
+          "serialize-exact-numbers_integral_dot_zero",
+          "serialize-exact-numbers_min_subnormal_max_finite",
+          "serialize-exact-numbers_rounding_ties_shortest",
+          "serialize-exact-numbers_fixed_scientific_thresholds",
+          "serialize-exact-numbers_i64_u64_edges",
+          "serialize-exact-numbers_nonfinite_reject_not_null"
+        ],
+        "interface_ref": "#/candidate_interfaces/0",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/differential"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration.",
+        "source_oracle_refs": [
+          "#/primary_dependency_sources/0",
+          "#/primary_dependency_sources/1",
+          "#/primary_dependency_sources/2",
+          "#/primary_numeric_policy"
+        ]
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "Finite binary64 bit token; canonical i64/u64 decimal integer token",
+          "output": "Exact serde numeric lexeme UTF-8 bytes or fixed typed error",
+          "policy": "Pinned zmij shortest correctly rounded f64 formatting, -0.0, integral .0, fixed/scientific thresholds/e+ sign. No Number.toString/JSON.stringify shortcut. Nonfinite rejected here even though general serde f64 serializer emits null. Semantic i128/u128 stay strings; public Value conversion only i64/u64. Binary32 later."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [
+        "#/primary_dependency_sources"
+      ],
+      "priority": 240,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "SERIALIZE-JSON-TREE",
+      "title": "UTF-8 JSON tree bytes without implicit final newline",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Owned tagged JSON tree with exact validated numeric lexemes, ordered entries, explicit mode and bounded sink -> UTF-8 JSON tree bytes without implicit final newline",
+      "prerequisites": [
+        "SERIALIZE-EXACT-NUMBERS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/exact-json-tree.ts",
+        "packages/healthmd-core-ts/tests/exact-json-tree.test.ts",
+        "packages/healthmd-core-ts/tests/exact-json-tree-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-JSON-TREE.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/write_ordered_json",
+        "#/source_symbols/foundation_key_cmp",
+        "#/source_symbols/foundation_json_string",
+        "#/source_symbols/write_kotlin_value",
+        "#/source_symbols/write_foundation_value"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/csv_and_yaml_escape_control_characters",
+        "#/source_test_cases/markdown_merge_is_idempotent_and_preserves_unknown_content",
+        "#/source_test_cases/nested_json_paths_create_objects_and_reject_conflicts",
+        "#/source_test_cases/kotlin_writer_uses_four_space_pretty_output",
+        "#/source_test_cases/foundation_compact_writer_sorts_keys_and_escapes_slashes",
+        "#/source_test_cases/foundation_writer_has_apple_spacing_and_sorted_keys"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/exact-json-tree-vectors.ts",
+        "introduced_case_ids": [
+          "serialize-json-tree_utf8_vs_utf16_order",
+          "serialize-json-tree_foundation_unicode_casefold_ties",
+          "serialize-json-tree_control_quote_backslash_slash",
+          "serialize-json-tree_null_default_empty_containers",
+          "serialize-json-tree_ordered_numeric_lexemes",
+          "serialize-json-tree_two_four_space_colon",
+          "serialize-json-tree_bounded_sink"
+        ],
+        "interface_ref": "#/candidate_interfaces/1",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/differential"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "Owned tagged JSON tree with exact validated numeric lexemes, ordered entries, explicit mode and bounded sink",
+          "output": "UTF-8 JSON tree bytes without implicit final newline",
+          "policy": "Canonical compact UTF-8 byte key order differs from Foundation Rust Unicode lowercase/original tie comparator. Foundation pretty2 slash-escape/colon spacing/blank-line empty containers; Kotlin pretty4 insertion or Value nested sorted order/no slash escaping. Ordered Number emitted verbatim; Value numeric formatter exact except Apple fixed f64 child. Control/quotes/backslash/nonASCII/null/default/array order source exact. No JSON.stringify/UTF16/locale sort."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-JSON-TREE.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [],
+      "priority": 241,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "SERIALIZE-SEMANTIC-RESULT",
+      "title": "canonical_result_bytes equivalent compact UTF-8",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "CODEC-SEMANTIC-RESULT owned strict SemanticResult3/canonical model1 -> canonical_result_bytes equivalent compact UTF-8",
+      "prerequisites": [
+        "SERIALIZE-JSON-TREE",
+        "CODEC-SEMANTIC-RESULT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/semantic-result-bytes.ts",
+        "packages/healthmd-core-ts/tests/semantic-result-bytes.test.ts",
+        "packages/healthmd-core-ts/tests/semantic-result-bytes-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-SEMANTIC-RESULT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/canonical_result_bytes",
+        "#/source_symbols/canonicalize_value"
+      ],
+      "source_test_case_refs": [],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/semantic-result-bytes-vectors.ts",
+        "introduced_case_ids": [
+          "serialize-semantic-result_result3_model1_defaults_null",
+          "serialize-semantic-result_u64_above_safe_integer",
+          "serialize-semantic-result_exact_number_time_strings",
+          "serialize-semantic-result_recursive_sort_array_order",
+          "serialize-semantic-result_no_newline",
+          "serialize-semantic-result_wrong_version"
+        ],
+        "interface_ref": "#/candidate_interfaces/2",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/semantic_differential"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "CODEC-SEMANTIC-RESULT owned strict SemanticResult3/canonical model1",
+          "output": "canonical_result_bytes equivalent compact UTF-8",
+          "policy": "Declared fields/default/null values, recursive UTF-8 sorted object keys, preserved arrays/exact bit/integer/time strings, exact u64/u32 numeric counters beyond safe Number; no final newline. No engine completion/host digest capability."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-SEMANTIC-RESULT.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [],
+      "priority": 242,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "CODEC-RENDER-INPUT",
+      "title": "Strict owned RenderSessionConfig/RenderBatch/RenderDay syntax models",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Original bounded UTF-8 config1/batch1; separately owned result3; explicit profile revision -> Strict owned RenderSessionConfig/RenderBatch/RenderDay syntax models",
+      "prerequisites": [
+        "CODEC-VALUES",
+        "CODEC-SEMANTIC-RESULT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C04",
+        "C05",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/contracts/render-input.ts",
+        "packages/healthmd-core-ts/tests/render-input.test.ts",
+        "packages/healthmd-core-ts/tests/render-input-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CODEC-RENDER-INPUT.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/RenderSessionConfig",
+        "#/source_symbols/RenderBatch",
+        "#/source_symbols/RenderDay",
+        "#/source_symbols/OrderedJsonValue",
+        "#/source_symbols/validate_ordered_json",
+        "#/source_symbols/validate_public_value",
+        "#/source_symbols/public_value_matches",
+        "#/source_symbols/validate_day",
+        "#/source_symbols/validate_config"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/all_profile_artifact_plans_match_exact_fixture_bytes",
+        "#/source_test_cases/canonical_range_v9_contract_fixtures_are_exact_rust_production_output",
+        "#/source_test_cases/apple_range_v9_is_separate_and_keeps_requested_failed_edge_bounds",
+        "#/source_test_cases/apple_range_v9_rejects_invalid_revision_coverage_and_contents",
+        "#/source_test_cases/fixture_rejections_are_transactional_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/render-input-vectors.ts",
+        "introduced_case_ids": [
+          "codec-render-input_every_struct_unknown_null_default",
+          "codec-render-input_ordered_number64_depth64",
+          "codec-render-input_value_depth32_container4096",
+          "codec-render-input_config262144_batch2097152_edges",
+          "codec-render-input_batch400_not_cumulative_admission",
+          "codec-render-input_lexical_vs_value_number",
+          "codec-render-input_no_attestation_grant",
+          "codec-render-input_active_serde_parser_rounding_underflow_overflow_negative_zero"
+        ],
+        "interface_ref": "#/candidate_interfaces/3",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/differential"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "Original bounded UTF-8 config1/batch1; separately owned result3; explicit profile revision",
+          "output": "Strict owned RenderSessionConfig/RenderBatch/RenderDay syntax models",
+          "policy": "All serde struct unknown/type/tag/default/null rules and exact primitive integers; ordered lexical numeric leaf distinct from serde Value parsed number. No extension token/source/purpose grant or semantic output-key attestation from syntax. Full validate_day/config policy stages are future admission, not assumed."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-RENDER-INPUT.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [
+        "#/primary_dependency_sources/0",
+        "#/primary_numeric_policy"
+      ],
+      "priority": 243,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "RENDER-APPLE-V8-JSON-DAY",
+      "title": "Exact local JSON-day body UTF-8 bytes only",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Decoded Apple health-data-v8 single-day presentation/config with explicitly bound synthetic semantic fixture context -> Exact local JSON-day body UTF-8 bytes only",
+      "prerequisites": [
+        "SERIALIZE-JSON-TREE",
+        "CODEC-RENDER-INPUT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C04",
+        "C05",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/render/apple-v8-json-day.ts",
+        "packages/healthmd-core-ts/tests/apple-v8-json-day.test.ts",
+        "packages/healthmd-core-ts/tests/apple-v8-json-day-vectors.ts",
+        "docs/migration/effect-refactor/receipts/RENDER-APPLE-V8-JSON-DAY.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/apple_v8_render_day",
+        "#/source_symbols/public_value_matches",
+        "#/source_symbols/public_json_entries",
+        "#/source_symbols/foundation_double",
+        "#/source_symbols/foundation_pretty_json",
+        "#/source_symbols/foundation_ordered_json"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/csv_and_yaml_escape_control_characters",
+        "#/source_test_cases/markdown_merge_is_idempotent_and_preserves_unknown_content",
+        "#/source_test_cases/nested_json_paths_create_objects_and_reject_conflicts",
+        "#/source_test_cases/kotlin_writer_uses_four_space_pretty_output",
+        "#/source_test_cases/foundation_compact_writer_sorts_keys_and_escapes_slashes",
+        "#/source_test_cases/foundation_writer_has_apple_spacing_and_sorted_keys",
+        "#/source_test_cases/all_profile_artifact_plans_match_exact_fixture_bytes",
+        "#/source_test_cases/canonical_range_v9_contract_fixtures_are_exact_rust_production_output",
+        "#/source_test_cases/apple_range_v9_is_separate_and_keeps_requested_failed_edge_bounds",
+        "#/source_test_cases/apple_range_v9_rejects_invalid_revision_coverage_and_contents",
+        "#/source_test_cases/fixture_rejections_are_transactional_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/apple-v8-json-day-vectors.ts",
+        "introduced_case_ids": [
+          "render-apple-v8-json-day_apple8_differential_local_json",
+          "render-apple-v8-json-day_foundation_signed_zero",
+          "render-apple-v8-json-day_foundation_17significant_boundaries",
+          "render-apple-v8-json-day_unicode_order_slashes",
+          "render-apple-v8-json-day_ordered_and_fallback",
+          "render-apple-v8-json-day_ordinal_nested_path_conflict"
+        ],
+        "interface_ref": "#/candidate_interfaces/4",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/differential/cases/0/json_artifacts/0"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "Decoded Apple health-data-v8 single-day presentation/config with explicitly bound synthetic semantic fixture context",
+          "output": "Exact local JSON-day body UTF-8 bytes only",
+          "policy": "Ordered native json_root plus public_json_entries fallback. Foundation fixed f64: -0/0; floor(log10(abs)); outside [-4,17) Rust .16e then trim/signed exponent; inside max(16-order,0) fractional precision and trim. Independent source oracle vectors and runtime equivalence mandatory, no JS log10/toFixed/Date assumption. No artifact plan/grants/writes/native SDK."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RENDER-APPLE-V8-JSON-DAY.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [],
+      "priority": 244,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
+      }
+    },
+    {
+      "id": "RENDER-ANDROID-V4-JSON-DAY",
+      "title": "Exact frozen-v4 local JSON-day body UTF-8 bytes only",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "Decoded android-frozen-v4 single-day presentation/config with explicitly bound synthetic semantic fixture context -> Exact frozen-v4 local JSON-day body UTF-8 bytes only",
+      "prerequisites": [
+        "SERIALIZE-JSON-TREE",
+        "CODEC-RENDER-INPUT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C04",
+        "C05",
+        "K03"
+      ],
+      "risk_ids": [
+        "F02",
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/contracts/render-input/v1/contract.md",
+        "docs/architecture/cross-platform-unification-policy.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/render/android-v4-json-day.ts",
+        "packages/healthmd-core-ts/tests/android-v4-json-day.test.ts",
+        "packages/healthmd-core-ts/tests/android-v4-json-day-vectors.ts",
+        "docs/migration/effect-refactor/receipts/RENDER-ANDROID-V4-JSON-DAY.json"
+      ],
+      "shared_resources": [
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private render candidate"
+      },
+      "source_inputs": [
+        {
+          "path": "AGENTS.md",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "sha256": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/contract.md",
+          "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-semantics.json",
+          "sha256": "6e6bb73b083686d8d8b21c9460a0a34a561e830bb1e57f5d42ac62c8aa0eda3e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-SEMANTICS.json",
+          "sha256": "98498e98181d5ede14f934a3c26a58485cff82b5ede31155ed8b5eac6c213a23",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+          "sha256": "5f42aa8072d3412431822b884ac00054b46bbbd7d3aaf7c0bfea7ec8b5c2ca8f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "sha256": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+          "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+          "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+          "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+          "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+          "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+          "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+          "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+          "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/Cargo.toml",
+          "sha256": "d1de6de7876b911668cf4065e569621b8ffd0f2e250dbec96197765278be92dd",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "sha256": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/render-input.schema.json",
+          "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/Cargo.toml",
+          "sha256": "03de99b8aae0e0ebb5c0a7a2d5af54a6f08d6215f919ad8646dba5e68582cb0c",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+          "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+          "source_revision": "c306053b9cb7bcb65ebdcc0789ddad9bc56652d6"
+        }
+      ],
+      "source_symbol_refs": [
+        "#/source_symbols/android_frozen_v4_render_day",
+        "#/source_symbols/public_json_entries",
+        "#/source_symbols/kotlin_pretty_json",
+        "#/source_symbols/kotlin_ordered_json",
+        "#/source_symbols/android_frozen_v4_render_api_record",
+        "#/source_symbols/android_frozen_v4_render_api_envelope",
+        "#/source_symbols/android_analytical_v5_render_day"
+      ],
+      "source_test_case_refs": [
+        "#/source_test_cases/csv_and_yaml_escape_control_characters",
+        "#/source_test_cases/markdown_merge_is_idempotent_and_preserves_unknown_content",
+        "#/source_test_cases/nested_json_paths_create_objects_and_reject_conflicts",
+        "#/source_test_cases/kotlin_writer_uses_four_space_pretty_output",
+        "#/source_test_cases/foundation_compact_writer_sorts_keys_and_escapes_slashes",
+        "#/source_test_cases/foundation_writer_has_apple_spacing_and_sorted_keys",
+        "#/source_test_cases/all_profile_artifact_plans_match_exact_fixture_bytes",
+        "#/source_test_cases/canonical_range_v9_contract_fixtures_are_exact_rust_production_output",
+        "#/source_test_cases/apple_range_v9_is_separate_and_keeps_requested_failed_edge_bounds",
+        "#/source_test_cases/apple_range_v9_rejects_invalid_revision_coverage_and_contents",
+        "#/source_test_cases/fixture_rejections_are_transactional_and_health_free"
+      ],
+      "accepted_inventory_fields": [
+        "docs/migration/effect-refactor/inventories/core.json#/exact_policies",
+        "docs/migration/effect-refactor/inventories/core.json#/bounds",
+        "docs/migration/effect-refactor/inventories/core.json#/frozen_fixtures"
+      ],
+      "fixture_inputs": "Frozen CODEC100 and #/fixture_catalog unchanged; new independently reviewed literal expected vectors/interface before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/android-v4-json-day-vectors.ts",
+        "introduced_case_ids": [
+          "render-android-v4-json-day_android4_differential_local_json",
+          "render-android-v4-json-day_native_frozen_default",
+          "render-android-v4-json-day_native_frozen_legacy_granular",
+          "render-android-v4-json-day_ordered_and_fallback",
+          "render-android-v4-json-day_v4_not_v5"
+        ],
+        "interface_ref": "#/candidate_interfaces/5",
+        "policy": "Fixture-first reviewable patch within child claim; independent expected source/byte and interface review BEFORE business implementation; pin immutable raw vector SHA. No implementation-derived expected bytes.",
+        "existing_input_pointers": [
+          "#/fixture_catalog/differential/cases/1/json_artifacts/0",
+          "#/fixture_catalog/android_requests/cases/0/json_artifacts/0",
+          "#/fixture_catalog/android_requests/cases/1/json_artifacts/0"
+        ],
+        "expected_result_policy": "Whole semantic hashes/complete plans reserved for full engine/render integration."
+      },
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "ci"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Exact locked portable toolchain installation under exclusive core build resource."
+        },
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "proof_class": "portable_synthetic",
+          "status": "not_run_by_packet",
+          "purpose": "Emitted candidate tests, portable boundary/one-Effect guards, independently reviewed introduced vectors and selected immutable render bytes. No complete Rust/native corpus claim from partial cases."
+        }
+      ],
+      "acceptance": [
+        "Match exact boundary and every independently reviewed positive/negative literal expectation plus selected frozen byte SHA/length.",
+        "Keep versions/frozen fixtures/native/Rust authority; no lossy Number/Date or default-order substitution.",
+        "Owned bounded input/output and fixed sanitized errors; source conversion/parse/rejection distinctions preserved.",
+        "Pin exact source/runtime/lock/modules/vectors/artifacts/check counts; partial proof not complete profile/family."
+      ],
+      "details": {
+        "boundary": {
+          "input": "Decoded android-frozen-v4 single-day presentation/config with explicitly bound synthetic semantic fixture context",
+          "output": "Exact frozen-v4 local JSON-day body UTF-8 bytes only",
+          "policy": "Native ordered lexemes/insertion; Kotlin pretty4/no slash escape; fallback Value numbers use serde exact shortest and nested sorted keys. Legacy quirks/discriminators retained; never analytical5 upgrade. APIv1 always frozen4 is separate future proof, no plan/grants/writes."
+        },
+        "bounds_ref": "#/bounds",
+        "public_api": "Private only, no package/index/export/lock/host edits.",
+        "purpose": "Pure synthetic transform, not acquisition/authorization/destination/publication."
+      },
+      "consumers": "Private downstream task modules/tests only. Rust/native/public CLI/MCP/export/website/plugin consumers retain authority; integration gates remain #/consumer_proof_policy.",
+      "proof_limits": "Portable synthetic boundary only; all native/full profile/session/public/distribution proofs remain open.",
+      "rollback": "Revert only this private module/test/vector/receipt while retaining current production launchers/state/contracts.",
+      "deletion_gate": "This task authorizes no production authority promotion or Rust/reference/retained-state deletion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RENDER-ANDROID-V4-JSON-DAY.json",
+      "reviewer_role": "independent core codec/render reviewer",
+      "status": "not_started",
+      "primary_dependency_refs": [],
+      "priority": 245,
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "task_id": "SPLIT-RENDER",
+        "path": "docs/migration/effect-refactor/expansions/split-render.json",
+        "sha256": "019b158eb2ac664f3cfc297bb4a9d0eab84e14b61a87472dddd6a077f3e975de"
       }
     }
   ]
