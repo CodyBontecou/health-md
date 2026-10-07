@@ -218,7 +218,7 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
-    # The complete accessibility matrix contributes 402 of roughly 440 app tests in
+    # The complete accessibility matrix contributes 392 app tests in
     # each F-Droid and Play variant, in addition to shared-core and direct CLI checks.
     # Preserve enough time to finish both variants on a cold hosted runner.
     timeout-minutes: 100

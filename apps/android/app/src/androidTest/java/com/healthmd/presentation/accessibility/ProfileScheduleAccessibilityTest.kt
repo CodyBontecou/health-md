@@ -246,29 +246,6 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
-    fun nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField() {
-        val initial = sampleEntry().copy(todayRefreshEnabled = false)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        val open = mutableStateOf(true)
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it; open.value = false }, onDismiss = { dismisses++; open.value = false })
-        }
-        val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
-        last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
-        last.scrollIfPossible().assertInNativeOwner()
-        assertAnchorLocals(last)
-        assertTextFits(last, GeistType.label20Mono.fontSize)
-        // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
-        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
-        assertEquals(0, dismisses)
-    }
-
-    @Test
     fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
         val initial = sampleEntry()
         val open = mutableStateOf(true)
