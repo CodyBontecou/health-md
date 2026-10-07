@@ -1,6 +1,6 @@
 # Health.md Effect refactor: agent execution plan
 
-**Status:** End-to-end goal active; baseline source inventories in progress. Product implementation and qualification have not started.
+**Status:** End-to-end goal active. The manifest records current implementation, review and qualification progress; source inventories and technical decisions do not establish product admission.
 
 **Design baseline:** 2026-10-07, repository revision `1b02fcc69f4706bca56de67698d2dc85996047b6`.
 

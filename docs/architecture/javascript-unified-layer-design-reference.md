@@ -1,6 +1,6 @@
 # Effect TypeScript and shared React design reference
 
-- **Status:** Design and source-evidence reference for the agent execution plan. Rust removal, Effect.ts, shared React UI/logic, unified health/location/screen-time and optional hosted storage/remote MCP scope are selected; implementation and qualification have not started.
+- **Status:** Design and source-evidence baseline for the agent execution plan. Rust removal, Effect.ts, shared React UI/logic, unified health/location/screen-time and optional hosted storage/remote MCP scope are selected. Research observations and limitations below describe the pre-implementation baseline; current task progress and admission evidence live in the execution manifest.
 - **Date:** 2026-10-07
 - **Motivation:** Faster CI/local tests and a smaller generated-build footprint for local development with worktrees.
 - **Scope:** Complete removal of maintained Health.md Rust implementations/tooling, including CLI/MCP and cloud consumers; shared Effect core/operations and React UI; iso.me location and time.md mobile/macOS acquisition in one Health.md dataset and combined/selected export system; optional hosted export destination, retained-data service and separately authorized remote MCP agents. macOS collectors first, including window titles; browser acquisition and Windows/Linux collectors later.

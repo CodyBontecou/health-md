@@ -432,7 +432,7 @@
       "id": "M01",
       "label": "M01 \u2014 Portable foundation and first shared operation",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
-      "status": "not_started",
+      "status": "in_progress",
       "qualification_receipts": [],
       "qualification_matrix": [],
       "matrix_review": {
@@ -2837,8 +2837,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 20,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/native-apple.json",
+          "docs/migration/effect-refactor/receipts/BASE-NATIVE-APPLE.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -2918,8 +2927,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 21,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_host",
+        "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/native-android.json",
+          "docs/migration/effect-refactor/receipts/BASE-NATIVE-ANDROID.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -3680,8 +3698,34 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 40,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "36244fd0a543456cfd7e2487d790ebe2fce2c19e",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/package.json",
+          "packages/healthmd-core-ts/package-lock.json",
+          "packages/healthmd-core-ts/tsconfig.json",
+          "packages/healthmd-core-ts/tsconfig.build.json",
+          "packages/healthmd-core-ts/tsconfig.test.json",
+          "packages/healthmd-core-ts/AGENTS.md",
+          "packages/healthmd-core-ts/README.md",
+          "packages/healthmd-core-ts/.node-version",
+          "packages/healthmd-core-ts/src/index.ts",
+          "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+          "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+          "packages/healthmd-core-ts/tests/foundation.test.ts",
+          "packages/healthmd-core-ts/scripts/build.mjs",
+          "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "packages/healthmd-core-ts/scripts/check.mjs",
+          "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json"
+        ],
+        "reserved_resources": [
+          "core-package-lock",
+          "core-public-interface"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
