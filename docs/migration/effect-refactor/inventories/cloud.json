@@ -1,0 +1,3118 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CLOUD",
+  "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+  "pilot_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+  "design_ids": [
+    "C18",
+    "C19",
+    "C20",
+    "C21",
+    "C22",
+    "H00",
+    "H01",
+    "F17",
+    "F18",
+    "F19",
+    "F20"
+  ],
+  "proof_class": "planning",
+  "source_identity": {
+    "pilot_branch_documented": "feat/cloud-mcp-pilot",
+    "exact_commit": "56611bc65c625f620b9920eeec7cff36908ecc79",
+    "parent": "f18c801374845aa00cdf2f1d642c2ec822a9015c",
+    "commit_subject": "feat(export): add WHOOP selection and Apple v10 cycle steps",
+    "verification": "git show -s exact commit and scoped git ls-tree/show only; no remote/live pilot access.",
+    "assigned_base_has_apps_cloud": false,
+    "qualification": "Accepted pilot source evidence only. Deployed/source head equality, live resources, credentials/accounts/grants/exports and earlier donor audit runs not independently verified.",
+    "license_authority": {
+      "paths": [
+        "LICENSE",
+        "LICENSES.md",
+        "apps/cloud/package.json"
+      ],
+      "cloud_declared_license": "AGPL-3.0-only",
+      "qualification": "Pinned source license metadata; dependency license/SBOM and successor distribution review remains H00/H01/H07 work."
+    }
+  },
+  "authority": "Current local native/Rust/contracts and pilot accepted historical byte readers remain authority; source inventory neither imports pilot into main nor promotes production/retires state.",
+  "input_authorities": [
+    {
+      "path": "AGENTS.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+    },
+    {
+      "path": "docs/migration/effect-refactor/cloud-release.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83"
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+    },
+    {
+      "path": "docs/architecture/cross-platform-unification-policy.md",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/cli.json",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/hosts.json",
+      "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+      "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+    }
+  ],
+  "source_records": [
+    {
+      "path": ".github/workflows/cloud-ci.yml",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "cf37d8129c4fbf12e879bfde85a2c2cac77f19dd04281db11283dc0456b5a013"
+    },
+    {
+      "path": "apps/cloud/AGENTS.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "874693adabb43ba7176116c7ed002ad7669083f9f8a55355369da53ffc1a0528"
+    },
+    {
+      "path": "apps/cloud/README.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "84f475af0ccd0c118ad137e5ec5c31f5fdf7ced6243a9e9526fdfa532c6299b1"
+    },
+    {
+      "path": "apps/cloud/docs/account-invite-runbook.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "653e61f6a8bfdea32c810d48534ff96dfaa591155057b4407ad390a969652e69"
+    },
+    {
+      "path": "apps/cloud/docs/account-key-rotation-runbook.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "49e03da7907a0c1e6a5bc9a7f3ab44af1344f16556a67ef99820e516069293a5"
+    },
+    {
+      "path": "apps/cloud/docs/mcp-full-export-tools.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "e6a4018a6a514ad872336fbfc9c609efb101d52fcafef04272b7b6281b5be460"
+    },
+    {
+      "path": "apps/cloud/docs/mcp-public-readiness.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "88e0f88f77adad32e4c9af1ab3b281fdd95b845ff38f1d4e0d1b87c6c2a546fa"
+    },
+    {
+      "path": "apps/cloud/docs/missing-export-handoff-v1.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b14eea5fd104aa3983412aa0c2a8952abeeee7cc00e66d68ef53dd377b784957"
+    },
+    {
+      "path": "apps/cloud/docs/multi-user-production-rollout-plan.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1434a5010ec623a5df8982f8e9fd6da7b7b8f4d1cf1d8805b57f60f6805e0af3"
+    },
+    {
+      "path": "apps/cloud/docs/native-subscription-and-large-export-research.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "4f802eafd97e78323cf992e35db5a824bf159cee8f0cdaa885f3333d0f1a8edf"
+    },
+    {
+      "path": "apps/cloud/docs/personal-tailnet-pilot.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "a7f68aab1aebc92401d379b3cf18b3a7a8f926630a24c7f85568c96259011461"
+    },
+    {
+      "path": "apps/cloud/docs/production-authorization-matrix.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "10c2a3d9b17a9dce54d2caab9739ea805e4bba92ce14db9d267c14937caba6b2"
+    },
+    {
+      "path": "apps/cloud/docs/production-data-flow-threat-model.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ed9009c55dc464ee167a34da0bcff420f6d85718264d997f719b2031e3ceaf96"
+    },
+    {
+      "path": "apps/cloud/docs/production-design-interview.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "11075fffe54228989996e2a70f1f505e8cd4d3ccde606b7d1fe486b6f84ea25b"
+    },
+    {
+      "path": "apps/cloud/docs/production-experience-roadmap.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "13b0100695ee39a7e3436bbc48e24226d016f5cc6dd97afd2003afd5a1b269c6"
+    },
+    {
+      "path": "apps/cloud/docs/production-load-qualification.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "d1cd57cc63dc0d8bece3b7d3b570373078215db03785ff1f5c7dcf7d95cfaa1c"
+    },
+    {
+      "path": "apps/cloud/docs/production-observability-and-slo.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "8f92fc99cbe09d0f71b14d5710e287794399dcc8a084f1a044c97f98ddb1ddaa"
+    },
+    {
+      "path": "apps/cloud/docs/production-readiness-audit.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "53354eb7a2182e759b7bdfea0d254c21639dc94cf308c1842cad4a48902fe3c6"
+    },
+    {
+      "path": "apps/cloud/docs/production-recovery-runbook.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0232a8d9c72640bf2ccc11ae6296f7b58a5ee3b12a733038c8e0bfbbaa85d8a9"
+    },
+    {
+      "path": "apps/cloud/docs/public-account-dashboard.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "406873a67d37768e672f75d9758d404c3129e04b0a9ccbcc3853bb3674d1efdb"
+    },
+    {
+      "path": "apps/cloud/docs/public-write-only-ingest.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b6df57508bb87224890964179b8b2304e0b67b9cdd69a7d7d9b2d4b112d10513"
+    },
+    {
+      "path": "apps/cloud/docs/remote-read-only-mcp.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "56142a657268e9d95b279b8deeb9b21a617db60310e746368f97f7fc25c87165"
+    },
+    {
+      "path": "apps/cloud/docs/retained-query-parity-plan.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "32ba722af5bf3b86fd40dd1af04279e263303d3fcb8333b45d4af22f719a4791"
+    },
+    {
+      "path": "apps/cloud/mcp/admin.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "c64b18aa2a3f0172133358588136171cbf9034a6e4a02ced8d6f7ca5e4ddca48"
+    },
+    {
+      "path": "apps/cloud/mcp/auth.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ca07cce1972c38c4f5bec623991139063b7edf8af94fb235b1eb70c6d7d84906"
+    },
+    {
+      "path": "apps/cloud/mcp/reader.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9366db87c36d9bd4f771f9a824c167bbf87e7334ccbb3452c481063e45b75fe5"
+    },
+    {
+      "path": "apps/cloud/mcp/server.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "81e9bc8cfdc03b5b88388edf33734f81bb8f3470dad5aa4d40df755406ca8fce"
+    },
+    {
+      "path": "apps/cloud/migrations/0001_initial.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1bfbfc6c8facaa201414cf94c8898a9d3b0d3b5f9e3c93beaff9cdcd5d4edb7e"
+    },
+    {
+      "path": "apps/cloud/migrations/0002_unique_payload.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "11b66a466c40b7599d6c2f1f9c639f9503e233512f84e1c2c10b2d3af81a6a93"
+    },
+    {
+      "path": "apps/cloud/migrations/0003_password_credentials.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "c24cf85148e64a35bdbf372a026aa2c5a1fbd6569ef42897882fd671dd2f73ff"
+    },
+    {
+      "path": "apps/cloud/migrations/0004_deletion_jobs.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7374779203beea563126848d61ded8ee006fe5669d394709c67aa127314610f6"
+    },
+    {
+      "path": "apps/cloud/migrations/0005_mcp_read_tokens.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "8407ba837ea06dc9f8d9be779c80d7563a6c20e12b69d76c11554f39b3f19652"
+    },
+    {
+      "path": "apps/cloud/migrations/0006_mcp_read_scope.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7179fb4284cd5057549954a1970c0f5687e5d5d2833bef3e02efd86d9b37342d"
+    },
+    {
+      "path": "apps/cloud/migrations/0007_repair_drafts.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5736f30fed88c6f545f7fec6030aa86f17d6c16a2b5e99a68974b992bb7ba3e0"
+    },
+    {
+      "path": "apps/cloud/migrations/0008_repair_device_handoff.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7f9beca042963f740e1abce339fc2a1745ffb8c8ffedc8f5f0f2823cccd89abf"
+    },
+    {
+      "path": "apps/cloud/migrations/0009_supplemental_exports.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "a089e6a987c6d7ec9b625f406df0946f9ea9bd361814c160e1c4783480d3e417"
+    },
+    {
+      "path": "apps/cloud/migrations/0010_multi_user_ingest.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "f07251a3df623fad89b9d5f676d670296ebd95e85d0ddd8d890efc27496a04b2"
+    },
+    {
+      "path": "apps/cloud/migrations/0011_account_export_keys.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5f4c1a49bcba30077d4a173b06f96ef371b86588f52003f7301f5412e56b3a77"
+    },
+    {
+      "path": "apps/cloud/migrations/0012_deletion_status_receipts.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ef2f1acf82eff55000ccc031bec01c93e125087016e6a2852d99a2fe21b63352"
+    },
+    {
+      "path": "apps/cloud/migrations/0013_account_key_rewrap.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "aaa05369d446354b033d5daf45704029a1ae6b081c2f11c33c093338adcab4d3"
+    },
+    {
+      "path": "apps/cloud/migrations/0014_maintenance_cursors.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "517af20e5468faf5b42db076cfcc42210caa8bcc1ae2351e451e11b744b4a3a8"
+    },
+    {
+      "path": "apps/cloud/migrations/0015_deletion_receipt_authorities.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "dac9ff2c02a5f387f6f7f8c3781abb4cb627af9b9186407b84db4505cd7ac8ca"
+    },
+    {
+      "path": "apps/cloud/migrations/0016_magic_link_session_claims.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "55161acb58e74634e23260f7329b58f10d611977b4de2e04491d6a028d87c555"
+    },
+    {
+      "path": "apps/cloud/migrations/0017_rate_limit_attempts.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "50620d3767f115e19bb14c70a9834bb8481e0b791322119b5357e6eb599aa555"
+    },
+    {
+      "path": "apps/cloud/migrations/0018_account_invites.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "4fc22764fb1928148f5467cf6090c1a34040113c6f57942705418cf2fc724610"
+    },
+    {
+      "path": "apps/cloud/package-lock.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "e8e8b629159cdd036e62fbb61b20ff0b418deb5b7a93a84315fab6872c98b472"
+    },
+    {
+      "path": "apps/cloud/package.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0d95c53c72e50cb25974a045dad6d77f4a731193e36a07dc4ab808108b7dcd88"
+    },
+    {
+      "path": "apps/cloud/public/dashboard.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b8f156c51aae617a1d028d7d4177a75037b3a732ca973da8eb252bf17a0886b1"
+    },
+    {
+      "path": "apps/cloud/public/dashboard.js",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2b4ec7a87eed1c12a80804b8d18db0ae0c72bd5f770fd0322619648931d213e7"
+    },
+    {
+      "path": "apps/cloud/public/deletion-status.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1537c745b4b9cdbb1fb1a25c9e00ec9dc1caf1f96ffc2604d35eb1c46720fca0"
+    },
+    {
+      "path": "apps/cloud/public/deletion-status.js",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "46a38417c1d84c897a74252fdd10569a98469f799593b481e3eb9da5af8a5c0d"
+    },
+    {
+      "path": "apps/cloud/public/explore.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "bfe7b1b29da27554999f2a8c8fd52d5135e0184c06002c8e7a8789b0914ff343"
+    },
+    {
+      "path": "apps/cloud/public/explore.js",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7e4f867541ca90c6467eb30819006acadbfbe8c2683ad962128323ceb7244004"
+    },
+    {
+      "path": "apps/cloud/public/login.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2718762d4d044d489f5d11f27ff8dc44d58a81dd4208dbf811d83ec696f562cc"
+    },
+    {
+      "path": "apps/cloud/public/repair-panel.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9de95e2a970b7579779684c6d5a0b7aae01fa92affdb5f89c975e201b73aa0d1"
+    },
+    {
+      "path": "apps/cloud/public/repair.html",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "169b43bc4f46a9d67d7f121f56e4a1503698132192aae6da3cbce0a268b7a2c5"
+    },
+    {
+      "path": "apps/cloud/public/repair.js",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1bbadc7cac2d940b27f02358e0683bfc17b80556858ecf8448e0753c12ff8e23"
+    },
+    {
+      "path": "apps/cloud/public/style.css",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3a00fd848fd3f78c9e4c1ef3ccb1d4cd3377efab1409bd26892db71f0680e175"
+    },
+    {
+      "path": "apps/cloud/scripts/build-vm.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "aed7d3654ce4825502099d4b2489a9c033de23b1eff74b4e5305fd73c3a511de"
+    },
+    {
+      "path": "apps/cloud/scripts/prepare-account-invites.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "50ce22f7f9ac0dfb5dbd005dfb7bfb8bc6e1d930b586798ffad9e0608e136173"
+    },
+    {
+      "path": "apps/cloud/scripts/qualify-staging-load.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7e5caf73137c907b34f645f44ee427ac64bb9e78c222d865c5740180cb9c0371"
+    },
+    {
+      "path": "apps/cloud/scripts/smoke-local.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b7d5c1281dfee780d49f082fd3a4df4bcfe1e5d19f670ee7adfd45c647750e57"
+    },
+    {
+      "path": "apps/cloud/scripts/staging-load-lib.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "51a24ac04a50c310e9d83fbdc7bb22b66e0a239c3a90ce933add88ae4a5017fd"
+    },
+    {
+      "path": "apps/cloud/scripts/verify-production-safety.mjs",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "65d68b34d5bbf7e43d163962217cc75fd4d46a02bca02125e8270f5b5b354573"
+    },
+    {
+      "path": "apps/cloud/src/account-export-keys.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0b8071e05d05bc951ee599a96772dda538a062bcf368414dc4f647f4a7d69f3a"
+    },
+    {
+      "path": "apps/cloud/src/account-export.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "d6af355fcf1a3434a5ce0e148c7c534e55b1e876093e13b94f486fbf3cc8f138"
+    },
+    {
+      "path": "apps/cloud/src/account-worker.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2cb1d26584f6be02823a08dac89941f3607d29014a7b0c202990aba584a09bf7"
+    },
+    {
+      "path": "apps/cloud/src/agent-tokens.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9f3e88c331e822056bff5d068c25b47531f8530cef1dc6849068072df1c3f600"
+    },
+    {
+      "path": "apps/cloud/src/apple-daily-profile.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "49e9c5c0780805a52e69438953e407e56c2a3d6699e2bc84ba842ce09d2f4cc7"
+    },
+    {
+      "path": "apps/cloud/src/auth.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "cd9da7491cef9d3fec2e2f8ee6d3ca86a35053b6e934a0f58613428f8408eab7"
+    },
+    {
+      "path": "apps/cloud/src/crypto.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1c5b71e8a8a1909ef085e1bb6e0ab0a80290330e4d48d73402c4bf11aa9f2cb3"
+    },
+    {
+      "path": "apps/cloud/src/dashboard.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2ead34bca8bde63e5397b7fc188e50280814e974d729fb81d26be0a01da7ef70"
+    },
+    {
+      "path": "apps/cloud/src/envelope.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3bb962d5f0a0f29744546e1b46a6c0bf38990ee6cdad24e2176ea0bf275b7594"
+    },
+    {
+      "path": "apps/cloud/src/explore.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3f0d53db435ced780d4d1fd39fdaf662b04c1a7a2513a4cf9c9cdf4e23398ff1"
+    },
+    {
+      "path": "apps/cloud/src/export-object-deletion.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7974e1aeb3afb0e487e581af5361d031876fda099f1d0f6a87eee3c124445dbc"
+    },
+    {
+      "path": "apps/cloud/src/exports.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "05b6836c26e044cf118a8dd0ec7957d36ed8ed600d44b9d96589a66093c37a11"
+    },
+    {
+      "path": "apps/cloud/src/http.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "66fef68e08070852e5b4facb89676c3dedfdd4b04ecbab72ae821d0dd34824ca"
+    },
+    {
+      "path": "apps/cloud/src/index.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ae0a6ada5d70f7919a1c6d555b2d55463a29d23ed91fd58b5e1576d24b3e6c95"
+    },
+    {
+      "path": "apps/cloud/src/ingest-worker.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "e9eb35a2b0f32d51cc6f2850316e65ab509e178a0964ea81bbfa1432532fb22b"
+    },
+    {
+      "path": "apps/cloud/src/lifecycle.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "01a36048e52db7f8d1cf20b5aacbe5213823bdd1385d43674be1de363729da3a"
+    },
+    {
+      "path": "apps/cloud/src/maintenance-worker.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3ab25d7565d4e3b69b672120f790e259bc6a88874d8182ce1547f46bc90fccd8"
+    },
+    {
+      "path": "apps/cloud/src/object-reconciliation.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "418e9575b60563381f5c8059069e3e2b8a78e2d4461ca3849b47527981fcbad4"
+    },
+    {
+      "path": "apps/cloud/src/password.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "56ee017c80cb3db9bc153c337105b4cb5f11169b67b9565f4bc26bf84ba63526"
+    },
+    {
+      "path": "apps/cloud/src/repair-devices.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1eea7955b7b462ffd207be65d8cbaed9dbdd61c91a3fabb1b63f0436f0bd3063"
+    },
+    {
+      "path": "apps/cloud/src/repair-dispatch.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "d23e881724ebf8918676460f1a432e02719f5d982c36bced151f604bc2a01f2e"
+    },
+    {
+      "path": "apps/cloud/src/repair-drafts.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "dcc0c8d9a9b2d607cbaf1aab10314f5c0f582fa071124acf7ffa4776a26b7e02"
+    },
+    {
+      "path": "apps/cloud/src/repair-evidence.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "107b9730641155c28df5720b3048ee1b73d886c4e4e2fc0761b8744f7fa9f615"
+    },
+    {
+      "path": "apps/cloud/src/repair-supplements.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "716d7263152a620ffda600df6528214e4c1782867b5c1d0a61e1e51dda881b19"
+    },
+    {
+      "path": "apps/cloud/src/telemetry.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "d36014fed6423ede734cad3549848b86d1d627a2b0d22b5440d8f6463cd22bde"
+    },
+    {
+      "path": "apps/cloud/src/types.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2470a72d8b62862c7aa57bcd867c459386c20390dccd2b15b9c7fd06affdc388"
+    },
+    {
+      "path": "apps/cloud/src/upload-intents.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "23211aa55443c292bcf94461cc4d4683f50e7c078f5470588c10be721af32cba"
+    },
+    {
+      "path": "apps/cloud/tsconfig.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "43f13a283428780b4480c9057b3019d3af13acb0bbe8f231a5b315830812c0af"
+    },
+    {
+      "path": "apps/cloud/tsconfig.vm.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "55747c2ca337892e0fba230471572b486270eef34cfb265c9f813c51f45b8806"
+    },
+    {
+      "path": "apps/cloud/vitest.config.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6820346058faae2937f9388e18c7000ef9d3d4aa65d831f476aeb31dd22e2082"
+    },
+    {
+      "path": "apps/cloud/vm/account-server.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ca8d189594a301089a5be9fbb67d1e9fa7e8d52f786f62290740887978f54c4a"
+    },
+    {
+      "path": "apps/cloud/vm/bootstrap-cli.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5117271b8e378667f58dc2471e2416b322afa5ebf56b0bcc24772a36d8ec8405"
+    },
+    {
+      "path": "apps/cloud/vm/bootstrap-generated.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "f672db14e721575c88043d567d7c9eebab9561ce71146457b53513ec170849be"
+    },
+    {
+      "path": "apps/cloud/vm/bootstrap.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "004f22b97b53622110f09ba4b17fa4ea04a80b743e3d7606436d7eae0ac0ebf4"
+    },
+    {
+      "path": "apps/cloud/vm/ingest-server.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "52d5b522fe00228480dd8888466e1bcd8007c1554b5c863666fb1465214d4850"
+    },
+    {
+      "path": "apps/cloud/vm/runtime.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "e96d8d11dbc3cf8b4e4a28ce695a49420746ae5676dca6469a89582810277418"
+    },
+    {
+      "path": "apps/cloud/vm/server.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "065f616504e9683648048d9c91bd785ad5d9cea489c7799613ab085bc66fbc11"
+    },
+    {
+      "path": "apps/cloud/vm/storage.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1a1673e91885bce6dabc4e96fed3936b213b5de2aa9ce7ed1fc6998b0070e0c2"
+    },
+    {
+      "path": "apps/cloud/wrangler.account.toml",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "dcc62a3792cd1949e603826beb57e6376cce905fb91a59fe390d930657768e05"
+    },
+    {
+      "path": "apps/cloud/wrangler.ingest.toml",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "09119fd15aaa001eafd88a1ae59417bc994bb84f4f1c40441bfa048c0ef805fe"
+    },
+    {
+      "path": "apps/cloud/wrangler.maintenance.toml",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "f52067b176026a5832ffa6fb587c7ee299f505eb17ffe20f45a293538d07d1d1"
+    },
+    {
+      "path": "apps/cloud/wrangler.toml",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "4b027bbf12e52749123dea5b1366cdb72ce19fef9970c1e942fe16e0c927aeb7"
+    },
+    {
+      "path": "docs/architecture/adr-0007-healthmd-cloud.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "e6dec14cf809f9b1d6c3eda76fb7e68de18ec6a26b3e60d422c5855dcb66ad48"
+    },
+    {
+      "path": "docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "949d071b1b71070bba2c069488b33fca382ee248af3fe9c2dc21b6836eac1156"
+    },
+    {
+      "path": "LICENSE",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0"
+    },
+    {
+      "path": "LICENSES.md",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3e289ea7df80d967dbdbf5c22bfdf599c074fa40ed152ca775550f07b36ce6a6"
+    }
+  ],
+  "test_cases": [
+    {
+      "path": "apps/cloud/test/abuse-limits.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "49eddb7a3cdb1e30c89f6fa6ce9507e37e8337a20d867c53360ffe0b7b91674d",
+      "case_ids": [
+        {
+          "id": "keeps failed email delivery generic while exactly reconciling magic-link cleanup",
+          "line": 138
+        },
+        {
+          "id": "bounds a stalled email provider and records only a fixed delivery-failure signal",
+          "line": 175
+        },
+        {
+          "id": "uses the configured link expiry and discards a non-success provider body",
+          "line": 220
+        },
+        {
+          "id": "admits split-account signup through a one-time hashed invite only",
+          "line": 275
+        },
+        {
+          "id": "rechecks split-account invite authority inside the account-creation transaction",
+          "line": 311
+        },
+        {
+          "id": "lets concurrent split-account requests consume one invite without duplicate accounts",
+          "line": 339
+        },
+        {
+          "id": "reconciles a lost split-account invite transaction response",
+          "line": 359
+        },
+        {
+          "id": "enforces an eligible-email provider send budget without changing the generic response",
+          "line": 389
+        },
+        {
+          "id": "creates usable links for deterministic concurrent first-account requests",
+          "line": 431
+        },
+        {
+          "id": "sends a durably committed magic link after its D1 batch response is lost",
+          "line": 498
+        },
+        {
+          "id": "returns the magic-link session after its atomic D1 response is lost",
+          "line": 541
+        },
+        {
+          "id": "allows exactly one concurrent consumer to claim a magic link",
+          "line": 562
+        },
+        {
+          "id": "withholds a magic-link session cookie while commit verification is unavailable",
+          "line": 581
+        },
+        {
+          "id": "returns a committed session after its atomic D1 batch response is lost",
+          "line": 601
+        },
+        {
+          "id": "withholds an ambiguously committed session when its durable state is unreadable",
+          "line": 631
+        },
+        {
+          "id": "keeps magic-link persistence failures generic and health-data-free",
+          "line": 679
+        },
+        {
+          "id": "recovers accepted and rejected rate-limit decisions after lost D1 responses",
+          "line": 717
+        },
+        {
+          "id": "admits exactly the configured number of concurrent rate-limit attempts",
+          "line": 759
+        },
+        {
+          "id": "fails closed when a committed rate-limit decision cannot be read",
+          "line": 778
+        },
+        {
+          "id": "cleans expired authentication state in bounded oldest-first pages",
+          "line": 834
+        },
+        {
+          "id": "enforces token and account ingest budgets before payload processing",
+          "line": 888
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/account-export-backpressure.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "06aaccd4adec7ee50b5a3bd04638d1f5e98656eb89c918d8ccdafc9fb33e247d",
+      "case_ids": [
+        {
+          "id": "reads nothing without demand and only one verified envelope for a paused consumer",
+          "line": 92
+        },
+        {
+          "id": "cancels an unread archive without any object read",
+          "line": 120
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/account-export-keys.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7095c5d5dea398bf692b6435a841dd01797da7d54c7d947105d1b450881aedf8",
+      "case_ids": [
+        {
+          "id": "creates distinct wrapped data keys per account and binds unwrap to the owner",
+          "line": 89
+        },
+        {
+          "id": "creates per-account keys without legacy global decryption authority",
+          "line": 111
+        },
+        {
+          "id": "returns a newly created account key only after exact durable verification",
+          "line": 123
+        },
+        {
+          "id": "withholds a committed account key while durable verification is unreadable",
+          "line": 143
+        },
+        {
+          "id": "concurrent account-key callers converge on one durable key",
+          "line": 160
+        },
+        {
+          "id": "counts an exact KEK rewrap after its D1 response is lost",
+          "line": 173
+        },
+        {
+          "id": "retries safely when KEK rewrap verification is unavailable",
+          "line": 216
+        },
+        {
+          "id": "stores and reads new exports with an account key while preserving exact bytes",
+          "line": 281
+        },
+        {
+          "id": "fails closed when wrapped key metadata is tampered",
+          "line": 370
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/account-export.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6de0110894caddfada8469783f3708e453f5d879f0ecffcca0510ce090af34b7",
+      "case_ids": [
+        {
+          "id": "streams paged owner-only TAR archives with exact verified legacy and account-key bytes",
+          "line": 43
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/account-lifecycle.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "a9f9764a37786080a54cf41e7caffad38204e965cefaba6af8049d69010751f1",
+      "case_ids": [
+        {
+          "id": "uses a fresh email-link session as deletion step-up and durably queues erasure",
+          "line": 75
+        },
+        {
+          "id": "does not create deletion authority unless account disablement is durable",
+          "line": 147
+        },
+        {
+          "id": "refuses deletion work for a job whose user is still active",
+          "line": 170
+        },
+        {
+          "id": "never treats an unreadable deletion remainder as zero",
+          "line": 186
+        },
+        {
+          "id": "does not mark deletion complete if the disabled-user delete becomes a no-op",
+          "line": 226
+        },
+        {
+          "id": "purges deletion status authorities and completed tombstones in bounded pages",
+          "line": 252
+        },
+        {
+          "id": "binds concurrent client-known receipts to one deletion job",
+          "line": 285
+        },
+        {
+          "id": "accepts an exact account-deletion completion after its D1 response is lost",
+          "line": 326
+        },
+        {
+          "id": "retries idempotently when deletion-completion verification is unavailable",
+          "line": 351
+        },
+        {
+          "id": "keeps account metadata until ciphertext deletion is exactly verified",
+          "line": 398
+        },
+        {
+          "id": "erases committed-intent ciphertext even when export metadata is already absent",
+          "line": 437
+        },
+        {
+          "id": "does not let one scheduled deletion failure starve another account",
+          "line": 464
+        },
+        {
+          "id": "continues independent scheduled cleanup after a deletion provider failure",
+          "line": 518
+        },
+        {
+          "id": "keeps a client-known receipt when a deletion commit response and verification are unavailable",
+          "line": 557
+        },
+        {
+          "id": "preserves the receipt when maintenance completes before commit read-back",
+          "line": 624
+        },
+        {
+          "id": "expires a status credential without discarding an unfinished deletion job",
+          "line": 687
+        },
+        {
+          "id": "requires a client-known high-entropy status receipt before deletion",
+          "line": 709
+        },
+        {
+          "id": "requires reauthentication when an email-link session is older than fifteen minutes",
+          "line": 726
+        },
+        {
+          "id": "keeps session, token administration, and deletion isolated between active accounts",
+          "line": 739
+        },
+        {
+          "id": "purges only a bounded oldest page of expired security audit events",
+          "line": 795
+        },
+        {
+          "id": "bounds reviewed security activity and never returns target identifiers",
+          "line": 822
+        },
+        {
+          "id": "lists and revokes only account-owned browser sessions",
+          "line": 844
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/account-shell-ui.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "21e5735cf2b4b16e501a93eccac5974740856beb47aa2a12a29967dc76705786",
+      "case_ids": [
+        {
+          "id": "switches the dashboard's central views and handles fixed-name history/back navigation",
+          "line": 95
+        },
+        {
+          "id": "sanitizes unknown private fragments and never serializes a repair selection",
+          "line": 113
+        },
+        {
+          "id": "keeps sign-in and deletion receipts separate from authenticated navigation",
+          "line": 136
+        },
+        {
+          "id": "renders legacy library metadata without fabricated roles or automatic original-field reads",
+          "line": 148
+        },
+        {
+          "id": "inspects selected fields in a bounded table, escapes text, and keeps pointers out of navigation",
+          "line": 165
+        },
+        {
+          "id": "clears displayed evidence and credentials before logout, ignoring an in-flight node response",
+          "line": 183
+        },
+        {
+          "id": "reports a failed field read without retaining the previous sensitive preview",
+          "line": 199
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/agent-tokens.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6c844832ca75928878d5a4b06d0124c19f6fffd1367ef781d8e594f7cde1ed4c",
+      "case_ids": [
+        {
+          "id": "recovers lost create and revoke responses from exact durable read-token state",
+          "line": 92
+        },
+        {
+          "id": "withholds read-token success while creation or revocation verification is unreadable",
+          "line": 119
+        },
+        {
+          "id": "serializes the ten-active full-export read-token cap",
+          "line": 141
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/bootstrap-generated.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "64296307c6ca9a3b2c65c6107a0b4579b6b69bcad0101ef5e00edaef8ee79b52",
+      "case_ids": [
+        {
+          "id": "generates one offline account from a piped password without exposing it",
+          "line": 15
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/branding.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5097538554883f98d2fb85c0c15e084315679bd3e1da83ad103659d70e363621",
+      "case_ids": [
+        {
+          "id": "ships a multi-resolution ICO fallback including 16px and 32px",
+          "line": 46
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/crypto.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6471925b8779f4b50f8b406b643e786e6793c3d51cc91874ef9cc65387ca216d",
+      "case_ids": [
+        {
+          "id": "round-trips ciphertext with a different salt/nonce per envelope",
+          "line": 13
+        },
+        {
+          "id": "binds ciphertext to account, export, key, and exact bytes",
+          "line": 22
+        },
+        {
+          "id": "wraps account export keys with account and key-version authenticated data",
+          "line": 32
+        },
+        {
+          "id": "encrypts account identities and separates lookup purposes",
+          "line": 43
+        },
+        {
+          "id": "refuses missing or malformed keyring values",
+          "line": 53
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/dashboard-ui.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1ec1266ad4c45b735c667c475d1a3933e84b083640cca13e1f21639a8e461627",
+      "case_ids": [
+        {
+          "id": "keeps all assets same-origin, unique control IDs, and working labels",
+          "line": 59
+        },
+        {
+          "id": "fetches only the existing bounded owner-session summaries, without dates in URLs",
+          "line": 75
+        },
+        {
+          "id": "reloads an in-flight old template instead of initializing new controls against missing markup",
+          "line": 90
+        },
+        {
+          "id": "detects optional capabilities without cookies, credentials, or reading health response bodies",
+          "line": 100
+        },
+        {
+          "id": "keeps the seven-migration pilot usable without unsupported controls or invented retention roles",
+          "line": 115
+        },
+        {
+          "id": "does not infer legacy deletion from failed, unexpected-success, or unavailable probes",
+          "line": 138
+        },
+        {
+          "id": "clears data, credentials, and in-memory state on deletion and ignores late trend responses",
+          "line": 149
+        },
+        {
+          "id": "never connects null, unmapped, read-limited, or missing days, and keeps measured zero",
+          "line": 173
+        },
+        {
+          "id": "uses unit-bearing absolute change rather than misleading percentages from zero",
+          "line": 193
+        },
+        {
+          "id": "changes chart metric and 7/14/30-day views without requesting or inventing more data",
+          "line": 200
+        },
+        {
+          "id": "uses readable, width-matched chart coordinates and finite scales at zero",
+          "line": 220
+        },
+        {
+          "id": "shows genuine empty states with no seeded or zero-filled readings",
+          "line": 229
+        },
+        {
+          "id": "filters dates/evidence, sorts numbers with missing values last, hides columns, and pages",
+          "line": 242
+        },
+        {
+          "id": "switches tab panels with keyboard navigation and keeps the sidebar responsive",
+          "line": 275
+        },
+        {
+          "id": "sends only in-memory metric/day selections and retains exact original download routes",
+          "line": 292
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/envelope.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9f0e85bb762cf6a59533a87a529dfa35c48fe101b69462b0df93fabc54ac4b1e",
+      "case_ids": [
+        {
+          "id": "accepts an Apple v8 day without modifying the original envelope",
+          "line": 28
+        },
+        {
+          "id": "rejects reserved unified daily v9 and does not call Android v10 equivalent",
+          "line": 57
+        },
+        {
+          "id": "accepts an Android v4 day and an Apple v2 provider sidecar",
+          "line": 66
+        },
+        {
+          "id": "accepts a failure-only batch without fabricating a daily snapshot",
+          "line": 84
+        },
+        {
+          "id": "rejects malformed UTF-8 instead of silently replacing bytes",
+          "line": 109
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/explore.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "d8297b99aa50f8a24123812b18ff680794319f738d4d8f7121511a6cca766390",
+      "case_ids": [
+        {
+          "id": "keeps exploration session-only, bounded, source-aware and able to navigate original synthetic JSON",
+          "line": 52
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/ingest-commit-ambiguity.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "913b969bd7e5dc96537b0f72cce629868bd7d205dc1647a89c3e34917dfee707",
+      "case_ids": [
+        {
+          "id": "releases its pre-body admission when envelope validation fails",
+          "line": 122
+        },
+        {
+          "id": "creates staged ciphertext conditionally without replacing an existing opaque key",
+          "line": 136
+        },
+        {
+          "id": "recovers a lost successful R2 put only after exact staged-byte verification",
+          "line": 165
+        },
+        {
+          "id": "rejects false-success and corrupt R2 puts before metadata commit",
+          "line": 184
+        },
+        {
+          "id": "retains cleanup authority when staged-object verification is unreadable",
+          "line": 216
+        },
+        {
+          "id": "cannot commit metadata after expiry cleanup claims and removes its active intent",
+          "line": 245
+        },
+        {
+          "id": "accepts a committed upload when the D1 batch response is lost",
+          "line": 287
+        },
+        {
+          "id": "preserves committed ciphertext when post-commit verification is temporarily unavailable",
+          "line": 300
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/ingest-token-issuance.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2bedb31bd6aba472f5642ac579e921e5fdd7cc801b5cdb194005e9233ee35bcd",
+      "case_ids": [
+        {
+          "id": "enforces the active write-token cap inside concurrent D1 writes",
+          "line": 72
+        },
+        {
+          "id": "returns the exact one-time token after a lost committed batch response",
+          "line": 88
+        },
+        {
+          "id": "confirms revocation and its audit event after a lost batch response",
+          "line": 105
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/invite-provisioning.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "35566900a2be0f1d06463d5b76d56beca8592c0b68e5ba193b93bb182cd89f7c",
+      "case_ids": [
+        {
+          "id": "prepares owner-only SQL containing hashes rather than invite addresses",
+          "line": 38
+        },
+        {
+          "id": "prepares privacy-preserving invite revocation SQL",
+          "line": 57
+        },
+        {
+          "id": "refuses non-private inputs and existing output without disclosing values",
+          "line": 68
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/mcp-http.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "bf2f87d652d4a3d80c24ed1f13be1534f954eec50a74ac4d28dba142086cc5f1",
+      "case_ids": [
+        {
+          "id": "serves authenticated, scoped, read-only Streamable HTTP MCP and revokes immediately",
+          "line": 15
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/mcp-reader.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0303314b3f4856416bb36938938f6d7c8708b90999913d378d957bc0866f0352",
+      "case_ids": [
+        {
+          "id": "reads scoped current Apple summaries without mixing unsupported profiles, with bounded full-export discovery",
+          "line": 17
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/object-reconciliation.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7fbc22b57bb48ce2f1155a29c048aa4a100011880ac939c6499cc99bb1b5bea3",
+      "case_ids": [
+        {
+          "id": "deletes only unreferenced ciphertext across bounded cursor pages",
+          "line": 65
+        },
+        {
+          "id": "accepts a lost R2 delete response only after exact absence verification",
+          "line": 106
+        },
+        {
+          "id": "does not advance after a false-success or unreadable R2 delete",
+          "line": 124
+        },
+        {
+          "id": "preserves ciphertext when reference verification returns no result",
+          "line": 150
+        },
+        {
+          "id": "verifies lost cursor writes and rejects false-success writes",
+          "line": 192
+        },
+        {
+          "id": "preserves a concurrent cursor winner instead of regressing it",
+          "line": 257
+        },
+        {
+          "id": "removes archived ciphertext after a lost metadata-delete response",
+          "line": 303
+        },
+        {
+          "id": "preserves ciphertext when archived-delete verification is unavailable",
+          "line": 340
+        },
+        {
+          "id": "preserves archived ciphertext when absence verification returns no row",
+          "line": 406
+        },
+        {
+          "id": "does not advance the cursor after delete failure or touch unexpected keys",
+          "line": 444
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/password.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9528666477fca61be0f276771c5b06705a60cdce8d3a8b1ec5a9d4187eebfbab",
+      "case_ids": [
+        {
+          "id": "normalizes usernames and rejects weak passwords",
+          "line": 11
+        },
+        {
+          "id": "uses a salted peppered verifier and rejects wrong inputs",
+          "line": 17
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-devices.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2539f3319d46ba7539ba8f88beeca6e994ed0b6ed28653a8eecfd8797a2e97b0",
+      "case_ids": [
+        {
+          "id": "binds a request-only secret to an owner-approved platform, then revokes it",
+          "line": 36
+        },
+        {
+          "id": "rejects expired grants and unavailable profiles without disclosing scopes",
+          "line": 109
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-dispatch.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ba8b7b715c60f3413b2188c6f320a8d549f077c558f4c43e118fa114ab183348",
+      "case_ids": [
+        {
+          "id": "recovers lost repair-device enrollment, approval and revocation responses",
+          "line": 129
+        },
+        {
+          "id": "withholds repair-device success while exact durable verification is unreadable",
+          "line": 162
+        },
+        {
+          "id": "recovers lost queue, claim, decline and owner-cancel responses from exact dispatch state",
+          "line": 195
+        },
+        {
+          "id": "withholds dispatch success while exact transition verification is unreadable",
+          "line": 232
+        },
+        {
+          "id": "binds a short-lived, review-only request to exactly one owner-approved device",
+          "line": 279
+        },
+        {
+          "id": "enforces one active dispatch per phone, cancellation, expiry and revocation",
+          "line": 374
+        },
+        {
+          "id": "has one atomic claim under concurrent polls and stops serving expired or revoked grants",
+          "line": 424
+        },
+        {
+          "id": "serves approved claims only on the account-authority listener, never on public ingest",
+          "line": 455
+        },
+        {
+          "id": "keeps the account ingress distinct from ingest and disables dispatch by default or in preview",
+          "line": 497
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-drafts.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "39f801d9d8eea09b9153c3df0d4570e35a07e45023db81f2d834e322efc3c3e9",
+      "case_ids": [
+        {
+          "id": "previews without inventing readings, encrypts owner-only drafts, and never exposes a launch route",
+          "line": 93
+        },
+        {
+          "id": "recovers lost repair-draft create and cancel responses through exact durable state",
+          "line": 233
+        },
+        {
+          "id": "withholds draft success while durable creation or cancellation verification is unreadable",
+          "line": 250
+        },
+        {
+          "id": "bounds encrypted drafts, fails closed on tampering and erases expired scopes",
+          "line": 273
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-evidence.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "befc8ebf767736d9164ceeb5372c24755d4d00d3eb6a098a16b99c034ae78e28",
+      "case_ids": [
+        {
+          "id": "distinguishes no upload from absent summary value and a measured zero",
+          "line": 6
+        },
+        {
+          "id": "does not suggest Apple measurements for Android, filtered, or budget-limited days",
+          "line": 19
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-link.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0961abd4c95ff5a98b44edd15c39d34211df6ed86a4899474996eb349dcd60cd",
+      "case_ids": [
+        {
+          "id": "keeps a single static cross-platform link without request details",
+          "line": 10
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-migration.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "733c02f7b06a143c06737bd38d4fe045d045fd836c0abea8712d98594c013cff",
+      "case_ids": [],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-supplements.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6d07839b1c316de07a8f7233fdacb89cc6f5e80e1bfb16f498aba5cb5578e88c",
+      "case_ids": [
+        {
+          "id": "keeps a narrow existing-day repair separate from the primary and shows original per-field provenance",
+          "line": 78
+        },
+        {
+          "id": "deduplicates concurrent scoped uploads without cross-mode reuse or an orphan",
+          "line": 163
+        },
+        {
+          "id": "retains partial, failed-only and Android envelopes without inventing primary coverage",
+          "line": 192
+        },
+        {
+          "id": "enforces retained-byte quota at transactional commit across simultaneous different supplements",
+          "line": 237
+        },
+        {
+          "id": "bounds paged provenance reads and fails closed on tampered metadata or ciphertext",
+          "line": 279
+        },
+        {
+          "id": "rolls back failed commits, protects supplements from revision cleanup and erases on account deletion",
+          "line": 313
+        },
+        {
+          "id": "purges legacy repair state in bounded oldest-first pages",
+          "line": 351
+        },
+        {
+          "id": "keeps read authority owner-scoped and rejects supplement requests on the write-only listener",
+          "line": 388
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/repair-ui.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "916f485dd6a9f07dc9891278f70b770a5ce27e9a4e86a40caaa6f9058993f123",
+      "case_ids": [
+        {
+          "id": "uses one first-party planner in dashboard, explorer and standalone view, without a launch link",
+          "line": 9
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/restore-drill.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "f25d0bb57ba07968fbc41c18aac52627fe754d408e93457462a4eb2bcbc72583",
+      "case_ids": [
+        {
+          "id": "restores an isolated encrypted synthetic snapshot with exact hashes and tenant isolation",
+          "line": 31
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/service-profiles.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "a26479e3ef4e15a41dedfd04e787e3a6721d670df059145017c967695ac83f19",
+      "case_ids": [
+        {
+          "id": "forces account assets through Worker validation and gives no assets to peer profiles",
+          "line": 50
+        },
+        {
+          "id": "wraps allowlisted assets and denies unknown/protected paths before the asset binding",
+          "line": 60
+        },
+        {
+          "id": "disables persisted Worker logs, invocation logs, traces and Logpush",
+          "line": 118
+        },
+        {
+          "id": "rejects allowed paths arriving through an alternate origin or query-bearing URL",
+          "line": 129
+        },
+        {
+          "id": "keeps the ingest Worker write-only and strips browser authority",
+          "line": 154
+        },
+        {
+          "id": "keeps the account Worker from accepting ingest or MCP traffic",
+          "line": 175
+        },
+        {
+          "id": "gives maintenance no public HTTP surface and fails closed on profile mismatch",
+          "line": 196
+        },
+        {
+          "id": "validates complete configuration before returning any split-profile route denial",
+          "line": 208
+        },
+        {
+          "id": "fails closed when required telemetry or account wrapping keys are absent",
+          "line": 230
+        },
+        {
+          "id": "does not require account email credentials in non-identity profiles",
+          "line": 445
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/session-revocation.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "685e58596180f60bd444793c65339d7b5d54a0f43a33bfc09f536df0dded7ecc",
+      "case_ids": [
+        {
+          "id": "reconciles a one-session revocation after its D1 response is lost",
+          "line": 89
+        },
+        {
+          "id": "returns the durable revoke-others count after its D1 response is lost",
+          "line": 110
+        },
+        {
+          "id": "reconciles logout before clearing the current cookie",
+          "line": 128
+        },
+        {
+          "id": "does not claim or clear a session revocation while verification is unavailable",
+          "line": 145
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/staging-load.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6e2994291e1179600c1d86fb95e62541e880889f24170adc07274d0fc3af48fe",
+      "case_ids": [
+        {
+          "id": "defaults to the documented 2x gate and calculates a budget-safe account count",
+          "line": 23
+        },
+        {
+          "id": "accepts only bounded Retry-After delta seconds",
+          "line": 38
+        },
+        {
+          "id": "constructs bounded fragmented and deliberately stalled request streams",
+          "line": 45
+        },
+        {
+          "id": "enforces cumulative and active per-account scheduler limits",
+          "line": 65
+        },
+        {
+          "id": "creates exact-size obviously synthetic compatibility envelopes",
+          "line": 107
+        },
+        {
+          "id": "accepts only unique owner-only token files with enough distinct accounts",
+          "line": 119
+        },
+        {
+          "id": "reports deterministic nearest-rank latency percentiles",
+          "line": 132
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/telemetry.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "44e6b2b5cd6015a90ad567a6ef3a8f5a831d8e02723f09e8f3667b172985e840",
+      "case_ids": [
+        {
+          "id": "records only low-cardinality buckets without request identifiers, credentials, or data",
+          "line": 42
+        },
+        {
+          "id": "never changes request behavior when the metrics provider fails",
+          "line": 73
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/upload-intents.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b8c3f37d5a74a31d2415a2ab226f68dc14a24ab496f650d908638d25f98ab76e",
+      "case_ids": [
+        {
+          "id": "bounds pre-body admissions per account and releases them exactly",
+          "line": 189
+        },
+        {
+          "id": "recovers lost admission insert and release responses",
+          "line": 211
+        },
+        {
+          "id": "recovers a lost admission-renewal response by exact read-back",
+          "line": 225
+        },
+        {
+          "id": "withholds an admission after false or unreadable renewal verification",
+          "line": 241
+        },
+        {
+          "id": "does not return an admission after a false-success insert response",
+          "line": 263
+        },
+        {
+          "id": "withholds an admission while its durable verification is unreadable",
+          "line": 275
+        },
+        {
+          "id": "bounds active uploads per account without imposing a process-global account limit",
+          "line": 287
+        },
+        {
+          "id": "accepts a successful D1 insert even when adapter change metadata is zero",
+          "line": 315
+        },
+        {
+          "id": "recovers an exact upload reservation after its D1 response is lost",
+          "line": 356
+        },
+        {
+          "id": "does not return a reservation after a false-success insert response",
+          "line": 369
+        },
+        {
+          "id": "withholds a committed reservation while its verification is unreadable",
+          "line": 381
+        },
+        {
+          "id": "accepts an exact object-written transition after its D1 response is lost",
+          "line": 397
+        },
+        {
+          "id": "fails safely when object-written verification is unavailable",
+          "line": 435
+        },
+        {
+          "id": "reconciles lost cleanup-claim and intent-delete responses exactly",
+          "line": 496
+        },
+        {
+          "id": "keeps an aborting reservation until ciphertext absence is verified",
+          "line": 514
+        },
+        {
+          "id": "does not report abandonment while deletion or verification is unreadable",
+          "line": 541
+        },
+        {
+          "id": "withholds object deletion while an expiry cleanup claim is unreadable",
+          "line": 563
+        },
+        {
+          "id": "verifies completed-intent retention deletes instead of trusting change metadata",
+          "line": 584
+        },
+        {
+          "id": "reserves quota atomically before writing an object",
+          "line": 601
+        },
+        {
+          "id": "does not let a stale expiry page delete a concurrently renewed admission",
+          "line": 616
+        },
+        {
+          "id": "removes expired staged ciphertext before releasing its durable reservation",
+          "line": 632
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/vm-permissions.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "2a417ddb73575de036816f206475a2f50281da637e69fe6ef525615e351584f3",
+      "case_ids": [
+        {
+          "id": "permits only an explicit, separate reader group with read/search access",
+          "line": 10
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/vm-reconciliation.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0995178ca174ad89d02649e10fdf2bc15bec7d898655f12d50bfc2ea387414e4",
+      "case_ids": [
+        {
+          "id": "preserves a public listener's open staging file during writer maintenance",
+          "line": 138
+        },
+        {
+          "id": "retains referenced crash files, then removes keyed and legacy staging leftovers after intent cleanup",
+          "line": 205
+        },
+        {
+          "id": "fails closed for missing object-written ciphertext and unsafe or unknown files",
+          "line": 252
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/vm.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7dabbf9f4eec98904413d003d220013d0b0f08c8a854b839d057551ae9a63848",
+      "case_ids": [
+        {
+          "id": "requires explicit no-backup MVP profile and shows the risk",
+          "line": 100
+        },
+        {
+          "id": "migrates an owner-only SQLite store and protects the password verifier",
+          "line": 112
+        },
+        {
+          "id": "serves signed-in owner and accepts an encrypted synthetic Apple envelope",
+          "line": 127
+        },
+        {
+          "id": "charts only current, bounded Apple-v8 daily summaries for an owner session",
+          "line": 244
+        },
+        {
+          "id": "isolates public write-only ingestion from the private writer and account APIs",
+          "line": 334
+        },
+        {
+          "id": "exposes only account routes and issues/revokes full-export credentials after reauthentication",
+          "line": 405
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    },
+    {
+      "path": "apps/cloud/test/worker.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3bbc4bfdcb6e78f1b26b473aab8ddb4cb35a15432e9d72c94f941c49c42e8ff4",
+      "case_ids": [
+        {
+          "id": "refuses production traffic without an explicit post-review gate",
+          "line": 22
+        },
+        {
+          "id": "fails closed for upload and token creation in a tailnet synthetic preview",
+          "line": 30
+        },
+        {
+          "id": "accepts only the expected HTTPS tailnet proxy headers for a synthetic preview",
+          "line": 47
+        },
+        {
+          "id": "requires dashboard intent on synthetic Tailscale's rewritten Origin",
+          "line": 65
+        },
+        {
+          "id": "never accepts a different host just because it reaches this Worker",
+          "line": 83
+        },
+        {
+          "id": "requires same-origin browser mutations in production",
+          "line": 89
+        },
+        {
+          "id": "coalesces highly fragmented chunked bodies within one bounded buffer",
+          "line": 95
+        },
+        {
+          "id": "uses a validated Content-Length as exact initial body capacity",
+          "line": 114
+        },
+        {
+          "id": "preserves the stable size error when stream cancellation fails",
+          "line": 128
+        },
+        {
+          "id": "returns the stable size error when stream cancellation never settles",
+          "line": 141
+        },
+        {
+          "id": "cancels a stalled body at its upload-admission deadline",
+          "line": 158
+        },
+        {
+          "id": "preserves the stable lease timeout when stream cancellation fails",
+          "line": 172
+        },
+        {
+          "id": "returns the stable lease timeout when stream cancellation never settles",
+          "line": 184
+        },
+        {
+          "id": "rejects malformed UTF-8 after a bounded fragmented read",
+          "line": 200
+        },
+        {
+          "id": "enforces request limits even without Content-Length",
+          "line": 211
+        }
+      ],
+      "case_method": "literal it/test descriptions and one-based line; dynamic/template/table-generated cases may require runtime discovery",
+      "execution": "unrun"
+    }
+  ],
+  "fixtures": [
+    {
+      "path": "apps/apple/docs/reference/generated/automation/api-export-v1.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba",
+      "profile_metadata": {
+        "daily_record_schema": "healthmd.health_data",
+        "daily_record_schema_version": 10,
+        "schema": "healthmd.api_export",
+        "schema_version": 1
+      },
+      "case_ids": [],
+      "execution": "unrun",
+      "authority": "Committed synthetic input used by cloud smoke/reader tests; donor profile not promotion of assigned native v8 baseline.",
+      "case_id_method": "No standalone named case ID in this fixture. Exact caller case IDs are recorded under test_cases; do not invent fixture IDs.",
+      "consumer_paths": [
+        "apps/cloud/scripts/smoke-local.mjs"
+      ]
+    },
+    {
+      "path": "apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b",
+      "profile_metadata": {
+        "daily_record_schema": "healthmd.health_data",
+        "daily_record_schema_version": 10,
+        "external_record_schema": "healthmd.external_provider_daily",
+        "external_record_schema_version": 1,
+        "schema": "healthmd.api_export",
+        "schema_version": 2
+      },
+      "case_ids": [],
+      "execution": "unrun",
+      "authority": "Committed synthetic input used by cloud smoke/reader tests; donor profile not promotion of assigned native v8 baseline.",
+      "case_id_method": "No standalone named case ID in this fixture. Exact caller case IDs are recorded under test_cases; do not invent fixture IDs.",
+      "consumer_paths": [
+        "apps/cloud/scripts/smoke-local.mjs"
+      ]
+    },
+    {
+      "path": "apps/apple/docs/reference/generated/core/summary-day.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5d905cc0786109af1a20271eb1812f889207d2459c1882b784e2b252a6794f05",
+      "profile_metadata": {
+        "schema": "healthmd.health_data",
+        "schema_version": 10
+      },
+      "case_ids": [],
+      "execution": "unrun",
+      "authority": "Committed synthetic input used by cloud smoke/reader tests; donor profile not promotion of assigned native v8 baseline.",
+      "case_id_method": "No standalone named case ID in this fixture. Exact caller case IDs are recorded under test_cases; do not invent fixture IDs.",
+      "consumer_paths": [
+        "apps/cloud/test/mcp-reader.test.ts"
+      ]
+    },
+    {
+      "path": "packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1780342891ea3975509f43af86a01656f37d503dac9d94ab8fed06650e4c84c3",
+      "profile_metadata": {},
+      "case_ids": [],
+      "execution": "unrun",
+      "authority": "Committed synthetic input used by cloud smoke/reader tests; donor profile not promotion of assigned native v8 baseline.",
+      "case_id_method": "No standalone named case ID in this fixture. Exact caller case IDs are recorded under test_cases; do not invent fixture IDs.",
+      "consumer_paths": [
+        "apps/cloud/test/mcp-reader.test.ts"
+      ]
+    }
+  ],
+  "runtime": {
+    "package": {
+      "name": "healthmd-cloud",
+      "version": "0.1.0",
+      "private": true,
+      "type": "module",
+      "license": "AGPL-3.0-only",
+      "description": "Private Health.md export ingestion and account dashboard.",
+      "engines": {
+        "node": ">=24"
+      },
+      "scripts": {
+        "build:vm": "node scripts/build-vm.mjs",
+        "check": "npm run typecheck && npm run typecheck:vm && npm test",
+        "deploy": "wrangler deploy",
+        "dev": "wrangler dev --var ENVIRONMENT:development --var PUBLIC_ORIGIN:http://localhost:8787 --var AUTH_SIGNUP_MODE:invite",
+        "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+        "dry-run:profiles": "wrangler deploy --dry-run --config wrangler.ingest.toml --outdir .wrangler/dry-run-ingest && wrangler deploy --dry-run --config wrangler.account.toml --outdir .wrangler/dry-run-account && wrangler deploy --dry-run --config wrangler.maintenance.toml --outdir .wrangler/dry-run-maintenance",
+        "migrate:local": "wrangler d1 migrations apply healthmd-cloud --local",
+        "prepare:account-invites": "node scripts/prepare-account-invites.mjs",
+        "qualify:staging-load": "node scripts/qualify-staging-load.mjs",
+        "test:smoke": "node scripts/smoke-local.mjs",
+        "test:restore-drill": "vitest run test/restore-drill.test.ts",
+        "verify:production-safety": "node scripts/verify-production-safety.mjs",
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "typecheck": "tsc --noEmit",
+        "typecheck:vm": "tsc --noEmit -p tsconfig.vm.json"
+      },
+      "devDependencies": {
+        "@cloudflare/workers-types": "^5.20260903.1",
+        "@types/node": "24.10.1",
+        "esbuild": "0.28.1",
+        "linkedom": "0.18.12",
+        "typescript": "^5.9.2",
+        "vitest": "^4.1.2",
+        "wrangler": "^4.0.0"
+      },
+      "dependencies": {
+        "@modelcontextprotocol/sdk": "1.30.1",
+        "zod": "4.6.5"
+      },
+      "overrides": {
+        "undici": "7.29.1"
+      }
+    },
+    "qualification": "Declared locked pilot package/dependency scripts only; no install/check/audit/build/dry-run performed. Effect successor not implemented by these pilot files."
+  },
+  "retained_profiles": {
+    "envelope": {
+      "schema": "healthmd.api_export",
+      "versions": [
+        1,
+        2
+      ],
+      "daily_schema": "healthmd.health_data",
+      "daily_versions": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        10
+      ],
+      "source_ids": [
+        "ios",
+        "android"
+      ],
+      "source_constraints": "Version10 requires ios. General admission does not otherwise bind each accepted daily version to one source; typed reader separately enforces ios+reviewed8/10. Supplement path further limits ios8/android4,5.",
+      "external_provider_v2_sidecar": "healthmd.external_provider_daily/1",
+      "archive": "healthmd.healthkit_records/1 if present",
+      "authority_paths": [
+        "apps/cloud/src/envelope.ts",
+        "apps/cloud/src/exports.ts",
+        "apps/cloud/src/apple-daily-profile.ts"
+      ]
+    },
+    "typed_query": "Reviewed Apple ios daily8/10 summaries only; timestamp null for aggregate, dates/timezone retained, omitted missing never zero. WHOOP cycle steps do not substitute for daily Apple steps. Android/location/usage/raw-session typed parity unqualified.",
+    "archive_read": "Full_export scope exposes retained Apple/Android original envelopes/revisions/provider sidecars/embedded JSON binary and separate supplements; original bytes exact. This does not create typed equivalence, live phone access or data never uploaded. Android Raw API Snapshot NDJSON not accepted.",
+    "native_baseline": "Assigned baseline Appleexport8 remains active. Pilot v10/historical reading does not bump native version.",
+    "saved_profile_identity": "Envelope has source/schema/revision, no saved app profile name or reliable Summary/Detailed discriminator; no invented profile filters."
+  },
+  "source_head_identity": {
+    "account": "users.id/session-derived user_id; no caller-supplied tenant for owner read",
+    "original": "exports.id/user_id, object_key, encryption_key_id, plaintext_sha256, byte_count, source, envelope/daily versions, exported_at/received_at",
+    "current_head": "daily_records PRIMARY KEY(user_id,owner_date), NOT source/device/selection; newest exported_at wins then newer received_at tie. Another device/narrower export may replace visible current fields.",
+    "historical": "Older envelopes remain exports rows/original bytes until policy cleanup; plaintext SHA256 dedup account-scoped. Separate supplemental_exports/records do not replace daily_records.",
+    "cursor": "Base64url canonical JSON [received_at,id], max160chars; tenant filtering occurs each query. Not authenticated grant/snapshot/source-bound cursor; export listing explicitly not snapshot during uploads/deletes.",
+    "missing_successor_fields": [
+      "source installation/generation IDs",
+      "immutable selection/manifest/reducer pins",
+      "query projection frontiers",
+      "source-scoped change/tombstone precedence",
+      "current grant/purpose-bound cursor contract"
+    ],
+    "authority_paths": [
+      "apps/cloud/migrations/0001_initial.sql",
+      "apps/cloud/migrations/0002_unique_payload.sql",
+      "apps/cloud/src/exports.ts",
+      "apps/cloud/mcp/reader.ts",
+      "apps/cloud/migrations/0009_supplemental_exports.sql"
+    ],
+    "temporal_limits": "Envelope canonicalTimestamp uses Date.parse/toISOString (millisecond instants) for head ordering; original bytes remain exact. New exact-numeric/time source semantics require versioned reconciliation rather than relying on parsed JSON/JS numbers."
+  },
+  "authority_map": [
+    {
+      "role": "upload",
+      "credential_class": "hmd_ing_ bearer hash bound active user; no session/read authority",
+      "routes": [
+        "POST /api/v1/exports"
+      ],
+      "scope": "Whole legacy envelopes; write-only; dedicated public/tailnet writer. Upload token cannot query/admin/delete/approve repair."
+    },
+    {
+      "role": "owner",
+      "credential_class": "HttpOnly SameSiteStrict __Host-healthmd_cloud_session; VM password pilot/split invite-email link source; same-origin mutation/reauth as route demands",
+      "scope": "Account/session/write-token admin/original download/portability/delete/explorer/non-launchable repair; pilot password+consent agent issuance separate from split omitted route."
+    },
+    {
+      "role": "agent read",
+      "credential_class": "hmd_read_ bearer SHA256, current active user/unrevoked/expiry each HTTP request; aggregates/full_export separate",
+      "routes": [
+        "POST /mcp"
+      ],
+      "scope": "Read-only filtered catalog; ingest/session/device credentials rejected. No pilot public OAuth server; current request auth is not future-grant/current-page SLA qualification."
+    },
+    {
+      "role": "repair device",
+      "credential_class": "hmd_dev_ separate request-only approved device token; pending10min code/grant90days; dispatch15min",
+      "scope": "Off-by-default combined VM/development only; native pairing/review/bound upload/verified receipt absent. Claims launchable:false/uploadEnabled:false. Owner approvals step-up; no upload/read grant."
+    },
+    {
+      "role": "deletion receipt",
+      "credential_class": "hmd_del_ client-known high entropy token hashed independently of internal deletion job ID",
+      "scope": "Pending/completed status after owner disable/session revoke; no health read or admin restoration."
+    }
+  ],
+  "routes": {
+    "literal_core": [
+      {
+        "method": "GET",
+        "path": "/health",
+        "authority": "public metadata/redirect",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 221,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/runtime",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 225,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "authority": "public metadata/redirect",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 231,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/request-link",
+        "authority": "profile-specific sign-in or active session/logout; exact origin",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 247,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/consume-link",
+        "authority": "profile-specific sign-in or active session/logout; exact origin",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 250,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/password-login",
+        "authority": "profile-specific sign-in or active session/logout; exact origin",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 253,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/exports",
+        "authority": "write-only ingest token; no cookie/read-token authority",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 256,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/account",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 262,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/account/delete",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 265,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/account/deletion-status",
+        "authority": "client-known hashed deletion receipt authority",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 268,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 271,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/security-events",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 274,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/revoke-others",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 277,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/auth/logout",
+        "authority": "profile-specific sign-in or active session/logout; exact origin",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 284,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/ingest-tokens",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 287,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/ingest-tokens",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 290,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/agent-tokens",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 300,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/agent-tokens",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 303,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/exports",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 310,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/dashboard/trends",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 313,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/device/enroll",
+        "authority": "separate repair-device token or pending enrollment; flag-gated/non-launchable",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 316,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/repair/device/status",
+        "authority": "separate repair-device token or pending enrollment; flag-gated/non-launchable",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 319,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/repair/devices",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 322,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/devices/approve",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 325,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/repair/dispatches",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 332,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/dispatch",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 335,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/dispatch/cancel",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 338,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/device/claim",
+        "authority": "separate repair-device token or pending enrollment; flag-gated/non-launchable",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 341,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/device/resume",
+        "authority": "separate repair-device token or pending enrollment; flag-gated/non-launchable",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 344,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/device/decline",
+        "authority": "separate repair-device token or pending enrollment; flag-gated/non-launchable",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 347,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/repair/drafts",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 350,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/preview",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 353,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/supplements",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 356,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/repair/drafts",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 359,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "GET",
+        "path": "/api/explore/catalog",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 366,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/explore/chart",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 370,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/explore/exports",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 373,
+        "qualification": "source route, not verified live/deployed availability"
+      },
+      {
+        "method": "POST",
+        "path": "/api/explore/node",
+        "authority": "owner session-derived tenant (runtime/health metadata excepted); same-origin mutation",
+        "source_path": "apps/cloud/src/index.ts",
+        "line": 376,
+        "qualification": "source route, not verified live/deployed availability"
+      }
+    ],
+    "dynamic_core": [
+      {
+        "route": "DELETE /api/sessions/{uuid}",
+        "authority": "owner session"
+      },
+      {
+        "route": "DELETE /api/ingest-tokens/{uuid}",
+        "authority": "owner session"
+      },
+      {
+        "route": "DELETE /api/agent-tokens/{uuid}",
+        "authority": "owner session/pilot only; split account omits"
+      },
+      {
+        "route": "DELETE /api/repair/devices/{uuid}",
+        "authority": "owner session; device repair flag gated/split omits"
+      },
+      {
+        "route": "DELETE /api/repair/drafts/{uuid}",
+        "authority": "owner session"
+      },
+      {
+        "route": "GET /api/exports/page/{decimal1..7digits}",
+        "authority": "owner session"
+      },
+      {
+        "route": "GET /api/days/page/{decimal1..7digits}",
+        "authority": "owner session"
+      },
+      {
+        "route": "GET /api/exports/{uuid}/download",
+        "authority": "owner session"
+      },
+      {
+        "route": "GET /api/account/export/page/{decimal1..8digits}",
+        "authority": "owner session"
+      }
+    ],
+    "split_ingest_allowlist": [
+      "GET /health",
+      "POST /api/v1/exports"
+    ],
+    "split_account_source": "apps/cloud/src/account-worker.ts:GET_ROUTES/POST_ROUTES plus bounded regex paths; no password-login/MCP agent token/device-enrollment-dispatch or ingest; all require exact configured origin and validated bindings.",
+    "split_maintenance": "No health HTTP app routes; validated scheduled/Queue lifecycle/cleanup.",
+    "vm_boundaries": "apps/cloud/vm/server.ts positive accountRoute/ingestRoute, exact configured Host/forwardedHTTPS/origin; account cannot ingest or serve MCP, public writer cannot owner-read/admin/MCP.",
+    "mcp_tools": [
+      {
+        "id": "health_list_metrics",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 54,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_get_latest",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 58,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_get_range",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 62,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_get_daily_summary",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 66,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_get_weekly_summary",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 70,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_search",
+        "scope": "aggregates or full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 74,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_export_guide",
+        "scope": "full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 80,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_list_exports",
+        "scope": "full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 99,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_find_export_for_date",
+        "scope": "full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 104,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_read_export_node",
+        "scope": "full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 109,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      },
+      {
+        "id": "health_read_export_bytes",
+        "scope": "full_export",
+        "source_path": "apps/cloud/mcp/server.ts",
+        "line": 116,
+        "output": "MCP text + structuredContent; JSON content bounded16KiB"
+      }
+    ]
+  },
+  "bounds": {
+    "legacy_whole_envelope_bytes": 26214400,
+    "legacy_batch_dates_including_failures": 7,
+    "upload_account_active_positions": 2,
+    "admission_and_intent_lease_seconds": 900,
+    "completed_intent_retention_seconds": 86400,
+    "mcp_body_bytes": 65536,
+    "mcp_result_bytes": 16384,
+    "mcp_requests_per_minute_token": 60,
+    "mcp_running_requests": 2,
+    "mcp_max_connections": 20,
+    "mcp_range_days": 31,
+    "mcp_catalog_snapshots": 365,
+    "mcp_object_bytes_cap": 26214656,
+    "mcp_request_read_bytes_cap": 67108864,
+    "mcp_exports_or_children_per_page": 20,
+    "mcp_byte_page": 8192,
+    "mcp_json_pointer_chars": 512,
+    "repair_draft_days_max": 31,
+    "repair_draft_ttl_seconds": 86400,
+    "repair_draft_read_bytes": 50331648,
+    "repair_dispatch_ttl_seconds": 900,
+    "owner_account_TAR_envelopes_per_page": 5,
+    "owner_TAR_pull_chunk_bytes": 65536,
+    "qualification": "Source constants/profile bounds; paging response does not bound whole-object decryption/JSON parse; source storage/download functions may have different explicit bounds. Not full-history resumable successor qualification.",
+    "constant_locators": [
+      {
+        "path": "apps/cloud/mcp/server.ts",
+        "locators": [
+          {
+            "line": 14,
+            "declaration": "const RESULT_BYTES = 16 * 1024;"
+          },
+          {
+            "line": 15,
+            "declaration": "const MCP_BODY_BYTES = 64 * 1024;"
+          },
+          {
+            "line": 16,
+            "declaration": "const MAX_REQUESTS_PER_MINUTE = 60;"
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/mcp/reader.ts",
+        "locators": [
+          {
+            "line": 59,
+            "declaration": "const BINDINGS: readonly Binding[] = ["
+          },
+          {
+            "line": 97,
+            "declaration": "const DATE = /^\\d{4}-\\d{2}-\\d{2}$/u;"
+          },
+          {
+            "line": 98,
+            "declaration": "const OBJECT_KEY = /^v1\\/[a-f0-9-]{36}$/u;"
+          },
+          {
+            "line": 99,
+            "declaration": "const MAX_DAYS = 31;"
+          },
+          {
+            "line": 100,
+            "declaration": "const MAX_CATALOG_DAYS = 365;"
+          },
+          {
+            "line": 101,
+            "declaration": "const MAX_OBJECT_BYTES = 25 * 1024 * 1024 + 256;"
+          },
+          {
+            "line": 102,
+            "declaration": "const MAX_READ_BYTES = 64 * 1024 * 1024;"
+          },
+          {
+            "line": 103,
+            "declaration": "const EXPORT_ID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;"
+          },
+          {
+            "line": 104,
+            "declaration": "const PAGE_LIMIT = 20;"
+          },
+          {
+            "line": 105,
+            "declaration": "const BYTE_PAGE = 8 * 1024;"
+          },
+          {
+            "line": 106,
+            "declaration": "const POINTER_LIMIT = 512;"
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/src/upload-intents.ts",
+        "locators": [
+          {
+            "line": 5,
+            "declaration": "const ADMISSION_LEASE_MS = 15 * 60_000;"
+          },
+          {
+            "line": 6,
+            "declaration": "const INTENT_LEASE_MS = 15 * 60_000;"
+          },
+          {
+            "line": 7,
+            "declaration": "const COMPLETED_INTENT_RETENTION_MS = 24 * 60 * 60_000;"
+          },
+          {
+            "line": 8,
+            "declaration": "const MAX_ACTIVE_UPLOADS_PER_ACCOUNT = 2;"
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/src/repair-drafts.ts",
+        "locators": [
+          {
+            "line": 6,
+            "declaration": "const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;"
+          },
+          {
+            "line": 7,
+            "declaration": "const DAY = 86_400_000;"
+          },
+          {
+            "line": 8,
+            "declaration": "const MAX_READ_BYTES = 48 * 1024 * 1024;"
+          },
+          {
+            "line": 9,
+            "declaration": "const TTL_MS = DAY;"
+          },
+          {
+            "line": 10,
+            "declaration": "const METRICS = new Set([\"steps\", \"active_energy\", \"heart_rate_avg\", \"heart_rate_min\","
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/src/repair-devices.ts",
+        "locators": [
+          {
+            "line": 7,
+            "declaration": "const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;"
+          },
+          {
+            "line": 8,
+            "declaration": "const TOKEN = /^hmd_dev_[A-Za-z0-9_-]{43}$/u;"
+          },
+          {
+            "line": 9,
+            "declaration": "const CODE = /^\\d{8}$/u;"
+          },
+          {
+            "line": 10,
+            "declaration": "const PAIR_TTL = 10 * 60_000;"
+          },
+          {
+            "line": 11,
+            "declaration": "const GRANT_TTL = 90 * 86_400_000;"
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/src/repair-dispatch.ts",
+        "locators": [
+          {
+            "line": 6,
+            "declaration": "const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/u;"
+          },
+          {
+            "line": 7,
+            "declaration": "const DISPATCH_TTL_MS = 15 * 60_000;"
+          }
+        ]
+      },
+      {
+        "path": "apps/cloud/src/crypto.ts",
+        "locators": [
+          {
+            "line": 3,
+            "declaration": "const EXPORT_MAGIC = textEncoder.encode(\"HMDC1\");"
+          },
+          {
+            "line": 4,
+            "declaration": "const EXPORT_SALT_BYTES = 16;"
+          },
+          {
+            "line": 5,
+            "declaration": "const AES_GCM_IV_BYTES = 12;"
+          },
+          {
+            "line": 6,
+            "declaration": "const AES_GCM_TAG_BYTES = 16;"
+          }
+        ]
+      }
+    ],
+    "agent_owner_issued_max_active_tokens": 10,
+    "agent_owner_issued_days_max": 90,
+    "agent_offline_issued_days_min": 1,
+    "agent_offline_issued_days_max": 365,
+    "agent_offline_issued_days_default": 90
+  },
+  "commit_crypto_lifecycle": {
+    "authority_paths": [
+      "apps/cloud/src/upload-intents.ts",
+      "apps/cloud/src/exports.ts",
+      "apps/cloud/src/crypto.ts",
+      "apps/cloud/src/account-export-keys.ts",
+      "apps/cloud/src/export-object-deletion.ts",
+      "apps/cloud/src/object-reconciliation.ts",
+      "apps/cloud/src/lifecycle.ts",
+      "apps/cloud/migrations/0010_multi_user_ingest.sql",
+      "apps/cloud/migrations/0011_account_export_keys.sql",
+      "apps/cloud/migrations/0012_deletion_status_receipts.sql",
+      "apps/cloud/migrations/0013_account_key_rewrap.sql",
+      "apps/cloud/migrations/0014_maintenance_cursors.sql",
+      "apps/cloud/migrations/0015_deletion_receipt_authorities.sql"
+    ],
+    "source_behavior": "Pre-body durable admission -> quota intent reservation -> create-only encrypted object/hash metadata verification -> object-written -> D1 transactional export/day/audit/intent commit -> exact durable postcondition before201. Lost commit read yields503 pending; do not delete potentially committed object. Expiry/abort first claims aborting then exact object absence before quota release; bounded maintenance reconciliation.",
+    "crypto": "HMDC1 framing +16byte salt/12byte IV/16byte AES256GCM tag, HKDF export derivation and account/export AAD; per-account wrapped DEKs/KEK rotation/legacy key retention. Whole-object encrypt/decrypt is not resumable authenticated chunk design. Server-readable, not zero knowledge.",
+    "deletion": "Durable account disable/revoke precedes bounded object/account erasure; hashed status authorities and exact absence. Source tests/runbooks not provider-copy/backup-expiry/containing-artifact selected erase/current-suppression restore SLA proof.",
+    "repair_supplements": "Internal ingestSupplement stores independent purpose-encrypted scope/original envelopes, no public or tailnet upload route. POST /api/repair/supplements is paged owner READ, not upload/merged repair.",
+    "qualification": "No DB/bucket/key/journal inspection or mutation; all fault/unit/provider/drill execution unrun."
+  },
+  "deployment_profiles": [
+    {
+      "profile": "NodeSQLite disposable single-owner VM",
+      "status": "implemented_source/historical_deployment_claims_unverified",
+      "paths": [
+        "apps/cloud/vm/server.ts",
+        "apps/cloud/vm/account-server.ts",
+        "apps/cloud/vm/ingest-server.ts",
+        "apps/cloud/mcp/server.ts"
+      ],
+      "source_ports": {
+        "tailnet_writer": 18788,
+        "upload_disabled_synthetic_preview": 18787,
+        "mcp_reader": 18789,
+        "account_loopback": 18791,
+        "public_ingest_loopback": 18793
+      },
+      "qualification": "Donor docs claim separate live tunnels/proxies/readerUID/store; this task did not contact hosts/DNS/endpoints/accounts. No production/multi-user/backup/recovery/client proof inherited."
+    },
+    {
+      "profile": "Worker/D1/R2 split ingest/account/maintenance",
+      "status": "source_closed/placeholders/unqualified",
+      "paths": [
+        "apps/cloud/wrangler.ingest.toml",
+        "apps/cloud/wrangler.account.toml",
+        "apps/cloud/wrangler.maintenance.toml",
+        "apps/cloud/src/index.ts"
+      ],
+      "qualification": "closed signup, deployment revision/resource placeholders, route-free provider config/secret-free committed files; no resources/approval/provider-backed operations established. Source audit historical passes not rerun."
+    },
+    {
+      "profile": "Node24 Effect/PostgreSQL/privateobject/KMS successor",
+      "status": "proposed/topology_choice_pending",
+      "qualification": "H01 prove bounded streaming/runtime/region/keyrecover/tenantcost; provider not selected/provisioned."
+    }
+  ],
+  "service_boundaries": {
+    "cloud": "Sensitive independent apps/cloud lock/tests/deploy/storage/keys/auth; separate ingest/owner/read/lifecycle authority required.",
+    "practice": "Isolated clinical app/backend; no shared health buckets/sessions/keys/proxy routes.",
+    "wake": "Notification-only isolated D1/Worker; no health/location/usage payload/request contents.",
+    "website": "Static public docs; staged dashboard redirect in donor docs not authenticated storage service or live compatibility proof.",
+    "pricing_analytics": "Health-free events only; no hosted payload/index/transport/storage authority.",
+    "provider_oauth_broker": "Existing Apple/Android provider OAuth boundary distinct; never reuse broker credentials/storage/proxy for retained cloud exports/agent grants."
+  },
+  "named_clients": [
+    {
+      "target": "Meta Muse",
+      "urls": [
+        "https://ai.meta.com/muse/"
+      ],
+      "accessed": "2026-10-07",
+      "docs_status": "Public product URL resolves/title available; browser extractor returned zero text lines. No custom-MCP onboarding/auth contract established.",
+      "integration_status": "unverified",
+      "followup_task": "H06 Muse-specific connector route/auth/product-version/plan/secret retention/source-purpose qualification; no pilot token issuance/consent inheritance."
+    },
+    {
+      "target": "ChatGPT dots",
+      "urls": [
+        "https://openai.com/index/introducing-dots/",
+        "https://help.openai.com/en/articles/20001530-getting-started-with-your-dot",
+        "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
+      ],
+      "accessed": "2026-10-07",
+      "docs_status": "Public docs read. Dots uses connected apps and retains obtained information after disconnect; ChatGPT custom MCP/admin docs are separate evidence, not dots account/workspace compatibility.",
+      "integration_status": "unverified",
+      "followup_task": "H06 exact plan/workspace/admin/custom-app availability, discovery/proactive routing/query paging/expiry/revoke and independent downstream-copy handling; authenticated client execution absent."
+    },
+    {
+      "target": "Grok Bot",
+      "urls": [
+        "https://docs.x.ai/grok-bot/overview",
+        "https://docs.x.ai/grok/connectors"
+      ],
+      "accessed": "2026-10-07",
+      "docs_status": "Public docs read. Bot shares account cloud computer/files/logins across bots; general Grok custom-MCP docs do not establish Bot-specific wiring or per-bot credentials.",
+      "integration_status": "unverified",
+      "followup_task": "H06 Bot-specific auth/connector/tool routing or reviewed CLI bridge; account shared-computer custody, separately revocable grants/retention/source-purpose proof."
+    },
+    {
+      "target": "Pi Durable",
+      "urls": [
+        "https://github.com/earendil-works/pi/tree/main/packages/durable",
+        "https://github.com/earendil-works/pi/blob/main/packages/durable/README.md",
+        "https://github.com/earendil-works/pi/blob/main/packages/mcp/README.md",
+        "https://raw.githubusercontent.com/earendil-works/pi/main/packages/durable/package.json",
+        "https://raw.githubusercontent.com/earendil-works/pi/main/packages/mcp/package.json"
+      ],
+      "accessed": "2026-10-07",
+      "docs_status": "Directory URL extractor failed; exact README/package paths read. Durable persists tool intent/replays safe tasks after crash; separate pi-mcp documents HTTP/stdio/OAuth/2025-11-25. Durable does not automatically wire that client.",
+      "observed_main_package_versions": {
+        "@earendil-works/pi-durable": "1.0.4",
+        "@earendil-works/pi-mcp": "1.0.4"
+      },
+      "version_qualification": "Public moving-main package metadata only; compatible installed package/commit pin still unqualified.",
+      "integration_status": "unverified",
+      "followup_task": "H06 pin both compatible commits/packages; thin Durable extension/client or CLI bridge; keep refresh secrets out of transcripts; restart/concurrent refresh/revocation/pinned pages/current grants/safe replay; newer MCP revisions separate."
+    }
+  ],
+  "open_choices": [
+    {
+      "id": "H00-region",
+      "authority": "Owner",
+      "question_or_proof": "EU/US initial region, exact custody/subprocessors and migration; donor US-only plan is not inherited.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-recovery",
+      "authority": "Owner + security/operations reviewers",
+      "question_or_proof": "Recovery/retention/erasure/backup/copy lifetime/RPO/RTO/deletion deadlines; replace incompatible donor no-backup versus recovery ADR authority.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-identity",
+      "authority": "Owner",
+      "question_or_proof": "Identity/passkey/recovery/provider/enrollment/step-up/compromise/support policy; donor password/email links do not implement new recovery.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-scope",
+      "authority": "Owner + source-purpose reviewer",
+      "question_or_proof": "Existing versus future uploads, domains/devices/details/titles/precision/ranges/duration/purpose/recipient limits/defaults; do not inherit donor All/until-revoked/shared credentials.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-billing",
+      "authority": "Owner",
+      "question_or_proof": "Capacities/accounting/billing/grace/downgrade/channel/native entitlement/lifetime-rights/support; donor tiers/prices/free-benefit/US adult/F-Droid exclusions are historical recommendations/decisions, not accepted successor choices.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-client",
+      "authority": "Owner + client integration reviewer",
+      "question_or_proof": "Exact named product client/plan/workspace/route/credential sharing/downstream copies/source-purpose; every selected target pending.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H00-governance",
+      "authority": "Coordinator/Owner",
+      "question_or_proof": "Successor cloud ADR reconciles donor ADR7/8 and later interview/roadmap; named service/security/privacy/identity/storage/on-call/release/client owners. Local ADR0007 Effect decision does not settle cloud.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H01-topology",
+      "authority": "Technical proof + Owner choice",
+      "question_or_proof": "Node24/Effect/PostgreSQL/privateobject/KMS versus Worker/D1/R2/NodeSQLite pilot; provider region/stream auth/tenant isolation/keyrecovery/cost/limits.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H02-contracts",
+      "authority": "Technical proof",
+      "question_or_proof": "Resumable C18 bundle/source installation/generation/manifest/profile/reducer/coverage/receipt, source-purpose policy/current grants/OAuth2025-2026/issuer/resource/S256/revocation SLA/cursor contracts.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H03-commit",
+      "authority": "Technical proof",
+      "question_or_proof": "Bounded complete-stream AEAD/chunks/invisible staging/exact originals/SQL-object transaction/ledger/outbox/idempotency/quota/cancel/lostresponse/crash.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H04-projections",
+      "authority": "Technical proof",
+      "question_or_proof": "Source-scoped snapshots/change/tombstones/overlap precedence/frontiers/shared evaluator/versioned reindex/suppression/typed health-location-usage; archive-only retained legacy profiles.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H05-lifecycle",
+      "authority": "Technical proof",
+      "question_or_proof": "Native secure enrollment/frozen account-region-destination/independent agent grants/recovery/portability/containing-artifact erase/allcopies/current suppression restore.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H06-clients",
+      "authority": "Technical proof",
+      "question_or_proof": "Separate synthetic two-tenant denied/narrow/full/history/future-upload/offline/stale/restart/expiry/OAuth/revoke/delete/purpose suite for each exact target.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H07-production",
+      "authority": "Technical proof",
+      "question_or_proof": "Actual deployed revision/security assessment/region inventory/keys/providerfault/restore/erasure/load/memory/fairqueue/cost/numeric SLOs/on-call.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "H08-transition",
+      "authority": "Owner rollout choice + technical proof",
+      "question_or_proof": "Voluntary archive migration/coverage digest receipts/credential rebinding/cohort consent/frozen legacy readers/rollback/decommission; no inherited deployment approval.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    },
+    {
+      "id": "F20-capacity",
+      "authority": "Technical proof + Owner limits",
+      "question_or_proof": "Numerical tenant/global storage/CPU/decrypt/query/ingest/queue/egress/index/backup/support/cost budgets; cheap object price not unlimited history/sustainable pricing.",
+      "status": "pending",
+      "blocks": "Only dependent cloud adapters/public promises/qualification; local/synthetic work proceeds."
+    }
+  ],
+  "donor_policy_reconciliation": {
+    "historical_authorities": [
+      "docs/architecture/adr-0007-healthmd-cloud.md",
+      "docs/architecture/adr-0008-multi-user-healthmd-cloud-production.md",
+      "apps/cloud/docs/production-design-interview.md",
+      "apps/cloud/docs/production-experience-roadmap.md"
+    ],
+    "conflict": "Disposable unbacked pilot; recoverable invite-first production deferring MCP; later public-US/no-backup/essential-MCP/passkeys/sharedAll/future grants/subscription policy disagree. Assigned design selects optional hosted service/remote agents, but region/recovery/billing/credentials/channels remain pending. No inherited tokens/data/consent/resources/approval.",
+    "donor_unresolved_questions": [
+      {
+        "id": "Q57",
+        "subject": "qualifying lifetime rights",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 228,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q58",
+        "subject": "included versus paid capacity",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 229,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q59",
+        "subject": "proof binding and transfer",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 230,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q60",
+        "subject": "paid-to-included continuation",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 231,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q61",
+        "subject": "externally effective store reductions",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 232,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q62",
+        "subject": "deliberate artifact/revision archive reduction",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 233,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q63",
+        "subject": "JSON schema families and Android raw admission",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 234,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q64",
+        "subject": "introductory subscription trials",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 235,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      },
+      {
+        "id": "Q65",
+        "subject": "support promises",
+        "authority_path": "apps/cloud/docs/production-design-interview.md",
+        "source_line": 236,
+        "status": "donor recommendation unanswered; no successor acceptance implied"
+      }
+    ],
+    "technical_frontier": "Provider/topology/key custody/numeric cohort-load-cost-latency/audit-deletion-copy retention/client modes and independent named reviewers remain unqualified."
+  },
+  "design_mapping": [
+    {
+      "id": "C18",
+      "status": "legacy implemented_source/new bundle pending",
+      "evidence": "retained_profiles/source_head_identity/commit_crypto_lifecycle",
+      "required": "Versioned authenticated resumable source/enrollment/manifest/chunk/receipt/quota contracts."
+    },
+    {
+      "id": "C19",
+      "status": "narrow Apple typed/archive source; unified multi-domain projection pending",
+      "evidence": "retained_profiles/source_head_identity/routes",
+      "required": "Explicit source/selection identity/typed frontiers/tombstones/pinned grant cursors/reindex suppression."
+    },
+    {
+      "id": "C20",
+      "status": "bespoke credentials/current token checks source; successor OAuth/grants/recovery pending",
+      "evidence": "authority_map/open_choices",
+      "required": "Qualified issuer/resource/audience/S256/registration/refresh/sourcepurpose/independent upload-read-admin/numeric revoke SLA."
+    },
+    {
+      "id": "C21",
+      "status": "pilot readonly catalog source; all four named targets unverified",
+      "evidence": "routes/mcp_tools/named_clients",
+      "required": "2025/2026 adapters/auth/OriginHost/metadatavalidation/guessed dispatch/artifact bounds/exact-client E2E."
+    },
+    {
+      "id": "C22",
+      "status": "account disable/cleanup/TAR/keyrotation source; production lifecycle pending",
+      "evidence": "commit_crypto_lifecycle/open_choices",
+      "required": "Containing-artifact erase/allcopies/restore latest suppression/retention-portability-capacity-commercial lifecycle."
+    },
+    {
+      "id": "H00",
+      "status": "policy/source inventory only; decisions pending",
+      "evidence": "donor_policy_reconciliation/open_choices/named_clients"
+    },
+    {
+      "id": "H01",
+      "status": "topology/runtime/provider feasibility unqualified",
+      "evidence": "deployment_profiles/open_choices"
+    }
+  ],
+  "risk_mapping": [
+    {
+      "id": "F17",
+      "proof_tasks": [
+        "H01",
+        "H03",
+        "H04",
+        "V11"
+      ],
+      "gap": "No deployed cross-tenant/complete-stream/sourcehead/current-page-grant/wholehistory proof."
+    },
+    {
+      "id": "F18",
+      "proof_tasks": [
+        "H00",
+        "H07",
+        "V13"
+      ],
+      "gap": "Region/key/copies/backup/erasure/current-suppression restore and numeric RPO/RTO/deletion unqualified; donor waiver not inherited."
+    },
+    {
+      "id": "F19",
+      "proof_tasks": [
+        "H02",
+        "H06",
+        "V12"
+      ],
+      "gap": "Exact named client/source-recipient purpose/downstreamcopy/expiry-refresh-revoke unqualified; public docs not integrations."
+    },
+    {
+      "id": "F20",
+      "proof_tasks": [
+        "H00",
+        "H01",
+        "H07"
+      ],
+      "gap": "Capacity/billing/fairqueue/load-egress-index-backup-support/cost/rollout/downgrade/rollback unqualified."
+    }
+  ],
+  "checks_available": {
+    "cwd": "apps/cloud",
+    "commands": {
+      "build:vm": "node scripts/build-vm.mjs",
+      "check": "npm run typecheck && npm run typecheck:vm && npm test",
+      "deploy": "wrangler deploy",
+      "dev": "wrangler dev --var ENVIRONMENT:development --var PUBLIC_ORIGIN:http://localhost:8787 --var AUTH_SIGNUP_MODE:invite",
+      "dry-run": "wrangler deploy --dry-run --outdir .wrangler/dry-run",
+      "dry-run:profiles": "wrangler deploy --dry-run --config wrangler.ingest.toml --outdir .wrangler/dry-run-ingest && wrangler deploy --dry-run --config wrangler.account.toml --outdir .wrangler/dry-run-account && wrangler deploy --dry-run --config wrangler.maintenance.toml --outdir .wrangler/dry-run-maintenance",
+      "migrate:local": "wrangler d1 migrations apply healthmd-cloud --local",
+      "prepare:account-invites": "node scripts/prepare-account-invites.mjs",
+      "qualify:staging-load": "node scripts/qualify-staging-load.mjs",
+      "test:smoke": "node scripts/smoke-local.mjs",
+      "test:restore-drill": "vitest run test/restore-drill.test.ts",
+      "verify:production-safety": "node scripts/verify-production-safety.mjs",
+      "test": "vitest run",
+      "test:watch": "vitest",
+      "typecheck": "tsc --noEmit",
+      "typecheck:vm": "tsc --noEmit -p tsconfig.vm.json"
+    },
+    "workflow": ".github/workflows/cloud-ci.yml",
+    "status": "all unrun; deploy/migrate/staging/credential scripts merely named, never executed",
+    "qualification": "Historical audit/test counts and donor live checks are source claims, not results of this inventory."
+  },
+  "limitations": [
+    "No installs/builds/tests/dry-runs/deployments/network pilot calls/infra/account/data/credential reads or mutations. Only Git source metadata and public vendor/GitHub docs.",
+    "Public moving-main docs/version metadata not immutable qualified client artifact; directory extractor failure explicit.",
+    "Literal test description index may omit dynamic/table-generated cases; no executed product/client/provider proof.",
+    "Cloud component absent at assigned baseline; pilot license/lock/source retained as potential donor evidence, not imported product/runtime authority.",
+    "No portable personaldata/cloud contract, current native v10 promotion, arbitrary raw Android/location/usage query or full-history parity fabricated.",
+    "Pending cloud decisions/proofs do not stop unrelated local/synthetic work; no production promotion/state/reference deletion."
+  ],
+  "inspection_method": "Exact raw Git blobs SHA256 at assigned baseline versus separately pinned pilot; test literal case IDs/lines and source router/tool/constant locators; concise public URL availability/date/evidence gaps. No source/schema wholesale dumps."
+}

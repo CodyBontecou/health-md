@@ -3393,7 +3393,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 22,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
@@ -3406,14 +3406,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "2771704da48fd0fbeb12cafdbc9adbd27f08343f+a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-CLOUD.json"
+        ]
       }
     },
     {
@@ -3790,9 +3792,12 @@
       "allowed_paths": [
         "packages/healthmd-core-ts/src/contracts/exact-values.ts",
         "packages/healthmd-core-ts/tests/exact-values*",
-        "docs/migration/effect-refactor/receipts/CODEC-VALUES.json"
+        "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs"
       ],
-      "shared_resources": [],
+      "shared_resources": [
+        "core-boundary-policy"
+      ],
       "acceptance": [
         "Frozen positive/negative cases preserve finite binary64 including negative zero, canonical integers beyond safe range and exact seconds/nanoseconds/civil dates.",
         "Reject invalid/nonfinite/overflow/version inputs per source policy; Date/JSON defaults cannot silently lose precision.",
@@ -3810,7 +3815,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted inventories/core.json exact_policies, frozen_fixtures and source_defined_negative_and_boundary_cases; semantic-input/v1 contract + Rust semantic.rs exact source at accepted BASE-CORE pin. Independently reviewed literal exact-value vectors; existing expected bytes unchanged.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -3822,8 +3827,22 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CODEC-VALUES.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 50,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_core",
+        "base_revision": "d2d08bd09d0b9ab4b24e6accbd8e82ccb6627a93",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "packages/healthmd-core-ts/tests/exact-values.test.ts",
+          "packages/healthmd-core-ts/tests/exact-values-vectors.ts",
+          "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "docs/migration/effect-refactor/receipts/CODEC-VALUES.json"
+        ],
+        "reserved_resources": [
+          "core-boundary-policy"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",

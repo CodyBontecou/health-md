@@ -1,0 +1,400 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CLOUD",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+  "patch_digest": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "included_paths": [
+      "docs/migration/effect-refactor/inventories/cloud.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+      "docs/migration/effect-refactor/plan.json",
+      "coordinator state and other workers changes"
+    ],
+    "scope": "Exact raw UTF-8 cloud.json bytes including trailing newline; excludes receipt/coordinator state.",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/inventories/cloud.json').read_bytes()).hexdigest())"
+    ]
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/cloud.json",
+    "docs/migration/effect-refactor/receipts/BASE-CLOUD.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "apps/apple/docs/reference/generated/automation/api-export-v1.json": "8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba",
+      "apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json": "94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b",
+      "apps/apple/docs/reference/generated/core/summary-day.json": "5d905cc0786109af1a20271eb1812f889207d2459c1882b784e2b252a6794f05",
+      "packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json": "1780342891ea3975509f43af86a01656f37d503dac9d94ab8fed06650e4c84c3"
+    },
+    "locks_and_runtime": {
+      "apps/cloud/package-lock.json": "e8e8b629159cdd036e62fbb61b20ff0b418deb5b7a93a84315fab6872c98b472",
+      "apps/cloud/package.json": "0d95c53c72e50cb25974a045dad6d77f4a731193e36a07dc4ab808108b7dcd88",
+      "apps/cloud/vitest.config.ts": "6820346058faae2937f9388e18c7000ef9d3d4aa65d831f476aeb31dd22e2082",
+      "apps/cloud/wrangler.account.toml": "dcc62a3792cd1949e603826beb57e6376cce905fb91a59fe390d930657768e05",
+      "apps/cloud/wrangler.ingest.toml": "09119fd15aaa001eafd88a1ae59417bc994bb84f4f1c40441bfa048c0ef805fe",
+      "apps/cloud/wrangler.maintenance.toml": "f52067b176026a5832ffa6fb587c7ee299f505eb17ffe20f45a293538d07d1d1",
+      "apps/cloud/wrangler.toml": "4b027bbf12e52749123dea5b1366cdb72ce19fef9970c1e942fe16e0c927aeb7"
+    },
+    "artifact_and_native_interface": {
+      "pilot_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "source_graph": "docs/migration/effect-refactor/inventories/cloud.json#/source_records",
+      "baseline_inventories": {
+        "docs/migration/effect-refactor/inventories/core.json": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+        "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+        "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+      },
+      "named_targets": "docs/migration/effect-refactor/inventories/cloud.json#/named_clients",
+      "production_native_or_deployed_artifacts_inspected": false
+    },
+    "policy_migration_key_versions": {
+      "envelope": [
+        1,
+        2
+      ],
+      "daily_admission": [
+        4,
+        5,
+        6,
+        7,
+        8,
+        10
+      ],
+      "typed_Apple": [
+        8,
+        10
+      ],
+      "active_native_baseline": 8,
+      "migrations": "0001\u20130018 pinned source, not applied",
+      "key_material_inspected": false,
+      "policy_changes": false
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Verify accepted branch revision and retained profiles/source/head identities, caps and current typed versus archive support.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/cloud.json#/source_identity /retained_profiles /source_head_identity /bounds /routes/mcp_tools:exactpilot56611\u2026/parent;account-datehead replacement;legacy envelopes1/2/daily4\u20138,10;Apple8/10typed/otherarchive;25MiB wholematerialization;11catalog IDs."
+    },
+    {
+      "criterion": "Map upload/owner/read/repair credentials and implemented versus closed/unqualified deployment paths; preserve separate services.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/cloud.json#/authority_map /routes /deployment_profiles /service_boundaries /commit_crypto_lifecycle:independentroles;write-onlyAPI/ownerVM/readonlyMCP;repairnonlaunchable/offflags/internal-supplement;splitclosed/placeholders;PracticeWakewebsiteanalyticsbroker separate."
+    },
+    {
+      "criterion": "Record each pending product/technical choice and exact named-client evidence; inspect no secrets/accounts/exports.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/cloud.json#/open_choices /donor_policy_reconciliation /named_clients /design_mapping /risk_mapping:16owner/prooffrontiers;donorQ57\u2013Q65;exactMuse/dots/GrokBot/PiDurablepublicURLs;eachintegrationunverified;no live account/pilot/data access."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-CLOUD"
+      ],
+      "result": "passed",
+      "evidence": "Exact task/target/acceptance/write scope read."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C18"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C19"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C20"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C21"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C22"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "H00"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "H01"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F17"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F18"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F19"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F20"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design obligation inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "show",
+        "-s",
+        "--format=%H%n%P%n%s",
+        "56611bc65c625f620b9920eeec7cff36908ecc79"
+      ],
+      "result": "passed",
+      "evidence": "Exact pilot commit/parent/subject verified; no remote refs/deployed head asserted."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "apps/cloud",
+        ".github/workflows/cloud-ci.yml"
+      ],
+      "result": "passed",
+      "evidence": "Pilot scoped tracked source/docs/migrations/check paths enumerated."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+        "apps/cloud"
+      ],
+      "result": "passed",
+      "evidence": "Assigned baseline has no apps/cloud; no pilot import performed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Git-show-only inline inspection of admission/profile/version/head SQL/routes/auth/reader/repair/split configurations/runbooks/source license metadata; no environments/data inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "159 pre-license pins rehashed;218 literal test/11tool/38route source locators verified; four clients unverified,baselinecloud absent. Two license blobs subsequently pinned; final161pins validated."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "web.run"
+      ],
+      "tool_arguments": {
+        "open": [
+          {
+            "ref_id": "https://ai.meta.com/muse/"
+          },
+          {
+            "ref_id": "https://openai.com/index/introducing-dots/"
+          },
+          {
+            "ref_id": "https://docs.x.ai/grok-bot/overview"
+          }
+        ],
+        "response_length": "short"
+      },
+      "result": "passed",
+      "evidence": "Actual public open calls inspected; source availability only. Meta zero extracted lines and Pi directory Internal Error explicit; fallback exact README/package paths available. No authenticated account/integration."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "web.run"
+      ],
+      "tool_arguments": {
+        "open": [
+          {
+            "ref_id": "https://help.openai.com/en/articles/20001530-getting-started-with-your-dot"
+          },
+          {
+            "ref_id": "https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt"
+          },
+          {
+            "ref_id": "https://docs.x.ai/grok/connectors"
+          },
+          {
+            "ref_id": "https://github.com/earendil-works/pi/tree/main/packages/durable"
+          },
+          {
+            "ref_id": "https://github.com/earendil-works/pi/blob/main/packages/mcp/README.md"
+          }
+        ],
+        "response_length": "short"
+      },
+      "result": "passed",
+      "evidence": "Actual public open calls inspected; source availability only. Meta zero extracted lines and Pi directory Internal Error explicit; fallback exact README/package paths available. No authenticated account/integration."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "web.run"
+      ],
+      "tool_arguments": {
+        "open": [
+          {
+            "ref_id": "https://github.com/earendil-works/pi/blob/main/packages/durable/README.md"
+          },
+          {
+            "ref_id": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/mcp/package.json"
+          },
+          {
+            "ref_id": "https://raw.githubusercontent.com/earendil-works/pi/main/packages/durable/package.json"
+          }
+        ],
+        "response_length": "short"
+      },
+      "result": "passed",
+      "evidence": "Actual public open calls inspected; source availability only. Meta zero extracted lines and Pi directory Internal Error explicit; fallback exact README/package paths available. No authenticated account/integration."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Fixture labels corrected to empty standalone case IDs with exact consumer paths;218 literal caller cases remain source-pinned. Inventory SHA256 and receipt equality validated."
+    }
+  ],
+  "inspection_summary": "Read root/execution/cloud-release/scoped C18\u2013C22/H00\u2013H01/F17\u2013F20/pilot and named-agent sections plus pilot component AGENTS. Inspected committed pilot routes/auth/ingest/intent/crypto/keys/head SQL/reader/repair/split gates, docs conflict/Q57\u2013Q65, package-lock/scripts/migrations and synthetic fixture/test locators.110source/doc/license records+38testpaths+4fixtures+9baseline input pins=161pins.218literal test names/11MCPtools/38core route locators verified. Public vendor/GitHub docs only;Meta zero-text andPi directory extractor failure explicit,exactPiREADME/packagepaths available. Historical audit/run/deployed/consent claims are donor source assertions, not this task proof. No npm/install/build/test/dryrun/pilotnetwork/account/data/credential/infra/deployment operation.",
+  "observations": [],
+  "limitations": [
+    "No installs/builds/tests/dry-runs/deployments/network pilot calls/infra/account/data/credential reads or mutations. Only Git source metadata and public vendor/GitHub docs.",
+    "Public moving-main docs/version metadata not immutable qualified client artifact; directory extractor failure explicit.",
+    "Literal test description index may omit dynamic/table-generated cases; no executed product/client/provider proof.",
+    "Cloud component absent at assigned baseline; pilot license/lock/source retained as potential donor evidence, not imported product/runtime authority.",
+    "No portable personaldata/cloud contract, current native v10 promotion, arbitrary raw Android/location/usage query or full-history parity fabricated.",
+    "Pending cloud decisions/proofs do not stop unrelated local/synthetic work; no production promotion/state/reference deletion."
+  ],
+  "remaining_qualification": [
+    "Independent source/inventory review accepted; hosted implementation and actual environment qualification remain open.",
+    "H00 successor cloud ADR/owner policy/named roles and H01provider/runtimefeasibility unresolved; local/synthetic work proceeds.",
+    "H02\u2013H09/V11\u2013V13 contracts/implementation/native/provider/signed/deployed/client/region/key/restore/erase/cost/rollout/retirement gates unqualified.",
+    "Public main/version metadata is documentation only; immutable compatible client artifacts and actual end-to-end recipient/purpose/auth/current-grant/replay/copy proofs required per client."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "2771704da48fd0fbeb12cafdbc9adbd27f08343f+a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b"
+  },
+  "independent_review": {
+    "scope": "Pilot identities/profiles/source-head/role/auth/bounds/commit/lifecycle/deployment isolation/policy gaps and individual named-client records reviewed. No blocking findings.",
+    "evidence": "Rehashed161 revision-specific Git source pins and verified218 literal test description/line locators plus raw inventory digest. Independently read the four exact primary product/README routes, dots app retention help, Grok connector docs, Pi MCP README and moving-main1.0.4 package metadata; documentation only, no authenticated integration. Current native Apple8 remains distinct from pilot8/10 archive/typed readers.",
+    "limitations": "No pilot/account/credential/data/infra/provider/deployed/client qualification performed; owner region/recovery/billing/grant/channel policies remain pending."
+  }
+}
