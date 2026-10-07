@@ -130,6 +130,31 @@ jobs:
       - name: Check authoritative reference snapshot
         run: npm run reference:check -- --source "$GITHUB_WORKSPACE/apps/apple"
 
+      - name: Stage additive reference text diagnostics
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Hosted-only generation; keep the authoritative drift check above.
+          npm run reference:sync -- --source "$GITHUB_WORKSPACE/apps/apple"
+          mkdir -p build/reference-text
+          { git -C "$GITHUB_WORKSPACE" diff --name-only -- apps/website/docs-src/src/content/docs/reference apps/website/docs-src/public/reference/generated apps/website/docs-src/reference-source.json;
+            git -C "$GITHUB_WORKSPACE" ls-files --others --exclude-standard -- apps/website/docs-src/src/content/docs/reference apps/website/docs-src/public/reference/generated; } |
+          sort -u | while IFS= read -r file; do
+            [[ -n "$file" ]] || continue
+            mkdir -p "build/reference-text/$(dirname "$file")"
+            cp "$GITHUB_WORKSPACE/$file" "build/reference-text/$file"
+          done
+
+      - name: Upload additive reference text diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-additive-reference-text
+          path: apps/website/build/reference-text
+          if-no-files-found: warn
+          retention-days: 1
+
       - name: Check website localization contracts
         run: npm run i18n:check
 
@@ -143,6 +168,23 @@ jobs:
 
       - name: Build complete website
         run: npm run build
+
+      - name: Stage reference provenance consumer text diagnostics
+        if: ${{ !cancelled() }}
+        run: |
+          npm --prefix docs-src run agent-assets:sync
+          mkdir -p build/reference-provenance
+          cp docs-src/public/reference/source-manifest.json docs-src/public/reference/source-manifest-v1.json build/reference-provenance/
+          cp docs-src/public/agents/manifest.json build/reference-provenance/agent-manifest.json
+
+      - name: Upload reference provenance consumer text diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-reference-provenance-text
+          path: apps/website/build/reference-provenance
+          if-no-files-found: warn
+          retention-days: 1
 
   gate:
     name: Website CI

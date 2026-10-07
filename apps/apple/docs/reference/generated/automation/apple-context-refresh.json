@@ -1,0 +1,36 @@
+{
+  "appleContext" : {
+    "_0" : {
+      "refresh" : {
+        "_0" : {
+          "endDate" : 795225600,
+          "id" : "A1700000-0000-4000-8000-000000000001",
+          "macInstallationID" : "A1700000-0000-4000-8000-000000000004",
+          "ownerDates" : [
+            "2026-03-15"
+          ],
+          "phoneInstallationID" : "A1700000-0000-4000-8000-000000000003",
+          "profileID" : "A1700000-0000-4000-8000-000000000005",
+          "selection" : {
+            "detail_level" : "summary",
+            "field_pointers" : [
+
+            ],
+            "metric_ids" : [
+              "steps"
+            ],
+            "object_paths" : [
+
+            ],
+            "source_ids" : [
+              "apple_health"
+            ]
+          },
+          "startDate" : 795225600,
+          "timeZoneIdentifier" : "UTC",
+          "version" : 1
+        }
+      }
+    }
+  }
+}

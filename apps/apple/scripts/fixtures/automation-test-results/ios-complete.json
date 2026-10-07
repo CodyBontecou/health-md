@@ -1,0 +1,34 @@
+{
+  "testNodes": [
+    {
+      "name": "HealthMdTests",
+      "nodeType": "Unit test bundle",
+      "children": [
+        {
+          "name": "AppleContextAutomationTests",
+          "nodeType": "Test Suite",
+          "children": [
+            {"name": "testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeIdentifier": "AppleContextAutomationTests/testProductAutomationInventoryIsSeparateFromFrozenMetricAuthorityAndHasConcreteParityTargets()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeIdentifier": "AppleContextAutomationTests/testLegacyCapabilityMissingOrFalseAndUnauthenticatedOrWrongRoleNeverSend()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testProductionIngressNegotiatesHelloSynchronouslyAndRejectsForeignOrDisabledFamily()", "nodeIdentifier": "AppleContextAutomationTests/testProductionIngressNegotiatesHelloSynchronouslyAndRejectsForeignOrDisabledFamily()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testRequestRejectsHostPathRawPointersUnknownFieldsAndNoncanonicalDates()", "nodeIdentifier": "AppleContextAutomationTests/testRequestRejectsHostPathRawPointersUnknownFieldsAndNoncanonicalDates()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testDurableIdentityRejectsProfilePeerDateSourceDetailMutationAndRestoresWithoutAck()", "nodeIdentifier": "AppleContextAutomationTests/testDurableIdentityRejectsProfilePeerDateSourceDetailMutationAndRestoresWithoutAck()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testReceiptsArePersistedPeerScopeRequestBoundMonotonicAndTerminal()", "nodeIdentifier": "AppleContextAutomationTests/testReceiptsArePersistedPeerScopeRequestBoundMonotonicAndTerminal()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPostWriteFailuresNeverBecomeAuthorityByLookupOrRestartAndRetryKeepsIdentity()", "nodeIdentifier": "AppleContextAutomationTests/testPostWriteFailuresNeverBecomeAuthorityByLookupOrRestartAndRetryKeepsIdentity()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPostWriteCompletionFailurePreservesPriorReceiptAndCorruptMarkerCannotBeAbsence()", "nodeIdentifier": "AppleContextAutomationTests/testPostWriteCompletionFailurePreservesPriorReceiptAndCorruptMarkerCannotBeAbsence()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdDirectoryErrorIsUnavailableNotAbsenceAndRestorationPreservesContents()", "nodeIdentifier": "AppleContextAutomationTests/testColdDirectoryErrorIsUnavailableNotAbsenceAndRestorationPreservesContents()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPhoneProductionAdapterFreezesProfileBeforeSendAndRecoversLostAckWithoutQuota()", "nodeIdentifier": "AppleContextAutomationTests/testPhoneProductionAdapterFreezesProfileBeforeSendAndRecoversLostAckWithoutQuota()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPhoneFailedPersistenceUnknownIneligibleUnboundAndLockedProfilesNeverSend()", "nodeIdentifier": "AppleContextAutomationTests/testPhoneFailedPersistenceUnknownIneligibleUnboundAndLockedProfilesNeverSend()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testPhonePostAtomicAdmissionAndReceiptFailuresRequireExplicitDurabilityRepairBeforeStatus()", "nodeIdentifier": "AppleContextAutomationTests/testPhonePostAtomicAdmissionAndReceiptFailuresRequireExplicitDurabilityRepairBeforeStatus()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testProductionPhoneHandlerPinsManifestAndRechecksLeaseAcrossAuthorizationAndCaptureAwait()", "nodeIdentifier": "AppleContextAutomationTests/testProductionPhoneHandlerPinsManifestAndRechecksLeaseAcrossAuthorizationAndCaptureAwait()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority()", "nodeIdentifier": "AppleContextAutomationTests/testActualFakeHealthKitCaptureAwaitRechecksPeerCapabilityAndUncertainAuthority()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext()", "nodeIdentifier": "AppleContextAutomationTests/testColdUnavailablePhoneAuthorityBlocksActualHandlerButPreservesOrdinaryFilesAndFirstRunContext()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testProtectedStatusCannotTransmitEvenWithProvenAdmission()", "nodeIdentifier": "AppleContextAutomationTests/testProtectedStatusCannotTransmitEvenWithProvenAdmission()", "nodeType": "Test Case", "result": "Passed"},
+            {"name": "testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents()", "nodeIdentifier": "AppleContextAutomationTests/testRealShortcutProviderRetainsSevenActionsAndRegistersBothContextIntents()", "nodeType": "Test Case", "result": "Passed"}
+          ]
+        },
+        {"name": "UnrelatedTests", "nodeType": "Test Suite", "children": [{"name": "testUnrelated()", "nodeIdentifier": "UnrelatedTests/testUnrelated()", "nodeType": "Test Case", "result": "Skipped"}]}
+      ]
+    }
+  ]
+}

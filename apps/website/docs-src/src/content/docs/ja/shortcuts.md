@@ -1,17 +1,21 @@
 ---
 title: "ショートカットとApp Intents"
-description: "公開済み7アクションと開発ソースのMacコンテキスト2アクションをショートカットやSiriで使用します。"
+description: "Health.mdの7アクションをショートカットとSiriで使用します。Macコンテキスト更新アクションは提案段階で、利用できません。"
 ---
 
-<div class="availability preview"><strong>公開済み7アクション · 現在のソースは9</strong><p>Macコンテキストの2アクションには対応するiPhone/Macビルドが必要です。正確なリリースノートを確認してください。</p></div>
+<div class="availability preview"><strong>ソースに登録された7アクション</strong><p>Refresh Mac Health ContextとGet Mac Context Refresh Statusは提案段階で、未実装です。開発版でも利用できません。<a href="https://github.com/CodyBontecou/health-md/issues/173">課題 #173</a>を参照してください。提供には実装、検証、正確なAppleリリースの説明が必要です。</p></div>
 
 ## アクション
 
 - 昨日、指定日、期間、直近N日をエクスポート
 - 健康概要または最終エクスポート状態を取得
 - スケジュールを有効・無効化
-- **Refresh Mac Health Context**（開発中）：プロファイルに結び付いた暗号化コンテキストの永続更新
-- **Get Mac Context Refresh Status**（開発中）：状態とjob IDを取得
+
+### 提案されたMacコンテキストアクション（利用不可）
+
+要求された**Refresh Mac Health Context**は明示的なプロファイルと日付範囲、認証済みの互換デバイス、永続的なコンテキスト取得を使用し、エクスポートファイルの作成やファイル出力枠の消費を行わない想定です。**Get Mac Context Refresh Status**は復旧可能なジョブ識別子とともに保留・完了・失敗を報告する想定です。これらは要件であり、現在のアプリで使えるアクション名、パラメータ、結果ではありません。
+
+コンピュータ側のMCP更新はiOSの個人用オートメーションを提供しません。通常のエクスポートショートカットで代用しないでください。出力先は引き続きiPhoneフォルダです。スリープ中のMacを起こしたり、保護されたHealthKitデータを回避したりすることは保証できません。この機能の検証には、復帰後の実機iPhoneでのオートメーションQAが引き続き必要です。
 
 4つのエクスポートアクションは任意の**プロファイル**を受け取ります。不明な名前は安全に失敗します。通常のショートカットはiPhoneフォルダへ書き込み、API EndpointやConnected Macへ密かに切り替わりません。
 

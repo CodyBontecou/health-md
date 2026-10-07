@@ -645,7 +645,12 @@ struct HealthMdApp: App {
     // MARK: - Sync Message Handling (iOS side)
 
     private func setupSyncMessageHandler() {
+        AppleContextPhoneClient.shared.install(syncService)
         syncService.onMessageReceived = { message in
+            if case .appleContext(let contextMessage) = message {
+                AppleContextPhoneClient.shared.receive(contextMessage)
+                return
+            }
             // Validate Mac accounting synchronously at the app ingress. The
             // asynchronous router receives a typed validated/rejected input, so
             // no raw result can cancel waiters or reach event subscribers first.
@@ -657,6 +662,7 @@ struct HealthMdApp: App {
             }
             Task { @MainActor in
                 switch message {
+                case .appleContext: break // persisted synchronously at ingress
                 case .requestData(let dates):
                     self.syncService.isSyncing = true
                     await HealthKitQueryExecutionController.withController {

@@ -27,6 +27,10 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
         }
 
         let expected = try GeneratedAutomationReferenceDocumentation.files()
+        // Stage native-serialized diagnostic text for hosted CI. This does NOT
+        // update committed documentation or bypass the drift assertions below.
+        try GeneratedAutomationReferenceDocumentation.write(to:
+            FileManager.default.temporaryDirectory.appendingPathComponent("healthmd-automation-reference-ci", isDirectory: true))
         let committedDirectory = GeneratedAutomationReferenceDocumentation.committedDirectory
         XCTAssertTrue(
             FileManager.default.fileExists(atPath: committedDirectory.path),
@@ -165,6 +169,30 @@ final class GeneratedAutomationReferenceDocumentationTests: XCTestCase {
             MacExportResultPayload.self,
             from: try XCTUnwrap(files["mac-export-result-partial.json"])
         ))
+    }
+
+    func testAdditiveAppleContextFamilyNativeFixturesBindOneScopeAndLegacyNegotiationDefaultsFalse() throws {
+        let files = try GeneratedAutomationReferenceDocumentation.files()
+        let decoder = JSONDecoder()
+        guard case .appleContext(.refresh(let refresh)) = try decoder.decode(SyncMessage.self, from: XCTUnwrap(files["apple-context-refresh.json"])),
+              case .appleContext(.status(let status)) = try decoder.decode(SyncMessage.self, from: XCTUnwrap(files["apple-context-status.json"])),
+              case .appleContext(.receipt(let receipt)) = try decoder.decode(SyncMessage.self, from: XCTUnwrap(files["apple-context-receipt.json"])) else {
+            return XCTFail("Native fixtures must serialize the separate negotiated Apple context family")
+        }
+        XCTAssertTrue(refresh.isValid)
+        XCTAssertEqual(refresh.version, 1)
+        XCTAssertEqual(refresh, status)
+        XCTAssertEqual(receipt.request, refresh)
+        XCTAssertEqual(receipt.state, .pending)
+        XCTAssertEqual(receipt.revision, 1)
+        XCTAssertEqual(refresh.selection.sourceIDs, ["apple_health"])
+        XCTAssertEqual(refresh.ownerDates, ["2026-03-15"])
+        var peer = try jsonObject("peer-capabilities.json", files: files)
+        XCTAssertEqual(peer["supportsPhoneContextAutomation"] as? Bool, true)
+        peer.removeValue(forKey: "supportsPhoneContextAutomation")
+        let legacy = try decoder.decode(SyncPeerCapabilities.self, from: JSONSerialization.data(withJSONObject: peer))
+        XCTAssertFalse(legacy.supportsPhoneContextAutomation)
+        XCTAssertEqual(legacy.protocolVersion, 2)
     }
 
     func testPrivateControlRequestFixturesFollowServerTestConstructionPattern() throws {

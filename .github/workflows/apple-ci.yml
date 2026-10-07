@@ -241,6 +241,24 @@ jobs:
                     f"{summary.get('skippedTests', 0)} skipped")
           PY
 
+      - name: Collect bounded named iOS automation test receipt
+        id: ios-automation-receipt
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          python3 -m unittest discover -s scripts/tests -p 'test_ci_automation_test_receipt.py' -v
+          xcrun xcresulttool get test-results tests --path build/test-results/HealthMd-iOS.xcresult > build/logs/ios-test-tree.json
+          python3 scripts/ci-automation-test-receipt.py build/logs/ios-test-tree.json build/logs/ios-automation-test-receipt.txt --head "$GITHUB_SHA" --platform iOS --diagnostics build/logs/ios-automation-test-diagnostics.txt
+
+      - name: Upload bounded iOS automation test receipt
+        if: ${{ !cancelled() && steps.ios-automation-receipt.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-automation-test-receipt
+          path: apps/apple/build/logs/ios-automation-test-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Check warnings (iOS)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/xcodebuild-ios-raw.log
@@ -258,6 +276,8 @@ jobs:
             apps/apple/build/logs/build-ios.log
             apps/apple/build/logs/xcodebuild-ios-raw.log
             apps/apple/build/logs/ios-test-summary.json
+            apps/apple/build/logs/ios-test-tree.json
+            apps/apple/build/logs/ios-automation-test-diagnostics.txt
             apps/apple/build/test-results/HealthMd-iOS.xcresult
           retention-days: 14
 
@@ -330,6 +350,50 @@ jobs:
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-macos.log
 
+      - name: Collect bounded named Mac automation test receipt
+        id: macos-automation-receipt
+        if: ${{ !cancelled() }}
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs
+          python3 -m unittest discover -s scripts/tests -p 'test_ci_automation_test_receipt.py' -v
+          xcrun xcresulttool get test-results tests --path build/coverage/HealthMd.xcresult > build/logs/macos-test-tree.json
+          python3 scripts/ci-automation-test-receipt.py build/logs/macos-test-tree.json build/logs/macos-automation-test-receipt.txt --head "$GITHUB_SHA" --platform macOS --diagnostics build/logs/macos-automation-test-diagnostics.txt
+
+      - name: Upload bounded Mac automation test receipt
+        if: ${{ !cancelled() && steps.macos-automation-receipt.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-automation-test-receipt
+          path: apps/apple/build/logs/macos-automation-test-receipt.txt
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Collect native-generated automation reference text
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          output=""
+          for root in "$HOME/Library/Containers" "${TMPDIR:-/tmp}" /tmp; do
+            [[ -d "$root" ]] || continue
+            output="$(find "$root" -type d -name healthmd-automation-reference-ci -print -quit 2>/dev/null || true)"
+            [[ -z "$output" ]] || break
+          done
+          if [[ -n "$output" ]]; then
+            mkdir -p build/generated-automation-reference
+            cp -R "$output/." build/generated-automation-reference/
+          fi
+
+      - name: Upload native-generated automation reference text
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: native-automation-reference-text
+          path: apps/apple/build/generated-automation-reference
+          if-no-files-found: warn
+          retention-days: 1
+
       - name: Upload macOS artifacts
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
@@ -338,6 +402,8 @@ jobs:
           path: |
             apps/apple/build/coverage/HealthMd.xcresult
             apps/apple/build/logs/build-macos.log
+            apps/apple/build/logs/macos-test-tree.json
+            apps/apple/build/logs/macos-automation-test-diagnostics.txt
           retention-days: 14
 
   test-ios-ui:

@@ -1,0 +1,249 @@
+#if os(macOS)
+import Combine
+import Foundation
+import Security
+
+/// Admission is synchronous; acquisition runs in a separate task so incoming
+/// acceptance/chunk/finalize responses remain routable on the MainActor.
+@MainActor
+final class MacContextAutomationCoordinator: ObservableObject {
+    let journal: AppleContextJournal
+    weak var nativeJobs: MacIPhoneExportRequestCoordinator?
+    private func ownsContextJob(_ id: UUID) -> Bool {
+        journal.isKnown(id) || nativeJobs?.contextRequest(jobID: id)?.responseMode == .contextStore
+    }
+    private var tasks: [UUID: Task<Void, Never>] = [:]
+    private var transferJobs: [UUID: UUID] = [:]
+    private let contextReadiness: () -> AppleContextReceipt.State?
+
+    func allowsMessage(_ message: SyncMessage, sync: SyncService, inbound: Bool = true) -> Bool {
+        let jobID: UUID?
+        var requiresContextAuthority = false
+        switch message {
+        case .connectedTransferStart(let start):
+            jobID = start.manifest.jobID
+            if ownsContextJob(start.manifest.jobID) {
+                guard start.manifest.kind == .connectedCorpusPartitionV1,
+                      allows(jobID: start.manifest.jobID, sync: sync) else { return false }
+                transferJobs[start.transferID] = start.manifest.jobID
+            }
+        case .connectedTransferChunk(let chunk): jobID = transferJobs[chunk.transferID]
+        case .connectedTransferComplete(let complete): jobID = transferJobs[complete.transferID]
+        case .connectedTransferAck(let acknowledgement): jobID = transferJobs[acknowledgement.transferID]
+        case .connectedTransferFinalAck(let acknowledgement): jobID = transferJobs[acknowledgement.transferID]
+        case .connectedTransferAbort(let abort): jobID = abort.jobID ?? transferJobs[abort.transferID]
+        case .iphoneExportRequest(let value):
+            jobID = value.jobID
+            requiresContextAuthority = value.responseMode == .contextStore
+        case .iphoneExportAccepted(let value): jobID = value.jobID
+        case .iphoneExportPreparationProgress(let value): jobID = value.jobID
+        case .iphoneExportRejected(let value): jobID = value.jobID
+        case .iphoneExportRawData(let value): jobID = value.jobID
+        case .macExportRequest(let value): jobID = value.jobID
+        case .macExportStreamStart(let value): jobID = value.jobID
+        case .macExportResult(let value): jobID = value.jobID
+        case .macExportFailed(let value): jobID = value.jobID
+        case .connectedCorpusTransferOpen(let value):
+            jobID = value.session.jobID
+            requiresContextAuthority = value.exportManifest?.mode == .encryptedContext
+            if let record = journal.record(value.session.jobID) {
+                guard let manifest = value.exportManifest, record.request.matches(manifest),
+                      value.session.peerBinding == ConnectedCorpusPeerBinding(
+                        sourceInstallationID: record.request.phoneInstallationID,
+                        destinationInstallationID: record.request.macInstallationID) else { return false }
+            }
+        case .connectedCorpusTransferFinalize(let value): jobID = value.jobID
+        case .connectedCorpusStatus(let value): jobID = value.jobID
+        case .connectedCorpusTransferCancel(let value): jobID = value.jobID
+        case .connectedCorpusTransferDisposition(let value): jobID = value.jobID
+        case .connectedCorpusTransferFinalAck(let value): jobID = value.jobID
+        case .connectedCorpusTransferCancelAck(let value): jobID = value.jobID
+        default: jobID = nil
+        }
+        guard let jobID else { return true }
+        if !ownsContextJob(jobID) {
+            return !requiresContextAuthority || journal.authorityState(jobID) == .absent
+        }
+        // Context jobs can NEVER be completed by ordinary export/raw messages.
+        switch message {
+        case .iphoneExportRawData, .macExportRequest, .macExportStreamStart,
+             .macExportResult, .macExportFailed: return !inbound && allows(jobID: jobID, sync: sync)
+        default: return allows(jobID: jobID, sync: sync)
+        }
+    }
+
+    /// Production app-root start delegation: denied owned file/raw kinds never
+    /// reach the generic receiver or subsequently the ordinary file executor.
+    func receiveTransferStart(_ start: ConnectedTransferStart, sync: SyncService,
+                              receiver: ConnectedTransferReceiver) -> ConnectedTransferReceiver.StartResult? {
+        guard allowsMessage(.connectedTransferStart(start), sync: sync) else { return nil }
+        return receiver.receive(start)
+    }
+
+    /// Verified application completes the receiver's digest-validated state even
+    /// if authority changes across the await. Its INTERNAL replay cache is not an
+    /// outbound ACK: sending still requires the current peer/proven authority.
+    func applyAndFinishVerifiedPartition(_ ready: ConnectedTransferReceiver.ReadyTransfer,
+                                        sync: SyncService, receiver: ConnectedTransferReceiver,
+                                        apply: () async throws -> Void) async throws -> Bool {
+        guard ready.start.manifest.kind == .connectedCorpusPartitionV1,
+              allowsMessage(.connectedTransferStart(ready.start), sync: sync) else { return false }
+        try await apply()
+        guard let acknowledgement = receiver.finish(transferID: ready.start.transferID, accepted: true) else { return false }
+        return sendVerifiedTransportAcknowledgement(acknowledgement, sync: sync)
+    }
+
+    @discardableResult
+    func sendVerifiedTransportAcknowledgement(_ acknowledgement: ConnectedTransferFinalAck, sync: SyncService) -> Bool {
+        guard allowsMessage(.connectedTransferFinalAck(acknowledgement), sync: sync, inbound: false) else { return false }
+        sync.send(.connectedTransferFinalAck(acknowledgement))
+        return true
+    }
+
+    /// Last app-root exclusion before any ordinary file execution, including
+    /// restored native context jobs whose private automation journal is unreadable.
+    func executeOrdinaryFileJob(_ job: MacExportJob, sync: SyncService,
+                                executor: MacExportJobExecutor, vault: VaultManager,
+                                progress: MacExportJobExecutor.ProgressHandler? = nil) async -> Result<MacExportResultPayload, MacExportFailure>? {
+        guard allowsMessage(.macExportRequest(job), sync: sync) else { return nil }
+        return await executor.execute(job, vaultManager: vault, progress: progress)
+    }
+
+    init(journal: AppleContextJournal? = nil, contextReadiness: (() -> AppleContextReceipt.State?)? = nil) {
+        self.journal = journal ?? AppleContextJournal(root: AppleContextJournal.productionRoot("MacContextRequests"))
+        self.contextReadiness = contextReadiness ?? {
+            do {
+                _ = try KeychainHealthContextEncryptionKeyProvider().existingOrCreateKeyData()
+                return nil
+            } catch HealthContextEncryptionKeyProviderError.keychainReadFailed(let status) {
+                return status == errSecInteractionNotAllowed ? .locked : .unavailable
+            } catch HealthContextEncryptionKeyProviderError.keychainWriteFailed(let status) {
+                return status == errSecInteractionNotAllowed ? .locked : .unavailable
+            } catch { return .unavailable }
+        }
+    }
+
+    func allows(jobID: UUID, sync: SyncService, requiresContextAuthority: Bool = true) -> Bool {
+        if !journal.isKnown(jobID) {
+            if nativeJobs?.contextRequest(jobID: jobID)?.responseMode == .contextStore {
+                return journal.authorityState(jobID) == .absent
+            }
+            return !requiresContextAuthority || journal.authorityState(jobID) == .absent
+        }
+        guard let record = journal.record(jobID), !journal.hasUncertainAuthority(jobID) else { return false }
+        return sync.canUsePhoneContextAutomation
+            && sync.authenticatedContextPeerID == record.request.phoneInstallationID
+            && sync.installationID == record.request.macInstallationID
+    }
+
+    func handle(_ message: AppleContextMessage, sync: SyncService,
+                jobs: MacIPhoneExportRequestCoordinator, destination: MacDestinationStatus) {
+        nativeJobs = jobs
+        let request: AppleContextRequest
+        switch message {
+        case .refresh(let value), .status(let value): request = value
+        case .receipt: return // a phone can never assert context completion
+        }
+        guard sync.canUsePhoneContextAutomation,
+              sync.authenticatedContextPeerID == request.phoneInstallationID,
+              sync.installationID == request.macInstallationID, request.isValid else { return }
+        if let existing = jobs.contextRequest(jobID: request.id), !request.matches(existing) { return }
+        let repaired: Bool
+        do {
+            if case .status = message {
+                repaired = try journal.retryDurability(request.id, expectedRequest: request)
+            } else { repaired = false }
+            try journal.admit(request)
+        } catch { return } // no ack/acquisition without proven durable mapping
+        let response = jobs.jobResponse(jobID: request.id)
+        if response.failureReason != "job_not_found" {
+            publish(request, response: response, sync: sync)
+            if case .status = message,
+               (repaired && response.durableState == "sent") || jobs.canExplicitlyResumeContext(jobID: request.id) {
+                // Marker repair OR a cold native restart can require dispatch.
+                // Release ONLY this automation waiter, then resume the
+                // same persisted job; never create a replacement or block ingress.
+                let previous = tasks[request.id]
+                jobs.cancelRequestForDisconnectedClient(jobID: request.id)
+                Task { @MainActor [weak self] in
+                    await previous?.value
+                    guard let self, self.tasks[request.id] == nil,
+                          self.allows(jobID: request.id, sync: sync) else { return }
+                    self.tasks[request.id] = Task { @MainActor in
+                        defer { self.tasks.removeValue(forKey: request.id) }
+                        let resumed = await jobs.resumeExport(jobID: request.id, waitTimeoutSeconds: 30,
+                            syncService: sync, destinationStatus: destination)
+                        self.publish(request, response: resumed, sync: sync)
+                    }
+                }
+            }
+            return
+        }
+        if journal.record(request.id)?.jobWasAdmitted == true {
+            // Expired/missing native jobs are not silently recreated as new work.
+            publishState(request, state: .unavailable, sync: sync)
+            return
+        }
+        if let state = contextReadiness() {
+            publishState(request, state: state, sync: sync)
+            return
+        }
+        guard tasks[request.id] == nil else { return }
+        tasks[request.id] = Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.tasks.removeValue(forKey: request.id) }
+            guard self.allows(jobID: request.id, sync: sync) else { return }
+            let response = await jobs.requestExport(.init(
+                jobID: request.id, startDate: request.startDate, endDate: request.endDate,
+                requestedDateIdentifiers: request.ownerDates, requestedBy: .cli,
+                settingsPolicy: .requestedDatesOnly, responseMode: .contextStore,
+                rawProfile: nil, canonicalSelection: request.selection, waitTimeoutSeconds: 30
+            ), syncService: sync, destinationStatus: destination, onDurableAdmission: {
+                // The context job has ALSO been persisted; only now acknowledge.
+                self.publish(request, response: jobs.jobResponse(jobID: request.id), sync: sync)
+            })
+            self.publish(request, response: response, sync: sync)
+        }
+    }
+
+    private func publish(_ request: AppleContextRequest,
+                         response: MacIPhoneExportRequestCoordinator.ExportResponse, sync: SyncService) {
+        guard allows(jobID: request.id, sync: sync) else { return }
+        let state: AppleContextReceipt.State
+        switch response.status {
+        case .success: state = .completed
+        case .partialSuccess: state = .partial
+        case .failure, .cancelled:
+            state = .failed
+        case .unavailable:
+            // Busy/unresolved storage are request-level availability, never job
+            // admission. A native write failure still emits NO pending ack/send.
+            if response.failureReason == "export_in_progress" || response.failureReason == "job_storage_unavailable" {
+                publishState(request, state: .unavailable, sync: sync)
+                return
+            }
+            guard response.durable == true else { return }
+            state = .unavailable
+        case .accepted, .preparing, .timedOut: state = .pending
+        }
+        guard response.durable == true else { return }
+        do { try journal.markJobAdmitted(request.id) } catch { return }
+        publishState(request, state: state, sync: sync)
+    }
+
+    private func publishState(_ request: AppleContextRequest, state: AppleContextReceipt.State, sync: SyncService) {
+        guard allows(jobID: request.id, sync: sync) else { return }
+        let previous = journal.record(request.id)?.receipt
+        if let previous, previous.state.isTerminal {
+            sync.send(.appleContext(.receipt(previous)))
+            return
+        }
+        let receipt = AppleContextReceipt(request: request, revision: (previous?.revision ?? 0) + 1, state: state)
+        do {
+            guard let peer = sync.authenticatedContextPeerID,
+                  try journal.accept(receipt, authenticatedPeer: peer, localID: sync.installationID, onPhone: false) else { return }
+            sync.send(.appleContext(.receipt(receipt)))
+        } catch { /* status recovery retries against the durable context job */ }
+    }
+}
+#endif

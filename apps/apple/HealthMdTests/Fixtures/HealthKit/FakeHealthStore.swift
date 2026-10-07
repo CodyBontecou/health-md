@@ -26,6 +26,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     var statisticsMaxes: [String: Double] = [:]
     var statisticsMostRecent: [String: Double] = [:]
     var querySumResult: ((HKQuantityTypeIdentifier, NSPredicate?) -> Double?)?
+    var querySumAsyncResult: ((HKQuantityTypeIdentifier, NSPredicate?) async throws -> Double?)?
 
     // Pre-configured category sample results
     var categorySampleResults: [String: [CategorySampleValue]] = [:]
@@ -207,6 +208,7 @@ final class FakeHealthStore: HealthStoreProviding, @unchecked Sendable {
     func querySum(identifier: HKQuantityTypeIdentifier, predicate: NSPredicate?) async throws -> Double? {
         queriedSumIdentifiers.append(identifier.rawValue)
         if let error = errorsForSum[identifier.rawValue] { throw error }
+        if let querySumAsyncResult { return try await querySumAsyncResult(identifier, predicate) }
         if let querySumResult { return querySumResult(identifier, predicate) }
         return statisticsSums[identifier.rawValue]
     }

@@ -331,6 +331,9 @@ struct ExportProfileDetailView: View {
     @EnvironmentObject private var schedulingManager: SchedulingManager
     @EnvironmentObject private var configurationProtection: ConfigurationProtectionManager
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var syncService: SyncService
+    @State private var contextBindingMessage = ""
+    @State private var showContextBindingMessage = false
 
     let profileID: UUID
 
@@ -339,6 +342,8 @@ struct ExportProfileDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
     @State private var showSettingsEditor = false
+    // Keep the immutable ID's copy receipt readable until this detail closes.
+    // A timer can erase it before a slow AX snapshot or VoiceOver read finishes.
     @State private var idCopied = false
     /// Pending overlap warning for a just-duplicated profile; undo deletes
     /// the copy (the source profile stays untouched and active).
@@ -385,6 +390,21 @@ struct ExportProfileDetailView: View {
                 activeBanner(for: profile)
                 overlapCard(for: profile)
                 destinationCard(for: profile)
+                if profile.target == .connectedMac {
+                    Button("Bind context automation to this authenticated Mac") {
+                        configurationProtection.performConfigurationChange {
+                            do {
+                                AppleContextPhoneClient.shared.install(syncService)
+                                try AppleContextPhoneClient.shared.bind(profileID: profile.id)
+                                contextBindingMessage = "Context automation is bound to this Mac. Ordinary export destinations are unchanged."
+                            } catch {
+                                contextBindingMessage = "Binding unavailable. Connect both updated apps using authenticated Manual IP pairing first."
+                            }
+                            showContextBindingMessage = true
+                        }
+                    }
+                    .accessibilityIdentifier("export.profiles.bind-context-mac")
+                }
                 outputCard(for: profile)
                 scheduleCard(for: profile)
                 profileIDCard(for: profile)
@@ -406,6 +426,11 @@ struct ExportProfileDetailView: View {
                 .accessibilityLabel(String(localized: "Edit profile settings", comment: "Toolbar action opening the profile settings editor"))
                 .accessibilityIdentifier("export.profiles.edit.button")
             }
+        }
+        .alert("Mac Context Automation", isPresented: $showContextBindingMessage) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(contextBindingMessage)
         }
         .sheet(isPresented: $showSettingsEditor) {
             ExportProfileEditorSheet(coordinator: coordinator, editing: profile)
@@ -726,9 +751,6 @@ struct ExportProfileDetailView: View {
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
                         idCopied = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                            idCopied = false
-                        }
                     } label: {
                         Label(
                             idCopied
@@ -828,7 +850,7 @@ struct ExportProfileDetailView: View {
         ) {
             Button(
                 String(
-                    localized: "Delete “%@”",
+                    localized: "Delete “\(profile.name)”",
                     comment: "Destructive action deleting the named export profile"
                 ),
                 role: .destructive

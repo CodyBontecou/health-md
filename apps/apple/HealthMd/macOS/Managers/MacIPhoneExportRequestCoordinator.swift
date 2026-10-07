@@ -282,8 +282,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     /// the currently connected iPhone matches this durable job's binding.
     var onRequestTermination: ((_ jobID: UUID, _ notifyPeer: Bool) -> Void)?
 
+    /// Additional admission for phone-initiated jobs only; ordinary exports
+    /// retain their existing transport behavior.
+    var contextAutomationPeerAdmission: ((UUID, SyncService, IPhoneExportRequest.ResponseMode) -> Bool)?
+    var contextAutomationOwnsJob: ((UUID) -> Bool)?
+
+    func contextRequest(jobID: UUID) -> IPhoneExportRequest? {
+        guard resolveStorageRoot() else { return nil }
+        return records[jobID]?.request
+    }
+    func canExplicitlyResumeContext(jobID: UUID) -> Bool {
+        guard let record = records[jobID], record.request.responseMode == .contextStore,
+              !record.state.isTerminal, waiters[jobID] == nil else { return false }
+        return record.state == .sent || record.paused
+    }
+
     private let fileManager: FileManager
-    private let rootURL: URL
+    private let storageRoot: MacConnectedExportJobStorageRoot
+    private var rootURL: URL? { storageRoot.url }
     private let now: () -> Date
     private var records: [UUID: JobRecord] = [:]
     private var waiters: [UUID: PendingWaiter] = [:]
@@ -293,38 +309,56 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     init(
         rootURL: URL? = nil,
+        storageRoot: MacConnectedExportJobStorageRoot? = nil,
         fileManager: FileManager = .default,
         now: @escaping () -> Date = Date.init
     ) {
         self.fileManager = fileManager
         self.now = now
         if let rootURL {
-            self.rootURL = rootURL
+            self.storageRoot = MacConnectedExportJobStorageRoot(resolver: { rootURL })
+        } else if let storageRoot {
+            self.storageRoot = storageRoot
         } else if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil {
-            // XCTest processes create many coordinators in one host; production
-            // always uses the stable Application Support location below.
-            self.rootURL = fileManager.temporaryDirectory
+            // Explicit isolated test storage; never a production fallback.
+            let testRoot = fileManager.temporaryDirectory
                 .appendingPathComponent("HealthMdConnectedExportTests-\(UUID().uuidString)", isDirectory: true)
+            self.storageRoot = MacConnectedExportJobStorageRoot(resolver: { testRoot })
         } else {
-            let support = (try? fileManager.url(
-                for: .applicationSupportDirectory,
-                in: .userDomainMask,
-                appropriateFor: nil,
-                create: true
-            )) ?? fileManager.temporaryDirectory
-            self.rootURL = support
-                .appendingPathComponent("Health.md", isDirectory: true)
-                .appendingPathComponent("ConnectedExportJobs", isDirectory: true)
+            self.storageRoot = MacConnectedExportJobStorageRoot(fileManager: fileManager)
         }
+        _ = try? self.storageRoot.resolve()
         restoreJobs()
+    }
+
+    private func resolveStorageRoot() -> Bool {
+        if rootURL != nil { return true }
+        do {
+            _ = try storageRoot.resolve()
+            restoreJobs()
+            return true
+        } catch {
+            // No reads, writes, admission or durable response from temporary
+            // storage. The same coordinator can retry resolution after recovery.
+            return false
+        }
     }
 
     func requestExport(
         _ exportRequest: ExportRequest,
         syncService: SyncService,
-        destinationStatus: MacDestinationStatus
+        destinationStatus: MacDestinationStatus,
+        onDurableAdmission: (() -> Void)? = nil
     ) async -> ExportResponse {
+        guard resolveStorageRoot() else {
+            return .unavailable("The Mac could not access durable export job storage.",
+                                reason: "job_storage_unavailable", jobID: exportRequest.jobID)
+        }
         cleanupExpiredJobs()
+        if let jobID = exportRequest.jobID,
+           contextAutomationPeerAdmission?(jobID, syncService, exportRequest.responseMode) == false {
+            return .unavailable("Authenticated context peer is unavailable.", reason: "context_peer_unavailable")
+        }
         guard exportRequest.rawProfile != .healthDataProjection
                 || exportRequest.canonicalSelection != nil,
               exportRequest.rawProfile != .canonicalSourceRecordsV1
@@ -449,11 +483,16 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         records[request.jobID] = record
         activeJobID = request.jobID
         latestProgress = nil
+        onDurableAdmission?()
         syncService.send(.iphoneExportRequest(request))
         return await waitForJob(jobID: request.jobID, timeoutSeconds: exportRequest.waitTimeoutSeconds)
     }
 
     func jobResponse(jobID: UUID) -> ExportResponse {
+        guard resolveStorageRoot() else {
+            return .unavailable("The Mac could not access durable export job storage.",
+                                reason: "job_storage_unavailable", jobID: jobID)
+        }
         cleanupExpiredJobs()
         guard let record = records[jobID] else {
             return .unavailable("No durable export job exists for this identifier.", reason: "job_not_found", jobID: jobID)
@@ -519,7 +558,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         record.state = .sent
         record.paused = false
         record.updatedAt = now()
-        update(record)
+        let persisted = update(record)
+        if contextAutomationOwnsJob?(jobID) == true && !persisted {
+            return .unavailable("Could not durably resume context job.", reason: "job_persistence_failed", jobID: jobID)
+        }
         activeJobID = jobID
         // This is the exact Codable request created by the original POST,
         // including its original createdAt and immutable date identifiers.
@@ -599,7 +641,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             record.paused = false
             record.state = .sent
             record.updatedAt = now()
-            update(record)
+            let persisted = update(record)
+            if contextAutomationOwnsJob?(jobID) == true && !persisted { continue }
             activeJobID = jobID
             syncService.send(.iphoneExportRequest(record.request))
             break // The control plane intentionally serializes connected exports.
@@ -939,7 +982,24 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     @discardableResult
     func complete(with payload: MacExportResultPayload) -> Bool {
-        guard let record = records[payload.jobID], !record.state.isTerminal else { return false }
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode != .contextStore else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    @discardableResult
+    func completeEncryptedContext(with evidence: MacEncryptedContextCommitEvidence) -> Bool {
+        let payload = evidence.result
+        guard let record = records[payload.jobID], !record.state.isTerminal,
+              record.request.responseMode == .contextStore,
+              evidence.manifest.mode == .encryptedContext,
+              evidence.manifest.canonicalSelection == record.request.canonicalSelection,
+              evidence.manifest.requestedDateIdentifiers == expectedDateIdentifiers(for: record),
+              payload.totalFilesWritten == 0 else { return false }
+        return completeResult(payload, record: record)
+    }
+
+    private func completeResult(_ payload: MacExportResultPayload, record: JobRecord) -> Bool {
         let status: ExportResponse.Status
         switch payload.status {
         case .success: status = .success
@@ -1242,6 +1302,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func matchesBoundPeer(_ record: JobRecord, syncService: SyncService) -> Bool {
+        guard contextAutomationPeerAdmission?(record.request.jobID, syncService, record.request.responseMode) != false else { return false }
         guard record.sourceInstallationID != nil || record.destinationInstallationID != nil else {
             return true
         }
@@ -1480,8 +1541,9 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     private func responseWithSpool(_ response: ExportResponse, artifact: JobRecord.SpoolArtifact, jobID: UUID) -> ExportResponse {
         var response = response
-        let url = jobDirectory(jobID: jobID).appendingPathComponent(artifact.relativePath)
-        guard validateSpoolArtifact(artifact, jobID: jobID) else { return response }
+        guard let directory = jobDirectory(jobID: jobID),
+              validateSpoolArtifact(artifact, jobID: jobID) else { return response }
+        let url = directory.appendingPathComponent(artifact.relativePath)
         response.spooledControlResponse = ConnectedTransferPreparedFile(
             url: url, totalBytes: artifact.byteCount, sha256: artifact.sha256
         )
@@ -1500,7 +1562,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     ) throws -> JobRecord.SpoolArtifact {
         defer { prepared.remove() }
         try ensureCoordinatorRootIsDurable()
-        let directory = jobDirectory(jobID: jobID)
+        guard let directory = jobDirectory(jobID: jobID) else { throw CocoaError(.fileWriteUnknown) }
         try fileManager.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
@@ -1711,7 +1773,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
               let expectedInode = artifact.directoryInode else {
             return false
         }
-        let directory = jobDirectory(jobID: jobID)
+        guard let directory = jobDirectory(jobID: jobID) else { return false }
         let directoryDescriptor = Darwin.open(
             directory.path,
             O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
@@ -1807,9 +1869,10 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
 
     private func removeSpoolArtifact(_ record: JobRecord) {
         guard let artifact = record.spoolArtifact,
-              artifact.relativePath == "control-response.json" else { return }
+              artifact.relativePath == "control-response.json",
+              let directory = jobDirectory(jobID: record.request.jobID) else { return }
         let descriptor = Darwin.open(
-            jobDirectory(jobID: record.request.jobID).path,
+            directory.path,
             O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
         )
         guard descriptor >= 0 else { return }
@@ -1823,6 +1886,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func ensureCoordinatorRootIsDurable() throws {
+        guard let rootURL else { throw CocoaError(.fileWriteUnknown) }
         try fileManager.createDirectory(
             at: rootURL,
             withIntermediateDirectories: true,
@@ -1841,6 +1905,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func synchronizeCoordinatorRoot() throws {
+        guard let rootURL else { throw CocoaError(.fileWriteUnknown) }
         let descriptor = Darwin.open(
             rootURL.path,
             O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC
@@ -1872,7 +1937,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
         }
         #endif
         try ensureCoordinatorRootIsDurable()
-        let directory = jobDirectory(jobID: record.request.jobID)
+        guard let directory = jobDirectory(jobID: record.request.jobID) else { throw CocoaError(.fileWriteUnknown) }
         try fileManager.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
@@ -1963,6 +2028,7 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
     }
 
     private func restoreJobs() {
+        guard let rootURL else { return }
         cleanupExpiredJobsFromDisk()
         guard let directories = try? fileManager.contentsOfDirectory(
             at: rootURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
@@ -1990,14 +2056,17 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
                 "The durable export job expired.", reason: "job_expired", jobID: record.request.jobID
             ))
             records.removeValue(forKey: record.request.jobID)
-            try? fileManager.removeItem(at: jobDirectory(jobID: record.request.jobID))
+            if let directory = jobDirectory(jobID: record.request.jobID) {
+                try? fileManager.removeItem(at: directory)
+            }
         }
         cleanupExpiredJobsFromDisk()
         refreshActiveJobID()
     }
 
     private func cleanupExpiredJobsFromDisk() {
-        guard let directories = try? fileManager.contentsOfDirectory(
+        guard let rootURL,
+              let directories = try? fileManager.contentsOfDirectory(
             at: rootURL, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles]
         ) else { return }
         for directory in directories {
@@ -2039,8 +2108,8 @@ final class MacIPhoneExportRequestCoordinator: ObservableObject {
             .first?.request.jobID
     }
 
-    private func jobDirectory(jobID: UUID) -> URL {
-        rootURL.appendingPathComponent(jobID.uuidString, isDirectory: true)
+    private func jobDirectory(jobID: UUID) -> URL? {
+        rootURL?.appendingPathComponent(jobID.uuidString, isDirectory: true)
     }
 
     private static func composeControlResponse(
