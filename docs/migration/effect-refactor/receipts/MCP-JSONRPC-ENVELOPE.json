@@ -1,0 +1,1695 @@
+{
+  "task_id": "MCP-JSONRPC-ENVELOPE",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "ff72e1af486d1ace8106281abbe34b3dd3e21e60",
+  "patch_digest": "934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
+  "patch_digest_method": "SHA256(concatenated sorted three nonreceipt UTF8 paths + NUL + raw-file SHA256 lowercase hexadecimal ASCII + LF); receipt excluded",
+  "changed_paths": [
+    "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+    "apps/cli/tests/surfaces/jsonrpc-envelope.test.ts",
+    "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+    "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "private synthetic jsonrpc-envelope"
+  },
+  "inputs": {
+    "source_reconciliation": [
+      {
+        "path": "AGENTS.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 6129,
+        "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+        "current_bytes": 6129,
+        "current_sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "GLOSSARY.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3868,
+        "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+        "current_bytes": 3868,
+        "current_sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-research.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 13361,
+        "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "current_bytes": 13361,
+        "current_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 284562,
+        "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "current_bytes": 284562,
+        "current_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/core-cli.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 5578,
+        "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+        "current_bytes": 5578,
+        "current_sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/templates.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 10054,
+        "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+        "current_bytes": 10054,
+        "current_sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/cli.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 347600,
+        "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+        "current_bytes": 347600,
+        "current_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/core.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 95633,
+        "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+        "current_bytes": 95633,
+        "current_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 12304,
+        "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+        "current_bytes": 12304,
+        "current_sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 26431,
+        "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+        "current_bytes": 26431,
+        "current_sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 145883,
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+        "current_bytes": 145883,
+        "current_sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 33855,
+        "sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d",
+        "current_bytes": 33855,
+        "current_sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 27886,
+        "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+        "current_bytes": 27886,
+        "current_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 34945,
+        "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+        "current_bytes": 34945,
+        "current_sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 124059,
+        "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+        "current_bytes": 124059,
+        "current_sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 139864,
+        "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "current_bytes": 139864,
+        "current_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/AGENTS.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 860,
+        "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "current_bytes": 860,
+        "current_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/docs/typescript-candidate.md",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 7580,
+        "sha256": "1b7898390cf04c276a285b60fee5c09215640ca95618b94c9abb73f756c3490b",
+        "current_bytes": 9517,
+        "current_sha256": "cfd673b889af17653694ca48bd5947f86e686b0a20260c10eab63716344b68c9",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": false
+      },
+      {
+        "path": "apps/cli/package.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 880,
+        "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+        "current_bytes": 880,
+        "current_sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/package-lock.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 28291,
+        "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+        "current_bytes": 28291,
+        "current_sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/scripts/build-candidate.mjs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 1574,
+        "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+        "current_bytes": 1574,
+        "current_sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/scripts/check-candidate.mjs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 35746,
+        "sha256": "aca2e32e0047fc397c9bde572f3464b17a4482589d6a1a986a6b0bda3efd8de3",
+        "current_bytes": 48837,
+        "current_sha256": "04a26fccd1b2c32976d18995ca161507ceeafa24c34dbae93e15927726332794",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": false
+      },
+      {
+        "path": "apps/cli/tsconfig.build.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 144,
+        "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+        "current_bytes": 144,
+        "current_sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/tsconfig.test.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 123,
+        "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+        "current_bytes": 123,
+        "current_sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/main.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 110543,
+        "sha256": "7f6be243c49085ea188adf739b829d968d8330b196a7e2317a043d4a8e2ddf32",
+        "current_bytes": 110543,
+        "current_sha256": "7f6be243c49085ea188adf739b829d968d8330b196a7e2317a043d4a8e2ddf32",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/guidance.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 42824,
+        "sha256": "f71d47555df981fbbc27f70bec6746a40846b6287f3f1200f2d9a6aac95456e0",
+        "current_bytes": 42824,
+        "current_sha256": "f71d47555df981fbbc27f70bec6746a40846b6287f3f1200f2d9a6aac95456e0",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 27301,
+        "sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+        "current_bytes": 27301,
+        "current_sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 17008,
+        "sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+        "current_bytes": 17008,
+        "current_sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/output.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 29781,
+        "sha256": "7ffedba6a33ee4111a993c5b6091da1b309d6e3ccc02d7a3ed64374b42e62afb",
+        "current_bytes": 29781,
+        "current_sha256": "7ffedba6a33ee4111a993c5b6091da1b309d6e3ccc02d7a3ed64374b42e62afb",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 17363,
+        "sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba",
+        "current_bytes": 17363,
+        "current_sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 2531,
+        "sha256": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f",
+        "current_bytes": 2531,
+        "current_sha256": "2d56e254c0af85537eca102adebaf1140fc9c77ceea0b9f1a881800f73b1d28f",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 52174,
+        "sha256": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+        "current_bytes": 52174,
+        "current_sha256": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 58209,
+        "sha256": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+        "current_bytes": 58209,
+        "current_sha256": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-operations/src/model.rs",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 1129,
+        "sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+        "current_bytes": 1129,
+        "current_sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/src/cli/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 7155,
+        "sha256": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+        "current_bytes": 7155,
+        "current_sha256": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/src/mcp/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 6487,
+        "sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+        "current_bytes": 6487,
+        "current_sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/normalize.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 2808,
+        "sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "current_bytes": 2808,
+        "current_sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/query.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 8929,
+        "sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "current_bytes": 8929,
+        "current_sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 116261,
+        "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+        "current_bytes": 116261,
+        "current_sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/tests/cli-query-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 4412,
+        "sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+        "current_bytes": 4412,
+        "current_sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/tests/mcp-query-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3586,
+        "sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+        "current_bytes": 3586,
+        "current_sha256": "4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      },
+      {
+        "path": "apps/cli/tests/candidate-api-vectors.ts",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "bytes": 3176,
+        "sha256": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6",
+        "current_bytes": 3176,
+        "current_sha256": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6",
+        "current_matches_assigned_git": true,
+        "historical_unchanged": true
+      }
+    ],
+    "packet": {
+      "path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+      "sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+    },
+    "vector": {
+      "path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+      "bytes": 216599,
+      "sha256": "07fd4081768c8d31bdda682a0c677a4682ae142c338c69a19bb245aaf4eeaba0",
+      "case_count": 143,
+      "minimum_packet_case_count": 7
+    },
+    "preclaim_card_review": {
+      "status": "accepted",
+      "reviewer": "/root",
+      "source_revision": "ff72e1af486d1ace8106281abbe34b3dd3e21e60",
+      "canonical_card_sha256": "7540c84201e68e4e878148a2c5cb15a0c6e8f87f82ae4949089dbd948a77c303",
+      "reviewed_snapshot_path": "/private/tmp/healthmd-mcp-jsonrpc-envelope-preclaim-card.json",
+      "scope": "Exact4private paths with Stage1onlyvector/receipt. Full source/lossless parser/serializer/common fake interfaces and independent literals beforeimplementation; source byte/numeric/unknown/duplicate semantics preserved, no public parser/source/state/client admission. Reacquire shared builder resources only before explicit later execution."
+    },
+    "resource_stage_history": [
+      {
+        "original_resources": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs",
+          "private-jsonrpc-envelope-interface"
+        ],
+        "released_for_stage1": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ],
+        "reason": "Stage1 source/fixture/receipt only. Builder/input leases must be explicitly reacquired before any current common generated output reads, typecheck/build/install/test. Native candidate common bundle and CLI component mutation cannot overlap."
+      }
+    ],
+    "source_numeric_policy": {
+      "serde_json": "1.0.151",
+      "Cargo_lock_checksum": "c841b55ecdae098c80dcae9cf767f6f8a0c2cdb3416bbef72181df4d0fe73f14",
+      "negativezero": "F64(-0.0) invalidi64;error echoes-0.0",
+      "float1_or_exp": "F64 noti64",
+      "features": "declaredraw_value;defaultBTreeMap;fullresolvedfeature qualification deferred"
+    },
+    "current_cohort_source_only": {
+      "path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+      "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+      "input_count": 43,
+      "output_count": 26,
+      "no_generated_outputs_read": true
+    },
+    "numeric_reuse_source": {
+      "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+      "bytes": 5809,
+      "sha256": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52"
+    },
+    "source_dependency_pins": [
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/de.rs",
+        "bytes": 86840,
+        "sha256": "4998d7e252eb513be85b298e287048b4fb283882e9ba7df905f572f07200f3f3"
+      },
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/number.rs",
+        "bytes": 25285,
+        "sha256": "70b83c36286f6c58123f544f27db2b54a1135f928fe33b08b521b2997773f862"
+      },
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/map.rs",
+        "bytes": 35057,
+        "sha256": "b5a2fd1ee865e6cfd83ef2da0a2e1057f892465ac7ede8a78a11354a60526f33"
+      },
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/value/de.rs",
+        "bytes": 41251,
+        "sha256": "ceda1bf415aafde89caa83bf275811b70d393717d4e1038e0c61822d2da02993"
+      },
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde_json-1.0.151/src/ser.rs",
+        "bytes": 63877,
+        "sha256": "f2b8cc0b97e30c49dbc58698fa22c14a7d56ea616cdb57b067835a59af49a75f"
+      },
+      {
+        "path": "/Users/codybontecou/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zmij-1.0.21/src/lib.rs",
+        "bytes": 47412,
+        "sha256": "d843c3c1c8a41a8cdaead2ee3a223a204bf2ed047c3f2892719248a0f10d9bef"
+      }
+    ],
+    "additional_assigned_source_pins": [
+      {
+        "path": "packages/healthmd-core-ts/package.json",
+        "bytes": 1410,
+        "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/index.ts",
+        "bytes": 319,
+        "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+        "bytes": 5809,
+        "sha256": "519d954f432d5ce4ecfc55bd3c0fa03232e84837e55900c1982a839ae0a48a52",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/apps.rs",
+        "bytes": 3022,
+        "sha256": "77a7fb5f16c78b0f1fdac4bdcc0569180e5926fe966499874152c01349d45336",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/catalog.rs",
+        "bytes": 1729,
+        "sha256": "74fcf993add2dfb5cfab608ac9c25b46b2e92e8d68f3d04a5f604738039194b9",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/transport/streamable_http.rs",
+        "bytes": 44066,
+        "sha256": "645624818ab535982df3af4a85908caeab0ee95a46ee5cb0b4964afeee25dccf",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "apps/cli/Cargo.lock",
+        "bytes": 88843,
+        "sha256": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "apps/cli/Cargo.toml",
+        "bytes": 2646,
+        "sha256": "55c7b45a78c3c87918d93fce970196f50468e616e85583f8eeb283f14bc3d90d",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/OP-CATALOG.json",
+        "bytes": 17512,
+        "sha256": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "bytes": 171341,
+        "sha256": "2aeb43dc54043fef42e8f2ace7ddafb46c915d54b659034e2b1fc74143f207c0",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "bytes": 47904,
+        "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+        "matches_assigned_Git": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json",
+        "bytes": 178234,
+        "sha256": "136e18c58fb939d8157784f3bfff6de5f2da869bfa19589baeac2ac8ac8adce2",
+        "matches_assigned_Git": true
+      }
+    ],
+    "numeric_reuse_admission": {
+      "source_implementation": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+      "current_package_export": false,
+      "root_index_export": false,
+      "proposed_action": "Do not duplicate renderer or add exports. Full codec adapter owner must separately admit existing pure scalar implementation through an allowed existing/explicitly reviewed interface before real serializer implementation. This child injects trusted serializer; fakes supply independently frozen primitive canonical bytes.",
+      "unqualified": "No guessed @healthmd/core-ts/candidate/exact-json-numbers import."
+    },
+    "source_symbol_locators": [
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 11,
+        "symbol": "MAXIMUM_REQUEST_ID_BYTES",
+        "line_sha256": "2e04ce67e07aa7bfa0b29610d607299ef83ec2ba5d3f91c3b42d05a3b4c393c4",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 12,
+        "symbol": "MAXIMUM_USED_REQUEST_IDS",
+        "line_sha256": "d5d479a72ecc539361c8569d54c4a0e9e7783e673db58a9731a2a468cedb626b",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 13,
+        "symbol": "const PROTOCOLS",
+        "line_sha256": "cf8c425ccf5a1327cb877dd6101bb1289e030386f46a749ae8ca6461fb906549",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 60,
+        "symbol": "async fn handle_with_caller(",
+        "line_sha256": "0fcd942843f0b908a8cbc9050629d094b35409794a8cc13b0a8a6ac9683f35ab",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 199,
+        "symbol": "fn initialize(",
+        "line_sha256": "624e8ba6b3943d1e218182bc849d9ff68cc3436b185044937a346eb0e1e680b8",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 263,
+        "symbol": "fn request_id_key(",
+        "line_sha256": "8c72dc4fbe0113b2dbe796e0f6114568ba32f7f055542fbc6adc3116ce7c77e4",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 280,
+        "symbol": "fn response_success(",
+        "line_sha256": "ad9ae4ffc606c810d01467000bdb983edc0a8938765154a9c4d2e472275fb0bc",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 286,
+        "symbol": "fn response_error(",
+        "line_sha256": "09b319a449ec38a7bad045679dedb7c78ef90ca9a63923c3fa05dcc2fea9801c",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+        "line": 66,
+        "symbol": "fn tool_result(",
+        "line_sha256": "06cdbfd62b664e1cd1fdd429aa6e76a8f444f64080389284640bf72690558964",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+        "line": 15,
+        "symbol": "fn query_tool_result(",
+        "line_sha256": "2fce152496c2b5688355d0caa5b3211bbd00348d96db71e411f327740412ce4f",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+        "line": 39,
+        "symbol": "fn pairing_start_tool_result(",
+        "line_sha256": "c8d66a0253cbd9d1cc35171514ce1a926a6f0491ef46b8e43ab0dbf340e91bae",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "matches_current_and_historical_Git": true
+      }
+    ],
+    "source_test_locators": [
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 356,
+        "case_id": "initializes_and_returns_the_shared_catalog",
+        "line_sha256": "16fb24984ae3adc24d231929fd856fcde4f2beb5ce85d91422f68db2295d1c84",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "executed_during_planning": false,
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 388,
+        "case_id": "forwards_bounded_mcp_progress_notifications",
+        "line_sha256": "0e837594aad65d46f13e885bc7022f2d20735741337116ab6839f93360cdbdf9",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "executed_during_planning": false,
+        "matches_current_and_historical_Git": true
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "line": 424,
+        "case_id": "request_identifiers_are_scalar_bounded_and_never_reused",
+        "line_sha256": "bf2267c1bed7a487fafe69e83e654399c8a8aedd41ac3499fe4cda319c174ead",
+        "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "executed_during_planning": false,
+        "matches_current_and_historical_Git": true
+      }
+    ],
+    "accepted_inventory_pointer_pins": [
+      {
+        "reference": "docs/migration/effect-refactor/inventories/cli.json#/mcp_envelope",
+        "canonical_value_sha256": "6734acad95563335397a4c04a1373a5d0b2a9ba9c1da27a0a4975a7a20658505"
+      },
+      {
+        "reference": "docs/migration/effect-refactor/inventories/cli.json#/catalog",
+        "canonical_value_sha256": "b6a892cde559911724c44036b7776759cb60efe1887a2e21be7307c3d18fc067"
+      },
+      {
+        "reference": "docs/migration/effect-refactor/inventories/cli.json#/schemas",
+        "canonical_value_sha256": "7727d22b9038b43470834b44cc107b7d5b4a7d46255e90749c5056930b84a9d2"
+      }
+    ],
+    "current_gate_negative_count": 84,
+    "historical_card_verification_expectation_reconciliation": "Task logical command retained;63historical negatives in card are superseded by accepted CORE-COHORT-IOS-ELIGIBILITY84. No check executed inStage1.",
+    "minimum_literal_metadata_reconciliation": "rpc-encoded-id-bound packet literal127ASCII raw bytes canonical129 includingquotes; literal preserved, rejectionunchanged, raw/canonical distinction fixed in fixture.",
+    "source_ownership": {
+      "Health_ordinary_CLI_commands": 14,
+      "feature_HTTP_separate": true,
+      "Health_full_MCP_operations": 21,
+      "Health_readonly_MCP_operations": 13,
+      "donor_time_md_tools": 40,
+      "donor_authority_separate": true,
+      "common_behavior_owner": "accepted common operations; fake metadata/results in this child are not a second evaluator",
+      "catalog_and_schema_source": "Pinned mcp-tools-v1/application/catalog/registry; actual fixed catalog/schema parity deferred with concrete owner/trigger."
+    },
+    "contract": {
+      "lossless_parser": "Trusted semantic adapter receives already primitive bounded JSON grammar and raw numeric lexemes. Own issuer returns opaque inspection, inert method/ID canonical encoded metadata and opaque unmaterialized params span tied to exact original frame. IDs classify serdeI64/U64/F64/String; never Number.isInteger. Raw -0 is F64 negativezero. Complete parser numerical conversion source feature graph remains next owner. Parser/issuer authenticity is NOT caller authentication.",
+      "serializer": "Trusted source-semantic adapter, own issued encoded primitive, no JSON.stringify numeric assumption. Existing exact scalar implementation is pinned but NOT currently a package export. Full future codec adapter must reuse/admit it separately; this bounded child does not implement a numeric renderer. Source BTreeMap key order, source escaping and canonical tokens are frozen independently. Returned primitive bytes bound to own request, captured Scope and current authority. Full serializer/tool/HTML grammar next owner.",
+      "authority": "Trusted per-request current caller/source/purpose/recipient/grant/catalog plus latest external suppression/frontier service captured at factory Scope. No selfclaimed JSON booleans. Inert metadata check before params materialization/allocation, recheck after callbacks, progress and final publication/assertCurrent. Pure ping/local failures/notifications acquire0, never source calls.",
+      "dispatcher": "Fixed common operation port, application metadata and result grammar remain external common authority; fake owns synthetic allocation/results not evaluator. No caseID table in implementation.",
+      "ownership": "Factory-issued WeakMap request/session/codec/result and WeakSet output membership before properties. Unknown primitive frame admitted before callback/coercion. Factory/session/lease bound original Scope, live sentinel registered before FIRST trusted callback. Check after every trusted callback and completedallocation, before progress/final publication/assertCurrent; newScope or providedLayer cannot revive closed session. One in-flight private request; completedresource allocation+finalizer atomic, asyncreleaseACK awaited before handoff; failures poison lifetime.",
+      "cancellation": "Interrupt/EOF signals owned operation, await exact once finalizerACK. Never pretend possible externalcommit rolledback; actual transport sessions/slow pipe/process cancellation deferred. Cause stripped to fixed failures or interrupt-only IDs without provider reasons.",
+      "progress": "Source valid token string rawUTF8<=128 or exacti64, not requestIDcanonical<=128;16sourcechannel slots. Fake bounded owned async sink, backpressure/interrupt/finalizer lifetime explicit; only currentpermit then materialize canonical notification. No real transport qualification.",
+      "used_ids": "Canonical encoded ID key strings andnumbers distinct; permanent session set on syntactically validrequest beforemethoddispatch, unknown/unsupported/errors consume; invalidIDs/notifications do not. Duplicate before16384limit precedence.",
+      "wire_grammar": {
+        "inspection": "Primitive JSON object exactly rootObject:boolean,version2:boolean,id:closed union,method:string|null,params:span|null,paramsDefaulted:boolean,progressToken:span|null. id absent={present:false}; present={present:true,scalar:enum,canonicalEncoded:string,validI64OrString:boolean}. span={start:canonical nonnegative integer,end:canonical nonnegative integer} in original UTF16 frame bounds and complete lexical value boundary. No offsets accepted from caller JSON as authority. Issuer owns spans and frozen metadata. Closed key policy, no duplicate private descriptor keys. Canonical JSON integer tokens before Number conversion; raw descriptor bound64KiB/depth32/nodes4096.",
+        "value": "Primitive JSON SourceValue wire tagged number with canonical decimal or16-lowerhex finitebits; object tagged {kind:object,entries:[[string,SourceValue],...]}; source semantic adapter, not arbitrary caller-object conversion. Frozen views and arrays factory-owned.",
+        "error": "OperationIssuer.error only canonical exact integer fixed source error codes and admitted fixed messages in this fixture; no provider text.",
+        "encoding": "Bounded primitive JSON text checked independently for grammar/UTF8/scalars before issuance, encoded origin bound to request. No source-parity assertion inferred from trusted output grammar."
+      },
+      "local_methods": "Factory owns protocol decision order, IDs and local ping/errors. Initialize and catalog/resources receive trusted source metadata adapter results with no resource acquire; exact current source information is fixture-bound. Full application/catalog rendering remains next owner. Notifications return null only after JSON/root/version/method validation. No initialize-before-ping policy. LocalMetadataPort.describe supplies owned result/error for recognized metadata methods without acquire; factory source method map owns routing. Codec serialize receives OwnedReply plus frozen ReplyView so source success/error/progress shape cannot be inferred from untrusted JSON keys. Pure current metadata is authorized separately from tool payloads; no data grant/network/source acquisition.",
+      "callback_safety": "All unknown session/frame/output and returned codec values checked by primitive typeof or own membership BEFORE any property/coercion/callback. TrustedFactoryInputs is host-owned configuration, never parsed from caller JSON. Sentinel registered at factory/open before trusted callbacks. Per-callback issuer lifetime prevents escaped/reentered issuance. Caller-derived opaque IDs/methods/params are request data only.",
+      "scalar_port": "ExactScalarPort.render unknown primitives only; authoritative existing implementation pinned, no current export/import. Adapter admission concrete SPLIT-CODECS child before real MCP/public serializer promotion; fake canonical-byte literals only.",
+      "malformed_frame": "Primitive/scalar/UTF8/private budget gate failure => fixed private_rpc_input before trusted callbacks. Well-bounded primitive JSON syntax failure => same own fixed source Parse error/null-ID context; lone surrogate escape is source parse failure. Syntactically valid JSON numerical overflow anywhere may be source_parse_error supplied by separately owned lossless adapter before root/version/ID validation. Raw illformed UTF16 => private frame failure, not full source framing equivalence. Unknown key content structurally scanned under budgets but ignored semantically only AFTER source semantic parse; duplicate decoded keys last value. No full JSON.parse params materialization or new numeric parser algorithm.",
+      "closed_failure_precedence": "Unknown primitive/membership first, original closed Scope next, busy then structural/private gates, source parse/root/version/method/id/duplicate/session-limit order. OriginalScope closure observed after trusted callback takes owned_handoff_closed precedence over returned success/metadata. Cleanup failure poisons session with private_rpc_cleanup, ACK awaited; no successful response is publishable after observed closure.",
+      "canonical_source_scope": "Locked cached serde_json1.0.151 source policies plus explicit current Cargo declarations support these independently derived literals. Fully resolved feature closure and complete floating lexeme conversion remain future adapter qualification. No actual Rust/native execution, no candidate output generated expectations. Unicode object sort uses scalar/UTF8 order, not JS UTF16 sort.",
+      "parser_outcome": "LosslessCodec.inspect returns unknown to the factory; runtime acceptance is ONLY current callback-issued OwnedInspectionOutcome tagged parsed OR source_parse_error, bound by own WeakMap to exact OwnedFrame/factory/original Scope and issuer lifetime. CodecIssuer.sourceParseError accepts only this owned frame and issues fixed Parse error/-32700/null-ID context. No arbitrary parser code/message/cause accepted. Foreign/malformed/expired/Proxy outcomes fail private_rpc_codec with zero property effects. Check original Scope after callback before recognizing either outcome; closed wins owned_handoff_closed. Source parse error short-circuits version/root/method/ID/used-ID/metadata/current-resource/dispatch/allocation; serializer receives same owned parse context and factory-owned error ReplyView with idCanonicalEncoded null. Source invalid JSON syntax may use same factory-issued source-error context after private raw budget/scalar gate; numeric overflow in any syntactically valid field is source semantic parse failure before protocol validation, not private codec or root invalid request.",
+      "operation_error_tag": "OperationIssuer.json(primitive SourceValue wire) privately tags every minted OwnedJson as SUCCESS, including objects with error/code/message keys. OperationIssuer.error(admitted fixed code,message) privately tags another own value as ERROR in a WeakMap bound to current callback/request/factory/Scope. Factory constructs OwnedReply by this private issuance tag only; source JSON-shaped result never determines failure disposition. Serializer receives own frozen ReplyView success/error/progress discriminator after membership checks. Expired/foreign issuance stays private boundary failure. Frozen root contrast cases show same error-shaped content in success result vs fixed RPC error envelope.",
+      "port_counters": "dispatch_calls counts ONLY FixedDispatcher.dispatch for acquired common synthetic operation; metadata_calls counts ONLY LocalMetadataPort.describe for source initialize/catalog/resource metadata with acquire0; parser/serializer/current authority tracked separately in lifetime stimuli. Each initialize protocol/UI/unsupported case describes once, dispatcher0, allocation/release0. Source response bytes unchanged."
+    },
+    "fixture_private_bounds": {
+      "frame_UTF8_bytes": 65536,
+      "depth": 32,
+      "nodes": 4096,
+      "number_token_bytes": 256,
+      "string_UTF8_bytes": 32768,
+      "owned_response_UTF8_bytes": 262144,
+      "progress_queue": 16,
+      "one_busy_request": true,
+      "public_limit_claim": false,
+      "source_request_ID_canonical_bytes": 128,
+      "source_lifetime_used_IDs": 16384,
+      "source_duplicate_decoded_keys": "last_value",
+      "source_outer_unknown_fields": "ignored",
+      "budget_status": "Synthetic unmeasured private seam bounds, not public stdio/HTTP limits.",
+      "transport_HTTP_public_UTF8_bytes": 2097152,
+      "transport_bound_owner": "apps/cli/crates/healthmd-mcp/src/transport/streamable_http.rs:25; separate transport owner, not this64KiB private frame gate"
+    },
+    "independent_stage1_revision_authority": {
+      "path": "/private/tmp/healthmd-mcp-envelope-root-stage1-review.json",
+      "raw_sha256": "fcca84aed6b783110c904c8c28b326c364a41e6c7bc34a422d9b35e5e553ab07",
+      "reviewer": "/root",
+      "literal_proposal_count": 6,
+      "proposal_policy": "Six exact root proposal subtrees adopted without regenerated expected bytes; old136vector/rawreceipt preserved under private/tmp. Only metadata counter/interface corrections authorized before code."
+    },
+    "independent_stage1_accepted_review": {
+      "path": "/private/tmp/healthmd-mcp-envelope-root-stage1-revised-review.json",
+      "sha256": "6098adff81e27f9cdde3aa14619fa677ab5eff3db913abc20fc09de535cb38ad",
+      "accepted_vector_sha256": "bd67dd7a42cdf52e34e5a79f445b511ccc0d74d8958488ccfaa40265ccf3efd3",
+      "before_source_implementation": true,
+      "companion_count": 3
+    },
+    "supplementary_semantic_port_inputs": {
+      "path": "/private/tmp/healthmd-mcp-envelope-semantic-port-inputs.json",
+      "sha256": "d85180b7bc5c43f564d02b9ffd678bc51ed56ce2bcccab85619b0e46871c5057",
+      "bytes": 66377,
+      "per_frame_count": 85,
+      "scalar_witness_count": 5,
+      "review": "accepted independently c985ea62 before fake ports/harness/assertions",
+      "source_only": true,
+      "no_case_ID_or_response_expected_inputs": true,
+      "superseded_raw_sha_prefix": "c8b336",
+      "superseded_reason": "Root-reviewed UI MIME positive correction and full plain-HTML negative; retain84rows and addexact positive source descriptor; scalar/metadata inputs unchanged.",
+      "superseded_raw_sha256": "e3a787668826208935fa1db3aa9334b6daa6ff902d531b7d8fc0cd4c391f527f"
+    },
+    "source_only_checkpoint_files": [
+      {
+        "path": "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+        "sha256": "693aeb1507aed9ef2a2073da5497a84dce58d6da4431a273246561efaff6a3e5",
+        "bytes": 42108
+      },
+      {
+        "path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "sha256": "07fd4081768c8d31bdda682a0c677a4682ae142c338c69a19bb245aaf4eeaba0",
+        "bytes": 216599
+      },
+      {
+        "path": "apps/cli/tests/surfaces/jsonrpc-envelope.test.ts",
+        "sha256": "cbd7aa357aee10449302ac68356b19dfc89fac46d2cc339aaa10afdb53e47192",
+        "bytes": 141980
+      }
+    ],
+    "reachable_callback_fixture_amendment": {
+      "root_proposal_path": "/private/tmp/healthmd-mcp-envelope-root-reachable-callback-proposals.json",
+      "root_proposal_sha256": "4b838f53e28a0919cebec10ab9233de3b94f548aa60092501b36df03d49d4916",
+      "independent_donor_review_sha_prefix": "d4146",
+      "clearance": "reachable_callback_fixture_amendment_clearance recorded by root BEFORE mutation",
+      "changed_case_ids": [
+        "scope-close-authority-before-allocation",
+        "scope-close-progress-sink-callback",
+        "cancel-progress-backpressure",
+        "progress-backpressure-cancel-ACK"
+      ],
+      "changed_fields": [
+        "stimulus.frame only in four rows"
+      ],
+      "all_142_expected_fields_unchanged": true,
+      "all_interfaces_other_cases_unchanged": true,
+      "candidate_source_unchanged_sha256": "1299ad389f2858b620cfece19ab46dcd269023d1d241145dbb0b4ebcaf847d8c",
+      "no_preparatory_request_or_inherited_progress": true,
+      "supplementary_MIME_source": "apps/cli/crates/healthmd-mcp/src/apps.rs:4",
+      "supplementary_MIME_review_sha_prefix": "637639",
+      "supplementary_MIME_fields": [
+        "local_metadata_source_inputs.UI_mime",
+        "local_metadata_source_inputs.capabilities_with_UI.extensions.io.modelcontextprotocol/ui.mimeTypes[0]"
+      ],
+      "added_distinct_frame_count": 2,
+      "historical_old_frame_rows_preserved": true
+    },
+    "UI_MIME_fixture_amendment": {
+      "root_proposal_path": "/private/tmp/healthmd-mcp-envelope-root-UI-MIME-proposal.json",
+      "root_proposal_sha256": "bd5849020e2270dc201af8ef0ffbc55ffe946d097616486d8ab14aeda5df76fd",
+      "independent_donor_review_sha256": "e3d2e9677c984f5a01494dfee2335f7db3f98b52733541b837bbac86764f7c14",
+      "clearance": "UI_MIME_fixture_amendment_clearance recorded before mutation",
+      "changed_case_id": "initialize-negotiates-UI",
+      "changed_fields": [
+        "stimulus.frame exact MIME",
+        "expected.response_utf8 exact MIME"
+      ],
+      "new_case_id": "initialize-plain-HTML-does-not-negotiate-UI",
+      "all_other141_existing_cases_unchanged": true,
+      "all_interfaces_unchanged": true,
+      "candidate_source_unchanged_sha256": "1299ad389f2858b620cfece19ab46dcd269023d1d241145dbb0b4ebcaf847d8c",
+      "source_derived_new_frame_row": {
+        "frame_utf8": "{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"initialize\",\"params\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{\"extensions\":{\"io.modelcontextprotocol/ui\":{\"mimeTypes\":[\"text/html;profile=mcp-app\"]}}}}}",
+        "frame_sha256": "884b84f1c4a41d6eb6ff4831900e03c8f4e47c7edda0482c1a12df41d6976ef7",
+        "disposition": "parsed",
+        "primitive_metadata_wire": "{\"rootObject\":true,\"version2\":true,\"id\":{\"present\":true,\"scalar\":\"unsigned_integer\",\"canonicalEncoded\":\"1\",\"validI64OrString\":true},\"method\":\"initialize\",\"params\":{\"start\":55,\"end\":192},\"paramsDefaulted\":false,\"progressToken\":null}",
+        "source_value_wire": "{\"kind\":\"object\",\"entries\":[[\"id\",{\"kind\":\"unsigned_integer\",\"decimal\":\"1\"}],[\"jsonrpc\",\"2.0\"],[\"method\",\"initialize\"],[\"params\",{\"kind\":\"object\",\"entries\":[[\"capabilities\",{\"kind\":\"object\",\"entries\":[[\"extensions\",{\"kind\":\"object\",\"entries\":[[\"io.modelcontextprotocol/ui\",{\"kind\":\"object\",\"entries\":[[\"mimeTypes\",[\"text/html;profile=mcp-app\"]]]}]]}]]}],[\"protocolVersion\",\"2025-11-25\"]]}]]}"
+      },
+      "old_plainHTML_row_retained_for_new_negative": true,
+      "no_candidate_output_used": true
+    },
+    "latest_pretest_input_review": {
+      "path": "/private/tmp/healthmd-mcp-semantic-port-input-independent-review.json",
+      "sha256": "c985ea62a5d02eb86c3ba4cc20d9d495af423a240ab7cbe2e222fd18ab2a3a35",
+      "bytes": 6130,
+      "execution_owner": "/root/android_release_host",
+      "before_fake_ports_harness_assertions": true,
+      "vector_sha256": "6ea2e86b5472245237bec55d99178e3fd444eab18dd2cad3db62b96a5acd4521",
+      "semantic_input_sha256": "d85180b7bc5c43f564d02b9ffd678bc51ed56ce2bcccab85619b0e46871c5057"
+    },
+    "implementation_checkpoint": {
+      "planned_test_count": 166,
+      "planned_literal_tests": 158,
+      "original143": 143,
+      "root_companions": 3,
+      "pure_scalar_port_tests": 5,
+      "ownership_corpus_properties": 3,
+      "all_uncompiled_and_unrun": false,
+      "test_port_inputs_embedded_exactly": true,
+      "no_case_id_expected_envelope_in_port_callbacks": true,
+      "scalar_renderer": "Synthetic trusted5 scalar input witnesses plus canonical BigInt signed/unsigned integer identity; unknownbinary64 rejected; no full parser/renderer/import/export claimed.",
+      "common_ports": "Synthetic coarse dispatcher/current authority/local metadata only; no evaluator/state/native/network/credentials/acquisition integration.",
+      "metadata": "RemoteReadOnly exact4 protocols/serverInfo/instructions/sourceUI MIME; real tools/resources/schema handlers remain separately owned.",
+      "allocation_counter_semantics": "Completed synthetic resource creation distinct from acquire_attempts; release_attempts distinct from completed release_ACKs.",
+      "busy_counter_semantics": "Target second operation measured after first real pending dispatch baseline; background release_ACK separately awaited and asserted.",
+      "scope_finalization": "Inner Effect.ensuring closes actual metadata/dispatch and per-publish sink lifetimes before postcallback authority/release; outer ensuring backstops interruptions. Synthetic Effect probes authored, never executed in this stage.",
+      "input_callbacks": "Actual parser/serializer/authority counters; private primitive bounds assert0 callbacks; authority denial asserts0 materializations.",
+      "private_scalar_scope": "Selected-string standard escaping and source scalar key order only; exact source serializer/numeric parser remains unqualified.",
+      "lazy_span_literal_tests": 8,
+      "lazy_progress_literal_tests": 4,
+      "actual_check_history": "Root actual b2f6 failed6 type diagnostics before0TAP; exact six-site repair reviewed e62bf; root actual934e check341/341 passed including166 new private tests. No author rerun.",
+      "actual_private_tests": 166,
+      "actual_total_CLI_tests": 341
+    },
+    "normative_authorized_span_gap": {
+      "path": "/private/tmp/healthmd-mcp-envelope-authorized-span-options.json",
+      "sha256": "cb80d578f2f6362081b35fab836fffa2b01fadffcbdd8afc5d6717f433694608",
+      "bytes": 4931,
+      "result": "historical violation; approved lazy Effect-valued per-read and immediate callback-boundary repair authored, pending independent source review and execution",
+      "source_pointers": [
+        "src/surfaces/jsonrpc-envelope.ts:39-40,54,303-315,438,452"
+      ],
+      "frozen_interface_pointers": [
+        "tests/surfaces/jsonrpc-envelope-vectors.ts:38-39,53"
+      ],
+      "execution_clearance": false,
+      "root_interface_decision_required_before_execution": true
+    },
+    "lazy_read_repairs": {
+      "span_interface_review": {
+        "path": "/private/tmp/healthmd-mcp-per-read-authority-interface-review.json",
+        "sha256": "49c9a59048c9ae3ba8c40b30648b2fa0a1d864a662dc7482482d4d834edac832",
+        "bytes": 9059
+      },
+      "span_literal_proposal": {
+        "path": "/private/tmp/healthmd-mcp-per-read-authority-literal-proposal.json",
+        "sha256": "8a53dbd4de4d7e6c7a4d9068c3c5f7b51682b9b1307dd5e603c881d1c5903223",
+        "bytes": 17580
+      },
+      "span_root_review": {
+        "path": "/private/tmp/healthmd-mcp-per-read-authority-root-literal-review.json",
+        "sha256": "0aeca811b6def68f53348c3651680837a8e1021411b667b78d5e0d13071237c9",
+        "bytes": 1990
+      },
+      "progress_literal_proposal": {
+        "path": "/private/tmp/healthmd-mcp-progress-read-independent-proposal.json",
+        "sha256": "3b3bf463e551cd70ac71e029fa953d846a9417d7ac984977446a856fd6b9b217",
+        "bytes": 17205
+      },
+      "progress_root_review": {
+        "path": "/private/tmp/healthmd-mcp-progress-read-root-literal-review.json",
+        "sha256": "2a3ceae1c3f829358d79ecc8bdad0b2ccbad38fa126cf531f4520f1e953d56a0",
+        "bytes": 2150
+      },
+      "before_source_repair_clearance": true,
+      "original143_case_bodies_byte_unchanged": true,
+      "original85_input_rows_unchanged": true,
+      "span_literal_count": 8,
+      "progress_literal_count": 4,
+      "literal_JSON_subtrees_copied_exactly": true,
+      "source_only_contract": "Lazy membership/context/inactive-first execution. EACH live read awaits captured current; after await original Scope/poison/member/context/callback lifetime rechecked before synchronous raw slice/text return. Separate sink callback live sentinel expires on actual publish Effect exit. No synchronous cached authority permit or external I/O atomicity claim.",
+      "scope_replacement_test": "Mutate original trusted authority.check object after factory capture and provide a fresh Scope, execute escaped lazy effect; no substitute unconsulted tag."
+    },
+    "own_span_stimulus_repair": {
+      "review_path": "/private/tmp/healthmd-mcp-lazy-read-full-independent-source-review.json",
+      "review_sha256": "2768ffb7d62e6f89338e44447985401f8b402fb2abab15d32700b52294f727fc",
+      "execution_owner": "/root/android_release_host",
+      "root_authorized_before_mutation": true,
+      "archive": "/private/tmp/healthmd-mcp-envelope-before-own-span-stimulus-repair-241ec28a",
+      "previous_patch_digest": "241ec28a71d2eaaa4505d6e3fa72b54839e76b36f5017303c3db144cd6e089cc",
+      "delta": "Test only: assert captured savedSpan exists, then recognize own_span after Proxy branches and before default foreignSpan. All other bytes/source/interface/literals unchanged.",
+      "planned_tests": 166,
+      "executed_tests": 0,
+      "narrow_independent_re_review_required": true
+    },
+    "test_type_repair": {
+      "root_authorized_before_mutation": true,
+      "archive": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722",
+      "previous_patch_digest": "b2f6f722edcdeb3333fc88122a8dc0cfd58ef9efe6d3aebb7bda78d803e226c2",
+      "sites": 6,
+      "changes": {
+        "foreignOutput = yield* other.handle(foreignSession, scene.frame); assert.ok(foreignOutput); foreignInspection = capture;": "const output = yield* other.handle(foreignSession, scene.frame); assert.ok(output); foreignOutput = output; foreignInspection = capture;",
+        "const child = yield* Effect.forkChild(Deferred.await(proceed).pipe(Effect.andThen(operation))); exit = yield* Fiber.interrupt(child);": "const child = yield* Effect.forkChild(Deferred.await(proceed).pipe(Effect.andThen(operation))); yield* Fiber.interrupt(child); exit = yield* Fiber.await(child);",
+        "exit = yield* Fiber.join(stopping);": "yield* Fiber.join(stopping); exit = yield* Fiber.await(child);",
+        "exit = Exit.isFailure(encoded) ? encoded : Exit.succeed(ownOutput);": "exit = Exit.isFailure(encoded) ? Exit.failCause(encoded.cause) : Exit.succeed(ownOutput);",
+        "exit = Exit.isFailure(checked) ? checked : Exit.succeed(ownOutput);": "exit = Exit.isFailure(checked) ? Exit.failCause(checked.cause) : Exit.succeed(ownOutput);",
+        "if (Exit.isFailure(encoded)) exit = encoded;": "if (Exit.isFailure(encoded)) exit = Exit.failCause(encoded.cause);"
+      },
+      "failure_report": {
+        "path": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722/healthmd-mcp-root-check-results.json",
+        "sha256": "36d6c4d2e8266cf7690be9383635985fe61839f221a60f1b787e34b7b6f85401",
+        "bytes": 9024
+      },
+      "failure_log": {
+        "path": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722/healthmd-mcp-root-check.log",
+        "sha256": "a3c9b8250dec8fad7801e4968886aa01f0fb6a1fc12754022baf80d2380545f5",
+        "bytes": 6786
+      },
+      "actual_API_sources": [
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/node_modules/effect/src/Fiber.ts",
+          "sha256": "0823a06049643e1b3efbfaabdccc03be1a08b5ae165841d3ef18916e297ee057",
+          "bytes": 24692
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/node_modules/effect/src/Exit.ts",
+          "sha256": "f9e4baea6718bd6617069563028710cfaee3ba7b432826f87c405e0ca3513818",
+          "bytes": 34658
+        }
+      ],
+      "semantics": [
+        "Foreign output: assign only after assert.ok narrows actual handle return, preserving existing assertion and owned-token stimulus.",
+        "Fiber.interrupt is Effect<void> and completes only when target finalizes; then Fiber.await returns actual child Exit. Pending interrupt helper is joined before awaiting same child. No extra interrupt, cancellation, ACK or publication behavior.",
+        "Failure-only encode/assert Exit is reconstructed with Exit.failCause using exact existing Cause; success output remains same token. No nominal string/void success type is transferred to output Exit, and no cause is suppressed."
+      ],
+      "production_vector_and_all_literals_unchanged": true,
+      "planned_tests": 166,
+      "TAP_tests_executed": 0,
+      "current_repaired_source_check": "passed_by_root_actual934e_check341tests_0fail"
+    },
+    "actual_portable_check": {
+      "execution_owner": "/root",
+      "report": {
+        "path": "/private/tmp/healthmd-mcp-test-type-retry-results.json",
+        "sha256": "8c0633d83f41517bf41a1aa95ba6b55b954c5a9ea26d2d2b8ae3258d471255cc",
+        "bytes": 33242
+      },
+      "log": {
+        "path": "/private/tmp/healthmd-mcp-test-type-retry.log",
+        "sha256": "2e1e874a01f80b255e6a43201915b75f32f535e5822786a5297108cc5adef634",
+        "bytes": 30648
+      },
+      "preparation": {
+        "path": "/private/tmp/healthmd-cli-check-execution-preparation.json",
+        "sha256": "bd4c3d1e25c97a806b2b110bab1fa9c1ad8c55cb6a3d3fa92be4252e6c11b96d",
+        "bytes": 9976
+      },
+      "independent_six_site_review": {
+        "path": "/private/tmp/healthmd-mcp-six-test-type-independent-review.json",
+        "sha256": "e62bf5863a45c12f9fa1c8997aef6a64cf1d9c97496cb380979f8752b0326211",
+        "bytes": 3771
+      },
+      "guard": {
+        "qualifiedCoreFiles": 26,
+        "qualifiedCoreInputs": 43,
+        "packedLocalCore": true,
+        "physicalEffectInstallations": 1,
+        "reviewedToolLaunchers": [
+          "esbuild",
+          "tsc"
+        ],
+        "serviceIdentity": true,
+        "negativeIdentityCases": [
+          "sibling-symlink",
+          "stale-build",
+          "unbuilt-source-edit",
+          "extra-source-file",
+          "unreviewed-metadata-edit",
+          "unreviewed-packed-export",
+          "missing-source-file",
+          "new-module-edit",
+          "source-symlink",
+          "new-module-stale-output",
+          "missing-output",
+          "extra-output",
+          "output-symlink",
+          "absent-cohort",
+          "tampered-cohort",
+          "unreviewed-delta",
+          "missing-personal-source",
+          "personal-source-edit",
+          "personal-source-symlink",
+          "personal-output-stale",
+          "missing-personal-output",
+          "extra-personal-output",
+          "personal-output-symlink",
+          "unreviewed-personal-receipt",
+          "slice-source:src/location/point-projection.ts:missing",
+          "slice-source:src/location/point-projection.ts:edited",
+          "slice-source:src/location/point-projection.ts:symlink",
+          "slice-source:src/operations/personal-slice.ts:missing",
+          "slice-source:src/operations/personal-slice.ts:edited",
+          "slice-source:src/operations/personal-slice.ts:symlink",
+          "slice-source:tests/combined-slice-vectors.ts:missing",
+          "slice-source:tests/combined-slice-vectors.ts:edited",
+          "slice-source:tests/combined-slice-vectors.ts:symlink",
+          "slice-source:tests/combined-slice.test.ts:missing",
+          "slice-source:tests/combined-slice.test.ts:edited",
+          "slice-source:tests/combined-slice.test.ts:symlink",
+          "slice-source:tests/location-point-projection-vectors.ts:missing",
+          "slice-source:tests/location-point-projection-vectors.ts:edited",
+          "slice-source:tests/location-point-projection-vectors.ts:symlink",
+          "slice-source:tests/location-point-projection.test.ts:missing",
+          "slice-source:tests/location-point-projection.test.ts:edited",
+          "slice-source:tests/location-point-projection.test.ts:symlink",
+          "slice-output:dist/core/location/point-projection.d.ts:missing",
+          "slice-output:dist/core/location/point-projection.d.ts:stale",
+          "slice-output:dist/core/location/point-projection.d.ts:symlink",
+          "slice-output:dist/core/location/point-projection.js:missing",
+          "slice-output:dist/core/location/point-projection.js:stale",
+          "slice-output:dist/core/location/point-projection.js:symlink",
+          "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+          "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+          "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+          "slice-output:dist/core/operations/personal-slice.js:missing",
+          "slice-output:dist/core/operations/personal-slice.js:stale",
+          "slice-output:dist/core/operations/personal-slice.js:symlink",
+          "slice-extra-output",
+          "slice-cohort:absent",
+          "slice-cohort:tampered",
+          "slice-receipt:location_delta:absent",
+          "slice-receipt:location_delta:tampered",
+          "slice-receipt:location_delta:unreviewed",
+          "slice-receipt:combined_delta:absent",
+          "slice-receipt:combined_delta:tampered",
+          "slice-receipt:combined_delta:unreviewed",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+          "eligibility-extra-output",
+          "eligibility-cohort:absent",
+          "eligibility-cohort:tampered",
+          "eligibility-receipt:absent",
+          "eligibility-receipt:tampered",
+          "eligibility-receipt:unreviewed"
+        ]
+      },
+      "compiled_test_entries": [
+        "tests/candidate-api.test.ts",
+        "tests/candidate-host.test.ts",
+        "tests/cli-query.test.ts",
+        "tests/mcp-query.test.ts",
+        "tests/shared-slice-parity.test.ts",
+        "tests/surfaces/discovery-normalizer.test.ts",
+        "tests/surfaces/jsonrpc-envelope.test.ts"
+      ],
+      "CLI_test_metafile": {
+        "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/test-metafile.json",
+        "sha256": "f1c1f1f3d76b732d127f0c9e820bf1c6e08ffe46b7c7da9152a4196629921eb1",
+        "bytes": 32461
+      },
+      "metafile_inputs": 18,
+      "metafile_outputs": 7,
+      "compiled_test_artifacts": [
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/candidate-api.test.js",
+          "sha256": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+          "bytes": 7645
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/candidate-host.test.js",
+          "sha256": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+          "bytes": 9686
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/cli-query.test.js",
+          "sha256": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70",
+          "bytes": 21461
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/mcp-query.test.js",
+          "sha256": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240",
+          "bytes": 30226
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/shared-slice-parity.test.js",
+          "sha256": "e48f38575a3cf08ba19085259d9e36df3bb2842836fbfff266fbfdbfeb944a0c",
+          "bytes": 38112
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/surfaces/discovery-normalizer.test.js",
+          "sha256": "477e264907c9e04b28272349235e7de35689fa96dfa699380c085da4e17395d7",
+          "bytes": 93990
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/tests/surfaces/jsonrpc-envelope.test.js",
+          "sha256": "3838110f49bee3437db5878b534c055593d07a450ff9f9eca117b17b770e8071",
+          "bytes": 367992
+        }
+      ],
+      "actual_counts": {
+        "tests": 341,
+        "suites": 0,
+        "pass": 341,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "private_MCP_tests": 166,
+      "retained_historical_CLI_tests": 175,
+      "duration_ms": 1220.339041,
+      "postcheck": {
+        "source_unchanged": true,
+        "core_inputs_unchanged": true,
+        "core_outputs_and_packed_unchanged": true
+      },
+      "proof_limits": [
+        "No concrete fullcodec/stdio/HTTP/OAuth/currentgrant/sourcepolicy/realtransport/native/durable/public client or release admission.",
+        "No install/corebuilder/cohortrefresh; CLI dist and disposable84guard-negative scratch copies only."
+      ],
+      "Effect_identity_evidence": "Guard physicalEffectInstallations1/serviceIdentitytrue and actual imported service/API tests; test metafile has external dependencies, not an independently bundled Effect installation proof."
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+      "result": "passed",
+      "evidence": "Independent before-code143 source cases/85 inert input rows and all8span+4progress amendments retained, exact3-file934e pins. Full source and narrow six-site reviews precede actual341-pass check.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Complete public parser/serializer/TOML/scalar adapter equivalence deferred to SPLIT-CODECS; no public byte-parity claimed."
+    },
+    {
+      "criterion": "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+      "result": "passed",
+      "evidence": "Exact4 allowed task files; production693a/vector07fd/testcbd7 unchanged through root passing check and final receipt-only write. No launcher/export/package/lock/guard/cohort change.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Real common operation adapter remains separate; injected ports implement orchestration, not a second evaluator."
+    },
+    {
+      "criterion": "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+      "result": "passed",
+      "evidence": "Actual owned fake issuer/session/Proxy/lifetime/current-phase denial and revocation regressions passed; original Scope/per-read/current and postcallback/sink expiry probes passed.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Synthetic trusted authority is not authentication or actual source-purpose/frontier service; real grant and per-page binding pending."
+    },
+    {
+      "criterion": "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+      "result": "passed",
+      "evidence": "Actual bounded primitive frame/descriptor guards, fixed error sanitation, source-derived duplicates/unknown/numeric/Unicode/nullID/overflow disposition fixtures passed without ordinary Number JSON parse equivalence.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Full finite-f64/numeric semantic parser is injected and unqualified; scalar witness domain is only5 exact approved values plus canonical BigInt integers."
+    },
+    {
+      "criterion": "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+      "result": "passed",
+      "evidence": "Actual Fiber interruption/Scope/Deferred late allocation/asynchronous ACK/backpressure/cleanup-poison and eight+four lazy lifetime regressions passed. Supervisor actual exited0/reaped/ESRCH/cleanupACKtrue.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Fake ACK/cancellation does not establish OS, remote stdout/network delivery, credentials or durable commit/revoke/delete atomicity."
+    },
+    {
+      "criterion": "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+      "result": "passed",
+      "evidence": "Pinned historical Health14+featureHTTP/21full13readonly/donor40 obligations remain distinct, unchanged Rust/catalog authorities; current175 historical CLI tests passed alongside166private; initialized fixed4versions/sourceUI metadata cases passed.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Full real tool/resource/catalog/schema/result dispatch and rendering remain next common application/CLI-result owners; no complete public query/transport parity."
+    },
+    {
+      "criterion": "Source JSONRPC2.0 outerunknown fields ignored, serde duplicate-key last-value semantics retained; request IDs strings or exacti64 numbers, canonical encoded key<=128UTF8bytes, no reuse. Float1.0/exponent numeric IDs noti64. Preserve initialized-notification noresponse and existing protocols; no newly invented initialize-before-ping requirement. Bytes/schemas require accepted lossless parser/serializer interface before implementation.",
+      "result": "passed",
+      "evidence": "143 independently frozen envelope literals including canonical ID128/16384 distinct used IDs, duplicate decodedkeys, invalid floats/overflow, missingID/source ordering, ping-beforeinitialize, UI-MIME and notification noresponse passed with approved85 semantic port stimuli.",
+      "scope": "private portable synthetic orchestration only",
+      "required_remaining_limit": "Source semantic metadata is trusted injected fake; tests prove envelope orchestration, not concrete serde/fullcodec parser or remote protocol compatibility."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "logical_argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "execution_owner": "/root",
+      "source_patch": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
+      "deadline_ms": 300000,
+      "output_cap_bytes": 16777216,
+      "wall_ms": 2291,
+      "result": "passed",
+      "proof": "portable_synthetic_private_MCP_only",
+      "expected": "Actual guard84/core43/26/packed26/oneEffect, noEmit source check, compiled7 test entries and all emitted CLI tests",
+      "observed": {
+        "exit_code": 0,
+        "counts": {
+          "tests": 341,
+          "suites": 0,
+          "pass": 341,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "guard_negatives": 84,
+        "guard_core_inputs": 43,
+        "guard_core_outputs": 26,
+        "physical_Effect_installations": 1,
+        "service_identity": true,
+        "compiled_entries": 7,
+        "raw_log_bytes": 30648,
+        "cleanup_ack": true,
+        "parent_reaped": true,
+        "group_absent": true,
+        "group_observation": "absent_esrch",
+        "cleanup_deadline_missed": false,
+        "postcheck": {
+          "source_unchanged": true,
+          "core_inputs_unchanged": true,
+          "core_outputs_and_packed_unchanged": true
+        }
+      },
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-mcp-test-type-retry-results.json",
+          "sha256": "8c0633d83f41517bf41a1aa95ba6b55b954c5a9ea26d2d2b8ae3258d471255cc",
+          "bytes": 33242
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-mcp-test-type-retry.log",
+          "sha256": "2e1e874a01f80b255e6a43201915b75f32f535e5822786a5297108cc5adef634",
+          "bytes": 30648
+        },
+        "CLI_test_metafile": {
+          "path": "/Users/codybontecou/dev/health-md/apps/cli/dist/test-metafile.json",
+          "sha256": "f1c1f1f3d76b732d127f0c9e820bf1c6e08ffe46b7c7da9152a4196629921eb1",
+          "bytes": 32461
+        }
+      },
+      "physical_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "actual_cwd": "/Users/codybontecou/dev/health-md/apps/cli"
+    }
+  ],
+  "inspection_summary": "Root actual physical Node24/npm CLI check passed341/341 (175 retained+166 new),0 fail/cancel/skip/todo;84 filesystem guard negatives/43core inputs26core outputs/oneEffect, source noEmit+compiled7 test entries. Source934e unchanged. Earlier six type-diagnostic failure retained; author finalized receipt only, without rerun.",
+  "observations": [
+    {
+      "case_id": "source_reconciliation",
+      "result": "passed",
+      "procedure": "Read each42historicalpacket input,currentbyte,andhistorical/currentassignedGit; compare exactpins beforewriting.",
+      "expected": "Historical42 pins preserved; anyaccepted currentdelta explicit.",
+      "observed": "40 unchanged; guard/docs2 accepted43/26integrationdifferences match assignedff72Git.",
+      "evidence": "inputs.source_reconciliation"
+    },
+    {
+      "case_id": "stage1_only",
+      "result": "passed",
+      "procedure": "Write only literal vector and ownpartial receipt.",
+      "expected": "No source/test/build/deps/generatedcommon/native/device/plan/Git changes.",
+      "observed": "Only2allowedStage1paths written; expectedUTF8 derived fromretained source/controlflow andfixedindependent synthetic actions, never candidate output.",
+      "evidence": "bd67dd7a42cdf52e34e5a79f445b511ccc0d74d8958488ccfaa40265ccf3efd3"
+    },
+    {
+      "case_id": "source_locators_and_current_admission",
+      "result": "passed",
+      "procedure": "Compare11source/3test exact current/historical source line hashes excluding line terminators and3canonical inventory pointers; compare12additional current raw files to assigned Git without generated outputs.",
+      "expected": "All authorities exact; package export absent remains explicit.",
+      "observed": "Exact11+3+3 verified;12additional assigned source pins verified; source scalar helper NOT exported.",
+      "evidence": "inputs.source_symbol_locators/source_test_locators/accepted_inventory_pointer_pins/additional_assigned_source_pins"
+    },
+    {
+      "case_id": "root_source_stage1_revision",
+      "result": "passed",
+      "procedure": "Preserve exact old136vector/rawreceipt and rootreview; adopt exact six independently sourced literal proposals, revise type-only owned outcome/error-tag interfaces and metadata counters; rehash54repo input pins vs assignedGit.",
+      "expected": "Only vector/ownpartialreceipt changed; source/test absent and no generated outputs/commands.",
+      "observed": "136 oldcase IDs and all old source response bytes retained; added6root exact proposals; initialize dispatch0/metadata1; no candidate execution or scalar algorithm/import/export changes.",
+      "evidence": "inputs.independent_stage1_revision_authority + historical_partial_checkpoints[-1]"
+    },
+    {
+      "case_id": "source_and_test_only_checkpoint",
+      "result": "passed",
+      "procedure": "Read immutable143vector/85source-input corpus and3root companion literals; compare embedded frame/scalar/metadata/companion JSON subtrees; inspect callback block for case-ID/expected-envelope access; hash3allowed source files. No execution.",
+      "expected": "Approved inputs unchanged; claimed source/test/receipt edits only; no expected response generated from candidate or case-ID-selected fake response.",
+      "observed": "143vector6ea2/85corpusd851 unchanged; embedded85rows/5scalars/metadata/3companions equal; no case_id/expected-envelope access in callbacks;154 tests authored and unrun; Effect.ensuring covers operation issuer lifetime.",
+      "evidence": "inputs.implementation_checkpoint + inputs.source_only_checkpoint_files + inputs.latest_pretest_input_review"
+    },
+    {
+      "case_id": "lazy_read_repair_source_only_subtree_freeze",
+      "result": "passed",
+      "procedure": "Use Python JSONDecoder on source literals without importing TypeScript: compare85frame/5scalar/metadata subtrees to corpus; exact8span/4progress subtrees to independently reviewed proposals; compare raw143 fixture-body bytes to archived pre-repair vector; hash3nonreceipt files. No execution.",
+      "expected": "Only approved type-prefix amendments and source/test repairs; no143 body or85 corpus change; expected scenes literal exact; all tests unrun.",
+      "observed": "Exact85/5/metadata/8/4 subtrees verified;143 body bytes identical; vector07fd4081768c8d31bdda682a0c677a4682ae142c338c69a19bb245aaf4eeaba0. Planned166 tests, no actual candidate/compiler/test execution.",
+      "evidence": "inputs.lazy_read_repairs + source_only_checkpoint_files; root preimplementation review pins"
+    },
+    {
+      "case_id": "own_span_test_stimulus_source_only_correction",
+      "result": "passed",
+      "procedure": "Archive and hash all four exact241e files; replace one test ternary and add savedSpan presence assertion; Python raw comparison verifies exact prescribed delta and unchanged production/vector bytes. No imports or execution.",
+      "expected": "foreignProxy request + own_span must supply authentic savedSpan rather than foreignSpan; no other source/literal change.",
+      "observed": "Only approved two-line test delta. Production693aeb15/vector07fd4081 unchanged;143/85/8+4 preserved.166 tests remain uncompiled/unrun.",
+      "evidence": "inputs.own_span_stimulus_repair + source_only_checkpoint_files"
+    },
+    {
+      "case_id": "six_site_test_type_source_only_repair",
+      "result": "passed",
+      "procedure": "Archive exact three b2f6 source files, root-updated17fb receipt and actual check failure; read installed Effect Fiber/Exit source API; assert raw test delta equals six authorized replacements and production/vector raw bytes unchanged. No candidate execution.",
+      "expected": "Only six type-site changes; no any/cast/suppression/expectation weakening or production behavior change.",
+      "observed": "Foreign token assigned after existing assertion; void interrupt/join followed by actual child Exit await; failure Exit rebuilt from unchanged Cause. Current166 tests unrun; prior0 TAP and failed type diagnostics retained.",
+      "evidence": "inputs.test_type_repair + source_only_checkpoint_files + checks"
+    },
+    {
+      "case_id": "actual_root_portable_synthetic_check",
+      "result": "passed",
+      "procedure": "Read and hash retained root report8c0633/full rawlog2e1e; parse actual341summary and84guardIDs/7compiledentries; rehash exact current3source934e and currentCLI testmetafile/artifacts. No author build/test/rerun.",
+      "expected": "Actual Node341pass/0failure with cleanupACK, unchanged source/core/packed authority; no production/public/native/grant inference.",
+      "observed": {
+        "counts": {
+          "tests": 341,
+          "suites": 0,
+          "pass": 341,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "wall_ms": 2291,
+        "guards": 84,
+        "core_inputs": 43,
+        "core_outputs": 26,
+        "compiled_entries": 7,
+        "metafile_inputs": 18,
+        "metafile_outputs": 7,
+        "cleanup_ack": true,
+        "group_observation": "absent_esrch",
+        "source_patch": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc"
+      },
+      "evidence": "inputs.actual_portable_check + checks passed entry"
+    }
+  ],
+  "limitations": [
+    "Fake metadata never authenticates caller grants or proves complete serde/numeric/serializer/public schema/catalog/query/result/client/transport parity.",
+    "Private bounds/lifetime failures synthetic and unmeasured, not new public restrictions.",
+    "Exact scalar helper source pinned but has no admitted package export in this child; no deep import, numeric algorithm copy, export/package/cohort change.",
+    "Cancellation probes are synthetic Fiber/Deferred/Scope events, not OS/remote peer cancellation; fake ACK is not credential/native/store durable cleanup proof.",
+    "No real health/native/network/credential/state/acquisition operation or public serializer/parser adapter implemented.",
+    "Trusted sink may retain already-observed text. Fresh per-read authority cannot retract previous permitted materialization or prove real atomic external delivery/authentication.",
+    "Final root receipt/task decision pending. Actual passing private synthetic tests resolve authored per-read/callback/type repairs only; historical failed evidence remains immutable."
+  ],
+  "remaining_qualification": [
+    {
+      "id": "SPLIT-CODECS/MCP-SERDE-CODEC-ADAPTER",
+      "owner": "core_cli coordinator and separately claimed SPLIT-CODECS numeric/parser/package-admission child",
+      "trigger": "Before a real source-semantic parser/serializer adapter, public MCP byte-parity claim, numeric renderer import, or package/consumer promotion; separately accepted SPLIT-CODECS child and cohort proof first.",
+      "proof": "Exact locked serde_json feature/POMsource profile; bounded Unicode/duplicate/finitef64 decimal parser and source serializer equivalence; admitted exactnumber renderer reused; not fake metadata authenticity. Exact scalar implementation is currently NOT a package export; explicitly admit reuse before real adapter. No guessed import."
+    },
+    {
+      "id": "MCP-COMMON-APPLICATION-RESULT",
+      "owner": "common operations coordinator / CLI-RESULT-ENVELOPE",
+      "trigger": "before realtools/resources/results/schema/progress renderer",
+      "proof": "Full21/13catalog andschemas, tool result/query/export/images/HTML source, authenticatedcurrentperpagegrant andlatestfrontier; no fake health/native evaluator."
+    },
+    {
+      "id": "MCP-TRANSPORT-LIFETIME",
+      "owner": "core_cli transport owner",
+      "trigger": "before actualstdio/HTTP/client launch",
+      "proof": "Boundedframing/backpressure/EOF/ownedprocess/session/perrequestOAuth/OSidentity/currentauthority/nativecleanup/durableambiguity."
+    },
+    {
+      "id": "MCP-AUTHORIZED-SPAN-CURRENTNESS",
+      "owner": "common operations coordinator / real MCP codec+current-authority adapter",
+      "trigger": "Before accepting lazy private per-read/current and callback-boundary conformance; real sensitive-data/source proof remains separately owned",
+      "proof": "Actual private8span+4progress cases passed with current934e; real source/current/frontier adapter and actual sensitive materialization remain separately owned and unqualified."
+    }
+  ],
+  "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
+    "evidence": {
+      "path": "/private/tmp/healthmd-mcp-envelope-final-root-review.json",
+      "sha256": "d7f704e378a58fb5cd07cb16e404e3da98da2cfe91c20ff2226cc985c47f6a5a"
+    },
+    "scope": "Completeconcretecodec/commontool/resource/schema/result/stdioHTTP/OAuth/currentgrant/sourcepolicy/native/durable/publicinterop remainsunqualified under separatecards; privatefiniteframebudgets notpublic2MiBcontract."
+  },
+  "historical_partial_checkpoints": [
+    {
+      "vector_sha256": "8c6fb9663a4ec9785ce1119ba989278bcf099ed6bf0bee8ba0830301ba332e4c",
+      "case_count": 98,
+      "reviewed": false,
+      "reason": "Author expanded closed ports/full source order and independent Scope/canonical/progress stimuli before initial independent review; no candidate implementation existed."
+    },
+    {
+      "vector": {
+        "path": "/private/tmp/healthmd-mcp-jsonrpc-envelope-stage1-136-vectors.ts",
+        "raw_sha256": "52b0accd9b8c374b7d9f2a9300d97eb35242b335712f6d8ac3517328aa040692",
+        "bytes": 200078,
+        "cases": 136
+      },
+      "receipt": {
+        "path": "/private/tmp/healthmd-mcp-jsonrpc-envelope-stage1-136-receipt.json",
+        "raw_sha256": "8031f960c9e7980598e7757aed0cbb4dd0adf0142b9d1dd39d89d71f02745364",
+        "bytes": 53521
+      },
+      "patch_digest": "1901a41f143def03ceeb6ac0295c5d70100ee16c3c6bc5972a7feb131a29a052",
+      "review_result": "revision_required_before_implementation",
+      "review_raw_sha256": "fcca84aed6b783110c904c8c28b326c364a41e6c7bc34a422d9b35e5e553ab07",
+      "resolved_in_proposal": [
+        "owned source parse-error outcome/null ID context",
+        "separate metadata_calls vs common dispatch counters",
+        "opaque private operation-error tag vs JSON-shaped success",
+        "Expired codec-port refusal aligned with mandated private_rpc_codec; old source response bytes unchanged"
+      ]
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-pre-source-checkpoint-receipt.json",
+      "sha256": "f674523ccc69c06361f6d42e3870c23bfa02d098d896d38d313b26c5135f2f00",
+      "bytes": 58444,
+      "stage": "accepted revised142 Stage1 receipt before source checkpoint; no test implementation"
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-reachable-amendment-142-bd67-vectors.ts",
+      "sha256": "bd67dd7a42cdf52e34e5a79f445b511ccc0d74d8958488ccfaa40265ccf3efd3",
+      "bytes": 214386
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-reachable-amendment-4999-semantic-port-inputs.json",
+      "sha256": "4999c0088fbb2d1acd00aab02b3bd04ac831954b20cc188a61ea9d65070570fb",
+      "bytes": 63147
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-reachable-amendment-source-checkpoint-340b-receipt.json",
+      "sha256": "340b895b388860a1031c4818e89ac03e96aa96711043683a9c2eca9d2c3f0198",
+      "bytes": 60394
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-UI-amendment-4b6f-vector.ts",
+      "sha256": "4b6f1027723ba20a3227862e136439eb58ddd3b8f22f5675bfca59feb0f5a9ae",
+      "bytes": 214530
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-UI-amendment-e3a787-inputs.json",
+      "sha256": "e3a787668826208935fa1db3aa9334b6daa6ff902d531b7d8fc0cd4c391f527f",
+      "bytes": 65215
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-UI-amendment-partial-test-header.ts",
+      "sha256": "216769c77574ef9381ea9d2d00958e25ccd561d59a7900cf13bc1089d90e388a",
+      "bytes": 64129
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-UI-amendment-953c-receipt.json",
+      "sha256": "953c8eaaf69490a5403ffa75f51df2b6f49e93eaaeca9db5eac490f89b7f0383",
+      "bytes": 62537
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-full-source-freeze-receipt.json",
+      "sha256": "55f0f2fa16331bc47723bd416404acc5e5c7893ea4d997ff66dd98d1012be1dc",
+      "bytes": 65807,
+      "stage": "accepted143/85 input amendment with literal-only test header, before full implementation checkpoint"
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-lazy-read-repair-receipt.json",
+      "sha256": "7a652c2c50c1f16509a51583f4e4117eb52bd3976f0633efde5a4be1fe712f92",
+      "bytes": 72347,
+      "stage": "Pre-repair complete154-test unrun checkpoint: independently identified EACH-read/callback-lifetime violations; preserved raw without reinterpreting as compliance."
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-own-span-stimulus-repair-241ec28a/docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+      "sha256": "26529aeccce27efb08a16d5fd3c6a21af264907e94dca2afd4a409863fb73cac",
+      "bytes": 76374,
+      "stage": "Exact241ec28a full lazy-read checkpoint; independent complete review requested one own_span stimulus correction, otherwise source coherent;166 tests unrun."
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722/docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+      "sha256": "17fb5f52b6286c1370c2884cd95ed8b910776c7c08616221f53d86ffade51455",
+      "bytes": 79201,
+      "stage": "Actual root-updated17fb b2f6 receipt including full source preflight after narrow a1675 review; preserved before six-site type repair. Earlier936a raw remains in prior freeze history."
+    },
+    {
+      "path": "/private/tmp/healthmd-mcp-envelope-before-portable-pass-receipt.json",
+      "sha256": "605e9508fd236d2e06aa3f87f8c7266a44dc2e239da07ae24c2c53f5167b6f20",
+      "bytes": 86306,
+      "stage": "Repaired934e source receipt before actual passing root check; all previous failed-check and source-only history retained."
+    }
+  ],
+  "not_executed": [
+    "No execution by author during final receipt update; root check credited to root execution_owner.",
+    "Full concrete serde/parser/serializer/scalar/package-adapter/public MCP schema and byte-parity qualification",
+    "Real source-purpose/OAuth/currentgrant/latestfrontier/sensitive health materialization/native/store/durable/remote cancellation",
+    "Public stdio/HTTP/client launch/OS native device/deploy/release",
+    "Core rebuild/installation/cohort or plan/Git mutation"
+  ],
+  "unresolved_source_API_questions": [],
+  "resolved_author_inspection_attempts": [
+    {
+      "kind": "source_only_static_search_false_positive",
+      "result": "resolved",
+      "procedure": "Static callback text inspection initially searched substring expected; diagnostic phrase unexpectedly succeeded matched, stopping script before receipt writes.",
+      "correction": "Inspect actual case_id/expected property access and expected_response keys; embedded corpus/literal comparisons unchanged and pass. No candidate/test execution occurred."
+    }
+  ],
+  "root_full_source_preflight_review": {
+    "result": "accepted_source_only_after_exact_test_stimulus_repair",
+    "fingerprint": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+b2f6f722edcdeb3333fc88122a8dc0cfd58ef9efe6d3aebb7bda78d803e226c2",
+    "full_independent_review": {
+      "path": "/private/tmp/healthmd-mcp-lazy-read-full-independent-source-review.json",
+      "sha256": "2768ffb7d62e6f89338e44447985401f8b402fb2abab15d32700b52294f727fc"
+    },
+    "narrow_review": {
+      "path": "/private/tmp/healthmd-mcp-own-span-root-narrow-review.json",
+      "sha256": "a1675a8e241194efce038be9c145cd30e770d4b503c450818cfd006daabcb1db"
+    },
+    "limits": "Synthetic interface source only; concretecodec/commonoperations/transport/sourcepolicy/publicclient/native/realgrant/durable qualification remains separate."
+  },
+  "historical_check_stages": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "availability": "existing",
+      "executed_during_planning": false,
+      "expected": "Current separately accepted43/26 source authority and84 historical filesystem negatives;166 planned new private tests alongside accepted175 historical CLI tests. Actual compiler/emitted totals/oneEffect/package admission require separately granted execution; no inferred pass.",
+      "result": "not_run",
+      "evidence": "Source/test-only clearance; no compile/build/npm/install/test/common-output read permission. Logical command retained; physical argv/logs to be recorded only after actual grant and execution."
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "execution_owner": "not_assigned_for_current_retry",
+      "availability": "existing",
+      "result": "not_run",
+      "source_patch": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
+      "expected": "Fresh typecheck/emitted tests after independent repair review and separate execution grant;166 private planned tests plus175 historical, counts require actual observation.",
+      "evidence": "No compiler/build/test execution authorized for repair stage."
+    },
+    {
+      "cwd": "/Users/codybontecou/dev/health-md/apps/cli",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "logical_argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "execution_owner": "/root",
+      "source_patch": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+b2f6f722edcdeb3333fc88122a8dc0cfd58ef9efe6d3aebb7bda78d803e226c2",
+      "deadline_ms": 300000,
+      "output_cap_bytes": 16777216,
+      "wall_ms": 741,
+      "result": "failed",
+      "stage": "Guard passed; TypeScript failed before TAP tests",
+      "expected": "Typecheck followed by actual emitted CLI tests",
+      "observed": "84 actual guard-negative cases/core43 inputs26 outputs/one Effect passed; six test type diagnostics; process exited1;0 TAP tests run.",
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722/healthmd-mcp-root-check-results.json",
+          "sha256": "36d6c4d2e8266cf7690be9383635985fe61839f221a60f1b787e34b7b6f85401",
+          "bytes": 9024
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-mcp-envelope-before-test-type-repair-b2f6f722/healthmd-mcp-root-check.log",
+          "sha256": "a3c9b8250dec8fad7801e4968886aa01f0fb6a1fc12754022baf80d2380545f5",
+          "bytes": 6786
+        }
+      },
+      "cleanup_ack": true
+    }
+  ],
+  "receipt_format_correction": {
+    "owner": "/root",
+    "prior_raw_receipt_sha256": "e7c92b3467164e97c520afc8dbbb72efb5d8a531dfce9edc3d87f481c85870bd",
+    "archive": "/private/tmp/healthmd-mcp-final-receipt-before-schema-format-fix.json",
+    "reason": "manage.py requires successfulchecks only in checks plus repository-relativecwd/exactcardlogicalargv. Actualphysicalargv/absolutecwd retainedseparately; failedactualcheck keptunchangedinhistorical_check_stages. No source/count/evidence/pass reinterpretation."
+  }
+}
