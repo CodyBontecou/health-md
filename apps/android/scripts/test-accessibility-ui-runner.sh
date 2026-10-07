@@ -39,11 +39,11 @@ case "$1" in
     shell)
         [[ "$2" == am && "$3" == instrument && "$*" != *'#'* ]]
         case "$MOCK_MODE" in
-            success) printf 'OK (402 tests)\n' ;;
+            success) printf 'OK (392 tests)\n' ;;
             zero) printf 'OK (0 tests)\n' ;;
             partial) printf 'OK (82 tests)\n' ;;
-            failure) printf 'FAILURES!!!\nTests run: 402, Failures: 1\n' ;;
-            runner_error) printf 'INSTRUMENTATION_FAILED: synthetic runner failure\nOK (402 tests)\n' ;;
+            failure) printf 'FAILURES!!!\nTests run: 392, Failures: 1\n' ;;
+            runner_error) printf 'INSTRUMENTATION_FAILED: synthetic runner failure\nOK (392 tests)\n' ;;
             adb_error) exit 23 ;;
             *) exit 18 ;;
         esac

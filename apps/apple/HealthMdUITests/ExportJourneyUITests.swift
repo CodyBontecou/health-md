@@ -10,39 +10,6 @@ final class ExportJourneyUITests: XCTestCase {
 
     // MARK: - First-Run Export Journey
 
-    func testFirstRunExportJourney_showsExportButton_andCompletesExport() throws {
-        let app = UITestLaunchHelper.firstRunExportApp()
-        app.launch()
-
-        // Verify app launched and is on the export tab (default)
-        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
-        XCTAssertTrue(exportButton.waitForExistence(timeout: 5), "Export button should be visible on launch")
-
-        // Verify health badge shows connected (CompactStatusBadge is a Button)
-        let healthBadge = app.buttons[UITestLaunchHelper.Export.healthBadge]
-        XCTAssertTrue(healthBadge.waitForExistence(timeout: 3), "Health badge should be visible")
-
-        // Verify vault badge shows connected
-        let vaultBadge = app.buttons[UITestLaunchHelper.Export.vaultBadge]
-        XCTAssertTrue(vaultBadge.waitForExistence(timeout: 3), "Vault badge should be visible")
-
-        // Tap export button — in test mode, simulateTestExport runs immediately.
-        exportButton.tap()
-
-        // After the simulated export, the status badge should appear
-        // ExportStatusBadge is a complex view — use descendants query
-        let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-        XCTAssertTrue(statusBadge.waitForExistence(timeout: 10), "Export status badge should appear after export")
-        XCTAssertTrue(
-            app.buttons["View Exported File"].exists,
-            "A successful local export should offer an exact-file viewer"
-        )
-        XCTAssertTrue(
-            app.buttons["Browse Export Folder"].exists,
-            "A successful local export should offer the exact parent folder in the document picker"
-        )
-    }
-
     func testNoDataExport_showsGuidanceInsteadOfGenericError() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

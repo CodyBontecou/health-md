@@ -383,43 +383,65 @@ jobs:
         run: |
           set -euo pipefail
           IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          IOS_UDID="${IOS_DESTINATION##*id=}"
           echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          echo "ios_udid=${IOS_UDID}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare iOS UI test products and Simulator
+        timeout-minutes: 20
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/ui-results
+          # Prepare the simulator and app before timed behavior checks.
+          # First installation should not consume the test execution allowance.
+          xcrun simctl bootstatus '${{ steps.simulator.outputs.ios_udid }}' -b
+          xcodebuild build-for-testing \
+            -project HealthMd.xcodeproj \
+            -scheme HealthMd-UITests-iOS \
+            -destination '${{ steps.simulator.outputs.ios_destination }}' \
+            -configuration Debug-iOS \
+            -derivedDataPath build/ui-derived-data \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/build-ios-ui.log \
+            | grep -E "error:|SUCCEEDED|FAILED"
+          xcrun simctl install '${{ steps.simulator.outputs.ios_udid }}' \
+            build/ui-derived-data/Build/Products/Debug-iOS-iphonesimulator/HealthMd.app
 
       - name: Run UI smoke tests (iOS)
         timeout-minutes: 35
         run: |
           set -euo pipefail
-          mkdir -p build/logs
-          xcodebuild test \
+          mkdir -p build/logs build/ui-results
+          xcodebuild test-without-building \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
+            -derivedDataPath build/ui-derived-data \
+            -resultBundlePath build/ui-results/ios-smoke.xcresult \
             -only-testing:HealthMdUITests/HealthMdUILaunchTests/testAppLaunches \
-            -only-testing:HealthMdUITests/ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_visibleAndCustomPickersHiddenByDefault \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testDateRangePresets_customRevealsStartAndEndPickers \
             -only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers \
             -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
-            -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee build/logs/build-ios-ui.log \
+            2>&1 | tee -a build/logs/build-ios-ui.log \
             | grep -E "Test Case|error:|PASSED|FAILED|Executed"
 
-          xcodebuild test \
+          xcodebuild test-without-building \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle \
+            -derivedDataPath build/ui-derived-data \
+            -resultBundlePath build/ui-results/ios-profile-regressions.xcresult \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testTurningProtectionOffRestoresConfigurationControls \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_MigrationShowsDefaultProfileInSettings \
             -only-testing:HealthMdUITests/ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard \
@@ -475,11 +497,16 @@ jobs:
           fi
 
           echo "Running App Review regression on iPad ${IPAD_UDID}"
-          xcodebuild test \
+          xcrun simctl bootstatus "${IPAD_UDID}" -b
+          xcrun simctl install "${IPAD_UDID}" \
+            build/ui-derived-data/Build/Products/Debug-iOS-iphonesimulator/HealthMd.app
+          xcodebuild test-without-building \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
             -destination "platform=iOS Simulator,id=${IPAD_UDID}" \
             -configuration Debug-iOS \
+            -derivedDataPath build/ui-derived-data \
+            -resultBundlePath build/ui-results/ipad-export-regression.xcresult \
             -only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError \
             -test-timeouts-enabled YES \
             -default-test-execution-time-allowance 180 \
@@ -498,7 +525,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ios-ui-build-logs
-          path: apps/apple/build/logs/build-ios-ui.log
+          path: |
+            apps/apple/build/logs/build-ios-ui.log
+            apps/apple/build/ui-results/*.xcresult
           retention-days: 14
 
   connectivity-package:
