@@ -499,10 +499,12 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.onNodeWithTag(ScheduleControlTags.HOUR).assertDoesNotExist()
 
         field.performScrollTo().performTouchInput { click() }.assertIsFocused()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.runOnIdle {
-                ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
-                    ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+        compose.withNativeInputDiagnostics("schedule keyboard show") {
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.runOnIdle {
+                    ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                        ?.isVisible(WindowInsetsCompat.Type.ime()) == true
+                }
             }
         }
         field.performTextReplacement(formatInteger(7, locale))
@@ -523,8 +525,13 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         field.assertIsNotFocused()
         // Native IME visibility becomes false before Compose's animated inset reaches zero.
         // Wait for the inset consumed by this fitted viewport before measuring clipped text.
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.runOnIdle { keyboardInsets.getBottom(keyboardDensity) == 0 }
+        compose.withNativeInputDiagnostics(
+            "schedule keyboard hide",
+            additionalState = { "composeImeBottom=${keyboardInsets.getBottom(keyboardDensity)}" },
+        ) {
+            compose.waitUntil(timeoutMillis = 10_000) {
+                compose.runOnIdle { keyboardInsets.getBottom(keyboardDensity) == 0 }
+            }
         }
         assertTextFits(field, GeistType.label20Mono.fontSize)
 

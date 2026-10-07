@@ -272,7 +272,9 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         // Inject the real system Back key without requiring the obscured activity window to focus.
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
         compose.waitForIdle()
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        compose.withNativeInputDiagnostics("profile dialog Back") {
+            compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
+        }
         assertEquals(2, dismisses)
         assertTrue(saved.isEmpty())
     }

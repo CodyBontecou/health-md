@@ -464,7 +464,9 @@ class FormatCustomizationAccessibilityTest(display: AccessibilityDisplayCase) : 
     }
 
     private fun waitForKeyboard() {
-        compose.waitUntil(timeoutMillis = 10_000) { keyboardVisible() }
+        compose.withNativeInputDiagnostics("format keyboard show") {
+            compose.waitUntil(timeoutMillis = 10_000) { keyboardVisible() }
+        }
         compose.waitForIdle()
     }
 

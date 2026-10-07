@@ -1,9 +1,12 @@
 package com.healthmd.presentation.accessibility
 
+import android.app.KeyguardManager
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.WindowManager
+import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +26,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.test.*
+import androidx.compose.ui.test.junit4.AndroidComposeTestRule
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
@@ -31,6 +35,8 @@ import androidx.compose.ui.unit.DpRect
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -43,6 +49,56 @@ import org.junit.Before
 import org.junit.Rule
 import java.io.File
 import java.util.Locale
+
+/** Report native input readiness only on failure; never include input text or token values. */
+internal fun <T> AndroidComposeTestRule<*, *>.withNativeInputDiagnostics(
+    stage: String,
+    additionalState: () -> String = { "" },
+    block: () -> T,
+): T {
+    try {
+        return block()
+    } catch (failure: Throwable) {
+        val state = runCatching {
+            runOnIdle {
+                val window = activity.window
+                val decor = window.decorView
+                val focus = activity.currentFocus
+                val imm = activity.getSystemService(InputMethodManager::class.java)
+                val keyguard = activity.getSystemService(KeyguardManager::class.java)
+                val insets = ViewCompat.getRootWindowInsets(decor)
+                val nativeWindows = runCatching {
+                    InstrumentationRegistry.getInstrumentation().uiAutomation.windows
+                        .joinToString(prefix = "[", postfix = "]") {
+                            "type=${it.type} active=${it.isActive} focused=${it.isFocused}"
+                        }
+                }.getOrElse { "unavailable:${it.javaClass.simpleName}" }
+                listOf(
+                    "windowScope=activity",
+                    "nativeWindows=$nativeWindows",
+                    "activityWindowFocus=${decor.hasWindowFocus()}",
+                    "activityFocusedView=${focus?.javaClass?.name}",
+                    "activityFocusedViewHasFocus=${focus?.hasFocus()}",
+                    "activityDecorHasToken=${decor.windowToken != null}",
+                    "activityFocusedViewHasToken=${focus?.windowToken != null}",
+                    "activityFocusedTokenMatchesDecor=${decor.windowToken != null && focus?.windowToken != null && focus.windowToken == decor.windowToken}",
+                    "activityImmActive=${imm?.isActive}",
+                    "activityImmServesFocusedView=${focus?.let { imm?.isActive(it) }}",
+                    "activityImmAcceptingText=${imm?.isAcceptingText}",
+                    "keyguardLocked=${keyguard?.isKeyguardLocked}",
+                    "deviceLocked=${keyguard?.isDeviceLocked}",
+                    "activityImeVisible=${insets?.isVisible(WindowInsetsCompat.Type.ime())}",
+                    "activityImeBottom=${insets?.getInsets(WindowInsetsCompat.Type.ime())?.bottom}",
+                    "activityWindowFlags=0x${Integer.toHexString(window.attributes.flags)}",
+                    additionalState(),
+                ).filter { it.isNotEmpty() }.joinToString(" ")
+            }
+        }.getOrElse { "diagnosticsUnavailable=${it.javaClass.simpleName}" }
+        // Diagnostics must not replace the original timeout/assertion, even if logging fails.
+        runCatching { Log.e("HealthMdNativeInput", "$stage: $state") }
+        throw failure
+    }
+}
 
 /** Shared geometry only: fixture callbacks must never read or mutate real health/settings state. */
 data class AccessibilityDisplayCase(
