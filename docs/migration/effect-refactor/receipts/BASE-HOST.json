@@ -1,0 +1,210 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-HOST",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+  "patch_digest": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+  "patch_digest_method": "SHA256 of exact UTF-8 bytes of docs/migration/effect-refactor/inventories/hosts.json only; excludes receipt and coordinator-owned plan/entrypoint state. Recompute with hashlib.sha256(Path(path).read_bytes()).hexdigest().",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/hosts.json",
+    "docs/migration/effect-refactor/receipts/BASE-HOST.json"
+  ],
+  "design_ids": [
+    "C07",
+    "C08",
+    "C09",
+    "C11",
+    "O03",
+    "O04",
+    "O05",
+    "O06",
+    "O07",
+    "F01",
+    "F02",
+    "F07",
+    "F09"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/contracts/direct-protocol/v2/fixtures/interop.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2"
+    },
+    "locks_and_runtime": {
+      "apps/cli/Cargo.lock": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "apps/cli/Cargo.toml": "55c7b45a78c3c87918d93fce970196f50468e616e85583f8eeb283f14bc3d90d",
+      "apps/cli/dist-workspace.toml": "e26024ab2357702287ad3d3224338454e7b6ea4c1cf8a408ecfe25d8929b3b97"
+    },
+    "artifact_and_native_interface": {
+      "apps/cli/crates/healthmd-client/src/credentials.rs": "4fced54da0f0b99440253add1b018edbcb44b375da688ee52a3015cb8a3bff2f",
+      "apps/cli/crates/healthmd-client/src/file_receiver.rs": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+      "apps/cli/release-identities.json": "558ec9af21ffe21322883ae67697092d6445f1fe887d3bb693945c7fe45e1291"
+    },
+    "policy_migration_key_versions": {
+      "design": "5869f39aaf549228490c7fced7e97af471763e7a1f58f04b3b38f3b17303e985",
+      "journals": "v1 JobRecord=1; RawJournal=1; FileJournal=2; V2JobRecord=2; ReceiverJournal=2; identity=1; helper=1",
+      "source_inventory": "docs/migration/effect-refactor/inventories/hosts.json#source_inventory"
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Record all five binary targets, signer/install identities, OS secret namespaces and native capability gaps.",
+      "result": "passed",
+      "evidence": "hosts.json distribution, secret_boundaries, destination_capability and qualification_remaining"
+    },
+    {
+      "criterion": "Map v1/v2 journals, quotas, locks, commits/ack and retained-state/downgrade recovery with actual tests.",
+      "result": "passed",
+      "evidence": "hosts.json host_state, journals, durable_lifecycle, test_inventory and fixture_inventory"
+    },
+    {
+      "criterion": "Identify crate/install and exact-CI consumers, pending external qualification and measurable build budgets.",
+      "result": "passed",
+      "evidence": "hosts.json consumers, ci_consumers, qualification_remaining and build_budgets"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-HOST"
+      ],
+      "result": "passed",
+      "evidence": "exact task scope/acceptance/target read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "result": "passed",
+      "evidence": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "status",
+        "--porcelain"
+      ],
+      "result": "passed",
+      "evidence": "initial coordinator-owned entrypoint/plan modified; no product drift observed"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "inventory generation read base with git show; asserted exact byte equality for source_inventory; extracted pinned test names, lines and fixture JSON pointers; calculated SHA256 digests"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "rg",
+        "--files",
+        "apps/cli",
+        "apps",
+        "-g",
+        "AGENTS.md"
+      ],
+      "result": "passed",
+      "evidence": "no component CLI AGENTS; root instructions govern"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "JSON parsed; exact target and allowed changed paths; 5 targets; all source/test/fixture digests recomputed against assigned base; inventory patch digest and pending review verified; 153 source test case IDs."
+    }
+  ],
+  "inspection_summary": "Read bounded task, cloud-release/release/identity/dist and selected C07-C09/C11/O03-O07/F01/F02/F07/F09 references; inspected source metadata, journals/receivers/quota/config/credential/release workflows. Pinned 54 source inputs, 31 test-source entries and 12 frozen fixture files. No product tests executed; planning verification list has no executable product gates.",
+  "observations": [],
+  "limitations": [
+    "Planning result inventories current source and exact cases; tests/signing/physical operation assertions were not executed.",
+    "No credentials, user state, production resources, real client or provider accessed.",
+    "No successor Node packaging or native ABI exists in this inventory; platform capability claims remain pending.",
+    "Dependency-owned Linux physical secret namespace mapping and external branch-protection/current public consumer usage require later evidence.",
+    "No measured startup/native/CI budget, full frozen retained journal corpus or signed downgrade qualification is claimed."
+  ],
+  "remaining_qualification": [
+    {
+      "class": "physical_device",
+      "status": "pending",
+      "cases": [
+        "exact iOS/CLI raw/extract/generated/resume/cancel LAN and Tailscale",
+        "exact iOS foreground typed-query LAN and Tailscale",
+        "exact Android raw/generated/resume/cancel LAN and Tailscale"
+      ],
+      "source": "apps/cli/docs/mobile-compatibility.md",
+      "note": "connectivity smoke recorded in source does not qualify full operation matrix; Android typed query unsupported"
+    },
+    {
+      "class": "signed_distribution",
+      "status": "pending",
+      "cases": [
+        "all five offline successor archives on clean machines without global Node/npm",
+        "macOS previous-signed-to-successor Keychain ACL + DMG notarization/stapling",
+        "Windows optional-to-qualified Authenticode transition and exact Credential Manager target",
+        "Linux headless/session/restart credential persistence",
+        "both launchers current-executable helper ABI/provenance and install upgrade",
+        "native destination/quota/cross-process crash/race/low-disk matrix"
+      ]
+    },
+    {
+      "class": "host_integration",
+      "status": "pending",
+      "cases": [
+        "every retained journal state and exact accepted profile",
+        "crash between destination commit/journal/ack",
+        "lost final acknowledgement and peer completion",
+        "unknown credential mutation outcome",
+        "safe downgrade and engine-pin route"
+      ]
+    },
+    {
+      "class": "external_client",
+      "status": "pending",
+      "cases": [
+        "public Rust crate/install consumer transition",
+        "configured required GitHub contexts/rulesets",
+        "Obsidian/installed MCP host interoperability"
+      ]
+    }
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
+  },
+  "review_evidence": {
+    "scope": "independent bounded source/fixture/state inventory review",
+    "checks": "All source/fixture pins and declared case symbols independently verified against assigned git revision; actual behavior qualification remains pending."
+  }
+}

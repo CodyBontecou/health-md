@@ -1,0 +1,2227 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CORE",
+  "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+  "scoped_design_ids": [
+    "C01",
+    "C02",
+    "C03",
+    "C04",
+    "C05",
+    "C06",
+    "K01",
+    "K02",
+    "K03",
+    "F05",
+    "F10"
+  ],
+  "proof_class": "planning",
+  "evidence_policy": "Facts are source-derived at source_revision using git show; checks listed as available are unrun. Synthetic fixture bytes are hashed, never copied as user data. No implementation or production qualification is claimed.",
+  "authority_manifest": {
+    "path": "packages/contracts/manifest.json",
+    "schema_version": 2,
+    "sha256": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2"
+  },
+  "source_pins": [
+    {
+      "path": ".github/workflows/android-ci.yml",
+      "sha256": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8"
+    },
+    {
+      "path": ".github/workflows/apple-ci.yml",
+      "sha256": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db"
+    },
+    {
+      "path": ".github/workflows/cli-ci.yml",
+      "sha256": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233"
+    },
+    {
+      "path": ".github/workflows/core-rust-ci.yml",
+      "sha256": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca"
+    },
+    {
+      "path": ".github/workflows/website-ci.yml",
+      "sha256": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a"
+    },
+    {
+      "path": "AGENTS.md",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "apps/android/app/src/androidTest/java/com/healthmd/domain/render/HealthMdRendererInstrumentationTest.kt",
+      "sha256": "3b94675f800f2b96799e11b127841e6e99d8d3227fcecb19935aefa9f7eae691"
+    },
+    {
+      "path": "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt",
+      "sha256": "db84cd10a6f24fc459adae6e0c7d9101588bb8fb660273bdfef4a8a24de70931"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt",
+      "sha256": "ec9c8024b61c85ffa7a359cd54d7bef0c34c36fe1ff21660d1f2f4882a1ec309"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt",
+      "sha256": "b57a7e2bebd84d134fd05518c94a8886e76005f8d3811f7794353c44f7e594b8"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt",
+      "sha256": "80abe9ae58237a24ad38a5cbb5453d4077da9b98d4a06770996a4483636a0ab7"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/render/HealthMdRenderInputAdapter.kt",
+      "sha256": "38c2202169214be2fd309bfb0771126c1d8870b4a616049677ab0048297a35f0"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt",
+      "sha256": "03c929d1218e222ae35e46289faab3ab09e5776df8599e19b384c490406a6d44"
+    },
+    {
+      "path": "apps/android/app/src/test/java/com/healthmd/domain/render/HealthMdRenderInputAdapterTest.kt",
+      "sha256": "d8e6ec6993e04f364cd7934925abaa756a232110989d7e03f856572f22d91115"
+    },
+    {
+      "path": "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt",
+      "sha256": "daabc0d1755f5e1f9f9dbf7e35aad46ede778af9fe51b7f8270cc5747d6593e3"
+    },
+    {
+      "path": "apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt",
+      "sha256": "e646fad70f47c10465955e7008fe672117e5cc9be177cd20cbe42d84c324d295"
+    },
+    {
+      "path": "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md",
+      "sha256": "c1e96bcb1a627880d5190fdbadd375f0296ef035f35bdc9edb33562d742ecd62"
+    },
+    {
+      "path": "apps/android/docs/export-contract/ios-export-contract.md",
+      "sha256": "d33fede41d914f34899eb2133c86216af7c5fb3b3b04b23ee198613452b69c4b"
+    },
+    {
+      "path": "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+      "sha256": "b62c92fe6e2561b2af2bb3f08b1408eb38f44202e4118887b37e55a5fe2ad70a"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+      "sha256": "4163f9eacdd956b3be2e1a9fa78237f1f633fc6e57cc9f2949989d36879c7864"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Core/HealthMdRenderInputAdapter.swift",
+      "sha256": "31fdcf49790d82d75943ffd8b4f0768264fff6a6807cd53188fa1c86c7fd77c8"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift",
+      "sha256": "fa1e62802f3339bea7a09e8351da6c3181d1ae0d2a5efbef3853a985ecf8903b"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+      "sha256": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift",
+      "sha256": "134265bd43d6208cd4a3f7ad70c52b9d2f0248ecb1fefb3e7bd2cbcd6649b842"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift",
+      "sha256": "6b54eb25076dae9af1dcafb9051a52561f114492f813b6bc03c40dedb4e600af"
+    },
+    {
+      "path": "apps/apple/HealthMd/Shared/Models/HealthMetrics.swift",
+      "sha256": "89de0f22a9f3f4809d63c3cbbe12cbdb35f1bbea6c65bb3258f61f7a91cac24b"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
+      "sha256": "f0fd0c624489d7a7d4289eae6602b1987952d9ca5ecc2dc3672ad10642784ad2"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/CSVExporterContractTests.swift",
+      "sha256": "6f30e18cb7354a284a7131d591293c469c2dc0218b8b268aa9c199d0584108a8"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/ExportSchemaSignatureTests.swift",
+      "sha256": "50d60fc9f2dac9dc468c870c278303f2236d5d9527387decf1e07199cdb45b0b"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/GeneratedRollupReferenceDocsTests.swift",
+      "sha256": "1beb8dad290722af43535fafc0cbeb02b495dadc5bf7df42d95cb6578ad6818d"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift",
+      "sha256": "44d3adf25601fd95676b959491afb4bd028ad208430d43c7c06b3a3f757ec429"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/JSONExporterContractTests.swift",
+      "sha256": "f63dda7fa65e78280ffac558defe3b107cefba3386cb86384d91cb559cedef1b"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/MarkdownExporterContractTests.swift",
+      "sha256": "a9fa058f934d5ee6fe37c1ab699c6b3d3a7b34f4a701e2797001f7e197529f9c"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Export/ObsidianBasesContractTests.swift",
+      "sha256": "6ac5bad1db96595eb9216874081330d8902eced757db988dd72d319fb1d73424"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/SharedCore/HealthMdRenderInputAdapterTests.swift",
+      "sha256": "3c6882bda732f976d8a9b8ab22c977e7e2e015ac69381dacd058760072006bb5"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift",
+      "sha256": "f73b48092c6b2e6b153f1779c8da5651800f7e245c5d16523830e6566c920db5"
+    },
+    {
+      "path": "apps/apple/Makefile",
+      "sha256": "46335dfb1cbfc60abfc1066b1a9051fd1e7d769265008248bcb07effa7c62fe0"
+    },
+    {
+      "path": "apps/apple/docs/features/export-schema.md",
+      "sha256": "f5d604b16a14e7aa6a1647c8c3cf9b63a40ebdd0db0096994e323d80a3691d07"
+    },
+    {
+      "path": "apps/website/docs-src/public/reference/metric-registry-v1.json",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+    },
+    {
+      "path": "apps/website/docs-src/src/content/docs/shared-metric-registry.md",
+      "sha256": "21c8b5e9b5865ffa6087fe0ae1c4f607590c9b9aafd47efbbabf478c3e47b54a"
+    },
+    {
+      "path": "apps/website/external-sources.json",
+      "sha256": "0ea940fab85168163691c2d2232527504162e717b7644052edf5644823bbc1f4"
+    },
+    {
+      "path": "apps/website/package.json",
+      "sha256": "dbef5580d91967e5a8fc2cfca3702bd2157d5cf5046284e66605cf12a30bbfbc"
+    },
+    {
+      "path": "apps/website/test/visualization-catalog.test.mjs",
+      "sha256": "eb0000e371144c3c4ecda03d70b7365b479964355e1b587e10008091b93c0a1f"
+    },
+    {
+      "path": "docs/architecture/cross-platform-unification-policy.md",
+      "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "sha256": "1a8e7fecd48df56398cd0d0dce4dc216e971294d0f15a28353fbae43e0795794"
+    },
+    {
+      "path": "docs/migration/effect-refactor/core-cli.md",
+      "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749"
+    },
+    {
+      "path": "packages/contracts/manifest.json",
+      "sha256": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2"
+    },
+    {
+      "path": "packages/contracts/product-capabilities.json",
+      "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+      "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/contract.md",
+      "sha256": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/render-input.schema.json",
+      "sha256": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+      "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/contract.md",
+      "sha256": "4571efb35d26898702d34972764775c105beccc47cd26cafbb84aa62fcc87962"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/rollup-summary.schema.json",
+      "sha256": "a8a29c50a33c1878eb6b764950d43074dc726d9413b6997827525e36d0eda621"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/contract.md",
+      "sha256": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+      "sha256": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/semantic-result.schema.json",
+      "sha256": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96"
+    },
+    {
+      "path": "packages/contracts/validate.py",
+      "sha256": "ca1f6fde2899e1ffac236bfea747e5e9a798a506c919edfb093d2eb34a58c23f"
+    },
+    {
+      "path": "packages/healthmd-core-rust/AGENTS.md",
+      "sha256": "4ea90487e4f9f2d504d33dbf4739a7173189cd5c807e9d05f635f906d4d2fcd9"
+    },
+    {
+      "path": "packages/healthmd-core-rust/Cargo.lock",
+      "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b"
+    },
+    {
+      "path": "packages/healthmd-core-rust/Cargo.toml",
+      "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+      "sha256": "b3b20017b579f8d9730076aa5be81b583c241cf46faad96cfe140b6c7a8a8200"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+      "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json",
+      "sha256": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+      "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
+      "sha256": "a22d63fb859bb466ec030b1801551498e88aca0b607e360479de56a472342256"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs",
+      "sha256": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+      "sha256": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+      "sha256": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v7.rs",
+      "sha256": "7be7f73ff02eaf60e975febbc6a63f381974845cd82ad955ab812df9dd93a9a7"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs",
+      "sha256": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs",
+      "sha256": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+      "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+      "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+      "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+      "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+      "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+      "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_native_bases.rs",
+      "sha256": "a41a739c1515bdf8d577045f66ddccfa4ca13ae1a872e892474bae59b3b79ff0"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs",
+      "sha256": "1de7a1413a700e318372f3bc4fd91afc9efe09bbcbce3c342c1f13c2c4232982"
+    },
+    {
+      "path": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+      "sha256": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210"
+    },
+    {
+      "path": "packages/healthmd-core-rust/scripts/import-native-registry.py",
+      "sha256": "5a4004fefe7526b118ff82222376df7088c6d0226112648ba54666aeabaa1045"
+    }
+  ],
+  "frozen_fixtures": [
+    {
+      "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json",
+      "sha256": "f92aaef42e1198bcd1b7591aa5248fc759270f2900ec108042d0375ed418152c",
+      "byte_count": 496904,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": null,
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json",
+      "sha256": "05f3778112115d9424a7e14fa25d2cdb6a657689b555cb14d41a847b44cdd966",
+      "byte_count": 371647,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": null,
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v1.json",
+      "sha256": "d2bad75b69e34e0e8e4ddd95ddb6d22ef867ddf81fca712c54612a9ec18587fb",
+      "byte_count": 491643,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v2.json",
+      "sha256": "108c5e5e0c1627bf4a871d33f7d099fe8c9468db7f930f08bb248e763395c84c",
+      "byte_count": 491643,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v3.json",
+      "sha256": "3b2b72348c0704f568ee2a7bf84f74e535cb72e50b5d6924be33c9ce4694646b",
+      "byte_count": 492194,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v4.json",
+      "sha256": "21b4796e4642f36cda19bfbe7b35e045b4864117b8b838319ed55ffb7e42502c",
+      "byte_count": 492925,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v5.json",
+      "sha256": "c76ec463eb03067f5f717a55087e97daf8ab636dba9aae505ba8e5df5d66d13e",
+      "byte_count": 524132,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v6.json",
+      "sha256": "43f69724e342eae61ccd37555525bc98f856e300e089aad31ef6e49f316e4fed",
+      "byte_count": 601931,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json",
+      "sha256": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
+      "byte_count": 604674,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v8.json",
+      "sha256": "d077deb20f8bcae121b9ac2da30b1f7f6bbf0ed2c1a7c4296076d882ca98374a",
+      "byte_count": 672074,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.health_data",
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json",
+      "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "byte_count": 4446,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "vectors": [
+          "issue-95-indentation-list",
+          "multiline-double-quoted-scalar",
+          "multiline-single-quoted-scalar",
+          "typed-plain-keys-do-not-collide-with-quoted-strings",
+          "yaml-1-1-booleans-and-string-looking-keys",
+          "null-numeric-and-timestamp-key-domains",
+          "quoted-string-key-does-not-collide-with-typed-plain-key",
+          "ordinary-update-uses-generated-preamble",
+          "unsupported-complex-key-rejects",
+          "crlf-and-eof-boundary"
+        ]
+      },
+      "fixture_schema": "healthmd.markdown_merge_vectors",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests/Fixtures/markdown-merge-v1.json",
+      "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "byte_count": 4446,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "vectors": [
+          "issue-95-indentation-list",
+          "multiline-double-quoted-scalar",
+          "multiline-single-quoted-scalar",
+          "typed-plain-keys-do-not-collide-with-quoted-strings",
+          "yaml-1-1-booleans-and-string-looking-keys",
+          "null-numeric-and-timestamp-key-domains",
+          "quoted-string-key-does-not-collide-with-typed-plain-key",
+          "ordinary-update-uses-generated-preamble",
+          "unsupported-complex-key-rejects",
+          "crlf-and-eof-boundary"
+        ]
+      },
+      "fixture_schema": "healthmd.markdown_merge_vectors",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
+      "sha256": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "byte_count": 20739,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "apple-health-data-v8",
+          "android-frozen-v4",
+          "android-analytical-v5"
+        ]
+      },
+      "fixture_schema": "healthmd.render_differential",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json",
+      "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "byte_count": 4446,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "vectors": [
+          "issue-95-indentation-list",
+          "multiline-double-quoted-scalar",
+          "multiline-single-quoted-scalar",
+          "typed-plain-keys-do-not-collide-with-quoted-strings",
+          "yaml-1-1-booleans-and-string-looking-keys",
+          "null-numeric-and-timestamp-key-domains",
+          "quoted-string-key-does-not-collide-with-typed-plain-key",
+          "ordinary-update-uses-generated-preamble",
+          "unsupported-complex-key-rejects",
+          "crlf-and-eof-boundary"
+        ]
+      },
+      "fixture_schema": "healthmd.markdown_merge_vectors",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
+      "sha256": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "byte_count": 316311,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "frozen-default",
+          "frozen-legacy-native",
+          "analytical-v5",
+          "analytical-v5-imperial"
+        ]
+      },
+      "fixture_schema": "healthmd.native_render_requests",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
+      "sha256": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "byte_count": 925731,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "frozen-default",
+          "frozen-legacy-native-granular",
+          "analytical-v5-granular",
+          "analytical-v5-imperial"
+        ]
+      },
+      "fixture_schema": "healthmd.native_render_requests",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json",
+      "sha256": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+      "byte_count": 313387,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "frozen-default",
+          "frozen-legacy-native-granular",
+          "analytical-v5-granular",
+          "analytical-v5-imperial"
+        ]
+      },
+      "fixture_schema": "healthmd.native_renderer_goldens",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/render-input/v1/fixtures/native-apple-v7.json",
+      "sha256": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+      "byte_count": 138487,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "partial-default",
+          "full-imperial",
+          "lossless-custom"
+        ]
+      },
+      "fixture_schema": "healthmd.native_renderer_goldens",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
+      "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+      "byte_count": 11629,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
+      "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+      "byte_count": 38202,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
+      "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "byte_count": 39662,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.rollup_summary",
+      "fixture_schema_version": 9,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
+      "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+      "byte_count": 9249,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+      "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "byte_count": 16053,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "apple-required-differentials",
+          "android-fraction-and-exact-time",
+          "android-analytical-native-field"
+        ],
+        "rejection_cases": [
+          "nonfinite-binary64",
+          "sequence-and-limit-contract",
+          "cancellation-terminal"
+        ]
+      },
+      "fixture_schema": "healthmd.semantic_differential_fixture",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+      "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "byte_count": 1015,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "range_limit_cases": [
+          "exact-10000-accepted",
+          "10001-rejected",
+          "reversed-rejected"
+        ]
+      },
+      "fixture_schema": "healthmd.semantic_profile_capability_fixture",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-android-v4-v5.json",
+      "sha256": "c042b7c78cfeef7e4825f1b30d8b4e32c566635369797589d62af3bfe5e016a6",
+      "byte_count": 77034,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": null,
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-apple-v7.json",
+      "sha256": "0b6db66f28d19565bd06f85e352a7d5af4ff859139c36ae4eb00f98cb7f23f30",
+      "byte_count": 150027,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": null,
+      "fixture_schema_version": null,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json",
+      "sha256": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e",
+      "byte_count": 10677,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {},
+      "fixture_schema": "healthmd.native_semantic_crosswalk",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/markdown-merge-v1.json",
+      "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "byte_count": 4446,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "vectors": [
+          "issue-95-indentation-list",
+          "multiline-double-quoted-scalar",
+          "multiline-single-quoted-scalar",
+          "typed-plain-keys-do-not-collide-with-quoted-strings",
+          "yaml-1-1-booleans-and-string-looking-keys",
+          "null-numeric-and-timestamp-key-domains",
+          "quoted-string-key-does-not-collide-with-typed-plain-key",
+          "ordinary-update-uses-generated-preamble",
+          "unsupported-complex-key-rejects",
+          "crlf-and-eof-boundary"
+        ]
+      },
+      "fixture_schema": "healthmd.markdown_merge_vectors",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json",
+      "sha256": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "byte_count": 316311,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "frozen-default",
+          "frozen-legacy-native",
+          "analytical-v5",
+          "analytical-v5-imperial"
+        ]
+      },
+      "fixture_schema": "healthmd.native_render_requests",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json",
+      "sha256": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "byte_count": 925731,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "frozen-default",
+          "frozen-legacy-native-granular",
+          "analytical-v5-granular",
+          "analytical-v5-imperial"
+        ]
+      },
+      "fixture_schema": "healthmd.native_render_requests",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json",
+      "sha256": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "byte_count": 20739,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "apple-health-data-v8",
+          "android-frozen-v4",
+          "android-analytical-v5"
+        ]
+      },
+      "fixture_schema": "healthmd.render_differential",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json",
+      "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "byte_count": 16053,
+      "case_identity_policy": "Use explicit fixture IDs below; otherwise entire file is the frozen case.",
+      "case_ids": {
+        "cases": [
+          "apple-required-differentials",
+          "android-fraction-and-exact-time",
+          "android-analytical-native-field"
+        ],
+        "rejection_cases": [
+          "nonfinite-binary64",
+          "sequence-and-limit-contract",
+          "cancellation-terminal"
+        ]
+      },
+      "fixture_schema": "healthmd.semantic_differential_fixture",
+      "fixture_schema_version": 1,
+      "evidence_class": "source_derived_frozen_bytes"
+    }
+  ],
+  "source_defined_negative_and_boundary_cases": [
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+      "sha256": "b3b20017b579f8d9730076aa5be81b583c241cf46faad96cfe140b6c7a8a8200",
+      "case_ids": [
+        "cancel",
+        "cancel",
+        "cancel",
+        "coarse_semantic_session_processes_and_cancels"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+      "sha256": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+      "case_ids": [
+        "rejects_each_unsupported_version_independently",
+        "rejects_non_canonical_or_mismatched_bytes",
+        "enforces_fixture_size_limit_before_parsing"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs",
+      "sha256": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+      "case_ids": [
+        "portable_collision_key",
+        "rejects_unsafe_posix_paths",
+        "detects_exact_case_and_unicode_collisions",
+        "indivisible_api_envelope_may_exceed_the_ordinary_artifact_limit"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+      "sha256": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+      "case_ids": [
+        "markdown_merge_is_idempotent_and_preserves_unknown_content",
+        "nested_json_paths_create_objects_and_reject_conflicts"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs",
+      "sha256": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+      "case_ids": [
+        "is_frontmatter_delimiter",
+        "apple_frontmatter_splice_preserves_crlf_scalars_delimiters_and_body",
+        "apple_frontmatter_fails_closed_for_unsupported_complex_keys",
+        "apple_frontmatter_rejects_tabs_before_required_yaml_indentation"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+      "sha256": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+      "case_ids": [
+        "date_templates_and_bases_collision_suffix_match_native_paths",
+        "invalid_batches_are_transactional_and_cancellation_is_terminal"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs",
+      "sha256": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+      "case_ids": [
+        "enforces_mode_size_cancellation_and_terminal_state"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+      "sha256": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "case_ids": [
+        "cancel_result",
+        "exact_numbers_reject_nonfinite_and_preserve_negative_zero_bits",
+        "range_rejects_revision_one_while_calendar_revision_one_remains_valid",
+        "range_accepts_exact_limit_and_rejects_limit_plus_one_or_reversed_bounds",
+        "invalid_batch_is_transactional_and_can_be_retried",
+        "cancellation_is_checked_during_day_reduction",
+        "cancellation_is_terminal_and_health_free"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+      "sha256": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+      "case_ids": [
+        "apple_range_v9_rejects_invalid_revision_coverage_and_contents",
+        "fixture_rejections_are_transactional_and_health_free"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs",
+      "sha256": "1de7a1413a700e318372f3bc4fd91afc9efe09bbcbce3c342c1f13c2c4232982",
+      "case_ids": [
+        "rejection_cases_are_enforced_without_private_values_in_errors"
+      ],
+      "classification": "Source-defined tests or validation helpers; names are exact source symbols, not all are executable tests. Frozen JSON rejection cases remain separately listed."
+    }
+  ],
+  "scoped_contract_map": [
+    {
+      "design_id": "C01",
+      "authorities": [
+        "packages/contracts/product-capabilities.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json"
+      ],
+      "classification_policy": {
+        "capabilities": [
+          "shared",
+          "apple_only",
+          "android_only",
+          "unavailable",
+          "planned"
+        ],
+        "registry": [
+          "platform_exact_or_unavailable",
+          "mapped_alias",
+          "platform_distinct"
+        ]
+      },
+      "registry_profiles": [
+        {
+          "id": "apple_health_data_v8",
+          "ordered_selection_ids": [
+            "sleep_total",
+            "sleep_bedtime",
+            "sleep_wake",
+            "sleep_deep",
+            "sleep_rem",
+            "sleep_core",
+            "sleep_awake",
+            "sleep_in_bed",
+            "steps",
+            "distance_walking_running",
+            "distance_swimming",
+            "distance_wheelchair",
+            "distance_downhill_snow",
+            "active_energy",
+            "basal_energy",
+            "exercise_time",
+            "stand_time",
+            "stand_hours",
+            "move_time",
+            "flights_climbed",
+            "swimming_strokes",
+            "push_count",
+            "vo2_max",
+            "physical_effort",
+            "activity_summary",
+            "activity_move_mode",
+            "cross_country_skiing_speed",
+            "distance_cross_country_skiing",
+            "paddle_sports_speed",
+            "distance_paddle_sports",
+            "rowing_speed",
+            "distance_rowing",
+            "distance_skating_sports",
+            "workout_effort_score",
+            "estimated_workout_effort_score",
+            "nike_fuel",
+            "heart_rate_avg",
+            "heart_rate_min",
+            "heart_rate_max",
+            "resting_heart_rate",
+            "walking_heart_rate",
+            "hrv",
+            "heart_rate_recovery",
+            "afib_burden",
+            "peripheral_perfusion_index",
+            "high_heart_rate_event",
+            "low_heart_rate_event",
+            "irregular_heart_rhythm_event",
+            "low_cardio_fitness_event",
+            "hypertension_event",
+            "electrocardiograms",
+            "heartbeat_series",
+            "respiratory_rate",
+            "blood_oxygen",
+            "forced_vital_capacity",
+            "fev1",
+            "peak_expiratory_flow",
+            "inhaler_usage",
+            "sleeping_breathing_disturbances",
+            "sleep_apnea_event",
+            "body_temperature",
+            "basal_body_temperature",
+            "wrist_temperature",
+            "blood_pressure_systolic",
+            "blood_pressure_diastolic",
+            "blood_glucose",
+            "electrodermal_activity",
+            "weight",
+            "height",
+            "bmi",
+            "body_fat",
+            "lean_body_mass",
+            "waist_circumference",
+            "date_of_birth",
+            "biological_sex",
+            "blood_type",
+            "fitzpatrick_skin_type",
+            "wheelchair_use",
+            "walking_speed",
+            "walking_step_length",
+            "walking_double_support",
+            "walking_asymmetry",
+            "walking_steadiness",
+            "stair_ascent_speed",
+            "stair_descent_speed",
+            "six_minute_walk",
+            "running_speed",
+            "running_stride_length",
+            "running_ground_contact",
+            "running_vertical_oscillation",
+            "running_power",
+            "walking_steadiness_event",
+            "cycling_distance",
+            "cycling_speed",
+            "cycling_power",
+            "cycling_cadence",
+            "cycling_ftp",
+            "dietary_energy",
+            "dietary_protein",
+            "dietary_carbs",
+            "dietary_fat",
+            "dietary_fat_saturated",
+            "dietary_fat_mono",
+            "dietary_fat_poly",
+            "dietary_cholesterol",
+            "dietary_fiber",
+            "dietary_sugar",
+            "dietary_sodium",
+            "dietary_water",
+            "dietary_caffeine",
+            "vitamin_a",
+            "vitamin_b6",
+            "vitamin_b12",
+            "vitamin_c",
+            "vitamin_d",
+            "vitamin_e",
+            "vitamin_k",
+            "thiamin",
+            "riboflavin",
+            "niacin",
+            "folate",
+            "biotin",
+            "pantothenic_acid",
+            "calcium",
+            "iron",
+            "potassium",
+            "magnesium",
+            "phosphorus",
+            "zinc",
+            "selenium",
+            "copper",
+            "manganese",
+            "chromium",
+            "molybdenum",
+            "chloride",
+            "iodine",
+            "headphone_audio",
+            "environmental_audio",
+            "environmental_sound_reduction",
+            "environmental_audio_exposure_event",
+            "headphone_audio_exposure_event",
+            "audiograms",
+            "mindful_minutes",
+            "mindful_sessions",
+            "state_of_mind_entries",
+            "daily_mood",
+            "average_valence",
+            "momentary_emotions",
+            "gad7_assessments",
+            "phq9_assessments",
+            "menstrual_flow",
+            "sexual_activity",
+            "ovulation_test",
+            "cervical_mucus",
+            "intermenstrual_bleeding",
+            "bleeding_after_pregnancy",
+            "bleeding_during_pregnancy",
+            "contraceptive",
+            "infrequent_menstrual_cycles",
+            "irregular_menstrual_cycles",
+            "lactation",
+            "persistent_intermenstrual_bleeding",
+            "pregnancy",
+            "pregnancy_test_result",
+            "progesterone_test_result",
+            "prolonged_menstrual_periods",
+            "symptom_headache",
+            "symptom_fatigue",
+            "symptom_nausea",
+            "symptom_dizziness",
+            "symptom_mood_changes",
+            "symptom_sleep_changes",
+            "symptom_appetite_changes",
+            "symptom_hot_flashes",
+            "symptom_chills",
+            "symptom_fever",
+            "symptom_lower_back_pain",
+            "symptom_bloating",
+            "symptom_constipation",
+            "symptom_diarrhea",
+            "symptom_heartburn",
+            "symptom_coughing",
+            "symptom_sore_throat",
+            "symptom_runny_nose",
+            "symptom_shortness_of_breath",
+            "symptom_chest_pain",
+            "symptom_skipped_heartbeat",
+            "symptom_rapid_heartbeat",
+            "symptom_acne",
+            "symptom_dry_skin",
+            "symptom_hair_loss",
+            "symptom_memory_lapse",
+            "symptom_night_sweats",
+            "symptom_vomiting",
+            "symptom_abdominal_cramps",
+            "symptom_breast_pain",
+            "symptom_pelvic_pain",
+            "symptom_body_ache",
+            "symptom_fainting",
+            "symptom_loss_of_smell",
+            "symptom_loss_of_taste",
+            "symptom_wheezing",
+            "symptom_sinus_congestion",
+            "symptom_bladder_incontinence",
+            "symptom_vaginal_dryness",
+            "clinical_allergy_records",
+            "clinical_note_records",
+            "clinical_condition_records",
+            "clinical_coverage_records",
+            "clinical_immunization_records",
+            "clinical_lab_result_records",
+            "clinical_medication_records",
+            "clinical_procedure_records",
+            "clinical_vital_sign_records",
+            "cda_documents",
+            "verifiable_clinical_records",
+            "vision_prescriptions",
+            "medications",
+            "uv_exposure",
+            "time_in_daylight",
+            "number_of_falls",
+            "blood_alcohol",
+            "alcoholic_beverages",
+            "insulin_delivery",
+            "toothbrushing",
+            "handwashing",
+            "water_temperature",
+            "underwater_depth",
+            "workouts",
+            "scheduled_workout_plans"
+          ],
+          "platform": "apple",
+          "profile_revision": 1,
+          "public_profile_id": "apple-v8",
+          "public_schema": "healthmd.health_data",
+          "public_schema_version": 8,
+          "unavailable_selection_ids": [],
+          "output_count": 226
+        },
+        {
+          "id": "android_frozen_v4",
+          "ordered_selection_ids": [
+            "sleep_total",
+            "sleep_deep",
+            "sleep_rem",
+            "sleep_light",
+            "sleep_awake",
+            "sleep_in_bed",
+            "steps",
+            "active_calories",
+            "total_calories",
+            "basal_calories",
+            "exercise_minutes",
+            "flights_climbed",
+            "distance",
+            "cycling_distance",
+            "elevation_gained",
+            "wheelchair_pushes",
+            "swimming_distance",
+            "swimming_strokes",
+            "wheelchair_distance",
+            "downhill_snow_distance",
+            "activity_intensity_minutes",
+            "resting_hr",
+            "avg_hr",
+            "walking_hr",
+            "min_hr",
+            "max_hr",
+            "hrv",
+            "respiratory_rate",
+            "blood_oxygen",
+            "body_temp",
+            "bp_systolic",
+            "bp_diastolic",
+            "blood_glucose",
+            "basal_body_temp",
+            "skin_temperature",
+            "weight",
+            "height",
+            "bmi",
+            "body_fat",
+            "lean_mass",
+            "body_water_mass",
+            "bone_mass",
+            "dietary_energy",
+            "protein",
+            "carbs",
+            "fat",
+            "saturated_fat",
+            "monounsaturated_fat",
+            "polyunsaturated_fat",
+            "unsaturated_fat",
+            "trans_fat",
+            "fiber",
+            "sugar",
+            "sodium",
+            "potassium",
+            "calcium",
+            "iron",
+            "magnesium",
+            "zinc",
+            "phosphorus",
+            "iodine",
+            "selenium",
+            "copper",
+            "manganese",
+            "chromium",
+            "molybdenum",
+            "chloride",
+            "vitamin_a",
+            "vitamin_b6",
+            "vitamin_b12",
+            "vitamin_c",
+            "vitamin_d",
+            "vitamin_e",
+            "vitamin_k",
+            "thiamin",
+            "riboflavin",
+            "niacin",
+            "folate",
+            "folic_acid",
+            "pantothenic_acid",
+            "biotin",
+            "cholesterol",
+            "water",
+            "caffeine",
+            "energy_from_fat",
+            "nutrition_meals",
+            "walking_speed",
+            "vo2_max",
+            "cycling_cadence",
+            "steps_cadence",
+            "power_avg",
+            "power_max",
+            "running_speed",
+            "running_power",
+            "mindful_minutes",
+            "mindful_sessions",
+            "menstrual_flow",
+            "cervical_mucus",
+            "ovulation_test",
+            "sexual_activity",
+            "intermenstrual_bleeding",
+            "menstruation_periods",
+            "menstruation_period_days",
+            "workouts",
+            "planned_workouts",
+            "medical_resources"
+          ],
+          "platform": "android",
+          "profile_revision": 1,
+          "public_profile_id": "android-frozen-v4",
+          "public_schema": "healthmd.health_data",
+          "public_schema_version": 4,
+          "unavailable_selection_ids": [
+            "wrist_temperature",
+            "electrodermal_activity",
+            "heart_rate_recovery",
+            "afib_burden",
+            "state_of_mind_entries",
+            "daily_mood",
+            "average_valence",
+            "momentary_emotions",
+            "stand_time",
+            "move_time",
+            "physical_effort",
+            "forced_vital_capacity",
+            "fev1",
+            "peak_expiratory_flow",
+            "inhaler_usage",
+            "waist_circumference",
+            "walking_step_length",
+            "walking_double_support",
+            "walking_asymmetry",
+            "walking_steadiness",
+            "stair_ascent_speed",
+            "stair_descent_speed",
+            "six_minute_walk",
+            "running_stride_length",
+            "running_ground_contact",
+            "running_vertical_oscillation",
+            "cycling_ftp",
+            "headphone_audio",
+            "environmental_audio",
+            "medications",
+            "uv_exposure",
+            "time_in_daylight",
+            "number_of_falls",
+            "blood_alcohol",
+            "alcoholic_beverages",
+            "insulin_delivery",
+            "toothbrushing",
+            "handwashing",
+            "water_temperature",
+            "underwater_depth",
+            "symptom_headache",
+            "symptom_fatigue",
+            "symptom_nausea",
+            "symptom_dizziness",
+            "symptom_mood_changes",
+            "symptom_sleep_changes",
+            "symptom_appetite_changes",
+            "symptom_hot_flashes",
+            "symptom_chills",
+            "symptom_fever",
+            "symptom_lower_back_pain",
+            "symptom_bloating",
+            "symptom_constipation",
+            "symptom_diarrhea",
+            "symptom_heartburn",
+            "symptom_coughing",
+            "symptom_sore_throat",
+            "symptom_runny_nose",
+            "symptom_shortness_of_breath",
+            "symptom_chest_pain",
+            "symptom_skipped_heartbeat",
+            "symptom_rapid_heartbeat",
+            "symptom_acne",
+            "symptom_dry_skin",
+            "symptom_hair_loss",
+            "symptom_memory_lapse",
+            "symptom_night_sweats",
+            "symptom_vomiting",
+            "symptom_abdominal_cramps",
+            "symptom_breast_pain",
+            "symptom_pelvic_pain",
+            "symptom_body_ache",
+            "symptom_fainting",
+            "symptom_loss_of_smell",
+            "symptom_loss_of_taste",
+            "symptom_wheezing",
+            "symptom_sinus_congestion",
+            "symptom_bladder_incontinence",
+            "symptom_vaginal_dryness",
+            "audio_exposure",
+            "afib_burden_percent",
+            "state_of_mind_count",
+            "average_valence_percent",
+            "daily_mood_count",
+            "average_daily_mood_valence",
+            "momentary_emotion_count",
+            "forced_vital_capacity_l",
+            "fev1_l",
+            "headphone_audio_db",
+            "environmental_sound_db",
+            "stand_hours",
+            "move_minutes",
+            "waist_circumference_cm",
+            "step_length_cm",
+            "double_support_percent",
+            "walking_asymmetry_percent",
+            "six_min_walk_m",
+            "walking_steadiness_percent",
+            "running_stride_length_m",
+            "running_ground_contact_ms",
+            "running_vertical_oscillation_cm",
+            "symptoms"
+          ],
+          "output_count": 161
+        },
+        {
+          "id": "android_analytical_v5",
+          "ordered_selection_ids": [
+            "sleep_total",
+            "sleep_deep",
+            "sleep_rem",
+            "sleep_light",
+            "sleep_awake",
+            "sleep_in_bed",
+            "steps",
+            "active_calories",
+            "total_calories",
+            "basal_calories",
+            "exercise_minutes",
+            "flights_climbed",
+            "distance",
+            "cycling_distance",
+            "elevation_gained",
+            "wheelchair_pushes",
+            "swimming_distance",
+            "swimming_strokes",
+            "wheelchair_distance",
+            "downhill_snow_distance",
+            "activity_intensity_minutes",
+            "resting_hr",
+            "avg_hr",
+            "walking_hr",
+            "min_hr",
+            "max_hr",
+            "hrv",
+            "respiratory_rate",
+            "blood_oxygen",
+            "body_temp",
+            "bp_systolic",
+            "bp_diastolic",
+            "blood_glucose",
+            "basal_body_temp",
+            "skin_temperature",
+            "weight",
+            "height",
+            "bmi",
+            "body_fat",
+            "lean_mass",
+            "body_water_mass",
+            "bone_mass",
+            "dietary_energy",
+            "protein",
+            "carbs",
+            "fat",
+            "saturated_fat",
+            "monounsaturated_fat",
+            "polyunsaturated_fat",
+            "unsaturated_fat",
+            "trans_fat",
+            "fiber",
+            "sugar",
+            "sodium",
+            "potassium",
+            "calcium",
+            "iron",
+            "magnesium",
+            "zinc",
+            "phosphorus",
+            "iodine",
+            "selenium",
+            "copper",
+            "manganese",
+            "chromium",
+            "molybdenum",
+            "chloride",
+            "vitamin_a",
+            "vitamin_b6",
+            "vitamin_b12",
+            "vitamin_c",
+            "vitamin_d",
+            "vitamin_e",
+            "vitamin_k",
+            "thiamin",
+            "riboflavin",
+            "niacin",
+            "folate",
+            "folic_acid",
+            "pantothenic_acid",
+            "biotin",
+            "cholesterol",
+            "water",
+            "caffeine",
+            "energy_from_fat",
+            "nutrition_meals",
+            "walking_speed",
+            "vo2_max",
+            "cycling_cadence",
+            "steps_cadence",
+            "power_avg",
+            "power_max",
+            "running_speed",
+            "running_power",
+            "mindful_minutes",
+            "mindful_sessions",
+            "menstrual_flow",
+            "cervical_mucus",
+            "ovulation_test",
+            "sexual_activity",
+            "intermenstrual_bleeding",
+            "menstruation_periods",
+            "menstruation_period_days",
+            "workouts",
+            "planned_workouts",
+            "medical_resources"
+          ],
+          "platform": "android",
+          "profile_revision": 1,
+          "public_profile_id": "android-analytical-v5",
+          "public_schema": "healthmd.health_data",
+          "public_schema_version": 5,
+          "unavailable_selection_ids": [
+            "wrist_temperature",
+            "electrodermal_activity",
+            "heart_rate_recovery",
+            "afib_burden",
+            "state_of_mind_entries",
+            "daily_mood",
+            "average_valence",
+            "momentary_emotions",
+            "stand_time",
+            "move_time",
+            "physical_effort",
+            "forced_vital_capacity",
+            "fev1",
+            "peak_expiratory_flow",
+            "inhaler_usage",
+            "waist_circumference",
+            "walking_step_length",
+            "walking_double_support",
+            "walking_asymmetry",
+            "walking_steadiness",
+            "stair_ascent_speed",
+            "stair_descent_speed",
+            "six_minute_walk",
+            "running_stride_length",
+            "running_ground_contact",
+            "running_vertical_oscillation",
+            "cycling_ftp",
+            "headphone_audio",
+            "environmental_audio",
+            "medications",
+            "uv_exposure",
+            "time_in_daylight",
+            "number_of_falls",
+            "blood_alcohol",
+            "alcoholic_beverages",
+            "insulin_delivery",
+            "toothbrushing",
+            "handwashing",
+            "water_temperature",
+            "underwater_depth",
+            "symptom_headache",
+            "symptom_fatigue",
+            "symptom_nausea",
+            "symptom_dizziness",
+            "symptom_mood_changes",
+            "symptom_sleep_changes",
+            "symptom_appetite_changes",
+            "symptom_hot_flashes",
+            "symptom_chills",
+            "symptom_fever",
+            "symptom_lower_back_pain",
+            "symptom_bloating",
+            "symptom_constipation",
+            "symptom_diarrhea",
+            "symptom_heartburn",
+            "symptom_coughing",
+            "symptom_sore_throat",
+            "symptom_runny_nose",
+            "symptom_shortness_of_breath",
+            "symptom_chest_pain",
+            "symptom_skipped_heartbeat",
+            "symptom_rapid_heartbeat",
+            "symptom_acne",
+            "symptom_dry_skin",
+            "symptom_hair_loss",
+            "symptom_memory_lapse",
+            "symptom_night_sweats",
+            "symptom_vomiting",
+            "symptom_abdominal_cramps",
+            "symptom_breast_pain",
+            "symptom_pelvic_pain",
+            "symptom_body_ache",
+            "symptom_fainting",
+            "symptom_loss_of_smell",
+            "symptom_loss_of_taste",
+            "symptom_wheezing",
+            "symptom_sinus_congestion",
+            "symptom_bladder_incontinence",
+            "symptom_vaginal_dryness",
+            "audio_exposure",
+            "afib_burden_percent",
+            "state_of_mind_count",
+            "average_valence_percent",
+            "daily_mood_count",
+            "average_daily_mood_valence",
+            "momentary_emotion_count",
+            "forced_vital_capacity_l",
+            "fev1_l",
+            "headphone_audio_db",
+            "environmental_sound_db",
+            "stand_hours",
+            "move_minutes",
+            "waist_circumference_cm",
+            "step_length_cm",
+            "double_support_percent",
+            "walking_asymmetry_percent",
+            "six_min_walk_m",
+            "walking_steadiness_percent",
+            "running_stride_length_m",
+            "running_ground_contact_ms",
+            "running_vertical_oscillation_cm",
+            "symptoms"
+          ],
+          "output_count": 161
+        }
+      ],
+      "fixture_paths": [
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-android-v4-v5.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-apple-v7.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json"
+      ],
+      "unknown_field_policy": "Registry RawRegistry/RawMetric/RawBinding readers in semantic.rs and registry.rs do not deny unknown fields; canonical checked-in registry bytes/digest remain authoritative. Product capability manifest is validated by validate.py; no global decoder policy is inferred."
+    },
+    {
+      "design_id": "C02",
+      "manifest_contract_id": "healthmd.semantic_input",
+      "authority_and_consumer_record": {
+        "id": "healthmd.semantic_input",
+        "version": 1,
+        "status": "canonical",
+        "summary": "Internal bounded native-to-Rust post-capture semantic input and typed result contract; independent from public export schemas.",
+        "specification": "packages/contracts/semantic-input/v1/contract.md",
+        "authorities": [
+          "packages/contracts/semantic-input/v1/contract.md",
+          "packages/contracts/semantic-input/v1/semantic-input.schema.json",
+          "packages/contracts/semantic-input/v1/semantic-result.schema.json"
+        ],
+        "implementations": [
+          "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+          "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift",
+          "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt"
+        ],
+        "consumers": [
+          "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs",
+          "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift",
+          "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt",
+          "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt"
+        ],
+        "fixtures": [
+          {
+            "path": "packages/contracts/semantic-input/v1/fixtures/differential-v1.json",
+            "sha256": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+            "provenance": "Reviewed synthetic cross-platform semantic cases; Rust, Swift, and Kotlin tests verify canonical encoding and exact result hashes without production health data.",
+            "mirrors": [
+              "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json"
+            ]
+          },
+          {
+            "path": "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json",
+            "sha256": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+            "provenance": "Reviewed internal capability fixture proving calendar revision 1 remains stable while range requires revision 2.",
+            "mirrors": []
+          }
+        ]
+      },
+      "negative_cases": "frozen rejection_cases, range_limit_cases and source-defined boundary cases indexed above",
+      "unknown_field_policy": "SemanticSessionConfig, SemanticBatch, ExactTimestamp, ExactNumber, SemanticValue, SemanticRecord and typed result objects use serde deny_unknown_fields and JSON Schema additionalProperties:false. Deliberate maps (attributes, value keys) admit bounded contract content; unknown extension namespaces retained in deterministic order, never used in shared calculations."
+    },
+    {
+      "design_id": "C03",
+      "manifest_contract_id": "healthmd.render_input",
+      "authority_and_consumer_record": {
+        "id": "healthmd.render_input",
+        "version": 1,
+        "status": "canonical",
+        "summary": "Internal deterministic profile rendering and destination-neutral artifact planning; independent from public export schemas.",
+        "specification": "packages/contracts/render-input/v1/contract.md",
+        "authorities": [
+          "packages/contracts/render-input/v1/contract.md",
+          "packages/contracts/render-input/v1/render-input.schema.json",
+          "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json"
+        ],
+        "implementations": [
+          "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs",
+          "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs",
+          "apps/apple/HealthMd/Shared/Core/HealthMdRenderInputAdapter.swift",
+          "apps/android/app/src/main/java/com/healthmd/domain/render/HealthMdRenderInputAdapter.kt"
+        ],
+        "consumers": [
+          "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs",
+          "apps/apple/HealthMdTests/SharedCore/HealthMdRenderInputAdapterTests.swift",
+          "apps/android/app/src/test/java/com/healthmd/domain/render/HealthMdRenderInputAdapterTest.kt",
+          "apps/android/app/src/androidTest/java/com/healthmd/domain/render/HealthMdRendererInstrumentationTest.kt"
+        ],
+        "fixtures": [
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/differential-v1.json",
+            "sha256": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+            "provenance": "Reviewed synthetic render requests and exact profile plans; Rust verifies every path, byte, length, checksum, and write mode.",
+            "mirrors": [
+              "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json"
+            ]
+          },
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json",
+            "sha256": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+            "provenance": "Reviewed synthetic managed-Markdown merge vectors shared by app Swift, direct-package Swift, and Rust; exact bytes contain no production health data.",
+            "mirrors": [
+              "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json",
+              "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests/Fixtures/markdown-merge-v1.json",
+              "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/markdown-merge-v1.json"
+            ]
+          },
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/native-apple-v7.json",
+            "sha256": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+            "provenance": "Frozen directly from the pre-cutover production Swift v7 exporters for summary, imperial, custom, and lossless synthetic days; Rust did not generate these bytes.",
+            "mirrors": []
+          },
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json",
+            "sha256": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+            "provenance": "Frozen directly from the pre-cutover production Kotlin v4/v5 exporters across default, alias/native, granular, metric, and imperial synthetic cases; Rust did not generate these bytes.",
+            "mirrors": []
+          },
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
+            "sha256": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+            "provenance": "Frozen Kotlin render-input requests from the production HealthDataFields presentation snapshot paired with independent production Obsidian Bases bytes for frozen-v4 and analytical-v5 metric/imperial cases.",
+            "mirrors": [
+              "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json"
+            ]
+          },
+          {
+            "path": "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
+            "sha256": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+            "provenance": "Frozen Kotlin render-input presentation snapshots paired with independent production Markdown, Obsidian Bases, JSON, and CSV bytes for Android frozen-v4 and analytical-v5 default, granular, native-alias, metric, and imperial cases.",
+            "mirrors": [
+              "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json"
+            ]
+          }
+        ]
+      },
+      "unknown_field_policy": "Typed config/batch/presentation/artifact objects deny unknown fields; schema additionalProperties:false. Custom frontmatter and bounded public/ordered JSON are deliberate content maps, not permission for unknown envelope fields. No global policy is transferred to public historical files.",
+      "negative_cases": "Source-defined rejection tests plus markdown-merge-v1 vectors; no separate frozen render rejection_cases array exists."
+    },
+    {
+      "design_id": "C04",
+      "authorities": [
+        "apps/apple/docs/features/export-schema.md",
+        "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs"
+      ],
+      "active_schema": 8,
+      "historical_signatures": "export_schema_signature_v1.json through v8.json, exact paths/digests indexed above",
+      "frozen_native_profile": "native-apple-v7.json retains historical public_schema_version 7 provenance; it does not qualify all active daily-v8/provider bytes.",
+      "extensions": "HealthKit archive v1 preserves typed metadata/unknown raw variants, binary/external records and relationships. Optional providers.whoop is provider.whoop_daily v1; archive, individual-entry plans, Daily Note edits and external-provider sidecars remain explicit native extensions.",
+      "unknown_field_policy": "No universal historical reader rejection rule established by structural signatures; preserve archive unknown future payload variants as described in export-schema.md. Dedicated consumer-decoder inventory is still required."
+    },
+    {
+      "design_id": "C05",
+      "authorities": [
+        "apps/android/docs/export-contract/ios-export-contract.md",
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs"
+      ],
+      "profiles": {
+        "android_frozen_v4": 4,
+        "android_analytical_v5": 5
+      },
+      "api_binding": "API v1 remains frozen-v4 even when local analytical-v5 selected; profile never inferred.",
+      "fixture_paths": [
+        "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json",
+        "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json",
+        "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json",
+        "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json",
+        "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-android-v4-v5.json"
+      ],
+      "unknown_field_policy": "Historical native exporter signature fixtures do not specify one reader policy; raw/provider/granular fields and alias quirks stay profile-specific. Consumer-specific extra-field behavior remains an explicit implementation qualification gap."
+    },
+    {
+      "design_id": "C06",
+      "authority_and_consumer_record": {
+        "id": "healthmd.rollup_summary",
+        "version": 9,
+        "status": "canonical",
+        "summary": "Public Apple range-summary grammar independently versioned from daily health data v8.",
+        "specification": "packages/contracts/rollup-summary/v9/contract.md",
+        "authorities": [
+          "packages/contracts/rollup-summary/v9/contract.md",
+          "packages/contracts/rollup-summary/v9/rollup-summary.schema.json"
+        ],
+        "implementations": [
+          "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift",
+          "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift",
+          "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs"
+        ],
+        "consumers": [
+          "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift",
+          "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs"
+        ],
+        "fixtures": [
+          {
+            "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.json",
+            "sha256": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+            "provenance": "Generated directly by the production Swift range generator and JSON renderer from the canonical synthetic partial-range corpus; Rust reconstructs and verifies the same public contract semantics.",
+            "mirrors": []
+          },
+          {
+            "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv",
+            "sha256": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+            "provenance": "Generated directly by the production Swift range generator and CSV renderer from the canonical synthetic partial-range corpus.",
+            "mirrors": []
+          },
+          {
+            "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9.md",
+            "sha256": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+            "provenance": "Generated directly by the production Swift range generator and Markdown renderer from the canonical synthetic partial-range corpus.",
+            "mirrors": []
+          },
+          {
+            "path": "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md",
+            "sha256": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+            "provenance": "Generated directly by the production Swift range generator and Obsidian Bases renderer from the canonical synthetic partial-range corpus.",
+            "mirrors": []
+          }
+        ]
+      },
+      "historical": "Historical calendar rollup v7/v8 paths retain provenance; v8 week/month/year files remain valid and are not relabeled.",
+      "range": "New requested-range schema v9, source daily schema v8, rollup rules v8, Apple semantic profile revision 2; inclusive explicit range <=10,000 days; start/end/timezone never inferred from successful dates; empty captured dates count; failed dates excluded; at least one summarized metric required.",
+      "android": "Period/range request rejected unsupported_semantic_operation; planned rollups remain planned.",
+      "unknown_field_policy": "rollup-summary.schema.json is closed at envelope/typed structures; acceptance of future fields by historical external readers is not established by this source-only inventory.",
+      "historical_authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v7.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs"
+      ]
+    }
+  ],
+  "versions": {
+    "source": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs and src/render/mod.rs; Cargo.toml; registry profile metadata",
+    "rust_workspace_package": "0.1.0-alpha.7",
+    "core_api": 4,
+    "semantic_result_embedded_core_api": 3,
+    "semantic_input": 1,
+    "canonical_model": 1,
+    "metric_registry": 1,
+    "render_input": 1,
+    "artifact_plan": 1,
+    "render_profile_revision": 2,
+    "persisted_state": 1,
+    "fixture_format": 1,
+    "semantic_profile_revision_admission": "Calendar/daily revision 1; Apple range revision 2, exactly one range period with rollup_range; Android rollups unsupported. Renderer admits 1|2 and matching completed semantic profile/session/hash."
+  },
+  "exact_policies": {
+    "numbers": {
+      "source": "src/semantic.rs ExactNumber/validate_number/number_f64",
+      "binary64": "Exactly 16 lowercase hex digits, finite IEEE754 binary64 bits; preserve negative zero. No NaN/Infinity. Explicit arithmetic uses f64 and original reduction order.",
+      "integers": "Canonical signed i128 and unsigned u128 decimal strings; no plus, leading zero, or signed -0. Source ordinal canonical u64 string. Lossless transport is distinct from number_f64 conversion to binary64 for reviewed reduction arithmetic.",
+      "rendering": "Ordered JSON numeric lexemes preserve native profile bytes; never ordinary JS JSON.parse/stringify when it changes integer precision or negative zero/lexemes.",
+      "integer_ranges": {
+        "signed_integer_decimal": "-170141183460469231731687303715884105728..170141183460469231731687303715884105727 (i128)",
+        "unsigned_integer_decimal": "0..340282366920938463463374607431768211455 (u128)",
+        "source_ordinal": "0..18446744073709551615 (u64)",
+        "epoch_seconds": "-9223372036854775808..9223372036854775807 (i64)"
+      }
+    },
+    "time": {
+      "source": "semantic.rs ExactTimestamp/validate_timestamp/parse_date",
+      "policy": "epoch_seconds canonical signed i64 string, nanoseconds 0..999999999; nullable source offset and required native calendar offset. Order epoch seconds, nanos, source ordinal; owner_date explicit YYYY-MM-DD with year 1..9998 and roundtrip canonical validation. Calendar timezone supplied IANA; Date/number cannot replace exact tuple.",
+      "hazards": [
+        "non-hour offsets",
+        "DST transitions",
+        "sleep owner date",
+        "ISO week-year boundaries",
+        "range partial first/last date failures"
+      ],
+      "offset_seconds_range": {
+        "source_utc_offset_seconds": "null or inclusive -64800..64800",
+        "calendar_utc_offset_seconds": "inclusive -64800..64800"
+      }
+    },
+    "rechunking": {
+      "source": "semantic-input/v1/contract.md and semantic_differential.rs",
+      "policy": "Stable record ID/retention token based on owner date and native identity, never batch index/position; strictly ascending source ordinal; owner dates ascending per batch, nondecreasing across batches with boundary-date repetition allowed; duplicate IDs reject. Transactional invalid batches do not advance expected index.",
+      "fixture_case": "apple-required-differentials exercises merged versus two-batch output comparison"
+    },
+    "cancellation": {
+      "source": "semantic.rs and render/mod.rs",
+      "policy": "Semantic checks before parsing, every 64 records and before reduction; idempotent observed cancellation clears records, returns terminal cancelled/no days; later calls semantic_session_terminal. Render batches stage then commit only on valid noncancelled inputs; terminal cancellation/completion preserved."
+    },
+    "selection_and_reduction": {
+      "source": "semantic-input/v1/contract.md and semantic.rs",
+      "policy": "Profile registry selector/projection validation; native SDK aggregates singular and not rebuilt; direct/dependency attribution preserved; disabled outputs filtered; paired BP requires both selectors; BMI calculation-only dependencies retained without leaking own outputs; latest exact time/ordinal; workouts explicit duration weighting; missing differs from zero; lower later VO2 remains latest."
+    },
+    "unicode_paths": {
+      "source": "render/artifact_plan.rs validate_relative_path/portable_collision_key",
+      "collision_key": "NFKC then full case folding then NFKC",
+      "limits": "Path <=4096 UTF-8 bytes; media type <=128 ASCII bytes. Source does not impose a separate per-component byte bound.",
+      "rejection": "Empty, absolute POSIX/Windows drive, trailing slash, backslash, NUL/control, unresolved braces, empty/dot/dotdot component; duplicate/collision keys rejected; destination roots remain native."
+    },
+    "serialization": "Semantic result canonical UTF-8 compact recursively sorted object keys; arrays retain order. Public profile bytes preserve key/number order, escaping, omission, exact delimiters/newlines and hashes. Stream RFC4180Rows uses CRLF. Managed Markdown merge renderer revision 2 preserves complete YAML property blocks and distinguishes plain typed from quoted string keys; ambiguous ownership fails."
+  },
+  "bounds": {
+    "semantic": {
+      "config_bytes": 262144,
+      "batch_bytes": 1048576,
+      "records_per_batch": 4096,
+      "record_bytes": 65536,
+      "selection_ids": 512,
+      "session_records": 100000,
+      "session_bytes": 33554432,
+      "cumulative_owner_dates": 10000,
+      "extension_refs_per_record": 32,
+      "retention_token_utf8_bytes": 128
+    },
+    "render_source": {
+      "config_bytes": 262144,
+      "semantic_result_bytes": 33554432,
+      "batch_bytes": 2097152,
+      "facts_per_batch": 4096,
+      "owner_dates_per_batch": 400,
+      "cumulative_owner_dates": 10000,
+      "artifacts": 4096,
+      "ordinary_inline_bytes": 8388608,
+      "indivisible_api_bytes": 33554432,
+      "total_inline_bytes": 33554432,
+      "stream_item_bytes": 1048576,
+      "stream_total_bytes": 2147483648
+    },
+    "stream_policy": "Synchronous pull one bounded raw chunk/JSON-array item/RFC4180 row per call; retain sequence/hash/count only; final descriptor hashes concatenated bytes including closing frame; planned api_post streams rejected. Native spool backpressure and deployed host memory remain unqualified."
+  },
+  "registry_and_generation": {
+    "authority": [
+      {
+        "id": "healthmd.product_capabilities",
+        "version": 1,
+        "path": "packages/contracts/product-capabilities.json",
+        "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+        "implementations": [
+          "packages/contracts/validate.py",
+          "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
+          "apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt"
+        ]
+      },
+      {
+        "id": "healthmd.metric_registry",
+        "version": 1,
+        "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+        "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+        "implementations": [
+          "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs",
+          "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift",
+          "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt"
+        ]
+      }
+    ],
+    "import": "packages/healthmd-core-rust/scripts/import-native-registry.py --check reconstructs canonical registry from frozen native baselines plus semantic crosswalk; normal consumers read checked-in registry.",
+    "generator": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py --check checks native catalogs/export mappings, parity ledger, website JSON and Markdown. Preserve native ordinal/default_enabled/availability, semantic IDs and exact projection order.",
+    "generated_consumers": [
+      "apps/apple/HealthMd/Shared/Models/HealthMetrics.swift",
+      "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt",
+      "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md",
+      "apps/website/docs-src/src/content/docs/shared-metric-registry.md",
+      "apps/website/docs-src/public/reference/metric-registry-v1.json"
+    ]
+  },
+  "available_consumer_checks": [
+    {
+      "consumer": "core",
+      "cwd": "packages/healthmd-core-rust",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-features",
+        "--locked"
+      ],
+      "source": ".github/workflows/core-rust-ci.yml",
+      "execution": "unrun; source-only task"
+    },
+    {
+      "consumer": "registry importer",
+      "cwd": "packages/healthmd-core-rust",
+      "argv": [
+        "python3",
+        "scripts/import-native-registry.py",
+        "--check"
+      ],
+      "source": ".github/workflows/core-rust-ci.yml",
+      "execution": "unrun"
+    },
+    {
+      "consumer": "registry generator",
+      "cwd": "packages/healthmd-core-rust",
+      "argv": [
+        "python3",
+        "scripts/generate-registry-adapters.py",
+        "--check"
+      ],
+      "source": ".github/workflows/core-rust-ci.yml",
+      "execution": "unrun"
+    },
+    {
+      "consumer": "contract validation",
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "packages/contracts/validate.py"
+      ],
+      "source": "packages/contracts/validate.py",
+      "execution": "unrun"
+    },
+    {
+      "consumer": "Apple export/semantic/render/native adapters",
+      "cwd": "apps/apple",
+      "argv": [
+        "make",
+        "test"
+      ],
+      "source": "apps/apple/Makefile",
+      "execution": "unrun; Xcode/native qualification separate"
+    },
+    {
+      "consumer": "Android profile/semantic/render/contract unit tests",
+      "cwd": "apps/android",
+      "argv": [
+        "./gradlew",
+        "--no-daemon",
+        "--max-workers=2",
+        ":app:testPlayDebugUnitTest",
+        ":healthmd-core:testDebugUnitTest",
+        ":wearable-contract:test",
+        ":wear:testDebugUnitTest",
+        ":direct-protocol:test",
+        "--stacktrace"
+      ],
+      "source": ".github/workflows/android-ci.yml",
+      "execution": "unrun; instrumentation separate"
+    },
+    {
+      "consumer": "CLI client/export/MCP shared protocol consumption",
+      "cwd": "apps/cli",
+      "argv": [
+        "cargo",
+        "test",
+        "--workspace",
+        "--all-features",
+        "--locked"
+      ],
+      "source": ".github/workflows/cli-ci.yml",
+      "execution": "unrun; exact command confirmed from source during inventory"
+    },
+    {
+      "consumer": "website mirrors and external fixture comparison",
+      "cwd": "apps/website",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "source": ".github/workflows/website-ci.yml",
+      "execution": "unrun; plugin comparison skips without HEALTHMD_OBSIDIAN_PLUGIN_REPO"
+    },
+    {
+      "consumer": "website authoritative reference",
+      "cwd": "apps/website",
+      "argv": [
+        "npm",
+        "run",
+        "reference:check",
+        "--",
+        "--source",
+        "../apple"
+      ],
+      "source": ".github/workflows/website-ci.yml",
+      "execution": "unrun; CI supplies absolute workspace path"
+    },
+    {
+      "consumer": "external Obsidian plugin",
+      "cwd": ".external/health-md-visualizations",
+      "argv": [
+        "npm",
+        "test"
+      ],
+      "source": ".github/workflows/website-ci.yml",
+      "execution": "unrun; external pinned checkout not read here"
+    },
+    {
+      "consumer": "external Obsidian plugin",
+      "cwd": ".external/health-md-visualizations",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "source": ".github/workflows/website-ci.yml",
+      "execution": "unrun"
+    },
+    {
+      "consumer": "external Obsidian plugin",
+      "cwd": ".external/health-md-visualizations",
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "source": ".github/workflows/website-ci.yml",
+      "execution": "unrun"
+    }
+  ],
+  "external_consumer_pin": {
+    "obsidian_plugin": {
+      "repository": "CodyBontecou/health-md-visualizations",
+      "revision": "d9bd050949dde067f32ea49381ca58e7ccbcf21d"
+    },
+    "fixture_mirror": "tests/fixtures/rollup-summary-v9/range-v9{.json,.csv,.md,-bases.md}, compared by apps/website/test/visualization-catalog.test.mjs; external content/digests not independently inspected"
+  },
+  "gaps_and_remaining_qualification": [
+    {
+      "id": "render-date-limit-documentation-drift",
+      "evidence_class": "source_derived_gap",
+      "description": "render contract table owner dates 400 versus renderer MAX_RENDER_BATCH_DATES 400 and MAX_RENDER_DATES 10000; scope distinctions need documentation reconciliation before codec acceptance."
+    },
+    {
+      "id": "render-profile-schema-drift",
+      "evidence_class": "source_derived_gap",
+      "description": "render-input.schema.json config profile_revision const 1, while Rust validate_config admits 1|2 and range-v9 uses revision 2. Preserve current bytes, resolve authoritative schema admission explicitly."
+    },
+    {
+      "id": "frozen-negative-corpus",
+      "evidence_class": "source_derived_gap",
+      "description": "Semantic frozen rejection cases exist; render rejection/path/Unicode/stream/version/extra-field behavior relies partly on source-built test mutations. Dedicated independently reviewed negative frozen vectors needed for TypeScript differential gates."
+    },
+    {
+      "id": "active-v8-full-byte-corpus",
+      "evidence_class": "source_derived_gap",
+      "description": "native-apple-v7 is historical; active daily-v8 WHOOP/archives/all formats/individual-entry/Daily Note exact byte coverage requires native producer corpus expansion, preserving existing signatures."
+    },
+    {
+      "id": "public-historical-unknown-field-policy",
+      "evidence_class": "unqualified",
+      "description": "No global extra-field rule applies across native public historical readers, external plugin and closed internal schemas. Inventory pins schemas/readers where established; consumer-specific reject/retain/ignore vectors remain required."
+    },
+    {
+      "id": "JS-codecs-and-host-proof",
+      "evidence_class": "unrun",
+      "description": "No TypeScript EngineBuildInfo, exact codecs, reducers/renderers or native adapter qualification established. Node/mobile binary64, i128/u128, time, serializer and Unicode versions need executed frozen vectors."
+    },
+    {
+      "id": "external-and-native-gates",
+      "evidence_class": "unrun",
+      "description": "No Cargo, native, Android instrumentation, website or external plugin tests run; no runtime installs, personal data, launchers, authority promotion or retirement."
+    }
+  ],
+  "rollback": "Delete/revert the two planning records; current source authorities, frozen expectations, public launchers and retained state are unchanged.",
+  "work_package_map": [
+    {
+      "id": "K01",
+      "scope": [
+        "C01",
+        "C02",
+        "C03"
+      ],
+      "source_authorities": [
+        "src/lib.rs",
+        "src/registry.rs",
+        "src/semantic.rs",
+        "src/render/mod.rs"
+      ],
+      "inventory_evidence": [
+        "versions",
+        "registry_and_generation",
+        "frozen_fixtures",
+        "scoped_contract_map"
+      ],
+      "remaining": "Implementation-neutral EngineBuildInfo and new native adapter version are design requirements, not existing authorities; TypeScript codec qualification pending."
+    },
+    {
+      "id": "K02",
+      "scope": [
+        "C02",
+        "C06"
+      ],
+      "source_authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs"
+      ],
+      "inventory_evidence": [
+        "exact_policies",
+        "bounds",
+        "source_defined_negative_and_boundary_cases"
+      ],
+      "remaining": "Portable exact numerical differential and native captured model integration unrun."
+    },
+    {
+      "id": "K03",
+      "scope": [
+        "C03",
+        "C04",
+        "C05",
+        "C06"
+      ],
+      "source_authorities": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/"
+      ],
+      "inventory_evidence": [
+        "frozen_fixtures",
+        "exact_policies",
+        "bounds",
+        "available_consumer_checks"
+      ],
+      "remaining": "All format/profile/path/stream/merge byte differential checks and external consumer checks unrun."
+    }
+  ],
+  "pin_method": "SHA-256 of raw bytes returned by git show SOURCE_REVISION:PATH; no normalization. Inventory and receipt are not included in source pins.",
+  "observed_working_tree_drift": [
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "pinned_sha256": "1a8e7fecd48df56398cd0d0dce4dc216e971294d0f15a28353fbae43e0795794",
+      "working_tree_sha256": "d7fde9dacbc405c66a27bc400a57e35b0ffd466a0a8a09a2a15916e48b4ab4ab",
+      "interpretation": "Shared coordinator execution-kit drift; inventory remains pinned to assigned source, not working-tree bytes."
+    }
+  ]
+}

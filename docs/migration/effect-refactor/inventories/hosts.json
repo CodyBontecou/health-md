@@ -1,0 +1,1928 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-HOST",
+  "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+  "design_ids": [
+    "C07",
+    "C08",
+    "C09",
+    "C11",
+    "O03",
+    "O04",
+    "O05",
+    "O06",
+    "O07",
+    "F01",
+    "F02",
+    "F07",
+    "F09"
+  ],
+  "scope": {
+    "proof_class": "planning",
+    "inspected": "repository metadata/source and frozen synthetic fixtures only",
+    "product_tests_executed": false,
+    "source_pinning": "SHA256 of git show SOURCE:path; product inputs verified byte-identical to checkout",
+    "coordinator_dirty_paths_at_start": [
+      "docs/architecture/javascript-unified-layer-research.md",
+      "docs/migration/effect-refactor/plan.json"
+    ],
+    "nearest_cli_instructions": "Root AGENTS.md; no apps/cli/AGENTS.md exists at assigned source",
+    "design_status": "requirements and proposed budgets are separate from measured/qualified implementation"
+  },
+  "distribution": {
+    "binary_targets": [
+      {
+        "target": "aarch64-apple-darwin",
+        "os": "macos",
+        "architecture": "arm64",
+        "binaries": [
+          "healthmd",
+          "healthmd-mcp"
+        ],
+        "archive": "healthmd-cli-aarch64-apple-darwin.tar.xz",
+        "installation_artifacts": [
+          "notarized stapled architecture-specific DMG",
+          "verified archive",
+          "shell installer",
+          "Homebrew formula"
+        ],
+        "signer": {
+          "team_id": "67KC823C9A",
+          "healthmd_identifier": "md.health.cli.healthmd",
+          "healthmd_mcp_identifier": "md.health.cli.healthmd-mcp"
+        },
+        "current_source_posture": "release workflow defined; this inventory did not build/sign/install/verify artifacts",
+        "successor_status": "pending offline clean-host packaging, non-Rust native capability ABI, signed upgrade and native filesystem qualification"
+      },
+      {
+        "target": "aarch64-unknown-linux-gnu",
+        "os": "linux",
+        "architecture": "arm64",
+        "binaries": [
+          "healthmd",
+          "healthmd-mcp"
+        ],
+        "archive": "healthmd-cli-aarch64-unknown-linux-gnu.tar.xz",
+        "installation_artifacts": [
+          "verified archive",
+          "shell installer",
+          "Linuxbrew formula"
+        ],
+        "signer": {
+          "binary_signature": "none configured; Sigstore checksum closure"
+        },
+        "current_source_posture": "release workflow defined; this inventory did not build/sign/install/verify artifacts",
+        "successor_status": "pending offline clean-host packaging, non-Rust native capability ABI, signed upgrade and native filesystem qualification"
+      },
+      {
+        "target": "x86_64-apple-darwin",
+        "os": "macos",
+        "architecture": "x64",
+        "binaries": [
+          "healthmd",
+          "healthmd-mcp"
+        ],
+        "archive": "healthmd-cli-x86_64-apple-darwin.tar.xz",
+        "installation_artifacts": [
+          "notarized stapled architecture-specific DMG",
+          "verified archive",
+          "shell installer",
+          "Homebrew formula"
+        ],
+        "signer": {
+          "team_id": "67KC823C9A",
+          "healthmd_identifier": "md.health.cli.healthmd",
+          "healthmd_mcp_identifier": "md.health.cli.healthmd-mcp"
+        },
+        "current_source_posture": "release workflow defined; this inventory did not build/sign/install/verify artifacts",
+        "successor_status": "pending offline clean-host packaging, non-Rust native capability ABI, signed upgrade and native filesystem qualification"
+      },
+      {
+        "target": "x86_64-unknown-linux-gnu",
+        "os": "linux",
+        "architecture": "x64",
+        "binaries": [
+          "healthmd",
+          "healthmd-mcp"
+        ],
+        "archive": "healthmd-cli-x86_64-unknown-linux-gnu.tar.xz",
+        "installation_artifacts": [
+          "verified archive",
+          "shell installer",
+          "Linuxbrew formula"
+        ],
+        "signer": {
+          "binary_signature": "none configured; Sigstore checksum closure"
+        },
+        "current_source_posture": "release workflow defined; this inventory did not build/sign/install/verify artifacts",
+        "successor_status": "pending offline clean-host packaging, non-Rust native capability ABI, signed upgrade and native filesystem qualification"
+      },
+      {
+        "target": "x86_64-pc-windows-msvc",
+        "os": "windows",
+        "architecture": "x64",
+        "binaries": [
+          "healthmd.exe",
+          "healthmd-mcp.exe"
+        ],
+        "archive": "healthmd-cli-x86_64-pc-windows-msvc.zip",
+        "installation_artifacts": [
+          "verified ZIP",
+          "PowerShell installer"
+        ],
+        "signer": {
+          "publisher_subject": null,
+          "status": "pending_external_certificate_provisioning"
+        },
+        "current_source_posture": "release workflow defined; this inventory did not build/sign/install/verify artifacts",
+        "successor_status": "pending offline clean-host packaging, non-Rust native capability ABI, signed upgrade and native filesystem qualification"
+      }
+    ],
+    "release_identities": {
+      "schema": "healthmd.cli_release_signing_identities",
+      "schema_version": 1,
+      "apple": {
+        "team_id": "67KC823C9A",
+        "healthmd_identifier": "md.health.cli.healthmd",
+        "healthmd_mcp_identifier": "md.health.cli.healthmd-mcp"
+      },
+      "windows": {
+        "publisher_subject": null,
+        "status": "pending_external_certificate_provisioning"
+      },
+      "sigstore": {
+        "certificate_identity_template": "https://github.com/CodyBontecou/health-md/.github/workflows/cli-release.yml@refs/tags/healthmd-cli/v<VERSION>",
+        "oidc_issuer": "https://token.actions.githubusercontent.com"
+      }
+    },
+    "install_command_identity": {
+      "primary": "healthmd",
+      "compatibility": "healthmd-mcp",
+      "install_path": "~/.local/bin",
+      "homebrew": "CodyBontecou/tap/healthmd",
+      "tap": "CodyBontecou/homebrew-tap",
+      "tag": "healthmd-cli/v<VERSION>",
+      "latest_policy": "make_latest=false; repository latest reserved for Apple",
+      "winget_scoop": "not configured; no package IDs promised",
+      "updater": false,
+      "cargo_dist": "0.31.0",
+      "source_tarball": false,
+      "reason": "independently locked shared-protocol path dependency cannot fit single-workspace source archive"
+    },
+    "closure": [
+      "five binary archives",
+      "two DMGs",
+      "shell and PowerShell installers",
+      "Homebrew formula",
+      "public release-identities.json",
+      "per-artifact checksums",
+      "three SBOM assets",
+      "sha256.sum keyless Sigstore bundle",
+      "GitHub build provenance"
+    ],
+    "release_feature_policy": {
+      "default": "21 local stdio/direct-mobile tools, explicit 13-tool serve-read-only and health-free P2 HTTPS wake",
+      "http_oauth": "source-build opt-ins excluded from distribution archives",
+      "wake_worker": "compatibility alias, not activation gate"
+    },
+    "evidence": [
+      "apps/cli/dist-workspace.toml",
+      "apps/cli/release-identities.json",
+      "apps/cli/docs/releasing.md",
+      ".github/workflows/cli-release.yml"
+    ]
+  },
+  "secret_boundaries": {
+    "shared_namespace": {
+      "service": "com.codybontecou.obsidianhealth.direct-cli-trust",
+      "account": "trust-state-v1",
+      "allowed_accounts": [
+        "trust-state-v1"
+      ],
+      "owner_binding": "TrustState.ownerInstallationID must match identity.json installationID; corrupt or mismatched owner fails closed",
+      "trust_payload": "trusted clients, reconnect secrets, optional per-peer wake key; no secret values in this inventory"
+    },
+    "macos": {
+      "backend": "keyring apple-native / Keychain generic password",
+      "principal": "Developer ID Team 67KC823C9A and stable md.health.cli.healthmd / md.health.cli.healthmd-mcp executable IDs",
+      "continuity": "legacy Swift service/account retained; signed prior-copy ACL fixture in sign-macos-archive.sh",
+      "development_transition": "ad-hoc/unsigned to Developer ID crosses principals; explicit unpair/re-pair once; installer must not delete or silently migrate trust",
+      "behavior": "serialized process-global noninteractive Keychain access; fails closed if authorization unavailable"
+    },
+    "windows": {
+      "backend": "keyring windows-native / Windows Credential Manager",
+      "generic_target": "trust-state-v1.com.codybontecou.obsidianhealth.direct-cli-trust",
+      "username": "trust-state-v1",
+      "mapping_evidence": ".github/workflows/cli-release.yml:448-478 synthetic legacy target fixture",
+      "publisher": "pending_external_certificate_provisioning; null subject; do not invent Authenticode identity"
+    },
+    "linux": {
+      "backend_features": [
+        "linux-native-async-persistent",
+        "crypto-rust",
+        "tokio"
+      ],
+      "native_facilities": "Linux kernel keyring / persistent Secret Service via keyring feature selection",
+      "logical_namespace": "same service/account passed to keyring::Entry::new",
+      "physical_secret_service_attributes": "dependency-owned mapping not independently established by this bounded inventory; exact daemon/session/item mapping and restart/headless retention pending native qualification",
+      "unavailable": "no plaintext fallback when native credential service unavailable"
+    },
+    "helper": {
+      "protocol": 1,
+      "argument": "__credential-helper-v1",
+      "executable": "std::env::current_exe; supervised private IPC before argument/Tokio startup",
+      "frame_bytes_max": 1048576,
+      "timeout_seconds": 10,
+      "concurrency": "semaphore 1; kill supervised helper on timeout",
+      "unknown_mutation": "set/delete timeout reports CredentialMutationOutcomeUnknown; do not silently retry as confirmed success",
+      "gap": "Node executable/helper identity, Keychain ACL, Windows target and Linux lifetime require real packaged proof; existing Rust helper is reference only"
+    },
+    "evidence": [
+      "apps/cli/crates/healthmd-client/src/credentials.rs",
+      "apps/cli/crates/healthmd-client/src/trust.rs",
+      "apps/cli/Cargo.toml",
+      "apps/cli/crates/healthmd-cli/tests/credential_helper.rs",
+      "apps/cli/scripts/sign-macos-archive.sh"
+    ]
+  },
+  "host_state": {
+    "root": "BaseDirs.data_local_dir()/Health.md/CLI/Direct/v1",
+    "override": "HEALTHMD_CLI_DATA_DIR",
+    "identity": {
+      "file": "identity.json",
+      "version": 1,
+      "publication": "owner-only temporary file, sync_all, hard-link create-new, Unix directory fsync; quota lease serializes concurrent publication; corrupt identity fails closed"
+    },
+    "layouts": {
+      "v1_jobs": "jobs/<lowercase-job-UUID>/record.json",
+      "v2_jobs": "jobs-v2/<lowercase-job-UUID>/record.json",
+      "v1_input": "corpus-sessions/<job-UUID>",
+      "v1_output": "response-spools/<job-UUID>",
+      "v2_input": "artifact-spools-v2/<job-UUID>",
+      "v2_output": "response-spools-v2/<job-UUID>"
+    },
+    "locks": {
+      "record": "per-job .lock shared reads / exclusive writes via fs2",
+      "execution": "per-job execution.lock try-exclusive; JobBusy on contention",
+      "cancellation": "cancellation-requested durable marker, distinct from local scope interruption",
+      "quota": ".storage-quota.lock; reservation-file lock; crashed unlocked reservations reaped",
+      "output": ".output-storage.lock serializes explicit output free-space floor",
+      "setup": ".healthmd-codex-config.lock; preserve unrelated TOML; absolute existing same executable; bounded read; compare original before atomic write"
+    },
+    "bounds": {
+      "dates": 36600,
+      "generated_files": 100000,
+      "partitions": 16384,
+      "job_bytes": 68719476736,
+      "retained_jobs_shared_v1_v2": 64,
+      "retained_private_bytes": 137438953472,
+      "retained_entries": 1000000,
+      "free_space_floor_bytes": 536870912,
+      "job_record_bytes": 1048576,
+      "durable_json_bytes": 67108864,
+      "future_materialization_copies": 3,
+      "input_plus_materialization_copies": 4,
+      "lifetime_seconds": 604800,
+      "transfer_frame_bytes": 524288
+    },
+    "quota_policy": "Reserve pending input plus future materialization, actual retained bytes and live leases under cross-process lock; bound jobs across v1/v2; ignore empty invalid crash directories as slots; reject private symlinks/reparse points; distinct external output reservation",
+    "evidence": [
+      "apps/cli/crates/healthmd-client/src/storage.rs",
+      "apps/cli/crates/healthmd-client/src/limits.rs",
+      "apps/cli/crates/healthmd-client/src/job.rs",
+      "apps/cli/crates/healthmd-client/src/v2_job.rs",
+      "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs"
+    ]
+  },
+  "destination_capability": {
+    "authority": "GeneratedDestination used by v1 FileReceiver and v2 V2ArtifactReceiver; local path is not sufficient authority",
+    "binding": {
+      "unix": "canonical path + device + inode",
+      "windows": "canonical path + volume serial number + file index",
+      "v2": "SHA256 canonical identity serialized into destination.binding_sha256"
+    },
+    "path_policy": "generated relative path validation, traversal/alias/collision rejection, cap-std descriptor-relative nofollow traversal; reject symlink and Windows reparse ancestors and ambiguous namespaces",
+    "commit": "private staged bounded content; digest before/after; ensure destination identity; durable commit plans with before/after/stage/committed; idempotent recovery when after digest already installed",
+    "unix_atomic": "renameat_with EXCHANGE for replacement; validate displaced digest and exchange back on mismatch; real read-only directory descriptor fsync",
+    "windows_atomic": "MoveFileEx/ReplaceFile write-through capability; retain displaced backup on uncertain outcome; validate digest and attempt rollback on race; portable directory fsync is explicitly unavailable",
+    "native_gaps": [
+      "Node ordinary path rename cannot by itself prove descriptor-relative nofollow/race resistance",
+      "non-Rust native ABI for atomic exchange/ReplaceFile, stable file ID and lock/ACL capabilities remains unimplemented/unqualified",
+      "Windows directory durability and supported-filesystem power-loss behavior require native proof",
+      "existing native tests are source only here; no real OS race, low-disk or crash execution"
+    ],
+    "evidence": [
+      "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+      "apps/cli/crates/healthmd-client/src/generated_path.rs",
+      "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
+    ]
+  },
+  "journals": [
+    {
+      "kind": "v1 JobRecord",
+      "version": 1,
+      "path": "jobs/<job>/record.json",
+      "fields": "request, created/expires/updated times, state, peerBinding, sessionID, requestFingerprint, committedPartitions/Bytes, processedDays/totalDays, safe failure/message, responseArtifact",
+      "authority": "validated bounded read/write; atomic temporary fsync/persist; seven-day expiry; per-job lock",
+      "source": "apps/cli/crates/healthmd-client/src/job.rs"
+    },
+    {
+      "kind": "v1 raw RawJournal",
+      "version": 1,
+      "path": "corpus-sessions/<job>/journal.json",
+      "fields": "immutable request, accepted selection, session/peer/fingerprint, manifests, ordered committed partitions, updatedAt",
+      "source": "apps/cli/crates/healthmd-client/src/raw_receiver.rs"
+    },
+    {
+      "kind": "v1 generated FileJournal",
+      "version": 2,
+      "path": "corpus-sessions/<job>/file-journal.json",
+      "fields": "request, accepted/session, destinationIdentity, manifests, ordered committedPartitions, commitPlans, outcome, updatedAt",
+      "note": "journal version 2 is distinct from application protocol v1",
+      "source": "apps/cli/crates/healthmd-client/src/file_receiver.rs"
+    },
+    {
+      "kind": "v2 V2JobRecord",
+      "version": 2,
+      "path": "jobs-v2/<job>/record.json",
+      "fields": "request with expires_at, destination_root for generated files only, state, updated_at, peer_binding/session_id, counters, safe failure/message, product-bound response_artifact",
+      "source": "apps/cli/crates/healthmd-client/src/v2_job.rs"
+    },
+    {
+      "kind": "v2 ReceiverJournal",
+      "version": 2,
+      "path": "artifact-spools-v2/<job>/receiver-journal.json",
+      "fields": "request, accepted, session, manifests, committed_partitions, commit_plans, updated_at",
+      "source": "apps/cli/crates/healthmd-client/src/v2_receiver.rs"
+    }
+  ],
+  "durable_lifecycle": {
+    "admission": "Freeze request/product/profile/destination/peer/fingerprint before prepare; validate journal equality on reopen; do not reinterpret job input",
+    "partition_commit": "authenticated chunk sequence/byte bounds; disk-backed incremental digest; verify complete partition digest/count then rename spool and persist journal/counters before returning partition acknowledgement",
+    "reconciliation": "exact committed descriptor returns skip only when spool digest matches; lost/corrupt retained spool can cause rollback/re-request of affected suffix (v1) or replacement partition (v2); expose loss rather than fabricate retention",
+    "final_commit": "validate complete corpus/manifests, materialize bounded artifact/generated destination, persist receipt and AwaitingPeerAcknowledgement before final ack",
+    "peer_completion": "Completed only after peer confirms final acknowledgement; duplicate confirmed completion accepted; v2 removes input artifact spool only after durable completion",
+    "cancel": "explicit marker persisted before delivery; CancellationPending until peer acknowledgement; local query/wake interruption is not remote cancellation; cancel removes private incomplete input, not previously committed destination files",
+    "expiration": "seven-day record lifetime; cleanup skips active execution lease; unknown/corrupt records not silently migrated",
+    "retained_state": "Current Rust stores read exact versions only; no TypeScript writer or engine-pin migration installed. Every state including awaiting ack/cancel pending and generated before/after plans needs successor/read-old/write-compatible proof. No full frozen installed-journal corpus identified; existing tests construct synthetic states inline.",
+    "downgrade": "Retain immutable prior signed archives, current Rust authority and exact old job/source/profile pins. Rollback binary may resume only proven wire/state-compatible jobs; unknown outcomes pause. Do not delete/rewrite committed files or trust to force rollback. No old-to-new Node or downgrade matrix executed.",
+    "evidence": [
+      "apps/cli/crates/healthmd-client/src/direct.rs",
+      "apps/cli/crates/healthmd-client/src/job.rs",
+      "apps/cli/crates/healthmd-client/src/v2_job.rs",
+      "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+      "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+      "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+      "apps/cli/docs/releasing.md"
+    ]
+  },
+  "consumers": {
+    "rust_public_crates": [
+      "healthmd-protocol",
+      "healthmd-operations",
+      "healthmd-client",
+      "healthmd-mcp",
+      "healthmd-cli"
+    ],
+    "publish_order": [
+      "healthmd-protocol (independent shared-core workspace)",
+      "healthmd-operations",
+      "healthmd-client",
+      "healthmd-mcp",
+      "healthmd-cli"
+    ],
+    "current_version": "0.1.0-alpha.7",
+    "msrv": "1.85.0",
+    "install_channels": [
+      "cargo install healthmd-cli",
+      "cargo-binstall matching GitHub archives",
+      "versioned GitHub archives/DMGs",
+      "shell installer",
+      "PowerShell installer",
+      "Homebrew/Linuxbrew"
+    ],
+    "consumer_users": "public downstream identities/use counts not known from repository; external registry/account access excluded",
+    "contracts": [
+      "Apple direct v1 and foreground query v3 producers",
+      "Android direct v2 producer, typed query unavailable",
+      "CLI and MCP local/read-only adapters",
+      "setup codex and healthmd-mcp executable consumers",
+      "website generated public docs/install guidance",
+      "external Obsidian export consumer remains separately qualified",
+      "shared Rust protocol crate consumers and component lockfiles"
+    ],
+    "retirement_obligation": "M08 choose last supported crates, deprecation/support window and replacement install/source channel; preserve immutable crates/tags/history; M10 remove maintained Cargo paths only after installed-state, external consumer and rollback gates"
+  },
+  "ci_consumers": {
+    "exact_release_workflows": [
+      {
+        "name": "CLI CI",
+        "path": ".github/workflows/cli-ci.yml"
+      },
+      {
+        "name": "Core Rust CI",
+        "path": ".github/workflows/core-rust-ci.yml"
+      },
+      {
+        "name": "Apple CI",
+        "path": ".github/workflows/apple-ci.yml"
+      },
+      {
+        "name": "Android CI",
+        "path": ".github/workflows/android-ci.yml"
+      }
+    ],
+    "exact_sha_policy": "qualify-exact-ci.py accepts only exact head_sha push/workflow_dispatch, never PR/other SHA; hard failure cannot be masked by success; missing/cancelled run recovered at immutable tag",
+    "aggregates": [
+      "CLI CI",
+      "Core Rust CI",
+      "Apple CI",
+      "Android CI"
+    ],
+    "branch_protection": "source defines aggregate context names; actual externally configured required contexts/rulesets not inspected and pending F09 reconciliation",
+    "release_gates": [
+      "clean committed current-main immutable tag",
+      "release version/signing/mobile ledger validation",
+      "five archive builds",
+      "exact-SHA component CI before signing/assembly/upload/publication",
+      "ledger-required signing/notarization/stapling",
+      "native extracted archive/installer smoke",
+      "signed checksum closure and remote draft-byte verification",
+      "SBOM SPDX/CycloneDX and attestations",
+      "protected cli-release final publication",
+      "independent Homebrew tap update"
+    ],
+    "publication": "cli-publish-crates.yml runs exact retained public release SHA from protected crates-io environment, exact version package/checksum and staged propagation",
+    "workflow_scope": "component lockfiles/caches/artifacts; shared-core changes affect CLI/Apple/Android/website; no new workflow or cache mutation",
+    "check_sources": [
+      "apps/cli/scripts/qualify-exact-ci.py",
+      "apps/cli/scripts/test_qualify_exact_ci.py",
+      ".github/workflows/cli-ci.yml",
+      ".github/workflows/cli-release.yml",
+      ".github/workflows/cli-sbom.yml",
+      ".github/workflows/cli-publish-crates.yml"
+    ]
+  },
+  "qualification_remaining": [
+    {
+      "class": "physical_device",
+      "status": "pending",
+      "cases": [
+        "exact iOS/CLI raw/extract/generated/resume/cancel LAN and Tailscale",
+        "exact iOS foreground typed-query LAN and Tailscale",
+        "exact Android raw/generated/resume/cancel LAN and Tailscale"
+      ],
+      "source": "apps/cli/docs/mobile-compatibility.md",
+      "note": "connectivity smoke recorded in source does not qualify full operation matrix; Android typed query unsupported"
+    },
+    {
+      "class": "signed_distribution",
+      "status": "pending",
+      "cases": [
+        "all five offline successor archives on clean machines without global Node/npm",
+        "macOS previous-signed-to-successor Keychain ACL + DMG notarization/stapling",
+        "Windows optional-to-qualified Authenticode transition and exact Credential Manager target",
+        "Linux headless/session/restart credential persistence",
+        "both launchers current-executable helper ABI/provenance and install upgrade",
+        "native destination/quota/cross-process crash/race/low-disk matrix"
+      ]
+    },
+    {
+      "class": "host_integration",
+      "status": "pending",
+      "cases": [
+        "every retained journal state and exact accepted profile",
+        "crash between destination commit/journal/ack",
+        "lost final acknowledgement and peer completion",
+        "unknown credential mutation outcome",
+        "safe downgrade and engine-pin route"
+      ]
+    },
+    {
+      "class": "external_client",
+      "status": "pending",
+      "cases": [
+        "public Rust crate/install consumer transition",
+        "configured required GitHub contexts/rulesets",
+        "Obsidian/installed MCP host interoperability"
+      ]
+    }
+  ],
+  "build_budgets": {
+    "measurement_status": "unmeasured in this bounded inventory; no builds/tests/cache scans executed",
+    "proposed": [
+      {
+        "metric": "warm affected TypeScript test loop",
+        "limit_seconds": 10
+      },
+      {
+        "metric": "warm complete portable suite",
+        "limit_seconds": 60
+      },
+      {
+        "metric": "generated output per non-native worktree excluding shared immutable caches",
+        "limit_bytes_exclusive": 1073741824
+      }
+    ],
+    "to_calibrate": [
+      "cold/warm portable tests and install/network separately",
+      "baseline/candidate startup and peak memory on each target",
+      "core/UI edit-to-device and clean/warm native builds",
+      "CI critical-path/job wall time, cache hits, artifact transfer",
+      "one and three concurrent worktree mutable outputs; shared immutable caches separately"
+    ],
+    "native_startup_ci_artifact_size_budgets": "numeric targets not yet selected from measured baseline; M00/M02 must establish before promotion",
+    "cleanup_exclusions": [
+      "user exports",
+      "private spools",
+      "donor data",
+      "unrelated worktrees/caches"
+    ],
+    "source": "docs/architecture/javascript-unified-layer-design-reference.md:430,927-931"
+  },
+  "test_inventory": [
+    {
+      "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+      "sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+      "case_ids": [
+        {
+          "case_id": "identity_is_stable_across_loads",
+          "line": 247
+        },
+        {
+          "case_id": "concurrent_creation_converges_on_one_identity",
+          "line": 261
+        },
+        {
+          "case_id": "corrupt_identity_fails_closed",
+          "line": 287
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/trust.rs",
+      "sha256": "cb8de913b5f196f4edaeb3808a999c7c3be2c8c328427cc59f76bc1aee3ac484",
+      "case_ids": [
+        {
+          "case_id": "trust_round_trips_with_swift_field_names",
+          "line": 219
+        },
+        {
+          "case_id": "mismatched_owner_fails_closed",
+          "line": 248
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/credentials.rs",
+      "sha256": "4fced54da0f0b99440253add1b018edbcb44b375da688ee52a3015cb8a3bff2f",
+      "case_ids": [
+        {
+          "case_id": "keychain_operations_disable_and_restore_interaction",
+          "line": 474
+        },
+        {
+          "case_id": "helper_protocol_allows_only_the_fixed_trust_account_and_shapes",
+          "line": 485
+        },
+        {
+          "case_id": "helper_frames_are_bounded",
+          "line": 507
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+      "sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+      "case_ids": [
+        {
+          "case_id": "aggregate_job_limit_and_bounded_read_fail_closed",
+          "line": 654
+        },
+        {
+          "case_id": "retained_storage_reservations_are_bounded_and_removed_on_drop",
+          "line": 665
+        },
+        {
+          "case_id": "lifecycle_accounting_reserves_four_bounded_copies_per_input_job",
+          "line": 678
+        },
+        {
+          "case_id": "explicit_output_capacity_is_serialized_across_process_leases",
+          "line": 696
+        },
+        {
+          "case_id": "crashed_unlocked_reservations_are_reaped_immediately",
+          "line": 723
+        },
+        {
+          "case_id": "empty_crash_directories_do_not_consume_job_slots",
+          "line": 741
+        },
+        {
+          "case_id": "retained_job_count_is_shared_across_protocol_versions",
+          "line": 754
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/job.rs",
+      "sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+      "case_ids": [
+        {
+          "case_id": "job_round_trips_and_cancellation_is_durable",
+          "line": 511
+        },
+        {
+          "case_id": "resume_preflight_is_needed_only_for_source_reachable_states",
+          "line": 536
+        },
+        {
+          "case_id": "extreme_job_timestamps_fail_without_panicking",
+          "line": 546
+        },
+        {
+          "case_id": "durable_counters_and_messages_are_bounded",
+          "line": 552
+        },
+        {
+          "case_id": "oversized_job_records_fail_before_write_or_decode",
+          "line": 570
+        },
+        {
+          "case_id": "expiration_cleanup_respects_active_execution_lease",
+          "line": 592
+        },
+        {
+          "case_id": "expired_job_is_removed",
+          "line": 614
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+      "sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+      "case_ids": [
+        {
+          "case_id": "android_durable_counters_and_messages_are_bounded",
+          "line": 463
+        },
+        {
+          "case_id": "android_job_requires_the_exact_seven_day_lifetime",
+          "line": 477
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+      "sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+      "case_ids": [
+        {
+          "case_id": "windows_destination_identity_detects_same_path_directory_replacement",
+          "line": 2062
+        },
+        {
+          "case_id": "windows_canonical_destination_round_trips_through_policy",
+          "line": 2076
+        },
+        {
+          "case_id": "windows_atomic_install_replaces_and_detects_destination_changes",
+          "line": 2093
+        },
+        {
+          "case_id": "windows_destination_policy_rejects_ambiguous_namespaces_and_reparse_points",
+          "line": 2155
+        },
+        {
+          "case_id": "append_commit_is_digest_bound_and_idempotent",
+          "line": 2194
+        },
+        {
+          "case_id": "source_neutral_destination_adapter_is_idempotent",
+          "line": 2378
+        },
+        {
+          "case_id": "traversal_and_symlink_ancestors_are_rejected",
+          "line": 2463
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+      "sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+      "case_ids": [
+        {
+          "case_id": "bounded_output_and_peer_metadata_fail_closed",
+          "line": 2000
+        },
+        {
+          "case_id": "all_empty_corpus_preserves_v1_scalar_and_records_no_evidenced_versions",
+          "line": 2182
+        },
+        {
+          "case_id": "empty_day_and_retained_v8_day_report_only_the_evidenced_version",
+          "line": 2207
+        },
+        {
+          "case_id": "homogeneous_v7_and_v8_corpora_report_evidenced_versions_in_json_and_jsonl",
+          "line": 2231
+        },
+        {
+          "case_id": "mixed_v7_v8_corpus_is_rejected_for_json_and_jsonl",
+          "line": 2256
+        },
+        {
+          "case_id": "shipped_apple_daily_schema_versions_survive_raw_and_extract_receipts",
+          "line": 2274
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+      "sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+      "case_ids": [
+        {
+          "case_id": "android_raw_snapshot_validator_accepts_scientific_number_lexemes",
+          "line": 2295
+        },
+        {
+          "case_id": "android_raw_snapshot_transfer_is_durable_and_validated",
+          "line": 2462
+        },
+        {
+          "case_id": "android_generated_file_transfer_commits_with_v2_destination_binding",
+          "line": 2682
+        },
+        {
+          "case_id": "android_raw_record_validation_preserves_android_number_lexemes",
+          "line": 2828
+        },
+        {
+          "case_id": "raw_snapshot_validation_rejects_placeholder_records_and_issues",
+          "line": 2847
+        },
+        {
+          "case_id": "generated_relative_paths_reject_aliases_and_traversal",
+          "line": 2854
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+      "sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+      "case_ids": [
+        {
+          "case_id": "pairing_protocols_preserve_legacy_platform_binding_and_share_v3",
+          "line": 3969
+        },
+        {
+          "case_id": "receive_message_answers_heartbeat_before_returning_control_message",
+          "line": 3982
+        },
+        {
+          "case_id": "repeated_heartbeats_do_not_extend_receive_deadline",
+          "line": 4026
+        },
+        {
+          "case_id": "durable_job_times_are_exact_and_not_future_dated",
+          "line": 4067
+        },
+        {
+          "case_id": "ios_peer_progress_never_redefines_the_local_durable_frontier",
+          "line": 4096
+        },
+        {
+          "case_id": "query_page_controls_and_complete_response_shapes_are_bounded",
+          "line": 4137
+        },
+        {
+          "case_id": "every_query_item_variant_has_a_strict_nested_shape",
+          "line": 4232
+        },
+        {
+          "case_id": "peer_diagnostics_are_bounded_and_machine_shaped",
+          "line": 4291
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/direct_fake_peer_tests.rs",
+      "sha256": "1c6ad211ba8a5822f75846677d0015aaedf60e2b554ca6773530d3df04a2dd6d",
+      "case_ids": [
+        {
+          "case_id": "fake_ios_peer_pairs_shared_v3_then_reconnects_with_v1_for_a_query",
+          "line": 372
+        },
+        {
+          "case_id": "fake_android_peer_pairs_v2_without_downgrading_to_v1",
+          "line": 514
+        },
+        {
+          "case_id": "wake_enrollment_round_trips_rotates_and_unpair_removes_it",
+          "line": 647
+        },
+        {
+          "case_id": "wake_status_reports_enrollment_per_device",
+          "line": 704
+        },
+        {
+          "case_id": "wake_enrollment_without_advertised_support_fails_closed",
+          "line": 741
+        },
+        {
+          "case_id": "malformed_wake_enrollment_is_rejected_without_persisting",
+          "line": 786
+        },
+        {
+          "case_id": "wake_window_retries_an_inactive_peer_until_it_is_active",
+          "line": 807
+        },
+        {
+          "case_id": "wake_window_retries_an_inactive_android_peer_until_it_is_active",
+          "line": 838
+        },
+        {
+          "case_id": "wake_window_retries_an_unreachable_peer_until_it_is_active",
+          "line": 868
+        },
+        {
+          "case_id": "wake_window_expiry_is_bounded_when_the_peer_is_unreachable",
+          "line": 900
+        },
+        {
+          "case_id": "wake_window_deadline_covers_authenticated_status_exchange",
+          "line": 925
+        },
+        {
+          "case_id": "wake_window_cancellation_is_not_phone_side_cancellation",
+          "line": 960
+        },
+        {
+          "case_id": "disabled_wake_window_performs_no_network_preflight",
+          "line": 990
+        },
+        {
+          "case_id": "explicit_cancellation_is_durable_before_the_wake_listener_opens",
+          "line": 1007
+        },
+        {
+          "case_id": "explicit_android_cancellation_is_durable_before_the_wake_listener_opens",
+          "line": 1050
+        },
+        {
+          "case_id": "ios_only_pairing_rejects_android_and_removes_new_trust",
+          "line": 1087
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/generated_path.rs",
+      "sha256": "83a09a4488de460f762d63a8da767ea30306e3a3be7e2f1b6fc6526dd8a9a8e0",
+      "case_ids": [
+        {
+          "case_id": "accepts_portable_nested_paths",
+          "line": 84
+        },
+        {
+          "case_id": "rejects_traversal_separators_and_windows_aliases",
+          "line": 93
+        },
+        {
+          "case_id": "detects_case_unicode_and_ancestor_collisions",
+          "line": 136
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/handshake.rs",
+      "sha256": "0e3e872bb04a0adc3cf97e54e2590ef0dd5701fbe713cbeeac3b204b3cc9dddd",
+      "case_ids": [
+        {
+          "case_id": "pairing_code_normalization_is_ascii_only",
+          "line": 411
+        },
+        {
+          "case_id": "pairing_shields_credential_mutation_and_delivers_reconnect_secret",
+          "line": 417
+        },
+        {
+          "case_id": "first_device_policy_atomically_rejects_a_different_new_trust_record",
+          "line": 500
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/secure_channel.rs",
+      "sha256": "adcc97283b8ab5dbf4d1156aca2754f2ace25929a865aa962dac2c4fbc4e7e81",
+      "case_ids": [
+        {
+          "case_id": "secure_channels_exchange_sequenced_messages",
+          "line": 187
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/packet.rs",
+      "sha256": "aacf215d9359bb2d67c9a7483bb1faf18c3e0b3bb5b674cf7f7e1f254fcb6557",
+      "case_ids": [
+        {
+          "case_id": "packet_round_trips_across_split_tcp_stream",
+          "line": 111
+        },
+        {
+          "case_id": "new_applies_transport_hardening_socket_options",
+          "line": 131
+        },
+        {
+          "case_id": "zero_length_packet_fails_before_allocation",
+          "line": 161
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba",
+      "case_ids": [
+        {
+          "case_id": "codex_configuration_is_idempotent_and_preserves_unrelated_values",
+          "line": 360
+        },
+        {
+          "case_id": "codex_configuration_pins_explicit_device_and_nondefault_port",
+          "line": 387
+        },
+        {
+          "case_id": "inline_codex_tables_are_preserved_and_extended",
+          "line": 409
+        },
+        {
+          "case_id": "concurrent_config_change_fails_without_overwrite",
+          "line": 436
+        },
+        {
+          "case_id": "stable_invocation_symlink_is_not_collapsed_to_versioned_target",
+          "line": 453
+        },
+        {
+          "case_id": "malformed_or_oversized_config_fails_without_replacement",
+          "line": 477
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/tests/credential_helper.rs",
+      "sha256": "2ebb38d1c28f43615fad41b01d40dfbe551af1888694ec2fd67593c7aadeeee5",
+      "case_ids": [
+        {
+          "case_id": "supervised_same_executable_helper_round_trip_succeeds",
+          "line": 4
+        },
+        {
+          "case_id": "windows_compatibility_launcher_supervises_its_own_helper",
+          "line": 18
+        },
+        {
+          "case_id": "private_credential_helper_rejects_direct_invocation",
+          "line": 31
+        },
+        {
+          "case_id": "windows_compatibility_helper_rejects_direct_invocation",
+          "line": 45
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/tests/guidance.rs",
+      "sha256": "168762523dadf505c80bc7dd73f8dd2d4f791cc488e1efbbf784fd02190fdac7",
+      "case_ids": [
+        {
+          "case_id": "incomplete_public_commands_return_successful_non_network_guidance",
+          "line": 17
+        },
+        {
+          "case_id": "discovery_does_not_initialize_private_cli_state",
+          "line": 51
+        },
+        {
+          "case_id": "selected_query_operation_returns_its_complete_argument_schema",
+          "line": 78
+        },
+        {
+          "case_id": "human_mode_renders_every_discovery_command_without_json_syntax",
+          "line": 93
+        },
+        {
+          "case_id": "explicit_json_preserves_the_machine_contract",
+          "line": 113
+        },
+        {
+          "case_id": "parse_failures_are_structured_actionable_and_do_not_echo_values",
+          "line": 122
+        },
+        {
+          "case_id": "invalid_typed_arguments_explain_the_exact_operation_without_contacting_iphone",
+          "line": 142
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/scripts/test_verify_release.py",
+      "sha256": "4ab17844e1dd0ab541c7290fe93d3354b350ad10c00e774e9b252b462a258c4b",
+      "case_ids": [
+        {
+          "case_id": "test_semver_prerelease_is_distinct_from_stable_and_build_metadata",
+          "line": 20
+        },
+        {
+          "case_id": "test_non_semver_tags_are_rejected",
+          "line": 31
+        },
+        {
+          "case_id": "test_pending_rows_are_allowed_only_for_preview_policy",
+          "line": 55
+        },
+        {
+          "case_id": "test_qualified_rows_are_bound_to_the_release_candidate",
+          "line": 65
+        },
+        {
+          "case_id": "test_malformed_rows_fail_for_preview_and_stable_policy",
+          "line": 104
+        },
+        {
+          "case_id": "test_structurally_malformed_duplicate_required_row_fails",
+          "line": 114
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/scripts/test_qualify_exact_ci.py",
+      "sha256": "741114266c4d6b33b5711d68c88ff668549c98adb5a3f10cf9c989b545ae1f42",
+      "case_ids": [
+        {
+          "case_id": "test_successful_exact_push_is_reused",
+          "line": 43
+        },
+        {
+          "case_id": "test_other_commits_and_pull_requests_are_not_qualification",
+          "line": 47
+        },
+        {
+          "case_id": "test_active_dispatch_recovers_an_older_cancelled_push",
+          "line": 57
+        },
+        {
+          "case_id": "test_hard_push_failure_is_not_masked_by_successful_dispatch",
+          "line": 74
+        },
+        {
+          "case_id": "test_cancelled_push_is_recoverable_at_the_immutable_tag",
+          "line": 85
+        },
+        {
+          "case_id": "test_successful_dispatch_is_accepted_for_exact_sha",
+          "line": 91
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/scripts/test_watch_cli_release.py",
+      "sha256": "c47df88afc5d99d82f855f760610e4ddebf20045e5df55c3a139c6f44a69809f",
+      "case_ids": [
+        {
+          "case_id": "test_signing_requires_exact_ci_and_five_builds",
+          "line": 19
+        },
+        {
+          "case_id": "test_release_requires_remote_byte_verification",
+          "line": 28
+        },
+        {
+          "case_id": "test_unknown_environments_never_become_approvable",
+          "line": 40
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/scripts/test-safe-extract-release.py",
+      "sha256": "ade8d1c8cde6c8aa6d5098459b0047af28b965e68bc80e348731b0a9e6fc1b8f",
+      "case_ids": [
+        {
+          "case_id": "test_extracts_bounded_regular_tar_tree_read_only",
+          "line": 24
+        },
+        {
+          "case_id": "test_extracts_exact_zip_tree",
+          "line": 43
+        },
+        {
+          "case_id": "test_rejects_traversal_and_removes_partial_destination",
+          "line": 56
+        },
+        {
+          "case_id": "test_rejects_symlinks_and_portable_aliases",
+          "line": 68
+        },
+        {
+          "case_id": "test_rejects_windows_names_ads_and_trailing_aliases",
+          "line": 94
+        },
+        {
+          "case_id": "test_rejects_declared_aggregate_over_bound",
+          "line": 115
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "apps/cli/scripts/test_verify_generated_release_metadata.py",
+      "sha256": "ffc956dcd7b0401b3d192d105712e2e6a2b1702188947be46ecf1b47482f07ad",
+      "case_ids": [
+        {
+          "case_id": "test_exact_metadata_passes",
+          "line": 82
+        },
+        {
+          "case_id": "test_stale_manifest_checksum_fails",
+          "line": 85
+        },
+        {
+          "case_id": "test_stale_shell_checksum_fails",
+          "line": 94
+        },
+        {
+          "case_id": "test_stale_formula_checksum_fails",
+          "line": 105
+        },
+        {
+          "case_id": "test_duplicate_formula_archive_fails",
+          "line": 116
+        },
+        {
+          "case_id": "test_wrong_powershell_archive_set_fails",
+          "line": 123
+        }
+      ],
+      "execution": "not_run_source_inventory_only",
+      "expected_result_authority": "existing pinned test assertions; do not regenerate to match candidate"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/kotlin_v2_vectors.rs",
+      "sha256": "380214d69140912b85d515b748f0dae7a24924281b9771090dcd5e8927c22d36",
+      "case_ids": [
+        {
+          "case_id": "android_pairing_v2_matches_kotlin_fixture"
+        },
+        {
+          "case_id": "rust_v2_request_matches_kotlin_fixture"
+        },
+        {
+          "case_id": "protocol_foundation_accepts_only_exact_v2_request_and_envelope_bytes"
+        },
+        {
+          "case_id": "foundation_matches_kotlin_defaults_null_policy_and_signed_ranges"
+        },
+        {
+          "case_id": "rust_v2_envelope_matches_kotlin_fixture"
+        },
+        {
+          "case_id": "v2_ping_has_an_explicit_empty_payload"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/profile_policy.rs",
+      "sha256": "3d621c67a37322228c3a6cfc7e6328653a2255efea168bd37f86b7d1cc9f5c33",
+      "case_ids": [
+        {
+          "case_id": "legacy_request_without_profile_fields_decodes"
+        },
+        {
+          "case_id": "profile_policy_round_trips_with_camel_case_fields"
+        },
+        {
+          "case_id": "profile_reference_name_is_omitted_when_absent"
+        },
+        {
+          "case_id": "old_peer_fails_closed_on_profile_policy"
+        },
+        {
+          "case_id": "old_peer_ignores_unknown_profile_reference_field"
+        },
+        {
+          "case_id": "canonical_selection_still_round_trips_alongside_profile"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/shared_pairing_v3_vectors.rs",
+      "sha256": "91be62274fb240d36871879f341734f9d04ce7fe879e008d12b1ec3a6c147007",
+      "case_ids": [
+        {
+          "case_id": "shared_pairing_v3_matches_canonical_fixture"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v1_profile_vectors.rs",
+      "sha256": "ebbc921a0b45d73fd7cea60c3e4aaaf4e8a82ac1c0e0c60c9db730b75767b1e3",
+      "case_ids": [
+        {
+          "case_id": "rust_matches_swift_profile_request_bytes_and_fingerprint"
+        },
+        {
+          "case_id": "rust_matches_swift_unnamed_reference_bytes"
+        },
+        {
+          "case_id": "swift_profile_bytes_decode_into_current_rust_model"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v1_vectors.rs",
+      "sha256": "ab4ec277c94794e5c44b499a7ce2f8eca44d1f52ad813fc0109d84c694861de2",
+      "case_ids": [
+        {
+          "case_id": "rust_matches_swift_pairing_proof_and_decodes_packet"
+        },
+        {
+          "case_id": "rust_canonical_request_and_fingerprint_match_swift"
+        },
+        {
+          "case_id": "protocol_foundation_accepts_only_the_exact_swift_request_and_preserves_message_bytes"
+        },
+        {
+          "case_id": "rust_binary_frame_matches_swift_byte_for_byte"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/swift_v3_query_vectors.rs",
+      "sha256": "f6716c88271a9448d5141484dd47722134a1b77e1f11a8e60759e849df1f2983",
+      "case_ids": [
+        {
+          "case_id": "rust_matches_swift_direct_query_v3_fixture"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/v2_profile_policy.rs",
+      "sha256": "b6812a5724daff3e7e46104a2f46f09fcb8a1cf0f14a1aa796a7aa6aeb8d5d6e",
+      "case_ids": [
+        {
+          "case_id": "legacy_request_without_profile_fields_decodes"
+        },
+        {
+          "case_id": "profile_policy_round_trips_with_snake_case_fields"
+        },
+        {
+          "case_id": "profile_reference_name_is_omitted_when_absent"
+        },
+        {
+          "case_id": "request_fingerprint_is_deterministic_for_profile_requests"
+        },
+        {
+          "case_id": "old_peer_fails_closed_on_unknown_profile_policy"
+        },
+        {
+          "case_id": "old_peer_fails_closed_on_unknown_profile_reference_field"
+        },
+        {
+          "case_id": "capability_advertisement_serializes_the_profile_policy"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/v2_profile_vectors.rs",
+      "sha256": "4ef8cc69fd37595b824fa0da24a24ff05313da258e369487e6beefe53a4e0f54",
+      "case_ids": [
+        {
+          "case_id": "canonical_request_json_matches_frozen_vector"
+        },
+        {
+          "case_id": "request_fingerprint_matches_frozen_vector"
+        },
+        {
+          "case_id": "envelope_framing_matches_frozen_vector"
+        },
+        {
+          "case_id": "unnamed_reference_matches_frozen_vector"
+        }
+      ],
+      "execution": "not_run_source_inventory_only"
+    }
+  ],
+  "fixture_inventory": [
+    {
+      "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+      "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/schema",
+        "/schema_version",
+        "/pairing_protocol_version",
+        "/pairing_code",
+        "/client_installation_id",
+        "/client_public_key_hex",
+        "/client_nonce_hex",
+        "/server_installation_id",
+        "/server_public_key_hex",
+        "/server_nonce_hex",
+        "/sealed_nonce_hex",
+        "/sealed_ciphertext_hex",
+        "/sealed_tag_hex",
+        "/pairing_code_key_hex",
+        "/pairing_client_verifier_hex",
+        "/pairing_server_verifier_hex",
+        "/qr_payload"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+      "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/profile_request_fingerprint",
+        "/profile_request_json_base64",
+        "/profile_request_message_json_base64",
+        "/profile_request_unnamed_reference_json_base64",
+        "/schema",
+        "/schema_version"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+      "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/binary_frame_base64",
+        "/pairing_packet_json_base64",
+        "/pairing_verifier_hex",
+        "/request_fingerprint",
+        "/request_json_base64",
+        "/request_message_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+      "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/client_private_key_hex",
+        "/client_public_key_hex",
+        "/server_private_key_hex",
+        "/server_public_key_hex",
+        "/shared_secret_hex",
+        "/client_nonce_hex",
+        "/server_nonce_hex",
+        "/reconnect_secret_hex",
+        "/pairing_code",
+        "/pairing_code_key_hex",
+        "/pairing_verifier_hex",
+        "/session_key_hex",
+        "/sealed_nonce_hex",
+        "/sealed_ciphertext_hex",
+        "/sealed_tag_hex",
+        "/pairing_server_verifier_hex",
+        "/android_pairing_code",
+        "/android_pairing_verifier_hex",
+        "/android_pairing_server_verifier_hex",
+        "/trusted_client_verifier_hex",
+        "/trusted_server_verifier_hex",
+        "/request_json_base64",
+        "/request_fingerprint",
+        "/status_request_envelope_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+      "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/schema",
+        "/schema_version",
+        "/request_json_base64",
+        "/envelope_json_base64",
+        "/request_fingerprint",
+        "/request_unnamed_reference_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+      "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/hello",
+        "/query_rejected",
+        "/query_request",
+        "/query_response",
+        "/schema",
+        "/schema_version"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+      "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/client_private_key_hex",
+        "/client_public_key_hex",
+        "/server_private_key_hex",
+        "/server_public_key_hex",
+        "/shared_secret_hex",
+        "/client_nonce_hex",
+        "/server_nonce_hex",
+        "/reconnect_secret_hex",
+        "/pairing_code",
+        "/pairing_code_key_hex",
+        "/pairing_verifier_hex",
+        "/session_key_hex",
+        "/sealed_nonce_hex",
+        "/sealed_ciphertext_hex",
+        "/sealed_tag_hex",
+        "/pairing_server_verifier_hex",
+        "/android_pairing_code",
+        "/android_pairing_verifier_hex",
+        "/android_pairing_server_verifier_hex",
+        "/trusted_client_verifier_hex",
+        "/trusted_server_verifier_hex",
+        "/request_json_base64",
+        "/request_fingerprint",
+        "/status_request_envelope_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+      "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/schema",
+        "/schema_version",
+        "/request_json_base64",
+        "/envelope_json_base64",
+        "/request_fingerprint",
+        "/request_unnamed_reference_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+      "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/profile_request_fingerprint",
+        "/profile_request_json_base64",
+        "/profile_request_message_json_base64",
+        "/profile_request_unnamed_reference_json_base64",
+        "/schema",
+        "/schema_version"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+      "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/schema",
+        "/schema_version",
+        "/pairing_protocol_version",
+        "/pairing_code",
+        "/client_installation_id",
+        "/client_public_key_hex",
+        "/client_nonce_hex",
+        "/server_installation_id",
+        "/server_public_key_hex",
+        "/server_nonce_hex",
+        "/sealed_nonce_hex",
+        "/sealed_ciphertext_hex",
+        "/sealed_tag_hex",
+        "/pairing_code_key_hex",
+        "/pairing_client_verifier_hex",
+        "/pairing_server_verifier_hex",
+        "/qr_payload"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+      "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/binary_frame_base64",
+        "/pairing_packet_json_base64",
+        "/pairing_verifier_hex",
+        "/request_fingerprint",
+        "/request_json_base64",
+        "/request_message_json_base64"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json",
+      "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+      "case_id_kind": "JSON top-level member pointer (fixtures have no universal case-id field)",
+      "case_ids": [
+        "/hello",
+        "/query_rejected",
+        "/query_request",
+        "/query_response",
+        "/schema",
+        "/schema_version"
+      ],
+      "qualification": "frozen synthetic reference only; no live pairing or credential access"
+    }
+  ],
+  "source_inventory": [
+    {
+      "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+      "sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/trust.rs",
+      "sha256": "cb8de913b5f196f4edaeb3808a999c7c3be2c8c328427cc59f76bc1aee3ac484",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/credentials.rs",
+      "sha256": "4fced54da0f0b99440253add1b018edbcb44b375da688ee52a3015cb8a3bff2f",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+      "sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/job.rs",
+      "sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+      "sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+      "sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+      "sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+      "sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+      "sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/direct_fake_peer_tests.rs",
+      "sha256": "1c6ad211ba8a5822f75846677d0015aaedf60e2b554ca6773530d3df04a2dd6d",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/generated_path.rs",
+      "sha256": "83a09a4488de460f762d63a8da767ea30306e3a3be7e2f1b6fc6526dd8a9a8e0",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/handshake.rs",
+      "sha256": "0e3e872bb04a0adc3cf97e54e2590ef0dd5701fbe713cbeeac3b204b3cc9dddd",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/secure_channel.rs",
+      "sha256": "adcc97283b8ab5dbf4d1156aca2754f2ace25929a865aa962dac2c4fbc4e7e81",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/src/packet.rs",
+      "sha256": "aacf215d9359bb2d67c9a7483bb1faf18c3e0b3bb5b674cf7f7e1f254fcb6557",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/onboarding.rs",
+      "sha256": "ea1cc76fdb08f44bfba6f482e079cd121ffe6c2a49636470f919aa7bd51c7eba",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/src/bin/healthmd-mcp/main.rs",
+      "sha256": "888addf13827ba86c97754aa97308e5ac03ffe85e2fd7c9075a24281c888be01",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/tests/credential_helper.rs",
+      "sha256": "2ebb38d1c28f43615fad41b01d40dfbe551af1888694ec2fd67593c7aadeeee5",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/tests/guidance.rs",
+      "sha256": "168762523dadf505c80bc7dd73f8dd2d4f791cc488e1efbbf784fd02190fdac7",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/Cargo.toml",
+      "sha256": "55c7b45a78c3c87918d93fce970196f50468e616e85583f8eeb283f14bc3d90d",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/Cargo.lock",
+      "sha256": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/dist-workspace.toml",
+      "sha256": "e26024ab2357702287ad3d3224338454e7b6ea4c1cf8a408ecfe25d8929b3b97",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/release-identities.json",
+      "sha256": "558ec9af21ffe21322883ae67697092d6445f1fe887d3bb693945c7fe45e1291",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/docs/releasing.md",
+      "sha256": "2cc1a6be5faa08db7f5dc09ffbed32020a93f08313efa0e2e6f4e0dfcd6fce46",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/docs/mobile-compatibility.md",
+      "sha256": "721454a602e835b1380cd3b043471e5380838f0d87a3ebb6a595d9c60648477b",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/docs/architecture.md",
+      "sha256": "89815e68d2aaf0c778a3b9dbce5b1f8532d282cb8c65a21ca11a0cacc1170290",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/docs/remote-mcp.md",
+      "sha256": "357f9b44dd8f89ed71e9c4e318383baf59e229f2f347856d914f12247fc81b5f",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/sign-macos-archive.sh",
+      "sha256": "dd6648867bfb06b6386e06e6ba6656d883fede5cf3e9362f7bd7d8460a40e99a",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/qualify-exact-ci.py",
+      "sha256": "33527d6bfac899029adddb72ffe47d7d0b6bc117d6f99e67dbd4da8552a276f6",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/verify-release.py",
+      "sha256": "62b70adcc12f9de769d2a8264ce3af740c7fa3834b45fb2ffe895a99962c8654",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/smoke-crate-packages.py",
+      "sha256": "0236c1e94f2fff929821496a69b05018205f0296169170367b1e4dbee2c6e789",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/watch-cli-release.py",
+      "sha256": "4d3ee9c04ad29b75658b64ae0b28a84e99a56a7186b277e5eac228187360833e",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/publish-crate.sh",
+      "sha256": "ed12a835d9716c8cde37ff40726de412fb202da102e2abd944f47b7ac1f73257",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/test_verify_release.py",
+      "sha256": "4ab17844e1dd0ab541c7290fe93d3354b350ad10c00e774e9b252b462a258c4b",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/test_qualify_exact_ci.py",
+      "sha256": "741114266c4d6b33b5711d68c88ff668549c98adb5a3f10cf9c989b545ae1f42",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/test_watch_cli_release.py",
+      "sha256": "c47df88afc5d99d82f855f760610e4ddebf20045e5df55c3a139c6f44a69809f",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/test-safe-extract-release.py",
+      "sha256": "ade8d1c8cde6c8aa6d5098459b0047af28b965e68bc80e348731b0a9e6fc1b8f",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/scripts/test_verify_generated_release_metadata.py",
+      "sha256": "ffc956dcd7b0401b3d192d105712e2e6a2b1702188947be46ecf1b47482f07ad",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/cli-ci.yml",
+      "sha256": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/cli-release.yml",
+      "sha256": "c22fdfabb2f6c052e6ab0ef8176f8ef98c6f084405af7e717ca20a028474900b",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/cli-publish-crates.yml",
+      "sha256": "c206798617f42e7d9021bfb0518f6c26b7cfd6adb9a527ba7fdc4780b5766d79",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/cli-sbom.yml",
+      "sha256": "927daad16dd0c0f3397520a7ae780a35641299209657cafcd53ba6462547f178",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/core-rust-ci.yml",
+      "sha256": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/apple-ci.yml",
+      "sha256": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/android-ci.yml",
+      "sha256": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": ".github/workflows/website-ci.yml",
+      "sha256": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+      "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "packages/healthmd-core-rust/Cargo.lock",
+      "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "sha256": "5869f39aaf549228490c7fced7e97af471763e7a1f58f04b3b38f3b17303e985",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-cli/Cargo.toml",
+      "sha256": "bb65e169fcb8f7166bcf36089acee328d4c628fc8a95c3512d8b198d41c2ef69",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-mcp/Cargo.toml",
+      "sha256": "5affa065eafbd19d846b0aa27b713bbd0320fa0d552e7beb9827f6dcac5a9c66",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-client/Cargo.toml",
+      "sha256": "fec386aaac74c6724a8c04921ec949bba58d9ca769bb60e9fcaaf480429fec06",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "apps/cli/crates/healthmd-operations/Cargo.toml",
+      "sha256": "174e82e56036f8b36497121e413117fd931d3b236265ca39506802e41a8bdf04",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    },
+    {
+      "path": "packages/healthmd-core-rust/crates/healthmd-protocol/Cargo.toml",
+      "sha256": "7f04af7d8f7e63f045251eee18b1c388e3e705b0055cc6fbffe9e5c67a2707ec",
+      "source_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+      "working_copy_matches_source": true
+    }
+  ],
+  "limitations": [
+    "Planning result inventories current source and exact cases; tests/signing/physical operation assertions were not executed.",
+    "No credentials, user state, production resources, real client or provider accessed.",
+    "No successor Node packaging or native ABI exists in this inventory; platform capability claims remain pending.",
+    "Dependency-owned Linux physical secret namespace mapping and external branch-protection/current public consumer usage require later evidence.",
+    "No measured startup/native/CI budget, full frozen retained journal corpus or signed downgrade qualification is claimed."
+  ],
+  "rollback": "Remove these inventory/receipt candidate files only; current Rust production launchers, immutable releases, frozen fixtures, credentials, journals and all user data remain authoritative."
+}

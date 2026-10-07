@@ -1,0 +1,349 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CORE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+  "patch_digest": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+  "patch_digest_method": "SHA-256 of raw UTF-8 inventory file bytes at docs/migration/effect-refactor/inventories/core.json including trailing newline; excludes self-referencing receipt and coordinator plan/state. Fingerprints only the bounded inventory deliverable.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/core.json",
+    "docs/migration/effect-refactor/receipts/BASE-CORE.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      ".github/workflows/android-ci.yml": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+      ".github/workflows/apple-ci.yml": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+      ".github/workflows/cli-ci.yml": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+      ".github/workflows/core-rust-ci.yml": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+      ".github/workflows/website-ci.yml": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a",
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/android/app/src/androidTest/java/com/healthmd/domain/render/HealthMdRendererInstrumentationTest.kt": "3b94675f800f2b96799e11b127841e6e99d8d3227fcecb19935aefa9f7eae691",
+      "apps/android/app/src/androidTest/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterInstrumentationTest.kt": "db84cd10a6f24fc459adae6e0c7d9101588bb8fb660273bdfef4a8a24de70931",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt": "ec9c8024b61c85ffa7a359cd54d7bef0c34c36fe1ff21660d1f2f4882a1ec309",
+      "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt": "b57a7e2bebd84d134fd05518c94a8886e76005f8d3811f7794353c44f7e594b8",
+      "apps/android/app/src/main/java/com/healthmd/domain/registry/HealthMdCoreRegistryAdapter.kt": "80abe9ae58237a24ad38a5cbb5453d4077da9b98d4a06770996a4483636a0ab7",
+      "apps/android/app/src/main/java/com/healthmd/domain/render/HealthMdRenderInputAdapter.kt": "38c2202169214be2fd309bfb0771126c1d8870b4a616049677ab0048297a35f0",
+      "apps/android/app/src/main/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapter.kt": "03c929d1218e222ae35e46289faab3ab09e5776df8599e19b384c490406a6d44",
+      "apps/android/app/src/test/java/com/healthmd/domain/render/HealthMdRenderInputAdapterTest.kt": "d8e6ec6993e04f364cd7934925abaa756a232110989d7e03f856572f22d91115",
+      "apps/android/app/src/test/java/com/healthmd/domain/semantic/HealthMdSemanticInputAdapterTest.kt": "daabc0d1755f5e1f9f9dbf7e35aad46ede778af9fe51b7f8270cc5747d6593e3",
+      "apps/android/app/src/test/java/com/healthmd/exportcontract/ProductCapabilityManifestTest.kt": "e646fad70f47c10465955e7008fe672117e5cc9be177cd20cbe42d84c324d295",
+      "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md": "c1e96bcb1a627880d5190fdbadd375f0296ef035f35bdc9edb33562d742ecd62",
+      "apps/android/docs/export-contract/ios-export-contract.md": "d33fede41d914f34899eb2133c86216af7c5fb3b3b04b23ee198613452b69c4b",
+      "apps/android/docs/export-contract/platform-native-export-boundaries.md": "b62c92fe6e2561b2af2bb3f08b1408eb38f44202e4118887b37e55a5fe2ad70a",
+      "apps/apple/HealthMd/Shared/Core/HealthMdCoreRegistryAdapter.swift": "4163f9eacdd956b3be2e1a9fa78237f1f633fc6e57cc9f2949989d36879c7864",
+      "apps/apple/HealthMd/Shared/Core/HealthMdRenderInputAdapter.swift": "31fdcf49790d82d75943ffd8b4f0768264fff6a6807cd53188fa1c86c7fd77c8",
+      "apps/apple/HealthMd/Shared/Core/HealthMdSemanticInputAdapter.swift": "fa1e62802f3339bea7a09e8351da6c3181d1ae0d2a5efbef3853a985ecf8903b",
+      "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0",
+      "apps/apple/HealthMd/Shared/Export/HealthRollupGenerator.swift": "134265bd43d6208cd4a3f7ad70c52b9d2f0248ecb1fefb3e7bd2cbcd6649b842",
+      "apps/apple/HealthMd/Shared/Export/HealthRollupModels.swift": "6b54eb25076dae9af1dcafb9051a52561f114492f813b6bc03c40dedb4e600af",
+      "apps/apple/HealthMd/Shared/Models/HealthMetrics.swift": "89de0f22a9f3f4809d63c3cbbe12cbdb35f1bbea6c65bb3258f61f7a91cac24b",
+      "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift": "f0fd0c624489d7a7d4289eae6602b1987952d9ca5ecc2dc3672ad10642784ad2",
+      "apps/apple/HealthMdTests/Export/CSVExporterContractTests.swift": "6f30e18cb7354a284a7131d591293c469c2dc0218b8b268aa9c199d0584108a8",
+      "apps/apple/HealthMdTests/Export/ExportSchemaSignatureTests.swift": "50d60fc9f2dac9dc468c870c278303f2236d5d9527387decf1e07199cdb45b0b",
+      "apps/apple/HealthMdTests/Export/GeneratedRollupReferenceDocsTests.swift": "1beb8dad290722af43535fafc0cbeb02b495dadc5bf7df42d95cb6578ad6818d",
+      "apps/apple/HealthMdTests/Export/HealthRollupExporterTests.swift": "44d3adf25601fd95676b959491afb4bd028ad208430d43c7c06b3a3f757ec429",
+      "apps/apple/HealthMdTests/Export/JSONExporterContractTests.swift": "f63dda7fa65e78280ffac558defe3b107cefba3386cb86384d91cb559cedef1b",
+      "apps/apple/HealthMdTests/Export/MarkdownExporterContractTests.swift": "a9fa058f934d5ee6fe37c1ab699c6b3d3a7b34f4a701e2797001f7e197529f9c",
+      "apps/apple/HealthMdTests/Export/ObsidianBasesContractTests.swift": "6ac5bad1db96595eb9216874081330d8902eced757db988dd72d319fb1d73424",
+      "apps/apple/HealthMdTests/SharedCore/HealthMdRenderInputAdapterTests.swift": "3c6882bda732f976d8a9b8ab22c977e7e2e015ac69381dacd058760072006bb5",
+      "apps/apple/HealthMdTests/SharedCore/HealthMdSemanticInputAdapterTests.swift": "f73b48092c6b2e6b153f1779c8da5651800f7e245c5d16523830e6566c920db5",
+      "apps/apple/Makefile": "46335dfb1cbfc60abfc1066b1a9051fd1e7d769265008248bcb07effa7c62fe0",
+      "apps/apple/docs/features/export-schema.md": "f5d604b16a14e7aa6a1647c8c3cf9b63a40ebdd0db0096994e323d80a3691d07",
+      "apps/website/docs-src/public/reference/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "apps/website/docs-src/src/content/docs/shared-metric-registry.md": "21c8b5e9b5865ffa6087fe0ae1c4f607590c9b9aafd47efbbabf478c3e47b54a",
+      "apps/website/external-sources.json": "0ea940fab85168163691c2d2232527504162e717b7644052edf5644823bbc1f4",
+      "apps/website/package.json": "dbef5580d91967e5a8fc2cfca3702bd2157d5cf5046284e66605cf12a30bbfbc",
+      "apps/website/test/visualization-catalog.test.mjs": "eb0000e371144c3c4ecda03d70b7365b479964355e1b587e10008091b93c0a1f",
+      "docs/architecture/cross-platform-unification-policy.md": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+      "docs/architecture/javascript-unified-layer-research.md": "1a8e7fecd48df56398cd0d0dce4dc216e971294d0f15a28353fbae43e0795794",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "packages/contracts/manifest.json": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2",
+      "packages/contracts/product-capabilities.json": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "packages/contracts/render-input/v1/artifact-plan.schema.json": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+      "packages/contracts/render-input/v1/contract.md": "4e7e1aac68c17174a1224b93ecd4946a6bf88fa1bcb29697e7f5fbca4d5e98ee",
+      "packages/contracts/render-input/v1/render-input.schema.json": "44819229b425d3c4a286e27425747110ccc19f79c7b644ac8d4ced622df0408f",
+      "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+      "packages/contracts/rollup-summary/v9/contract.md": "4571efb35d26898702d34972764775c105beccc47cd26cafbb84aa62fcc87962",
+      "packages/contracts/rollup-summary/v9/rollup-summary.schema.json": "a8a29c50a33c1878eb6b764950d43074dc726d9413b6997827525e36d0eda621",
+      "packages/contracts/semantic-input/v1/contract.md": "496c1e25bd30ee1d7445e328a194e5b5d10eb5576fab43cb4f0258ef41407079",
+      "packages/contracts/semantic-input/v1/semantic-input.schema.json": "84476840cf2ef995af06167f519d9ba80a350b5ebd807fee9b2bbde729e06581",
+      "packages/contracts/semantic-input/v1/semantic-result.schema.json": "821faabd155263b8a28f66fd83ed5f4a072e62b6aee2466f2d7c76e680539c96",
+      "packages/contracts/validate.py": "ca1f6fde2899e1ffac236bfea747e5e9a798a506c919edfb093d2eb34a58c23f",
+      "packages/healthmd-core-rust/AGENTS.md": "4ea90487e4f9f2d504d33dbf4739a7173189cd5c807e9d05f635f906d4d2fcd9",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "packages/healthmd-core-rust/Cargo.toml": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+      "packages/healthmd-core-rust/crates/healthmd-core-uniffi/src/lib.rs": "b3b20017b579f8d9730076aa5be81b583c241cf46faad96cfe140b6c7a8a8200",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json": "a6a27513561de8b31e5cde05f28afedff4b4a527b1a16f425750202fbc219c5e",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs": "efe8d439cc19495e9393c3954fcede16f09f680effe619765da5cbc5a734711f",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/registry.rs": "a22d63fb859bb466ec030b1801551498e88aca0b607e360479de56a472342256",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_analytical_v5.rs": "6ebe64474145f22fd77bd11a70854ac23a20b1632b054b3480f18fe4c797c3a3",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/android_frozen_v4.rs": "f7b223bc74766222e855469f69fe0fe048910299b8895e21da8b590cc7f88992",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs": "8d26b3fb2921feb96ef4d74b98f41c97899404088d1c482f0e59baeb610aad9a",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v7.rs": "7be7f73ff02eaf60e975febbc6a63f381974845cd82ad955ab812df9dd93a9a7",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_rollup_v8.rs": "5dccdc03f80ceedc41bae4e6809b558c1b44d88443ca69ccb69623bdc972a6ff",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_v8.rs": "0a548483449d097e4046c663e79677a4116f63bddc3740808fd2da14bc99412f",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/artifact_plan.rs": "c158effd40fd85e57536fa92f159209a1be59c22f803d83f23f60986c2ec7113",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs": "773977a72134cbd8f4e7ff32a5f24a4d48a29265113a78f58b5b4b113e118f06",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/markdown_merge.rs": "b69c27e8ebc2f3706b0fbcb3840312500000391787c01c24be349aa1b069cdd8",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/mod.rs": "772d02f19d2fd6e513b7bba478089f0cc1f7252b69538f2e4a466f264dcccb7e",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/render/stream.rs": "405124471c30c1aa4dcc2cdca5a57711e49cbdc10c8e9cd97570fcf0645bbd94",
+      "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs": "cdda2cf012c926e83f5ab6c0b6a189de654a01edfa0307eb13f2f240d3a29b2b",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/render_differential.rs": "7afc43cc6cb518dceff0edd0fd2dcf3877c1195bfd51a093b9d97fe9f96206ee",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/render_native_bases.rs": "a41a739c1515bdf8d577045f66ddccfa4ca13ae1a872e892474bae59b3b79ff0",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/semantic_differential.rs": "1de7a1413a700e318372f3bc4fd91afc9efe09bbcbce3c342c1f13c2c4232982",
+      "packages/healthmd-core-rust/scripts/generate-registry-adapters.py": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+      "packages/healthmd-core-rust/scripts/import-native-registry.py": "5a4004fefe7526b118ff82222376df7088c6d0226112648ba54666aeabaa1045",
+      "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_android_analytical_v5.json": "f92aaef42e1198bcd1b7591aa5248fc759270f2900ec108042d0375ed418152c",
+      "apps/android/app/src/test/resources/export-contract/signatures/exporter_signature_ios_v4_frozen.json": "05f3778112115d9424a7e14fa25d2cdb6a657689b555cb14d41a847b44cdd966",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v1.json": "d2bad75b69e34e0e8e4ddd95ddb6d22ef867ddf81fca712c54612a9ec18587fb",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v2.json": "108c5e5e0c1627bf4a871d33f7d099fe8c9468db7f930f08bb248e763395c84c",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v3.json": "3b2b72348c0704f568ee2a7bf84f74e535cb72e50b5d6924be33c9ce4694646b",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v4.json": "21b4796e4642f36cda19bfbe7b35e045b4864117b8b838319ed55ffb7e42502c",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v5.json": "c76ec463eb03067f5f717a55087e97daf8ab636dba9aae505ba8e5df5d66d13e",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v6.json": "43f69724e342eae61ccd37555525bc98f856e300e089aad31ef6e49f316e4fed",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v7.json": "12c1d7469f54b2ffc6e4e719aea12a4d6cf89f1d59ca3330032c0aeb4b54e0c6",
+      "apps/apple/HealthMdTests/Fixtures/Export/export_schema_signature_v8.json": "d077deb20f8bcae121b9ac2da30b1f7f6bbf0ed2c1a7c4296076d882ca98374a",
+      "apps/apple/HealthMdTests/Fixtures/Export/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "apps/apple/Packages/HealthMdConnectivity/Tests/HealthMdDirectClientCoreTests/Fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/contracts/render-input/v1/fixtures/differential-v1.json": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "packages/contracts/render-input/v1/fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/contracts/render-input/v1/fixtures/native-android-bases-requests-v1.json": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "packages/contracts/render-input/v1/fixtures/native-android-render-requests-v1.json": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "packages/contracts/render-input/v1/fixtures/native-android-v4-v5.json": "f6b738aab833c19ab96900593f838084e029afb86d2c11ee5a84d0310487f7b1",
+      "packages/contracts/render-input/v1/fixtures/native-apple-v7.json": "53e119fd851b794bae5894705ee540b1a845b5b925217c840250d989202e951a",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9-bases.md": "8c09db1a0af44294ef051476f2ac727ed42ae66e7c51b693d5dfdaa4d9e136ec",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.csv": "6e72ba48289c5302a44636427d3d9747fe9297eb86b482d544411b2167208eb7",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.json": "3dbf93498ee3ecd1dafde2408c40ebb66c01d42b6107973c48176893c6668b2b",
+      "packages/contracts/rollup-summary/v9/fixtures/range-v9.md": "1c9307fd17cd84bb3d99b6062a2de40718572a07ae891fb69c28b1eee14fe2a4",
+      "packages/contracts/semantic-input/v1/fixtures/differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439",
+      "packages/contracts/semantic-input/v1/fixtures/range-profile-revision-v2.json": "f6132a3a82e0c06b75891ded706dfa3a24ae287838db036c16e057071a10e941",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-android-v4-v5.json": "c042b7c78cfeef7e4825f1b30d8b4e32c566635369797589d62af3bfe5e016a6",
+      "packages/healthmd-core-rust/crates/healthmd-core/registry/native-baseline-apple-v7.json": "0b6db66f28d19565bd06f85e352a7d5af4ff859139c36ae4eb00f98cb7f23f30",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/markdown-merge-v1.json": "da8de537a761ca9c8ed08e554919d87dfcffd42fa285cbb682c5e17061b94051",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-bases-requests-v1.json": "63936636dd139f386f845c91cb6cbe7bb32dcad9e237d51a096a2acb7b95de5f",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/native-android-render-requests-v1.json": "b94a7c9d0533919a36471bf3fd96a1bd51524b8b3ca404a27344aa922473373d",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/render-differential-v1.json": "0938986585652b3df4734ed52b3e8b8be3e6122837fb947f83a764e8c56447a2",
+      "packages/healthmd-core-rust/crates/healthmd-core/tests/fixtures/semantic-differential-v1.json": "fcdf1190d5360e1641b23fbde30ab02016624d2f3b01c70c23b5d6110ca8a439"
+    },
+    "locks_and_runtime": {
+      "runtime_execution": "none; source inspection only",
+      "workspace_package": "0.1.0-alpha.7"
+    },
+    "artifact_and_native_interface": {
+      "versions": {
+        "source": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs and src/render/mod.rs; Cargo.toml; registry profile metadata",
+        "rust_workspace_package": "0.1.0-alpha.7",
+        "core_api": 4,
+        "semantic_result_embedded_core_api": 3,
+        "semantic_input": 1,
+        "canonical_model": 1,
+        "metric_registry": 1,
+        "render_input": 1,
+        "artifact_plan": 1,
+        "render_profile_revision": 2,
+        "persisted_state": 1,
+        "fixture_format": 1,
+        "semantic_profile_revision_admission": "Calendar/daily revision 1; Apple range revision 2, exactly one range period with rollup_range; Android rollups unsupported. Renderer admits 1|2 and matching completed semantic profile/session/hash."
+      },
+      "external_obsidian": {
+        "repository": "CodyBontecou/health-md-visualizations",
+        "revision": "d9bd050949dde067f32ea49381ca58e7ccbcf21d"
+      }
+    },
+    "policy_migration_key_versions": {
+      "scope": "No keys/state/registry/schema/public bytes changed."
+    }
+  },
+  "observations": [],
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+  },
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "acceptance_results": [
+    {
+      "criterion": "Map each scoped contract to actual source/spec and frozen positive/negative case paths; record gaps.",
+      "result": "passed",
+      "evidence": "core.json scoped_contract_map covers C01-C06 and work_package_map covers K01-K03. 32 frozen files hashed with explicit case IDs; source-defined negative/boundary symbols and frozen corpus gaps recorded."
+    },
+    {
+      "criterion": "Record exact profile/core/embedded-result versions, unknown-field policy, numeric/time/Unicode hazards.",
+      "result": "passed",
+      "evidence": "core.json versions/exact_policies/bounds records core API 4 versus immutable embedded API 3, independent profiles/revisions, per-contract unknown fields, numeric/time/Unicode/serializer hazards and normative/source disagreements."
+    },
+    {
+      "criterion": "List registry/generator/native/website/external consumers with current checks; inspect metadata/source only.",
+      "result": "passed",
+      "evidence": "core.json registry_and_generation/available_consumer_checks/external_consumer_pin records native/CLI/website/pinned Obsidian consumers and exact unrun checks."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-CORE"
+      ],
+      "result": "passed",
+      "evidence": "Scope/target/acceptance inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C01"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C02"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C03"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C04"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C05"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C06"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K01"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K02"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K03"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F05"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F10"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design reference inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Metadata validation stdin script recomputed all 83 source pins and 32 fixture SHA256 at source_sha, compared scoped manifest fixture digests, and recorded coordinator execution entrypoint drift separately. Final inventory/receipt JSON, source/digest linkage, C01-C06/K01-K03 scope, pending review, and three exact acceptance item assertions passed."
+    }
+  ],
+  "inspection_summary": "Read root/core instructions, execution entrypoint, core-cli branch, scoped design references, canonical manifest/specs/schema, semantic/render implementation and exporter/generator/consumer metadata. Pinned 83 source files and 32 fixture files through git show at assigned source. All digests recomputed; one coordinator documentation working-tree drift recorded. Product checks listed as available were not run. Inventory creation and metadata validation scripts ran as Python stdin; initial multi-ID reference attempt failed argparse and was replaced by successful one-ID calls.",
+  "limitations": [
+    "render contract table owner dates 400 versus renderer MAX_RENDER_BATCH_DATES 400 and MAX_RENDER_DATES 10000; scope distinctions need documentation reconciliation before codec acceptance.",
+    "render-input.schema.json config profile_revision const 1, while Rust validate_config admits 1|2 and range-v9 uses revision 2. Preserve current bytes, resolve authoritative schema admission explicitly.",
+    "Semantic frozen rejection cases exist; render rejection/path/Unicode/stream/version/extra-field behavior relies partly on source-built test mutations. Dedicated independently reviewed negative frozen vectors needed for TypeScript differential gates.",
+    "native-apple-v7 is historical; active daily-v8 WHOOP/archives/all formats/individual-entry/Daily Note exact byte coverage requires native producer corpus expansion, preserving existing signatures.",
+    "No global extra-field rule applies across native public historical readers, external plugin and closed internal schemas. Inventory pins schemas/readers where established; consumer-specific reject/retain/ignore vectors remain required.",
+    "No TypeScript EngineBuildInfo, exact codecs, reducers/renderers or native adapter qualification established. Node/mobile binary64, i128/u128, time, serializer and Unicode versions need executed frozen vectors.",
+    "No Cargo, native, Android instrumentation, website or external plugin tests run; no runtime installs, personal data, launchers, authority promotion or retirement."
+  ],
+  "remaining_qualification": [
+    "Independent source_sha+patch_digest review pending; planning result does not qualify any parent phase/family, native host, public profile, client, distribution or production action.",
+    "Resolve frozen negative corpus, render schema/profile admission and date-limit documentation in bounded successor tasks; implement and run affected producer/consumer gates."
+  ],
+  "review_evidence": {
+    "scope": "independent bounded source/fixture/state inventory review",
+    "checks": "All source/fixture pins and declared case symbols independently verified against assigned git revision; actual behavior qualification remains pending."
+  }
+}

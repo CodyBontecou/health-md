@@ -2570,7 +2570,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 10,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
@@ -2583,14 +2583,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-CORE.json"
+        ]
       }
     },
     {
@@ -2733,7 +2735,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 12,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_host",
         "base_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
@@ -2746,14 +2748,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-HOST.json"
+        ]
       }
     },
     {
