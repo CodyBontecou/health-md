@@ -18,6 +18,52 @@ Each workflow's path map lives in two places — the `on.push.paths` trigger fil
 
 The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
 
+## Optional Apple local pilot
+
+`apple-local-pilot.yml` is a manually dispatched experiment for an everyday Apple Silicon Mac.
+It has no push, pull-request, schedule, or reusable-workflow trigger and is not a required gate.
+Existing CI, nightly, release, and exact-SHA qualification workflows keep their current ownership.
+This pilot exercises the bounded `apps/apple/scripts/run-local-actions-pilot.sh` entry point;
+it is not the complete Apple CI matrix or evidence accepted by release qualification.
+
+Register the runner using `scripts/setup-local-actions-runner.py` with **no default labels** and
+the single custom label `healthmd-local-pilot-macos-arm64`. The setup helper defaults to the ignored
+`.external/local-actions-runner` installation; `--runner-dir` selects another location. Its `_work`
+checkout is separate from the development source. Setup registers the runner and does not install
+a background service or start it. Start the foreground process when the Mac is available and stop
+it with Control-C:
+
+```sh
+python3 scripts/setup-local-actions-runner.py
+cd .external/local-actions-runner
+env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN ./run.sh
+```
+
+Runner registration credentials stay in the ignored runner installation. Never commit them.
+
+The `--no-default-labels` registration option is essential: the existing Apple nightly uses generic
+`runs-on: self-hosted`, and adding a custom label while retaining that default would allow those
+nightly jobs to run on this Mac. This workflow instead routes only to
+`runs-on: [healthmd-local-pilot-macos-arm64]`. If no matching runner is online, the optional Mac job
+waits for capacity; required hosted CI continues independently.
+
+Dispatch from `main`, optionally providing a full 40-character `source_sha`. A hosted resolver
+rejects branch/tag dispatches, commits outside `origin/main` history, and commits that predate the
+pilot script before it schedules the Mac. With no input, it tests the dispatch commit. The local
+job checks out that exact SHA with `persist-credentials: false`, verifies `HEAD`, and checks for
+native arm64 macOS with installed Swift 6.3 or newer. It uses the installed Xcode without changing
+the machine's global Xcode or Git settings and requests only `contents: read`.
+
+The component script owns test simulator selection/isolation; do not point it at the simulator
+used for interactive development. Its absolute `PILOT_OUTPUT_DIR` is an attempt-specific directory
+under `$RUNNER_TEMP`. Logs, test results, and source/toolchain evidence are uploaded for seven days,
+including available diagnostics after a failure. Pilot runs are serialized and use unsigned test
+builds without release certificates, signing secrets, publication, or deployment. Keep the Mac
+awake while a run is active and review its CPU, memory, disk, and simulator impact before moving
+additional work onto it.
+
+Before expanding this pilot, preserve the complete component checks and release qualification described below.
+
 ## Android release trigger
 
 Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.

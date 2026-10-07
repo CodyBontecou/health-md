@@ -129,7 +129,11 @@ jobs:
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: apple-local-pilot-${{ needs.resolve.outputs.source_sha }}-${{ github.run_id }}-attempt-${{ github.run_attempt }}
-          path: ${{ env.PILOT_OUTPUT_DIR }}
+          path: |
+            ${{ env.PILOT_OUTPUT_DIR }}/checkout-preflight.log
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/logs/
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/receipt.json
+            ${{ env.PILOT_OUTPUT_DIR }}/ios-unit/HealthMd-iOS.xcresult
           if-no-files-found: warn
           retention-days: 7
 

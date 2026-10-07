@@ -79,8 +79,13 @@ def extract_archive(archive: Path, destination: Path, expected: str) -> None:
                 raise ValueError("Runner archive contains an unsupported special file")
         # Recheck resolved paths immediately before each write, including links created earlier.
         for member in members:
-            if not (destination / member.name).resolve().is_relative_to(destination.resolve()):
+            target = (destination / member.name).resolve()
+            if not target.is_relative_to(destination.resolve()):
                 raise ValueError("Runner archive writes through an escaping link")
+            if member.issym() or member.islnk():
+                link_base = target.parent if member.issym() else destination
+                if not (link_base / member.linkname).resolve().is_relative_to(destination.resolve()):
+                    raise ValueError("Runner archive links through an escaping link")
             bundle.extract(member, destination)
         if any(not link.resolve().is_relative_to(destination.resolve()) for link in links):
             raise ValueError("Runner archive contains an escaping link chain")
