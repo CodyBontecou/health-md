@@ -1,0 +1,452 @@
+{
+  "schema_version": 1,
+  "task_id": "UI-FOUNDATION",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "3c9c520762e55324e2904955429496574b8ba292",
+  "patch_digest": "f54d386ce7632a53d00d5ccc32dc4df3c44d0c0504f66239f3779f29070a6e13",
+  "patch_digest_method": "SHA-256 over13 sorted claimed non-receipt paths, each UTF-8 repository-relative path + NUL + exact raw file bytes + NUL. Excludes receipt, coordinator plan/state and ignored dist/node_modules/cache. Individual raw file SHA256 inputs listed in patch_files.",
+  "changed_paths": [
+    "packages/healthmd-ui/.node-version",
+    "packages/healthmd-ui/AGENTS.md",
+    "packages/healthmd-ui/README.md",
+    "packages/healthmd-ui/package-lock.json",
+    "packages/healthmd-ui/package.json",
+    "packages/healthmd-ui/scripts/build.mjs",
+    "packages/healthmd-ui/scripts/check-boundaries.mjs",
+    "packages/healthmd-ui/scripts/check.mjs",
+    "packages/healthmd-ui/src/index.ts",
+    "packages/healthmd-ui/tests/foundation.test.ts",
+    "packages/healthmd-ui/tsconfig.build.json",
+    "packages/healthmd-ui/tsconfig.json",
+    "packages/healthmd-ui/tsconfig.test.json",
+    "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/native-ui.md": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05",
+      "docs/migration/effect-refactor/inventories/native.json": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "runtime_provenance": "Reused retained exact official archive/runtime previously verified by accepted TS-FOUNDATION; independently checked executed Node/npm versions, not re-downloaded here.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "package_lock_sha256": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+      "locked_package_records": 51,
+      "installed_package_count": 6,
+      "development_dependencies": {
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "@types/node": "24.19.1"
+      },
+      "undici_types": "7.24.6",
+      "runtime_dependencies": {},
+      "optional_peer_candidates": {
+        "effect": "4.0.1",
+        "react": "19.2.3 || 19.2.0",
+        "react-dom": "19.2.3",
+        "react-native": "0.87.1 || 0.83.10",
+        "react-native-web": "0.21.3",
+        "react-native-macos": "0.83.0"
+      },
+      "installed_platform_binary_digests": {
+        "node_modules/@typescript/typescript-darwin-arm64/lib/tsc": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2",
+        "node_modules/@esbuild/darwin-arm64/bin/esbuild": "10b6243df618d374bb2d5c9cfbe7052e1405f6aa4e53a6164f11a91b9f2e1384"
+      },
+      "host_tuple_metadata": [
+        {
+          "url": "https://registry.npmjs.org/react/19.2.3",
+          "raw_sha256": "fe2d29ecc007f985e0ae64bdef2e77782befea8f44f417b9350ec86b77e4bbb9",
+          "name": "react",
+          "version": "19.2.3"
+        },
+        {
+          "url": "https://registry.npmjs.org/react/19.2.0",
+          "raw_sha256": "92f5f5ad38cd697c78ff7fafe03e670739b2bebc9f4317705dfdc6161d2d9157",
+          "name": "react",
+          "version": "19.2.0"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-dom/19.2.3",
+          "raw_sha256": "6c824706d5fe3a14284ac35ab0676c0cd26f61a9026a2e0a6f2ef1c1febf57d7",
+          "name": "react-dom",
+          "version": "19.2.3"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-native/0.87.1",
+          "raw_sha256": "3c2153f7c8f56a7377cf9c4fbd55b3c9fe4675d84950f2c43bb1274a69279818",
+          "name": "react-native",
+          "version": "0.87.1"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-native/0.83.10",
+          "raw_sha256": "ea8c82da6412265cc6ced637bd2e3667c6d67e4995ca72a3c7b433a312b66dad",
+          "name": "react-native",
+          "version": "0.83.10"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-native-web/0.21.3",
+          "raw_sha256": "9667f8edc4f963c41465b9df381effd2a450b006eb03e6ab43c6646391fd40b3",
+          "name": "react-native-web",
+          "version": "0.21.3"
+        },
+        {
+          "url": "https://registry.npmjs.org/react-native-macos/0.83.0",
+          "raw_sha256": "24d75841a7507321d6b4ed78231534aab97056f1c3d7ecc35e1b8f35e10c0ca3",
+          "name": "react-native-macos",
+          "version": "0.83.0"
+        }
+      ],
+      "official_renderer_sources": [
+        {
+          "url": "https://raw.githubusercontent.com/facebook/react-native/v0.87.1/packages/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js",
+          "sha256": "873ef19f4dfbb385f43ad6ec510e2ab00168289f72becba703111652008ddf94",
+          "renderer_react_version": "19.2.3"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/facebook/react-native/v0.83.10/packages/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js",
+          "sha256": "6fce932c458ee63cc016d3092d1402b6b412bcb151b3cc4e4835a3b4e082be81",
+          "renderer_react_version": "19.2.0"
+        },
+        {
+          "url": "https://raw.githubusercontent.com/microsoft/react-native-macos/19f618c032c9f07967281ed5c462dc3259e8e7e1/packages/react-native/Libraries/Renderer/implementations/ReactFabric-dev.js",
+          "sha256": "6fce932c458ee63cc016d3092d1402b6b412bcb151b3cc4e4835a3b4e082be81",
+          "renderer_react_version": "19.2.0"
+        }
+      ],
+      "host_tuples": {
+        "phone": {
+          "react": "19.2.3",
+          "react-native": "0.87.1",
+          "effect": "4.0.1"
+        },
+        "web": {
+          "react": "19.2.3",
+          "react-dom": "19.2.3",
+          "react-native-web": "0.21.3",
+          "effect": "4.0.1"
+        },
+        "macos_candidate": {
+          "react": "19.2.0",
+          "react-native": "0.83.10",
+          "react-native-macos": "0.83.0",
+          "effect": "4.0.1"
+        }
+      },
+      "identity_qualification": "No Effect/React/renderer runtime installed or bundled into UI. Candidate tuple exact declarations and official source compatibility checked; installed singletons/native SDK/Hermes/renderer runtime not qualified."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-ui/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+        "packages/healthmd-ui/AGENTS.md": "ec6191b2c7952efd397e4d022efa044e3da4cbe70dfa7f783994349c61055d93",
+        "packages/healthmd-ui/README.md": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+        "packages/healthmd-ui/package-lock.json": "da207a4e47d83dd37066f7c226bcae1165a1e2b7a097fc80d3331ac535f66539",
+        "packages/healthmd-ui/package.json": "37541b7d4378675290fa0c548a4de291c13178a2cfe591686c5af902a19b67e1",
+        "packages/healthmd-ui/scripts/build.mjs": "5b4e01fc6b9dc8062866bbf3acc13a186d8f78942d44c4cb0dcbdd3e2bb7fe21",
+        "packages/healthmd-ui/scripts/check-boundaries.mjs": "15a5385293503023c5aeb8447e29367866a6e29e8a28c7b6442ee430b7b9c8e8",
+        "packages/healthmd-ui/scripts/check.mjs": "81695e1643fe7337b3e2767f2c9b461763e0c8b99f80d8e6dd3837632a74be6a",
+        "packages/healthmd-ui/src/index.ts": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+        "packages/healthmd-ui/tests/foundation.test.ts": "acdb3322eaed4c78a810a6a9726c7039889f010fbfb566d03c420c36ebb4965c",
+        "packages/healthmd-ui/tsconfig.build.json": "e73aec6909d77a6bfd714ecd0fb01d332c38c8a35560aaf7a9a1a08cbf502652",
+        "packages/healthmd-ui/tsconfig.json": "13b30948373dbdb17fa646527a87af6b6e38ab2bcd279399ad8ac7b7e854173e",
+        "packages/healthmd-ui/tsconfig.test.json": "5c7d7190fd3eaf03efcc6d6272dfc1bb76df9208455fdbee610eeeac0ddb26f0"
+      },
+      "built_artifact_digests": {
+        "dist/model/index.d.ts": "237b829c85532ece48d90c1fba1b784f998c8f7bf3e02ee400f041321a5bed28",
+        "dist/model/index.js": "68d7d53b4f4dfc7b7c74fa6ae5cdf1b952b0da6b10482b15be09f2666e73af47",
+        "dist/model-metafile.json": "c114fae73a3d859995ce640117417604636fa4af59dbc31b6a5d6ab7399717fb",
+        "dist/model.bundle.js": "66ca058af12d1c00811f1a2daf6ee2a9caca2b920c7f5b75c7d438fc7fa17870",
+        "dist/test-metafile.json": "5a8c83dbd94ac54fbff53618e2eb73e00952242fe7515c3430e835ec64e66f7b",
+        "dist/tests/foundation.test.js": "6b2cfd7b151526933d56bdf9e8e0f1ec29a69b9b7614fb00a9de9e5282dda0f8"
+      },
+      "build_inputs": [
+        "src/index.ts",
+        "tests/foundation.test.ts",
+        "tsconfig.json",
+        "tsconfig.build.json",
+        "tsconfig.test.json",
+        "scripts/build.mjs",
+        "locked TypeScript7.0.2/esbuild0.28.2"
+      ],
+      "model_bundle_inputs": [
+        "src/index.ts"
+      ],
+      "model_bundle_external_imports": [],
+      "test_case_ids": [
+        "initial unknown state and selected-domain props never admit source grants",
+        "subscription observes actions and cleanup detaches component lifecycle",
+        "dispose awaits owned async cleanup and ignores late source results",
+        "superseding refresh cancels old work without stale publication",
+        "cancel retains loaded state and can refresh again without double cleanup",
+        "raw operation and cleanup errors become content-free state",
+        "bounded source descriptor validation rejects duplicate or oversized results",
+        "independent models and hostile view listeners do not affect operation cleanup",
+        "dispose during supersede waits for prior cleanup acknowledgement",
+        "cancel during supersede waits for prior cleanup and prevents successor read",
+        "third refresh during supersede cannot acquire before prior cleanup",
+        "loading subscriber disposal prevents stale operation acquisition",
+        "loading subscriber cancellation prevents read and permits later refresh",
+        "one-time loading subscriber refresh acquires only the latest operation"
+      ],
+      "negative_boundary_cases": 22,
+      "scope": "Headless readiness/model + immutable component-props projection; no rendered React component/native bridge or production public interface change.",
+      "test_discovery": {
+        "source_entries": [
+          "tests/foundation.test.ts"
+        ],
+        "compiled_entries": [
+          "dist/tests/foundation.test.js"
+        ],
+        "policy": "recursive sorted .test.ts build and .test.js execution; reject symlinks and empty suites"
+      }
+    },
+    "policy_migration_key_versions": {
+      "authority": "Current native/Rust/installed-state/public contracts preserved; source labels retain independent capture/display/query/export statuses.",
+      "public_contract_or_state_change": "none",
+      "D01": "Lock allowlist only TypeScript/esbuild Go tool packages/Node types; no Rust parser/test/native addon dependency or Effect duplicate.",
+      "native_admission": "U13 personal sources proposed; F-Droid native/JS/telemetry/provider/billing/Wear graph proof separate; generic API and future hosted channel consent choices preserved."
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Keep React/RN peer/runtime resolution separate from portable core entrypoints and one compatible instance per candidate host.",
+      "result": "passed",
+      "evidence": "package.json optional exact peers + README host tuple/source hashes; model has no core/Effect/React import or file dependency. Actual host singleton/native runtime unqualified."
+    },
+    {
+      "criterion": "Provide documented component/model check scripts using fake operations without requiring a native build.",
+      "result": "passed",
+      "evidence": "scripts/check.mjs/build.mjs/check-boundaries.mjs; fourteen recursively discovered compiled-JS fake operation/model/component-props cases,22 negative boundary cases, strict source/test types and neutral zero-import bundle passed."
+    },
+    {
+      "criterion": "Record exact UI candidate pins; runtime compatibility and native accessibility admission remain later tasks.",
+      "result": "passed",
+      "evidence": "README exact metadata/renderer hashes; phone React19.2.3/RN0.87.1 versus Mac React19.2.0/RN0.83.10/RNmacOS0.83.0; browser exact peer tuple; no native/accessibility admission."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "install",
+        "--package-lock-only",
+        "--ignore-scripts",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund",
+        "--offline"
+      ],
+      "result": "passed",
+      "evidence": "Independent package lock generated/updated on exact runtime from scoped accepted cache; optional peers not installed."
+    },
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "ci",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund",
+        "--offline"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 0.572,
+      "evidence": "Final fresh scoped install added6 packages; no host peers/Rust/transitive native Node addons. npm reports esbuild postinstall not approved; installed platform binary supports passing build without postinstall approval."
+    },
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Final exact-runtime check after loading-subscriber reentry repair:14 recursively discovered compiled-JS cases including pending-close cleanup and synchronous loading cancel/dispose/refresh regressions;22 negative guards; strict typechecks, rebuilt ESM/declarations/neutral bundle and lock/install/no-addon boundaries passed. No dependency change or extra native check."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Public official npm exact metadata and tag/commit-pinned Fabric source fetched and SHA256 inspected; React renderer identity difference corrected in final optional declarations. Exact accepted native input digest/13-file patch hashes/source/target/write scope/JSON verified."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Recomputed13 sorted claimed non-receipt raw file hashes, patch digest and all emitted/metafile artifact hashes;11 exact test IDs and concrete result:passed observation assertions verified; target and write scope unchanged."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Recomputed13-file patch/raw hashes and rebuilt artifact hashes;14 exact test IDs/result:passed observations; README case count corrected to14 within original claim. Metadata/core/plan/peers unchanged."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "Root reviewed all13 package source/tool/test/config/lock/instruction files, independently recomputed13patch/11input/6built artifact hashes, fresh installed6 packages on exact Node24.21.0/npm11.19.0 and ran final14 compiledJS tests/22 boundary negatives. Reproduced then verified async supersede cleanup and loading-subscriber stale acquisition corrections; recursive sorted test discovery retained. Independently fetched7 exact public npm metadata and3 pinned official Fabric sources; all10 hashes and actual React/renderer tuples match. Peer/native host singleton, Effect adapter/actual React components/accessibility/native physical/signed admission remain unqualified."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "initial unknown state and selected-domain props never admit source grants",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Selection invokes zero reads; loaded props filter usage and preserve independent unavailable/unknown/planned source states; one finalizer.",
+      "observed": "Zero reads before refresh, one after; props contain only usage, health capture unknown/query unavailable; frozen props and one cleanup.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "subscription observes actions and cleanup detaches component lifecycle",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Subscribe sees idle/loading/ready, unsubscribe detaches; disposed rejects future actions.",
+      "observed": "Observed [idle,loading,ready]; unsubscribed selection adds no event; dispose publishes disposed; subscribe/refresh reject model_disposed.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "dispose awaits owned async cleanup and ignores late source results",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Dispose and repeated dispose wait for registered async cleanup; late results cannot publish.",
+      "observed": "Both disposal promises remained pending before cleanup release; one cleanup; disposed sources empty after late result.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "superseding refresh cancels old work without stale publication",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Superseded work finalizes exactly once and cannot overwrite the newest source projection.",
+      "observed": "Two operations produced two cleanups; late health result ignored; sources remain usage.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "cancel retains loaded state and can refresh again without double cleanup",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Cancel retains loaded sources, ignores late result and supports a subsequent refresh without double cleanup.",
+      "observed": "After cancel phase idle with health retained; three reads yielded three cleanups; late usage ignored before next read.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "raw operation and cleanup errors become content-free state",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Raw operation/cleanup errors normalize to fixed content-free codes.",
+      "observed": "cleanup_failed and operation_failed observed; serialized state contains no private error text.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "bounded source descriptor validation rejects duplicate or oversized results",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Duplicate IDs and65-source result reject before publication.",
+      "observed": "Both cases report invalid_source_state with empty sources.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "independent models and hostile view listeners do not affect operation cleanup",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Models isolate selection/state and subscriber failure cannot interrupt owned cleanup.",
+      "observed": "First selection remains isolated; second selectedDomain all; cleanup count1 despite throwing listener.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "dispose during supersede waits for prior cleanup acknowledgement",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Dispose during pending supersede cannot acknowledge before prior cleanup; superseded read never acquires.",
+      "observed": "Dispose pending with reads1/cleanupStarted1/acknowledged0; after release reads1/started1/acknowledged1 and disposed empty state.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "cancel during supersede waits for prior cleanup and prevents successor read",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Cancel during pending supersede waits for cleanup and prevents queued successor read; subsequent fresh read works.",
+      "observed": "Cancel pending with reads1/started1/acknowledged0; after release idle, reads1/started1/acknowledged1; next refresh reads2 with usage.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "third refresh during supersede cannot acquire before prior cleanup",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test with injected fake operations and deferred source/cleanup acknowledgements where applicable",
+      "expected": "Third refresh during pending supersede waits before acquisition; only latest refresh acquires and stale result cannot publish.",
+      "observed": "Before release reads1/started1/acknowledged0; after release reads2/started1/acknowledged1, ready usage; original health result ignored.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "loading subscriber disposal prevents stale operation acquisition",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test, synchronous loading subscriber invokes dispose/cancel/one-time refresh before operation invocation",
+      "expected": "Loading listener disposal must prevent any stale read acquisition.",
+      "observed": "Disposed callback leaves reads0, phase disposed and sources empty; disposal is awaited.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "loading subscriber cancellation prevents read and permits later refresh",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test, synchronous loading subscriber invokes dispose/cancel/one-time refresh before operation invocation",
+      "expected": "Loading listener cancellation must prevent the read and preserve ability to refresh later.",
+      "observed": "Cancellation leaves reads0, phase idle and sources empty; after unsubscribing a fresh refresh reads1 and projects health.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    },
+    {
+      "case_id": "one-time loading subscriber refresh acquires only the latest operation",
+      "result": "passed",
+      "procedure": "Compiled Node24 node:test, synchronous loading subscriber invokes dispose/cancel/one-time refresh before operation invocation",
+      "expected": "A one-time loading listener refresh must supersede the old acquisition and run only its successor.",
+      "observed": "Exactly one read and one cleanup; final phase ready with usage; no stale read initiated.",
+      "evidence": "packages/healthmd-ui/tests/foundation.test.ts"
+    }
+  ],
+  "inspection_summary": "Portable synthetic foundation only. Official current metadata and renderer source establish separate candidate tuples; no claim that peer ranges alone admit a renderer or that headless tests prove native source availability. Scope13 package files plus receipt; no core, production native, manifest plan, decision or dependency edits outside package. Independent review lifecycle race corrected by retaining active ownership during pending close and waiting for acknowledgement before successor acquisition. Recursive sorted test discovery replaces foundation-only hardcoding. Synchronous loading notifications now recheck disposed/generation/cancelled scope before operation acquisition, finalizing stale owned scopes. Three reentry regressions prove zero stale reads for cancel/dispose and one latest read for bounded refresh reentry.",
+  "limitations": [
+    "Node24 darwin-arm64 headless synthetic checks only; actual React/Effect singleton resolution, rendered components/hooks, browser, RN/Hermes/macOS/native Release SDK/bridge/bundle and accessibility are unexecuted.",
+    "Operation adapter must cooperate with cancellation and register owned finalizers before suspension; model cannot force an arbitrary external promise to settle.",
+    "Conservative import-free leaf boundary guard is not a general TypeScript security parser; neutral bundle graph and strict ES-only types also checked.",
+    "Source metadata hashes are fetched primary bytes; registry tarball/native artifacts/signatures not installed or independently verified.",
+    "No source domain grant, native available capability, capture, persisted state, health values, credentials, provider connection or user-data access."
+  ],
+  "remaining_qualification": [
+    "SPLIT-NATIVE-HOSTS must prove exact installed React/Effect singleton/renderer/Hermes/SDK/native/JS graphs, offline Release, bounded bridge/cancellation/backpressure/teardown/cold runtime and signed channel exclusions.",
+    "Real common-operation/host adapters, source-purpose/grant admission, per-feature observable rendering/accessibility/localization and physical lifecycle receipts before UI/product promotion.",
+    "All U01/U13/F03/F06 family/phase/native/store/retirement gates remain open."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "3c9c520762e55324e2904955429496574b8ba292+f54d386ce7632a53d00d5ccc32dc4df3c44d0c0504f66239f3779f29070a6e13"
+  }
+}

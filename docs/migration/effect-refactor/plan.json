@@ -3108,8 +3108,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 22,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/donor-location.json",
+          "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -4917,7 +4926,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json",
       "reviewer_role": "independent native/ui reviewer",
       "priority": 63,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_host",
         "base_revision": "3c9c520762e55324e2904955429496574b8ba292",
@@ -4945,14 +4954,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "3c9c520762e55324e2904955429496574b8ba292+f54d386ce7632a53d00d5ccc32dc4df3c44d0c0504f66239f3779f29070a6e13"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json"
+        ]
       }
     },
     {
