@@ -1,0 +1,159 @@
+{
+  "schema_version": 1,
+  "task_id": "CLOUD-FAULT-MODEL",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+  "patch_digest": "4c21ad1bead15fa48688e9030f201b0e3e755260b19237029fd1e9daaf8a0c62",
+  "patch_digest_method": "SHA256 sorted two nonreceipt repository-relative paths + NUL + raw bytes including final newline + NUL. Excludes receipt/coordinator plan and all runtime/build outputs.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+    "docs/migration/effect-refactor/decisions/cloud-fault-model.md",
+    "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "docs/migration/effect-refactor/inventories/cloud.json": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "docs/migration/effect-refactor/receipts/BASE-CLOUD.json": "7ceadf78af0969ba65c2fa124dbdfc4ab8ef1116396df362287d80de9799e5d5",
+      "docs/migration/effect-refactor/receipts/BASE-HOST.json": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+      "docs/migration/effect-refactor/receipts/BASE-CORE.json": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+      "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json": "54f660c295832cafaee2b7cbc4f876ee9320db811066d29e11bf7e712f453032"
+    },
+    "locks_and_runtime": {
+      "execution": "Python3 static source/pointer/JSON checks only; no Node/native/provider build/install."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d"
+      },
+      "provenance_refs": 29,
+      "selected_pilot_source_test_fixture_files": 22,
+      "literal_retained_case_lines": 14,
+      "candidate_case_count": 43,
+      "case_execution": "All required_not_created_or_executed; literal independent expected outcomes only."
+    },
+    "policy_migration_key_versions": {
+      "open_decisions": [
+        "Q-CLOUD-REGION",
+        "Q-CLOUD-TOPOLOGY",
+        "Q-CLOUD-IDENTITY",
+        "Q-CLOUD-RETENTION",
+        "Q-CLOUD-COMMERCE",
+        "Q-CLOUD-GRANTS"
+      ],
+      "all_numerical_provider_policy": "unselected_candidate",
+      "current_contracts": "No public/shared schema/profile/key/grant/ledger/migration changed."
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Specify independent expected outcomes at reserve/receive/verify/seal/commit/project and ambiguous response/cancel boundaries.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json#/cases and docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+    },
+    {
+      "criterion": "Include two tenants, broad/narrow/range dedup, revocation, wrong/truncated authentication-unit range reads and no resurrection.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json#/cases and docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+    },
+    {
+      "criterion": "Restore an old backup after later accepted delete/revoke using a current independent suppression journal; fail closed when missing.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json#/cases and docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+    },
+    {
+      "criterion": "Record all unknown capacity/retention/provider guarantees as candidate without choosing product policy.",
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json#/cases and docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "CLOUD-FAULT-MODEL"
+      ],
+      "result": "passed",
+      "evidence": "Exact task target/three-path claim/four acceptance criteria inspected."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "10 assigned-base inputs,22 selected pilot source/test/fixture hashes and14 literal test lines verified;12 indexed design rows pinned. JSON pointer provenance checked; no whole baseline re-audit or product execution."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "43 unique candidate oracles,12 covered design IDs,29 resolving provenance pointers,expected fields/unexecuted status and two-file digest validated. Receipt target/observations/rollback/pending review checked."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "PASS58 atomic tasks/86 families/16choices; structural only, no gate closure."
+    }
+  ],
+  "inspection_summary": "Scoped accepted inventory plus literal retained fixtures/source establish independent successor fault expectations; proposed cases are not implementation or provider proof. Separate author required for future implementation.",
+  "observations": [
+    {
+      "case_id": "literal-independent-oracles",
+      "procedure": "Inspect task/design and selected accepted provenance, then write literal symbolic fault outcomes before future implementation.",
+      "expected": "All scoped durable/authority/restore acceptance items have candidate oracles with source/gap provenance.",
+      "observed": "43 unique candidate cases; every phase and selected design ID covered; original/profile/service authority retained.",
+      "evidence": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json#/cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "COORDINATOR-CLOUD-ORACLE-PROVENANCE",
+      "procedure": "Root independently rehashes sorted2-file patch, compares10 current inputs to assigned Git tree, verifies29 pinned provenance bodies/pointers,22 selected pilot files,14 exact retained test lines and12 design rows; reads43 literal state/authority expectations.",
+      "expected": "Exact preimplementation43case oracle/provenance only; accepted source pins unchanged; no implementation/provider/numerical policy proof inferred.",
+      "observed": "All digests and pointers match;43 distinct cases remain required_not_created_or_executed;14 literal source test lines verified without running them. Complete-unit, current authority, source-scoped precedence, ambiguous cleanup and independently-current suppression restoration expectations preserved.",
+      "evidence": "decisions/cloud-fault-cases.json#/provenance, cases, authority_invariants andstate_model; cloud-fault-model.md",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Independent review of exact case bytes before future implementation; implementation must use a different author.",
+    "Scoped executable fake-port oracle/chaos tests and codec/crypto/tenant/grant review; no expected result regenerated from implementation.",
+    "Chosen source-purpose/recipient/identity/retention/region/provider/capacity/billing contracts and numerical budgets.",
+    "Actual deployed provider/keys/regions/copies/restore/erasure/load/revocation and each named client production evidence.",
+    "Native/source acquisition and existing public profiles/principals remain separate; no C/H/F or phase closure."
+  ],
+  "remaining_qualification": [
+    "Independent cloud/release review pending at exact source/patch fingerprint.",
+    "Future implementation by another author, then executable fake-port cases and independent fault/crypto/tenant/grant/lifecycle review.",
+    "Provider/policy/production/client/native/family/phase closure not established."
+  ],
+  "rollback": "Current native/Rust/pilot historical readers and exact originals remain authority; revert only this candidate expectation packet. No ledger/key/grant/journal/provider/state mutation or production promotion.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_cli",
+    "fingerprint": "16b833e3e9a1181605aff21e7242a57abdada0d5+4c21ad1bead15fa48688e9030f201b0e3e755260b19237029fd1e9daaf8a0c62"
+  }
+}

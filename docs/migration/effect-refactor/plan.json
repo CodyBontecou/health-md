@@ -4926,7 +4926,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json",
       "reviewer_role": "independent cloud/release reviewer",
       "priority": 34,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
@@ -4940,14 +4940,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "16b833e3e9a1181605aff21e7242a57abdada0d5+4c21ad1bead15fa48688e9030f201b0e3e755260b19237029fd1e9daaf8a0c62"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLOUD-FAULT-MODEL.json"
+        ]
       }
     },
     {

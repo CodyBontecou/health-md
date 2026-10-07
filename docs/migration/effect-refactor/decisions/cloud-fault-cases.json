@@ -1,0 +1,1768 @@
+{
+  "schema_version": 1,
+  "task_id": "CLOUD-FAULT-MODEL",
+  "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+  "proof_class": "planning",
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "status": "candidate_pending_independent_review",
+  "design_ids": [
+    "C18",
+    "C19",
+    "C20",
+    "C22",
+    "H02",
+    "H03",
+    "H04",
+    "H07",
+    "F17",
+    "F18",
+    "F19",
+    "F20"
+  ],
+  "design_row_pins": [
+    {
+      "id": "C18",
+      "line": 587,
+      "row_sha256": "1ad55a18bca58fb15ce0fcdc0550ffa2b4585b962dc916ec6844857c670158eb",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "C19",
+      "line": 588,
+      "row_sha256": "0a14058795c382ba9b203a8dbe4be3243465b8c2a266ddf68a597005bf880257",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "C20",
+      "line": 589,
+      "row_sha256": "80437025c408b5b10601c96b458e88b5d2b6338d8fb489d8c93424f521babc1a",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "C22",
+      "line": 591,
+      "row_sha256": "20b0f7b1f427c1727f435eaabef743fbb1113a7e73c734c1718811264efe98d4",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "H02",
+      "line": 345,
+      "row_sha256": "60158fa3bd7677f1a1e2a170b39c37f609a7b9939a3d77f945e9db787220d270",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "H03",
+      "line": 346,
+      "row_sha256": "ae3d62250fb091e3d71e455474b14f83911fadd6f857648c8b8088c8e469aed2",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "H04",
+      "line": 347,
+      "row_sha256": "4f0d843828e34d94679607554fdf171335b32b6918a6338e060cc7831343d47e",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "H07",
+      "line": 350,
+      "row_sha256": "2d1e39f477ee877d68ac258067b7797be9f9d7044c019d29ac2f8dd1bfebe1f7",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "F17",
+      "line": 1057,
+      "row_sha256": "94ef6e1528025ebd56f7ac8f8afd68e4fca49ceddb61e2834612cb62984800cd",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "F18",
+      "line": 1058,
+      "row_sha256": "e56415fee45fd90e6c0a5365018a0f43af16f1637f61712a53cb06baa40b0b29",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "F19",
+      "line": 1059,
+      "row_sha256": "c4b466fd27524567b10ec479be01f2c1cce4417f707d5d7a5b6c698bee48e3df",
+      "method": "UTF-8 exact indexed row without newline"
+    },
+    {
+      "id": "F20",
+      "line": 1060,
+      "row_sha256": "c0ed2097300a37ebc9581265b17eb5da1b914a4e7dc19842a699cbd073d1837c",
+      "method": "UTF-8 exact indexed row without newline"
+    }
+  ],
+  "accepted_inputs": {
+    "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+    "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+    "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+    "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+    "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+    "docs/migration/effect-refactor/inventories/cloud.json": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+    "docs/migration/effect-refactor/receipts/BASE-CLOUD.json": "7ceadf78af0969ba65c2fa124dbdfc4ab8ef1116396df362287d80de9799e5d5",
+    "docs/migration/effect-refactor/receipts/BASE-HOST.json": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+    "docs/migration/effect-refactor/receipts/BASE-CORE.json": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+    "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json": "54f660c295832cafaee2b7cbc4f876ee9320db811066d29e11bf7e712f453032"
+  },
+  "provenance": {
+    "B_ingest": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/commit_crypto_lifecycle",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_identity": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/authority_map",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_query": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/source_head_identity",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_profiles": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/retained_profiles",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_policy": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/open_choices",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_limits": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/bounds",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "B_services": {
+      "kind": "accepted_inventory_requirement_or_gap",
+      "path": "docs/migration/effect-refactor/inventories/cloud.json",
+      "source_revision": "16b833e3e9a1181605aff21e7242a57abdada0d5",
+      "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+      "json_pointer": "/service_boundaries",
+      "scope": "Retained pilot source facts/gaps; not successor implementation or provider qualification."
+    },
+    "S_crypto_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/crypto.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1c5b71e8a8a1909ef085e1bb6e0ab0a80290330e4d48d73402c4bf11aa9f2cb3",
+      "inventory_pointer": "/source_records/70",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_exports_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/exports.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "05b6836c26e044cf118a8dd0ec7957d36ed8ed600d44b9d96589a66093c37a11",
+      "inventory_pointer": "/source_records/75",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_upload-intents_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/upload-intents.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "23211aa55443c292bcf94461cc4d4683f50e7c078f5470588c10be721af32cba",
+      "inventory_pointer": "/source_records/90",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_lifecycle_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/lifecycle.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "01a36048e52db7f8d1cf20b5aacbe5213823bdd1385d43674be1de363729da3a",
+      "inventory_pointer": "/source_records/79",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_account-export-keys_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/account-export-keys.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0b8071e05d05bc951ee599a96772dda538a062bcf368414dc4f647f4a7d69f3a",
+      "inventory_pointer": "/source_records/64",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_object-reconciliation_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/object-reconciliation.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "418e9575b60563381f5c8059069e3e2b8a78e2d4461ca3849b47527981fcbad4",
+      "inventory_pointer": "/source_records/81",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_envelope_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/src/envelope.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "3bb962d5f0a0f29744546e1b46a6c0bf38990ee6cdad24e2176ea0bf275b7594",
+      "inventory_pointer": "/source_records/72",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_reader_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/mcp/reader.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "9366db87c36d9bd4f771f9a824c167bbf87e7334ccbb3452c481063e45b75fe5",
+      "inventory_pointer": "/source_records/25",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_auth_ts": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/mcp/auth.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "ca07cce1972c38c4f5bec623991139063b7edf8af94fb235b1eb70c6d7d84906",
+      "inventory_pointer": "/source_records/24",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_0001_initial_sql": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/migrations/0001_initial.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "1bfbfc6c8facaa201414cf94c8898a9d3b0d3b5f9e3c93beaff9cdcd5d4edb7e",
+      "inventory_pointer": "/source_records/27",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "S_0002_unique_payload_sql": {
+      "kind": "pinned_pilot_source",
+      "path": "apps/cloud/migrations/0002_unique_payload.sql",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "11b66a466c40b7599d6c2f1f9c639f9503e233512f84e1c2c10b2d3af81a6a93",
+      "inventory_pointer": "/source_records/28",
+      "scope": "Inspected pinned source; no current/deployed equality asserted."
+    },
+    "T_crypto_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/crypto.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6471925b8779f4b50f8b406b643e786e6793c3d51cc91874ef9cc65387ca216d",
+      "inventory_pointer": "/test_cases/9",
+      "case_ids": [
+        {
+          "id": "round-trips ciphertext with a different salt/nonce per envelope",
+          "line": 13
+        },
+        {
+          "id": "binds ciphertext to account, export, key, and exact bytes",
+          "line": 22
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_ingest-commit-ambiguity_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/ingest-commit-ambiguity.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "913b969bd7e5dc96537b0f72cce629868bd7d205dc1647a89c3e34917dfee707",
+      "inventory_pointer": "/test_cases/13",
+      "case_ids": [
+        {
+          "id": "releases its pre-body admission when envelope validation fails",
+          "line": 122
+        },
+        {
+          "id": "creates staged ciphertext conditionally without replacing an existing opaque key",
+          "line": 136
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_upload-intents_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/upload-intents.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "b8c3f37d5a74a31d2415a2ab226f68dc14a24ab496f650d908638d25f98ab76e",
+      "inventory_pointer": "/test_cases/33",
+      "case_ids": [
+        {
+          "id": "bounds pre-body admissions per account and releases them exactly",
+          "line": 189
+        },
+        {
+          "id": "recovers lost admission insert and release responses",
+          "line": 211
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_mcp-reader_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/mcp-reader.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "0303314b3f4856416bb36938938f6d7c8708b90999913d378d957bc0866f0352",
+      "inventory_pointer": "/test_cases/17",
+      "case_ids": [
+        {
+          "id": "reads scoped current Apple summaries without mixing unsupported profiles, with bounded full-export discovery",
+          "line": 17
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_account-lifecycle_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/account-lifecycle.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "a9f9764a37786080a54cf41e7caffad38204e965cefaba6af8049d69010751f1",
+      "inventory_pointer": "/test_cases/4",
+      "case_ids": [
+        {
+          "id": "uses a fresh email-link session as deletion step-up and durably queues erasure",
+          "line": 75
+        },
+        {
+          "id": "does not create deletion authority unless account disablement is durable",
+          "line": 147
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_agent-tokens_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/agent-tokens.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "6c844832ca75928878d5a4b06d0124c19f6fffd1367ef781d8e594f7cde1ed4c",
+      "inventory_pointer": "/test_cases/6",
+      "case_ids": [
+        {
+          "id": "recovers lost create and revoke responses from exact durable read-token state",
+          "line": 92
+        },
+        {
+          "id": "withholds read-token success while creation or revocation verification is unreadable",
+          "line": 119
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_object-reconciliation_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/object-reconciliation.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "7fbc22b57bb48ce2f1155a29c048aa4a100011880ac939c6499cc99bb1b5bea3",
+      "inventory_pointer": "/test_cases/18",
+      "case_ids": [
+        {
+          "id": "deletes only unreferenced ciphertext across bounded cursor pages",
+          "line": 65
+        },
+        {
+          "id": "accepts a lost R2 delete response only after exact absence verification",
+          "line": 106
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "T_restore-drill_test_ts": {
+      "kind": "retained_literal_case",
+      "path": "apps/cloud/test/restore-drill.test.ts",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "f25d0bb57ba07968fbc41c18aac52627fe754d408e93457462a4eb2bcbc72583",
+      "inventory_pointer": "/test_cases/28",
+      "case_ids": [
+        {
+          "id": "restores an isolated encrypted synthetic snapshot with exact hashes and tenant isolation",
+          "line": 31
+        }
+      ],
+      "execution": "not_run",
+      "scope": "Independent retained expectation provenance, not evidence that new fault cases or provider drills passed."
+    },
+    "F_0": {
+      "kind": "retained_exact_fixture",
+      "path": "apps/apple/docs/reference/generated/automation/api-export-v1.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba",
+      "inventory_pointer": "/fixtures/0",
+      "profile_metadata": {
+        "daily_record_schema": "healthmd.health_data",
+        "daily_record_schema_version": 10,
+        "schema": "healthmd.api_export",
+        "schema_version": 1
+      },
+      "case_ids": [],
+      "execution": "not_run",
+      "scope": "Exact legacy bytes only; no new producer version or typed equivalence admission."
+    },
+    "F_1": {
+      "kind": "retained_exact_fixture",
+      "path": "apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b",
+      "inventory_pointer": "/fixtures/1",
+      "profile_metadata": {
+        "daily_record_schema": "healthmd.health_data",
+        "daily_record_schema_version": 10,
+        "external_record_schema": "healthmd.external_provider_daily",
+        "external_record_schema_version": 1,
+        "schema": "healthmd.api_export",
+        "schema_version": 2
+      },
+      "case_ids": [],
+      "execution": "not_run",
+      "scope": "Exact legacy bytes only; no new producer version or typed equivalence admission."
+    },
+    "F_2": {
+      "kind": "retained_exact_fixture",
+      "path": "apps/apple/docs/reference/generated/core/summary-day.json",
+      "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+      "sha256": "5d905cc0786109af1a20271eb1812f889207d2459c1882b784e2b252a6794f05",
+      "inventory_pointer": "/fixtures/2",
+      "profile_metadata": {
+        "schema": "healthmd.health_data",
+        "schema_version": 10
+      },
+      "case_ids": [],
+      "execution": "not_run",
+      "scope": "Exact legacy bytes only; no new producer version or typed equivalence admission."
+    }
+  },
+  "synthetic_only": {
+    "tenants": [
+      "alpha",
+      "beta"
+    ],
+    "objects_records_days": "Symbolic op_a/object_a/row_a/fields a,b/day d_a,d_b only; no health/location/usage/account/device values.",
+    "credentials_keys": "Symbolic roles and key versions; no key bytes, tokens, provider account or live endpoint.",
+    "versions": "Candidate fault expectation format1 is task-local; no public/shared protocol/profile revision selected.",
+    "numerical_policy": "Once/zero/page1/page2 describe fixture cardinality/order only. Capacity/ranges/frame sizes/timeouts/retention/revoke SLA/RPO/RTO/billing thresholds remain unselected; pilot constants in provenance are not inherited."
+  },
+  "authority_invariants": [
+    "Reserve/receive/verify/seal staging invisible; seal is not committed or query-ready.",
+    "SQL commit binds ledger/accounting/outbox atomically; object and SQL transactions separate. Exact durable reconciliation required for ambiguous acknowledgment.",
+    "Tenant/source installation/generation/immutable selection/profile/codec/reducer/manifest identity remains explicit. Exact originals and typed projections have different authority.",
+    "Current tenant/account/source/purpose/recipient/detail/time/existing-or-future grants and suppression apply to every page and materialization/commit. Unsupported source-purpose remains unavailable.",
+    "Authentication completes over a complete declared unit before any plaintext from that unit is visible; byte-range success cannot authenticate a prefix.",
+    "Later accepted deletion/revocation must survive restore/rollback/reindex through latest independently current complete suppression journal outside restored lineage. Missing/stale/wrong lineage blocks service.",
+    "Source-specific precision/missingness/coverage preserved; no cross-device/source dedup or precedence without reviewed identity/equivalence.",
+    "No model execution/provider guarantee, deployment, promotion, region policy or deletion of real state authorized."
+  ],
+  "state_model": {
+    "stages": [
+      "reserved",
+      "receiving",
+      "verified",
+      "sealed",
+      "ledger_committed_projection_pending",
+      "projection_ready",
+      "aborting",
+      "aborted",
+      "suppressed_purge_pending",
+      "purge_scope_verified",
+      "restore_quarantined"
+    ],
+    "success_receipt": "stored reports exact committed original; ready reports specific completed projection/frontier/coverage only; ambiguous state is pending_unknown.",
+    "no_distributed_atomicity": "Verified staging objects plus transactional SQL ledger/accounting/outbox and idempotent reconciliation, never SQL/object atomicity promise.",
+    "late_cancel": "Committed winner reconciles; separate current authorized erase required.",
+    "restore_service_gate": "Current independently authenticated checkpoint + complete matching suppression/revoke journal + replay/read-old compatibility + current grants, then separately qualified promotion."
+  },
+  "cases": [
+    {
+      "case_id": "RESERVE-valid-invisible",
+      "boundary": "reserve",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Tenant alpha has a current write-only source/purpose/region/destination grant and symbolic available quota.",
+      "actions": "Reserve operation alpha/op_a against immutable manifest identity.",
+      "expected": {
+        "outcome": "reserved_pending",
+        "read_visibility": "No query/archive/projection record or ready receipt.",
+        "accounting": "One reservation; no committed charge.",
+        "authority": "Read/admin authority not created."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESERVE-two-tenant-and-role-denial",
+      "boundary": "reserve",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_ingest"
+      ],
+      "setup": "Alpha writer; beta object/operation locator; agent reader and deletion-status token.",
+      "actions": "Attempt cross-tenant reserve and swap writer/read/admin/status roles.",
+      "expected": {
+        "outcome": "denied_before_body",
+        "read_visibility": "No foreign existence detail or staged materialization.",
+        "accounting": "No foreign reservation/charge.",
+        "authority": "Credential class never widens role; all keys tenant-bound."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESERVE-idempotency-and-quota-race",
+      "boundary": "reserve",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "T_upload-intents_test_ts"
+      ],
+      "setup": "Two same-tenant retries share op_a; another request competes for last symbolic quota unit.",
+      "actions": "Interleave reserve and retry; reuse op_a with a different immutable manifest.",
+      "expected": {
+        "outcome": "same_operation_or_conflict",
+        "read_visibility": "Only canonical reservation pending; no data readable.",
+        "accounting": "Exactly one winning reservation; changed manifest conflicts; competitor rejected without oversubscription.",
+        "authority": "Idempotency binds tenant, writer/source installation/generation/selection, bytes/profile and policy versions."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESERVE-ambiguous-ack",
+      "boundary": "reserve",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Reservation write may commit but adapter response is lost.",
+      "actions": "Retry with op_a; then make exact durable read-back unavailable.",
+      "expected": {
+        "outcome": "reconcile_or_pending",
+        "read_visibility": "No success/reservation ownership fabricated from timeout or affected-row hint.",
+        "accounting": "No second charge; unknown reservation cannot be released as absent.",
+        "authority": "Exact durable identity/state governs acknowledgment."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RECEIVE-offset-manifest-and-replay",
+      "boundary": "receive",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Reserved immutable ordered manifest with explicit unit IDs/digests/lengths.",
+      "actions": "Receive same chunk twice; wrong offset/sequence/length/digest or extra chunk; mismatch source generation.",
+      "expected": {
+        "outcome": "dedup_identical_reject_conflicting",
+        "read_visibility": "Staging stays invisible; no partial original exposed.",
+        "accounting": "Duplicate receipt adds no committed charge; rejected receive cannot replace another unit.",
+        "authority": "Chunk identity cannot substitute for complete-manifest/source authority."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RECEIVE-provider-false-success",
+      "boundary": "receive",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "T_object-reconciliation_test_ts"
+      ],
+      "setup": "Create-only staging key bound to alpha/op_a.",
+      "actions": "Provider put reports success, returns lost ack, corrupt bytes, or read-back unavailable.",
+      "expected": {
+        "outcome": "verify_exact_or_pending",
+        "read_visibility": "Unverified bytes never enter ledger/projection.",
+        "accounting": "Retain reservation/cleanup ownership while unknown; do not claim absence.",
+        "authority": "No overwrite of preexisting opaque object; beta untouched."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RECEIVE-crash-resume",
+      "boundary": "receive",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "T_upload-intents_test_ts"
+      ],
+      "setup": "Some verified units staged; no sealed original.",
+      "actions": "Crash/restart; resume same op, then expire it against a concurrent renewal.",
+      "expected": {
+        "outcome": "resume_verified_or_abort_claim",
+        "read_visibility": "No readable committed data before seal/commit.",
+        "accounting": "Recovered exact reservation once; stale cleanup cannot delete a renewed/committed winner.",
+        "authority": "Durable lease/state comparison precedes cleanup."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "VERIFY-complete-authentication-unit",
+      "boundary": "verify",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_crypto_ts",
+        "T_crypto_test_ts"
+      ],
+      "setup": "Unit ciphertext includes framing/header/AAD/final tag and declared full byte count.",
+      "actions": "Delay/truncate last bytes; mutate header/tag; offer a valid prefix.",
+      "expected": {
+        "outcome": "authentication_failed_or_pending",
+        "read_visibility": "Zero plaintext/result before full declared authentication unit verified; prefix is not a readable range.",
+        "accounting": "No committed charge or ready receipt.",
+        "authority": "Tenant/source/manifest/profile/unit ordering and versions authenticated; hashes alone do not grant trust."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "VERIFY-wrong-tenant-key-range",
+      "boundary": "verify",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_crypto_ts",
+        "T_crypto_test_ts",
+        "B_identity"
+      ],
+      "setup": "Alpha sealed unit; beta principal/key/AAD or arbitrary byte slice.",
+      "actions": "Decrypt with wrong principal/key; request tagless ciphertext range or misaligned unit range.",
+      "expected": {
+        "outcome": "denied_or_authentication_failed",
+        "read_visibility": "No plaintext, cross-tenant existence hints or partial successful range.",
+        "accounting": "No new charge.",
+        "authority": "Range mapping must cover complete authenticated units; key lookup and byte selection both tenant-bound."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "VERIFY-bounded-authenticated-range",
+      "boundary": "verify",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_crypto_ts",
+        "T_crypto_test_ts",
+        "B_limits"
+      ],
+      "setup": "Authorized synthetic reader asks a bounded range spanning complete units.",
+      "actions": "Authenticate every contributing complete unit; cancel during withheld terminal tag.",
+      "expected": {
+        "outcome": "verified_range_or_interrupted",
+        "read_visibility": "Emit only requested bytes after each complete required unit authenticates; no prefix from incomplete unit.",
+        "accounting": "Resource/demand bounds explicitly fixture-local, not provider budgets.",
+        "authority": "No whole-file AEAD prefix shortcut; whole-object legacy must authenticate whole original before serving slice."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "VERIFY-schema-profile-and-purpose",
+      "boundary": "verify",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2",
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts"
+      ],
+      "setup": "Authentic bytes contain unknown profile/schema, forbidden browser/input detail or unsupported source-recipient purpose.",
+      "actions": "Validate codec/ordered manifest/source eligibility before materialization.",
+      "expected": {
+        "outcome": "archive_only_if_admitted_else_unavailable",
+        "read_visibility": "No typed projection or destination copy for unsupported policy; no fallback permission.",
+        "accounting": "No duplicate charge or silent normalization.",
+        "authority": "Authenticity is not source permission; entitlement, server-readable consent, destination and agent grants remain distinct."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "SEAL-missing-or-extra-unit",
+      "boundary": "seal",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Verified declared units except one; another supplied unit is not in manifest.",
+      "actions": "Attempt seal; retry with complete identical units; tamper canonical/ordered manifest.",
+      "expected": {
+        "outcome": "reject_incomplete_then_sealed_pending",
+        "read_visibility": "Seal alone produces no committed/readable/ready export.",
+        "accounting": "Reservation retained once; byte/digest totals exact.",
+        "authority": "Frozen selection/generation/codec pins immutable; seal proves complete manifest, not projection readiness."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "COMMIT-object-sql-split",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Sealed verified object exists; SQL ledger not committed.",
+      "actions": "Crash after object put but before ledger/accounting/outbox transaction.",
+      "expected": {
+        "outcome": "pending_reconcile",
+        "read_visibility": "Object existence never makes data visible.",
+        "accounting": "No committed usage until exact atomic ledger/accounting/outbox commit; staging reservation persists.",
+        "authority": "Objects and SQL are separate transactions, never claimed distributed atomic."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "COMMIT-atomic-ledger-outbox",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "One verified sealed original alpha/op_a; beta independent.",
+      "actions": "Commit ledger identity, once-only accounting and projection outbox together; fault each SQL member.",
+      "expected": {
+        "outcome": "all_or_none",
+        "read_visibility": "Only ledger-committed original may be authorized readable; projection stays pending.",
+        "accounting": "Exactly one committed charge or none; no ledger without outbox/accounting.",
+        "authority": "Current writer/source/purpose/suppression state rechecked in commit admission."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "COMMIT-ambiguous-response-readable",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "SQL transaction may commit before lost response.",
+      "actions": "Retry/read exact durable operation, ledger, charge and outbox; durable postcondition matches.",
+      "expected": {
+        "outcome": "stored_receipt_same_operation",
+        "read_visibility": "Same exact original accessible only to current authorized reader; ready remains false until projection frontier passes.",
+        "accounting": "One ledger/charge/outbox event; retry does not insert another export.",
+        "authority": "Affected rows/HTTP success alone not commitment; exact postcondition is authority."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "COMMIT-ambiguous-response-unreadable",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Transaction response lost and durable verification unavailable.",
+      "actions": "Retry/cancel/reconcile while object and ledger state remain unknown.",
+      "expected": {
+        "outcome": "pending_unknown",
+        "read_visibility": "No false stored/ready/abandoned receipt; no object deletion that may erase a committed winner.",
+        "accounting": "Hold bounded durable reconciliation/cleanup authority; no second debit or assumed quota release.",
+        "authority": "Unknown is explicit and fails closed for visibility/irreversible cleanup."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "CANCEL-before-and-during-commit",
+      "boundary": "cancel",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "T_upload-intents_test_ts"
+      ],
+      "setup": "Cancel races with seal/commit or expiry claimant.",
+      "actions": "Atomically claim abort only if not committed; await native/object cleanup acknowledgment.",
+      "expected": {
+        "outcome": "aborted_or_committed_reconcile",
+        "read_visibility": "Precommit abort invisible; committed winner retained; cancellation is not retroactive erase.",
+        "accounting": "Release reservation only after exact staged object absence and terminal abort; committed charge never double released.",
+        "authority": "No success cancellation acknowledgment before owned cleanup; separate authorized erasure required after commit."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "PROJECT-outbox-retry-and-frontier",
+      "boundary": "project",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2",
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts"
+      ],
+      "setup": "Stored ledger plus outbox; projection worker crashes before/after projection transaction.",
+      "actions": "Retry event; observe stored vs ready receipts and pinned reducer/codec/frontier.",
+      "expected": {
+        "outcome": "idempotent_projection",
+        "read_visibility": "Original remains exact; ready only for requested coverage when exact generation/version frontier completed.",
+        "accounting": "Projection retries create no ingest charge; duplicate event not duplicate facts.",
+        "authority": "One common query/reducer implementation; projection receipt exposes version/freshness/gaps."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "PROJECT-corrupt-or-unavailable-original",
+      "boundary": "project",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2",
+        "B_ingest",
+        "S_crypto_ts",
+        "T_crypto_test_ts"
+      ],
+      "setup": "Ledger references original whose key/object/authentication or codec is unavailable.",
+      "actions": "Attempt project/read/reindex.",
+      "expected": {
+        "outcome": "pending_unavailable_or_archive_only",
+        "read_visibility": "Never fabricate zero, complete coverage or ready result; authenticate before interpreting.",
+        "accounting": "No new committed debit from repair retry.",
+        "authority": "Missing source not equivalent to no observations; original availability and typed readiness distinct."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "OVERLAP-broad-narrow-retained-originals",
+      "boundary": "projection_precedence",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Alpha same installation/source/day: broad gen_a selects fields a,b; newer narrow gen_b selects a only.",
+      "actions": "Ingest both immutable originals; build typed view for a,b.",
+      "expected": {
+        "outcome": "selection_scoped_precedence",
+        "read_visibility": "Original broad and narrow bytes both retained if admitted; a follows newer admitted selected generation, b remains broad with older provenance/freshness.",
+        "accounting": "No broad+narrow double sum; original retention accounted separately from projection dedup.",
+        "authority": "Narrow snapshot never deletes unselected fields or claims whole-day freshness."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "OVERLAP-range-duplicate-records",
+      "boundary": "projection_precedence",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Broad range days d_a,d_b and narrow d_b share stable producer record IDs under same installation/source lineage.",
+      "actions": "Query union and reingest identical original; changed bytes reuse op identity.",
+      "expected": {
+        "outcome": "dedup_facts_keep_originals",
+        "read_visibility": "Shared record counted once; no loss of distinct originals; conflicting immutable identity rejected.",
+        "accounting": "Retry same op charged once; distinct originals follow unselected accounting policy.",
+        "authority": "Dedup key includes tenant/source installation/record identity, not time/value similarity or plaintext SHA across tenants."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "OVERLAP-different-device-source-version",
+      "boundary": "projection_precedence",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Same tenant/day/time has distinct installations/sources; a new codec/reducer version also exists.",
+      "actions": "Query combined scope without reviewed equivalence/overlap policy.",
+      "expected": {
+        "outcome": "separate_or_explicitly_partial",
+        "read_visibility": "No automatic cross-device/source summation/overwrite; values retain exact source/version/provenance.",
+        "accounting": "No cross-source dedup from matching values.",
+        "authority": "Unsupported typed equivalence unavailable; versioned reindex cannot rewrite exact originals."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "OVERLAP-out-of-order-and-inferred-identity",
+      "boundary": "projection_precedence",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Old generation received after new; legacy original lacks installation/selection or reliable saved-profile name.",
+      "actions": "Reconcile heads and attempt profile/device filter or reconstructed IDs.",
+      "expected": {
+        "outcome": "no_arrival_order_promotion",
+        "read_visibility": "Admitted generation order governs selected scope; legacy unknown provenance remains labeled legacy/archive-only where needed.",
+        "accounting": "No new charge due head replay.",
+        "authority": "Receipt/exportedAt/receivedAt cannot fabricate producer identity, profile or snapshot completeness."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "TOMBSTONE-selected-scope-and-reindex",
+      "boundary": "project",
+      "coverage": [
+        "C19",
+        "H04",
+        "F17",
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2",
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Later accepted source-scoped tombstone suppresses a record across old/new indexes.",
+      "actions": "Reindex old originals or replay delayed projection after tombstone.",
+      "expected": {
+        "outcome": "suppressed",
+        "read_visibility": "No resurrection; unrelated source/selection records retained; current suppression applied before visibility.",
+        "accounting": "No projection/reindex double charge.",
+        "authority": "Reindex version never outranks later accepted suppression frontier."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "GRANT-each-page-current",
+      "boundary": "query_page",
+      "coverage": [
+        "C20",
+        "H02",
+        "F19",
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Agent narrow grant covers alpha/source_a/d_a/summary; cursor pins logical query/dataset/frontier.",
+      "actions": "Read page1; revoke/narrow/expire source-purpose/recipient grant before page2; retry cached cursor.",
+      "expected": {
+        "outcome": "page2_denied_or_stale",
+        "read_visibility": "No further object read/materialization/output after current authority invalid; page1 already delivered cannot be recalled.",
+        "accounting": "No retry-based scope widening.",
+        "authority": "Revalidate tenant/account active, source/purpose/recipient/detail/time and current grant/suppression each page, including raw pages."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "CURSOR-crosswire",
+      "boundary": "query_page",
+      "coverage": [
+        "C20",
+        "H02",
+        "F19",
+        "C19",
+        "H04",
+        "F17"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Valid alpha cursor for query_a/profile_a/frontier_a.",
+      "actions": "Replay on beta, query_b, source_b, different selection/version/frontier or stale generation.",
+      "expected": {
+        "outcome": "denied_or_stale_cursor",
+        "read_visibility": "No foreign result, mixed frontier or fabricated continuation.",
+        "accounting": "No extra ingest accounting.",
+        "authority": "Opaque authenticated binding requires reviewed host capability; adapter sidecar/caller claims alone not authentication."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "GRANT-existing-vs-future",
+      "boundary": "authorization",
+      "coverage": [
+        "C20",
+        "H02",
+        "F19",
+        "C22"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts"
+      ],
+      "setup": "Agent admitted for explicit existing snapshot set; later upload is outside that frozen set.",
+      "actions": "Upload future generation; invoke same token; broaden details/titles/location/domain.",
+      "expected": {
+        "outcome": "unavailable_outside_scope",
+        "read_visibility": "Future uploads/detail grants never inferred from sign-in, upload authority, purchase or broad original containment.",
+        "accounting": "No commerce-derived authority.",
+        "authority": "Future consent, native acquisition, server-readable storage and agent sharing are independent."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "OAUTH-wrong-issuer-resource-pkce",
+      "boundary": "authorization",
+      "coverage": [
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts"
+      ],
+      "setup": "Synthetic issuer/resource/client registration/S256/state/response-iss/PKCE binding declared, no actual provider selected.",
+      "actions": "Swap issuer/audience/resource/registration; replay state/code; downgrade PKCE or omit required metadata.",
+      "expected": {
+        "outcome": "denied_before_session_or_grant",
+        "read_visibility": "No token/session/grant issued or foreign discovery fallback.",
+        "accounting": "No product quota choice.",
+        "authority": "Concrete reviewed OAuth version/client contract required; owner or writer credential cannot become agent grant."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "REFRESH-revoke-and-recovery",
+      "boundary": "authorization",
+      "coverage": [
+        "C20",
+        "H02",
+        "F19",
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Refresh or identity recovery races with later accepted session/device/agent revoke.",
+      "actions": "Restore old auth rows or replay refresh/recovery token.",
+      "expected": {
+        "outcome": "denied_or_explicit_new_authority",
+        "read_visibility": "Revoked grant remains invalid; recovery alone does not reenable deleted data or former source/recipient scopes.",
+        "accounting": "No automatic retention/payment action.",
+        "authority": "Current independent revocation journal and approved recovery/step-up contract required; identity policy still open."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "DELETE-containing-artifact",
+      "boundary": "erase",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts",
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Original bundle contains requested erased field a plus unrelated b; copies exist in indexes/versions/caches.",
+      "actions": "Accept suppression; determine artifact indivisibility; purge/rewrite only under separately reviewed new-artifact transaction.",
+      "expected": {
+        "outcome": "suppressed_then_pending_purge",
+        "read_visibility": "No reads of containing artifact exposing a; disclose collateral b unavailability if entire original must be erased; never claim byte-selective deletion of an immutable encrypted original.",
+        "accounting": "No double release; object/key/backup/copy policy still unselected.",
+        "authority": "Enumerate manifests/objects/versions/keys/indexes/caches/replicas/backup and onward controlled recipients; keep exact purge receipts."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "DELETE-ambiguous-purge-and-status",
+      "boundary": "erase",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts",
+        "T_object-reconciliation_test_ts"
+      ],
+      "setup": "Accepted durable suppression; object delete returns lost ack/false success or remainder unreadable.",
+      "actions": "Read exact absence and all required copy/key authorities; retry status request.",
+      "expected": {
+        "outcome": "suppressed_pending_or_verified_scope",
+        "read_visibility": "Deletion complete only for explicitly verified containing-artifact scope; unreadable count is not zero; no old key/read restoration.",
+        "accounting": "Accounting converges exactly once after verified state, not provider success hint.",
+        "authority": "Status credential grants status only; expiry does not discard unfinished deletion work."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "DELETE-journal-ack-boundary",
+      "boundary": "suppression",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Delete/revoke accepted after backup_b; independent suppression authority write may lose acknowledgment.",
+      "actions": "Verify exact current journal event/frontier before accepted receipt; crash/retry.",
+      "expected": {
+        "outcome": "verified_acceptance_or_pending_unknown",
+        "read_visibility": "Never acknowledge durable delete/revoke without independent journal persistence/reconciliation; provisional denial may remain while pending.",
+        "accounting": "Idempotent event/frontier, no duplicated erase charge.",
+        "authority": "Journal separate from backup_b restore lineage; self-asserted freshness insufficient."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESTORE-old-backup-later-delete-revoke",
+      "boundary": "restore",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Backup_b contains object_a, grant_a; after backup, accepted delete_a and revoke_a persisted at independent frontier_f.",
+      "actions": "Restore backup_b into isolated quarantine; obtain latest authenticated complete journal including frontier_f; replay before serving.",
+      "expected": {
+        "outcome": "suppressed_and_revoked",
+        "read_visibility": "object_a not readable/projected/reindexed; grant_a cannot refresh; unrelated beta retained under current authority.",
+        "accounting": "Restored accounting reconciles current ledger/suppression, never releases/recharges blindly.",
+        "authority": "Latest independent journal outranks backup timestamps and includes later accepted tombstones/revokes; replay every relevant source/version/replica before service."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESTORE-missing-journal",
+      "boundary": "restore",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Old backup has readable originals and old grants; latest independent suppression journal unavailable.",
+      "actions": "Attempt promote restored service.",
+      "expected": {
+        "outcome": "restore_blocked",
+        "read_visibility": "No query/download/agent refresh/projection/upload promotion; quarantine only.",
+        "accounting": "No inferred zero suppression or current quota.",
+        "authority": "Fail closed; old backup cannot establish absence of later delete/revoke."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESTORE-stale-or-wrong-lineage",
+      "boundary": "restore",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Journal is authentic but behind trusted external current frontier, wrong tenant/region/service lineage, incomplete/gapped or tampered.",
+      "actions": "Replay then attempt readiness/promotion.",
+      "expected": {
+        "outcome": "restore_blocked",
+        "read_visibility": "No serving from partially reconciled journal; affected service remains quarantined.",
+        "accounting": "No guessed quota repair.",
+        "authority": "External independently current checkpoint required; authentication alone does not prove latest frontier or complete lineage."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RESTORE-rollback-and-key-version",
+      "boundary": "restore",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18",
+        "F20"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts",
+        "S_account-export-keys_ts"
+      ],
+      "setup": "Rollback reader/schema/key version predates accepted revoke/delete/ledger and KEK rotation.",
+      "actions": "Roll back binaries or rewrap keys; replay old outbox.",
+      "expected": {
+        "outcome": "retain_current_authority_or_block",
+        "read_visibility": "Old access/erased objects cannot return; obsolete reader unable to interpret current journal/grants fails closed.",
+        "accounting": "Current committed ledger/accounting preserved.",
+        "authority": "Rollback cannot discard accepted keys/ledger/grant/suppression state; no immediate crypto-erasure claim while recoverable key copies exist."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "RECIPIENT-independent-copies",
+      "boundary": "erase",
+      "coverage": [
+        "C22",
+        "H07",
+        "F18",
+        "F19"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts"
+      ],
+      "setup": "Authorized recipient already downloaded alpha plaintext to independently controlled storage.",
+      "actions": "Revoke agent and erase cloud data; request recall guarantee.",
+      "expected": {
+        "outcome": "future_access_denied_recall_unavailable",
+        "read_visibility": "Server stops current/future access; cannot prove deletion of independent recipient caches/copies; disclose scope.",
+        "accounting": "No billing-based permission.",
+        "authority": "Controlled downstream copies require explicit enforceable purge evidence; independent copies remain an explicit limit."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "REGION-provider-fault-and-isolation",
+      "boundary": "operational",
+      "coverage": [
+        "H07",
+        "F17",
+        "F18",
+        "F20"
+      ],
+      "provenance": [
+        "B_ingest",
+        "B_policy",
+        "S_lifecycle_ts",
+        "T_restore-drill_test_ts",
+        "T_account-lifecycle_test_ts",
+        "B_services",
+        "B_limits"
+      ],
+      "setup": "Candidate provider/region/topology remains unselected; two synthetic tenants scheduled independently.",
+      "actions": "Inject SQL/object/KMS/queue outage or tenant alpha busy/noisy load; propose migration.",
+      "expected": {
+        "outcome": "pending_bounded_isolated",
+        "read_visibility": "No foreign tenant reads/fallback-region copy or service privilege broadening; beta not logically starved by alpha cleanup failure.",
+        "accounting": "Symbolic fairness/limits require later measured budgets; no advertised cost/SLO.",
+        "authority": "Region keys/subprocessors/replicas/backups/temp files/telemetry inventories and migration acceptance separate."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "BILLING-downgrade-and-portability",
+      "boundary": "policy",
+      "coverage": [
+        "C22",
+        "F20"
+      ],
+      "provenance": [
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts",
+        "B_policy",
+        "B_limits"
+      ],
+      "setup": "Candidate plan/capacity/retention/grace unselected; retained admitted archive exists.",
+      "actions": "Downgrade/payment failure/capacity exhaustion; request owner portability.",
+      "expected": {
+        "outcome": "policy_pending_no_silent_erasure",
+        "read_visibility": "No automatic delete/history truncation or consent widening; portability follows current explicit auth and bounded complete-unit verification.",
+        "accounting": "Capacity/storage/index/egress/backup/retry accounting must be selected and measured separately.",
+        "authority": "Local account-free product remains available; billing does not grant native/source/agent authority."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "LEGACY-exact-original-vs-typed-projection",
+      "boundary": "compatibility",
+      "coverage": [
+        "C18",
+        "C19",
+        "H04"
+      ],
+      "provenance": [
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2"
+      ],
+      "setup": "Pinned v1/v2 legacy fixture originals and unsupported typed Android/location/usage profile.",
+      "actions": "Read authorized original; project through unreviewed codec or claim saved profile metadata.",
+      "expected": {
+        "outcome": "exact_original_or_unavailable_typed",
+        "read_visibility": "Exact original bytes/profile remain; derivative labeled with codec/reducer/frontier; unsupported typed facts omitted/unavailable, missing never zero.",
+        "accounting": "No archive read as second upload.",
+        "authority": "No native version bump, shared-profile convergence, fabricated profile/device/source or data never uploaded."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "BOUND-demand-cancel-diagnostics",
+      "boundary": "resource",
+      "coverage": [
+        "H03",
+        "H04",
+        "H07",
+        "F17",
+        "F20"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "B_ingest",
+        "S_crypto_ts",
+        "T_crypto_test_ts",
+        "B_limits"
+      ],
+      "setup": "Synthetic slow sink, stalled source, long bounded history page; no numerical product budget chosen.",
+      "actions": "Pause downstream demand; cancel owned crypto/object/SQL/queue tasks; emit malformed imported strings.",
+      "expected": {
+        "outcome": "bounded_pending_or_interrupted",
+        "read_visibility": "No prefetched unbounded plaintext/whole-history memory, stale output or raw sensitive/provider error; input strings never execute shell/SQL/network.",
+        "accounting": "Explicit fixture-local resource limits and cancellation cleanup acknowledgment; later provider memory/latency budgets required.",
+        "authority": "One shared owner and sanitized fixed outcomes; cancellation cannot falsely certify durable absence."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "COMMIT-revoke-after-verify",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts"
+      ],
+      "setup": "Alpha bytes are verified/sealed; current writer/source-purpose grant is then revoked before commit.",
+      "actions": "Race commit/retry against independently accepted revoke frontier.",
+      "expected": {
+        "outcome": "denied_or_reconciled_committed_winner",
+        "read_visibility": "No new original/ready projection after revoke wins; if commit won earlier, later read/agent scope still revoked.",
+        "accounting": "No new charge for denied commit; retain staged cleanup authority until exact absence.",
+        "authority": "Grant and suppression version checked at durable commit admission; previous verified bytes do not freeze permission."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    },
+    {
+      "case_id": "TENANT-independent-identical-bytes",
+      "boundary": "commit",
+      "coverage": [
+        "C18",
+        "H03",
+        "F17",
+        "C19",
+        "H04",
+        "F17",
+        "C20",
+        "H02",
+        "F19"
+      ],
+      "provenance": [
+        "B_ingest",
+        "S_upload-intents_ts",
+        "S_exports_ts",
+        "T_ingest-commit-ambiguity_test_ts",
+        "B_query",
+        "B_profiles",
+        "S_reader_ts",
+        "F_0",
+        "F_1",
+        "F_2",
+        "B_identity",
+        "B_policy",
+        "S_auth_ts",
+        "T_agent-tokens_test_ts"
+      ],
+      "setup": "Alpha and beta independently admit the same synthetic plaintext under separate source/grant/operation/key identities.",
+      "actions": "Commit each; query/list/reconcile/delete alpha while beta remains active.",
+      "expected": {
+        "outcome": "two_isolated_commitments",
+        "read_visibility": "Each current principal sees only its own ledger/original/projection; alpha suppression/revoke/cleanup cannot expose or delete beta.",
+        "accounting": "One admitted commitment/charge per tenant; no global dedup reveals other tenant or cross-tenant quota release.",
+        "authority": "Tenant identity binds object/SQL/key/cache/outbox/cursor and every maintenance path; identical digest is not shared authority."
+      },
+      "execution": "required_not_created_or_executed",
+      "expectation_origin": "Literal independent design/source-derived oracle written before future implementation; not generated from candidate runtime captures."
+    }
+  ],
+  "open_decisions": [
+    {
+      "id": "Q-CLOUD-REGION",
+      "status": "open",
+      "owner_role": "owner",
+      "resolution_criteria": "Owner EU/US choice and complete processing/key/backup/subprocessor residency inventory recorded.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    },
+    {
+      "id": "Q-CLOUD-TOPOLOGY",
+      "status": "open",
+      "owner_role": "architecture/service",
+      "resolution_criteria": "Select a candidate provider/runtime/storage/key/region topology against concrete streaming, SQL/query isolation, recovery and cost requirements. Actual provider limits, load, keys, region and deployed recovery are separately qualified in H01/H07/V11/V13.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    },
+    {
+      "id": "Q-CLOUD-IDENTITY",
+      "status": "open",
+      "owner_role": "product/security",
+      "resolution_criteria": "Select the identity/issuer/passkey/recovery/step-up/support policy and compromise workflows with product/security acceptance and a concrete threat model. Actual deployed auth and recovery controls are separately qualified in H05/H07/V12/V13.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    },
+    {
+      "id": "Q-CLOUD-RETENTION",
+      "status": "open",
+      "owner_role": "owner/privacy/service",
+      "resolution_criteria": "Select numerical retention/capacity/RPO/RTO/erasure requirements, reconcile donor backup conflict and specify durable suppression/copy policy. Actual deployed controls are separately proved in H07/V13.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    },
+    {
+      "id": "Q-CLOUD-COMMERCE",
+      "status": "open",
+      "owner_role": "owner/product",
+      "resolution_criteria": "Included/paid capacity, checkout, downgrade/grace/portability and F-Droid/native channel policy chosen; no inherited donor pricing.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    },
+    {
+      "id": "Q-CLOUD-GRANTS",
+      "status": "open",
+      "owner_role": "product/privacy",
+      "resolution_criteria": "Concrete domain/source/time/detail/recipient/existing/future defaults and numerical revoke policy accepted without auto-widening.",
+      "scope": "Blocks dependent real adapter/public policy; does not block this synthetic expectation model."
+    }
+  ],
+  "consumers": [
+    "H02 contract/grant fixtures",
+    "H03 resumable ingest/ledger/outbox adapters",
+    "H04 HOSTED-FAKE-SOURCE and query/projection/reindex adapters",
+    "H05 suppression/erasure/recovery/portability",
+    "H07 two-tenant provider/restore/load/copy qualification",
+    "SPLIT-CLOUD-INGEST / SPLIT-CLOUD-GRANTS / SPLIT-CLOUD-LIFECYCLE planners",
+    "Read-only UI/CLI/MCP clients of the same common operations"
+  ],
+  "remaining_qualification": [
+    "Independent review of exact case bytes before future implementation; implementation must use a different author.",
+    "Scoped executable fake-port oracle/chaos tests and codec/crypto/tenant/grant review; no expected result regenerated from implementation.",
+    "Chosen source-purpose/recipient/identity/retention/region/provider/capacity/billing contracts and numerical budgets.",
+    "Actual deployed provider/keys/regions/copies/restore/erasure/load/revocation and each named client production evidence.",
+    "Native/source acquisition and existing public profiles/principals remain separate; no C/H/F or phase closure."
+  ],
+  "rollback": "Current native/Rust/pilot historical readers and exact originals remain authority; revert only this candidate expectation packet. No ledger/key/grant/journal/provider/state mutation or production promotion."
+}
