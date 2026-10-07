@@ -1706,6 +1706,9 @@ class SchedulingManager: ObservableObject {
                 )
             }
 
+            // Capture may suspend past discard; do not admit the newly built transfer afterward.
+            try Task.checkCancellation()
+            guard isScheduledRecoveryAuthorized(jobID: jobID) else { throw CancellationError() }
             guard syncService.canExportToConnectedMac(requiring: settings) else {
                 syncService.isSyncing = false
                 return scheduledFailureResult(
@@ -1774,6 +1777,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
                         jobID: jobID,
                         startDate: startDate,
@@ -1872,6 +1883,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[job.jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: job.jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: job.jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     let preparedFile = try ConnectedTransferFile.encode(job)
                     defer { preparedFile.remove() }
                     guard self.scheduledMacExportContexts[job.jobID] != nil else { return }
@@ -1889,6 +1908,8 @@ class SchedulingManager: ObservableObject {
                     if case .failure(let abort) = transferResult {
                         _ = self.handleScheduledConnectedTransferAbort(abort)
                     }
+                } catch is CancellationError {
+                    // The cancellation/result path owns continuation completion.
                 } catch {
                     _ = self.completeScheduledMacExport(with: MacExportFailure(
                         jobID: job.jobID,
@@ -2996,7 +3017,8 @@ class SchedulingManager: ObservableObject {
                 profile: profile, dates: dates, target: target, settings: settings,
                 originalRequestedDates: pendingRequest.originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
-                quotaJobID: pendingRequest.id, request: pendingRequest
+                quotaJobID: pendingRequest.id,
+                notificationOperationID: pendingRequest.id, request: pendingRequest
             )
         }
 
