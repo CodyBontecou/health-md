@@ -100,6 +100,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.cancel-active-export",
         "direct-cli.shared-qr-pairing",
         "direct.cli_agent_wake",
+        "direct.full_public_authorized_corpus",
+        "diagnostics.local_bundle",
     ]
 
     private static let appleCapabilities: Set<String> = [

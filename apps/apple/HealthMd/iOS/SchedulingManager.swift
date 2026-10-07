@@ -609,6 +609,7 @@ class SchedulingManager: ObservableObject {
         // the user without a recovery notification.
         exportNotificationScheduler.cancelArmedPendingExportNotification(id: request.id)
 
+        DiagnosticRecorder.shared.record(.triggerReceived, fields: [.operationId: .text(request.id.uuidString.lowercased()), .trigger: .text(trigger == .notificationTap ? "notification" : "app_open")])
         logger.info("Draining pending scheduled export request \(request.id.uuidString)")
         let target = scheduledTarget(for: request)
         // Phase 3: profile requests run against their profile's destinations;
@@ -1263,6 +1264,10 @@ class SchedulingManager: ObservableObject {
         quotaJobID: UUID?,
         notificationOperationID: UUID? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        var diagnosticFields: [DiagnosticField: DiagnosticValue] = [.dayCount: .integer(Int64(dates.count))]
+        if let quotaJobID { diagnosticFields[.operationId] = .text(quotaJobID.uuidString.lowercased()) }
+        DiagnosticRecorder.shared.record(.attemptStarted, fields: diagnosticFields)
+        defer { DiagnosticRecorder.shared.record(.attemptFinished, fields: diagnosticFields) }
         if target == .localIPhoneFolder,
            let blockedResult = scheduledLocalDestinationPreflight?(dates) {
             return blockedResult
@@ -1311,6 +1316,8 @@ class SchedulingManager: ObservableObject {
             }
         }
 
+        diagnosticFields[.reason] = .text(result.didCompleteAllRequestedDates ? "success" : (result.successCount > 0 ? "partial" : "failure"))
+        DiagnosticRecorder.shared.record(.exportResult, fields: diagnosticFields)
         recordScheduledExportQuotaUseIfNeeded(for: result, jobID: quotaJobID)
         return result
     }
@@ -2568,6 +2575,7 @@ class SchedulingManager: ObservableObject {
 
         onExpirationArmed({ [weak self] in
             guard let self else { return }
+            DiagnosticRecorder.shared.record(.backgroundExpired, fields: [.trigger: .text("background_task")])
             self.logger.warning("Background task expired")
             Task { @MainActor in
                 await self.sendExportNotification(success: false, daysExported: 0, failureReason: .backgroundTaskExpired)

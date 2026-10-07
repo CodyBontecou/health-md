@@ -111,6 +111,8 @@ class ProductCapabilityManifestTest {
             "automation.cancel-active-export",
             "direct-cli.shared-qr-pairing",
             "direct.cli_agent_wake",
+            "direct.full_public_authorized_corpus",
+            "diagnostics.local_bundle",
         )
 
         val appleCapabilities = setOf(

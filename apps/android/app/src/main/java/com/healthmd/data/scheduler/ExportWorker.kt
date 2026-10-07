@@ -15,6 +15,10 @@ import androidx.work.CoroutineWorker
 import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
+import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.DiagnosticEventID
+import com.healthmd.diagnostics.DiagnosticField
+import com.healthmd.diagnostics.DiagnosticValue
 import com.healthmd.R
 import com.healthmd.data.export.APIEndpointExportRunner
 import com.healthmd.data.export.APIExportCredentialStore
@@ -74,13 +78,18 @@ class ExportWorker @AssistedInject constructor(
     private val distributionPolicy: DistributionPolicy,
 ) : CoroutineWorker(appContext, workerParams) {
 
-    override suspend fun doWork(): Result = try {
-        if (ScheduledExportOccurrence.fromWorkData(inputData) != null) {
-            setForeground(getForegroundInfo())
+    override suspend fun doWork(): Result {
+        val identity = mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString()), DiagnosticField.TRIGGER to DiagnosticValue.Text("background_task"))
+        Diagnostics.record(DiagnosticEventID.ATTEMPT_STARTED, identity)
+        return try {
+            if (ScheduledExportOccurrence.fromWorkData(inputData) != null) setForeground(getForegroundInfo())
+            val result = doWorkManaged()
+            Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(when (result) { is Result.Success -> "success"; is Result.Failure -> "failure"; else -> "retry" })))
+            result
+        } finally {
+            Diagnostics.record(DiagnosticEventID.ATTEMPT_FINISHED, identity)
+            ScheduledExportCancellationCoordinator.finish(id)
         }
-        doWorkManaged()
-    } finally {
-        ScheduledExportCancellationCoordinator.finish(id)
     }
 
     private suspend fun doWorkManaged(): Result {
@@ -916,7 +925,13 @@ class ExportWorker @AssistedInject constructor(
         } else {
             SCHEDULE_RESULT_NOTIFICATION_ID
         }
-        manager.notify(notificationId, notification)
+        try {
+            manager.notify(notificationId, notification)
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_REQUESTED, mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())))
+        } catch (error: RuntimeException) {
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_FAILED, Diagnostics.errorFields(error))
+            throw error
+        }
     }
 
     private fun canPostNotifications(): Boolean {
@@ -952,6 +967,7 @@ class ExportWorker @AssistedInject constructor(
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             manager.cancel(EXPORT_RESULT_NOTIFICATION_ID)
             manager.cancel(SCHEDULE_RESULT_NOTIFICATION_ID)
+            Diagnostics.record(DiagnosticEventID.NOTIFICATION_CANCELLED)
         }
     }
 }

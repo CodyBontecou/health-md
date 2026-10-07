@@ -1,0 +1,68 @@
+{
+  "provenance": "Synthetic diagnostic values only; shared Swift/Kotlin privacy-admission and sharing vector, not user health data.",
+  "input": {
+    "schema": "healthmd.diagnostic_event",
+    "schema_version": 1,
+    "timestamp": "2026-10-07T00:00:00.000Z",
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "sequence": 1,
+    "monotonic_ms": 1000,
+    "platform": "ios",
+    "event_id": "sync.connection_changed",
+    "subsystem": "connection",
+    "severity": "info",
+    "source": "HealthMd/SyncService.swift:100",
+    "fields": {
+      "state": "connected",
+      "operation_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "peer_name": "SYNTHETIC_PRIVATE_PEER",
+      "transport": "SYNTHETIC_SECRET_SENTINEL",
+      "health_values": "SYNTHETIC_HEALTH_SENTINEL",
+      "access_token": "SYNTHETIC_SECRET_SENTINEL"
+    },
+    "omitted_fields": {},
+    "unknown_root": "SYNTHETIC_HEALTH_SENTINEL"
+  },
+  "expected_operational": {
+    "schema": "healthmd.diagnostic_event",
+    "schema_version": 1,
+    "timestamp": "2026-10-07T00:00:00.000Z",
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "sequence": 1,
+    "monotonic_ms": 1000,
+    "platform": "ios",
+    "event_id": "sync.connection_changed",
+    "subsystem": "connection",
+    "severity": "info",
+    "source": "HealthMd/SyncService.swift:100",
+    "fields": {
+      "state": "connected",
+      "operation_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+    },
+    "omitted_fields": {
+      "peer_name": "redacted",
+      "transport": "invalid"
+    }
+  },
+  "expected_private": {
+    "schema": "healthmd.diagnostic_event",
+    "schema_version": 1,
+    "timestamp": "2026-10-07T00:00:00.000Z",
+    "session_id": "11111111-2222-4333-8444-555555555555",
+    "sequence": 1,
+    "monotonic_ms": 1000,
+    "platform": "ios",
+    "event_id": "sync.connection_changed",
+    "subsystem": "connection",
+    "severity": "info",
+    "source": "HealthMd/SyncService.swift:100",
+    "fields": {
+      "state": "connected",
+      "operation_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+      "peer_name": "SYNTHETIC_PRIVATE_PEER"
+    },
+    "omitted_fields": {
+      "transport": "invalid"
+    }
+  }
+}

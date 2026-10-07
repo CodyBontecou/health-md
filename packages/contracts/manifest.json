@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+      "sha256": "d026f790816da9d2d0537df0d503f8796fe46a98afc36cdbfbb449f962d89c4c",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -26,6 +26,51 @@
     }
   ],
   "contracts": [
+    {
+      "id": "healthmd.diagnostics",
+      "version": 1,
+      "status": "canonical",
+      "summary": "Local privacy-classified technical events and explicitly reviewed original-attachment diagnostic ZIPs, independently versioned from health exports and Direct protocols.",
+      "specification": "packages/contracts/diagnostics/v1/contract.md",
+      "authorities": [
+        "packages/contracts/diagnostics/v1/contract.md",
+        "packages/contracts/diagnostics/v1/catalog.json",
+        "packages/contracts/diagnostics/v1/event.schema.json",
+        "packages/contracts/diagnostics/v1/bundle.schema.json"
+      ],
+      "implementations": [
+        "packages/contracts/diagnostics/generate.py",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticRecorder.swift",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticBundle.swift",
+        "apps/apple/HealthMd/Shared/Diagnostics/DiagnosticsView.swift",
+        "apps/android/app/src/main/java/com/healthmd/diagnostics/DiagnosticStore.kt",
+        "apps/android/app/src/main/java/com/healthmd/diagnostics/DiagnosticBundle.kt",
+        "apps/android/app/src/main/java/com/healthmd/presentation/diagnostics/DiagnosticsScreen.kt"
+      ],
+      "consumers": [
+        "packages/contracts/diagnostics/validate.py",
+        "apps/apple/HealthMdTests/Diagnostics/DiagnosticRecorderTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/diagnostics/DiagnosticStoreTest.kt"
+      ],
+      "documentation": [
+        "apps/apple/docs/features/diagnostics.md",
+        "apps/android/docs/features/diagnostics.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/diagnostics/v1/fixtures/privacy.json",
+          "sha256": "cd6ac1a5d8c1fa757e59c42952f4307e0f2ea59d578fa6e2229214d0700ffc09",
+          "provenance": "Reviewed synthetic privacy-admission/sharing vector tested by Swift and Kotlin; no user or live credential data.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/diagnostics/v1/fixtures/bundle.json",
+          "sha256": "36cbea8b032f3b9ce369954c357160ab5a087fc5ee09828b088da68d33a06d0b",
+          "provenance": "Reviewed hand-authored synthetic manifest inventory with explicit unchanged attachment content, validated digests and truthful sensitivity.",
+          "mirrors": []
+        }
+      ]
+    },
     {
       "id": "healthmd.direct.ios",
       "version": 1,

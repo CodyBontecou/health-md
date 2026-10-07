@@ -6,6 +6,7 @@ import WidgetKit
 
 class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        DiagnosticRecorder.shared.record(.appStarted)
         UNUserNotificationCenter.current().delegate = self
         // RFC-0005 P2: the worker's wake notification carries this category. Tapping it is the
         // user-presence surface — the app foregrounds, the direct service reconnects, and the
@@ -22,6 +23,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
     }
 
     func applicationDidBecomeActive(_ application: UIApplication) {
+        DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("ios_application_did_become_active")])
         if !TestMode.suppressesRuntimeServices {
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
@@ -53,6 +55,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
             completionHandler(.noData)
             return
         }
+        DiagnosticRecorder.shared.record(.triggerReceived, fields: [.trigger: .text("silent_push")])
         let fireDate = scheduledExportFireDate(from: userInfo)
         let kind = scheduledExportKind(from: userInfo)
         Task { @MainActor in
@@ -105,6 +108,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         let pendingExportPayload = PendingExportNotificationPayload(userInfo: request.content.userInfo)
 
         if let pendingExportPayload = pendingExportPayload {
+            DiagnosticRecorder.shared.record(.notificationTapped, fields: [.operationId: .text(pendingExportPayload.requestID.uuidString.lowercased()), .trigger: .text("notification")])
             Task { @MainActor in
                 await SchedulingManager.shared.waitForScheduledExportDependencies()
                 await SchedulingManager.shared.performNotificationTriggeredExport(payload: pendingExportPayload)
@@ -605,6 +609,18 @@ struct HealthMdApp: App {
                 directCLIService.rejectExternalPairingLink()
             }
             .onAppear { hasInstalledSharedSetupURLHandler = true }
+            .onChange(of: scenePhase, initial: true) { _, phase in
+                // UIScene apps need scene facts: UIApplication delegate callbacks
+                // alone do not reliably observe their foreground transitions.
+                let callback: String
+                switch phase {
+                case .active: callback = "ios_scene_phase_active"
+                case .inactive: callback = "ios_scene_phase_inactive"
+                case .background: callback = "ios_scene_phase_background"
+                @unknown default: return
+                }
+                DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text(callback)])
+            }
             .onChange(of: scenePhase) { _, phase in
                 guard !TestMode.suppressesRuntimeServices else { return }
                 switch phase {
