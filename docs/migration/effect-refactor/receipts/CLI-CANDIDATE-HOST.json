@@ -1,0 +1,444 @@
+{
+  "schema_version": 1,
+  "task_id": "CLI-CANDIDATE-HOST",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+  "patch_digest": "edbcfd44f085257cc0fea8b13b28760932d3fc229e7f57d57c26714b670b6306",
+  "patch_digest_method": "SHA256 over sorted ten claimed nonreceipt manifest/lock/config/source/test/doc/script paths, each UTF-8 repository-relative path + NUL + raw file bytes + NUL. Excludes receipt, coordinator plan/state and ignored component dist/node_modules/cache outputs.",
+  "changed_paths": [
+    "apps/cli/package.json",
+    "apps/cli/package-lock.json",
+    "apps/cli/tsconfig.json",
+    "apps/cli/tsconfig.build.json",
+    "apps/cli/tsconfig.test.json",
+    "apps/cli/src/candidate-host.ts",
+    "apps/cli/tests/candidate-host.test.ts",
+    "apps/cli/docs/typescript-candidate.md",
+    "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json",
+    "apps/cli/scripts/build-candidate.mjs",
+    "apps/cli/scripts/check-candidate.mjs"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/architecture/javascript-unified-layer-design-reference.md": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/hosts.json": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      "docs/migration/effect-refactor/receipts/OP-CATALOG.json": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+      ".gitignore": "384570ae153b22996ff9eb6753f77631a9473cf95d62a2afe820e048af7d1f67"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "@types/node": "24.19.1",
+      "undici-types": "7.24.6",
+      "lock_sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "locked_package_records": 53,
+      "dependency_graph_sha256": "1b0b97d617a7c2a1459e85e8f7f0e37b4fff54f9e309ae053f73d618d2de0f12",
+      "installed_package_records": [
+        {
+          "path": "node_modules/@esbuild/darwin-arm64/package.json",
+          "name": "@esbuild/darwin-arm64",
+          "version": "0.28.2",
+          "package_sha256": "4e652c9e4410daf03da852a664940153601fac397233cdcf276b4b1a312454b9"
+        },
+        {
+          "path": "node_modules/@healthmd/core-ts/package.json",
+          "name": "@healthmd/core-ts",
+          "version": "0.0.0-candidate.1",
+          "package_sha256": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2"
+        },
+        {
+          "path": "node_modules/@types/node/package.json",
+          "name": "@types/node",
+          "version": "24.19.1",
+          "package_sha256": "6e6bedd46e6541dce6fedbf7570c499a97476e1517123f0bdae4621dab023978"
+        },
+        {
+          "path": "node_modules/@typescript/typescript-darwin-arm64/package.json",
+          "name": "@typescript/typescript-darwin-arm64",
+          "version": "7.0.2",
+          "package_sha256": "e88558e22e3db6c4da920e15a60eb2bbea801732b94aedb67e972be2a7f485b8"
+        },
+        {
+          "path": "node_modules/effect/package.json",
+          "name": "effect",
+          "version": "4.0.1",
+          "package_sha256": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f"
+        },
+        {
+          "path": "node_modules/esbuild/package.json",
+          "name": "esbuild",
+          "version": "0.28.2",
+          "package_sha256": "9d0bc453f4e791553c4cc2298ba023b409241fd9801e494741666eb0f6051490"
+        },
+        {
+          "path": "node_modules/typescript/package.json",
+          "name": "typescript",
+          "version": "7.0.2",
+          "package_sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+        },
+        {
+          "path": "node_modules/undici-types/package.json",
+          "name": "undici-types",
+          "version": "7.24.6",
+          "package_sha256": "541adf5ec10733ecbf9278ec706914c76b1e5b25cccebdadb7ade8f3066ae052"
+        }
+      ],
+      "platform_binary_digests": {
+        "node_modules/@typescript/typescript-darwin-arm64/lib/tsc": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2",
+        "node_modules/@esbuild/darwin-arm64/bin/esbuild": "10b6243df618d374bb2d5c9cfbe7052e1405f6aa4e53a6164f11a91b9f2e1384"
+      },
+      "install_mode": "Fresh component npm ci --install-links --engine-strict --no-audit --no-fund using retained immutable task cache. Packed local core includes reviewed dist/core and package metadata, no src tree. No global/root/workspace install.",
+      "lifecycle_script_observation": "npm11.19 warns esbuild postinstall not covered by allowScripts; it was not approved/run. Selected optional Go binary is present and esbuild compiled tests successfully. No lifecycle approval/config mutation.",
+      "bundled_package_metadata": [
+        {
+          "path": "node_modules/effect/ai-docs/package.json",
+          "name": "ai-docs",
+          "version": "0.0.0",
+          "package_sha256": "a275fea6e88f940e67764f6275bb32f3fab312ff8013d8f054eed397a631fbef"
+        },
+        {
+          "path": "node_modules/typescript/vendor/vscode-jsonrpc/package.json",
+          "name": "vscode-jsonrpc",
+          "version": "9.0.0",
+          "package_sha256": "85d5135a9ae9d7b7ef4b444711eaaa2c90d84c0c314722046e0126c55fe67479"
+        }
+      ]
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "apps/cli/package.json": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+        "apps/cli/package-lock.json": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+        "apps/cli/tsconfig.json": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+        "apps/cli/tsconfig.build.json": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+        "apps/cli/tsconfig.test.json": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+        "apps/cli/src/candidate-host.ts": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+        "apps/cli/tests/candidate-host.test.ts": "ec424cd4d5653b8c03400c70320770353afcecdd3251a14739479b75de74d88f",
+        "apps/cli/docs/typescript-candidate.md": "52fb658133c5841150b49d6a23a85ca36f378729f5bf79af7b704c7b0bc7d3a5",
+        "apps/cli/scripts/build-candidate.mjs": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+        "apps/cli/scripts/check-candidate.mjs": "3b3e1b1e43a12bae206d335d5a186d6672453067bd549b2a71a7ba1d471b771b"
+      },
+      "emitted_artifacts": {
+        "dist/candidate/candidate-host.d.ts": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+        "dist/candidate/candidate-host.js": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+        "dist/test-metafile.json": "522efe326cdeba5e8c2d8502586b9f480ac9ae9eb5ffeefa6c954c4087f3423d",
+        "dist/tests/candidate-host.test.js": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f"
+      },
+      "packed_core_artifact_digests": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+      },
+      "core_build_authority": {
+        "receipt": "docs/migration/effect-refactor/receipts/REGISTRY-READER.json",
+        "source_sha": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
+        "patch_digest": "110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+        "accepted_review": {
+          "status": "accepted",
+          "reviewer": "/root/donor_mac_review",
+          "fingerprint": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3+110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4"
+        },
+        "scope": "16 exact emitted core files/manifest match accepted build; prerequisite191 core tests retained, not rerun because no core inputs changed."
+      },
+      "physical_resolution": "Host effect/Effect and createRequire from both packed core public export entrypoints resolve same real file under apps/cli/node_modules/effect. Tests dynamically import that URL and require identical ESM namespace; CandidateSession constructors match across core/host exports. One physical Effect installation; packed core is not sibling symlink.",
+      "qualified_core_inputs": {
+        "authority_source_sha": "3b551faef158e1f0c0d675a72a72f8fe3e919bc3",
+        "authority_patch_digest": "110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4",
+        "derivation": "Historical tracked component tree at accepted source SHA plus exactly three accepted registry patch-file raw hashes; author used read-only Git to derive this map, never blessed current tree. Runtime guard uses explicit map with no Git. Exact root dist/node_modules/build directories excluded only; nested paths and new source/config inputs remain guarded.",
+        "map_sha256": "be0f02f3deb901d881d6557a41bd569b6ad598b5dcb383d4f2bef4270b549b01",
+        "files": {
+          ".node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "README.md": "27f9a30230a34c76df65a5268c371f5823a92e9bd110c243842cf83457dbc7c9",
+          "package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+          "scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+          "scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+          "src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+          "src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+          "src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+          "src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+          "src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+          "src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+          "src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+          "tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+          "tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+          "tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+          "tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+          "tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+          "tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+          "tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+          "tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+          "tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+          "tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+          "tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+          "tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+        }
+      }
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Locked candidate checks can import the same qualified portable source/build identity.",
+      "result": "passed",
+      "evidence": "Fresh exact-runtime locked install and check pass.16 installed core files/manifest match independently accepted core build; physical Effect realpath/ESM namespace/service constructor identity proven, plus actual temporary symlink/stale-build rejections. Test bundle keeps core/Effect external; no engine source copied. Explicit28-file current core source/config/script/test set/digest guard derives from accepted historical tree+exact registry patch; real disposable source edit/addition negatives fail with old dist retained."
+    },
+    {
+      "criterion": "Document explicit development invocation; existing Rust public launchers, installers, principals and releases remain authoritative.",
+      "result": "passed",
+      "evidence": "typescript-candidate.md documents exact component bootstrap, mandatory --install-links, qualified build prerequisite and opt-in fake smoke. Smoke emits readiness for two synthetic surfaces and acquired2/released2. No public bin, launcher, installer, signed identity, credential service/account, protocol, state or release changed."
+    },
+    {
+      "criterion": "No runtime Rust-backed add-on or hidden native toolchain enters this candidate seam.",
+      "result": "passed",
+      "evidence": "Exact allowlisted graph: core/Effect runtime; selected TypeScript/esbuild Go platform tooling and Node/undici types dev-only. All registry records retain integrity/URLs and exact compiler/bundler platform versions. Installed tree has no .node addon; only reviewed tsc/esbuild launcher symlinks, targeted to installed tools. Selected Go binary digests match accepted foundation; emitted JS builtin tests, no Node TS stripping/tsx/SWC/Vite/Rollup/Rust build."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "ci",
+        "--install-links",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "result": "passed",
+      "evidence": "Fresh component packed install exit0;8 installed packages; exact Node/npm engines enforced; no mutation of core/root/global dependencies. Elapsed1.566s."
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Strict source/test typechecks and ESM declaration/build;12 compiled tests pass,0 failures/cancellations/skips.16 qualified core files, one actual Effect namespace/service identity; four actual negative source/build filesystem identity cases and exact .bin launcher targets pass. Elapsed0.84s. Frozen28-file source/build input set+bytes match historical accepted tree/patch authority; unbuilt edit/addition reject without core rebuild."
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "candidate:smoke"
+      ],
+      "result": "passed",
+      "evidence": "Explicit fake-only smoke exit0; CLI/MCP ready, acquired2/released2. Elapsed0.099s."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "17 assigned-base sources/receipts/fixtures/locks/config inputs unchanged; frozen MCP catalog SHA31377cf8 retained; all16 installed core files match accepted qualification; two installed Go binary digests match foundation; sorted10-file patch/lock graph/artifact digests computed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check",
+        "--",
+        "apps/cli/package.json",
+        "apps/cli/package-lock.json",
+        "apps/cli/tsconfig.json",
+        "apps/cli/tsconfig.build.json",
+        "apps/cli/tsconfig.test.json",
+        "apps/cli/src/candidate-host.ts",
+        "apps/cli/tests/candidate-host.test.ts",
+        "apps/cli/docs/typescript-candidate.md",
+        "apps/cli/scripts/build-candidate.mjs",
+        "apps/cli/scripts/check-candidate.mjs"
+      ],
+      "result": "passed",
+      "evidence": "Exit0; no whitespace diagnostics for scoped candidate paths."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "PASS58 atomic tasks/86 families/16 choices; structural graph/pointer/state/evidence/claims validation only, no qualification closure."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "node",
+        "--input-type=module"
+      ],
+      "result": "passed",
+      "evidence": "Unchanged independent standard Deferred/Fiber reviewer mixed-cause probe against emitted host on pinned Node24: interruptedtrue/rawSecretInCausefalse. Both-surface fixed mixed cleanup-defect tests also have interrupt-only causes and no synthetic provider secret."
+    }
+  ],
+  "inspection_summary": "Read task/root/entrypoint/core-cli C11/F01/F06 plus accepted host/core/catalog/pin/registry receipts and public core exports. No nearer apps/cli AGENTS exists; root instructions apply. Kept independently locked app-local seam with same common portable operation/service: one inspectHost program wraps inspectCandidate, two thin development envelope functions map its result, common operation owns acquire/release. Safe typed failure outcomes and defect sanitization retain interruption semantics. npm file dependency is packed with install-links and checked against qualified build bytes, not accepted from version/path strings alone. Legacy native trust/principal/helper/installer/release authorities remain untouched. Independent review repaired unbuilt-source gap with explicit historical28-file source/build input pins. Inspected locked Effect4 OnFailure/catchCause and uninterruptibleMask behavior: interruptible catch handlers may be skipped under cancellation. A small outer uninterruptible mask restores common operation interruption mode, then reconstructs new interrupt-only reasons preserving numeric cancellation IDs while removing provider reasons and original annotations; acquisition/inspection/cleanup stay owned by unchanged common operation.",
+  "observations": [
+    {
+      "case_id": "packed-build-and-singleton",
+      "procedure": "Fresh locked packed install, compare16 core artifact bytes/manifest with accepted receipt, resolve Effect physically from host/core/host-interface export, dynamically import resolved URL and compare namespace/service constructors.",
+      "expected": "One packed qualified core, one physical Effect namespace and shared CandidateSession. Current28-file core source/build input tree must match accepted history+patch before build admission.",
+      "observed": "16 hashes match; no installed core src tree/sibling symlink; one Effect installation; namespace and both constructor identities equal. All28 fixed input hashes/file set match.",
+      "evidence": "scripts/check-candidate.mjs physical audit; tests/candidate-host.test.ts identity case; locked packed core record",
+      "result": "passed"
+    },
+    {
+      "case_id": "wrong-install-stale-build-and-launchers",
+      "procedure": "Audit actual temporary core symlink and copied stale index.js; validate installed .bin exactnames/real targets and all other package trees. Copy28 accepted source inputs into disposable tree; edit src/index.ts with old dist retained conceptually, then restore/add extra source file.",
+      "expected": "Symlink/stale build rejected; only reviewed tsc/esbuild launchers admitted. Edited source or source addition rejects even with unchanged qualified build.",
+      "observed": "Both negative audits rejected; temporary copies removed; exact two launchers match installed package targets; no other dependency symlink/addon accepted. Actual unbuilt-source edit and extra-source file audits reject; all temporary copies removed.",
+      "evidence": "scripts/check-candidate.mjs auditCore and launcher audit",
+      "result": "passed"
+    },
+    {
+      "case_id": "one-common-owner-and-failures",
+      "procedure": "Run CLI/MCP thin surfaces with fake CandidateSession, typed inspect/acquire failure, unexpected inspect/release defect and concurrent isolated Layers.",
+      "expected": "Portable common lifecycle only; content-free failure outcomes, no false ready/zero or provider payload.",
+      "observed": "Success acquired2/inspected2/released2; typed failures safe and releaseonce; unavailable acquisition stays unavailable; defect/release failures sanitized; concurrent ownership isolated.",
+      "evidence": "tests/candidate-host.test.ts common owner/failure/defect/concurrency cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "cancellation-cleanup-acknowledgment",
+      "procedure": "For each surface hold inspection behind Deferred, interrupt fiber, block asynchronous release behind acknowledgment, then acknowledge and interrupt again.",
+      "expected": "Interruption retained, cancellation cannot finish before cleanup acknowledgment, exactlyone release.",
+      "observed": "Before acknowledgment finishedfalse/released0; after acknowledgment interrupted exit/released1; second interruption causes no second release.",
+      "evidence": "tests/candidate-host.test.ts CLI/MCP interruption cases",
+      "result": "passed"
+    },
+    {
+      "case_id": "fake-opt-in-smoke",
+      "procedure": "Run npm run candidate:smoke against compiled host with explicit internally supplied fake Layer.",
+      "expected": "Both development surface readiness outcomes, acquired2/released2, no external capability invocation.",
+      "observed": "Exact synthetic JSON matched; no device/credential/transport/user-data/state operations in smoke implementation.",
+      "evidence": "src/candidate-host.ts smokeCandidate; candidate:smoke package script and test",
+      "result": "passed"
+    },
+    {
+      "case_id": "mixed-interruption-provider-defect",
+      "procedure": "For both candidate surfaces, interrupt deferred inspection, hold asynchronous release behind acknowledgment, then release once and die with fixed synthetic secret. Independently replay reviewer standard mixed-cause probe against emitted host.",
+      "expected": "Cancellation remains interrupt-only after acknowledged cleanup; no provider defect/annotation/secret retained in resulting cause.",
+      "observed": "Both gated cases pass: released1, interrupt-only cause, synthetic secret absent. Independent probe interruptedtrue/rawSecretInCausefalse.",
+      "evidence": "tests/candidate-host.test.ts CLI/MCP mixed interruption+cleanup defect cases; unchanged reviewer standard Deferred/Fiber probe procedure",
+      "result": "passed"
+    },
+    {
+      "case_id": "coordinator-independent-final-replay",
+      "procedure": "Independently reconstruct historical core source/patch pins, verify exact candidate patch and baseline inputs, run fresh scoped exact-runtime npmci/check/smoke, compare rebuilt own artifacts.",
+      "expected": "28 source inputs and16 emitted core artifacts remain qualified;12 lifecycle/identity tests, four actual filesystem rejection cases and fake-only smoke pass; mixed cleanup defect carries no raw provider reason.",
+      "observed": "All28 reconstructed pins and17 baseline inputs match;12 tests pass0fail/cancel/skip, one physical Effect and shared constructor;four identity/source/build negatives reject; smoke acquired2/released2;four own artifact bytes unchanged.",
+      "evidence": "coordinator_replay checks/log hashes and candidate source/test/check script; REGISTRY-READER accepted input/build authority",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Only exact Node24.21.0/npm11.19.0 darwin-arm64 portable synthetic host seam. Real CLI/MCP envelopes/exit codes/framing/concurrency clients, native/phone/health capabilities, network/transport/credentials/state and actual command/tool integrations remain unqualified.",
+    "Current core exports only . and ./host-interfaces. Catalog/normalizer/query/registry integrations remain future scoped exports/host adapter work; no duplicate engines or unqualified internal subpath imports introduced.",
+    "Fresh checks depend on the committed accepted REGISTRY-READER receipt and reproducible qualified core ignored build. Missing/stale/changed source/build authority fails closed; future core changes require current reviewed build evidence and scoped consumer integration. Local file dependency itself has no registry integrity field, so exact packed build hash audit is required.",
+    "Linux/Windows/signed installers, package/channel licensing/full runtime inventory, legacy OS principal/service/account continuity and F-Droid/billing/privacy exclusions remain F01/F06 qualification, not proven by this developer seam.",
+    "TypeScript/esbuild Go platform binaries allowed by accepted pins; npm esbuild install-script warning observed without lifecycle approval. No Rust/addon/helper invocation, native build, public launcher/install/release or user data changed.",
+    "Source/build identity map is deliberately frozen to the accepted28-file history+registry patch; new core inputs/builds require separately reviewed pin authority updates. No core source/build mutation or requalification performed by this repair."
+  ],
+  "remaining_qualification": [
+    "Admit actual thin CLI/MCP adapters that call existing common operations, preserving public command/tool/catalog envelopes and authorization/cancellation, with separately reviewed common exports as needed.",
+    "Extend consumer CI/path maps and qualification as candidate surfaces become actual consumers; retain existing Rust contexts/authorities until later complete integration and retirement gates.",
+    "Prove supported signed Node distribution and actual legacy credential principals/helpers on each target; complete channel dependency/licensing/privacy/exclusion and physical/external-client matrices. C11/F01/F06 and broader M01/M02/product qualification remain open."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "24d37c2ce5a76a4138e4780b95e29f840d679713+edbcfd44f085257cc0fea8b13b28760932d3fc229e7f57d57c26714b670b6306"
+  },
+  "coordinator_replay": {
+    "runtime": "Node24.21.0/npm11.19.0 darwin-arm64",
+    "checks": [
+      {
+        "label": "install",
+        "argv": [
+          "npm",
+          "ci",
+          "--install-links",
+          "--engine-strict",
+          "--no-audit",
+          "--no-fund"
+        ],
+        "exit": 0,
+        "seconds": 2.361773791,
+        "log": "/private/tmp/healthmd-cli-independent-final-install.log",
+        "sha256": "a42aa387df74f367952ea93faeb290ea97e5c04d0323cd4052c1a34e78a95bb4"
+      },
+      {
+        "label": "check",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ],
+        "exit": 0,
+        "seconds": 0.8885889580000002,
+        "log": "/private/tmp/healthmd-cli-independent-final-check.log",
+        "sha256": "d474ee457315621128c84d98eec4adc16c3a9de39a99408f17ea025a3849c0f3"
+      },
+      {
+        "label": "smoke",
+        "argv": [
+          "npm",
+          "run",
+          "candidate:smoke"
+        ],
+        "exit": 0,
+        "seconds": 0.15873020800000015,
+        "log": "/private/tmp/healthmd-cli-independent-final-smoke.log",
+        "sha256": "545986528383e6f067feca9cede908eef22ae17f208d5f41146275c1371cd860"
+      }
+    ],
+    "source_pin_derivation": "Root independently reconstructed all28 core input hashes from accepted REGISTRY-READER historical source plus exactly three accepted patch-file hashes, then verified current inputs. No Git dependency at candidate runtime.",
+    "hash_assertions": "Ten nonreceipt patch files;17 baseline inputs;28 reviewed core inputs;four freshly rebuilt own artifacts. All match current accepted authorities."
+  },
+  "independent_review_evidence": "Reviewer reconstructed28 historical source pins; verified10 patch,17 baseline,20 artifact and12 metadata/binary hashes; replayed12 emitted tests/checker and4filesystem negatives; independent nested src/dist addition and mixed-cause probes reject drift/sanitize raw reason. Public/native/CI/distribution qualification remains open."
+}

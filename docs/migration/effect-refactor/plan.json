@@ -3358,7 +3358,7 @@
         "Preserve missing history/precision/provenance, browser/input exclusions and the aggregate-first/open-S06 exception without re-auditing all source."
       ],
       "verification": [],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted immutable three donor inventories and reviewed receipts at source e9e9697a476c962c9df2762334b9623955f1a6ba: location51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f; Mac usage5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c; mobile usagebbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d. Reconcile their mapped outcomes/transfer requirements without re-auditing donor sources or importing code. Preserve corrected continuation-hour mirror loss, CSV outings/md+markdown parser support, identifier-vs-label missingness; exact source IDs/history/precision/retention/grants/queues/account and purpose boundaries. Q-DONOR-SOURCE/Q-DONOR-SUPPORT owner choices stay open; no native/data/service actions.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "source_only",
@@ -3370,8 +3370,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
       "reviewer_role": "independent personal/data reviewer",
       "priority": 30,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "e9e9697a476c962c9df2762334b9623955f1a6ba",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/inventories/donors.json",
+          "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -4241,7 +4250,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 61,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
@@ -4266,14 +4275,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "24d37c2ce5a76a4138e4780b95e29f840d679713+edbcfd44f085257cc0fea8b13b28760932d3fc229e7f57d57c26714b670b6306"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json"
+        ]
       }
     },
     {
@@ -6649,7 +6660,8 @@
         "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift",
         "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh",
         "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
-        "apps/apple/effect-host-candidates/ios/babel.config.cjs"
+        "apps/apple/effect-host-candidates/ios/babel.config.cjs",
+        "apps/apple/effect-host-candidates/ios/ios/PrivacyInfo.xcprivacy"
       ],
       "shared_resources": [
         "ios-candidate-project",
@@ -6722,7 +6734,7 @@
         "docs/migration/effect-refactor/receipts/UI-FOUNDATION.json#/inputs/locks_and_runtime"
       ],
       "interface_contract_ref": "#/candidate_interface",
-      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/0/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes.",
+      "fixture_inputs": "Exact fixture/source/interface inputs are pinned in docs/migration/effect-refactor/expansions/split-native-hosts.json#/children/0/fixture_inputs and #/fixture_catalog, with source_inputs and candidate_interface. Refer to preserved fixture_input_map in this task. Existing cases are source-pinned; introduced native probe fixtures/checks remain unrun until this child executes. Scope amendment: CocoaPods RN post_install-generated candidate ios/PrivacyInfo.xcprivacy retained for actual SDK privacy graph review; no production manifest or policy change. Hash and audit its source/category declarations in receipt.",
       "candidate_tuple": {
         "react": "19.2.3",
         "react-native": "0.87.1",
@@ -6845,7 +6857,8 @@
           "apps/apple/effect-host-candidates/ios/ios/HostProbeTests.swift",
           "apps/apple/effect-host-candidates/ios/scripts/run-release-probe.sh",
           "docs/migration/effect-refactor/receipts/NATIVE-IOS-RELEASE-PROBE.json",
-          "apps/apple/effect-host-candidates/ios/babel.config.cjs"
+          "apps/apple/effect-host-candidates/ios/babel.config.cjs",
+          "apps/apple/effect-host-candidates/ios/ios/PrivacyInfo.xcprivacy"
         ],
         "reserved_resources": [
           "ios-candidate-project",

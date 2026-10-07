@@ -1,0 +1,23 @@
+# Opt-in TypeScript host candidate
+
+This private development seam calls the shared portable `inspectCandidate` operation through `CandidateSession`. Thin CLI and MCP candidate functions share its acquisition, inspection and scoped cleanup. Their development envelopes are synthetic; current Rust commands, MCP tools, public launchers, installers, credential principals and releases remain authoritative.
+
+Use exactly Node 24.21.0 and npm 11.19.0. Start with the committed portable core and its accepted build receipt. If its ignored build is absent, run its documented component checks first, sequentially with other core builds:
+
+```sh
+cd packages/healthmd-core-ts
+npm ci --engine-strict --no-audit --no-fund
+npm run check
+cd ../../apps/cli
+npm ci --install-links --engine-strict --no-audit --no-fund
+npm run check
+npm run candidate:smoke
+```
+
+`--install-links` is mandatory: npm packs the local core's declared `dist/core` files into this component's installation. A sibling symlink can resolve Effect through the sibling's `node_modules`, yielding a different singleton. Default install behavior is therefore not a supported bootstrap. The check fails on a symlinked core, stale/missing qualified core build bytes, edited or added unbuilt core source/config/test inputs, changed package identity, unreviewed dependencies, duplicate Effect or differing physical resolution. A changed common core requires new qualified build evidence and scoped adapter integration, rather than bypassing these checks.
+
+The scoped lock records Effect 4.0.1, TypeScript 7.0.2, esbuild 0.28.2, Node types 24.19.1 and undici types 7.24.6. Build uses the selected Go compiler/bundler tooling; tests execute recursively discovered emitted ESM JavaScript with Node's test runner. Effect and the core remain external imports, so neither is bundled into test copies. The test seam verifies namespace and service constructor identity, lifecycle, failures, concurrent ownership and interruption with asynchronous cleanup acknowledgment, including interrupted cleanup defects. The host reconstructs interrupt-only causes with their cancellation IDs, stripping provider reasons and original annotations; synthetic provider errors do not escape through mixed causes. The check contains an explicit 28-file input digest map derived from accepted core source revision `3b551faef158e1f0c0d675a72a72f8fe3e919bc3` plus exactly the three accepted REGISTRY-READER patch files (`110aa7e30055cb45fee8be13bd29a19f8f6872c01909fdc4a057e8f01ce34ce4`). It verifies the complete source/config/script/test file set as well as emitted bytes, so an unbuilt source edit cannot use old qualified output. Runtime checks do not require Git. Only exact core component-root `dist`, `node_modules` and `build` output directories are excluded; new source/config files elsewhere fail closed. Check scripts exercise real temporary source edits/additions, symlink and stale-build rejections and remove those copies afterward.
+
+The smoke command is explicitly fake-only. It prints ready outcomes for both candidate surfaces and two acquisitions/two releases. No listener, phone, health data, credential access, transport, filesystem discovery or retained user state is involved. Importing the host module does not execute the smoke.
+
+Future catalog/normalization/query/registry adapters must consume the existing common portable owners through separately reviewed exports. This seam does not implement those operations, public CLI exit/framing behavior, MCP wire contracts, real host capabilities, signed Node distribution, legacy OS principal continuity, channel admission or Rust retirement. Remove these candidate files and ignored `apps/cli/dist`/`node_modules` to roll back; current product launchers and data remain unchanged.

@@ -1,0 +1,19 @@
+{
+  "name": "@healthmd/cli-candidate",
+  "version": "0.0.0-candidate.1",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.21.0", "npm": "11.19.0" },
+  "packageManager": "npm@11.19.0",
+  "files": ["dist/candidate"],
+  "scripts": {
+    "typecheck": "tsc --project tsconfig.json",
+    "build": "node scripts/build-candidate.mjs",
+    "test": "node scripts/check-candidate.mjs --tests-only",
+    "check": "node scripts/check-candidate.mjs",
+    "candidate:smoke": "node --input-type=module -e 'import { smokeCandidate } from \"./dist/candidate/candidate-host.js\"; console.log(JSON.stringify(await smokeCandidate()))'"
+  },
+  "dependencies": { "@healthmd/core-ts": "file:../../packages/healthmd-core-ts", "effect": "4.0.1" },
+  "devDependencies": { "typescript": "7.0.2", "esbuild": "0.28.2", "@types/node": "24.19.1" },
+  "overrides": { "undici-types": "7.24.6" }
+}
