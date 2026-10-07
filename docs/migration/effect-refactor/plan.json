@@ -9030,9 +9030,16 @@
       "allowed_paths": [
         "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
         "apps/android/effect-host-candidate/app/build.gradle.kts",
-        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
-        "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
-        "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeApplication.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+        "apps/android/effect-host-candidate/app/src/androidTestColdPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+        "apps/android/effect-host-candidate/app/proguard-cold-worker.pro",
+        "apps/android/effect-host-candidate/app/gradle.lockfile",
+        "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+        "apps/android/effect-host-candidate/tooling/native/complete-provenance.json",
+        "apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
         "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
         "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
         "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
@@ -9187,9 +9194,16 @@
         "write_paths": [
           "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
           "apps/android/effect-host-candidate/app/build.gradle.kts",
-          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
-          "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
-          "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+          "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+          "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeApplication.kt",
+          "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt",
+          "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+          "apps/android/effect-host-candidate/app/src/androidTestColdPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+          "apps/android/effect-host-candidate/app/proguard-cold-worker.pro",
+          "apps/android/effect-host-candidate/app/gradle.lockfile",
+          "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+          "apps/android/effect-host-candidate/tooling/native/complete-provenance.json",
+          "apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
           "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
           "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
           "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
@@ -9245,7 +9259,86 @@
         "canonical_card_sha256": "b54d76f2532d62d7adb5f35586f7ce5f67fb96d1cdb2f22ecf2aa70ef54f3f34",
         "scope": "Stage1 complete closed private Worker/interface and independent five-case literal fixture only before code; actual cold WorkManager OS scheduling semantics and current Play host preserved. No native process, build/install/device/common-output read until independent freeze and separately scoped clearance. Read nearest AGENTS/native-ui/accepted32source Play receipt/fixture and exact source inputs; reconcile unsupported paths/API/resource seams before edits."
       },
-      "source_reconciliation": "Initial phase ONLY fixtures/cold-worker-v1.json and task receipt, with full closed TypeScript/Kotlin/private WorkData/result/scheduling/cancel/cleanup and source/graph proposition frozen before implementation. Five independent IDs from accepted native packet. Existing accepted ten Play cases/source/bridge remain immutable unless explicit additive seam approved. No direct Worker.doWork/test driver substitute for actual cold OS WorkManager execution, no mounted activity/React, no production IDs/security/state/data. Read only committed source current/Git pins; common core/CLI build held by IOS-USAGE-ELIGIBILITY, so no common generated output reads/bundling/install/native execution. Later native slot is reserved; native checks need root-specific input/graph/fixture review and no common builder conflict. Technical choices resolve supported API/source before code; no speculative dependency or unscoped path changes."
+      "source_reconciliation": "Initial phase ONLY fixtures/cold-worker-v1.json and task receipt, with full closed TypeScript/Kotlin/private WorkData/result/scheduling/cancel/cleanup and source/graph proposition frozen before implementation. Five independent IDs from accepted native packet. Existing accepted ten Play cases/source/bridge remain immutable unless explicit additive seam approved. No direct Worker.doWork/test driver substitute for actual cold OS WorkManager execution, no mounted activity/React, no production IDs/security/state/data. Read only committed source current/Git pins; common core/CLI build held by IOS-USAGE-ELIGIBILITY, so no common generated output reads/bundling/install/native execution. Later native slot is reserved; native checks need root-specific input/graph/fixture review and no common builder conflict. Technical choices resolve supported API/source before code; no speculative dependency or unscoped path changes.",
+      "scope_amendment_history": [
+        {
+          "by": "/root",
+          "original_allowed_paths": [
+            "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+            "apps/android/effect-host-candidate/app/build.gradle.kts",
+            "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+            "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+            "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+            "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+            "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+            "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+          ],
+          "replacement_allowed_paths": [
+            "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+            "apps/android/effect-host-candidate/app/build.gradle.kts",
+            "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+            "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeApplication.kt",
+            "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt",
+            "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+            "apps/android/effect-host-candidate/app/src/androidTestColdPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+            "apps/android/effect-host-candidate/app/proguard-cold-worker.pro",
+            "apps/android/effect-host-candidate/app/gradle.lockfile",
+            "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+            "apps/android/effect-host-candidate/tooling/native/complete-provenance.json",
+            "apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
+            "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+            "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+            "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+          ],
+          "reason": "Add isolatedcoldPlay source/manifest/application/test/R8/dependencygraph and separatebuilder. Keep existingdefaultplay variant/mainApplication/mainManifest/oldNativeProbeModule/oldassets/tenfixtures unchanged. Complete dependency/runtime graph still separately reviewed before native code or execution.",
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+          "fixture_sha256": "f2a67c17977e3eb615c581bccb73a817d417a57f272ede30a1d7ebb38db00bd2"
+        }
+      ],
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+f2a67c17977e3eb615c581bccb73a817d417a57f272ede30a1d7ebb38db00bd2",
+        "fixture_raw_sha256": "f2a67c17977e3eb615c581bccb73a817d417a57f272ede30a1d7ebb38db00bd2",
+        "evidence": {
+          "path": "/private/tmp/healthmd-cold-worker-root-stage1-review.json",
+          "sha256": "72024fdab7e1b523dd9ed0a82974a652ff652303ba4796e8d951318fb6b53c55",
+          "current_git_pins": 43,
+          "historical_git_pins": 10,
+          "main_cases": 5,
+          "admission_negatives": 14,
+          "supplemental_cases": 8
+        },
+        "scope": "Complete closed private rawframe/opaqueissuer/nativeACK/control/samebootexperiment and isolated15pathproposition only. Dependencygraph/actualOSschedule/DUMPshellprincipal/cleanupACK/nativeproof unqualified."
+      },
+      "dependency_graph_clearance": {
+        "status": "approved_bounded_graph_only",
+        "by": "/root",
+        "write_paths": [
+          "apps/android/effect-host-candidate/app/build.gradle.kts",
+          "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+          "apps/android/effect-host-candidate/app/gradle.lockfile",
+          "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+          "apps/android/effect-host-candidate/tooling/native/complete-provenance.json"
+        ],
+        "permission": "Add onlycoldPlay variant/coldPlayImplementation proposedWorkManager2.10.0/separateauditColdWorkerArtifacts plus cold-only manifest. Bounded offlineGradle graph/lock/checksum/license and mergedmanifest audit allowed; use existingGradleuserhome/JDK17/SDK36 with no additionalcachecopies. Readonly olddefaultPlay resolved artifact authority, preserveoldresolved-artifacts.tsv and oldpackage/Node/RN/Hermes inputs; successorgraphnotautomaticadmission. Actual graph command/log/source/upstreamchecksums/licenses/runtimeABI/API/manifest inputs frozen for independent review before worker/application/bridge/JS/bundle/nativecompile/device code execution.",
+        "max_graph_command_seconds": 300,
+        "max_combined_graph_output_bytes": 16777216,
+        "actual_runtime": false,
+        "native_compile": false,
+        "bundle_common_inputs": false,
+        "network_fetch": "Offline first; report exactmissing artifacts before any narrow officialregistry acquisition. No broad package/dependency refresh or permissions/signing/deploy/userdata operations."
+      },
+      "dependency_acquisition_clearance": {
+        "status": "approved_narrow_official_graph_acquisition",
+        "by": "/root",
+        "trigger": "Actual offline coldPlayDebugCompileClasspath missing androidx.work:work-runtime:2.10.0, bounded resolve2 exit1; existing locks/default audit/bundle unchanged.",
+        "initial_coordinate": "androidx.work:work-runtime:2.10.0",
+        "permission": "Retrieve exact initial official Google Maven POM/module/AAR and sources/license metadata, then only missing exact transitive coordinates proven by this official POM/module graph from Google Maven or Maven Central. Record every coordinate/version/URL/raw checksum/size and actual bounded command. Existing cache and exact five graph write paths only; 300s/16MiB graph-only limits remain. No broad dependency refresh, native compile, source/bundle/device/user actions, production dependency admission. If resolution changes a default Play coordinate/version/artifact, stop and report before rewriting that historical authority. Freeze complete default/cold comparison, lock/checksum/license/source/manifest for independent review before runtime implementation.",
+        "official_release_reference": "https://developer.android.com/jetpack/androidx/releases/work#2.10.0",
+        "checked_at": "2026-10-07",
+        "release_note_observation": "2.10.0 released 2024-10-30, compiled SDK35; newer2.10.5 and2.12.0 exist. This fixed narrow nonnetwork/nonforeground private probe pin is not a production recommendation/version admission; later shipping graph requires separate current maintenance review."
+      }
     },
     {
       "id": "CODEC-SEMANTIC-INPUT",
@@ -18772,7 +18865,7 @@
       "stream": "personal_data",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/android_release_host",
         "base_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
@@ -19351,13 +19444,13 @@
         {
           "cwd": "packages/healthmd-core-ts",
           "argv": [
-            "npm",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
             "run",
             "check"
           ],
           "availability": "existing",
-          "executed_during_planning": false,
-          "expected": "Pinned Node24.21.0/npm11.19.0 component emittedtests/identity/portable guards only after interface freeze and exclusive builder claim."
+          "purpose": "Exact physical pinned Node/npm argv used for final repaired592-test and19-boundary check; logical npm run check retained in previous card and receipts."
         }
       ],
       "consumers": "Future common Personal UI/query/export/CLI/MCP operations; separate Apple and Android producer channels retain production authority. No browser/input or cloud/commerce/service wiring adopted.",
@@ -19367,14 +19460,20 @@
       "rollback": "Revert private candidate files; retain donor readers/history and all current native/Rust/public authority.",
       "deletion_gate": "No source adoption, production promotion, retained-state deletion or family retirement.",
       "qualification": {
-        "status": "pending",
+        "status": "passed",
         "proof_class": "portable_synthetic",
-        "receipts": []
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json"
+        ]
       },
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+bf5bd96a34f1938fccd10d39667a6de3f518bdc7a6343ade79f9b429cf8bf4ea",
+        "evidence": {
+          "path": "/private/tmp/healthmd-ios-eligibility-root-independent-recheck.json",
+          "sha256": "cd220e73c92b9789a8d8c6a6f5c03fe952fe28cb4372fe5db79e1458f5fe28ae"
+        }
       },
       "blocker": null,
       "priority": 330,
@@ -19422,6 +19521,36 @@
         "permission": "Implement private gate and independent harness against frozen154 literals; exclusive core npm run check with pinned Node24 and installed dependencies allowed. No dependency/lock/package/index/export/cohort/CLI/native/data/API/profile/admission changes. Record actual physical cwd+argv/log digests including failures. Frozen original fixtures must not change to match implementation. Final source/test/evidence needs independent reviewer before done.",
         "native_execution": false,
         "common_admission": false
+      },
+      "independent_review_history": [
+        {
+          "status": "changes_requested",
+          "reviewer": "/root/personal_codecs",
+          "fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+214b59c422be7693868e923f1d13cd5a21004f717ee6cbc12c7220f6e4988761",
+          "finding": "Original Scope can close through trusted callback reentry; gate still allocates, publishes alreadyclosed handoff or asserts success. Initial lifetime sentinel must precede trusted work and recheck after callbacks before authority/allocation/publication/assert success.",
+          "evidence": {
+            "path": "/private/tmp/healthmd-ios-eligibility-independent-personal-review.json",
+            "sha256": "21029fdbb91d60e4ab943cc367cbea87d61b9c56e5aa1f04ec950aed47cc60ec"
+          }
+        }
+      ],
+      "scope_reentry_repair_clearance": {
+        "status": "approved",
+        "by": "/root",
+        "source_paths": [
+          "packages/healthmd-core-ts/src/usage-mobile/ios-eligibility.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility.test.ts",
+          "packages/healthmd-core-ts/tests/usage-mobile-ios-eligibility-vectors.ts",
+          "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json"
+        ],
+        "original154_vector_raw_sha256": "c8dcbaa0bec3ef32eb603aa85eb265bc7a715bbd70782bedfda0bb78c65f456b",
+        "supplemental_literal_count": 6,
+        "supplemental_proposal": {
+          "path": "/private/tmp/healthmd-ios-eligibility-scope-reentry-literal-proposal.json",
+          "sha256": "0d06575992caf8c15f14dec56225743b7f80a632c635c943357a4507b14ac456"
+        },
+        "permission": "Repair Scope lifetime within same private module/test/receipt. Embed or preserve exact independent six literals in test evidence; original154 vector bytes unchanged. Run bounded private core check using pinned Node/npm only; no CLI/native/install/dependency/cohort/public admission. Preserve prior586 success and failed review/probe and any actual failed repair checks. New fullpatch needs independent review before done.",
+        "expected": "alreadyclosed Scope zero host/allocation; sourcecallback closure skips current and downstream work; currentcallback closure prevents allocation/publication/assertsuccess; exactonce owned releaseACK and owned_handoff_closed, no late callback."
       }
     },
     {
@@ -22506,8 +22635,21 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/surfaces/discovery-normalizer.ts",
+          "apps/cli/tests/surfaces/discovery-normalizer.test.ts",
+          "apps/cli/tests/surfaces/discovery-normalizer-vectors.ts",
+          "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
+        ],
+        "reserved_resources": [
+          "private-discovery-normalizer-interface"
+        ]
+      },
       "prerequisites": [
         "BASE-CLI",
         "OP-CATALOG"
@@ -22554,8 +22696,6 @@
         "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json"
       ],
       "shared_resources": [
-        "cli-candidate-build",
-        "cli-candidate-qualified-core-inputs",
         "private-discovery-normalizer-interface"
       ],
       "target": {
@@ -22848,6 +22988,58 @@
         "child_pointer": "#/children/0",
         "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
         "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      },
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+        "canonical_card_sha256": "7bc4960e735984d2976da1719b50c3b016fdf8d58760585a7ac5136f97b71f3d",
+        "scope": "Independently reviewed surface packet a515912 child0; source-only full typed input/catalog/result and independent exact guidance literals before code. Preserve corrected local unknown query discovery exit0/recognizedfalse. Only private localdiscovery adapter, no newpublic commands/normalizers/catalog changes or native/sharedoperation duplication."
+      },
+      "source_reconciliation": "Stage1 ONLY tests/surfaces/discovery-normalizer-vectors.ts and own partial receipt; full closed type/interface/exact source-derived catalog bytes and independent literal stimuli before source/test/build. Read current/Git immutable source/inventories/contracts/accepted OP-CATALOG and CORE-COHORT-PERSONAL-SLICES receipt; no mutable common generated outputs/node_modules/dist/install/npm/native/device. IOS-USAGE-ELIGIBILITY owns core component builder/new unadmitted43-input successor, so no CLI check/qualified core/common reads until separately accepted exact cohort refresh and scoped build clearance. ExistingHealth14+featureHTTP/21full13readonly distinctfromdonor40. No production entrypoints/package/index/lock/source/profile/wire/schema/guard/cohort changes; CLI/MCP common operation soleowner. Exact source omissions/leniency/numerics/guidance behavior before implementation; preservefuture fullparity/parser/serializer/native/evaluator/state/client/distribution/rollback/retirement gates.",
+      "resource_release_history": [
+        {
+          "resources": [
+            "cli-candidate-build",
+            "cli-candidate-qualified-core-inputs"
+          ],
+          "reason": "Source-only Stage1 discovery fixture cannot read or mutate qualified core/CLI outputs; release idle builder/input leases so the mandatory accepted eligibility successor can rebind before CLI implementation/build. Reacquire both resources after that prerequisite is accepted.",
+          "source_revision": "aa563e6de291e7da746268e4fddef4296d70e35d",
+          "phase": "stage1_only"
+        }
+      ],
+      "implementation_build_gate": {
+        "requires_accepted_task": "CORE-COHORT-IOS-ELIGIBILITY",
+        "reacquire_resources": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ],
+        "stage1_source_only_allowed": true,
+        "build_permitted": false
+      },
+      "fixture_review_before_implementation": {
+        "status": "accepted",
+        "reviewer": "/root/android_release_host",
+        "fingerprint": "aa563e6de291e7da746268e4fddef4296d70e35d+78ee801186742725c3c6d8a6d726e8f54561d0d244a0230c93c92da3d5d6708e",
+        "vector_raw_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+        "literal_count": 64,
+        "evidence": {
+          "path": "/private/tmp/healthmd-cli-discovery-normalizer-stage1-independent-review.json",
+          "sha256": "82680bf60e042c6ff9f01f880a235b9cae68c93c407fd57a88d83bae36b16f2e",
+          "current_git_pins": 47,
+          "symbol_test_line_pins": 15,
+          "inventory_pointers": 3,
+          "minimum_packet_cases": 6
+        },
+        "scope": "Private local discovery decisions and owned trusted parser/issuer boundary only; fake parser/closed private decision bytes do not qualify complete public clap/TS parser or public stdout/json/schema/human rendering."
+      },
+      "implementation_clearance": {
+        "status": "approved_source_only",
+        "by": "/root",
+        "frozen_vector_sha256": "3f109680f9a0cb03e10226815f7c583e7b1f3826ae5258149572aac3fa9d850b",
+        "permission": "After reviewer completes eligibility supplemental findings, implement exact private source/test against frozen64 literals with no frozen expectation edits. No builds/npm/typecheck/install/common outputs/CLIguard/cohort/native until accepted CORE-COHORT-IOS-ELIGIBILITY and explicit builder/input lease reacquisition. Record partial source checkpoint then await approved emitted check; public launchers/parser/wire remain unchanged.",
+        "build_permitted": false,
+        "requires_accepted_task": "CORE-COHORT-IOS-ELIGIBILITY"
       }
     },
     {
@@ -24590,6 +24782,119 @@
         "child_pointer": "#/children/5",
         "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
         "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      }
+    },
+    {
+      "stream": "core_cli",
+      "kind": "implementation",
+      "coverage": [
+        "C01",
+        "C11"
+      ],
+      "risk_ids": [],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "reviewer_role": "independent portable build and core provenance reviewer",
+      "rollback": "Restore prior committed34-input/20-output personal guard/cohort and packed CLI candidate together. New private location/combined modules remain independently revertible; no public launchers/user state/data mutation.",
+      "deletion_gate": "No production promotion, source/profile admission, Rust/reference/fixture/state deletion or family retirement.",
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "purpose": "Exact pinned toolchain argv actually executed; original logical npm command and offline/cache choices retained in receipt."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+            "ci",
+            "--offline",
+            "--cache",
+            "/private/tmp/healthmd-effect-npm-cache",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing",
+          "purpose": "Exact pinned toolchain argv actually executed; original logical npm command and offline/cache choices retained in receipt."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/opt/homebrew/lib/node_modules/npm/bin/npm-cli.js",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "purpose": "Exact pinned toolchain argv actually executed; original logical npm command and offline/cache choices retained in receipt."
+        }
+      ],
+      "id": "CORE-COHORT-IOS-ELIGIBILITY",
+      "title": "Bind the private iOS eligibility core cohort for CLI and MCP",
+      "phase": "M02",
+      "outcome": "Independently rebind the complete immutable core source/packed artifact authority with only the accepted private eligibility delta; keep CLI and MCP on the same exact Effect build.",
+      "proof_class": "portable_synthetic",
+      "prerequisites": [
+        "CORE-COHORT-PERSONAL-SLICES",
+        "IOS-USAGE-ELIGIBILITY"
+      ],
+      "required_decisions": [],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
+      ],
+      "acceptance": [
+        "Eligibility implementation, frozen154 literals and source/test/artifact receipt independently accepted and committed before dispatch. Freeze complete exact assigned Git/current source/output/runtime/lock/receipt sets and obtain independent review BEFORE guard/docs edits or build/install. No discovered file set automatically authorizes code.",
+        "Retain all40 old personal-slice source inputs and24 exact source/packed module outputs plus every historical cohort/receipt byte. Extend only usage-mobile/ios-eligibility.ts, its exact frozen vector and actual test, and corresponding emitted module/declaration outputs. Expected43inputs/26outputs must match actual committed source and built artifacts; unexpected changes remain rejected.",
+        "Hard-pin successor cohort digest and accepted eligibility source+patch+independent review+raw receipt, preserving previous authority. Keep one physical Effect, exact Node/runtime/locks/package/public exports/no-Rust checks and all63 existing actual disposable-filesystem negative tests. Add missing/edited/symlinked each introduced input, missing/stale/symlinked each introduced output, extra output, absent/tampered successor cohort, and absent/tampered/unreviewed eligibility receipt cases; all exercised on actual bounded filesystem fixtures.",
+        "No own refresh receipt reverse-pin, immutable previous cohort/receipt edits, automatic broadening, package/index/exports/dependency/lock, source semantics, native/API/profile/source-purpose/public authority admission. Candidate handoff stays metadata-only, native/export unqualified.",
+        "After independent complete authority review, exclusively run core check, exact offline CLI install-links refresh and CLI/MCP check sequentially. Record actual physical cwd+argv/log/source/packed/output/guard/negative test hashes and first failures. New CLI discovery vectors/source are separate scoped future inputs; no other core writer/build/install/native bundle until this integration freezes."
+      ],
+      "fixture_inputs": "Exact accepted IOS-USAGE-ELIGIBILITY receipt/frozen154 vectors/three source files and immutable CORE-COHORT-PERSONAL-SLICES40/24 source authority; full successor map fixed independently before any guard edit.",
+      "consumers": "Portable shared Effect core and packed CLI/MCP candidate only; same functions/one Effect. Current Rust/native/public/state/source/profile/SDK/client/distribution/retirement authorities preserved.",
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private iOS eligibility successor cohort only"
+      },
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+      "priority": 65,
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
       }
     }
   ]
