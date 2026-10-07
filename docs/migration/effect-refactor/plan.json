@@ -5793,7 +5793,12 @@
       ],
       "read_required": [
         "AGENTS.md",
-        "docs/migration/effect-refactor/core-cli.md"
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json"
       ],
       "allowed_paths": [
         "docs/migration/effect-refactor/expansions/split-codecs.json",
@@ -5819,20 +5824,57 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
+      "status": "done",
       "claim": null,
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+        ]
       },
-      "max_children": 6
+      "max_children": 6,
+      "source_reconciliation": "Source-only packet at exact current19c22c794 after accepted43/26cohort and CLI discovery. Select at most6 concrete codec/build children for exact shared JSON value numeric-class parsing, canonical serializer and candidate package/identity admission needed by CLI/MCP/common consumers; current accepted exact-json-numbers implementation remains immutable, no duplicate finite-f64/i64/u64 renderer. Existing package/index does not export scalar serializer; no guessed/private import bypass. Reconcile actual current/Git contracts/source/locks/fixtures and acceptednumeric evidence before child path/dependency/checks. Full typed lossless ports and sourceprofile serde duplicate/unknown/numeric/negativezero/string key/UTF8/escaping/order/floatparser semantics must be exact; ordinaryJSON.parse/JSON.stringify is not retained-source parity. Link active MCP Stage1 abstract codec ports but do not alter its vector/source or import its current unreviewed fixture as authority. Every introduced literal expected independently frozen/reviewed before childimplementation, existingfixturesneverregenerated. Separate package/export changes, immutable complete source/packed cohort successor and client admission with independently reviewed exact graph before execution; no self-refresh. No code/test/build/install/npm/common generated output/native/device/production/plan/Git writes in this planning task. Complete remaining wire/schema/profile/codec/generator/consumer/sourcepurpose/public parser/tool/human/TOML/PNG/host/signed/distribution/rollout/retirement scope needs concrete owner/packet/trigger; this packet not familydone.",
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "canonical_card_sha256": "fd9702b91cd79d3ea084c4897448608b208280a7173d43244ff76ea3e53c1e95",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-split-codecs-preclaim-card.json",
+        "scope": "At most6 source-only exact codec/package/cohort child cards. Reuse accepted scalar renderer; complete source/byte/numeric/ownership contracts and source-derived independent fixtures before code; no builds/native/public or broad selfqualification."
+      },
+      "independent_packet_review_history": [
+        {
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+          "patch_digest": "27530fe87a6862515a75ac10d2b543703f062621c9a8bd82128d18000777587a",
+          "reviewer": "/root/donor_mac_review",
+          "result": "revision_required",
+          "report": "/private/tmp/healthmd-split-codecs-independent-review.json",
+          "report_sha256": "9346ede85552c415d1255544d11e6c2f4f8397af6311c18c1119bc135ac95ef3",
+          "finding": "Binding child64-byte ID limit contradicts retained source128 decoded-string and canonicalencoded UTF8 limit; source contract correction required before planning acceptance. Parser reader captured-original factory seam must freeze in parser Stage1, already carded."
+        }
+      ],
+      "revision_clearance": {
+        "status": "approved_source_only_packet_receipt_revision",
+        "scope": [
+          "docs/migration/effect-refactor/expansions/split-codecs.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+        ],
+        "required": "Preserve rejected freeze/report and exact19c22source; correct ID limit128 and stale advisory MCP136 count; make reader capture obligation explicit within existing parserStage1. No source/test/build/package/lock/generated/native/plan/Git actions. Revised packet independently re-reviewed before acceptance."
+      },
+      "accepted_packet": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "patch_digest": "c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "scope": "six planning children only; no C01/C02/C03/K01/F05 full family admission"
+      }
     },
     {
       "id": "SPLIT-SEMANTICS",
@@ -9377,6 +9419,41 @@
         "fixture_sha256": "f2a67c17977e3eb615c581bccb73a817d417a57f272ede30a1d7ebb38db00bd2",
         "accepted_graph_patch_digest": "4151c6b49e7b5e7fd43fe1e70112a7739d185a73f9b340b4a605e08d5384dcec",
         "accepted_provenance_sha256": "3f4699761a5a0361e1fae6066f9e861376c387ee87638e409b7a46ad90b18d52"
+      },
+      "independent_source_review_history": [
+        {
+          "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+          "patch_digest": "5498f7e41a0de3fc6453499cef796d3b6f95c500fec10764bd8e0ec525309f86",
+          "reviewer": "/root/personal_codecs",
+          "result": "changes_requested_source_only",
+          "report": "/private/tmp/healthmd-android-cold-personal-source-review.json",
+          "report_sha256": "0a9ddc84f38971b6d5c11ce041c5e27d4b4f16543e0bd2a103cfc88e0a1befdd",
+          "finding_ids": [
+            "COLD-SUPPLEMENTAL-NONCE-CODE",
+            "COLD-SUPPLEMENTAL-OWNERSHIP-CODE",
+            "COLD-METRO-PREPEND-PINS",
+            "COLD-OVERFLOW-EVIDENCE",
+            "COLD-SUPERVISOR-UTF8-CAP"
+          ],
+          "qualification_limits": [
+            "All five supervisor faults unexecuted; require actual parent/child handler readiness observation for TERM-ignore expectations.",
+            "Fresh PID alone excludes setup/directworker but does not attribute SystemJobService vs GreedyScheduler; actual bounded job/WorkUUID ingress attribution required before stronger scheduler proof.",
+            "No native artifacts/builds/ABI/R8/SDK/runtime/device/permission/native ACK/process-death/durable production proof."
+          ]
+        }
+      ],
+      "source_revision_clearance": {
+        "status": "approved_source_only_repair",
+        "scope": "Existing15 exact paths; frozen f2a67c fixture immutable; preserve5498 source/raw report/rejected receipt.",
+        "required": "Resolve five independent findings against fixed literals; meaningful supplemental ownership/control/failed-release tests; complete physical+exactvirtual Metro prepend provenance; retain failed command evidence before assertions; strict bounded decoded UTF8 with independent supplemental literals frozen before repair. Observe TERM-handler readiness in actual fault evidence, no timing success inference. Re-freeze source/provenance/receipt for independent pre-execution review.",
+        "not_authorized": [
+          "script or supervisor execution",
+          "typecheck/compiler/build/bundle/install",
+          "native/device/ADB/permissions/OS runtime",
+          "common generated-output reads",
+          "public/store/source/privacy/durable promotion",
+          "plan/Git writes"
+        ]
       }
     },
     {
@@ -23865,6 +23942,36 @@
         ],
         "stage1_source_only_allowed": true,
         "build_permitted": false
+      },
+      "independent_stage1_review_history": [
+        {
+          "source_revision": "ff72e1af486d1ace8106281abbe34b3dd3e21e60",
+          "patch_digest": "1901a41f143def03ceeb6ac0295c5d70100ee16c3c6bc5972a7feb131a29a052",
+          "reviewer": "/root",
+          "result": "revision_required",
+          "report": "/private/tmp/healthmd-mcp-envelope-root-stage1-review.json",
+          "report_sha256": "fcca84aed6b783110c904c8c28b326c364a41e6c7bc34a422d9b35e5e553ab07",
+          "findings": [
+            "Explicit owned source parse-error disposition/null-ID serializer context required for serde overflow even in ignored fields; unknown malformed/foreign port return stays privatecodec error.",
+            "Initialize fixture common dispatcher counter must0 with separate metadata_calls counter.",
+            "Privately issued tagged operation errors distinct from success JSON containing error-shaped keys."
+          ],
+          "verified": "42 historical+12 current/Git pins,6cachedprimaryfiles,14symbol/testlocators,3inventorypointers,136fullcases/7packetminima; no implementation/execution."
+        }
+      ],
+      "stage1_revision_clearance": {
+        "status": "approved_vectors_receipt_only",
+        "scope": [
+          "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+          "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json"
+        ],
+        "required": "Preserve1901 vector freeze and source. Resolve three rootfindings with exact typed outcomes/counters and six independently rootproposed literals in review report fcca84; original136 expected bytes preserved except separately reviewed metadata counters. Explicit source parse-error precedes semantic protocol validation and owns null-ID serializer context; malformed/foreign/expired remains privatecodec; error issuance tag not JSONshape. Re-freeze for independent review before implementation.",
+        "not_authorized": [
+          "source/test implementation",
+          "build/typecheck/npm/install/generated reads",
+          "native/transport/public/client actions",
+          "package/lock/core/cohort/guard/plan/Git edits"
+        ]
       }
     },
     {
@@ -25223,6 +25330,1705 @@
         "model_cohort": "Hypothetical1000 cloud-activeusers, not all appDAU automatically uploading",
         "exclusions": "Paid identity/model tokens/support/security/legal/tax/localization services and operational proofs remain separate."
       }
+    },
+    {
+      "id": "PARSE-EXACT-JSON-NUMBERS",
+      "title": "Decode one complete JSON numeric token to retained serde i64/u64/F64 class and exact payload",
+      "outcome": "Decode one complete JSON numeric token to retained serde i64/u64/F64 class and exact payload",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "SERIALIZE-EXACT-NUMBERS",
+        "CORE-COHORT-IOS-ELIGIBILITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/exact-json-number-parser.ts",
+        "packages/healthmd-core-ts/tests/exact-json-number-parser.test.ts",
+        "packages/healthmd-core-ts/tests/exact-json-number-parser-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-NUMBERS.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-json-number-parser-interface"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate parse-exact-json-numbers"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/exact-json-number-parser-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "number-u64-one",
+            "input": "1",
+            "expected": {
+              "class": "u64",
+              "decimal": "1"
+            },
+            "source_basis": "de.rs parse_number positive integer",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-i64-minus-one",
+            "input": "-1",
+            "expected": {
+              "class": "i64",
+              "decimal": "-1"
+            },
+            "source_basis": "de.rs negative integer",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-minus-zero",
+            "input": "-0",
+            "expected": {
+              "class": "f64",
+              "bits": "8000000000000000"
+            },
+            "source_basis": "de.rs explicitly promotes -0 to F64",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-decimal-one",
+            "input": "1.0",
+            "expected": {
+              "class": "f64",
+              "bits": "3ff0000000000000"
+            },
+            "source_basis": "parse_decimal",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-exponent-one",
+            "input": "1e0",
+            "expected": {
+              "class": "f64",
+              "bits": "3ff0000000000000"
+            },
+            "source_basis": "parse_exponent",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-i64-min",
+            "input": "-9223372036854775808",
+            "expected": {
+              "class": "i64",
+              "decimal": "-9223372036854775808"
+            },
+            "source_basis": "negative wrapping boundary",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-u64-max",
+            "input": "18446744073709551615",
+            "expected": {
+              "class": "u64",
+              "decimal": "18446744073709551615"
+            },
+            "source_basis": "u64 max",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-unsafe-integer",
+            "input": "9007199254740993",
+            "expected": {
+              "class": "u64",
+              "decimal": "9007199254740993"
+            },
+            "source_basis": "no Number/JSON.parse rounding",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-u64-overflow",
+            "input": "18446744073709551616",
+            "expected": {
+              "class": "f64",
+              "bits": "43f0000000000000"
+            },
+            "source_basis": "default parse_long_integer, exactly2^64",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-negative-underflow",
+            "input": "-1e-999",
+            "expected": {
+              "class": "f64",
+              "bits": "8000000000000000"
+            },
+            "source_basis": "negative exponent underflow preserves sign",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-positive-overflow",
+            "input": "1e999",
+            "expected": {
+              "error": "invalid_json_number"
+            },
+            "source_basis": "finite overflow rejects",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-zero-huge-exponent",
+            "input": "0e999999999999999999999",
+            "expected": {
+              "class": "f64",
+              "bits": "0000000000000000"
+            },
+            "source_basis": "parse_exponent_overflow zero_significand",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-leading-zero",
+            "input": "01",
+            "expected": {
+              "error": "invalid_json_number"
+            },
+            "source_basis": "strict JSON grammar",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-trailing-junk",
+            "input": "1x",
+            "expected": {
+              "error": "invalid_json_number"
+            },
+            "source_basis": "complete token only",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-plus",
+            "input": "+1",
+            "expected": {
+              "error": "invalid_json_number"
+            },
+            "source_basis": "no leading plus",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "number-caller-object",
+            "input": {
+              "harness": "throwing proxy/accessor/coercion object"
+            },
+            "expected": {
+              "error": "invalid_json_number",
+              "traps": 0
+            },
+            "source_basis": "primitive type before coercion",
+            "status": "proposed_independent_literal_review_required"
+          }
+        ],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 freeze primitive interface, complete grammar/default float algorithm and independent bits/classes corpus before code. Pin actual resolved retained serde feature graph BEFORE any Rust oracle execution; Cargo.lock itself contains versions/checksums, not resolved features.",
+        "Retain all existing scalar renderer bytes and vectors; no new dtoa/finite scalar serializer, no JSON.parse/Number equivalence assumption. Implement declared default non-float_roundtrip parse stages/rounding/overflow/underflow, fixed payload-free failures and bounded primitive tokens.",
+        "Exact semantic i128/u128 decimal-string transport is distinct from generic serde JSON u64/i64/F64 token classification; no widening or conversion of tagged exact-values."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "required_runtime": "Pinned physical Node24.21.0 + npm11.19.0 npm-cli; exact actual argv/environment/logs required, coordinator exclusive source/output window.",
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-NUMBERS.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "PARSE-EXACT-JSON-NUMBERS",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+    },
+    {
+      "id": "PARSE-EXACT-JSON-VALUES",
+      "title": "Decode bounded primitive JSON text/UTF8-hex to one owned lossless serde Value graph",
+      "outcome": "Decode bounded primitive JSON text/UTF8-hex to one owned lossless serde Value graph",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "PARSE-EXACT-JSON-NUMBERS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/exact-json-value.ts",
+        "packages/healthmd-core-ts/tests/exact-json-value.test.ts",
+        "packages/healthmd-core-ts/tests/exact-json-value-vectors.ts",
+        "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-json-value-interface"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate parse-exact-json-values"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/exact-json-value-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "value-decoded-duplicate",
+            "input": "{\"a\":1,\"\\u0061\":2}",
+            "expected": {
+              "compact": "{\"a\":2}"
+            },
+            "source_basis": "value/de.rs decoded Map insert last value",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-nested-order",
+            "input": "{\"z\":{\"b\":1,\"a\":2},\"a\":[2,1]}",
+            "expected": {
+              "compact": "{\"a\":[2,1],\"z\":{\"a\":2,\"b\":1}}"
+            },
+            "source_basis": "BTreeMap recursively sorted, arrays unchanged",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-integer-key-order",
+            "input": "{\"2\":0,\"10\":0,\"1\":0}",
+            "expected": {
+              "compact": "{\"1\":0,\"10\":0,\"2\":0}"
+            },
+            "source_basis": "Rust string order, not JS object enumeration",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-supplementary-order",
+            "input": "{\"\ud800\udc00\":1,\"\ue000\":2}",
+            "expected": {
+              "compact": "{\"\ue000\":2,\"\ud800\udc00\":1}"
+            },
+            "source_basis": "UTF8/scalar order differs JS UTF16 sort",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-surrogate-pair",
+            "input": "\"\\ud83d\\ude00\"",
+            "expected": {
+              "compact": "\"\ud83d\ude00\""
+            },
+            "source_basis": "read.rs validated surrogate pairing",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-lone-high",
+            "input": "\"\\ud800\"",
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "UTF8 String validation",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-lone-low",
+            "input": "\"\\udc00\"",
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "UTF8 String validation",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-control-escape",
+            "input": "\"\\u0000\\b\\t\\n\\f\\r\"",
+            "expected": {
+              "compact": "\"\\u0000\\b\\t\\n\\f\\r\""
+            },
+            "source_basis": "ser.rs escape table",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-slash-nonescape",
+            "input": "\"\\/\"",
+            "expected": {
+              "compact": "\"/\""
+            },
+            "source_basis": "slash decoder accepted serializer unescaped",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-whitespace",
+            "input": " \n [null,true,false] \t",
+            "expected": {
+              "compact": "[null,true,false]"
+            },
+            "source_basis": "JSON whitespace/full consumption",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-trailing",
+            "input": "{}{}",
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "full input consumption",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-comments",
+            "input": "/*x*/{}",
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "no comments",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-unknown-generic",
+            "input": "{\"unrecognized\":1}",
+            "expected": {
+              "compact": "{\"unrecognized\":1}"
+            },
+            "source_basis": "generic Value keeps keys; not typed deny_unknown_fields",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-invalid-utf8",
+            "input": {
+              "representation": "utf8_hex",
+              "payload": "22c08022"
+            },
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "overlong UTF8 rejected before decode",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-closed-bounds",
+            "input": {
+              "harness": "1MiB+1 input, depth128, nodes65537, string262145, numeric token1025 independently"
+            },
+            "expected": {
+              "error": "invalid_json_value",
+              "partial_value_published": false
+            },
+            "source_basis": "private proposed budgets; boundary+1 cases independently frozen",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "value-nonprimitive",
+            "input": {
+              "harness": "proxy/accessor payload"
+            },
+            "expected": {
+              "error": "invalid_json_value",
+              "traps": 0
+            },
+            "source_basis": "primitive before inspection",
+            "status": "proposed_independent_literal_review_required"
+          }
+        ],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 freeze full closed value/ownership interfaces and independently expected parser/string/ordering/duplicate/bounds corpus before code. Freeze the concrete original parser-owned reader/visitor and immutable node types at this same Stage1, including same-factory membership-before-access, original capability capture, foreign/proxy/cross-factory reader rejection and no later parser edit needed by the separately claimed serializer.",
+        "Primitive representation/text admission before reflection/coercion; strict UTF8/surrogate handling, complete input consumption, bounded linear parser with explicit depth/nodes/strings/token budgets, no partial graph or provider errors.",
+        "Generic Value preserves unknown members and replaces duplicate decoded keys with last value; typed serde structs may reject unknown/duplicate fields in later per-contract decoders. Do not impose one global policy.",
+        "Only codec factory owns inaccessible immutable AST; authentic handles checked by identity membership before properties. Arrays ordered; numeric type retained; original input mutation cannot alter graph. No data authority, reads or effect callbacks."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "required_runtime": "Pinned physical Node24.21.0 + npm11.19.0 npm-cli; exact actual argv/environment/logs required, coordinator exclusive source/output window.",
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "PARSE-EXACT-JSON-VALUES",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+    },
+    {
+      "id": "SERIALIZE-CANONICAL-JSON",
+      "title": "Encode authentic owned Value graph to bounded serde compact UTF8 bytes under explicit newline policy",
+      "outcome": "Encode authentic owned Value graph to bounded serde compact UTF8 bytes under explicit newline policy",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "PARSE-EXACT-JSON-VALUES",
+        "SERIALIZE-EXACT-NUMBERS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/canonical-json.ts",
+        "packages/healthmd-core-ts/tests/canonical-json.test.ts",
+        "packages/healthmd-core-ts/tests/canonical-json-vectors.ts",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-canonical-json-interface"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate serialize-canonical-json"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/canonical-json-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "serialize-negative-zero",
+            "input": {
+              "owned_input": "[-0,1,1.0,1e0]"
+            },
+            "expected": {
+              "compact": "[-0.0,1,1.0,1.0]"
+            },
+            "source_basis": "F64/I64/U64 classes + accepted scalar renderer",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-compact-lf",
+            "input": {
+              "owned_input": "{\"b\":1,\"a\":2}",
+              "policy": "serde_value_compact_lf"
+            },
+            "expected": {
+              "utf8": "{\"a\":2,\"b\":1}\n"
+            },
+            "source_basis": "lib.rs fixture newline is explicit profile not universal",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-compact-no-lf",
+            "input": {
+              "owned_input": "{}",
+              "policy": "serde_value_compact"
+            },
+            "expected": {
+              "utf8": "{}"
+            },
+            "source_basis": "semantic canonical_result_bytes and MCP text no LF",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-large-integer",
+            "input": {
+              "owned_input": "9007199254740993"
+            },
+            "expected": {
+              "utf8": "9007199254740993"
+            },
+            "source_basis": "existing u64 renderer",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-escaped-string",
+            "input": {
+              "owned_input": "\"a\\n\\\"\\\\\""
+            },
+            "expected": {
+              "utf8": "\"a\\n\\\"\\\\\""
+            },
+            "source_basis": "ser escape table",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-foreign-handle",
+            "input": {
+              "harness": "other codec factory handle/proxy"
+            },
+            "expected": {
+              "error": "invalid_json_value",
+              "traps": 0
+            },
+            "source_basis": "factory membership before properties",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-output-owned",
+            "input": {
+              "owned_input": "[1]",
+              "harness": "mutate first returned bytes then serialize again"
+            },
+            "expected": {
+              "second_utf8": "[1]",
+              "same_buffer": false
+            },
+            "source_basis": "fresh bounded output ownership",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-invalid-profile",
+            "input": {
+              "owned_input": "{}",
+              "policy": "foundation_ordered_json"
+            },
+            "expected": {
+              "error": "invalid_json_value"
+            },
+            "source_basis": "public ordered profiles excluded",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "serialize-output-limit",
+            "input": {
+              "harness": "valid input whose escaped output exceeds configured1MiB cap"
+            },
+            "expected": {
+              "error": "invalid_json_value",
+              "partial_output_published": false
+            },
+            "source_basis": "preflight complete encoded size then owned allocation",
+            "status": "proposed_independent_literal_review_required"
+          }
+        ],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 freeze full strings/key ordering/numeric-class/newline/owned-graph literals independently before code.",
+        "Reuse serializeExactJsonNumber bit-for-bit for finite F64/i64/u64. Rust BTreeMap UTF8 lexical order for string keys; do not JS object-enumerate integer keys or UTF16 sort supplementary characters. Preserve array order, serde escape table, exact UTF8, no normalization.",
+        "Membership-first authentic graph, captured original factory access, no caller getters/Proxies/toJSON, bounded complete encoded-size validation before output allocation and fresh owned bytes each success. Capture the original parser-owned bound reader/visitor once as trusted construction input, as already frozen by parser Stage1; do not obtain AST via caller properties, a substituted reader or guessed deep import.",
+        "Only explicit serde_value_compact or serde_value_compact_lf; no claim Foundation/Kotlin ordered profile, pretty JSON, schema/receipt version/time formatting or native renderer parity."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "required_runtime": "Pinned physical Node24.21.0 + npm11.19.0 npm-cli; exact actual argv/environment/logs required, coordinator exclusive source/output window.",
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "SERIALIZE-CANONICAL-JSON",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+    },
+    {
+      "id": "CORE-CANDIDATE-CODEC-API",
+      "title": "Expose one reviewed private codec facade through a literal package subpath",
+      "outcome": "Expose one reviewed private codec facade through a literal package subpath",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "SERIALIZE-CANONICAL-JSON"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/serialization/index.ts",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/tests/candidate-codec-api.test.ts",
+        "packages/healthmd-core-ts/tests/candidate-codec-api-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "core-candidate-export-manifest"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate core-candidate-codec-api"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/candidate-codec-api-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "codec-export-literal",
+            "input": "@healthmd/core-ts/candidate/codecs",
+            "expected": {
+              "present": true,
+              "wildcard": false
+            },
+            "source_basis": "proposed private facade",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "codec-root-retained",
+            "input": "@healthmd/core-ts",
+            "expected": {
+              "original_exports_unchanged": true
+            },
+            "source_basis": "src/index.ts immutable",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "codec-identity-single",
+            "input": {
+              "harness": "facade scalar vs original scalar on all accepted frozen numbers"
+            },
+            "expected": {
+              "bytes_equal": true,
+              "one_effect": true,
+              "duplicate_renderer": false
+            },
+            "source_basis": "accepted scalar authority",
+            "status": "proposed_independent_literal_review_required"
+          }
+        ],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 freeze exact exports and public TypeScript declarations/owned-handle failures; proposed literal subpath @healthmd/core-ts/candidate/codecs only, named parser/value/serializer+existing scalar facade.",
+        "No root wildcard/guessed subpath/private deep import and no duplicated scalar algorithm. Existing root API and original6 explicit export identities retain bytes/semantics except declared new literal exports entry.",
+        "No dependencies/lock/version/public launcher changes. Independently audit exact new source/declaration/import graph and package metadata before execution; core build proves portable facade only, not packed consumer admission."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "required_runtime": "Pinned physical Node24.21.0 + npm11.19.0 npm-cli; exact actual argv/environment/logs required, coordinator exclusive source/output window.",
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "CORE-CANDIDATE-CODEC-API",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+    },
+    {
+      "id": "CORE-COHORT-EXACT-CODECS",
+      "title": "Rebind complete immutable source and packed-module authority for the reviewed private codec delta",
+      "outcome": "Rebind complete immutable source and packed-module authority for the reviewed private codec delta",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "CORE-CANDIDATE-CODEC-API",
+        "CORE-COHORT-IOS-ELIGIBILITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate core-cohort-exact-codecs"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "literal_proposals": [],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 ONLY new cohort+partial receipt: pin complete43/26 historical maps and all accepted new source/module outputs, exact package/lock/runtime/graph/raw receipts and independent reviews. No output discovery as acceptance, no own receipt reverse pin; review BEFORE guard/docs/build/install.",
+        "Expected declared additions are12 input files and8 module outputs (prospective55/34), plus reviewed replacements of package.json and README metadata. Reconcile actual accepted changed paths/output contracts explicitly; never treat projected counts as passed actual maps. Keep all41 other old input bytes/all26 old module output bytes including scalar unchanged unless separately reviewed generated metadata delta.",
+        "Retain all84 exact prior filesystem negatives; add missing/edited/symlink for each new source, missing/stale/symlink/extra JS/d.ts artifact, missing/tampered/unreviewed each accepted codec/API receipt and new cohort. Freeze full exact resulting count/catalog before implementation; no count guessed as coverage.",
+        "After independent authority/guard review, exclusive core check, pinned offline CLI npm ci --install-links --engine-strict --no-audit --no-fund, CLI npm run check sequentially with bounded commands/exact actual physical argv. One physical Effect graph, no symlink/deep import/self-refresh/automatic hash admission."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--offline",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "required_runtime": "Pinned physical Node/npm and explicit approved cache; metadata/dependency graph independently reviewed before install.",
+          "availability": "existing"
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "CORE-COHORT-EXACT-CODECS",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+    },
+    {
+      "id": "CLI-MCP-EXACT-CODEC-BINDING",
+      "title": "Bind candidate trusted owned codec ports to the admitted private shared facade",
+      "outcome": "Bind candidate trusted owned codec ports to the admitted private shared facade",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "SPLIT-CODECS",
+        "CORE-COHORT-EXACT-CODECS",
+        "MCP-JSONRPC-ENVELOPE",
+        "CLI-RESULT-ENVELOPE"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-CODECS.json"
+      ],
+      "allowed_paths": [
+        "apps/cli/src/surfaces/exact-codec-bindings.ts",
+        "apps/cli/tests/surfaces/exact-codec-bindings.test.ts",
+        "apps/cli/tests/surfaces/exact-codec-bindings-vectors.ts",
+        "docs/migration/effect-refactor/receipts/CLI-MCP-EXACT-CODEC-BINDING.json"
+      ],
+      "shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-cli-mcp-codec-binding"
+      ],
+      "source_input_refs": [
+        "#/input_pins",
+        "#/primary_source",
+        "#/source_reconciliation"
+      ],
+      "source_symbol_refs": [
+        {
+          "path": "packages/healthmd-core-ts/src/serialization/exact-json-numbers.ts",
+          "line": 99,
+          "symbol": "export function serializeExactJsonNumber",
+          "line_sha256": "6f2e18cc3229b9c88ed1926c78884887b02de45a9aeecb82c64a29c2ae534a6a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 109,
+          "symbol": "export function decodeExactTimestamp",
+          "line_sha256": "c975857592721db1f393339ae18cd2389c9c573c9524a739bafc986fb2d91b91",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "line": 46,
+          "symbol": "export function decodeCanonicalInteger",
+          "line_sha256": "df58f32497bfd76c03db1e5ca5baa9ee480c093c4fa6cd92c92e56a10e3f62b3",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 123,
+          "symbol": "pub struct ExactTimestamp",
+          "line_sha256": "c5f01f9bf7b1af649ff2f8f7452a0d2e9f61236b7b9c67fe9763038f50456697",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 133,
+          "symbol": "pub enum ExactNumber",
+          "line_sha256": "56cf32b91943382bd42fab6c22418bfa28ee6bcf769fa0ef831bf053588d0323",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2255,
+          "symbol": "fn canonical_result_bytes",
+          "line_sha256": "b4b993bbb305872ee11078b19ec4ed6eca3649001622438712558a05eab70bbe",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+          "line": 2261,
+          "symbol": "fn canonicalize_value",
+          "line_sha256": "1470d5982c2cf94b98e8adc2737d1ca4a71abc9d99d96f8ee0a9731b0a7e934a",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/lib.rs",
+          "line": 187,
+          "symbol": "struct FixtureEnvelope",
+          "line_sha256": "022591e8d722a523d4991ddfc5d46f0f8b79e84d04f42cbdec9fae2e7302a05c",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "line": 263,
+          "symbol": "pub(crate) fn request_id_key",
+          "line_sha256": "502c4ad642c6c660e03f5bc04c0fa3328605eff6baa240ead6cf1b1a752ce750",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/result.rs",
+          "line": 66,
+          "symbol": "pub fn tool_result",
+          "line_sha256": "8a49922517dc9672aeefb1557390f06527b72b1671f43d98ebb08a4642a41a59",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 677,
+          "symbol": "pub(crate) fn kotlin_ordered_json",
+          "line_sha256": "bdf96029a7c4efdd4b75a2d83ca5e71a37958e9f53048383e2fc4a033d0ba66f",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/src/render/format.rs",
+          "line": 683,
+          "symbol": "pub(crate) fn foundation_ordered_json",
+          "line_sha256": "a35df6606fcf7fa68231fc6ea256e3f689911d2aac01128c039ca4636a66d727",
+          "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03"
+        }
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private candidate cli-mcp-exact-codec-binding"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Frozen source/contracts/accepted scalar vectors; new full independently reviewed Stage1 literal corpus BEFORE implementation, no expected values generated from candidate.",
+      "fixture_details": {
+        "introduced_path": "apps/cli/tests/surfaces/exact-codec-bindings-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "binding-id-minus-zero",
+            "input": "-0",
+            "expected": {
+              "accepted_as_i64": false
+            },
+            "source_basis": "jsonrpc request_id_key Number as_i64",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-id-u64-safe",
+            "input": "1",
+            "expected": {
+              "canonical_id": "1",
+              "accepted_as_i64": true
+            },
+            "source_basis": "positive Number as_i64 when<=i64max",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-id-float-one",
+            "input": "1.0",
+            "expected": {
+              "accepted_as_i64": false
+            },
+            "source_basis": "F64 is distinct",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-before-authority",
+            "input": {
+              "harness": "deny or reenter revoke at codec callback"
+            },
+            "expected": {
+              "params_decode": 0,
+              "payload_materialization": 0,
+              "delivery": 0
+            },
+            "source_basis": "current authority before observation",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-issuer-expired",
+            "input": {
+              "harness": "saved view after callback/Scope release/reprovided service"
+            },
+            "expected": {
+              "accepted": false,
+              "caller_traps": 0
+            },
+            "source_basis": "owned callback lifetime",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-foreign-handle",
+            "input": {
+              "harness": "other frame/reply factory authentic handle"
+            },
+            "expected": {
+              "accepted": false
+            },
+            "source_basis": "exact issuer/factory membership",
+            "status": "proposed_independent_literal_review_required"
+          },
+          {
+            "case_id": "binding-source-version",
+            "input": {
+              "harness": "historical semantic-result-v1 embedded api3 with implementation api4"
+            },
+            "expected": {
+              "embedded_api_retained": 3,
+              "silent_rewrite": false
+            },
+            "source_basis": "K01 independent versions",
+            "status": "proposed_independent_literal_review_required"
+          }
+        ],
+        "preserve_existing": true
+      },
+      "acceptance": [
+        "Stage1 independently freeze accepted envelope interfaces + complete literal exact-byte/range/class/bounds/ownership corpus before code. Existing unreviewed MCP Stage1 is seam guidance only, not accepted fixture authority.",
+        "Import literal @healthmd/core-ts/candidate/codecs through the independently accepted packed cohort only. Same accepted source graph and one Effect; no current hidden serialization deep import or local duplicate parser/renderer.",
+        "OwnedFrame/OwnedReply/SourceValue handles and issuer/view ports membership first; capture original trusted pure services; callback-scope issuer invalidates on return/throw/cancel/cleanup, no cross-factory/cross-frame/reprovided services or saved view resurrection. Source/purpose/detail/destination current grant/frontier gate before params/payload decode/materialization/serialize/delivery, and after trusted callback reentry. Codec validity is never authorization.",
+        "Private synthetic binding proves exact bytes for accepted envelope cases, ID numeric class (-0/1.0/exponents F64 rejected when source requires as_i64), 128 canonical-encoded UTF8-byte ID cap and 128 decoded UTF8-byte string-ID cap; progress-token limit is separately 128 decoded UTF8 bytes, fresh outputs and no side effect. Full grammar/catalog/profile/health query/durable transport/public client/native/host proofs remain separate."
+      ],
+      "verification": [
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "required_runtime": "Pinned Node24/npm11; accepted exact packed core immutable during run.",
+          "availability": "existing"
+        }
+      ],
+      "consumers": "Private common core and future CLI/MCP trusted pure codec bindings; public/native/profile/source/grant/transport admission separate.",
+      "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+      "deletion_gate": "No public promotion, source/state/contract fixture mutation, Rust deletion or family closure.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CLI-MCP-EXACT-CODEC-BINDING.json",
+      "reviewer_role": "Independent core/CLI contract and source-profile reviewer; coordinator acceptance after exact source+patch review.",
+      "priority": 101,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
+        "child_id": "CLI-MCP-EXACT-CODEC-BINDING",
+        "source_revision": "19c22c794e18651ed623dddd1cab03c42f346f03",
+        "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
+        "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
+      },
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
     }
   ]
 }
