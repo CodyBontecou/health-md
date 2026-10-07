@@ -234,6 +234,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         scripts.mkdir()
         shutil.copy(SCRIPTS / "validate_ios_ui_xctestrun.py", scripts)
         self.calls = self.root / "calls.jsonl"
+        self.device_calls = self.root / "device-calls.jsonl"
         self.output = self.root / "github-output"
         stub = (
             "#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\n"
@@ -252,9 +253,19 @@ class WorkflowExecutionTests(unittest.TestCase):
         )
         self.executable(self.bin / "xcodebuild", stub)
         self.executable(self.bin / "git", f"#!/bin/sh\nprintf '%s\\n' '{SOURCE_SHA}'\n")
-        self.executable(self.bin / "xcrun", "#!/bin/sh\nexit 0\n")
-        self.executable(scripts / "select-ios-simulator.sh", "#!/bin/sh\nprintf '%s\\n' 'platform=iOS Simulator,id=SYNTHETIC-IPAD'\n")
-        self.environment = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}", GITHUB_OUTPUT=str(self.output), MD_MOCK_CALLS=str(self.calls))
+        self.executable(self.bin / "xcrun", (
+            "#!/usr/bin/env python3\nimport json,os,sys\nfrom pathlib import Path\n"
+            "args=sys.argv[1:]\n"
+            "with Path(os.environ['MD_MOCK_DEVICE_CALLS']).open('a') as f: f.write(json.dumps(args)+'\\n')\n"
+            "if os.environ.get('MD_MOCK_SIMCTL_FAILURE')==args[1]: sys.exit(73)\n"
+            "if args[:2]==['simctl','install'] and not Path(args[3]).is_dir(): sys.exit(74)\n"
+        ))
+        self.executable(scripts / "select-ios-simulator.sh", (
+            "#!/bin/sh\ncase \"$*\" in\n"
+            "  *iPad*) printf '%s\\n' 'platform=iOS Simulator,id=SYNTHETIC-IPAD';;\n"
+            "  *) printf '%s\\n' 'platform=iOS Simulator,id=SYNTHETIC-IPHONE';;\nesac\n"
+        ))
+        self.environment = dict(os.environ, PATH=f"{self.bin}:{os.environ['PATH']}", GITHUB_OUTPUT=str(self.output), MD_MOCK_CALLS=str(self.calls), MD_MOCK_DEVICE_CALLS=str(self.device_calls))
         self.job, self.steps = ui_steps()
 
     @staticmethod
@@ -265,17 +276,23 @@ class WorkflowExecutionTests(unittest.TestCase):
     def run_step(self, name: str, artifact: str = "") -> subprocess.CompletedProcess:
         script = shell_body(self.steps[name])
         script = script.replace("${{ steps.ui_artifacts.outputs.xctestrun }}", artifact)
+        script = script.replace("${{ steps.ui_artifacts.outputs.app }}", self.app if artifact else "")
         script = script.replace("${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=SYNTHETIC-IPHONE")
         return subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=self.root, env=self.environment, text=True, capture_output=True)
 
     def build(self) -> str:
         result = self.run_step("Build UI test artifacts once")
         self.assertEqual(result.returncode, 0, result.stderr)
-        return self.output.read_text().strip().removeprefix("xctestrun=")
+        outputs = dict(line.split("=", 1) for line in self.output.read_text().splitlines())
+        self.assertEqual(set(outputs), {"xctestrun", "app"})
+        receipt = json.loads((self.root / "build/logs/ios-ui-build-receipt.json").read_text())
+        self.app = outputs["app"]
+        self.assertEqual(self.app, receipt["products"][0]["path"])
+        return outputs["xctestrun"]
 
     def test_one_generic_build_and_three_run_only_commands_share_exact_artifact(self) -> None:
         artifact = self.build()
-        for name in ("Run UI smoke tests (iOS)", "Run App Review export regression (iPad)"):
+        for name in ("Select newest compatible iOS Simulator", "Run UI smoke tests (iOS)", "Run App Review export regression (iPad)"):
             result = self.run_step(name, artifact)
             self.assertEqual(result.returncode, 0, result.stderr)
         calls = [json.loads(line) for line in self.calls.read_text().splitlines()]
@@ -298,6 +315,15 @@ class WorkflowExecutionTests(unittest.TestCase):
             self.assertEqual(len(selected), count)
             selections.extend(selected)
         self.assertEqual(selections, EXPECTED_TESTS)
+        self.assertEqual(
+            [json.loads(line) for line in self.device_calls.read_text().splitlines()],
+            [
+                ["simctl", "bootstatus", "SYNTHETIC-IPHONE", "-b"],
+                ["simctl", "install", "SYNTHETIC-IPHONE", self.app],
+                ["simctl", "bootstatus", "SYNTHETIC-IPAD", "-b"],
+                ["simctl", "install", "SYNTHETIC-IPAD", self.app],
+            ],
+        )
         self.assertTrue((self.root / "build/logs/build-ios-ui-compile.log").is_file())
         self.assertTrue((self.root / "build/logs/ios-ui-build-receipt.json").is_file())
 
@@ -317,6 +343,10 @@ class WorkflowExecutionTests(unittest.TestCase):
         artifact = self.build()
         self.environment["MD_MOCK_FAILURE"] = "test-without-building"
         self.assertEqual(self.run_step("Run UI smoke tests (iOS)", artifact).returncode, 73)
+        self.assertEqual(self.run_step("Run App Review export regression (iPad)", artifact).returncode, 73)
+        self.environment.pop("MD_MOCK_FAILURE")
+        self.environment["MD_MOCK_SIMCTL_FAILURE"] = "install"
+        self.assertEqual(self.run_step("Select newest compatible iOS Simulator", artifact).returncode, 73)
         self.assertEqual(self.run_step("Run App Review export regression (iPad)", artifact).returncode, 73)
 
     def test_existing_gate_budgets_and_compile_warning_retention_are_preserved(self) -> None:

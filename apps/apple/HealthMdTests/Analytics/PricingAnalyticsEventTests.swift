@@ -256,9 +256,7 @@ final class PricingAnalyticsEventTests: XCTestCase {
         ]
 
         for file in metadataFiles {
-            let data = try Data(contentsOf: file)
-            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
-            let description = try XCTUnwrap(object["description"] as? String)
+            let description = try effectiveAppStoreDescription(for: file)
             for claim in prohibitedClaims {
                 XCTAssertFalse(
                     description.localizedCaseInsensitiveContains(claim),
@@ -267,12 +265,62 @@ final class PricingAnalyticsEventTests: XCTestCase {
             }
         }
 
-        let englishData = try Data(contentsOf: metadataRoot.appendingPathComponent("en-US.json"))
-        let englishObject = try XCTUnwrap(JSONSerialization.jsonObject(with: englishData) as? [String: Any])
-        let englishDescription = try XCTUnwrap(englishObject["description"] as? String)
+        let englishDescription = try effectiveAppStoreDescription(for: metadataRoot.appendingPathComponent("en-US.json"))
         XCTAssertTrue(englishDescription.contains("automatically collects limited pseudonymous product events"))
         XCTAssertTrue(englishDescription.contains("never include health values, metric names, health dates, or exported files"))
         XCTAssertTrue(englishDescription.contains("not used for advertising or cross-app tracking"))
+    }
+
+    func testAppStoreDescriptionInheritsOmittedFieldsPerLocale() throws {
+        try withAppStoreMetadataFixture([
+            "3.4.1": ["en-US": ["description": "English disclosure"], "de-DE": ["description": "German disclosure"]],
+            "3.4.9": ["en-US": ["description": "Updated English disclosure"]],
+            "3.4.10": ["en-US": ["whatsNew": "Release notes"], "de-DE": ["whatsNew": "Versionshinweise"]]
+        ]) { versionsRoot in
+            XCTAssertEqual(
+                try effectiveAppStoreDescription(for: versionsRoot.appendingPathComponent("3.4.10/en-US.json")),
+                "Updated English disclosure"
+            )
+            XCTAssertEqual(
+                try effectiveAppStoreDescription(for: versionsRoot.appendingPathComponent("3.4.10/de-DE.json")),
+                "German disclosure"
+            )
+        }
+    }
+
+    func testAppStoreDescriptionPreservesLatestExplicitPrivacyClaim() throws {
+        try withAppStoreMetadataFixture([
+            "3.4.1": ["en-US": ["description": "Pseudonymous product analytics disclosure"]],
+            "3.4.9": ["en-US": ["description": "Earlier explicit disclosure"]],
+            "3.4.10": ["en-US": ["description": "No analytics"]]
+        ]) { versionsRoot in
+            let description = try effectiveAppStoreDescription(for: versionsRoot.appendingPathComponent("3.4.10/en-US.json"))
+            XCTAssertEqual(description, "No analytics")
+            XCTAssertTrue(description.localizedCaseInsensitiveContains("no analytics"))
+        }
+    }
+
+    func testAppStoreDescriptionRejectsMissingOrInvalidExplicitFields() throws {
+        try withAppStoreMetadataFixture([
+            "3.4.1": [
+                "empty": ["description": "Earlier disclosure"],
+                "null": ["description": "Earlier disclosure"],
+                "number": ["description": "Earlier disclosure"]
+            ],
+            "3.4.3": [
+                "missing": ["whatsNew": "Release notes"],
+                "empty": ["description": " \n"],
+                "null": ["description": NSNull()],
+                "number": ["description": 7]
+            ]
+        ]) { versionsRoot in
+            for locale in ["missing", "empty", "null", "number"] {
+                XCTAssertThrowsError(
+                    try effectiveAppStoreDescription(for: versionsRoot.appendingPathComponent("3.4.3/\(locale).json")),
+                    "\(locale) must not silently inherit an older disclosure."
+                )
+            }
+        }
     }
 
     func testPrivacyManifestDeclaresPseudonymousProductAnalyticsWithoutTracking() throws {
@@ -397,6 +445,64 @@ final class PricingAnalyticsEventTests: XCTestCase {
             code: 2,
             userInfo: [NSLocalizedDescriptionKey: "Could not locate App Store version metadata from \(#filePath)."]
         )
+    }
+
+    private func effectiveAppStoreDescription(for metadataFile: URL) throws -> String {
+        let versionDirectory = metadataFile.deletingLastPathComponent()
+        let directories = try FileManager.default.contentsOfDirectory(
+            at: versionDirectory.deletingLastPathComponent(),
+            includingPropertiesForKeys: [.isDirectoryKey]
+        )
+        .filter {
+            (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true
+                && $0.lastPathComponent.compare(versionDirectory.lastPathComponent, options: .numeric) != .orderedDescending
+        }
+        .sorted { $0.lastPathComponent.compare($1.lastPathComponent, options: .numeric) == .orderedDescending }
+
+        // Release workflows copy the previous description before applying partial version metadata.
+        for directory in directories {
+            let file = directory.appendingPathComponent(metadataFile.lastPathComponent)
+            guard FileManager.default.fileExists(atPath: file.path) else { continue }
+            let data = try Data(contentsOf: file)
+            guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+                throw invalidAppStoreDescription(at: file)
+            }
+            guard let value = object["description"] else { continue }
+            guard let description = value as? String,
+                  !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw invalidAppStoreDescription(at: file)
+            }
+            return description
+        }
+
+        throw invalidAppStoreDescription(at: metadataFile)
+    }
+
+    private func invalidAppStoreDescription(at metadataFile: URL) -> NSError {
+        NSError(
+            domain: "PricingAnalyticsEventTests",
+            code: 4,
+            userInfo: [NSLocalizedDescriptionKey: "Missing or invalid description at \(metadataFile.path)."]
+        )
+    }
+
+    private func withAppStoreMetadataFixture(
+        _ versions: [String: [String: [String: Any]]],
+        assertions: (URL) throws -> Void
+    ) throws {
+        let versionsRoot = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PricingAnalyticsMetadata-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: versionsRoot) }
+
+        for (version, locales) in versions {
+            let directory = versionsRoot.appendingPathComponent(version)
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+            for (locale, object) in locales {
+                try JSONSerialization.data(withJSONObject: object)
+                    .write(to: directory.appendingPathComponent("\(locale).json"))
+            }
+        }
+        try assertions(versionsRoot)
     }
 
     private func pricingAnalyticsSourceURLs() throws -> [URL] {

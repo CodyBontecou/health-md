@@ -23,6 +23,8 @@ Data Detail defaults to Summary for new installs. Detailed Time-Series adds sele
 4. Configure metrics, formats, and Data Detail on Export.
 5. Optional: enable Today Refresh every 3/6/12 hours.
 
+On launch, Health.md restores local fallback notifications, HealthKit background delivery, and APNs registration for both legacy and profile schedules. Opening the app also re-arms the next profile occurrence even when nothing is due yet; it does not start a future export. App-open catch-up evaluates due profile schedules when the legacy schedule is disabled, while already-queued recovery remains owned by the pending drain rather than being immediately attempted twice.
+
 Each new completed-day profile occurrence re-exports the **entire configured lookback**, including dates exported by earlier runs. A daily 08:00 schedule with a 14-day lookback therefore sends all 14 completed days every morning, ending yesterday. If execution is delayed, the window stays anchored to the scheduled fire day rather than shifting to the wake-up day. Successful occurrences are not repeated by duplicate wake-ups; retries export only their exact unresolved dates. Today Refresh independently re-fetches only the current day when iOS permits and does not replace the completed-day lookback. File targets use Update/Overwrite to replace the daily JSON snapshot; API Endpoint targets resend the complete snapshot so the receiver can replace or upsert that date.
 
 ## What gets exported

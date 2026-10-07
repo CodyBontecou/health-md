@@ -404,7 +404,9 @@ jobs:
             --derived-data "$MD_UI_DERIVED_DATA" \
             --source-sha "$(git rev-parse HEAD)" \
             --receipt build/logs/ios-ui-build-receipt.json)
+          MD_UI_APP=$(python3 -c 'import json; print(json.load(open("build/logs/ios-ui-build-receipt.json"))["products"][0]["path"])')
           echo "xctestrun=$MD_UI_XCTESTRUN" >> "$GITHUB_OUTPUT"
+          echo "app=$MD_UI_APP" >> "$GITHUB_OUTPUT"
 
       - name: Select newest compatible iOS Simulator
         id: simulator
@@ -415,6 +417,7 @@ jobs:
           echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
           xcrun simctl bootstatus "${IOS_DESTINATION##*id=}" -b
+          xcrun simctl install "${IOS_DESTINATION##*id=}" '${{ steps.ui_artifacts.outputs.app }}'
 
       - name: Run UI smoke tests (iOS)
         timeout-minutes: 35
@@ -468,6 +471,7 @@ jobs:
           IPAD_DESTINATION=$(scripts/select-ios-simulator.sh --device-family iPad --create-missing)
           echo "Running App Review regression on ${IPAD_DESTINATION}"
           xcrun simctl bootstatus "${IPAD_DESTINATION##*id=}" -b
+          xcrun simctl install "${IPAD_DESTINATION##*id=}" '${{ steps.ui_artifacts.outputs.app }}'
 
           xcodebuild test-without-building \
             -xctestrun '${{ steps.ui_artifacts.outputs.xctestrun }}' \

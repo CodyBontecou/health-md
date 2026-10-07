@@ -257,9 +257,12 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
         // Copy the profile ID for CLI/automation references.
         let profileID = app.staticTexts.matching(
-            NSPredicate(format: "label MATCHES %@", "[0-9A-F]{8}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{4}-[0-9A-F]{12}")
+            NSPredicate(
+                format: "label MATCHES %@",
+                "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+            )
         ).firstMatch
-        XCTAssertTrue(profileID.waitUntilExists(timeout: 5))
+        XCTAssertTrue(profileID.waitUntilExists(timeout: 5), "detail should expose the exact profile UUID")
         let expectedCopiedID = profileID.label
         XCTAssertNotNil(UUID(uuidString: expectedCopiedID))
         let copy = app.buttons["export.profiles.copyID"]
@@ -310,6 +313,8 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         // Anchor the menu's observed hit point to the intended alert field. Targeting the
         // menu itself makes XCTest mistake the rename alert for an interruption and cancel it.
         let pasteFrame = paste.frame
+        XCTAssertFalse(pasteFrame.isEmpty)
+        XCTAssertTrue(app.frame.contains(pasteFrame), "the Paste action should be on screen")
         let fieldFrame = field.frame
         field.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)

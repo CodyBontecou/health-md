@@ -101,6 +101,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.discard-pending-recovery",
         "direct.full_public_authorized_corpus",
         "direct-cli.shared-qr-pairing",
+        "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
     ]
 

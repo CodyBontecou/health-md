@@ -19,7 +19,7 @@ ANDROID_SERIAL=2C061FDH200CJN scripts/run-accessibility-ui-tests.sh /tmp/healthm
 scripts/test-accessibility-ui-runner.sh
 ```
 
-The expected UI inventory is 402 cases, not a nonzero partial count. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
+The expected UI inventory is 412 cases, not a nonzero partial count. Never substitute `connectedPlayDebugAndroidTest`, uninstall the app or clear its data. The host runner self-test uses fake binaries and is not a device test.
 
 ## TalkBack traversal and activation
 

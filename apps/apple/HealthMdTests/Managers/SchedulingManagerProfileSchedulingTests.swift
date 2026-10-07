@@ -159,6 +159,149 @@ final class SchedulingManagerProfileSchedulingTests: XCTestCase {
 
     // MARK: - Wake-up evaluation
 
+    func testAppActiveCatchUpRearmsProfileFallbackBeforeItsFirstOccurrence() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 7)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+            $0.enabledAt = self.date(year: 2026, month: 8, day: 10, hour: 6)
+        }
+        let manager = harness.makeManager(
+            defaults: defaults,
+            keychain: keychain,
+            now: { now },
+            systemSideEffectsEnabled: true
+        )
+
+        // The app-active delegate drains pending work, then catches up. A
+        // restored profile-only schedule must arm a reminder even if no
+        // occurrence is due and no settings were edited this launch.
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+        await manager.performCatchUpExportIfNeeded()
+        for _ in 0..<100 where harness.notificationScheduler.allScheduledRequests.isEmpty {
+            await Task.yield()
+        }
+
+        XCTAssertFalse(manager.schedule.isEnabled, "profile scheduling owns automation")
+        XCTAssertTrue(harness.runnerDates.isEmpty, "opening the app must not export a future occurrence")
+        let armed = try XCTUnwrap(
+            harness.notificationScheduler.allScheduledRequests.last,
+            "opening a restored profile schedule must re-arm its local notification"
+        )
+        XCTAssertEqual(armed.profileID, profileID)
+        XCTAssertEqual(armed.scheduledFireDate, date(year: 2026, month: 8, day: 10, hour: 8))
+        XCTAssertTrue(try harness.pendingStore.loadAll().contains { $0.id == armed.id })
+
+        let previousArmCount = harness.notificationScheduler.allScheduledRequests.count
+        await manager.performCatchUpExportIfNeeded()
+        for _ in 0..<100 where harness.notificationScheduler.allScheduledRequests.count == previousArmCount {
+            await Task.yield()
+        }
+        XCTAssertGreaterThan(harness.notificationScheduler.allScheduledRequests.count, previousArmCount)
+        XCTAssertEqual(harness.notificationScheduler.allScheduledRequests.last?.id, armed.id)
+        XCTAssertEqual(try harness.pendingStore.loadAll().map(\.id), [armed.id])
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+    }
+
+    func testAppActiveCatchUpWithAllSchedulingDisabledDoesNotArmFallback() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 7)
+        _ = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now) {
+            $0.isEnabled = false
+        }
+        let manager = harness.makeManager(
+            defaults: defaults, keychain: keychain, now: { now },
+            systemSideEffectsEnabled: true
+        )
+
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertTrue(harness.notificationScheduler.allScheduledRequests.isEmpty)
+        XCTAssertTrue(harness.runnerDates.isEmpty)
+        XCTAssertTrue(try harness.pendingStore.loadAll().isEmpty)
+    }
+
+    func testAppActiveCatchUpRunsDueProfileWhenLegacyScheduleIsDisabled() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertEqual(harness.runnerDates, [[date(year: 2026, month: 8, day: 9)]])
+        XCTAssertEqual(harness.runnerTargets, [.apiEndpoint])
+        XCTAssertEqual(
+            ScheduledExportEntryStore(userDefaults: defaults).entry(profileID: profileID)?.lastExportDate,
+            date(year: 2026, month: 8, day: 10, hour: 8)
+        )
+    }
+
+    func testAppActiveCatchUpPreservesDrainedProfileRecoveryWithoutSecondAttempt() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        let request = PendingExportRequest(
+            dates: [date(year: 2026, month: 8, day: 9)],
+            source: .scheduled,
+            scheduledFireDate: date(year: 2026, month: 8, day: 10, hour: 8),
+            exportTarget: .apiEndpoint,
+            profileID: profileID,
+            profileName: "Daily",
+            calendar: calendar
+        )
+        try harness.pendingStore.upsert(request)
+        harness.resultProvider = { dates, _ in
+            ExportOrchestrator.ExportResult(
+                successCount: 0, totalCount: dates.count,
+                failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) }
+            )
+        }
+        let manager = harness.makeManager(defaults: defaults, keychain: keychain, now: { now })
+
+        await manager.drainPendingExportsIfNeeded(trigger: .appActive)
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertEqual(harness.runnerDates.count, 1, "catch-up must not immediately retry work the drain just attempted")
+        let retry = try XCTUnwrap(try harness.pendingStore.loadAll().first)
+        XCTAssertEqual(retry.id, request.id)
+        XCTAssertEqual(retry.dates, request.dates)
+        XCTAssertNotNil(harness.notificationScheduler.immediateRequests[request.id])
+    }
+
+    func testAppActiveCatchUpRunsLegacyDespiteOtherProfileRecovery() async throws {
+        let harness = ProfileSchedulingHarness()
+        let now = date(year: 2026, month: 8, day: 10, hour: 12)
+        let profileID = seedDueDailyProfile(defaults: defaults, keychain: keychain, now: now)
+        harness.resultProvider = { dates, target in
+            if target == .apiEndpoint {
+                return ExportOrchestrator.ExportResult(
+                    successCount: 0, totalCount: dates.count,
+                    failedDateDetails: dates.map { FailedDateDetail(date: $0, reason: .deviceLocked) }
+                )
+            }
+            return ExportOrchestrator.ExportResult(
+                successCount: dates.count, totalCount: dates.count,
+                failedDateDetails: [], completedDates: dates
+            )
+        }
+        let manager = harness.makeManager(
+            defaults: defaults, keychain: keychain, now: { now },
+            schedule: ExportSchedule(
+                isEnabled: true, frequency: .daily, preferredHour: 8,
+                enabledAt: date(year: 2026, month: 8, day: 1)
+            )
+        )
+
+        await manager.performCatchUpExportIfNeeded()
+
+        XCTAssertEqual(harness.runnerTargets, [.apiEndpoint, .localIPhoneFolder])
+        XCTAssertEqual(manager.schedule.lastExportDate, date(year: 2026, month: 8, day: 10, hour: 8))
+        let retry = try XCTUnwrap(try harness.pendingStore.loadAll().first)
+        XCTAssertEqual(retry.profileID, profileID)
+        XCTAssertNotNil(harness.notificationScheduler.immediateRequests[retry.id])
+    }
+
     func testDueProfileOccurrenceRunsProfileScopedExport() async throws {
         let harness = ProfileSchedulingHarness()
         // 2026-08-10 is a Monday; 08:00 slot has yesterday to export.

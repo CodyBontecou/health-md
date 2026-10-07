@@ -27,6 +27,31 @@ enum HealthMdReleaseNotes {
 
     static let notes: [NoteletVersionNotes] = [
         .init(
+            version: "3.4.3",
+            items: [
+                .list(
+                    title: "Schedule recovery and clearer reminders",
+                    rows: [
+                        .init(
+                            symbolSystemName: "calendar.badge.clock",
+                            title: "Schedules restored",
+                            description: "Export-profile schedules restore their notifications when you reopen the app and avoid duplicate catch-up attempts."
+                        ),
+                        .init(
+                            symbolSystemName: "bell.badge",
+                            title: "Notification recovery",
+                            description: "Improved scheduled notification setup and recovery after temporary delivery errors."
+                        ),
+                        .init(
+                            symbolSystemName: "number",
+                            title: "Accurate export reminders",
+                            description: "Upgrade reminders correctly show how many free exports you have used."
+                        )
+                    ]
+                )
+            ]
+        ),
+        .init(
             version: "3.4.2",
             items: [
                 .list(
