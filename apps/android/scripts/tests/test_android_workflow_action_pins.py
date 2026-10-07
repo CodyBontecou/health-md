@@ -129,21 +129,22 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 
     def test_ci_sdk_setup_explicitly_installs_supported_packages(self) -> None:
-        workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
-        sdk_steps = [
-            step
-            for step in re.split(r"(?m)^      - ", workflow)
-            if re.search(r"(?m)^\s*uses: android-actions/setup-android@", step)
-        ]
-        self.assertTrue(sdk_steps, "Android CI must set up the SDK")
-        for step in sdk_steps:
-            with self.subTest(step=step.splitlines()[0]):
-                packages = re.search(r"(?m)^\s+packages:\s*([^\n#]+)", step)
-                self.assertIsNotNone(
-                    packages,
-                    "Override setup-android's obsolete 'tools platform-tools' default",
-                )
-                self.assertEqual(["platform-tools"], packages.group(1).split())
+        for name in ("android-ci.yml", "practice-ci.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text()
+            sdk_steps = [
+                step
+                for step in re.split(r"(?m)^      - ", workflow)
+                if re.search(r"(?m)^\s*uses: android-actions/setup-android@", step)
+            ]
+            self.assertTrue(sdk_steps, f"{name} must set up the SDK")
+            for step in sdk_steps:
+                with self.subTest(workflow=name, step=step.splitlines()[0]):
+                    packages = re.search(r"(?m)^\s+packages:\s*([^\n#]+)", step)
+                    self.assertIsNotNone(
+                        packages,
+                        "Override setup-android's obsolete 'tools platform-tools' default",
+                    )
+                    self.assertEqual(["platform-tools"], packages.group(1).split())
 
     def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
