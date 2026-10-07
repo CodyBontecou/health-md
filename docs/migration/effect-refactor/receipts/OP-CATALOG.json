@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "task_id": "OP-CATALOG",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "3c9c520762e55324e2904955429496574b8ba292",
+  "patch_digest": "d352a12964f36310543acdbb76d265cfd0efbe55c62e42fc23e65cef779484e6",
+  "patch_digest_method": "SHA256 over sorted four claimed catalog/normalizer/test/vector paths, each UTF-8 repository-relative path + NUL + raw file bytes + NUL. Excludes receipt, coordinator plan/state and ignored dist/build/node_modules/cache outputs. Individual hashes in inputs.artifact_and_native_interface.patch_files.",
+  "changed_paths": [
+    "packages/healthmd-core-ts/src/operations/catalog.ts",
+    "packages/healthmd-core-ts/src/operations/normalize.ts",
+    "packages/healthmd-core-ts/tests/catalog-vectors.ts",
+    "packages/healthmd-core-ts/tests/catalog.test.ts",
+    "docs/migration/effect-refactor/receipts/OP-CATALOG.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "apps/cli/crates/healthmd-operations/src/registry.rs": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+      "apps/cli/crates/healthmd-operations/src/model.rs": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+      "apps/cli/crates/healthmd-operations/src/normalize.rs": "ab026b1d0e991bc2c79f8c02b2b8348241bcbfc9195474d46fc9d22bd6aefd54",
+      "apps/cli/crates/healthmd-operations/src/limits.rs": "2a5f0ea3854fdb54550a1e075195407141321cc2cc1edeb91c05a3f047485184",
+      "apps/cli/crates/healthmd-mcp/src/application.rs": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a",
+      "apps/cli/crates/healthmd-mcp/src/catalog.rs": "74fcf993add2dfb5cfab608ac9c25b46b2e92e8d68f3d04a5f604738039194b9",
+      "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09"
+    },
+    "locks_and_runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "package_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "installation": "Retained exact scoped installation from prerequisite checks; no package/lock/build-policy change.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+        "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27"
+      },
+      "emitted_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/neutral-metafile.json": "bee5a4aafb870642decc321995ba849c9dd7c6cdba64c544e55a45272a6241ec",
+        "dist/test-metafile.json": "cdd473f0d045d03b0f209f8e1d80363fd612cea7ef047576dd069ce64c5706f0",
+        "dist/tests/catalog.test.js": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653",
+        "dist/tests/exact-values.test.js": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05",
+        "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+      },
+      "expected_vectors": {
+        "path": "packages/healthmd-core-ts/tests/catalog-vectors.ts",
+        "sha256": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+        "cases": 14,
+        "positive": 6,
+        "negative": 8,
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root",
+          "fingerprint": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+          "method": "Root independently compared all14 literal outcomes to actual registry.rs query_invocation/typed_query/detail_level/ensure_keys and Python literal inspection; no candidate normalizer used."
+        }
+      },
+      "catalog_authority": {
+        "asset": "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+        "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+        "full_ids": [
+          "healthmd_status",
+          "healthmd_doctor",
+          "healthmd_capabilities",
+          "healthmd_metrics",
+          "healthmd_metric_chart",
+          "healthmd_sleep_sessions",
+          "healthmd_training_alignment",
+          "healthmd_workouts",
+          "healthmd_coverage",
+          "healthmd_compare_periods",
+          "healthmd_training_evidence",
+          "healthmd_query",
+          "healthmd_evidence_packet",
+          "healthmd_pairing_start",
+          "healthmd_pairing_status",
+          "healthmd_export_files",
+          "healthmd_export_raw",
+          "healthmd_raw_artifact_read",
+          "healthmd_export_job_status",
+          "healthmd_export_job_resume",
+          "healthmd_export_job_cancel"
+        ],
+        "read_only_ids": [
+          "healthmd_status",
+          "healthmd_doctor",
+          "healthmd_capabilities",
+          "healthmd_metrics",
+          "healthmd_metric_chart",
+          "healthmd_sleep_sessions",
+          "healthmd_training_alignment",
+          "healthmd_workouts",
+          "healthmd_coverage",
+          "healthmd_compare_periods",
+          "healthmd_training_evidence",
+          "healthmd_query",
+          "healthmd_evidence_packet"
+        ],
+        "projection": "Trusted static mirror injected at createStaticCatalog; preserve every declaration field; local_only8 filtered for read-only; source-specific doctor/capabilities descriptions applied.",
+        "runtime_binding": "No fs/hash/network discovery in portable code. Future host/bundler must bind exact reviewed mirror bytes before injection.21 ordered identities verified; this is not schema authentication."
+      },
+      "source_symbols": [
+        "registry.rs OPERATION_DEFINITIONS/list/apply_profile_descriptions/tool_catalog",
+        "registry.rs query_invocation/typed_query/detail_level/ensure_keys",
+        "limits.rs DEFAULT_PAGE_ITEMS/DEFAULT_PAGE_BYTES",
+        "application.rs query caller admission and downstream service execution"
+      ],
+      "native_interfaces_changed": []
+    },
+    "policy_migration_key_versions": {
+      "normalization_scope": "Discovery and metric_chart only. No relative CLI date resolution, new scalar/envelope protocol/version, request ID or public export changes.",
+      "query_behavior": "Already-parsed JSON object, only6 known top-level keys; dates/metrics required by presence; sources/page copied verbatim or defaults. all_pages optional bool defaultfalse; string detail only summary/lossless, nonstring/missing falls backsummary. Nested validation deferred exactly as source.",
+      "limits": "Catalog copied trusted116261-byte21 declaration fixture; schema page bounds1..1000 items/1..1048576 bytes, metric IDs1..512 unique, sourceallowlist/providermax0 preserved as declarations. Normalizer defaults250/262144/null; nested bounds/unknown/version validation left to downstream. No enclosing byte/depth budget established.",
+      "execution_availability": "All21 operation executions not_implemented; only metric_chart query normalization available. Other20 operation normalizers remain open; readiness/capabilities/metrics execution not implemented by static discovery.",
+      "caller_authority": "Profile static filter only. Actual caller grants/credential/source admissibility, query validation and backend/protocol routing remain later boundaries."
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Match existing full/read-only static identities/schema/filter; normalize only scoped discovery and one query command. Other operation normalizers remain explicit open scope.",
+      "result": "passed",
+      "evidence": "Frozen full21 declarations compared deeply against unchanged SHA-pinned asset; both read-only13 schemas/annotations/metadata/filter/order and source-specific guidance pass. Discovery envelopes and14 independently reviewed metric_chart normalization vectors pass; other operations explicitly not_implemented."
+    },
+    {
+      "criterion": "Discovery has no credential/network/listener side effects.",
+      "result": "passed",
+      "evidence": "Portable modules import only Effect Result and local types, accept static reviewed catalog input, and use no fs/network/credential/listener/host services. Offline synthetic discovery and full neutral graph checks pass."
+    },
+    {
+      "criterion": "Execution availability is explicit; a catalog port does not claim all operations implemented.",
+      "result": "passed",
+      "evidence": "Availability checks for all21 report execution:not_implemented; metric_chart normalization only marked available. Raw/envelope/date-resolution/backend integration and all other normalizers explicitly deferred."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exact Node24.21.0/npm11.19.0, exit0 in 0.768s;134 discovered emitted-JS tests passed,0 failures/cancellations/skips;19 boundary negatives;6 source modules/1 Effect identity; strict ES-only own source/test checks and build pass."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Assigned-base source/input hashes compared with working bytes; unchanged catalog31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d and independently accepted vectora28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51 verified; scoped4-file patch hash computed."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0 with no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "independent-review"
+      ],
+      "result": "passed",
+      "evidence": "Root read complete4-file implementation/test/vector patch and source catalog/filter/schema/normalization boundaries; independently recomputed4 patch/15 input/17 emitted hashes and reviewed14 literal expectations; exact Node24/npm npm run check passed134 tests and19 negatives. Source-selection schema intentionally ignores profile, so read-only schemas unchanged. Trusted static host hash binding, downstream JSON/query/grant/cursor execution and actual surfaces remain open."
+    }
+  ],
+  "inspection_summary": "Used accepted cli inventory and actual pinned registry/model/normalize/application/catalog/limits files; incorrect generic command.rs/query.rs task references were clarified by coordinator without a source blocker. Read root/component/entrypoint/core branch/C11/O01. Full mirror is injected trusted reviewed data, avoiding portable fs or generated Rust tooling. Internal candidate modules do not modify package public exports, production CLI/MCP/plugin/native/website authority, schema/fixture/version or caller grants.",
+  "observations": [
+    {
+      "case_id": "frozen-catalog-projections",
+      "procedure": "Read frozen fixture only in Node tests and hash-check; inject catalog snapshot; deep-compare full21 and both read-only13 declarations to frozen/source expectations.",
+      "expected": "Every name/title/description/schema/annotation/metadata/order preserved except prescribed read-only descriptions/filter.",
+      "observed": "Full and read-only comparisons pass; fixed catalog/tool envelopes and unknown/filtered lookup errors pass; immutable snapshots prevent caller mutation.",
+      "evidence": "packages/healthmd-core-ts/tests/catalog.test.ts; apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+      "result": "passed"
+    },
+    {
+      "case_id": "reviewed-normalization-vectors",
+      "procedure": "Root independent source/math literal review then execute unchanged14-case corpus against metric_chart normalizer.",
+      "expected": "6 accepts/8 rejects; exact defaults, nested null/opaque values and order/duplicates preserved; nonstringdetailfallback retained.",
+      "observed": "All14 pass at independently accepted fingerprint; normalized nested objects cloned as source ownership requires.",
+      "evidence": "packages/healthmd-core-ts/tests/catalog-vectors.ts @ a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+      "result": "passed"
+    },
+    {
+      "case_id": "availability-and-pure-discovery",
+      "procedure": "Exercise discover and availability APIs for fixed profiles/names; run all own-module import/global graph checks.",
+      "expected": "No host ports required; every operationexecution not_implemented; only metric_chart normalization available; top-level request_id rejected.",
+      "observed": "6 supplemental catalog tests pass; source6modules/1 Effect and19 negative boundary cases pass. No native/network/credential/listener steps invoked.",
+      "evidence": "packages/healthmd-core-ts/tests/catalog.test.ts; output SHA256 9afa523db5cf91e05cc95af8e9bc2499e3d687a4b37d53bc7963f233f62e5d94",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "Trusted mirror injection preserves supplied declarations but does not cryptographically authenticate arbitrary supplied schemas. Actual host/bundle must pin reviewed asset hash; no public host integration performed.",
+    "Already-parsed metric_chart arguments normalization only; downstream full JSON/date/metric/source/page/version/size/depth validation remains required. Source accepts opaque malformed nested shapes at this stage; normalization success must not authorize execution.",
+    "No protocol request-ID generation/validation, relative CLI date resolution, raw JSON numeric/lexical handling, caller-grant admission, evaluator query, pagination execution or other20 operation normalizers implemented.",
+    "Local exact Node24 darwin-arm64 synthetic checks only; actual CLI/MCP/UI surfaces, native/browser VM, GitHub and external clients unrun.",
+    "No new operation package public exports/config/locks, production authorities or contracts changed. Parent C11/O01 and broader slice remain open."
+  ],
+  "remaining_qualification": [
+    "Later common query slice must validate admitted normalized query and implement injected source/cancellation/evidence behavior.",
+    "Later host/CLI/MCP integration must bind exact static asset, preserve grants/envelopes/protocol IDs and run actual consumer tests before admission."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "3c9c520762e55324e2904955429496574b8ba292+d352a12964f36310543acdbb76d265cfd0efbe55c62e42fc23e65cef779484e6"
+  }
+}
