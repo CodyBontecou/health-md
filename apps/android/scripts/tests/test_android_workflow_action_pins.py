@@ -22,6 +22,34 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
                     failures.append(f"{workflow.relative_to(ROOT)}: {reference}")
         self.assertEqual([], failures, "mutable external action refs:\n" + "\n".join(failures))
 
+    def test_sdk_setup_excludes_the_removed_legacy_tools_package(self) -> None:
+        failures: list[str] = []
+        setup_count = 0
+        for workflow in WORKFLOWS:
+            lines = workflow.read_text().splitlines()
+            for index, line in enumerate(lines):
+                if "uses: android-actions/setup-android@" not in line:
+                    continue
+                setup_count += 1
+                indentation = len(line) - len(line.lstrip())
+                step_indentation = indentation if line.lstrip().startswith("- ") else indentation - 2
+                configuration: list[str] = []
+                for following in lines[index + 1:]:
+                    if following.strip() and len(following) - len(following.lstrip()) <= step_indentation:
+                        break
+                    configuration.append(following)
+                # The pinned action defaults to `tools platform-tools`; Google has
+                # removed `tools`, so every caller must override that default.
+                packages = re.search(
+                    rf"^ {{{step_indentation + 4}}}packages:\s*['\"]?platform-tools['\"]?\s*(?:#.*)?$",
+                    "\n".join(configuration),
+                    re.MULTILINE,
+                )
+                if packages is None:
+                    failures.append(f"{workflow.relative_to(ROOT)}:{index + 1}: requires packages: platform-tools")
+        self.assertGreater(setup_count, 0, "no SDK setup actions found")
+        self.assertEqual([], failures, "unsafe SDK package defaults:\n" + "\n".join(failures))
+
     def test_protected_evidence_checkout_is_annotated_tagged_and_main_reachable(self) -> None:
         workflow = (ROOT / ".github/workflows/android-wear-evidence.yml").read_text()
         required = (

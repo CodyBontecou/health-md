@@ -18,6 +18,14 @@ Each workflow's path map lives in two places — the `on.push.paths` trigger fil
 
 The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
 
+## Apple pull-request checks
+
+Apple CI keeps shared-core preparation, macOS unit tests and coverage, iOS UI regressions, and the standalone connectivity-package tests. The flaky `test-ios` unit-test job is removed from CI and its final gate; iOS unit tests remain available through `make -C apps/apple test-ios` and the Apple Nightly Extended Tests workflow. Build-number validation and TDD-evidence checks run in the macOS job, and simulator-selection policy tests run in the iOS UI job.
+
+## Android SDK setup
+
+Every Android workflow explicitly passes `packages: platform-tools` to the pinned `setup-android` action. Its default, `tools platform-tools`, requests the removed legacy `tools` package and fails before Gradle runs. The action still installs command-line tools and accepts SDK licenses; each job installs its NDK, build tools, and emulator images separately as needed. `apps/android/scripts/tests/test_android_workflow_action_pins.py` guards this override as well as action pins.
+
 ## Android release trigger
 
 Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
