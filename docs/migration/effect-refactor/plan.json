@@ -4499,7 +4499,10 @@
         "apps/cli/tests/shared-slice-parity*",
         "docs/migration/effect-refactor/receipts/SLICE-PARITY.json"
       ],
-      "shared_resources": [],
+      "shared_resources": [
+        "core-component-build",
+        "cli-candidate-build"
+      ],
       "acceptance": [
         "Compare normalized commands, source calls, grants, bounds, partial receipts and interruption across adapters.",
         "Assert discovery has no source/secret/network/listener effects.",
@@ -4527,7 +4530,7 @@
           "introduced_by": "TS-FOUNDATION"
         }
       ],
-      "fixture_inputs": "Resolve exact paths/case IDs/digests from the accepted baseline inventory before coding; preserve independent frozen expectations.",
+      "fixture_inputs": "Accepted CLI-QUERY-ADAPTER source0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c+614ca11852d4048ab502801fdb8b4062a6ce09d624c3032a125ef800b6659d0c/frozen315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2 and MCP-QUERY-ADAPTER source6b0b2d928c35893b4b91a74ab81fe663b3af9789+6044741862e22e3f77ef1620871dc1ce7cdc325aa7c575701f5eb2771314b6d3/frozen4fddfa0b53eba0402bde2239b995bde2ea1e019f7f1076041b8dcc963df6b154; both call the same four packed common exports. Static discovery fixture apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json raw31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d and accepted OP-CATALOG independent vectors. Review literal cross-adapter invocation/source/grant/page/receipt/bound/cancellation and discovery expectations BEFORE qualification test implementation. One metric_chart fake-source and pure common catalog only; no native source, complete CLI/MCP discovery command route, raw serializer, real authenticated authority, process/transport/public/family qualification.",
       "consumers": "Inventory every affected producer/consumer from the scoped design IDs; integration runs its required gates.",
       "target": {
         "platform": "portable",
@@ -4539,8 +4542,21 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 80,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/effect_base_cli",
+        "base_revision": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/tests/shared-slice-parity-vectors.ts",
+          "apps/cli/tests/shared-slice-parity.test.ts",
+          "docs/migration/effect-refactor/receipts/SLICE-PARITY.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build"
+        ]
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -7777,7 +7793,11 @@
             "ci",
             "--engine-strict",
             "--no-audit",
-            "--no-fund"
+            "--no-fund",
+            "--cache",
+            "/private/tmp/healthmd-effect-npm-cache",
+            "--fetch-retries=0",
+            "--fetch-timeout=15000"
           ],
           "purpose": "Separate exact Mac React/RN/RNmacOS graph, not phone tuple",
           "availability": "created_by_this_task",
@@ -7828,11 +7848,11 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
+      "status": "done",
       "blocker": null,
       "claim": {
         "agent": "/root/mac_release_host",
-        "base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+        "base_revision": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf",
         "worktree": "/Users/codybontecou/dev/health-md",
         "write_paths": [
           "apps/apple/effect-host-candidates/macos/package.json",
@@ -7865,14 +7885,17 @@
           "mac-candidate-js-lock",
           "mac-candidate-bridge",
           "native-candidate-build"
-        ]
+        ],
+        "assigned_base_revision": "6b0b2d928c35893b4b91a74ab81fe663b3af9789"
       },
       "consumers": "Candidate common core/UI and isolated platform/bridge/bundle/test graph only. Current Apple/Android native/public/state/extension consumers remain authority; corresponding product integration/physical/signed/source-purpose qualification is unassigned remaining scope.",
       "priority": 204,
       "qualification": {
         "proof_class": "host_integration",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json"
+        ]
       },
       "read_required": [
         "AGENTS.md",
@@ -7880,9 +7903,9 @@
         "apps/apple/AGENTS.md"
       ],
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+6affc71ae4fce0b8f170535ab0f3ca28aa8e795f1195600dcbd7d9396abb4a9f"
       },
       "expansion_input": {
         "task_id": "SPLIT-NATIVE-HOSTS",
@@ -7910,7 +7933,8 @@
         ],
         "policy": "Create independent health-free expected fixture before adapter, obtain fixture review and raw hash in child receipt; existing frozen expectations unchanged."
       },
-      "common_build_window": "Coordinator common make284 passed on unchanged common source; Mac Metro509-source packaged bundle frozen and native compilation/ordinary run do not read common source/dist. Common build resources released after author confirmation; any re-bundle must request and reserve a new explicit window before reads."
+      "common_build_window": "Coordinator common make284 passed on unchanged common source; Mac Metro509-source packaged bundle frozen and native compilation/ordinary run do not read common source/dist. Common build resources released after author confirmation; any re-bundle must request and reserve a new explicit window before reads.",
+      "assignment_reconciliation": "Unrelated accepted MCP/plan checkpoint advanced6b0b to4db9; independent reviewer verified actual common/source inputs unchanged at both assigned and recorded revisions. Final candidate/SDK/runtime/bundle source cohort is4db9+6affc71a, without borrowing production authority."
     },
     {
       "id": "NATIVE-IOS-COLD-INTENT-PROBE",

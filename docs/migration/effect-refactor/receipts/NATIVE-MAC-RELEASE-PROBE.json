@@ -1,0 +1,684 @@
+{
+  "schema_version": 1,
+  "task_id": "NATIVE-MAC-RELEASE-PROBE",
+  "result": "passed",
+  "proof_state": "passed_scoped_host_integration",
+  "proof_class": "host_integration",
+  "source_sha": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf",
+  "assigned_source_sha": "6b0b2d928c35893b4b91a74ab81fe663b3af9789",
+  "patch_digest": "6affc71ae4fce0b8f170535ab0f3ca28aa8e795f1195600dcbd7d9396abb4a9f",
+  "patch_digest_method": "SHA256 of UTF8 canonical JSON source_file_manifest (sort_keys=True,separators=(comma,colon),ensure_ascii=False), sorted repository-relative paths; exact bytes of 22 claimed candidate source files; excludes this self-referential receipt and ignored build outputs. Recompute file lengths/hashes independently, then manifest digest. Root unrelated CLI checkpoint advanced HEAD; shared inputs stayed hash-pinned.",
+  "source_file_manifest": [
+    {
+      "path": "apps/apple/effect-host-candidates/macos/.node-version",
+      "bytes": 8,
+      "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/babel.config.cjs",
+      "bytes": 69,
+      "sha256": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+      "bytes": 4104,
+      "sha256": "f33fab9b7aaeae20e4c8c1e82ff18d3412c4b30c0d62c3b4052523b796dc807b"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/AppDelegate.swift",
+      "bytes": 1590,
+      "sha256": "8b937e61f8611db5626bc4347527fcd9300ea0059761ecacf96153acd4db8b15"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/HostProbe.entitlements",
+      "bytes": 181,
+      "sha256": "97704a8960b4facceef54397a08fb5d0a456247c3627359215aa2a27df22656c"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/project.pbxproj",
+      "bytes": 22682,
+      "sha256": "0c7a16698f6509a368bba499a744b439bf2996cb0d94e0b09651fa48b17b8c54"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+      "bytes": 3660,
+      "sha256": "6d7ea4212a060d257f3fe863c5a3cfa710e96be03081fb60419f4ce90ea5bedc"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/HostProbeTests.swift",
+      "bytes": 401,
+      "sha256": "b19c681d6aa6fdfed164b57190d86837b5816c25756d4c1a8863cd3d62b2d843"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/Info.plist",
+      "bytes": 683,
+      "sha256": "b6cafdf6d9bcc95ff9ead44b721c7da60425812c260ab45dff159f00c6cf2447"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/NativeProbe.mm",
+      "bytes": 6224,
+      "sha256": "85fa2e8defa4c998bf3f944a0ddfe616093ac0a319b2ba076a90dbb8543868a6"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/Podfile",
+      "bytes": 739,
+      "sha256": "190822b52e741612d379044a8a41a7a0e51d184cdac1974fcfc9edfe77cec42e"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/Podfile.lock",
+      "bytes": 75279,
+      "sha256": "fce2726fea6d4974e9452ff21981adb5e001d71a7faddc9e2d4e10144c76180f"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/macos/PrivacyInfo.xcprivacy",
+      "bytes": 986,
+      "sha256": "b9289ecfec677540a293fba948db7268c02b1d44943fa66b1e7a85ba0c31a252"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/metro.config.cjs",
+      "bytes": 535,
+      "sha256": "d21065fbe743b35e216177351a51466fb259f3338ae9015de96bfbf3cf28b95e"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/package-lock.json",
+      "bytes": 228101,
+      "sha256": "759a833311cf9545332dadf202593e2a1fb98c0fbe549bf2eea2e085de223845"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/package.json",
+      "bytes": 736,
+      "sha256": "eb056a7d77f4368373ec34338f82187c4662ba6e45fdbaa56f3607d6ad0c2bb7"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/scripts/build.mjs",
+      "bytes": 3396,
+      "sha256": "1be0d4e8b8da509c5cfa29e6ea1e0b9207f0200fb450a7a8c07488ffd3c51abd"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/scripts/check.mjs",
+      "bytes": 4917,
+      "sha256": "6d04e3693764a6b4a9eb8737361132fb49972e3d66b62f910e01dac28b3534df"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/scripts/run-release-probe.sh",
+      "bytes": 3545,
+      "sha256": "e906daae97c0045a28df5766dac12e81570e1ea2961662bbe87862964d94ad3d"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/src/HostProbe.tsx",
+      "bytes": 597,
+      "sha256": "1d539f734efc4f46185a7ca6f35e2c897b1903cad00f1b5ffa2649ef95a9bf2b"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/src/probe.ts",
+      "bytes": 8008,
+      "sha256": "9af2c75f7b736441e2db81efc74761399a5e5db52364edc3f1dd176e5665c5cf"
+    },
+    {
+      "path": "apps/apple/effect-host-candidates/macos/tsconfig.json",
+      "bytes": 555,
+      "sha256": "90a66df3ba2ca8a1975bd883f818d54a773a3a0067f7975782b58c01f798b1ca"
+    }
+  ],
+  "changed_paths": [
+    "apps/apple/effect-host-candidates/macos/.node-version",
+    "apps/apple/effect-host-candidates/macos/babel.config.cjs",
+    "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+    "apps/apple/effect-host-candidates/macos/macos/AppDelegate.swift",
+    "apps/apple/effect-host-candidates/macos/macos/HostProbe.entitlements",
+    "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/project.pbxproj",
+    "apps/apple/effect-host-candidates/macos/macos/HostProbe.xcodeproj/xcshareddata/xcschemes/HostProbe.xcscheme",
+    "apps/apple/effect-host-candidates/macos/macos/HostProbeTests.swift",
+    "apps/apple/effect-host-candidates/macos/macos/Info.plist",
+    "apps/apple/effect-host-candidates/macos/macos/NativeProbe.mm",
+    "apps/apple/effect-host-candidates/macos/macos/Podfile",
+    "apps/apple/effect-host-candidates/macos/macos/Podfile.lock",
+    "apps/apple/effect-host-candidates/macos/macos/PrivacyInfo.xcprivacy",
+    "apps/apple/effect-host-candidates/macos/metro.config.cjs",
+    "apps/apple/effect-host-candidates/macos/package-lock.json",
+    "apps/apple/effect-host-candidates/macos/package.json",
+    "apps/apple/effect-host-candidates/macos/scripts/build.mjs",
+    "apps/apple/effect-host-candidates/macos/scripts/check.mjs",
+    "apps/apple/effect-host-candidates/macos/scripts/run-release-probe.sh",
+    "apps/apple/effect-host-candidates/macos/src/HostProbe.tsx",
+    "apps/apple/effect-host-candidates/macos/src/probe.ts",
+    "apps/apple/effect-host-candidates/macos/tsconfig.json",
+    "docs/migration/effect-refactor/receipts/NATIVE-MAC-RELEASE-PROBE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "fixture_path": "apps/apple/effect-host-candidates/macos/fixtures/host-probe-v1.json",
+      "fixture_sha256": "f33fab9b7aaeae20e4c8c1e82ff18d3412c4b30c0d62c3b4052523b796dc807b",
+      "preimplementation_approval": {
+        "reviewer": "/root",
+        "sha256": "f33fab9b7aaeae20e4c8c1e82ff18d3412c4b30c0d62c3b4052523b796dc807b",
+        "case_ids": 10,
+        "timing": "root independently reviewed raw vectors before adapter authoring"
+      },
+      "split_native_hosts_sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+    },
+    "locks_and_runtime": {
+      "file_hashes": {
+        "package.json": "eb056a7d77f4368373ec34338f82187c4662ba6e45fdbaa56f3607d6ad0c2bb7",
+        "package-lock.json": "759a833311cf9545332dadf202593e2a1fb98c0fbe549bf2eea2e085de223845",
+        "macos/Podfile": "190822b52e741612d379044a8a41a7a0e51d184cdac1974fcfc9edfe77cec42e",
+        "macos/Podfile.lock": "fce2726fea6d4974e9452ff21981adb5e001d71a7faddc9e2d4e10144c76180f",
+        "babel.config.cjs": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b",
+        "metro.config.cjs": "d21065fbe743b35e216177351a51466fb259f3338ae9015de96bfbf3cf28b95e",
+        "macos/PrivacyInfo.xcprivacy": "b9289ecfec677540a293fba948db7268c02b1d44943fa66b1e7a85ba0c31a252",
+        "macos/HostProbe.entitlements": "97704a8960b4facceef54397a08fb5d0a456247c3627359215aa2a27df22656c"
+      },
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2",
+      "types_node": "24.19.1",
+      "undici_types": "7.24.6",
+      "react": "19.2.0",
+      "react_native": "0.83.10",
+      "react_native_macos": "0.83.0",
+      "effect": "4.0.1",
+      "observed_engine": {
+        "react": "19.2.0",
+        "hermes": true,
+        "hermes_release": "0.14.1",
+        "bytecode_version": 96,
+        "engine_build": "Release",
+        "effect": "4.0.1",
+        "mounted_react": false
+      },
+      "npm_lock_packages": 456,
+      "native_pods": 80,
+      "cocoapods": "1.17.0",
+      "npm_licenses": [
+        "MIT",
+        "ISC",
+        "Apache-2.0",
+        "BSD-2-Clause",
+        "BSD-3-Clause",
+        "0BSD",
+        "CC-BY-4.0",
+        "(MIT OR Apache-2.0)",
+        "(MIT OR CC0-1.0)"
+      ],
+      "native_license_classes": {
+        "MIT": 75,
+        "Apache License, Version 2.0": 1,
+        "Unlicense": 1,
+        "Boost Software License": 1,
+        "Google/glog BSD3 source COPYING": 1
+      },
+      "script_policy": "global npm policy retained; no script approvals/config overrides; esbuild/fsevents scripts blocked"
+    },
+    "artifact_and_native_interface": {
+      "bundle_id": "com.healthmd.effecthost.maccandidate",
+      "binary_and_bundle": {
+        "Contents/MacOS/HostProbe": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784",
+        "Contents/Resources/main.jsbundle": "147d37463f1425098f836c86b5ca9d71f35c9485d4f06a1179141e71fb30d2c8"
+      },
+      "native_bridge_sha256": "85fa2e8defa4c998bf3f944a0ddfe616093ac0a319b2ba076a90dbb8543868a6",
+      "source_archive_sha256": "1f1a577adbd3e52cfcd705645c4d61cd02890a08155a42b91763097b421e3a5b",
+      "source_archive_url": "https://registry.npmjs.org/react-native-macos/-/react-native-macos-0.83.0.tgz",
+      "engine_archive_sha256": "af777af183efde76275685216f8ec442cf163223a451a636863bcaf7afda2b0e",
+      "engine_archive_url": "https://repo1.maven.org/maven2/com/facebook/hermes/hermes-ios/0.14.1/hermes-ios-0.14.1-hermes-ios-release.tar.gz",
+      "hermes_override": "exact local immutable Release archive with macosx/hermesvm.framework; no unpinned-main fallback",
+      "hermes_framework_sha256": "a5fff5c54ca3980efe5d7d37cdd074478727b766a59ca2677b3cbebf22ba5bbf",
+      "metro_inputs_sha256": "74d6286c997db202c5765fea1b062c1d016e239e0bc1392b37532742206bc4d6",
+      "esbuild_inputs_sha256": "d98aba72cfd370c563fcedebd2e6504d5a01e9c7f52476efa676e11348d001d4",
+      "metro_sources": 509,
+      "macos_rn_sources": 436,
+      "phone_rn_sources": 0,
+      "single_physical_react_effect_identity": true,
+      "native_metadata_sha256": "46cb9e2dbfe5c6d9d7a58d208ed56ed672cfca487ceaf74c79ff210a8e1748d6",
+      "logs": {
+        "probe-1.log": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "xctest.log": "7b41b55571387d70ce5e60fe8fcf0bbc96bb52edd98698e4cdafb352b255a9b0",
+        "run-release-probe.log": "d828e4462a799a493a9c883f0a6d6a6ac204399d3b400016609433f3007dd33b",
+        "probe-1.stderr.log": "3c1256bb3c9e1b965dbb52e591f96cf7bb5381f3f54321b1e01a21db944e7e34",
+        "pod-install.log": "af6875ffddea3effa473ddf2aebd228463fd173e76726927dfb75b3398b2b450",
+        "release-build.log": "318806c6f9a0ca40236837ae814417bf6d9858fd5fb23c9c0f27fa489464c379",
+        "metro-build.log": "0d652cb3a98f77aab5b27788350d55d562e8e9d2ad6ff94c9dd827d930136a9c",
+        "check.log": "b37d529e137554f722536e23c5aa21cb3142d474e5f7518662528b1c7ace4c20"
+      },
+      "artifact_unchanged_after_xctest": true,
+      "architectures": [
+        "arm64",
+        "x86_64"
+      ],
+      "signing": "CODE_SIGNING_ALLOWED=NO; arm64 mandatory adhoc/linker-signed MachO; TeamIdentifier absent, no sealed resources/Info binding; no developer/store signature"
+    },
+    "policy_migration_key_versions": {
+      "public_schema": "unchanged",
+      "production_state": "unchanged",
+      "private_probe": "healthmd.candidate_host_probe v1",
+      "health_grants": "none"
+    }
+  },
+  "target": {
+    "platform": "macOS",
+    "channel": "development candidate",
+    "profile": "Unsigned Release; current macOS14 minimum; signed channels unqualified"
+  },
+  "environment": {
+    "xcode": "26.6",
+    "xcode_build": "17F113",
+    "sdk": "macOS26.5",
+    "sdk_build": "25F70",
+    "executed_host": "macOS26.5.1",
+    "host_build": "25F80",
+    "executed_arch": "arm64",
+    "deployment_minimum": "14.0"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Actual isolated exact native SDK/engine/lock/bridge/bundle graph and one Effect/React identity fingerprinted; declared peer compatibility alone does not pass.",
+      "result": "passed",
+      "evidence": "Actual 10-case packaged ordinary offline fresh process report, portable checks, source/lock/artifact graph and scoped native XCTest; see observations and limits"
+    },
+    {
+      "criterion": "Fresh-process packaged offline Release executes one health-free common inspectCandidate operation without Metro/network or mounted React presentation.",
+      "result": "passed",
+      "evidence": "Actual 10-case packaged ordinary offline fresh process report, portable checks, source/lock/artifact graph and scoped native XCTest; see observations and limits"
+    },
+    {
+      "criterion": "Private frame/credit/schema admission rejects before acquire; cancel/backpressure/expiry/teardown await native finalizer acknowledgment; no stale acquisition after loading cancellation.",
+      "result": "passed",
+      "evidence": "Actual 10-case packaged ordinary offline fresh process report, portable checks, source/lock/artifact graph and scoped native XCTest; see observations and limits"
+    },
+    {
+      "criterion": "Current production IDs/state/security/SDK/public schemas/native source grants remain untouched; candidate uses unique private namespace and no health permission/read.",
+      "result": "passed",
+      "evidence": "Actual 10-case packaged ordinary offline fresh process report, portable checks, source/lock/artifact graph and scoped native XCTest; see observations and limits"
+    },
+    {
+      "criterion": "Record exact source/artifact/engine/SDK/runtime/fixture hashes, actual measured bounded probe cases and limitations; unsupported target yields failed/partial evidence, not admission.",
+      "result": "passed",
+      "evidence": "Actual 10-case packaged ordinary offline fresh process report, portable checks, source/lock/artifact graph and scoped native XCTest; see observations and limits"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator fresh common window:191 core tests; root make log SHA2568c518757adf6ba480911b9f01efd07cd69461f4b357fe1bd830a4910f0e65356; worker did not mutate shared outputs"
+    },
+    {
+      "cwd": "packages/healthmd-ui",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Same coordinator common window:14 UI tests; shared source unchanged"
+    },
+    {
+      "cwd": "apps/apple/effect-host-candidates/macos",
+      "argv": [
+        "npm",
+        "ci",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund",
+        "--cache",
+        "/private/tmp/healthmd-effect-npm-cache",
+        "--fetch-retries=0",
+        "--fetch-timeout=15000"
+      ],
+      "result": "passed",
+      "evidence": "412 physical packages/456 locked; global install scripts policy preserved, esbuild/fsevents scripts blocked"
+    },
+    {
+      "cwd": "apps/apple/effect-host-candidates/macos",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": {
+        "cases": 10,
+        "log": "macos/build/check.log",
+        "sha256": "b37d529e137554f722536e23c5aa21cb3142d474e5f7518662528b1c7ace4c20"
+      }
+    },
+    {
+      "cwd": "apps/apple/effect-host-candidates/macos",
+      "argv": [
+        "./scripts/run-release-probe.sh",
+        "--offline",
+        "--fresh-process"
+      ],
+      "result": "passed",
+      "evidence": {
+        "ordinary_fresh_process_cases": 10,
+        "xctest_passed": 1,
+        "xctest_failures": 0,
+        "logs": {
+          "probe-1.log": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+          "xctest.log": "7b41b55571387d70ce5e60fe8fcf0bbc96bb52edd98698e4cdafb352b255a9b0",
+          "run-release-probe.log": "d828e4462a799a493a9c883f0a6d6a6ac204399d3b400016609433f3007dd33b",
+          "probe-1.stderr.log": "3c1256bb3c9e1b965dbb52e591f96cf7bb5381f3f54321b1e01a21db944e7e34",
+          "pod-install.log": "af6875ffddea3effa473ddf2aebd228463fd173e76726927dfb75b3398b2b450",
+          "release-build.log": "318806c6f9a0ca40236837ae814417bf6d9858fd5fb23c9c0f27fa489464c379",
+          "metro-build.log": "0d652cb3a98f77aab5b27788350d55d562e8e9d2ad6ff94c9dd827d930136a9c",
+          "check.log": "b37d529e137554f722536e23c5aa21cb3142d474e5f7518662528b1c7ace4c20"
+        }
+      }
+    },
+    {
+      "cwd": "apps/apple/effect-host-candidates/macos/macos",
+      "argv": [
+        "pod",
+        "install",
+        "--no-repo-update"
+      ],
+      "environment": {
+        "HERMES_ENGINE_TARBALL_PATH": "primary immutable Hermes0.14.1 Release archive af777af183efde76275685216f8ec442cf163223a451a636863bcaf7afda2b0e",
+        "COCOAPODS_HOME": "candidate macos/build/cocoapods-home",
+        "COCOAPODS_CACHE_PATH": "candidate macos/build/cocoapods-cache"
+      },
+      "result": "passed",
+      "evidence": "80 pods, hermes-engine0.14.1 Pre-built; pod-install.log af6875ffddea3effa473ddf2aebd228463fd173e76726927dfb75b3398b2b450"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Independent reviewer bounded subprocess driver launched only the exact existing private packaged HostProbe binary with HEALTHMD_CANDIDATE_OFFLINE=1 and a30-second deadline. Fresh actual process passed all ten fixed cases; cleanup55ms; only spawned child terminated after report, source/artifacts unchanged. StdoutSHA49d0d6f97de36897c4ed20e9729c020ba9417e2cff2e7b2dd29df58956781dcb; stderrSHAe9701bc5e6f40b742f8a1b25bbcca9742b4a8cb34128b79aee2c55a25e7e3d8b. Initial sandbox-only launch was unavailable; identical narrow escalated replay passed."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "single_react_effect_identity",
+      "result": "passed",
+      "observed": {
+        "react": "19.2.0",
+        "hermes": true,
+        "hermes_release": "0.14.1",
+        "bytecode_version": 96,
+        "engine_build": "Release",
+        "effect": "4.0.1",
+        "mounted_react": false
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "react": "19.2.0",
+        "effect": "4.0.1",
+        "hermes": true,
+        "mounted_react": false
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "offline_success",
+      "result": "passed",
+      "observed": {
+        "released": 1,
+        "unresolved_inspections": 0,
+        "inspecting": 0,
+        "max_queued": 0,
+        "max_active": 0,
+        "active": 0,
+        "releasing": 0,
+        "queued_frames": 0,
+        "accepted_frames": 0,
+        "acknowledged_frames": 0,
+        "active_frames": 0,
+        "acquired": 1,
+        "value": "ready"
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "value": "ready"
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "cancel_before_acquire",
+      "result": "passed",
+      "observed": {
+        "released": 0,
+        "unresolved_inspections": 0,
+        "inspecting": 0,
+        "max_queued": 0,
+        "max_active": 0,
+        "active": 0,
+        "releasing": 0,
+        "queued_frames": 0,
+        "accepted_frames": 0,
+        "acknowledged_frames": 0,
+        "active_frames": 0,
+        "acquired": 0
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "acquired": 0,
+        "released": 0,
+        "active": 0
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "cancel_waits_release_ack",
+      "result": "passed",
+      "observed": {
+        "released": 1,
+        "unresolved_inspections": 0,
+        "inspecting": 0,
+        "max_queued": 0,
+        "max_active": 0,
+        "active": 0,
+        "releasing": 0,
+        "queued_frames": 0,
+        "accepted_frames": 0,
+        "acknowledged_frames": 0,
+        "active_frames": 0,
+        "acquired": 1,
+        "cleanup_ms": 60,
+        "ack_before_completion": true,
+        "expiry_ack_before_completion": true,
+        "incomplete_during_native_release": true
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "ack_before_completion": true,
+        "expiry_ack_before_completion": true,
+        "incomplete_during_native_release": true
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "reentry_dispose_cancel_supersede",
+      "result": "passed",
+      "observed": {
+        "stale_reads": 0,
+        "fresh_reads": 1,
+        "released": 1
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "stale_reads": 0,
+        "released": 1
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "frame_limit",
+      "result": "passed",
+      "observed": {
+        "code": "frame_limit",
+        "acquired": 0,
+        "utf8_multibyte_rejected": true
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "code": "frame_limit",
+        "acquired": 0
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "result": "passed",
+      "observed": {
+        "code": "schema_invalid",
+        "acquired": 0,
+        "negative_vectors": 7
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "code": "schema_invalid",
+        "acquired": 0,
+        "negative_vectors": 7
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "queue_backpressure",
+      "result": "passed",
+      "observed": {
+        "accepted": 6,
+        "rejected": 1,
+        "max_active": 2,
+        "max_queued": 4,
+        "acknowledged": 6,
+        "active": 0,
+        "queued": 0,
+        "unacknowledged": 0
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "accepted": 6,
+        "rejected": 1,
+        "max_active": 2,
+        "max_queued": 4,
+        "acknowledged": 6,
+        "queued": 0,
+        "unacknowledged": 0
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "teardown_fresh_restart",
+      "result": "passed",
+      "observed": {
+        "released": 1,
+        "unresolved_inspections": 0,
+        "inspecting": 0,
+        "max_queued": 0,
+        "max_active": 0,
+        "active": 0,
+        "releasing": 0,
+        "queued_frames": 0,
+        "accepted_frames": 0,
+        "acknowledged_frames": 0,
+        "active_frames": 0,
+        "acquired": 1,
+        "private_state_writes": 0
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "private_state_writes": 0,
+        "unresolved_inspections": 0
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "no_native_grant_expansion",
+      "result": "passed",
+      "observed": {
+        "health_permissions": 0,
+        "health_reads": 0,
+        "persistent_writes": 0,
+        "scope": "candidate_owned_adapter"
+      },
+      "procedure": "Packaged Release ordinary fresh process; no AppRegistry/root view/mounted React. Fixture expected fields compared by run script.",
+      "expected": {
+        "health_permissions": 0,
+        "health_reads": 0,
+        "persistent_writes": 0,
+        "scope": "candidate_owned_adapter"
+      },
+      "evidence": {
+        "stdout_sha256": "7a1126d6f100c9338b5f6689e0cbeec474d39f0e09d481d6f11a8f6539096ea1",
+        "binary_sha256": "2eece635e7b55b5b2a1e1d77e57892dcf0aa38354ae0ab782d558818045cc784"
+      }
+    },
+    {
+      "case_id": "independent-fresh-packaged-runtime",
+      "procedure": "Independent reviewer launches frozen private native binary in a new bounded process without rebuild, checks all ten preimplementation fixture expectations and terminates only its child; coordinator verifies report and raw artifact/source/log pins.",
+      "expected": "Packaged Release runs offline without React mount, same engine/SDK/artifact cohort; all ten fixed lifecycle cases match, release completion follows native acknowledgment.",
+      "observed": "All ten passed;cleanup55ms, unresolved inspections0,6 frame acknowledgments/max2active+4queued/one rejected/final zero queued and unacknowledged,7 schema negatives and UTF8 boundary. Existing binary and bundle unchanged; root22 source files/canonical manifest,2 packaged artifacts,8 author logs and8 lock/config pins match.",
+      "evidence": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+6affc71ae4fce0b8f170535ab0f3ca28aa8e795f1195600dcbd7d9396abb4a9f; independent stdoutSHA49d0d6f97de36897c4ed20e9729c020ba9417e2cff2e7b2dd29df58956781dcb; root verified actual fixed report.",
+      "result": "passed"
+    }
+  ],
+  "inspection_summary": "Independent fixture/interface reviewed before code. Exact primary npm source/native minimum OS/engine audit preceded installation; full 79 resolved local podspec license table inspected after CocoaPods resolution. CocoaPods appends SDK required reasons FileTimestampC617.1/UserDefaultsCA92.1/SystemBootTime35F9.1. This is not SDK-wide no-collection or store privacy certification. First sandbox-only pod/network/build attempts failed environment access, then narrow exact candidate graph escalation passed. No Rust-backed tool, production principal, grant, service, StoreKit or collector code introduced.",
+  "limitations": [
+    "Only current arm64 macOS26.5.1 ordinary process executed; macOS14 minimum and x86_64 runtime are declared/build compatibility, not executed qualification.",
+    "No signed AppStore/DeveloperID/notarization/install/upgrade/downgrade qualification; linker adhoc MachO only.",
+    "Zero grant/read/persistence counters concern candidate-owned adapter; RN/OS caches, aggregate third-party SDK privacy and automatic NSApplication system activity not globally qualified.",
+    "URLProtocol blocks app HTTP/HTTPS and Release packages bundle; no Metro server/app network operation. Native/OS service diagnostics are not a complete network trace.",
+    "XCTest executed one private identity/no-health-description test; all 10 behavioral cases executed independently in ordinary process; XCTest is not a second behavioral qualification.",
+    "Fake candidate ports only; no real HealthKit/context/helper/bookmark/keychain/loopback/title/session/AX/browser/input/location/StoreKit authority, physical lifecycle or production UI behavior.",
+    "Measured cleanup acknowledgment60ms on current host; fixture bounds synthetic 5s/64KiB/2active+4queued are not physical energy/startup/production workload guarantees.",
+    "Full native licenses audited after exact pod resolution; npm graph/scripts/minOS/engine/source audit before installation/build.",
+    "Reentry and cancel-before-acquire use accepted shared model, seven bad schemas/UTF8 are actual native admission checks; acquire is synchronous so delayed-allocation cancellation is not separately claimed.",
+    "Native acquire/report methods are qualified only through the fixed trusted JS0/1000-delay and private bounded-report call sites. General callers/nonfinite acquisition parameters/arbitrary report grammar are not admitted or tested; no public native transport or general parameter-validation qualification follows from this probe."
+  ],
+  "remaining_qualification": [
+    "Global Q-NATIVE-RUNTIME and Mac collector API/channel decisions remain open",
+    "Real native ports, full source grants/lifecycle/minimumOS/signed distribution/installed-state/common UI/production promotion and Rust retirement require separate tasks"
+  ],
+  "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/donor_mac_review",
+    "fingerprint": "4db9d8a1ff90049377a1d35b9dca12d35e3893cf+6affc71ae4fce0b8f170535ab0f3ca28aa8e795f1195600dcbd7d9396abb4a9f"
+  }
+}

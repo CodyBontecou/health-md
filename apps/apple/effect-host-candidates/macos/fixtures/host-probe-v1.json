@@ -1,0 +1,162 @@
+{
+  "schema": "healthmd.candidate_host_probe",
+  "version": 1,
+  "bounds": {
+    "frame_bytes": 65536,
+    "queued_frames": 4,
+    "unacknowledged_frames": 2,
+    "operation_ms": 5000,
+    "cleanup_ack_ms": 5000
+  },
+  "cases": [
+    {
+      "case_id": "offline_success",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "value": "ready"
+      }
+    },
+    {
+      "case_id": "cancel_before_acquire",
+      "expected": {
+        "acquired": 0,
+        "released": 0,
+        "active": 0
+      }
+    },
+    {
+      "case_id": "cancel_waits_release_ack",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "ack_before_completion": true,
+        "expiry_ack_before_completion": true,
+        "incomplete_during_native_release": true
+      }
+    },
+    {
+      "case_id": "reentry_dispose_cancel_supersede",
+      "expected": {
+        "stale_reads": 0,
+        "released": 1
+      }
+    },
+    {
+      "case_id": "frame_limit",
+      "expected": {
+        "code": "frame_limit",
+        "acquired": 0
+      },
+      "vectors": [
+        {
+          "kind": "ascii_bytes",
+          "count": 65537
+        },
+        {
+          "kind": "utf8_multibyte",
+          "scalar": "é",
+          "count": 32768,
+          "envelope_overhead": true
+        }
+      ]
+    },
+    {
+      "case_id": "queue_backpressure",
+      "expected": {
+        "accepted": 6,
+        "rejected": 1,
+        "max_active": 2,
+        "max_queued": 4,
+        "acknowledged": 6,
+        "queued": 0,
+        "unacknowledged": 0
+      }
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "expected": {
+        "code": "schema_invalid",
+        "acquired": 0,
+        "negative_vectors": 7
+      },
+      "vectors": [
+        {
+          "schema": "wrong",
+          "version": 1
+        },
+        {
+          "version": true,
+          "sequence": 0
+        },
+        {
+          "version": 1,
+          "sequence": false
+        },
+        {
+          "version": 1.5,
+          "sequence": 0
+        },
+        {
+          "version": 1,
+          "sequence": -1
+        },
+        {
+          "version": 1,
+          "sequence": 0.5
+        },
+        {
+          "version": 1,
+          "sequence": 4294967296
+        }
+      ]
+    },
+    {
+      "case_id": "teardown_fresh_restart",
+      "expected": {
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "private_state_writes": 0,
+        "unresolved_inspections": 0
+      }
+    },
+    {
+      "case_id": "single_react_effect_identity",
+      "expected": {
+        "react": "19.2.0",
+        "effect": "4.0.1",
+        "hermes": true,
+        "mounted_react": false
+      }
+    },
+    {
+      "case_id": "no_native_grant_expansion",
+      "expected": {
+        "health_permissions": 0,
+        "health_reads": 0,
+        "persistent_writes": 0,
+        "scope": "candidate_owned_adapter"
+      }
+    }
+  ],
+  "interface": {
+    "native_module": "NativeProbe",
+    "identity": "com.healthmd.effecthost.maccandidate",
+    "methods": {
+      "acquire": "delay_ms bounded0..1000 -> Promise<integer resource token>",
+      "inspect": "owned token -> Promise<ready|cancelled>",
+      "release": "owned token -> Promise<void> after50ms native cleanup acknowledgment",
+      "stats": "Promise<content-free integer counters>",
+      "frame": "UTF8 JSON exactly schema/version/case_id/sequence -> Promise<ack>; schema/version/sequence rejects before acquire",
+      "reset": "Promise<void>; rejects while resources/frames active",
+      "report": "one content-free JSON report on stdout"
+    },
+    "common_operation": "CandidateSession.acquire -> CandidateResource.inspect/release; inspectCandidate owns release",
+    "runtime": "React19.2.0/RN0.83.10/RNmacOS0.83.0/Effect4.0.1; engine must be observed",
+    "presentation": "no React mount or AppRegistry registration",
+    "authority": "zero candidate-owned health grants/reads/persistence/production services/title/input/browser collection; RN/OS caches and third-party SDK privacy not claimed"
+  }
+}
