@@ -92,8 +92,6 @@ def run_pilot(output: Path, source_sha: str | None) -> int:
     def interrupt(signum, _frame):
         nonlocal interrupted
         interrupted = True
-        if active and active.poll() is None:
-            os.killpg(active.pid, signum)
         raise InterruptedError("Pilot interrupted")
 
     previous_handlers = {sig: signal.signal(sig, interrupt) for sig in (signal.SIGINT, signal.SIGTERM)}
@@ -146,12 +144,23 @@ def run_pilot(output: Path, source_sha: str | None) -> int:
         for sig in previous_handlers:
             signal.signal(sig, signal.SIG_IGN)
         if active and active.poll() is None:
-            os.killpg(active.pid, signal.SIGTERM)
+            def stop_group(signum):
+                try:
+                    os.killpg(active.pid, signum)
+                except ProcessLookupError:
+                    pass  # The child can exit between poll and signal.
+                except OSError as error:
+                    receipt.setdefault("cleanup_errors", []).append(f"process-group: {error}")
+
+            stop_group(signal.SIGTERM)
             try:
                 active.wait(timeout=10)
             except subprocess.TimeoutExpired:
-                os.killpg(active.pid, signal.SIGKILL)
-                active.wait()
+                stop_group(signal.SIGKILL)
+                try:
+                    active.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    receipt.setdefault("cleanup_errors", []).append("process-group did not exit")
         if simulator and re.fullmatch(r"[0-9A-Fa-f-]{36}", simulator):
             for action in ("shutdown", "delete"):
                 try:

@@ -64,7 +64,8 @@ class PilotSafetyTests(unittest.TestCase):
                 pilot.validate_summary(summary)
 
     def exercise(self, output: Path, *, failing_command: str | None = None,
-                 interrupt: bool = False, dirty: str = "", source: str = SHA):
+                 interrupt: bool = False, dirty: str = "", source: str = SHA,
+                 signal_error: OSError | None = None):
         commands = []
         cleanup = []
         handlers = {}
@@ -101,13 +102,15 @@ class PilotSafetyTests(unittest.TestCase):
                 return None if self.running else 0
 
             def wait(self, timeout=None):
-                if interrupt and self.args[0] == "xcodebuild" and self.running:
+                if interrupt and timeout is None and self.args[0] == "xcodebuild" and self.running:
                     handlers[signal.SIGTERM](signal.SIGTERM, None)
                 self.running = False
                 return 65 if self.args[0] == failing_command else 0
 
         def killpg(pid, signum):
             killed.append((pid, signum))
+            if signal_error:
+                raise signal_error
             for process in processes:
                 if process.pid == pid:
                     process.running = False
@@ -195,6 +198,21 @@ class PilotSafetyTests(unittest.TestCase):
                                        for action in ("shutdown", "delete")])
             self.assertEqual(handlers, {signal.SIGINT: signal.SIG_DFL, signal.SIGTERM: signal.SIG_DFL})
             self.assertEqual(json.loads((output / "ios-unit" / "receipt.json").read_text())["result"], "interrupted")
+
+    def test_signal_errors_still_preserve_cancellation_receipt_and_remove_own_simulator(self):
+        for error in (ProcessLookupError("already exited"), PermissionError("signal denied")):
+            with self.subTest(error=error), tempfile.TemporaryDirectory() as temporary:
+                output = Path(temporary) / "attempt"
+                code, _, cleanup, handlers, killed, _ = self.exercise(
+                    output, interrupt=True, signal_error=error)
+                self.assertEqual(code, 130)
+                self.assertEqual(killed, [(987654, signal.SIGTERM)])
+                self.assertEqual(cleanup, [["xcrun", "simctl", action, SIMULATOR]
+                                           for action in ("shutdown", "delete")])
+                receipt = json.loads((output / "ios-unit" / "receipt.json").read_text())
+                self.assertEqual(receipt["result"], "interrupted")
+                self.assertEqual(bool(receipt.get("cleanup_errors")), isinstance(error, PermissionError))
+                self.assertEqual(handlers, {signal.SIGINT: signal.SIG_DFL, signal.SIGTERM: signal.SIG_DFL})
 
     def test_shell_wrapper_forwards_arguments_and_preserves_nonzero_exit(self):
         with tempfile.TemporaryDirectory() as temporary:
