@@ -2,7 +2,7 @@
 
 ## Wear OS companion (deferred)
 
-The separately buildable `:wear` module remains in development, but it is **not included in the current Google Play release**. The phone app does not advertise Wear capabilities, start Data Layer synchronization, or show Wear settings while publication is deferred. `release-scope.json` records the phone-only `1.9.1` boundary and targets Wear requalification for `1.10.0`. See `docs/features/wear-os-completion-audit.md` for the outstanding physical-device work.
+The separately buildable `:wear` module remains in development, but it is **not included in the current Google Play release**. The phone app does not advertise Wear capabilities, start Data Layer synchronization, or show Wear settings while publication is deferred. `release-scope.json` records the phone-only `1.9.2` boundary and targets Wear requalification for `1.10.0`. See `docs/features/wear-os-completion-audit.md` for the outstanding physical-device work.
 
 > **Health Connect to Markdown, JSON, NDJSON, CSV, and Obsidian Bases — private files you control.**
 
