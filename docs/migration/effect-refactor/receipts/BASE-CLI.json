@@ -1,0 +1,343 @@
+{
+  "schema_version": 1,
+  "task_id": "BASE-CLI",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
+  "patch_digest": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+  "changed_paths": [
+    "docs/migration/effect-refactor/inventories/cli.json",
+    "docs/migration/effect-refactor/receipts/BASE-CLI.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "patch_digest_method": {
+    "algorithm": "SHA-256",
+    "command": [
+      "python3",
+      "-c",
+      "import hashlib,pathlib; print(hashlib.sha256(pathlib.Path('docs/migration/effect-refactor/inventories/cli.json').read_bytes()).hexdigest())"
+    ],
+    "included_paths": [
+      "docs/migration/effect-refactor/inventories/cli.json"
+    ],
+    "excluded_paths": [
+      "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+      "docs/migration/effect-refactor/plan.json"
+    ],
+    "scope": "Exact UTF-8 inventory bytes including newline; receipt/coordinator/other workers excluded."
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+      "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+      "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+      "packages/contracts/direct-protocol/v2/fixtures/interop.json": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+      "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+      "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2"
+    },
+    "locks_and_runtime": {
+      "apps/cli/Cargo.lock": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+      "apps/cli/Cargo.toml": "55c7b45a78c3c87918d93fce970196f50468e616e85583f8eeb283f14bc3d90d",
+      "packages/healthmd-core-rust/Cargo.lock": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+      "packages/healthmd-core-rust/Cargo.toml": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f"
+    },
+    "artifact_and_native_interface": {
+      "native_authorities": [
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift"
+      ]
+    },
+    "policy_migration_key_versions": {
+      "pairing_selectors": [
+        1,
+        2,
+        3
+      ],
+      "application_versions": {
+        "ios_export": 1,
+        "android": 2,
+        "ios_query": 3
+      },
+      "query_schema": 1,
+      "journal_versions": [
+        1,
+        2
+      ],
+      "no_contract_or_state_change": true
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Enumerate current full/read-only catalog and every O01\u2013O07 entry, including guessed dispatch policy.",
+      "result": "passed",
+      "evidence": "inventories/cli.json#/catalog, /workflows, /cli, /mcp_envelope:21/13 catalog; exact guessed-name deny dispatch policy source-derived"
+    },
+    {
+      "criterion": "Map wire/crypto/cursor/job transitions and exact limits to authoritative paths and independent cases.",
+      "result": "passed",
+      "evidence": "inventories/cli.json#/protocol, /bounds, /durable_state, /fixtures, /test_cases:6 canonical/mirror family SHA256 pins,352 source case IDs with per-flow thematic index"
+    },
+    {
+      "criterion": "Include native Swift query/context/evidence authority where Rust tests are incomplete; classify planned Android paths.",
+      "result": "passed",
+      "evidence": "inventories/cli.json#/query_authority, /platforms, /gaps:8 Swift query authority pins and foundation/projector/Mac tests; Android current unavailable and future target explicit"
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "BASE-CLI"
+      ],
+      "result": "passed",
+      "evidence": "Task scope/acceptance/target read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C07"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C08"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C09"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C11"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "C13"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K04"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "K05"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O01"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O02"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O03"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O04"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O05"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O06"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "O07"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F05"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F07"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "reference",
+        "F10"
+      ],
+      "result": "passed",
+      "evidence": "Exact scoped design row/section read"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "ls-tree",
+        "-r",
+        "--name-only",
+        "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d"
+      ],
+      "result": "passed",
+      "evidence": "Assigned source paths enumerated"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Inline JSON/catalog/flow presence assertions and git show SHA256/mirror/case validation:158 records rehashed,6 mirrors equal,352 test IDs present; no builds/tests"
+    }
+  ],
+  "inspection_summary": "Read root execution entrypoint/AGENTS, brief/templates/core-cli, registry/limits/normalization/service/caller/dispatch; CLI grammar/guidance/setup/stdio; handshake/packet/secure channel/receivers/journals and protocol specs. Pinned93 source records,6 fixture families,59 test paths with352 source case IDs. CLI/contracts component AGENTS absent; root governs. Apple/Android/shared-core AGENTS inspected. Source checkout comparison had no drift. One inline receipt-generation attempt had a Python syntax error and executed nothing; corrected run passed. Source inspection is planning evidence only.",
+  "observations": [],
+  "limitations": [
+    "No product tests/builds, device pairing, credentials, captures, external clients, hosted services or production promotion performed.",
+    "Portable evaluator expectations are incomplete without native Swift corpus extraction; fixture pins identify independent cases but do not claim extracted byte corpus exists.",
+    "Source-only inventory cannot certify published alpha.7 artifacts, signed hosts or physical compatibility; architecture says full retained matrix remains pending.",
+    "No Android typed-query parity fabricated; future native qualification separately scoped.",
+    "Native integration setup beyond existing CLI Codex transaction remains BASE-NATIVE/native interface inventory coverage.",
+    "Old journals/profile engine pins require F07 crash/retry/downgrade tests before retirement; no retained-state inspection/deletion authorized.",
+    "Apps resources/HTTP compile features and catalog identities inventoried only; external client rendering/OAuth and signed distribution remain unrun."
+  ],
+  "remaining_qualification": [
+    "Independent core/CLI exact fingerprint review pending.",
+    "Native fixture extraction, successor implementation, product checks and host/physical/signed/external/deployed qualification unrun.",
+    "Resolve stale v3 legacy pairing prose separately; preserve frozen protocol bytes."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
+  },
+  "review_evidence": {
+    "scope": "independent bounded source/catalog/query/protocol planning review",
+    "checks": "173 recursive pins, 352 test symbols, six fixture field-ID lists/mirrors, 59 source constant locators and all 21/13 catalog policies verified; actual behavior qualification remains pending."
+  }
+}

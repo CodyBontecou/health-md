@@ -2656,7 +2656,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 11,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_cli",
         "base_revision": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d",
@@ -2669,14 +2669,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "912c58553c0f692ae8667f32ec7fd7a8c6ceff8d+d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/BASE-CLI.json"
+        ]
       }
     },
     {
