@@ -4353,7 +4353,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 70,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/effect_base_core",
         "base_revision": "0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c",
@@ -4370,14 +4370,16 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_base_cli",
+        "fingerprint": "0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c+614ca11852d4048ab502801fdb8b4062a6ce09d624c3032a125ef800b6659d0c"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json"
+        ]
       }
     },
     {

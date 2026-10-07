@@ -1,0 +1,291 @@
+{
+  "schema_version": 1,
+  "task_id": "CLI-QUERY-ADAPTER",
+  "source_sha": "0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c",
+  "patch_digest": "614ca11852d4048ab502801fdb8b4062a6ce09d624c3032a125ef800b6659d0c",
+  "patch_digest_method": "SHA256 over lexically sorted three non-receipt claimed UTF8 repository-relative paths + NUL + raw file bytes + NUL. Excludes receipt/coordinator state/ignored outputs.",
+  "changed_paths": [
+    "apps/cli/src/cli/query.ts",
+    "apps/cli/tests/cli-query-vectors.ts",
+    "apps/cli/tests/cli-query.test.ts",
+    "docs/migration/effect-refactor/receipts/CLI-QUERY-ADAPTER.json"
+  ],
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "inputs": {
+    "source_contract_and_build_pins": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "apps/cli/crates/healthmd-cli/src/guidance.rs": "f71d47555df981fbbc27f70bec6746a40846b6287f3f1200f2d9a6aac95456e0",
+      "apps/cli/crates/healthmd-cli/src/main.rs": "7f6be243c49085ea188adf739b829d968d8330b196a7e2317a043d4a8e2ddf32",
+      "apps/cli/crates/healthmd-cli/src/mcp/mod.rs": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+      "apps/cli/crates/healthmd-cli/src/output.rs": "7ffedba6a33ee4111a993c5b6091da1b309d6e3ccc02d7a3ed64374b42e62afb",
+      "apps/cli/crates/healthmd-operations/src/limits.rs": "2a5f0ea3854fdb54550a1e075195407141321cc2cc1edeb91c05a3f047485184",
+      "apps/cli/crates/healthmd-operations/src/model.rs": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+      "apps/cli/crates/healthmd-operations/src/registry.rs": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+      "apps/cli/crates/healthmd-operations/src/service.rs": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+      "apps/cli/docs/typescript-candidate.md": "71ddadcdd39d1e4579782142af2b1998e86851dd85df9b96c285e12d0edb577a",
+      "apps/cli/package-lock.json": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+      "apps/cli/package.json": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+      "apps/cli/scripts/build-candidate.mjs": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+      "apps/cli/scripts/check-candidate.mjs": "df45b92da8f6415231bfa78b7d4e516841d2a136bb4a1476ea99aac08c66fe00",
+      "apps/cli/src/candidate-host.ts": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624",
+      "apps/cli/tests/candidate-api-vectors.ts": "e866e706c0cb71c4d782f5c9bcc9e12059f86897e7974cce60844c2c0a3f0cc6",
+      "apps/cli/tests/candidate-api.test.ts": "3ec07bd038a61561e902b3ef268c361d2791bebf80e6bce7f1cf9f0f44e59c63",
+      "apps/cli/tests/candidate-host.test.ts": "ec424cd4d5653b8c03400c70320770353afcecdd3251a14739479b75de74d88f",
+      "apps/cli/tsconfig.build.json": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+      "apps/cli/tsconfig.json": "ad34c0e91c3a575d3278af944148bdccc83ef90413050250d7ca629431c20c6c",
+      "apps/cli/tsconfig.test.json": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/core-cli.md": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+      "docs/migration/effect-refactor/inventories/cli.json": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+      "docs/migration/effect-refactor/receipts/BASE-CLI.json": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+      "docs/migration/effect-refactor/receipts/CLI-CANDIDATE-HOST.json": "54f660c295832cafaee2b7cbc4f876ee9320db811066d29e11bf7e712f453032",
+      "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-API.json": "d7441c0314fa08584dfb24534b0784bfc1a5f636baa32c21d393380bd441bb15",
+      "docs/migration/effect-refactor/receipts/OP-CATALOG.json": "a3ce7294241c2bd32051d0a296977e73eda01197b40a04666dee35edb9e6f758",
+      "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json": "d78dcac7a562180f9a30ec4459b0bde53c7e7080cddcf44f6d2edd27d3a2b87d",
+      "docs/migration/effect-refactor/receipts/REGISTRY-READER.json": "3f98a2b5368904c6f4ed00eb03cee6e8f93fecae58ee5b40dfe6be761ba1fde1",
+      "docs/migration/effect-refactor/templates.md": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/AGENTS.md": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "packages/healthmd-core-ts/README.md": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/package.json": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/src/contracts/exact-values.ts": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+      "packages/healthmd-core-ts/src/contracts/registry.ts": "0a2712e9f7ec42596b65a509d8ccf755d8e85f5bfb2f47e0b272bf180469fe09",
+      "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "packages/healthmd-core-ts/src/host-interfaces/faults.ts": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "packages/healthmd-core-ts/src/index.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "packages/healthmd-core-ts/src/operations/catalog.ts": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7",
+      "packages/healthmd-core-ts/src/operations/normalize.ts": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+      "packages/healthmd-core-ts/src/operations/query.ts": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+      "packages/healthmd-core-ts/tests/catalog-vectors.ts": "a28c9539cb62c1c5b52319c5e4cca27f93b3bebd5b5900592775800067a06f51",
+      "packages/healthmd-core-ts/tests/catalog.test.ts": "a3751d2bc08ab1b855db9b7ab318430cf927d5b00f7104124448f820168e1b27",
+      "packages/healthmd-core-ts/tests/exact-values-vectors.ts": "b64ca4d8bd50335a41f4d6f2ff045825f8feb3c0e91c3ce58e13715ae77ec954",
+      "packages/healthmd-core-ts/tests/exact-values.test.ts": "03c50ea1fb9f0d9d1efee6b415468876a3f917b9628ee32bb9b76587ec6578a5",
+      "packages/healthmd-core-ts/tests/foundation.test.ts": "f9f54951e7fb19db668373c4b8aab74d5aa5e282396380bc163152ffedb1ba0c",
+      "packages/healthmd-core-ts/tests/query-traversal-vectors.ts": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+      "packages/healthmd-core-ts/tests/query-traversal.test.ts": "d4f52ac9b25e16e76f21a4e2da2698a1a020f7cf6a3701d01d6c186760fba4ea",
+      "packages/healthmd-core-ts/tests/registry-vectors.ts": "f470896023dff3e000aa4171afd8988606fc4dc049c0d5b17929bfbbda67873a",
+      "packages/healthmd-core-ts/tests/registry.test.ts": "23c0932104a0874f4e1d8b382d38a7c01ed818f6deca12171225e8007b4a2761",
+      "packages/healthmd-core-ts/tsconfig.build.json": "da405f2cf08aea30602cc1ffdbaedd25a0ead61e8b966e806404627212cb0614",
+      "packages/healthmd-core-ts/tsconfig.json": "5c9087c0fdfed84a89a16f31266a0b76c3269d9aabcbf23e7cf8dd7f6d0405a5",
+      "packages/healthmd-core-ts/tsconfig.test.json": "a2f54ecf614e4a58e3fbaf664f6cebc81d41d4ec6e861ae9fb4c4d5f484f68e5"
+    },
+    "expected_vectors": {
+      "path": "apps/cli/tests/cli-query-vectors.ts",
+      "sha256": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+      "independent_review": {
+        "reviewer": "/root",
+        "result": "passed",
+        "timing": "Approved fixed source-derived literals before adapter implementation.",
+        "source_mapping": "Rust main.rs QueryArgs334..348/direct_query908..960/async_main failure exit1, output.rs output-mode selection and main.rs write_json_stdout; accepted common normalize/query fixtures. Private unknown-operation syntax exit2 differs legacy public registry rejection exit1 and is not parity."
+      }
+    },
+    "locks_and_runtime": {
+      "node": "v24.21.0",
+      "npm": "11.19.0",
+      "platform": "darwin-arm64",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "node_executable_sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b",
+      "dependency_graph": "Unchanged scoped CLI/core locks: one Effect4.0.1, TS7.0.2/esbuild0.28.2 Go optional tools, Node24 compiled ESM tests. Existing packed install-links core/16artifact/28input/manifest/module guards passed. No install, dependency, policy or global configuration change in this task."
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        "apps/cli/src/cli/query.ts": "a7b83690886d6d643ce5a72f98514739eadb6a34178148ad6111c7caf50d98a2",
+        "apps/cli/tests/cli-query-vectors.ts": "315098960cd4b7afdccd9c8d19a9f330495e33940f5954f4ea3026921b1f3bd2",
+        "apps/cli/tests/cli-query.test.ts": "feedc7f5fde3340493335327d5176a63687c05630356c017322beee48f6dbbde"
+      },
+      "compiled_CLI_artifacts": {
+        "apps/cli/dist/candidate/candidate-host.d.ts": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20",
+        "apps/cli/dist/candidate/candidate-host.js": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230",
+        "apps/cli/dist/candidate/cli/query.d.ts": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d",
+        "apps/cli/dist/candidate/cli/query.js": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74",
+        "apps/cli/dist/test-metafile.json": "366fa930ecb2c9f7cd49a62a592acde3cf6f7a09647f9700037dc0cb0271a4c9",
+        "apps/cli/dist/tests/candidate-api.test.js": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0",
+        "apps/cli/dist/tests/candidate-host.test.js": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f",
+        "apps/cli/dist/tests/cli-query.test.js": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70"
+      },
+      "unchanged_common_emitted_artifacts": {
+        "dist/core/contracts/exact-values.d.ts": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62",
+        "dist/core/contracts/exact-values.js": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4",
+        "dist/core/contracts/registry.d.ts": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e",
+        "dist/core/contracts/registry.js": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7",
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/core/operations/catalog.d.ts": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88",
+        "dist/core/operations/catalog.js": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5",
+        "dist/core/operations/normalize.d.ts": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393",
+        "dist/core/operations/normalize.js": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e",
+        "dist/core/operations/query.d.ts": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb",
+        "dist/core/operations/query.js": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+      },
+      "check_log_sha256": "fd74ab3501bcf9fc616fc227a9e7c7ec669e04c904c3a0668d2bb362783970a9"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Arguments normalize into the shared command and call the same operation in-process.",
+      "result": "passed",
+      "evidence": "Private fixed query argv routes host-decoded arguments through packed normalizeMetricChart and traverseQuery; host admission supplies binding/grants independently of flags. Tests record literal shared invocation/timeout and one open/read/release."
+    },
+    {
+      "criterion": "Exact canonical receipts and CLI errors/raw output semantics match scoped fixtures.",
+      "result": "passed",
+      "evidence": "Independently reviewed immutable315098... corpus matches one-page/shared-receipt objects, ASCII safe-integer pretty JSON bytes and scoped error codes/messages. This is not general raw/lossless JSON or full legacy CLI envelope/guidance/discovery parity."
+    },
+    {
+      "criterion": "Signals interrupt the query scope without marking separate durable work cancelled.",
+      "result": "passed",
+      "evidence": "Actual Fiber interruption waits Deferred native-like release acknowledgment, strips mixed cleanup defects and leaves no acquired resource/read after cancelled preparation. Pending interruption at final allocation acquires1/reads0/releases1. No durable job API is imported or invoked; real process SIGINT handling remains separate as dispatch requires."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "elapsed_seconds": 1.201,
+      "evidence": "Exit0;49tests (20 accepted prior+29 new CLI query),0failure/cancel/skip; strict source/test types and compiled ESM;28core inputs/16artifacts/one physical Effect/service identity;6actual filesystem guards. LogSHA256 fd74ab3501bcf9fc616fc227a9e7c7ec669e04c904c3a0668d2bb362783970a9."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "Independent raw digest/source stability inspection: immutable vectors,28unchanged core input files,4unchanged CLI manifest/lock/scripts,16unchanged core artifact hashes; scoped compiled output hashes captured."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0/no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0 after receipt:71atomic tasks/86families/16choices; structural graph/pointers/evidence/claims valid, not release qualification."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Coordinator fresh frozen integration, pinned Node24.21.0/npm11.19.0:191 core+14 UI+49 CLI=254 tests passed, zero failures/cancelled/skipped/todo. Exact 59 historical/current inputs,8 CLI outputs and16 common outputs in source/packed copies reverified. LogSHA256 99a8ca5c80798817a01c6fd8d5a4a82ddf02e28ebb299363513449edf99557be."
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "argv-authority-rejection",
+      "procedure": "Run eight fixed private syntax negatives against counting host decoder/admission/source.",
+      "expected": "Unknown caller/source/grant/dataset flags fail before decode, admission or acquisition.",
+      "observed": "All eight cases produce fixed private parse projection; all host/source counters zero.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "shared-normalization-and-profile",
+      "procedure": "Execute three valid argv vectors through injected decoded JSON/admission and packed common modules.",
+      "expected": "1200 default/1..3600 controls and literal summary invocation; caller/source/profile/dataset/grants supplied only by host.",
+      "observed": "Three literal invocation/default cases, lossless/all-pages and two host-attested read-only profiles pass. Empty grants prevent open.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "bounded-presentation",
+      "procedure": "Compare literal one-page and traversal receipt objects plus separately pinned sorted-pretty ASCII strings.",
+      "expected": "Exact scoped bytes and receipt, preserving partial coverage; reject unsafe integers/fraction/-0/Unicode and integer-like object keys.",
+      "observed": "All literals and five unsupported representation cases pass. Trusted encodedBytes64 is synthetic accounting, not exact serialization proof.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "safe-errors",
+      "procedure": "Exercise typed decoder/source failure, provider/admission/cleanup defects and reused fixed error mutation.",
+      "expected": "Only fixed candidate codes/messages; no input/provider/parser cause or secret contamination.",
+      "observed": "Decode/normalizer/query/presentation errors match literals; pure and mixed cleanup defects content-free; nested fixed failures immutable.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "interruption-barrier",
+      "procedure": "Interrupt actual Fiber during source read and during masked final allocation; hold async cleanup acknowledgment.",
+      "expected": "Cancellation cannot complete before acknowledgment; resource finalizes once and final-allocation pending interrupt cannot leak.",
+      "observed": "Read cancellation and mixed cause retain interrupt-only reasons; final allocation acquires1/reads0/releases1; cancellation during admission opens0.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "qualification-cohort",
+      "procedure": "Compare core/package/lock/scripts and16emitted files to assigned accepted source; run CLI check only.",
+      "expected": "Existing qualified code/exports/locks remain unchanged; no new business engine.",
+      "observed": "28core inputs,4CLI manifest/lock/scripts and16core artifacts unchanged;49compiled tests passed with one physical Effect/shared constructors and six existing filesystem guards.",
+      "evidence": "Pinned vectors/source/artifacts and actual npm check log hash in this receipt.",
+      "result": "passed"
+    },
+    {
+      "case_id": "independent-review-and-root-integration",
+      "procedure": "Independent read-only exact source review and emitted49 test replay, then coordinator fresh common make and raw input/patch/artifact verification.",
+      "expected": "Same frozen patch and common cohort, all scoped tests pass; no scope expansion or authority promotion.",
+      "observed": "Reviewer accepted exact614ca... source;49 emitted tests, nine additional argv negatives and exact ASCII presentation check pass. Root common254 tests pass;59 input pins,8 CLI outputs and16 common outputs in both copies match.",
+      "evidence": "Review /root/effect_base_cli at 0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c+614ca11852d4048ab502801fdb8b4062a6ce09d624c3032a125ef800b6659d0c; root logSHA256 99a8ca5c80798817a01c6fd8d5a4a82ddf02e28ebb299363513449edf99557be.",
+      "result": "passed"
+    }
+  ],
+  "inspection_summary": {
+    "claimed_paths": 4,
+    "nonreceipt_paths": 3,
+    "new_compiled_tests": 29,
+    "total_CLI_tests": 49,
+    "common_core_inputs_unchanged": 28,
+    "common_core_artifacts_unchanged": 16,
+    "filesystem_guard_cases": 6,
+    "presentation": "JSON-mode literal ASCII/non-numeric keys/safe integral values only; bounded4096nodes/32depth/65536codeunits; no general serde raw parity.",
+    "ownership": "No JSON parser, source discovery, credentials, network, listener, process signal handler or durable job mutation. Shared QuerySource/ownQueryResource/traverseQuery remain operation owners."
+  },
+  "limitations": [
+    "Private fixed healthmd_metric_chart execution path only; no full Clap, operation discovery, human/TTY selection, wake/device/port, complete legacy guidance/error recovery envelope or public launcher parity. Private unknown-operation rejection exit2 is not the legacy public registry error exit1.",
+    "Trusted host decodeArguments must supply reviewed lossless/raw-byte decoding before common normalization; candidate performs no JSON.parse or numeric lexeme interpretation. Full raw lossless parser/Unicode/fraction/-0/large-integer serializer remains a later dependency.",
+    "ASCII safe-integer presentation corpus alone is qualified; unsupported representations fail private candidate_presentation_unavailable. No general canonical-byte equivalence, native evaluator, exact encoded-byte/memory/frame accounting or health-coverage claim.",
+    "Host admit and QuerySource validate complete grammar/current authenticated caller/source/profile/grants/coverage/cursor/dataset; test attestations are synthetic. Legacy Rust CLI LocalDirect differs candidate host-attested read-only subset; flags never create authority.",
+    "Actual Fiber cancellation/cleanup acknowledgment only. OS SIGINT/process exit and durable job lifecycle integration remain separate; this module never marks durable work cancelled.",
+    "Only exact Darwin-arm64 portable synthetic runtime observed. Root common make passed254 scoped portable tests; no native builds, physical/signed/remote CI/admin/public wire/distribution or O02/C11 family/promotion/Rust retirement qualification."
+  ],
+  "remaining_qualification": [
+    "Thin MCP adapter/SLICE-PARITY, complete lossless raw parser and serializers, real host admission/native evaluator/QuerySource capabilities, public CLI/process/distribution proofs."
+  ],
+  "rollback": "Remove these three private candidate source/test/vector files and this receipt, then rebuild only scoped CLI candidate outputs if needed. Existing public Rust CLI/MCP launchers, locks, protocols, fixtures, common operation code, credential/state authority and user data remain unchanged.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_base_cli",
+    "fingerprint": "0bc1f992f68e7dbecaaba2840aa8b6b82c5df70c+614ca11852d4048ab502801fdb8b4062a6ce09d624c3032a125ef800b6659d0c"
+  }
+}
