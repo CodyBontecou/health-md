@@ -1,0 +1,393 @@
+{
+  "schema_version": 1,
+  "task_id": "PORTABLE-CI",
+  "source_revision": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+  "design_ids": [
+    "C01",
+    "C11",
+    "H09",
+    "F08",
+    "F09"
+  ],
+  "proof_class": "portable_synthetic",
+  "qualification_scope": "Candidate configuration and local darwin-arm64 execution only; no GitHub, native, release or production admission.",
+  "source_fact_pins": {
+    "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+    "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+    "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+    "docs/migration/effect-refactor/inventories/ci.json": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+    "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+    "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+    ".github/actions/component-changes/action.yml": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5",
+    "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+    "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+    "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+    "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+    "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+    "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "1f70daf4005a031b4e179c98b90bc687a543a490db0597abff91aeb119fd2f70"
+  },
+  "candidate": {
+    "workflow": ".github/workflows/core-typescript-ci.yml",
+    "context": "Core TypeScript CI / Core TypeScript CI",
+    "router": [
+      "make",
+      "test-portable"
+    ],
+    "component": "packages/healthmd-core-ts",
+    "runtime": {
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "effect": "4.0.1",
+      "typescript": "7.0.2",
+      "esbuild": "0.28.2"
+    },
+    "path_map": [
+      "packages/healthmd-core-ts/**",
+      "packages/contracts/**",
+      "docs/migration/effect-refactor/decisions/portable-pins.json",
+      "AGENTS.md",
+      "Makefile",
+      ".github/actions/component-changes/**",
+      ".github/workflows/core-typescript-ci.yml"
+    ],
+    "current_consumers": [
+      "Candidate package build/test/boundary scripts only. No public/native/product consumer imports the candidate."
+    ],
+    "future_consumer_obligation": "Extend actual introduced consumer CI/release path maps and qualification in separate bounded cards before admission.",
+    "cache": {
+      "path": "packages/healthmd-core-ts/build/npm-cache",
+      "key_dimensions": [
+        "runner OS",
+        "runner architecture",
+        "Node24.21.0",
+        "npm11.19.0",
+        "component package-lock.json hash"
+      ],
+      "cached_outputs": "npm downloads only; no node_modules/dist restore",
+      "restore_keys": []
+    },
+    "artifact": {
+      "path": "packages/healthmd-core-ts/dist/",
+      "identity": "core-typescript-${source_sha}-${run_attempt}",
+      "retention_days": 7,
+      "missing_artifact": "failure"
+    },
+    "events": {
+      "pull_request": "Always instantiate final context; local detector selects check.",
+      "push": "main with mirrored component map; non-PR detector runs full.",
+      "workflow_dispatch": "Full; optional exact40 lowercase hexadecimal SHA otherwise event SHA.",
+      "workflow_call": "Required exact40 lowercase hexadecimal SHA; explicit full=true even under caller PR event."
+    },
+    "final_gate_policy": "Require changes job success and exactly run=true/check=success OR run=false/check=skipped. Missing/invalid decisions and failure/cancellation fail.",
+    "permissions": "contents:read; changes only adds pull-requests:read; checkout persist-credentials:false; no production secrets/signing/publishing/deployment."
+  },
+  "actual_configuration_checks": {
+    "gate_matrix_cases": 96,
+    "gate_matrix_sha256": "4128b9bbb2549989404c38462a4c4006597e0660e6dec2a3c51f1e596cf5e83b",
+    "gate_passing_vectors": [
+      {
+        "changes": "success",
+        "run": "true",
+        "check": "success",
+        "expected_pass": true,
+        "exit": 0
+      },
+      {
+        "changes": "success",
+        "run": "false",
+        "check": "skipped",
+        "expected_pass": true,
+        "exit": 0
+      }
+    ],
+    "path_cases": [
+      {
+        "path": "packages/healthmd-core-ts/tests/nested/foo.test.ts",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": "packages/contracts/example.json",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": "docs/migration/effect-refactor/decisions/portable-pins.json",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": "AGENTS.md",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": "Makefile",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": ".github/actions/component-changes/action.yml",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": ".github/workflows/core-typescript-ci.yml",
+        "expected_run": "true",
+        "observed_run": "true"
+      },
+      {
+        "path": "apps/apple/HealthMd/example.swift",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "apps/android/example.kt",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "apps/cli/example.rs",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "packages/healthmd-core-rust/example.rs",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "apps/website/example.ts",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "apps/practice/example.ts",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "apps/wake/example.ts",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "docs/other.md",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": ".github/workflows/core-rust-ci.yml",
+        "expected_run": "false",
+        "observed_run": "false"
+      },
+      {
+        "path": "packages/healthmd-core-ts-other/foo.ts",
+        "expected_run": "false",
+        "observed_run": "false"
+      }
+    ],
+    "source_cases": [
+      {
+        "case_id": "exact-current-head",
+        "expected_pass": true,
+        "exit": 0
+      },
+      {
+        "case_id": "missing",
+        "expected_pass": false,
+        "exit": 1
+      },
+      {
+        "case_id": "symbolic-main",
+        "expected_pass": false,
+        "exit": 1
+      },
+      {
+        "case_id": "wrong-sha",
+        "expected_pass": false,
+        "exit": 1
+      },
+      {
+        "case_id": "uppercase",
+        "expected_pass": false,
+        "exit": 1
+      }
+    ],
+    "unchanged_workflows": {
+      ".github/workflows/android-announce.yml": "ff43a2bd458678f5db9bacec9b912d654a032292f20a4f062061899704cfb0ee",
+      ".github/workflows/android-ci.yml": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+      ".github/workflows/android-google-play-access-audit.yml": "001712d2875c739233f14a12dd2b1fb3af1f71706ce6f1d864a8149f7d4e437b",
+      ".github/workflows/android-promote-production-recover.yml": "b07edc41845cca78ca42d88c680a57d183bfc04b75bfdf41ef232951934afe38",
+      ".github/workflows/android-promote-production.yml": "337d15f9ec1f3d8d36f0411c5ac0dbac25a4ee82107a28334b5813919996d4a7",
+      ".github/workflows/android-release.yml": "b37c468f5ff225cebaff365c78c6a904a3369d5abbbbd2960bb2ee02c177fa27",
+      ".github/workflows/android-wear-evidence-submit.yml": "035b82a9adb9f143ee636251e957b921765e7da5aa4217a302bf14e43377c30f",
+      ".github/workflows/android-wear-evidence.yml": "3edfca72c5a5845ff1383c943706ca8b32f84311f8344756eb201837d7392650",
+      ".github/workflows/android-wear-screenshots.yml": "10ae659d28a029c7dd09dac7bce8dcf43d68e0b8e5396e15ddb349b70c406c3b",
+      ".github/workflows/apple-announce.yml": "806e72c1309cff4965fb82957260400cda78fec2519b81112a5aa80ab6b96460",
+      ".github/workflows/apple-cancel-review-submission.yml": "a9809688fdccb63b34edbb7dadaefba92339cf2c6ff42fc5a2ac1b7c32152dd3",
+      ".github/workflows/apple-ci.yml": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+      ".github/workflows/apple-nightly.yml": "989f496524b59ff6d582232934d84ede4e4eb0f76623a6eb473eb13013ff6bde",
+      ".github/workflows/apple-review-state.yml": "3f44dbec7fc4e8051f9156e4d6b01548f70cb6536e9a0c55d8efa51dd682addd",
+      ".github/workflows/apple-review-status.yml": "97efa23cc30c52fc0d1c4c7a0b55af8e83dcb27c9fef6b117b208489f2cffdbe",
+      ".github/workflows/apple-submit-version.yml": "07427a47022a18d4b051724b611e21868cc6cbd5810188612ee1c5bc381cb34c",
+      ".github/workflows/cli-ci.yml": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+      ".github/workflows/cli-publish-crates.yml": "c206798617f42e7d9021bfb0518f6c26b7cfd6adb9a527ba7fdc4780b5766d79",
+      ".github/workflows/cli-release.yml": "c22fdfabb2f6c052e6ab0ef8176f8ef98c6f084405af7e717ca20a028474900b",
+      ".github/workflows/cli-sbom.yml": "927daad16dd0c0f3397520a7ae780a35641299209657cafcd53ba6462547f178",
+      ".github/workflows/core-rust-ci.yml": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+      ".github/workflows/practice-ci.yml": "3d3121fcb6f7664424478112f36f497c0da46c6bb88a9c17a799bbae32ee0923",
+      ".github/workflows/release-ios.yml": "96489fa745a3128a7752d5490d62ade62bfd137a0b0c81467f65dbbea0030e9b",
+      ".github/workflows/release-macos.yml": "78931cc58aae4b4fa724b4daf1d7e779fd4b065cdd7142915544548ceab3b823",
+      ".github/workflows/wake-ci.yml": "65f18d3d1d48c8c3fc321f4d0966750aee51400a568fd7137f305ba29b61b6c0",
+      ".github/workflows/website-ci.yml": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a"
+    },
+    "unchanged_make_target_count": 22,
+    "path_map": [
+      "packages/healthmd-core-ts/**",
+      "packages/contracts/**",
+      "docs/migration/effect-refactor/decisions/portable-pins.json",
+      "AGENTS.md",
+      "Makefile",
+      ".github/actions/component-changes/**",
+      ".github/workflows/core-typescript-ci.yml"
+    ],
+    "config_assertions": [
+      "Push/detector paths identical",
+      "workflow_call release_sha required and forces full run",
+      "always() final gate",
+      "existing workflow files byte-identical",
+      "all old Makefile target headers/recipes preserved"
+    ],
+    "result": "passed",
+    "runtime_cases": [
+      {
+        "node": "v24.21.0",
+        "npm": "11.19.0",
+        "expected_pass": true,
+        "exit": 0
+      },
+      {
+        "node": "v26.8.1",
+        "npm": "11.19.0",
+        "expected_pass": false,
+        "exit": 1
+      },
+      {
+        "node": "v24.21.0",
+        "npm": "11.18.0",
+        "expected_pass": false,
+        "exit": 1
+      },
+      {
+        "node": "",
+        "npm": "",
+        "expected_pass": false,
+        "exit": 1
+      }
+    ],
+    "unpinned_router_rejection": {
+      "exit_code": 2,
+      "install_started": false,
+      "host_node": "26.8.1",
+      "host_npm": "11.19.0"
+    }
+  },
+  "configuration_reproduction": {
+    "yaml_loader": "PyYAML BaseLoader (preserves on string)",
+    "gate": "Read jobs.gate.steps[0].run from YAML and execute via bash -c for Cartesian product changes={success,failure,cancelled,skipped}, run={true,false,empty,True,null,invalid}, check={success,failure,cancelled,skipped}. Expect only the two documented passing vectors. Matrix digest canonical json.dumps(sort_keys=True,separators=(comma,colon)).",
+    "paths": "Compare on.push.paths with detect.with.paths splitlines. Parse Python here-doc from unchanged local action; AST compile only pattern_to_regex with re provided, no API/credentials; apply recorded17 cases.",
+    "source": "Execute unchanged Validate exact source shell with current git HEAD, empty, main, zero40, uppercase HEAD inputs; only current HEAD accepted.",
+    "runtime": "Execute workflow runtime assertion with shell stub node/npm outputs for recorded4 cases. Also actually run root router on installed unpinned host, requiring nonzero before npm ci.",
+    "preservation": "Compare every base .github/workflows/*.yml raw byte against working file; compare all old Make target headers/prerequisites/recipes excluding extended .PHONY.26 workflow files and22 old targets identical."
+  },
+  "local_execution": {
+    "cwd": ".",
+    "argv": [
+      "make",
+      "test-portable"
+    ],
+    "exit_code": 0,
+    "elapsed_seconds": 2.333,
+    "environment": {
+      "platform": "darwin-arm64",
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "install": "Fresh npm ci from task download cache; npm_config_offline=true; no global installs/config edits.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"
+    },
+    "installed_packages": 7,
+    "tests": {
+      "discovered_source": [
+        "tests/foundation.test.ts"
+      ],
+      "executed_js": [
+        "dist/tests/foundation.test.js"
+      ],
+      "passed": 8,
+      "failed": 0,
+      "cancelled": 0,
+      "skipped": 0
+    },
+    "boundaries": {
+      "source_modules": 3,
+      "effect_installations": 1,
+      "lexical_negatives_passed": 13,
+      "graph_negatives_passed": 6
+    },
+    "output_sha256": "28b14bd50e8b2f2f42d22128c8b32b52429e9d73f305211e7dcb57be5a8a6b75",
+    "artifacts_sha256": {
+      "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+      "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+      "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+      "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+      "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+      "dist/neutral-metafile.json": "47a510bef7aeec8041d2029b5e8de52f91c8bf273459fbdbd6b70bdcb14e62a2",
+      "dist/test-metafile.json": "7affcce911041a27ce0cc1251b818b295f29459f4cb52722232f1f567a4e9847",
+      "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+    },
+    "native_toolchains_invoked": [],
+    "warning": "npm11.19 skipped unapproved esbuild postinstall; exact optional Go binary installed and real build passed without changing policy."
+  },
+  "preserved_required_contexts": [
+    "Apple CI / Apple CI",
+    "Android CI / Android CI",
+    "CLI CI / CLI CI",
+    "Core Rust CI / Core Rust CI",
+    "Practice CI / Practice CI",
+    "Wake CI / Wake CI",
+    "Website CI / Website CI"
+  ],
+  "primary_documentation": [
+    {
+      "url": "https://github.com/actions/setup-node/tree/v4",
+      "supports": "Exact node-version and check-latest input selection; actual action execution unrun."
+    },
+    {
+      "url": "https://github.com/actions/cache/tree/v4",
+      "supports": "Explicit cache path and key inputs; actual restore/save unrun."
+    },
+    {
+      "url": "https://github.com/actions/upload-artifact/tree/v4",
+      "supports": "Explicit artifact path, missing-file error and retention settings; actual upload unrun."
+    },
+    {
+      "url": "https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax",
+      "supports": "PR/push/call/dispatch, job outputs/conditions and permissions; GitHub event behavior not locally executed."
+    }
+  ],
+  "limitations": [
+    "No remote workflow dispatched; Linux runner install, action execution, PR pagination/API, event checkout, cache restore/save, artifact upload and actual final status contexts remain unrun.",
+    "GitHub branch protection/rulesets and required-context administrator reconciliation uninspected and unchanged; existing seven remain required by source policy.",
+    "Local timing is one final sample, not CI/runtime/disk performance benefit or cold/parallel/native-worktree evidence.",
+    "Actions use existing repository major-v4 convention; exact resolved action revisions/attestations and future action updates need actual supported-run evidence.",
+    "No Rust/native/full make test or product consumer qualification; unchanged gates preserve existing obligations.",
+    "Node archive accepted raw hash provenance retained from TS-FOUNDATION; signatures/attestation not newly verified."
+  ],
+  "remaining_qualification": [
+    "Independent exact source+patch review.",
+    "Actual GitHub run on admitted exact source/runtime and successful/skip/failure event paths; administrator reconciliation separately.",
+    "Extend maps and verify integration gates for every later actual consumer; H09/F08/F09 and parent phases remain open."
+  ]
+}

@@ -1,0 +1,257 @@
+{
+  "schema_version": 1,
+  "task_id": "PORTABLE-CI",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "source_sha": "2771704da48fd0fbeb12cafdbc9adbd27f08343f",
+  "patch_digest": "b721b746427de81c1242316cf69dc5e902f731e2b239c9cf81086617bb624783",
+  "patch_digest_method": "SHA256 over lexically sorted four claimed workflow/document/router/inventory paths, each UTF-8 repository-relative path + NUL + exact raw bytes + NUL. Excludes receipt itself, coordinator plan/state and ignored build/dist/node_modules/cache outputs. Individual files pinned in inputs.artifact_and_native_interface.patch_files.",
+  "changed_paths": [
+    ".github/workflows/README.md",
+    ".github/workflows/core-typescript-ci.yml",
+    "Makefile",
+    "docs/migration/effect-refactor/inventories/portable-ci-result.json",
+    "docs/migration/effect-refactor/receipts/PORTABLE-CI.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "AGENTS.md": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "docs/architecture/javascript-unified-layer-research.md": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "docs/migration/effect-refactor/cloud-release.md": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+      "docs/migration/effect-refactor/inventories/ci.json": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+      "docs/migration/effect-refactor/decisions/portable-pins.json": "5d4eef97a3f1350d6fedc7fc84aae7e3ca8a02a1eb1d7206370f0a7299f06a85",
+      "docs/migration/effect-refactor/receipts/TS-FOUNDATION.json": "cb33a810595cd495103c73da37f103c59f75b4a61df28864c359c83e5bf6b993",
+      ".github/actions/component-changes/action.yml": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5",
+      "packages/healthmd-core-ts/package.json": "669826ebeacdc3211b4d41ec0f17ddad63b78b710bb74756fa2dfd586c756ba2",
+      "packages/healthmd-core-ts/package-lock.json": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "packages/healthmd-core-ts/.node-version": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+      "packages/healthmd-core-ts/scripts/check.mjs": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "packages/healthmd-core-ts/scripts/build.mjs": "74a89aaaca29b65bdbc13fec480aaa642b8bf72c7daeebacfae150750c7cd83b",
+      "packages/healthmd-core-ts/scripts/check-boundaries.mjs": "1f70daf4005a031b4e179c98b90bc687a543a490db0597abff91aeb119fd2f70"
+    },
+    "locks_and_runtime": {
+      "platform": "darwin-arm64",
+      "node": "24.21.0",
+      "npm": "11.19.0",
+      "install": "Fresh npm ci from task download cache; npm_config_offline=true; no global installs/config edits.",
+      "node_archive_sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057",
+      "package_lock_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "runtime_dependencies": {
+        "effect": "4.0.1"
+      },
+      "build_tools": {
+        "typescript": "7.0.2",
+        "esbuild": "0.28.2",
+        "@types/node": "24.19.1"
+      },
+      "installed_packages": 7
+    },
+    "artifact_and_native_interface": {
+      "patch_files": {
+        ".github/workflows/README.md": "2248c21ed2fbb8eb7a1004df30b57b1ae45921c915cf5cf9f0ceac396e73e714",
+        ".github/workflows/core-typescript-ci.yml": "a8a062bdc2c34b26a16b73095d19236ac4fb8efeae33478a4c0758cc0f8a84a5",
+        "Makefile": "f5b4fb1c41ca1d92eba4c5bc27770ca787bb6d511b5caddabe56ac464c49f4fe",
+        "docs/migration/effect-refactor/inventories/portable-ci-result.json": "eaee7dccebaad04bc5f6a135b730e379c92f6f234685b27db0df8d92fd3ea43f"
+      },
+      "emitted_files": {
+        "dist/core/host-interfaces/capabilities.d.ts": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235",
+        "dist/core/host-interfaces/capabilities.js": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef",
+        "dist/core/host-interfaces/faults.d.ts": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8",
+        "dist/core/host-interfaces/faults.js": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0",
+        "dist/core/index.d.ts": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+        "dist/core/index.js": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389",
+        "dist/neutral-metafile.json": "47a510bef7aeec8041d2029b5e8de52f91c8bf273459fbdbd6b70bdcb14e62a2",
+        "dist/test-metafile.json": "7affcce911041a27ce0cc1251b818b295f29459f4cb52722232f1f567a4e9847",
+        "dist/tests/foundation.test.js": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+      },
+      "native_interfaces_changed": [],
+      "workflow_action_refs": [
+        "actions/checkout@v4",
+        "actions/setup-node@v4",
+        "actions/cache@v4",
+        "actions/upload-artifact@v4"
+      ]
+    },
+    "policy_migration_key_versions": {
+      "source_contract_state_impact": "No public contract/fixture/state change; candidate CI only.",
+      "required_contexts_retained": [
+        "Apple CI / Apple CI",
+        "Android CI / Android CI",
+        "CLI CI / CLI CI",
+        "Core Rust CI / Core Rust CI",
+        "Practice CI / Practice CI",
+        "Wake CI / Wake CI",
+        "Website CI / Website CI"
+      ]
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Use the core component's locked check script and explicit cache/artifact paths; its portable default invokes no native toolchain.",
+      "result": "passed",
+      "evidence": "Workflow and make target use scoped npm ci + unchanged locked npm run check. Exact Node/npm preflight; explicit download cache/dist artifact; actual8 emitted-JS tests/19 boundary cases/one Effect passed without native tools."
+    },
+    {
+      "criterion": "Add stable fail-closed context/path maps without removing Rust/native/release requirements; consumers are extended in separate cards as introduced.",
+      "result": "passed",
+      "evidence": "Inventory records96 executed gate vectors,17 mirrored-map cases,5 exact-source and4 runtime assertion cases. All26 prior workflow files byte-identical and22 old Make target definitions preserved. Seven contexts retained; future consumer maps separate."
+    },
+    {
+      "criterion": "Execute the introduced core-only local portable router and record actual command/configuration evidence plus pending CI/admin qualification.",
+      "result": "passed",
+      "evidence": "Required make test-portable executed from root on Node24.21.0/npm11.19.0; fresh scoped offline cached npm ci installed7 packages and full check exited0 in 2.333s. GitHub/admin/Linux qualification explicitly pending."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json local_execution: exact runtime, offline scoped cache; fresh7-package install;8 tests/19 negatives; exit0; elapsed 2.333s."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "actionlint",
+        ".github/workflows/core-typescript-ci.yml"
+      ],
+      "result": "passed",
+      "evidence": "Exit0 with no diagnostics; workflow only."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json actual_configuration_checks and configuration_reproduction:96 gate-shell,17 local matcher,5 source,4 runtime vectors;26 workflow byte comparisons/22 preserved old targets. Executed stdin inspection and temporary replay independently reran same cases."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "make",
+        "-n",
+        "test-portable"
+      ],
+      "result": "passed",
+      "evidence": "Exactly scoped version preflight, npm ci and npm run check; no Cargo/native router dependencies."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "diff",
+        "--check"
+      ],
+      "result": "passed",
+      "evidence": "Exit0, no whitespace diagnostics."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "git",
+        "check-ignore",
+        "packages/healthmd-core-ts/build/npm-cache",
+        "packages/healthmd-core-ts/dist"
+      ],
+      "result": "passed",
+      "evidence": "Both intended output paths ignored by existing root rules."
+    }
+  ],
+  "inspection_summary": "Read pinned root/entrypoint/cloud-release instructions and scoped C01/C11/H09/F08/F09 rows, accepted ci/pins/foundation receipt and current component scripts. Candidate is not yet a product consumer. New workflow uses read-only permissions and no production secret/release/native steps. Cache and artifact paths scoped; required contexts/releases/source files preserved. Locally tested extracted YAML shell gates and actual unchanged action matcher without network/API credentials.",
+  "observations": [
+    {
+      "case_id": "exact-runtime-portable-router",
+      "procedure": "Prepend admitted temporary Node24 binary and use scoped offline download cache; run make test-portable at repository root.",
+      "expected": "Exact-runtime fresh lock install and full portable package check succeeds.",
+      "observed": "Exit0;7 installed packages;8 tests passed,0 failures/cancellations/skips;13 lexical+6 graph negatives passed;3 source modules/1 Effect identity.",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json local_execution",
+      "result": "passed"
+    },
+    {
+      "case_id": "unpinned-runtime-rejected",
+      "procedure": "Run same root target with available host Node26.8.1/npm11.19.0.",
+      "expected": "Preflight rejects unpinned runtime before dependency installation.",
+      "observed": "make exit2 before npm ci; expected rejection.",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json actual_configuration_checks.unpinned_router_rejection",
+      "result": "passed"
+    },
+    {
+      "case_id": "fail-closed-gate-matrix",
+      "procedure": "Read jobs.gate.steps[0].run from YAML and execute via bash -c for Cartesian product changes={success,failure,cancelled,skipped}, run={true,false,empty,True,null,invalid}, check={success,failure,cancelled,skipped}. Expect only the two documented passing vectors. Matrix digest canonical json.dumps(sort_keys=True,separators=(comma,colon)).",
+      "expected": "Exactly2 of96 vectors succeed; all failure/cancellation/missing/invalid decision vectors fail.",
+      "observed": "All96 matched independent expectations; only success/true/success and success/false/skipped passed.",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json actual_configuration_checks.gate_matrix_sha256",
+      "result": "passed"
+    },
+    {
+      "case_id": "path-source-runtime-preservation",
+      "procedure": "Execute recorded matcher/source/runtime assertions and compare base workflow bytes/Make definitions.",
+      "expected": "Mirrored7 patterns;17 path,5 source,4 runtime cases; unchanged prior native/release requirements.",
+      "observed": "All cases passed;26 old workflow files identical;22 old targets unchanged; seven context names retained.",
+      "evidence": "docs/migration/effect-refactor/inventories/portable-ci-result.json actual_configuration_checks",
+      "result": "passed"
+    }
+  ],
+  "limitations": [
+    "No remote workflow dispatched; Linux runner install, action execution, PR pagination/API, event checkout, cache restore/save, artifact upload and actual final status contexts remain unrun.",
+    "GitHub branch protection/rulesets and required-context administrator reconciliation uninspected and unchanged; existing seven remain required by source policy.",
+    "Local timing is one final sample, not CI/runtime/disk performance benefit or cold/parallel/native-worktree evidence.",
+    "Actions use existing repository major-v4 convention; exact resolved action revisions/attestations and future action updates need actual supported-run evidence.",
+    "No Rust/native/full make test or product consumer qualification; unchanged gates preserve existing obligations.",
+    "Node archive accepted raw hash provenance retained from TS-FOUNDATION; signatures/attestation not newly verified."
+  ],
+  "remaining_qualification": [
+    "Independent exact source+patch review accepted.",
+    "Actual GitHub run on admitted exact source/runtime and successful/skip/failure event paths; administrator reconciliation separately.",
+    "Extend maps and verify integration gates for every later actual consumer; H09/F08/F09 and parent phases remain open."
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "2771704da48fd0fbeb12cafdbc9adbd27f08343f+b721b746427de81c1242316cf69dc5e902f731e2b239c9cf81086617bb624783"
+  },
+  "independent_review": {
+    "scope": "Full workflow, Makefile, README, result inventory and receipt against scoped task and accepted source. No blocking findings.",
+    "checks": [
+      {
+        "cwd": ".",
+        "argv": [
+          "make",
+          "test-portable"
+        ],
+        "result": "passed",
+        "evidence": "Pinned Node24.21.0/npm11.19.0 with scoped offline cache; fresh7 packages;8 tests/19 boundary cases; actual1.963s."
+      },
+      {
+        "cwd": ".",
+        "argv": [
+          "actionlint",
+          ".github/workflows/core-typescript-ci.yml"
+        ],
+        "result": "passed",
+        "evidence": "No diagnostics."
+      },
+      {
+        "cwd": ".",
+        "argv": [
+          "python3",
+          "-"
+        ],
+        "result": "passed",
+        "evidence": "Independently replayed96 gate-shell/17 path/5 source/4 runtime cases; verified26 old workflow bytes and22 preserved Make targets, and recomputed exact4-file patch digest."
+      }
+    ],
+    "limitations": "Actual GitHub/Linux/action/API/cache/artifact/admin qualification remains pending."
+  }
+}

@@ -1,0 +1,161 @@
+name: Core TypeScript CI
+
+on:
+  # Every PR receives a conclusive candidate context; only the check job is filtered.
+  pull_request:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/healthmd-core-ts/**'
+      - 'packages/contracts/**'
+      - 'docs/migration/effect-refactor/decisions/portable-pins.json'
+      - 'AGENTS.md'
+      - 'Makefile'
+      - '.github/actions/component-changes/**'
+      - '.github/workflows/core-typescript-ci.yml'
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Exact 40-character source SHA; omitted uses event SHA
+        required: false
+        type: string
+  workflow_call:
+    inputs:
+      release_sha:
+        description: Exact 40-character source SHA to qualify in full
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: core-typescript-ci-${{ github.event_name }}-${{ inputs.release_sha || github.ref }}
+  cancel-in-progress: true
+
+env:
+  QUALIFICATION_SHA: ${{ inputs.release_sha || github.sha }}
+
+jobs:
+  changes:
+    name: Detect portable-core-affecting changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.full.outputs.run || steps.detect.outputs.run }}
+    steps:
+      - name: Check out exact source for the local detector
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
+      - name: Validate exact source
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$QUALIFICATION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SHA"
+      - name: Run explicit source qualifications in full
+        id: full
+        if: ${{ inputs.release_sha != '' }}
+        shell: bash
+        run: echo 'run=true' >> "$GITHUB_OUTPUT"
+      - name: Detect whether the portable candidate must run
+        id: detect
+        if: ${{ inputs.release_sha == '' }}
+        uses: ./.github/actions/component-changes
+        with:
+          component: Core TypeScript CI
+          paths: |
+            packages/healthmd-core-ts/**
+            packages/contracts/**
+            docs/migration/effect-refactor/decisions/portable-pins.json
+            AGENTS.md
+            Makefile
+            .github/actions/component-changes/**
+            .github/workflows/core-typescript-ci.yml
+
+  check:
+    name: Portable candidate Node 24
+    needs: changes
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: packages/healthmd-core-ts
+        shell: bash
+    env:
+      NPM_CONFIG_CACHE: ${{ github.workspace }}/packages/healthmd-core-ts/build/npm-cache
+    steps:
+      - name: Check out exact qualification source
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+          persist-credentials: false
+      - name: Verify source and expose artifact identity
+        id: source
+        run: |
+          set -euo pipefail
+          [[ "$QUALIFICATION_SHA" =~ ^[0-9a-f]{40}$ ]]
+          test "$(git rev-parse HEAD)" = "$QUALIFICATION_SHA"
+          echo "sha=$QUALIFICATION_SHA" >> "$GITHUB_OUTPUT"
+      - name: Set up exact portable Node runtime
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24.21.0'
+          check-latest: false
+      - name: Verify Node and bundled npm pins
+        run: |
+          set -euo pipefail
+          test "$(node --version)" = v24.21.0
+          test "$(npm --version)" = 11.19.0
+      - name: Cache only component npm downloads
+        uses: actions/cache@v4
+        with:
+          path: packages/healthmd-core-ts/build/npm-cache
+          key: core-typescript-${{ runner.os }}-${{ runner.arch }}-node24.21.0-npm11.19.0-${{ hashFiles('packages/healthmd-core-ts/package-lock.json') }}
+      - name: Install the independently locked candidate
+        run: npm ci --engine-strict --no-audit --no-fund
+      - name: Typecheck, build, discovered tests and portable boundaries
+        run: npm run check
+      - name: Retain scoped candidate build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-typescript-${{ steps.source.outputs.sha }}-${{ github.run_attempt }}
+          path: packages/healthmd-core-ts/dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  gate:
+    name: Core TypeScript CI
+    if: ${{ always() }}
+    needs: [changes, check]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require the candidate check or an explicit successful unaffected decision
+        shell: bash
+        env:
+          CHANGES_RESULT: ${{ needs.changes.result }}
+          CHANGES_RUN: ${{ needs.changes.outputs.run }}
+          CHECK_RESULT: ${{ needs.check.result }}
+        run: |
+          set -euo pipefail
+          test "$CHANGES_RESULT" = success
+          case "$CHANGES_RUN" in
+            true)
+              test "$CHECK_RESULT" = success
+              ;;
+            false)
+              test "$CHECK_RESULT" = skipped
+              echo "Explicit unaffected decision; portable candidate check skipped."
+              ;;
+            *)
+              echo "Invalid or missing portable changes decision."
+              exit 1
+              ;;
+          esac

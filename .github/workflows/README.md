@@ -18,6 +18,16 @@ Each workflow's path map lives in two places — the `on.push.paths` trigger fil
 
 The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
 
+## Portable TypeScript candidate
+
+`.github/workflows/core-typescript-ci.yml` adds the candidate context `Core TypeScript CI / Core TypeScript CI`. The seven existing required contexts and every native/Rust/release requirement stay in place. Adding this workflow does not configure branch protection; actual GitHub runs and administrator reconciliation remain separate qualification.
+
+The candidate checks only `packages/healthmd-core-ts` on exact Node 24.21.0/npm 11.19.0 with its independent lock. `make test-portable` installs that component and runs its complete check script using the caller's pinned runtime. `make test` retains the production/native router. Tests execute emitted JavaScript; no native SDK or Rust toolchain runs in the portable target.
+
+Pull requests always produce the candidate final context. Its mirrored push/detector paths cover the current component, language-neutral contracts, portable pin decision, root instructions/router, workflow and local detector action. No product consumes this candidate yet; newly introduced consumers must extend their own workflow/release path maps in separate cards. Detection failure, missing/invalid boolean, failed/cancelled check, or inconsistent skipped state fails the final gate. Bypass requires successful detection with exactly `run=false` and a skipped check.
+
+Manual dispatch runs in full and accepts an optional exact source SHA. Reusable qualification requires a 40-character SHA and runs in full even when called by a pull-request workflow. Both source checkouts verify that SHA against `git rev-parse HEAD`. Node/npm versions are asserted before installation. Only component download caches under `packages/healthmd-core-ts/build/npm-cache` are cached; keys include OS/architecture, exact tool versions and component lock hash. Built `packages/healthmd-core-ts/dist/` evidence is retained for seven days under source/run-attempt artifact identity. These paths are ignored component outputs. Workflow permissions are read-only and no production secret, signing, publishing or deployment step is introduced.
+
 ## Android release trigger
 
 Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
