@@ -4,6 +4,7 @@ import com.healthmd.core.CoreMetricRegistrySnapshot
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
 import com.healthmd.data.export.MarkdownExporter
+import com.healthmd.data.export.WakeDateJsonDocument
 import com.healthmd.core.HEALTHMD_SLEEP_REGISTRY_SHA256
 import com.healthmd.domain.model.HEALTHMD_CORE_REGISTRY_SHA256
 import com.healthmd.domain.model.AndroidCaptureContext
@@ -132,7 +133,7 @@ object HealthMdRenderInputAdapter {
             throw AdapterException("capture and completed semantic authority are incompatible")
         }
         val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
-            if ("json" !in options.formats || options.api != null || options.includeGranularData) {
+            if (options.api != null || options.includeGranularData) {
                 throw AdapterException("wake-date native profile documents are not qualified")
             }
             if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
@@ -146,7 +147,8 @@ object HealthMdRenderInputAdapter {
         val sessionId = root["session_id"]?.jsonPrimitive?.contentOrNull
             ?: throw AdapterException("semantic result is invalid")
         val days = root["days"]?.jsonArray ?: throw AdapterException("semantic result is invalid")
-        if (handoffVersion == 2 && captureContext != null && "json" in options.formats) {
+        if (handoffVersion == 2 && captureContext != null &&
+            ("json" in options.formats || presentationByOwnerDate.isNotEmpty())) {
             val owners = days.map { day ->
                 day.jsonObject["owner_date"]?.jsonPrimitive?.content
                     ?: throw AdapterException("semantic day is invalid")
@@ -352,6 +354,9 @@ object HealthMdRenderInputAdapter {
             )
             fields.associateBy { it.key }
         }.orEmpty()
+        val sleepClocks = if (nativeWakeDateContext != null && presentationData != null) {
+            WakeDateJsonDocument(nativeWakeDateContext).sleepClocks(presentationData)
+        } else null
         val metrics = day.getValue("values").jsonArray.mapIndexed { ordinal, element ->
             val value = element.jsonObject
             val outputKey = value.getValue("output_key").jsonPrimitive.content
@@ -373,9 +378,19 @@ object HealthMdRenderInputAdapter {
                 put("frontmatter_key", frontmatterKey)
                 put("json_path", buildJsonArray { add(JsonPrimitive(categoryIdentifier(metric.categoryId))); add(JsonPrimitive(outputKey)) })
                 put("public_value", public)
-                put("display_value", presentationField?.value?.toString() ?: displayValue(public))
+                // Human clocks follow the selected time format; quantities keep the
+                // completed semantic precision rather than native display rounding.
+                val clock = when (outputKey) {
+                    "sleep_bedtime" -> sleepClocks?.first
+                    "sleep_wake" -> sleepClocks?.second
+                    else -> null
+                }
+                val display = if (nativeWakeDateContext != null && public is JsonPrimitive && !public.isString && clock == null) {
+                    displayValue(public)
+                } else presentationField?.value?.toString() ?: displayValue(public)
+                put("display_value", display)
                 put("unit", unit)
-                put("timestamp", JsonNull)
+                put("timestamp", clock?.toString()?.let(::JsonPrimitive) ?: JsonNull)
                 put("ordinal", ordinal)
             }
         }
@@ -461,7 +476,10 @@ object HealthMdRenderInputAdapter {
             JsonNull
         }
         return buildJsonObject {
-            put("semantic_output_keys", JsonArray(semanticOutputKeys.sorted().map(::JsonPrimitive)))
+            val documentOutputKeys = if (nativeWakeDateContext != null && jsonRoot == JsonNull) {
+                emptyList()
+            } else semanticOutputKeys
+            put("semantic_output_keys", JsonArray(documentOutputKeys.sorted().map(::JsonPrimitive)))
             put("markdown_body", markdown)
             put("csv_rows", rows)
             put("json_root", jsonRoot)

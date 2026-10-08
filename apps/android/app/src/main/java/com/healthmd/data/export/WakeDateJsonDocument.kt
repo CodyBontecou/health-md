@@ -32,7 +32,7 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
         put("sleep_interval_clipping", "none")
     }
 
-    fun finish(payload: JsonObject, data: HealthData): JsonObject {
+    fun sleepClocks(data: HealthData): Pair<Instant?, Instant?> {
         require(data.sleep.stages.none { it.stage.equals("core", ignoreCase = true) }) {
             "wake-date native sleep stage identity is incompatible"
         }
@@ -47,14 +47,37 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             data.sleep.stages.map { stage -> instant(stage.exactStartTime) to instant(stage.exactEndTime) }
                 .filter { (start, end) -> start < end }
         }
+        val start = intervals.minOfOrNull { it.first }
+        val end = intervals.maxOfOrNull { it.second }
+        if (data.sleep.sessionStart != null) require(start != null && runCatching {
+            start.atZone(context.zoneId).toLocalDateTime().withNano(0) == data.sleep.sessionStart.withNano(0)
+        }.getOrDefault(false)) {
+            "wake-date native summary clock is incompatible"
+        }
+        if (data.sleep.sessionEnd != null) require(end != null && runCatching {
+            end.atZone(context.zoneId).toLocalDateTime().withNano(0) == data.sleep.sessionEnd.withNano(0) &&
+                end.atZone(context.zoneId).toLocalDate() == data.date
+        }.getOrDefault(false)) {
+            "wake-date native summary clock is incompatible"
+        }
+        if (end != null) require(runCatching {
+            end.atZone(context.zoneId).toLocalDate() == data.date
+        }.getOrDefault(false)) {
+            "wake-date native session owner is incompatible"
+        }
+        return start to end
+    }
+
+    fun finish(payload: JsonObject, data: HealthData): JsonObject {
+        val (start, end) = sleepClocks(data)
         val source = payload.toMutableMap()
         (source["sleep"] as? JsonObject)?.let { original ->
             val sleep = original.toMutableMap()
             if ("bedtimeISO" in sleep) {
-                sleep["bedtimeISO"] = JsonPrimitive(intervals.minOfOrNull { it.first }?.toString() ?: unavailable())
+                sleep["bedtimeISO"] = JsonPrimitive(start?.toString() ?: unavailable())
             }
             if ("wakeTimeISO" in sleep) {
-                sleep["wakeTimeISO"] = JsonPrimitive(intervals.maxOfOrNull { it.second }?.toString() ?: unavailable())
+                sleep["wakeTimeISO"] = JsonPrimitive(end?.toString() ?: unavailable())
             }
             source["sleep"] = JsonObject(sleep)
         }

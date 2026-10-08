@@ -97,11 +97,10 @@ class FrozenDailyAggregateExportRequest private constructor(
                 require(mode == ExportEngineMode.rust) { "wake-date export requires the Rust engine" }
                 require(context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                     context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
-                // Exact native sleep clocks can enter the prepared JSON-only handoff. Other
-                // native presentation surfaces remain gated rather than losing source data.
+                // Source clocks are validated before successor presentation; historical
+                // native bodies and detailed exports remain independently gated.
                 require(settings.formatCustomization.unitPreference == UnitPreference.METRIC &&
                     !settings.includeGranularData && !settings.formatCustomization.includeLegacyAndroidAliases &&
-                    (formats == listOf(ExportFormat.JSON) || (data.sleep.sessionStart == null && data.sleep.sessionEnd == null)) &&
                     data.compatibilityProvenance == null && data.workouts.isEmpty() &&
                     data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
                     "wake-date native presentation is not qualified"
@@ -284,8 +283,6 @@ class HealthMdRustDailyAggregatePlanner(
             service = coreService,
         )
         val markdown = request.customization.markdownTemplate
-        val nativeWakeDateJson = request.profile == AndroidExportProfile.android_sleep_v6 &&
-            ExportFormat.JSON in request.formats
         val renderInput = HealthMdRenderInputAdapter.encode(
             semanticResult = semanticResult,
             registry = registry,
@@ -333,9 +330,7 @@ class HealthMdRustDailyAggregatePlanner(
                 basesSuffix = "-bases",
                 api = null,
             ),
-            presentationByOwnerDate = if (request.profile == AndroidExportProfile.android_sleep_v6 && !nativeWakeDateJson) {
-                emptyMap()
-            } else mapOf(request.data.date.toString() to request.data),
+            presentationByOwnerDate = mapOf(request.data.date.toString() to request.data),
             presentationCustomization = request.customization,
             captureContext = request.captureContext,
         )

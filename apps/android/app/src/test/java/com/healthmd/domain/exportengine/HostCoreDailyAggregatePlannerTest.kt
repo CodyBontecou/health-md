@@ -17,6 +17,8 @@ import io.mockk.coEvery
 import io.mockk.mockk
 import java.time.Instant
 import java.time.ZoneOffset
+import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.model.TimeFormatPreference
 import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
 import com.healthmd.domain.model.NutritionData
@@ -160,7 +162,7 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
-    fun nativeSleepCaptureReachesARealSuccessorJsonPlanWithoutShiftingSourceTimestamps() = runTest {
+    fun nativeSleepCaptureReachesEverySuccessorFormatWithoutShiftingSourceTimestamps() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val date = LocalDate.of(2026, 11, 1)
         val client = mockk<HealthConnectClient>()
@@ -169,28 +171,86 @@ class HostCoreDailyAggregatePlannerTest {
                 startTime = Instant.parse("2026-11-01T02:00:00.123456789Z"), startZoneOffset = ZoneOffset.of("-04:00"),
                 endTime = Instant.parse("2026-11-01T12:00:00.987654321Z"), endZoneOffset = ZoneOffset.of("-05:00"),
                 metadata = Metadata.manualEntry(clientRecordId = "synthetic-native-sleep"),
+                stages = listOf(SleepSessionRecord.Stage(
+                    Instant.parse("2026-11-01T02:00:00.123456789Z"),
+                    Instant.parse("2026-11-01T12:00:00.987654321Z"),
+                    SleepSessionRecord.STAGE_TYPE_LIGHT,
+                )),
             ),
         ), null)
         val data = HealthConnectManager(mockk<Context>(relaxed = true), client).fetchHealthDataRange(
             listOf(date), DataTypeSelection().deselectAll().copy(sleep = true), false, context.zoneId,
             sleepDayAttribution = SleepDayAttribution.MORNING_ENDS,
         ).single()
-        val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
-            exportFormats = setOf(ExportFormat.JSON),
+        val planner = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot read ambient clock") })
+        for (formats in listOf(ExportFormat.entries.toSet(), setOf(ExportFormat.MARKDOWN, ExportFormat.CSV, ExportFormat.OBSIDIAN_BASES))) {
+            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+                exportFormats = formats,
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+            ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("host-native-sleep", "host-native-sleep-session"))
+            val result = planner.plan(request)
+            assertThat(result.plan.artifactPlanVersion).isEqualTo(2u)
+            assertThat(result.plan.items).hasSize(formats.size)
+            for (item in result.plan.items) {
+                val text = item.content.decodeToString()
+                assertThat(text).contains("morning_ends")
+                assertThat(text).doesNotContain("sleep_core_hours")
+                assertThat(text).doesNotContain("Core Sleep")
+                assertThat(text).contains(when {
+                    item.relativePath.endsWith(".json") -> "lightSleep"
+                    item.relativePath.endsWith("-bases.md") -> "sleep_light_hours"
+                    else -> "Light Sleep"
+                })
+                if (item.relativePath.endsWith(".md")) {
+                    assertThat(text).contains("sleep_bedtime: 22:00")
+                    assertThat(text).contains("sleep_wake: 07:00")
+                }
+                if (item.relativePath.endsWith(".csv")) {
+                    assertThat(text).contains(",22:00,time,2026-11-01T02:00:00.123456789Z\n")
+                    assertThat(text).contains(",07:00,time,2026-11-01T12:00:00.987654321Z\n")
+                }
+            }
+            if (ExportFormat.JSON in formats) {
+                val root = Json.parseToJsonElement(result.plan.items.single {
+                    it.relativePath.endsWith(".json")
+                }.content.decodeToString()).jsonObject
+                assertThat(root.getValue("schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
+                val sleep = root.getValue("sleep").jsonObject
+                assertThat(sleep.getValue("bedtimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T02:00:00.123456789Z")
+                assertThat(sleep.getValue("wakeTimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T12:00:00.987654321Z")
+                // Captured summary quantities keep milliseconds; source instants keep nanoseconds.
+                assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(36000.864)
+            }
+        }
+        val settings = ExportSettings(
+            exportFormats = setOf(ExportFormat.MARKDOWN, ExportFormat.CSV), includeMetadata = false,
+            formatCustomization = FormatCustomization(timeFormat = TimeFormatPreference.HOUR_12),
             executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
-        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
-            DailyAggregateExportIds("host-native-sleep", "host-native-sleep-session"))
-        val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot read ambient clock") }).plan(request)
-        assertThat(result.plan.artifactPlanVersion).isEqualTo(2u)
-        val root = Json.parseToJsonElement(result.plan.items.single().content.decodeToString()).jsonObject
-        assertThat(root.getValue("schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
-        val sleep = root.getValue("sleep").jsonObject
-        assertThat(sleep.getValue("bedtimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T02:00:00.123456789Z")
-        assertThat(sleep.getValue("wakeTimeISO").jsonPrimitive.content).isEqualTo("2026-11-01T12:00:00.987654321Z")
-        // The existing native summary reducer captures milliseconds; retain that quantity,
-        // while keeping the independent source end instant's full nanosecond representation.
-        assertThat(sleep.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(36000.864)
+        )
+        val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+            AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("host-native-human-clock", "host-native-human-clock-session"))
+        val humanPlan = planner.plan(request).plan
+        val markdown = humanPlan.items.single { it.relativePath.endsWith(".md") }.content.decodeToString()
+        assertThat(markdown.startsWith("---")).isFalse()
+        assertThat(markdown).contains("10:00 PM")
+        assertThat(markdown).contains("7:00 AM")
+        assertThat(markdown).contains("morning_ends")
+        val csv = humanPlan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
+        assertThat(csv).contains(",10:00 PM,time,2026-11-01T02:00:00.123456789Z\n")
+        for (invalid in listOf(
+            data.copy(date = date.plusDays(1)),
+            data.copy(sleep = data.sleep.copy(sessionEnd = data.sleep.sessionEnd!!.plusHours(1))),
+            data.copy(sleep = data.sleep.copy(sessions = data.sleep.sessions.map { it.copy(exactEndTime = null) })),
+        )) {
+            val candidate = FrozenDailyAggregateExportRequest.capture(invalid, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("host-invalid-clock", "host-invalid-clock-session"))
+            assertThat(runCatching { planner.plan(candidate) }.isFailure).isTrue()
+        }
     }
+
 
     @Test
     fun emptyAndPopulatedSleepDaysShareOneNativeJsonGrammar() = runTest {
