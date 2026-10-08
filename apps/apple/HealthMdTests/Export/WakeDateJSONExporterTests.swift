@@ -150,6 +150,53 @@ final class WakeDateJSONExporterTests: XCTestCase {
         XCTAssertTrue(sink.data.isEmpty, "Unowned native summaries cannot produce a partial successor artifact")
     }
 
+    func testSelectedSleepTotalsKeepSourceOwnershipWithoutExportingDisabledClocks() throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let date = try XCTUnwrap(formatter.date(from: "2026-11-01T04:00:00Z"))
+        var day = HealthData(date: date,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.sleep = SleepData(totalDuration: 29_700, coreSleep: 15_300,
+            sessionStart: try XCTUnwrap(formatter.date(from: "2026-11-01T02:00:00Z")),
+            sessionEnd: try XCTUnwrap(formatter.date(from: "2026-11-01T10:15:00Z")))
+        var selection = MetricSelectionState()
+        selection.enabledMetrics = ["sleep_total", "sleep_core"]
+        let filtered = day.filtered(by: selection).filtered(by: selection)
+        XCTAssertNil(filtered.sleep.sessionStart)
+        XCTAssertNil(filtered.sleep.sessionEnd)
+        let bytes = try filtered.toJSONDataThrowing(customization: Self.customization, captureContext: context)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+        XCTAssertEqual(sleep["totalDuration"] as? Double, 29_700)
+        XCTAssertEqual(sleep["coreSleep"] as? Double, 15_300)
+        for key in ["bedtime", "bedtimeISO", "wakeTime", "wakeTimeISO", "sourceSessionBounds"] {
+            XCTAssertNil(sleep[key], "Disabled clocks and internal bounds must not become public fields")
+        }
+        let encoded = try JSONEncoder().encode(filtered.sleep)
+        XCTAssertFalse(String(decoding: encoded, as: UTF8.self).contains("sourceSessionBounds"))
+        var wrongDay = day
+        wrongDay.sleep.sessionEnd = formatter.date(from: "2026-11-02T10:15:00Z")
+        var stepsOnly = MetricSelectionState()
+        stepsOnly.enabledMetrics = ["steps"]
+        wrongDay.activity.steps = 0
+        let activity = wrongDay.filtered(by: stepsOnly)
+        XCTAssertNil(activity.sleep.sourceSessionBounds, "Unselected sleep must not block an unrelated export")
+        XCTAssertNoThrow(try activity.toJSONDataThrowing(customization: Self.customization, captureContext: context))
+        var missingBounds = day
+        missingBounds.sleep.sessionEnd = nil
+        var contradictory = filtered
+        contradictory.sleep.sessionEnd = formatter.date(from: "2026-11-01T11:15:00Z")
+        for invalid in [wrongDay.filtered(by: selection), missingBounds.filtered(by: selection), contradictory] {
+            let sink = MemoryExportByteSink(mediaType: "application/json")
+            XCTAssertThrowsError(try invalid.writeJSONThrowing(to: sink,
+                customization: Self.customization, captureContext: context)) {
+                XCTAssertEqual($0 as? AppleWakeDateJSONError, .incompatibleSessionOwner)
+            }
+            XCTAssertTrue(sink.data.isEmpty)
+        }
+    }
+
     @MainActor
     func testWholeNoonSpanningSessionReachesSuccessorJSONWithNativeCoreAndOriginalFoldClocks() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))

@@ -708,6 +708,55 @@
           "mirrors": []
         }
       ]
+    },
+    {
+      "id": "healthmd.rollup_summary.sleep",
+      "version": 11,
+      "status": "deferred",
+      "summary": "Production-gated Apple v11 wake-date requested-range summary; immutable historical v8/v9 output remains supported.",
+      "specification": "packages/contracts/rollup-summary/v11/contract.md",
+      "authorities": [
+        "packages/contracts/rollup-summary/v11/contract.md",
+        "packages/contracts/rollup-summary/v11/rollup-summary.schema.json"
+      ],
+      "implementations": [
+        "packages/healthmd-core-rust/crates/healthmd-core/src/semantic.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/apple_range_rollup_v9.rs",
+        "packages/contracts/validate.py"
+      ],
+      "consumers": [
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_range_summary.rs",
+        "packages/contracts/test_validate_sleep_attribution.py"
+      ],
+      "documentation": [
+        "packages/contracts/sleep-attribution/v1/contract.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11-bases.md",
+          "sha256": "5978d440d427435330ef4b6f4d106f1188e5fb4c1952613db55b5bfe08c2b3e2",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.csv",
+          "sha256": "a5a1857e0b0b13f0b2d6005c3b1cab18f10b180071c76c1c681d032311367d0d",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.json",
+          "sha256": "cf6ee5f811c9bebc602c850fe396dda6f4e769a69aa62b8253c416d0a856ddfe",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/rollup-summary/v11/fixtures/range-v11.md",
+          "sha256": "48bc6d302a2aefcdf1c9956ec1fcc5db3b2f0b15f1b05ed0d39f1e2223f6b9e3",
+          "provenance": "Actual shared-core v11 range artifact from synthetic SDK aggregate facts and real semantic/render sessions; independently asserted DST bounds, successful empty-day coverage and whole-session quantities. Native execution/consumer qualification remains pending.",
+          "mirrors": []
+        }
+      ]
     }
   ]
 }

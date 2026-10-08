@@ -102,5 +102,38 @@ class SleepAttributionValidationTests(unittest.TestCase):
             self.check()
 
 
+class SleepRollupValidationTests(unittest.TestCase):
+    def setUp(self):
+        self.directory = ROOT / 'packages/contracts/rollup-summary/v11/fixtures'
+        self.payload = json.loads((self.directory / 'range-v11.json').read_text())
+
+    def test_real_core_artifacts_and_manifest(self):
+        for artifact in self.directory.iterdir():
+            validate.validate_sleep_rollup_fixture(ROOT, artifact)
+        validate.validate_manifest(ROOT)
+
+    def test_invalid_source_or_sleep_authority_is_rejected(self):
+        original = copy.deepcopy(self.payload)
+        for key, value in [('schema_version', 9), ('source_schema_version', 8),
+                           ('rollup_rules_version', 8), ('source_schema_profile', 'apple-v8'),
+                           ('schema_profile', 'apple-v11'), ('calendar_timezone', 'Invalid/Timezone')]:
+            with self.subTest(key=key):
+                changed = copy.deepcopy(original)
+                changed[key] = value
+                with self.assertRaises(validate.ContractValidationError):
+                    validate.validate_sleep_rollup_authority(changed, 'negative synthetic range')
+        for key in original['time_context']:
+            changed = copy.deepcopy(original)
+            del changed['time_context'][key]
+            with self.subTest(missing=key), self.assertRaises(validate.ContractValidationError):
+                validate.validate_sleep_rollup_authority(changed, 'negative incomplete range')
+        for key, value in [('calendar_timezone', 'UTC'), ('sleep_day_attribution', 'night_begins'),
+                           ('sleep_interval_clipping', 'noon'), ('timestamp_timezone', 'America/New_York')]:
+            changed = copy.deepcopy(original)
+            changed['time_context'][key] = value
+            with self.subTest(conflict=key), self.assertRaises(validate.ContractValidationError):
+                validate.validate_sleep_rollup_authority(changed, 'negative conflicting range')
+
+
 if __name__ == '__main__':
     unittest.main()

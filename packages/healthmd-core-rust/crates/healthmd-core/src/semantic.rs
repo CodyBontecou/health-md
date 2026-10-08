@@ -513,8 +513,7 @@ impl SemanticSession {
         {
             return Err(CoreError::InvalidSemanticConfig);
         }
-        if config.profile != SemanticProfile::AppleHealthDataV8 && !config.rollup_periods.is_empty()
-        {
+        if !config.profile.is_apple() && !config.rollup_periods.is_empty() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         Ok(Self {
@@ -968,7 +967,7 @@ impl SemanticSession {
         if self.config.rollup_periods.is_empty() {
             return Ok(Some(Vec::new()));
         }
-        if self.config.profile != SemanticProfile::AppleHealthDataV8 {
+        if !self.config.profile.is_apple() {
             return Err(CoreError::UnsupportedSemanticOperation);
         }
         let mut results = Vec::new();
@@ -1184,11 +1183,17 @@ fn validate_config(config: &SemanticSessionConfig) -> Result<(), CoreError> {
     if contains_range != config.rollup_range.is_some()
         || (contains_range
             && (config.rollup_periods.len() != 1
-                || config.semantic_input_version != SEMANTIC_INPUT_VERSION
+                || config.semantic_input_version != config.profile.semantic_input_version()
                 || config.profile_revision != 2
-                || config.profile != SemanticProfile::AppleHealthDataV8))
+                || !config.profile.is_apple()))
     {
         return Err(CoreError::InvalidSemanticConfig);
+    }
+    if config.profile == SemanticProfile::AppleHealthDataV11
+        && !config.rollup_periods.is_empty()
+        && !contains_range
+    {
+        return Err(CoreError::UnsupportedSemanticOperation);
     }
     if !contains_range && config.profile_revision != 1 {
         return Err(CoreError::InvalidSemanticConfig);

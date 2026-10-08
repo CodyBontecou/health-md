@@ -58,7 +58,10 @@ nonisolated enum HealthMdSemanticInputAdapter {
     ) throws -> Data {
         let inputVersion = try validatedInputVersion(registry: registry,
             calendarTimeZoneIdentifier: calendarTimeZoneIdentifier, captureContext: captureContext)
-        guard inputVersion == semanticInputVersion || (rollupPeriods.isEmpty && requestedRange == nil) else {
+        guard inputVersion == semanticInputVersion || (rollupPeriods.isEmpty && requestedRange == nil)
+                || (inputVersion == AppleExportEnginePin.wakeDateHandoffVersion
+                    && registry.profileId == AppleExportEnginePin.wakeDateProfileID
+                    && rollupPeriods == [.range] && requestedRange != nil) else {
             throw AdapterError.invalidSessionResult
         }
         guard calendarTimeZoneIdentifier == "UTC"

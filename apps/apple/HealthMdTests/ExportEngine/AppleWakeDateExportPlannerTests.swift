@@ -215,8 +215,60 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testWakeDateRangeSummaryPreservesFailedBoundsAndSuccessfulEmptyDay() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let first = try XCTUnwrap(formatter.date(from: "2026-11-01T04:00:00Z"))
+        let second = try XCTUnwrap(formatter.date(from: "2026-11-02T05:00:00Z"))
+        var populated = HealthData(date: first, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        populated.sleep = SleepData(totalDuration: 29_700, coreSleep: 15_300,
+            sessionStart: try XCTUnwrap(formatter.date(from: "2026-11-01T02:00:00Z")),
+            sessionEnd: try XCTUnwrap(formatter.date(from: "2026-11-01T10:15:00Z")))
+        let empty = HealthData(date: second, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        let requested = try HealthRollupRangeRequest(
+            startDate: XCTUnwrap(formatter.date(from: "2026-10-31T04:00:00Z")),
+            endDate: XCTUnwrap(formatter.date(from: "2026-11-03T05:00:00Z")),
+            calendarTimeZoneIdentifier: zone.identifier)
+        let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+            selectionIDs: ["sleep_total", "sleep_core"], rangeSummary: true)
+        let resolution = try await AppleLooseDailyExportPlanner().planRange(healthData: [populated, empty],
+            dailyOutputOwnerDates: ["2026-11-01"], requestedRange: requested,
+            settingsSnapshot: snapshot, surface: .localVaultRangeWithoutSideEffects,
+            operationIdentity: AppleExportOperationIdentity(requestID: "sleep-range-request", sessionID: "sleep-range-session",
+                capturedAt: try XCTUnwrap(formatter.date(from: "2026-11-04T12:00:00Z")),
+                calendarTimeZoneIdentifier: zone.identifier))
+        guard case .planned(let operation) = resolution else { return XCTFail("The successor range must not fall back to a historical writer") }
+        let summaries = operation.artifacts.filter { $0.kind == .rollup }
+        XCTAssertEqual(summaries.count, 4)
+        for planned in summaries {
+            let bytes = planned.artifact.inlineData
+            let text = String(decoding: bytes, as: UTF8.self)
+            XCTAssertTrue(text.contains("morning_ends"))
+            XCTAssertTrue(text.contains("apple-v11"))
+            if planned.format == .json {
+                let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+                XCTAssertEqual(root["schema_version"] as? Int, 11)
+                XCTAssertEqual(root["source_schema_version"] as? Int, 11)
+                XCTAssertEqual(root["rollup_rules_version"] as? Int, 11)
+                XCTAssertEqual(root["period_id"] as? String, "2026-10-31_to_2026-11-03")
+                XCTAssertEqual(root["days_expected"] as? Int, 4)
+                XCTAssertEqual(root["days_counted"] as? Int, 2)
+                XCTAssertEqual(root["source_dates"] as? [String], ["2026-11-01", "2026-11-02"])
+                XCTAssertEqual(root["coverage_percent"] as? Double, 50)
+            }
+            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_RANGE_FIXTURE_DIR"], !directory.isEmpty {
+                let output = URL(fileURLWithPath: directory).appendingPathComponent("native-apple-v11")
+                    .appendingPathComponent(planned.artifact.relativePath)
+                try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try bytes.write(to: output)
+            }
+        }
+    }
+
     private func acceptedSnapshot(
-        context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil
+        context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil,
+        rangeSummary: Bool = false
     ) throws -> ExportSettingsSnapshot {
         let suite = "AppleWakeDatePlannerFixture.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -228,7 +280,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false
         settings.includeGranularData = false
-        settings.generateRangeSummary = false
+        settings.generateRangeSummary = rangeSummary
         settings.dailyNoteInjection.enabled = false
         settings.individualTracking.globalEnabled = false
         settings.exportTimeZoneOverride = context.timeZone

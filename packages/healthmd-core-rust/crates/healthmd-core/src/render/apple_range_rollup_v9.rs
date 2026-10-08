@@ -1,4 +1,4 @@
-//! Exact Apple v9 range-roll-up bytes and paths.
+//! Exact historical Apple v9 range bytes and explicit Apple v11 wake-date range output.
 
 use std::{collections::BTreeMap, fmt::Write as _};
 
@@ -166,6 +166,7 @@ fn render(
             .then(left.presentation.key.cmp(&right.presentation.key))
     });
     let context = Context {
+        wake_date: config.profile.is_wake_date(),
         rollup,
         period_id,
         days_expected,
@@ -183,6 +184,7 @@ fn render(
 }
 
 struct Context<'a> {
+    wake_date: bool,
     rollup: &'a SemanticRollupResult,
     period_id: String,
     days_expected: u32,
@@ -212,12 +214,15 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             )
         })
         .collect::<serde_json::Map<_, _>>();
-    let mut bytes = format::foundation_pretty_json(&[
+    let mut fields = vec![
         (
             "schema".to_owned(),
             Value::String("healthmd.rollup_summary".to_owned()),
         ),
-        ("schema_version".to_owned(), Value::from(9)),
+        (
+            "schema_version".to_owned(),
+            Value::from(if context.wake_date { 11 } else { 9 }),
+        ),
         ("type".to_owned(), Value::String("health_rollup".to_owned())),
         (
             "rollup_period".to_owned(),
@@ -252,8 +257,14 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
             "source_schema".to_owned(),
             Value::String("healthmd.health_data".to_owned()),
         ),
-        ("source_schema_version".to_owned(), Value::from(8)),
-        ("rollup_rules_version".to_owned(), Value::from(8)),
+        (
+            "source_schema_version".to_owned(),
+            Value::from(if context.wake_date { 11 } else { 8 }),
+        ),
+        (
+            "rollup_rules_version".to_owned(),
+            Value::from(if context.wake_date { 11 } else { 8 }),
+        ),
         (
             "generated_at".to_owned(),
             Value::String(context.generated_at.to_owned()),
@@ -273,9 +284,29 @@ fn render_json(context: &Context<'_>) -> Result<Vec<u8>, RenderError> {
                     .collect(),
             ),
         ),
-    ])?;
+    ];
+    fields.extend(sleep_json_authority(context));
+    let mut bytes = format::foundation_pretty_json(&fields)?;
     bytes.push(b'\n');
     Ok(bytes)
+}
+
+fn sleep_json_authority(context: &Context<'_>) -> Vec<(String, Value)> {
+    if !context.wake_date {
+        return Vec::new();
+    }
+    Vec::from([
+        ("schema_profile".to_owned(), Value::from("apple-rollup-v11")),
+        ("source_schema_profile".to_owned(), Value::from("apple-v11")),
+        (
+            "time_context".to_owned(),
+            serde_json::json!({
+                "calendar_timezone":context.rollup.calendar_time_zone, "timestamp_timezone":"UTC",
+                "sleep_day_attribution":"morning_ends", "sleep_owner_day_rule":"session_end_date",
+                "sleep_interval_clipping":"none"
+            }),
+        ),
+    ])
 }
 
 fn metric_json(metric: &Metric<'_>) -> Value {
@@ -326,13 +357,27 @@ fn render_csv(context: &Context<'_>) -> Vec<u8> {
     let mut output = String::from(
         "Schema,Schema Version,Source Schema,Source Schema Version,Rollup Rules Version,Calendar Timezone,Period,Period ID,Start Date,End Date,Days Expected,Days Counted,Coverage Percent,Category,Metric,Key,Canonical Key,Primary Value,Unit,Metric Days Counted,Rule,Statistic,Statistic Value,Notes\n",
     );
+    let authority = if context.wake_date {
+        output = output.trim_end_matches('\n').to_owned()
+            + ",Schema Profile,Source Schema Profile,Timestamp Timezone,Sleep Day Attribution,Sleep Owner Day Rule,Sleep Interval Clipping\n";
+        vec![
+            "apple-rollup-v11",
+            "apple-v11",
+            "UTC",
+            "morning_ends",
+            "session_end_date",
+            "none",
+        ]
+    } else {
+        Vec::new()
+    };
     for metric in &context.metrics {
         let common = [
             "healthmd.rollup_summary".to_owned(),
-            "9".to_owned(),
+            if context.wake_date { "11" } else { "9" }.to_owned(),
             "healthmd.health_data".to_owned(),
-            "8".to_owned(),
-            "8".to_owned(),
+            if context.wake_date { "11" } else { "8" }.to_owned(),
+            if context.wake_date { "11" } else { "8" }.to_owned(),
             context.rollup.calendar_time_zone.clone(),
             period_id(context.rollup.period).to_owned(),
             context.period_id.clone(),
@@ -352,20 +397,28 @@ fn render_csv(context: &Context<'_>) -> Vec<u8> {
         ];
         append_csv_row(
             &mut output,
-            common.iter().map(String::as_str).chain([
-                "primary",
-                metric.primary.as_str(),
-                metric.presentation.notes.as_deref().unwrap_or(""),
-            ]),
+            common
+                .iter()
+                .map(String::as_str)
+                .chain([
+                    "primary",
+                    metric.primary.as_str(),
+                    metric.presentation.notes.as_deref().unwrap_or(""),
+                ])
+                .chain(authority.iter().copied()),
         );
         for (name, value) in &metric.statistics {
             append_csv_row(
                 &mut output,
-                common.iter().map(String::as_str).chain([
-                    *name,
-                    value.as_str(),
-                    metric.presentation.notes.as_deref().unwrap_or(""),
-                ]),
+                common
+                    .iter()
+                    .map(String::as_str)
+                    .chain([
+                        *name,
+                        value.as_str(),
+                        metric.presentation.notes.as_deref().unwrap_or(""),
+                    ])
+                    .chain(authority.iter().copied()),
             );
         }
     }
@@ -379,7 +432,7 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 9".to_owned(),
+        format!("schema_version: {}", if context.wake_date { 11 } else { 9 }),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", context.period_id),
@@ -390,10 +443,28 @@ fn render_markdown(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
-        "rollup_rules_version: 8".to_owned(),
+        format!(
+            "source_schema_version: {}",
+            if context.wake_date { 11 } else { 8 }
+        ),
+        format!(
+            "rollup_rules_version: {}",
+            if context.wake_date { 11 } else { 8 }
+        ),
         format!("generated_at: {}", context.generated_at),
     ];
+    if context.wake_date {
+        lines.extend([
+            "schema_profile: apple-rollup-v11".to_owned(),
+            "source_schema_profile: apple-v11".to_owned(),
+            "time_context:".to_owned(),
+            format!("  calendar_timezone: {}", context.rollup.calendar_time_zone),
+            "  timestamp_timezone: UTC".to_owned(),
+            "  sleep_day_attribution: morning_ends".to_owned(),
+            "  sleep_owner_day_rule: session_end_date".to_owned(),
+            "  sleep_interval_clipping: none".to_owned(),
+        ]);
+    }
     let dates = sorted_source_date_strings(context.rollup);
     if !dates.is_empty() {
         lines.push("source_dates:".to_owned());
@@ -524,7 +595,7 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
     let mut lines = vec![
         "---".to_owned(),
         "schema: healthmd.rollup_summary".to_owned(),
-        "schema_version: 9".to_owned(),
+        format!("schema_version: {}", if context.wake_date { 11 } else { 9 }),
         "type: health_rollup".to_owned(),
         format!("rollup_period: {period}"),
         format!("period_id: {}", yaml_quoted(&context.period_id)),
@@ -536,10 +607,28 @@ fn render_bases(context: &Context<'_>) -> Vec<u8> {
         format!("days_counted: {}", context.days_counted),
         format!("coverage_percent: {}", format_number(context.coverage)),
         "source_schema: healthmd.health_data".to_owned(),
-        "source_schema_version: 8".to_owned(),
-        "rollup_rules_version: 8".to_owned(),
+        format!(
+            "source_schema_version: {}",
+            if context.wake_date { 11 } else { 8 }
+        ),
+        format!(
+            "rollup_rules_version: {}",
+            if context.wake_date { 11 } else { 8 }
+        ),
         format!("generated_at: {}", context.generated_at),
     ];
+    if context.wake_date {
+        lines.extend([
+            "schema_profile: apple-rollup-v11".to_owned(),
+            "source_schema_profile: apple-v11".to_owned(),
+            "time_context:".to_owned(),
+            format!("  calendar_timezone: {}", context.rollup.calendar_time_zone),
+            "  timestamp_timezone: UTC".to_owned(),
+            "  sleep_day_attribution: morning_ends".to_owned(),
+            "  sleep_owner_day_rule: session_end_date".to_owned(),
+            "  sleep_interval_clipping: none".to_owned(),
+        ]);
+    }
     let dates = sorted_source_date_strings(context.rollup);
     if !dates.is_empty() {
         lines.push("source_dates:".to_owned());

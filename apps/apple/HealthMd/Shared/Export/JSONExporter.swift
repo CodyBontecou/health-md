@@ -224,7 +224,14 @@ extension HealthData {
         guard context.exportProfileID == "apple-v11" else {
             throw AppleWakeDateJSONError.incompatibleCaptureAuthority
         }
-        if let start = snapshot.sleep.bedtime, let end = snapshot.sleep.wakeTime {
+        let bounds = snapshot.sleep.sourceSessionBounds
+        let sourceStart = bounds == nil ? snapshot.sleep.bedtime : bounds?.start
+        let sourceEnd = bounds == nil ? snapshot.sleep.wakeTime : bounds?.end
+        guard snapshot.sleep.bedtime == nil || snapshot.sleep.bedtime == sourceStart,
+              snapshot.sleep.wakeTime == nil || snapshot.sleep.wakeTime == sourceEnd else {
+            throw AppleWakeDateJSONError.incompatibleSessionOwner
+        }
+        if let start = sourceStart, let end = sourceEnd {
             var calendar = Calendar(identifier: .gregorian)
             calendar.timeZone = context.timeZone
             guard start.timeIntervalSince1970.isFinite, end.timeIntervalSince1970.isFinite,
@@ -232,7 +239,7 @@ extension HealthData {
                 throw AppleWakeDateJSONError.incompatibleSessionOwner
             }
         } else if snapshot.sleep.hasData || !snapshot.sleep.stages.isEmpty ||
-                    snapshot.sleep.bedtime != nil || snapshot.sleep.wakeTime != nil {
+                    sourceStart != nil || sourceEnd != nil {
             throw AppleWakeDateJSONError.incompatibleSessionOwner
         }
         return context

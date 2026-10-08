@@ -3544,6 +3544,73 @@ def validate_rollup_summary_fixture(root: Path, path: Path) -> None:
         fail(f"{context}.categories: must match the production metric category projection")
 
 
+def validate_sleep_rollup_authority(payload: dict[str, Any], context: str) -> None:
+    expected = {
+        "schema": "healthmd.rollup_summary", "schema_version": 11,
+        "schema_profile": "apple-rollup-v11", "source_schema": "healthmd.health_data",
+        "source_schema_version": 11, "source_schema_profile": "apple-v11", "rollup_rules_version": 11,
+        "rollup_period": "range",
+    }
+    if any(payload.get(key) != value for key, value in expected.items()):
+        fail(f"{context}: incompatible successor rollup/source authority")
+    timezone = payload.get("calendar_timezone")
+    try:
+        ZoneInfo(timezone)
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        fail(f"{context}: invalid successor rollup calendar timezone")
+    if payload.get("time_context") != {
+        "calendar_timezone": timezone, "timestamp_timezone": "UTC",
+        "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
+        "sleep_interval_clipping": "none",
+    }:
+        fail(f"{context}: incomplete or conflicting successor rollup sleep authority")
+
+
+def validate_sleep_rollup_fixture(root: Path, path: Path) -> None:
+    context = f"sleep rollup fixture {path}"
+    json_path = path.parent / "range-v11.json"
+    payload = load_json(json_path, context)
+    validate_rollup_summary_fixture(root, json_path)
+    validate_sleep_rollup_authority(payload, context)
+    if path.suffix == ".json":
+        return
+    if path.suffix == ".csv":
+        with path.open(newline="") as source:
+            rows = csv.DictReader(source)
+            headers = rows.fieldnames or []
+            if len(headers) != len(set(headers)):
+                fail(f"{context}: duplicate CSV authority columns")
+            expected = {
+                "Schema": payload["schema"], "Schema Version": "11", "Source Schema": payload["source_schema"],
+                "Source Schema Version": "11", "Rollup Rules Version": "11", "Calendar Timezone": payload["calendar_timezone"],
+                "Period": "range", "Period ID": payload["period_id"], "Start Date": payload["start_date"],
+                "End Date": payload["end_date"], "Schema Profile": "apple-rollup-v11",
+                "Source Schema Profile": "apple-v11", "Timestamp Timezone": "UTC", "Sleep Day Attribution": "morning_ends",
+                "Sleep Owner Day Rule": "session_end_date", "Sleep Interval Clipping": "none",
+            }
+            count = 0
+            for row in rows:
+                count += 1
+                if any(row.get(key) != value for key, value in expected.items()):
+                    fail(f"{context}: conflicting CSV source/window/sleep authority")
+            if not count:
+                fail(f"{context}: empty CSV rollup")
+    else:
+        text = path.read_text()
+        block = text.split("---", 2)
+        if len(block) != 3 or block[0]:
+            fail(f"{context}: missing successor rollup frontmatter")
+        required = ["schema: healthmd.rollup_summary", "schema_version: 11", "source_schema_version: 11",
+                    "rollup_rules_version: 11", "schema_profile: apple-rollup-v11", "source_schema_profile: apple-v11",
+                    "time_context:", f"calendar_timezone: {payload['calendar_timezone']}",
+                    f"  calendar_timezone: {payload['calendar_timezone']}", "  timestamp_timezone: UTC",
+                    "  sleep_day_attribution: morning_ends", "  sleep_owner_day_rule: session_end_date",
+                    "  sleep_interval_clipping: none"]
+        lines = block[1].splitlines()
+        if any(lines.count(line) != 1 for line in required):
+            fail(f"{context}: incomplete or duplicate successor rollup frontmatter authority")
+
+
 def validate_rollup_production_fixture(root: Path, path: Path) -> None:
     context = f"rollup production fixture {path}"
     production_names = {
@@ -3824,6 +3891,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     load_json(directory / "native-android-v6-handoff.json", "native successor handoff"),
                     load_json(directory / "core-android-v6-artifact-plan.json", "core successor plan"),
                 )
+            elif identifier == "healthmd.rollup_summary.sleep":
+                validate_sleep_rollup_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
             elif identifier == SHARED_SETUP_SCHEMA:

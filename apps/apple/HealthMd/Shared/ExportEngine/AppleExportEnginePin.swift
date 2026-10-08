@@ -198,11 +198,11 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     }
 
     func validateRangeCompatibility(buildInfo: CoreBuildInfo) throws {
-        guard profile == Self.profileID,
+        guard (profile == Self.profileID || hasExplicitWakeDateContracts),
               coreAPIVersion >= Self.rangeCoreAPIVersion,
               buildInfo.coreApiVersion >= Self.rangeCoreAPIVersion,
-              semanticInputVersion == HealthMdSemanticInputAdapter.semanticInputVersion,
-              buildInfo.semanticInputVersion == semanticInputVersion else {
+              semanticInputVersion == (isWakeDate ? Self.wakeDateHandoffVersion : HealthMdSemanticInputAdapter.semanticInputVersion),
+              isWakeDate || buildInfo.semanticInputVersion == semanticInputVersion else {
             throw CompatibilityError.incompatibleSemanticProfile
         }
     }

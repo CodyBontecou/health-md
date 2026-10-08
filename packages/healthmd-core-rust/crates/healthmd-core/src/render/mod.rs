@@ -947,9 +947,7 @@ fn validate_config(
         .rollups
         .iter()
         .any(|rollup| rollup.period == RollupPeriod::Range);
-    if (contains_range
-        && (semantic.profile_revision != 2
-            || semantic.profile != SemanticProfile::AppleHealthDataV8))
+    if (contains_range && (semantic.profile_revision != 2 || !semantic.profile.is_apple()))
         || (semantic.profile_revision == 2
             && semantic
                 .rollups
@@ -958,8 +956,14 @@ fn validate_config(
     {
         return Err(RenderError::InvalidSemanticResult);
     }
-    if config.profile != SemanticProfile::AppleHealthDataV8
-        && (!semantic.rollups.is_empty() || config.rollups.is_some())
+    if !config.profile.is_apple() && (!semantic.rollups.is_empty() || config.rollups.is_some()) {
+        return Err(RenderError::UnsupportedOperation);
+    }
+    if config.profile == SemanticProfile::AppleHealthDataV11
+        && semantic
+            .rollups
+            .iter()
+            .any(|rollup| rollup.period != RollupPeriod::Range)
     {
         return Err(RenderError::UnsupportedOperation);
     }
@@ -1680,6 +1684,9 @@ fn render_plan(
     }
     if config.profile == SemanticProfile::AppleHealthDataV8 {
         apple_v8::add_rollups(&mut builder, config, semantic)?;
+    }
+    if config.profile == SemanticProfile::AppleHealthDataV11 {
+        apple_range_rollup_v9::add_rollups(&mut builder, config, semantic)?;
     }
     if let Some(api) = &config.api {
         if api.enabled {

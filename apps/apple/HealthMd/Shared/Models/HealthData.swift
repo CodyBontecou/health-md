@@ -112,6 +112,14 @@ nonisolated struct SleepData: Codable, Sendable {
     /// when no InBed samples are recorded.
     var sessionEnd: Date? = nil
 
+    /// In-memory capture authority retained when selected output fields remove clocks.
+    /// Excluded from CodingKeys and never emitted as a metric or portable setting.
+    struct SourceSessionBounds: Sendable {
+        let start: Date?
+        let end: Date?
+    }
+    var sourceSessionBounds: SourceSessionBounds? = nil
+
     /// Individual sleep stage intervals for granular export.
     var stages: [SleepStageSample] = []
 
@@ -1783,6 +1791,14 @@ extension HealthData {
         filtered.sleep.stages = filtered.sleep.stages.filter { stage in
             guard let metricID = sleepStageMetricID[stage.stage] else { return false }
             return enabledMetricIDs.contains(metricID)
+        }
+
+        if timeContext.sleepDayAttribution == .morningEnds {
+            let retainsSleep = filtered.sleep.hasData || !filtered.sleep.stages.isEmpty
+                || filtered.sleep.sessionStart != nil || filtered.sleep.sessionEnd != nil
+            filtered.sleep.sourceSessionBounds = retainsSleep
+                ? sleep.sourceSessionBounds ?? .init(start: sleep.sessionStart, end: sleep.sessionEnd)
+                : nil
         }
 
         if let archive = filtered.healthKitRecordArchive {
