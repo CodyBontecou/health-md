@@ -18,9 +18,66 @@ Each workflow's path map lives in two places — the `on.push.paths` trigger fil
 
 The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
 
+## Optional Apple local pilot
+
+The Mac runner belongs exclusively to the private
+[`CodyBontecou/health-md-local-ci`](https://github.com/CodyBontecou/health-md-local-ci)
+controller repository. Public PRs cannot schedule this repository-scoped runner. Labels select
+machines; they do not enforce workflow access. Do not register an everyday development Mac
+against this public repository or use runner hooks as an access-control substitute.
+
+`scripts/local-actions/apple-local-pilot.yml.template` is the reviewed controller workflow.
+Copy it to `.github/workflows/apple-local-pilot.yml` in the private controller when updating it;
+compare the deployed workflow with this template. This public repository's
+`apple-local-pilot.yml` runs tooling safety tests on a hosted runner only.
+
+The controller permits manual dispatch from its `main` branch. A hosted resolver checks out
+public `health-md` main, validates an optional full 40-character `source_sha` against main
+history, rejects commits predating the pilot script, and runs tooling safety tests before
+scheduling the Mac. The default is the public main commit resolved at job start. The Mac then
+checks out that exact public SHA. The controller does not accept public PR triggers, reusable
+workflow calls, repository dispatches, or arbitrary source repositories.
+
+Register with `scripts/setup-local-actions-runner.py`. It refuses a public controller or a
+non-main default branch and uses **no default labels**, with only
+`healthmd-local-pilot-macos-arm64`. Its ignored `.external/local-actions-runner/_work` checkout
+is separate from development source. Registration does not install a background service.
+Run the listener in a foreground terminal when the Mac is available; stop with Control-C:
+
+```sh
+python3 scripts/setup-local-actions-runner.py
+cd .external/local-actions-runner
+env -u GH_TOKEN -u GITHUB_TOKEN -u GH_ENTERPRISE_TOKEN -u GITHUB_ENTERPRISE_TOKEN ./run.sh
+```
+
+From another terminal, dispatch and inspect the private run:
+
+```sh
+gh workflow run apple-local-pilot.yml --repo CodyBontecou/health-md-local-ci --ref main
+gh run list --repo CodyBontecou/health-md-local-ci --workflow apple-local-pilot.yml
+```
+
+To test an earlier eligible commit, add `-f source_sha=<full-main-commit-sha>` to the dispatch.
+Only trusted people should have write/dispatch access to the private controller. Keep runner
+registration credentials inside the ignored installation and never commit them. A custom-only
+label prevents generic self-hosted jobs from claiming this runner; private registration provides
+the public-PR access boundary. If the listener is offline, the optional Mac job waits for capacity.
+
+The component entry point `apps/apple/scripts/run-local-actions-pilot.sh` requires a clean
+committed checkout, native arm64 macOS, and installed Swift 6.3 or newer. It creates a fresh
+compatible iPhone simulator, runs the unsigned iOS unit suite with isolated DerivedData, checks
+for nonzero passing tests with no failures, and removes only its own simulator. Attempt-specific
+logs, xcresult and a receipt with source/toolchain/controller identity are retained for seven days.
+Cancellation preserves available diagnostics and records cleanup errors. It does not change
+global Xcode or Git settings. Keep the Mac awake while a run is active.
+
+This pilot is optional and is not the complete Apple CI matrix or release qualification.
+Its checks/artifacts appear in the private controller and do not satisfy public PR status gates.
+Existing required hosted CI, nightly, release, and exact-SHA qualification remain in place.
+
 ## Android release trigger
 
-Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
+Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
 `.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 

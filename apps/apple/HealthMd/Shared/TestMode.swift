@@ -74,6 +74,12 @@ enum TestMode {
         env("UITEST_SYNC_STATE") ?? "disconnected"
     }
 
+    /// Whether a UI journey starts with an inactive copy of its migrated profile.
+    /// Opt-in setup only; the CRUD journey still exercises real UI duplication.
+    static var duplicateExportProfile: Bool {
+        isUITesting && env("UITEST_DUPLICATE_EXPORT_PROFILE") == "true"
+    }
+
     /// Whether the export schedule is enabled.
     static var scheduleEnabled: Bool {
         env("UITEST_SCHEDULE_ENABLED") == "true"

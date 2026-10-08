@@ -2,6 +2,8 @@
 set -euo pipefail
 manifest="wear/src/main/AndroidManifest.xml"; wear="wear/build.gradle.kts"; phone="app/build.gradle.kts"
 fail(){ echo "wear validation: $*" >&2; exit 1; }
+# shellcheck source=android-release-scope.sh
+source scripts/android-release-scope.sh
 grep -q 'android.hardware.type.watch.*required="true"' "$manifest" || fail "required watch feature missing"
 grep -q 'com.google.android.wearable.standalone.*false' "$manifest" || fail "standalone=false missing"
 test "$(grep -c 'ComplicationService" android:exported' "$manifest")" -eq 10 || fail "expected 10 complications"
@@ -22,7 +24,9 @@ phone_code=$(sed -n 's/.*versionCode = \([0-9_]*\).*/\1/p' "$phone" | head -1 | 
 [[ -n "$wear_package" && "$wear_package" == "$phone_package" ]] || fail "application IDs differ"
 [[ "$wear_min_sdk" == 30 && "$wear_target_sdk" == 36 ]] || fail "Wear SDK contract"
 [[ -n "$phone_min_sdk" && -n "$phone_target_sdk" ]] || fail "phone SDK contract unavailable"
-test "$wear_name" = "$phone_name" || fail "version names differ"
+[[ "$wear_name" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]] || fail "invalid Wear version name"
+wear_mode=$(android_release_wear_mode release-scope.json "$phone_name" "$phone_code") \
+  || fail "release-scope.json is invalid or differs from the phone source identity"
 test "$phone_code" -lt 1000000 && test "$wear_code" -ge 1000000 && test "$wear_code" != "$phone_code" || fail "version-code range collision"
 app_locales=$(find app/src/main/res -maxdepth 1 -type d -name 'values-*' ! -name 'values-night*' -exec basename {} \;|sort); wear_locales=$(find wear/src/main/res -maxdepth 1 -type d -name 'values-*' ! -name 'values-night*' -exec basename {} \;|sort)
 test "$app_locales" = "$wear_locales" || fail "Wear locale directory parity"
@@ -75,6 +79,7 @@ case "$wear_artifact" in
     [[ -n "$phone_artifact" && -f "$phone_artifact" ]] \
       || fail "phone AAB required for paired Wear AAB validation"
     [[ "$phone_artifact" == *.aab ]] || fail "paired phone artifact must be an AAB"
+    test "$wear_name" = "$phone_name" || fail "version names differ"
     tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
     unzip -tqq "$wear_artifact" || fail "invalid Wear AAB ZIP"
     # Parse the actual AAPT2 protobuf manifest rather than grepping opaque bytes or trusting source
@@ -126,9 +131,16 @@ case "$wear_artifact" in
     fi
     ;;
   *.apk)
+    # Deferred Wear APKs are development artifacts, still bound to their own source/manifest.
+    [[ "$wear_mode" == deferred || "$wear_name" == "$phone_name" ]] || fail "version names differ"
     aapt="${ANDROID_HOME:-$HOME/Library/Android/sdk}/build-tools/35.0.0/aapt"; test -x "$aapt" || fail "aapt unavailable"
-    "$aapt" dump badging "$wear_artifact" | grep -q "package: name='com.healthmd.android'.*versionCode='$wear_code'" || fail "packaged identity"
-    "$aapt" dump badging "$wear_artifact" | grep -q "uses-feature: name='android.hardware.type.watch'" || fail "packaged watch feature"
+    badging=$("$aapt" dump badging "$wear_artifact") || fail "packaged manifest unreadable"
+    packaged_package=$(printf '%s\n' "$badging" | sed -n "s/^package: name='\([^']*\)'.*/\1/p" | head -1)
+    packaged_code=$(printf '%s\n' "$badging" | sed -n "s/^package: .*versionCode='\([0-9][0-9]*\)'.*/\1/p" | head -1)
+    packaged_name=$(printf '%s\n' "$badging" | sed -n "s/^package: .*versionName='\([^']*\)'.*/\1/p" | head -1)
+    [[ "$packaged_package" == "$wear_package" && "$packaged_code" == "$wear_code" &&
+       "$packaged_name" == "$wear_name" ]] || fail "packaged identity"
+    printf '%s\n' "$badging" | grep -Fq "uses-feature: name='android.hardware.type.watch'" || fail "packaged watch feature"
     ;;
   *) fail "unsupported Wear artifact type (expected .apk or .aab): $wear_artifact" ;;
 esac

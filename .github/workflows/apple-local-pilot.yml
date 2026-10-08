@@ -1,0 +1,30 @@
+name: Local Runner Tooling
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/apple-local-pilot.yml'
+      - 'scripts/local-actions/**'
+      - 'scripts/setup-local-actions-runner.py'
+      - 'scripts/tests/test_setup_local_actions_runner.py'
+      - 'apps/apple/scripts/local_actions_pilot.py'
+      - 'apps/apple/scripts/run-local-actions-pilot.sh'
+      - 'apps/apple/scripts/tests/test_local_actions_pilot.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  safety:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Verify runner tooling safety
+        run: |
+          python3 -m unittest \
+            apps/apple/scripts/tests/test_local_actions_pilot.py \
+            scripts/tests/test_setup_local_actions_runner.py

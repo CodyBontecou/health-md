@@ -502,6 +502,11 @@
     <string name="profile_schedule_refresh_interval">ਰਿਫਰੈਸ਼ ਅੰਤਰਾਲ</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ਘੰਟੇ</string>
     <string name="profile_schedule_refresh_summary">ਅੱਜ ਹਰ %1$d ਘੰਟੇ ਬਾਅਦ ਰਿਫਰੈਸ਼ ਕਰਦਾ ਹੈ</string>
+    <string name="profile_schedule_discard_recovery">ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰੋ</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s ਲਈ ਬਕਾਇਆ ਰਿਕਵਰੀ ਰੱਦ ਕਰਨੀ ਹੈ?</string>
+    <string name="profile_schedule_discard_recovery_body">ਇਸ ਪ੍ਰੋਫਾਈਲ ਦੀ ਅਨੁਸੂਚਿਤ ਮੁੜ ਕੋਸ਼ਿਸ਼ ਬੰਦ ਕਰੋ ਅਤੇ ਇਸ ਦੀਆਂ ਬਕਾਇਆ ਮਿਤੀਆਂ ਅਤੇ ਸੰਭਾਲੀਆਂ ਨਿਰਯਾਤ ਸੈਟਿੰਗਾਂ ਮਿਟਾਓ। ਅਗਲਾ ਅਨੁਸੂਚਿਤ ਰਨ ਮੌਜੂਦਾ ਪ੍ਰੋਫਾਈਲ ਅਤੇ ਅਨੁਸੂਚੀ ਵਰਤੇਗਾ। ਤੁਹਾਡੀ ਪ੍ਰੋਫਾਈਲ, API ਪ੍ਰਮਾਣ-ਪੱਤਰ, ਨਿਰਯਾਤ ਇਤਿਹਾਸ ਅਤੇ ਪਹਿਲਾਂ ਨਿਰਯਾਤ ਕੀਤਾ ਡਾਟਾ ਰੱਖਿਆ ਜਾਵੇਗਾ। ਇਹ ਪਹਿਲਾਂ ਕੀਤੇ ਅੱਪਲੋਡ ਜਾਂ ਲਿਖੀ ਫਾਈਲ ਨੂੰ ਵਾਪਸ ਨਹੀਂ ਲੈ ਸਕਦਾ।</string>
+    <string name="profile_schedule_discard_recovery_failed">ਬਕਾਇਆ ਰਿਕਵਰੀ ਪੂਰੀ ਤਰ੍ਹਾਂ ਰੱਦ ਨਹੀਂ ਹੋ ਸਕੀ। ਪ੍ਰੋਫਾਈਲ ਦੀ ਜਾਂਚ ਕਰੋ ਅਤੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।</string>
     <string name="schedule_date_window_today">ਅੱਜ</string>
     <string name="schedule_export_past_days">ਪਿਛਲੇ ਦਿਨਾਂ ਨੂੰ ਨਿਰਯਾਤ ਕਰੋ</string>
     <string name="schedule_today_summary">ਹਰ ਵਾਰ ਅੱਜ ਦਾ ਡੇਟਾ ਨਿਰਯਾਤ ਹੁੰਦਾ ਹੈ, ਤਾਂ ਜੋ ਮੌਜੂਦਾ ਰੋਜ਼ਾਨਾ ਫਾਈਲ ਅੱਪ-ਟੂ-ਡੇਟ ਰਹੇ। ਇੱਕੋ ਦਿਨ ਦੀ ਸਮੱਗਰੀ ਦੋ ਵਾਰ ਜੁੜਨ ਤੋਂ ਬਚਾਉਣ ਲਈ Overwrite ਜਾਂ Update ਲਿਖਣ ਮੋਡ ਵਰਤੋ।</string>

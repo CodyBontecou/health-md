@@ -132,6 +132,7 @@ enum UITestLaunchHelper {
         freeExportsUsed: Int = 0,
         syncState: String = "disconnected",
         scheduleEnabled: Bool = false,
+        duplicateExportProfile: Bool = false,
         configurationProtectionEnabled: Bool = false,
         useHealthKitExportPreviewFixtures: Bool = false,
         exportResult: String? = nil,
@@ -153,6 +154,7 @@ enum UITestLaunchHelper {
             "UITEST_FREE_EXPORTS_USED": "\(freeExportsUsed)",
             "UITEST_SYNC_STATE": syncState,
             "UITEST_SCHEDULE_ENABLED": scheduleEnabled ? "true" : "false",
+            "UITEST_DUPLICATE_EXPORT_PROFILE": duplicateExportProfile ? "true" : "false",
             "UITEST_CONFIGURATION_PROTECTION_ENABLED": configurationProtectionEnabled ? "true" : "false",
             "UITEST_HEALTHKIT_EXPORT_PREVIEW_FIXTURES": useHealthKitExportPreviewFixtures ? "true" : "false",
             "UITEST_MAC_EXPORT_STATUS": macExportStatus,
@@ -174,11 +176,12 @@ enum UITestLaunchHelper {
 
     /// App configured for first-run export journey:
     /// Health authorized, vault selected, unlocked, ready to export.
-    static func firstRunExportApp() -> XCUIApplication {
+    static func firstRunExportApp(duplicateExportProfile: Bool = false) -> XCUIApplication {
         configuredApp(
             healthAuthorized: true,
             vaultSelected: true,
-            purchaseUnlocked: true
+            purchaseUnlocked: true,
+            duplicateExportProfile: duplicateExportProfile
         )
     }
 
@@ -209,5 +212,14 @@ enum UITestLaunchHelper {
             purchaseUnlocked: true,
             syncState: state
         )
+    }
+}
+
+extension XCUIElement {
+    /// Avoid XCTest's initial polling interval for elements already present.
+    /// Missing elements retain the full wait; normal XCTest idle synchronization
+    /// and the caller's assertions and hittability checks remain enabled.
+    func waitUntilExists(timeout: TimeInterval) -> Bool {
+        exists || waitForExistence(timeout: timeout)
     }
 }

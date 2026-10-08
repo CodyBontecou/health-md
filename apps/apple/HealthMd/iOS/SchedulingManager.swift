@@ -175,6 +175,13 @@ class SchedulingManager: ObservableObject {
     /// coordinator.
     private let scheduledProfileDestinationAdopter: @MainActor (ExportProfile?) -> Void
     private let isSharedSetupV2ProfileBlocked: @MainActor (UUID) -> Bool
+    private let scheduledAPIDestinationResolver: @MainActor (ExportProfile?) -> APIExportDestinationSnapshot?
+    @MainActor private var activeProfileRequests: [UUID: PendingExportRequest] = [:]
+    @MainActor @Published private(set) var pendingRecoveryProfileIDs: Set<UUID> = []
+    private static let apiRecoveryDestinationChangedMessage = String(
+        localized: "The original API recovery destination cannot be verified. Discard Pending Recovery, or disable and re-enable the legacy schedule, before exporting to the current endpoint.",
+        comment: "Fail-closed scheduled API recovery after a destination or credential change"
+    )
 
     /// Result from notification-triggered export, observed by UI to show alert
     /// when no in-app activity banner owns the operation.
@@ -194,20 +201,30 @@ class SchedulingManager: ObservableObject {
     /// the legacy schedule and every scheduled entry. Called from the legacy
     /// `schedule` didSet and by the UI after entry mutations.
     @MainActor func refreshScheduledAutomation() {
+        refreshScheduledAutomation(cancelPendingFallbacks: true)
+    }
+
+    @MainActor private func refreshScheduledAutomation(cancelPendingFallbacks: Bool) {
         isSchedulingActive = schedule.isEnabled || hasEnabledProfileEntries
+        refreshPendingRecoveryProfiles()
+        for request in activeProfileRequests.values where !canStartProfileRequest(request) {
+            cancelNotificationExport(operationID: request.id)
+        }
+        if systemSideEffectsEnabled {
+            IPhoneCorpusExportRecoveryManager.shared.revalidateScheduledRecovery()
+        }
         guard systemSideEffectsEnabled else { return }
         guard !TestMode.isUITesting else { return }
         #if DEBUG
         guard !MarketingCapture.isActive else { return }
         #endif
-        let active = isSchedulingActive
         Task { @MainActor in
-            if active {
-                self.scheduleBackgroundTask()
+            if self.schedule.isEnabled || self.hasEnabledProfileEntries {
+                self.scheduleBackgroundTask(cancelPendingFallbacks: cancelPendingFallbacks)
                 await self.setupHealthKitBackgroundDelivery()
                 await PushRegistrationManager.shared.registerForRemoteNotificationsIfNeeded()
             } else {
-                self.cancelBackgroundTask()
+                self.cancelBackgroundTask(cancelPendingFallbacks: cancelPendingFallbacks)
                 await self.disableHealthKitBackgroundDelivery()
             }
         }
@@ -266,7 +283,8 @@ class SchedulingManager: ObservableObject {
         scheduledProfileStore: ExportProfileStore = ExportProfileStore(),
         scheduledDestinationStore: ProfileDestinationStore = ProfileDestinationStore(),
         scheduledProfileDestinationAdopter: (@MainActor (ExportProfile?) -> Void)? = nil,
-        isSharedSetupV2ProfileBlocked: (@MainActor (UUID) -> Bool)? = nil
+        isSharedSetupV2ProfileBlocked: (@MainActor (UUID) -> Bool)? = nil,
+        scheduledAPIDestinationResolver: (@MainActor (ExportProfile?) -> APIExportDestinationSnapshot?)? = nil
     ) {
         self.pendingExportStore = pendingExportStore
         self.exportNotificationScheduler = exportNotificationScheduler
@@ -289,12 +307,150 @@ class SchedulingManager: ObservableObject {
             ?? { profileID in
                 SharedSetupV2ExecutionGate().isExecutionBlocked(profileID: profileID)
             }
+        self.scheduledAPIDestinationResolver = scheduledAPIDestinationResolver ?? { profile in
+            guard let profile else { return APIExportSettings().destinationSnapshot }
+            guard profile.target == .apiEndpoint else { return nil }
+            guard let bindingID = profile.apiEndpointID else { return APIExportSettings().destinationSnapshot }
+            scheduledDestinationStore.reloadPersistedDestinations()
+            // A missing bound endpoint is not an invitation to use the active profile's URL.
+            guard let endpoint = scheduledDestinationStore.apiEndpoint(id: bindingID) else { return nil }
+            // Resolve without persisting a URL or copying credentials into global settings.
+            let trimmedURL = endpoint.endpointURLString.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let url = URL(string: trimmedURL),
+                  let scheme = url.scheme?.lowercased(), ["https", "http"].contains(scheme),
+                  url.host?.isEmpty == false else { return nil }
+            let token = (scheduledDestinationStore.token(for: bindingID) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let header = token.isEmpty ? nil
+                : (token.localizedCaseInsensitiveContains("Bearer ") || token.localizedCaseInsensitiveContains("Basic ")
+                   ? token : "Bearer \(token)")
+            return APIExportDestinationSnapshot(
+                endpointURL: url,
+                authorizationHeaderValue: header,
+                displayName: url.host ?? "API Endpoint",
+                redactedEndpointDescription: APIExportSettings.redactedEndpointDescription(for: endpoint.endpointURLString)
+            )
+        }
         self.scheduledExportCoordinator = ScheduledExportCoordinator(
             pendingExportStore: pendingExportStore,
             exportNotificationScheduler: exportNotificationScheduler
         )
         self.schedule = initialSchedule
         isSchedulingActive = self.schedule.isEnabled || self.hasEnabledProfileEntries
+        self.scheduledExportCoordinator.shouldRetainRequest = { [weak self] request in
+            self?.shouldRetainScheduledRequest(request) == true
+        }
+        refreshPendingRecoveryProfiles()
+    }
+
+    @MainActor private func refreshPendingRecoveryProfiles() {
+        guard let requests = try? pendingExportStore.loadAll() else { return }
+        pendingRecoveryProfileIDs = Set(requests.filter { request in
+            guard request.source == .scheduled else { return false }
+            if request.attemptedAt != nil { return true }
+            // Pre-marker retries are recoverable after their fallback window. A merely
+            // armed future occurrence is not an error/recovery action in the UI.
+            return request.scheduledFireDate.map {
+                $0.addingTimeInterval(exportNotificationScheduler.fallbackDelay) <= now()
+            } ?? false
+        }.compactMap(\.profileID))
+    }
+
+    /// No credentials, profiles, files, history or success markers are removed. Invalidate
+    /// before cancellation/removal, because a cancelled producer can finish later.
+    @MainActor func discardPendingRecovery(profileID: UUID) throws {
+        let requests = try pendingExportStore.loadAll().filter {
+            $0.source == .scheduled && $0.profileID == profileID
+        }
+        guard scheduledEntryStore.discardPendingRecovery(profileID: profileID) else {
+            throw ScheduledExportPreparationError.invalidated
+        }
+        defer { refreshScheduledAutomation(cancelPendingFallbacks: false) }
+        for request in requests {
+            cancelNotificationExport(operationID: request.id)
+            exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+            if scheduledTarget(for: request) == .connectedMac {
+                try IPhoneCorpusExportRecoveryManager.shared.discardScheduledRecovery(jobID: request.id)
+            }
+        }
+        try pendingExportStore.clearCompletedRequests(ids: Set(requests.map(\.id)))
+    }
+
+    /// Retention permits future fallbacks and a disabled schedule's partial checkpoint,
+    /// but never an abandoned generation, previous enabled period or historical refresh.
+    @MainActor private func shouldRetainScheduledRequest(_ request: PendingExportRequest) -> Bool {
+        guard request.source == .scheduled else { return true }
+        let projection: ExportSchedule
+        if let profileID = request.profileID {
+            guard let entry = scheduledEntryStore.entry(profileID: profileID),
+                  entry.recoveryGeneration == request.recoveryGeneration else { return false }
+            projection = entry.dateMathProjection
+            if entry.isEnabled, let captured = request.scheduleEnabledAt, captured != entry.enabledAt {
+                return false
+            }
+        } else {
+            projection = schedule
+            if schedule.isEnabled, let captured = request.scheduleEnabledAt, captured != schedule.enabledAt {
+                return false
+            }
+        }
+        if let fireDate = request.scheduledFireDate,
+           let enabledAt = projection.enabledAt, fireDate <= enabledAt { return false }
+        if request.scheduledKind == .todayRefresh {
+            let calendar = pendingExportCalendar(for: request)
+            guard projection.todayRefreshEnabled,
+                  let fireDate = request.scheduledFireDate,
+                  calendar.startOfDay(for: fireDate) >= calendar.startOfDay(for: now()) else { return false }
+        }
+        return true
+    }
+
+    @MainActor private func canRecordScheduledProgress(_ request: PendingExportRequest) -> Bool {
+        guard shouldRetainScheduledRequest(request) else { return false }
+        if let profileID = request.profileID {
+            guard scheduledEntryStore.entry(profileID: profileID)?.isEnabled == true else { return false }
+        } else if !schedule.isEnabled { return false }
+        if request.scheduledKind == .todayRefresh {
+            guard let fireDate = request.scheduledFireDate,
+                  pendingExportCalendar(for: request).isDate(fireDate, inSameDayAs: now()) else { return false }
+        }
+        return true
+    }
+
+    @MainActor private func canStartProfileRequest(_ request: PendingExportRequest) -> Bool {
+        guard let profileID = request.profileID,
+              !isSharedSetupV2ProfileBlocked(profileID),
+              canRecordScheduledProgress(request),
+              isPendingExportRequestStillStored(request) else { return false }
+        return request.scheduledFireDate.map { $0 <= now() } ?? true
+    }
+
+    @MainActor func isScheduledRecoveryAuthorized(jobID: UUID) -> Bool {
+        guard let request = loadPendingScheduledExportRequest(id: jobID),
+              request.source == .scheduled, scheduledTarget(for: request) == .connectedMac,
+              canRecordScheduledProgress(request),
+              request.scheduledFireDate.map({ $0 <= now() }) ?? true else { return false }
+        return request.profileID.map { !isSharedSetupV2ProfileBlocked($0) } ?? true
+    }
+
+    @MainActor private func apiIdentity(for profile: ExportProfile?) -> ScheduledAPIEndpointIdentity? {
+        scheduledAPIDestinationResolver(profile).map {
+            ScheduledAPIEndpointIdentity(destination: $0, bindingID: profile?.apiEndpointID)
+        }
+    }
+
+    @MainActor private func verifiedAPIDestination(for request: PendingExportRequest) -> APIExportDestinationSnapshot? {
+        let profile: ExportProfile?
+        if let profileID = request.profileID {
+            guard let current = scheduledProfileStore.profile(id: profileID), current.target == .apiEndpoint else {
+                return nil
+            }
+            profile = current
+        } else { profile = nil }
+        guard let identity = request.apiDestinationIdentity,
+              let destination = scheduledAPIDestinationResolver(profile),
+              identity.matches(destination, bindingID: profile?.apiEndpointID) else { return nil }
+        return destination
     }
 
     @MainActor func configureScheduledExportDependencies(
@@ -465,6 +621,7 @@ class SchedulingManager: ObservableObject {
 
     /// Drains persisted pending requests when the app becomes active.
     @MainActor func drainPendingExportsIfNeeded(trigger: PendingExportDrainTrigger = .appActive) async {
+        defer { refreshPendingRecoveryProfiles() }
         let requests: [PendingExportRequest]
         do {
             requests = try pendingExportStore.loadAll().sorted(by: pendingExportSort)
@@ -593,7 +750,7 @@ class SchedulingManager: ObservableObject {
         trigger: PendingExportDrainTrigger
     ) async {
         guard await shouldAttemptPendingScheduledExport(request, trigger: trigger) else { return }
-        guard shouldAttemptPendingScheduledExportTarget(request) else { return }
+        guard shouldAttemptPendingScheduledExportTarget(request, trigger: trigger) else { return }
         // Dedupe gate: profile requests use the per-profile occurrence key so
         // a retry never collides with another profile's run at the same fire
         // minute; legacy requests keep the shared fire-minute key.
@@ -638,6 +795,11 @@ class SchedulingManager: ObservableObject {
             dates: request.dates,
             target: target
         )
+        if request.profileID != nil { activeProfileRequests[request.id] = request }
+        defer {
+            activeProfileRequests.removeValue(forKey: request.id)
+            refreshPendingRecoveryProfiles()
+        }
         let result = await runCancellableNotificationExport(
             operationID: notificationOperationID
         ) {
@@ -658,7 +820,8 @@ class SchedulingManager: ObservableObject {
                     originalRequestedDates: request.originalRequestedDates,
                     originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                     quotaJobID: request.id,
-                    notificationOperationID: notificationOperationID
+                    notificationOperationID: notificationOperationID,
+                    request: request
                 )
             }
             return await self.runScheduledExport(
@@ -668,7 +831,8 @@ class SchedulingManager: ObservableObject {
                 originalRequestedDates: request.originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: request.originalCalendarTimeZoneIdentifier,
                 quotaJobID: request.id,
-                notificationOperationID: notificationOperationID
+                notificationOperationID: notificationOperationID,
+                expectedRequest: request
             )
         }
 
@@ -718,6 +882,10 @@ class SchedulingManager: ObservableObject {
                 }
                 return false
             }
+            guard shouldRetainScheduledRequest(request) else {
+                discardPendingScheduledExportRequest(request)
+                return false
+            }
             if let fireDate = request.scheduledFireDate, fireDate > now() {
                 logger.info("Skipping future profile pending request \(request.id.uuidString)")
                 return false
@@ -761,6 +929,10 @@ class SchedulingManager: ObservableObject {
             return false
         }
 
+        guard shouldRetainScheduledRequest(request) else {
+            discardPendingScheduledExportRequest(request)
+            return false
+        }
         guard let fireDate = request.scheduledFireDate else {
             return true
         }
@@ -784,8 +956,19 @@ class SchedulingManager: ObservableObject {
     /// exact pending request untouched until the peer handshake and destination
     /// status exist instead of recording a misleading "open iPhone" failure.
     @MainActor private func shouldAttemptPendingScheduledExportTarget(
-        _ request: PendingExportRequest
+        _ request: PendingExportRequest,
+        trigger: PendingExportDrainTrigger
     ) -> Bool {
+        if scheduledTarget(for: request) == .apiEndpoint,
+           verifiedAPIDestination(for: request) == nil {
+            if trigger == .notificationTap {
+                notificationExportResult = NotificationExportResult(
+                    status: .failure(reason: Self.apiRecoveryDestinationChangedMessage),
+                    timestamp: now(), operationID: request.id
+                )
+            }
+            return false
+        }
         guard scheduledTarget(for: request) == .connectedMac else { return true }
         guard scheduledSyncService != nil else {
             logger.info("Deferring pending Connected Mac export until app services are configured")
@@ -832,6 +1015,7 @@ class SchedulingManager: ObservableObject {
     }
 
     @MainActor private func discardPendingScheduledExportRequest(_ request: PendingExportRequest) {
+        defer { refreshPendingRecoveryProfiles() }
         exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
         do {
             try pendingExportStore.remove(id: request.id)
@@ -1000,8 +1184,9 @@ class SchedulingManager: ObservableObject {
     ) {
         let range = scheduledExportHistoryRange(for: request)
         let targetLabel = scheduledTargetLabel(for: target, profile: profile)
-        let didCompleteRequest = completion == .clearedAfterSuccess
-            || (completion == nil && result.didCompleteAllRequestedDates)
+        let didCompleteRequest = (completion == .clearedAfterSuccess
+            || (completion == nil && result.didCompleteAllRequestedDates))
+            && canRecordScheduledProgress(request)
 
         if didCompleteRequest {
             if let profileID = request.profileID {
@@ -1010,7 +1195,8 @@ class SchedulingManager: ObservableObject {
                 scheduledEntryStore.recordSuccess(
                     profileID: profileID,
                     kind: request.scheduledKind,
-                    occurrenceDate: request.scheduledFireDate ?? now()
+                    occurrenceDate: request.scheduledFireDate ?? now(),
+                    expectedRecoveryGeneration: request.recoveryGeneration
                 )
             } else {
                 var updatedSchedule = schedule
@@ -1041,10 +1227,9 @@ class SchedulingManager: ObservableObject {
             )
         }
 
-        notificationExportResult = makeNotificationExportResult(
-            from: result,
-            operationID: request.id
-        )
+        notificationExportResult = completion == .discarded
+            ? NotificationExportResult(status: .cancelled, timestamp: now(), operationID: request.id)
+            : makeNotificationExportResult(from: result, operationID: request.id)
     }
 
     private func isExportLimitResult(_ result: ExportOrchestrator.ExportResult) -> Bool {
@@ -1090,7 +1275,8 @@ class SchedulingManager: ObservableObject {
             if let firstErrorDetails,
                firstErrorDetails == VaultManager.destinationChangedMessage
                 || firstErrorDetails == Self.exportLimitReachedMessage
-                || firstErrorDetails == SharedSetupV2ExecutionGate.blockedExecutionMessage {
+                || firstErrorDetails == SharedSetupV2ExecutionGate.blockedExecutionMessage
+                || firstErrorDetails == Self.apiRecoveryDestinationChangedMessage {
                 reason = firstErrorDetails
             } else {
                 reason = result.primaryFailureReason?.shortDescription ?? "Unknown error"
@@ -1268,11 +1454,36 @@ class SchedulingManager: ObservableObject {
         originalRequestedDates: [Date]? = nil,
         originalCalendarTimeZoneIdentifier: String? = nil,
         quotaJobID: UUID?,
-        notificationOperationID: UUID? = nil
+        notificationOperationID: UUID? = nil,
+        expectedRequest: PendingExportRequest? = nil
     ) async -> ExportOrchestrator.ExportResult {
+        let pending: PendingExportRequest?
+        do {
+            pending = try expectedRequest ?? pendingExportStore.loadAll().first { $0.id == quotaJobID }
+        } catch {
+            return scheduledFailureResult(dates: dates, reason: .unknown, message: error.localizedDescription)
+        }
+        if Task.isCancelled || pending.map({ !isPendingExportRequestStillStored($0) }) == true {
+            return scheduledFailureResult(dates: dates, reason: .unknown,
+                message: "Scheduled recovery was invalidated.", wasCancelled: true)
+        }
+        if let pending, !canRecordScheduledProgress(pending)
+            || pending.scheduledFireDate.map({ $0 > now() }) == true {
+            if !shouldRetainScheduledRequest(pending) { discardPendingScheduledExportRequest(pending) }
+            return scheduledFailureResult(dates: dates, reason: .unknown,
+                message: "Scheduled recovery was invalidated.", wasCancelled: true)
+        }
+        let resolvedAPIDestination: APIExportDestinationSnapshot?
+        if target == .apiEndpoint {
+            if let pending { resolvedAPIDestination = verifiedAPIDestination(for: pending) }
+            else { resolvedAPIDestination = scheduledAPIDestinationResolver(nil) }
+        } else { resolvedAPIDestination = nil }
+        if target == .apiEndpoint, pending != nil, resolvedAPIDestination == nil {
+            return scheduledFailureResult(dates: dates, reason: .unknown,
+                message: Self.apiRecoveryDestinationChangedMessage)
+        }
         let context: AppleSleepCaptureContext
         do {
-            let pending = try pendingExportStore.loadAll().first { $0.id == quotaJobID }
             if let pending {
                 context = try pending.recoveredSleepCaptureContext()
             } else if let settingsSnapshot {
@@ -1292,7 +1503,8 @@ class SchedulingManager: ObservableObject {
             await runScheduledExportWithCaptureContext(dates: dates, target: target,
                 settingsSnapshot: operationSnapshot, originalRequestedDates: originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
-                quotaJobID: quotaJobID, notificationOperationID: notificationOperationID)
+                quotaJobID: quotaJobID, notificationOperationID: notificationOperationID,
+                resolvedAPIDestination: resolvedAPIDestination)
         }
     }
 
@@ -1301,7 +1513,8 @@ class SchedulingManager: ObservableObject {
         dates: [Date], target: ExportTargetSelection,
         settingsSnapshot: ExportSettingsSnapshot?, originalRequestedDates: [Date]?,
         originalCalendarTimeZoneIdentifier: String?, quotaJobID: UUID?,
-        notificationOperationID: UUID?
+        notificationOperationID: UUID?,
+        resolvedAPIDestination: APIExportDestinationSnapshot?
     ) async -> ExportOrchestrator.ExportResult {
         if target == .localIPhoneFolder,
            let blockedResult = scheduledLocalDestinationPreflight?(dates) {
@@ -1337,7 +1550,8 @@ class SchedulingManager: ObservableObject {
                 result = await performBackgroundAPIEndpointExport(
                     dates: dates,
                     settingsSnapshot: settingsSnapshot,
-                    notificationOperationID: notificationOperationID
+                    notificationOperationID: notificationOperationID,
+                    destination: resolvedAPIDestination
                 )
             case .connectedMac:
                 result = await performBackgroundConnectedMacExport(
@@ -1372,11 +1586,11 @@ class SchedulingManager: ObservableObject {
     private func performBackgroundAPIEndpointExport(
         dates: [Date],
         settingsSnapshot: ExportSettingsSnapshot?,
-        notificationOperationID: UUID?
+        notificationOperationID: UUID?,
+        destination: APIExportDestinationSnapshot?
     ) async -> ExportOrchestrator.ExportResult {
         let settings = settingsSnapshot?.makeAdvancedExportSettings() ?? AdvancedExportSettings()
-        let apiSettings = APIExportSettings()
-        guard let destination = apiSettings.destinationSnapshot else {
+        guard let destination else {
             return scheduledFailureResult(
                 dates: dates,
                 reason: .apiEndpointNotConfigured,
@@ -1540,6 +1754,9 @@ class SchedulingManager: ObservableObject {
                 )
             }
 
+            // Capture may suspend past discard; do not admit the newly built transfer afterward.
+            try Task.checkCancellation()
+            guard isScheduledRecoveryAuthorized(jobID: jobID) else { throw CancellationError() }
             guard syncService.canExportToConnectedMac(requiring: settings) else {
                 syncService.isSyncing = false
                 return scheduledFailureResult(
@@ -1608,6 +1825,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     _ = try await IPhoneConnectedCorpusProducer.sendFileExport(
                         jobID: jobID,
                         startDate: startDate,
@@ -1706,6 +1931,14 @@ class SchedulingManager: ObservableObject {
             scheduledMacExportTransferTasks[job.jobID] = Task { @MainActor [weak self, weak syncService] in
                 guard let self, let syncService else { return }
                 do {
+                    try Task.checkCancellation()
+                    guard self.isScheduledRecoveryAuthorized(jobID: job.jobID) else {
+                        _ = self.completeScheduledMacExport(with: MacExportFailure(
+                            jobID: job.jobID, reason: .cancelled,
+                            message: "Scheduled recovery was invalidated."
+                        ))
+                        return
+                    }
                     let preparedFile = try ConnectedTransferFile.encode(job)
                     defer { preparedFile.remove() }
                     guard self.scheduledMacExportContexts[job.jobID] != nil else { return }
@@ -1723,6 +1956,8 @@ class SchedulingManager: ObservableObject {
                     if case .failure(let abort) = transferResult {
                         _ = self.handleScheduledConnectedTransferAbort(abort)
                     }
+                } catch is CancellationError {
+                    // The cancellation/result path owns continuation completion.
                 } catch {
                     _ = self.completeScheduledMacExport(with: MacExportFailure(
                         jobID: job.jobID,
@@ -2166,12 +2401,14 @@ class SchedulingManager: ObservableObject {
                 originalRequestedDates: pendingRequest?.originalRequestedDates,
                 originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
                 quotaJobID: notificationOperationID,
-                notificationOperationID: notificationOperationID
+                notificationOperationID: notificationOperationID,
+                expectedRequest: pendingRequest
             )
         }
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
-        let didCompleteRequest = completion == .clearedAfterSuccess
-            || (pendingRequest == nil && result.didCompleteAllRequestedDates)
+        let didCompleteRequest = (completion == .clearedAfterSuccess
+            || (pendingRequest == nil && result.didCompleteAllRequestedDates))
+            && (pendingRequest.map(canRecordScheduledProgress) ?? schedule.isEnabled)
 
         if didCompleteRequest {
             var updatedSchedule = schedule
@@ -2249,6 +2486,7 @@ class SchedulingManager: ObservableObject {
         defer { finishScheduledOccurrenceExport(fireDate: resolvedFireDate) }
 
         let pendingRequest = await preparePendingScheduledExport(fireDate: resolvedFireDate, kind: kind)
+        guard pendingRequest != nil else { return }
         let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
         let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
         let target = scheduledTarget(for: pendingRequest)
@@ -2259,7 +2497,8 @@ class SchedulingManager: ObservableObject {
             settingsSnapshot: pendingRequest?.settingsSnapshot,
             originalRequestedDates: pendingRequest?.originalRequestedDates,
             originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
-            quotaJobID: pendingRequest?.id
+            quotaJobID: pendingRequest?.id,
+            expectedRequest: pendingRequest
         )
 
         await processAutomaticScheduledExportResult(
@@ -2276,11 +2515,19 @@ class SchedulingManager: ObservableObject {
     /// Checks for and exports any missed days since last export
     /// Call this when the app becomes active
     @MainActor func performCatchUpExportIfNeeded() async {
-        guard schedule.isEnabled else {
-            logger.info("Schedule disabled, skipping catch-up")
+        guard schedule.isEnabled || hasEnabledProfileEntries else {
+            logger.info("Scheduling disabled, skipping catch-up")
             return
         }
-        _ = await performCatchUpExportInternal()
+        if hasEnabledProfileEntries {
+            // The app-active drain already handles persisted recovery. Only
+            // discover unqueued occurrences here, rather than retrying a
+            // just-failed drain or bypassing a deferred Connected Mac target.
+            await runDueProfileOccurrences(skippingPendingRecovery: true)
+        }
+        if schedule.isEnabled {
+            _ = await performCatchUpExportInternal()
+        }
     }
 
     /// Internal method that performs catch-up export and returns result for UI display
@@ -2311,6 +2558,7 @@ class SchedulingManager: ObservableObject {
         do {
             let alreadyPending = try pendingExportStore.loadAll().contains { request in
                 request.source == .scheduled
+                    && request.profileID == nil
                     && request.scheduledFireDate == fireDate
                     && request.scheduledKind == .completedDay
             }
@@ -2389,6 +2637,8 @@ class SchedulingManager: ObservableObject {
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: target,
             settingsSnapshot: await makeSettingsSnapshotForNewScheduledOperation(target: target),
+            scheduleEnabledAt: schedule.enabledAt,
+            apiDestinationIdentity: target == .apiEndpoint ? apiIdentity(for: nil) : nil,
             calendar: calendar
         )
         do {
@@ -2407,7 +2657,8 @@ class SchedulingManager: ObservableObject {
             settingsSnapshot: pendingRequest.settingsSnapshot,
             originalRequestedDates: pendingRequest.originalRequestedDates,
             originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
-            quotaJobID: pendingRequest.id
+            quotaJobID: pendingRequest.id,
+            expectedRequest: pendingRequest
         )
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
         processPendingScheduledExportResult(
@@ -2477,8 +2728,8 @@ class SchedulingManager: ObservableObject {
 
     /// Production destination adoption: writes the profile's folder binding
     /// into the persisted vault keys (a fresh `VaultManager()` resolves them
-    /// during the run) and loads the profile's API endpoint into
-    /// `APIExportSettings`. Nil adopts the active profile's destinations,
+    /// during the run). API endpoints are resolved directly into immutable values.
+    /// Nil adopts the active profile's folder destination,
     /// restoring the state the UI expects after a profile run.
     @MainActor private static func defaultAdoptProfileDestinations(_ profile: ExportProfile?) {
         let destinationStore = ProfileDestinationStore()
@@ -2488,13 +2739,8 @@ class SchedulingManager: ObservableObject {
                 from: destinationStore
             )
         }
-        if let profile,
-           let endpointID = profile.apiEndpointID,
-           let endpoint = destinationStore.apiEndpoint(id: endpointID) {
-            let apiSettings = APIExportSettings()
-            apiSettings.endpointURLString = endpoint.endpointURLString
-            apiSettings.bearerToken = destinationStore.token(for: endpoint.id) ?? ""
-        }
+        // API destinations are resolved as immutable values, never adopted into global
+        // URL/Keychain settings. Concurrent profiles cannot redirect each other's uploads.
     }
 
     /// Per-profile occurrence in-flight key. Unlike the legacy fire-minute
@@ -2514,8 +2760,33 @@ class SchedulingManager: ObservableObject {
     /// HealthKit delivery calls this. Local-folder runs serialize on the
     /// folder gate (persisted vault state is global); all other targets run
     /// concurrently.
-    @MainActor func runDueProfileOccurrences() async {
-        let due = scheduledEntryStore.dueOccurrences(now: now())
+    @MainActor func runDueProfileOccurrences(skippingPendingRecovery: Bool = false) async {
+        // Restore the next wake-up even when opening the app before a due
+        // occurrence. Local notifications are one-shot and may need re-arming
+        // after a relaunch or reboot without another schedule-editor save.
+        // Preserve attempted recovery and already-armed request identities.
+        defer {
+            if systemSideEffectsEnabled, !TestMode.isUITesting {
+                scheduleBackgroundTask(cancelPendingFallbacks: false)
+            }
+        }
+        var due = scheduledEntryStore.dueOccurrences(now: now())
+        if skippingPendingRecovery {
+            do {
+                let pending = try pendingExportStore.loadAll()
+                due.removeAll { occurrence in
+                    pending.contains { request in
+                        request.source == .scheduled
+                            && request.profileID == occurrence.profileID
+                            && request.scheduledFireDate == occurrence.fireDate
+                            && request.scheduledKind == occurrence.kind
+                    }
+                }
+            } catch {
+                logger.error("Profile catch-up could not inspect pending work: \(error.localizedDescription)")
+                return
+            }
+        }
         guard !due.isEmpty else { return }
 
         await withTaskGroup(of: Void.self) { group in
@@ -2524,16 +2795,6 @@ class SchedulingManager: ObservableObject {
                     await self?.runProfileOccurrence(occurrence)
                 }
             }
-        }
-
-        // Re-arm the wake-up for the next occurrence across all entries.
-        // cancelPendingFallbacks:false mirrors the legacy run body: the runs
-        // above may have just preserved retry requests (device-locked or
-        // partial outcomes) whose fallback windows are still open, and the
-        // bulk cancel would delete the recovery surface milliseconds after
-        // it was advertised.
-        if systemSideEffectsEnabled, !TestMode.isUITesting {
-            scheduleBackgroundTask(cancelPendingFallbacks: false)
         }
     }
 
@@ -2599,6 +2860,7 @@ class SchedulingManager: ObservableObject {
         defer { finishScheduledOccurrenceExport(fireDate: fireDate) }
 
         let pendingRequest = await preparePendingScheduledExport(fireDate: fireDate, kind: kind)
+        guard pendingRequest != nil else { return .skipped }
         let range = pendingRequest.map(scheduledExportHistoryRange) ?? fallbackScheduledExportHistoryRange(kind: kind)
         let dates = pendingRequest?.dates ?? fallbackScheduledExportDates(kind: kind)
         let target = scheduledTarget(for: pendingRequest)
@@ -2631,7 +2893,8 @@ class SchedulingManager: ObservableObject {
             settingsSnapshot: pendingRequest?.settingsSnapshot,
             originalRequestedDates: pendingRequest?.originalRequestedDates,
             originalCalendarTimeZoneIdentifier: pendingRequest?.originalCalendarTimeZoneIdentifier,
-            quotaJobID: pendingRequest?.id
+            quotaJobID: pendingRequest?.id,
+            expectedRequest: pendingRequest
         )
 
         await processAutomaticScheduledExportResult(
@@ -2657,8 +2920,15 @@ class SchedulingManager: ObservableObject {
         originalRequestedDates: [Date],
         originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
-        notificationOperationID: UUID?
+        notificationOperationID: UUID?,
+        request: PendingExportRequest
     ) async -> ExportOrchestrator.ExportResult {
+        // The permit can be acquired long after evaluation: recheck opt-in and the durable
+        // fence here, not just before waiting for another profile's folder export.
+        guard !Task.isCancelled, canStartProfileRequest(request) else {
+            return scheduledFailureResult(dates: dates, reason: .unknown,
+                message: "Scheduled recovery was invalidated.", wasCancelled: true)
+        }
         scheduledProfileDestinationAdopter(profile)
         defer {
             scheduledProfileDestinationAdopter(scheduledProfileStore.activeProfile)
@@ -2670,7 +2940,8 @@ class SchedulingManager: ObservableObject {
             originalRequestedDates: originalRequestedDates,
             originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
             quotaJobID: quotaJobID,
-            notificationOperationID: notificationOperationID
+            notificationOperationID: notificationOperationID,
+            expectedRequest: request
         )
     }
 
@@ -2685,8 +2956,13 @@ class SchedulingManager: ObservableObject {
         originalRequestedDates: [Date],
         originalCalendarTimeZoneIdentifier: String?,
         quotaJobID: UUID?,
-        notificationOperationID: UUID? = nil
+        notificationOperationID: UUID? = nil,
+        request: PendingExportRequest
     ) async -> ExportOrchestrator.ExportResult {
+        guard !Task.isCancelled, canStartProfileRequest(request) else {
+            return scheduledFailureResult(dates: dates, reason: .unknown,
+                message: "Scheduled recovery was invalidated.", wasCancelled: true)
+        }
         guard !isSharedSetupV2ProfileBlocked(profile.id) else {
             return scheduledFailureResult(
                 dates: dates,
@@ -2704,7 +2980,8 @@ class SchedulingManager: ObservableObject {
                     originalRequestedDates: originalRequestedDates,
                     originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
                     quotaJobID: quotaJobID,
-                    notificationOperationID: notificationOperationID
+                    notificationOperationID: notificationOperationID,
+                    request: request
                 )
             }
         }
@@ -2720,7 +2997,8 @@ class SchedulingManager: ObservableObject {
             originalRequestedDates: originalRequestedDates,
             originalCalendarTimeZoneIdentifier: originalCalendarTimeZoneIdentifier,
             quotaJobID: quotaJobID,
-            notificationOperationID: notificationOperationID
+            notificationOperationID: notificationOperationID,
+            expectedRequest: request
         )
     }
 
@@ -2740,7 +3018,14 @@ class SchedulingManager: ObservableObject {
             )
         }
 
-        guard let entry = scheduledEntryStore.entry(id: due.entryID) else { return }
+        guard let entry = scheduledEntryStore.entry(id: due.entryID),
+              entry.isEnabled,
+              entry.recoveryGeneration == due.recoveryGeneration,
+              entry.enabledAt == due.enabledAt,
+              ScheduleDateMath.shouldRunScheduledOccurrence(
+                schedule: entry.dateMathProjection, kind: due.kind,
+                fireDate: due.fireDate, now: now()
+              ) else { return }
         guard let profile = scheduledProfileStore.profile(id: due.profileID) else {
             logger.error("Scheduled entry references a missing profile; disabling entry")
             scheduledEntryStore.update(profileID: due.profileID) { $0.isEnabled = false }
@@ -2767,7 +3052,10 @@ class SchedulingManager: ObservableObject {
             profileID: profile.id,
             profileName: profile.name,
             target: profile.target,
-            settings: profile.settings
+            settings: profile.settings,
+            recoveryGeneration: entry.recoveryGeneration,
+            enabledAt: entry.enabledAt,
+            apiDestinationIdentity: profile.target == .apiEndpoint ? apiIdentity(for: profile) : nil
         )
         let pendingRequest: PendingExportRequest
         do {
@@ -2791,29 +3079,35 @@ class SchedulingManager: ObservableObject {
         let dates = pendingRequest.dates
         let target = pendingRequest.exportTarget ?? context.target
         let settings = pendingRequest.settingsSnapshot ?? context.settings
-        let result = await runProfileScopedExport(
-            profile: profile,
-            dates: dates,
-            target: target,
-            settings: settings,
-            originalRequestedDates: pendingRequest.originalRequestedDates,
-            originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
-            quotaJobID: pendingRequest.id
-        )
+        activeProfileRequests[pendingRequest.id] = pendingRequest
+        defer {
+            activeProfileRequests.removeValue(forKey: pendingRequest.id)
+            refreshPendingRecoveryProfiles()
+        }
+        let result = await runCancellableNotificationExport(operationID: pendingRequest.id) {
+            await self.runProfileScopedExport(
+                profile: profile, dates: dates, target: target, settings: settings,
+                originalRequestedDates: pendingRequest.originalRequestedDates,
+                originalCalendarTimeZoneIdentifier: pendingRequest.originalCalendarTimeZoneIdentifier,
+                quotaJobID: pendingRequest.id,
+                notificationOperationID: pendingRequest.id, request: pendingRequest
+            )
+        }
 
         let completion = await completePendingScheduledExport(pendingRequest, result: result)
-        if completion == .clearedAfterSuccess {
+        if completion == .clearedAfterSuccess, canRecordScheduledProgress(pendingRequest) {
             scheduledEntryStore.recordSuccess(
                 profileID: due.profileID,
                 kind: due.kind,
-                occurrenceDate: due.fireDate
+                occurrenceDate: due.fireDate,
+                expectedRecoveryGeneration: pendingRequest.recoveryGeneration
             )
         }
 
         let rangeStart = dates.first ?? due.fireDate
         let rangeEnd = dates.last ?? due.fireDate
         if result.successCount > 0 || result.dailyNoteSkipCount > 0 {
-            if result.didCompleteAllRequestedDates {
+            if result.didCompleteAllRequestedDates, canRecordScheduledProgress(pendingRequest) {
                 await sendExportNotification(
                     success: true,
                     daysExported: result.successCount,
@@ -2982,8 +3276,10 @@ class SchedulingManager: ObservableObject {
         kind: ScheduledExportKind = .completedDay,
         entry: ScheduledExportEntry? = nil
     ) async -> PendingExportRequest? {
+        let capturedSchedule = schedule
+        defer { refreshPendingRecoveryProfiles() }
         let resolvedFireDate = fireDate
-            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: schedule, kind: kind, now: now())
+            ?? ScheduleDateMath.latestScheduledOccurrenceDate(schedule: capturedSchedule, kind: kind, now: now())
             ?? now()
 
         // Profile entries arm their fallback request with the profile's own
@@ -2993,6 +3289,9 @@ class SchedulingManager: ObservableObject {
         // disabled"), even though the armed occurrence belonged to the entry.
         let profileContext: ScheduledExportCoordinator.ScheduledProfileRequestContext?
         if let entry {
+            guard let current = scheduledEntryStore.entry(id: entry.id), current.isEnabled,
+                  current.recoveryGeneration == entry.recoveryGeneration,
+                  current.enabledAt == entry.enabledAt else { return nil }
             guard let profile = scheduledProfileStore.profile(id: entry.profileID) else {
                 logger.error("Cannot arm profile fallback: entry \(entry.profileID.uuidString) references a missing profile")
                 return nil
@@ -3005,7 +3304,10 @@ class SchedulingManager: ObservableObject {
                 profileID: profile.id,
                 profileName: profile.name,
                 target: profile.target,
-                settings: profile.settings
+                settings: profile.settings,
+                recoveryGeneration: entry.recoveryGeneration,
+                enabledAt: entry.enabledAt,
+                apiDestinationIdentity: profile.target == .apiEndpoint ? apiIdentity(for: profile) : nil
             )
         } else {
             profileContext = nil
@@ -3013,13 +3315,15 @@ class SchedulingManager: ObservableObject {
 
         do {
             return try await scheduledExportCoordinator.preparePendingScheduledExport(
-                schedule: entry?.dateMathProjection ?? schedule,
+                schedule: entry?.dateMathProjection ?? capturedSchedule,
                 fireDate: resolvedFireDate,
                 kind: kind,
                 profile: profileContext,
+                apiDestinationIdentity: capturedSchedule.target == .apiEndpoint && profileContext == nil
+                    ? apiIdentity(for: nil) : nil,
                 makeSettingsSnapshot: {
                     await makeSettingsSnapshotForNewScheduledOperation(
-                        target: profileContext?.target ?? schedule.target
+                        target: profileContext?.target ?? capturedSchedule.target
                     )
                 }
             )
@@ -3054,6 +3358,7 @@ class SchedulingManager: ObservableObject {
         _ request: PendingExportRequest?,
         result: ExportOrchestrator.ExportResult
     ) async -> ScheduledExportCompletion? {
+        defer { refreshPendingRecoveryProfiles() }
         guard let request else {
             if result.primaryFailureReason == .deviceLocked {
                 await sendExportReminderNotification()
@@ -3083,7 +3388,11 @@ class SchedulingManager: ObservableObject {
     /// fallback. Used on paths that preserve the request without going
     /// through `ScheduledExportCoordinator`'s retry creation.
     @MainActor private func markPendingExportRequestAttempted(_ request: PendingExportRequest) {
+        defer { refreshPendingRecoveryProfiles() }
         guard request.attemptedAt == nil else { return }
+        if request.source == .scheduled {
+            guard shouldRetainScheduledRequest(request), isPendingExportRequestStillStored(request) else { return }
+        }
         let attempted = request.markingAttempted(at: now())
         do {
             try pendingExportStore.upsert(attempted)
@@ -3152,8 +3461,9 @@ class SchedulingManager: ObservableObject {
         let targetLabel = scheduledTargetLabel(for: target)
         let hasActionablePendingNotification = completion == .preservedPartialSuccess
             || completion == .preservedDeviceLocked
-        let didCompleteRequest = completion == .clearedAfterSuccess
-            || (pendingRequest == nil && result.didCompleteAllRequestedDates)
+        let didCompleteRequest = (completion == .clearedAfterSuccess
+            || (pendingRequest == nil && result.didCompleteAllRequestedDates))
+            && (pendingRequest.map(canRecordScheduledProgress) ?? schedule.isEnabled)
 
         if didCompleteRequest {
             var updatedSchedule = schedule
@@ -3180,7 +3490,7 @@ class SchedulingManager: ObservableObject {
                 // ScheduledExportCoordinator has posted a stable-ID pending
                 // notification whose payload retries only unresolved dates.
                 logger.info("Scheduled export partially completed; pending dates preserved for retry")
-                if !hasActionablePendingNotification {
+                if !hasActionablePendingNotification, completion != .discarded {
                     await sendExportNotification(
                         success: false,
                         daysExported: max(result.totalCount, fallbackDaysToExport),
@@ -3203,7 +3513,7 @@ class SchedulingManager: ObservableObject {
             logger.error("Scheduled export failed")
 
             let failureReason = result.primaryFailureReason
-            if failureReason != .deviceLocked && !hasActionablePendingNotification {
+            if failureReason != .deviceLocked && !hasActionablePendingNotification && completion != .discarded {
                 await sendExportNotification(
                     success: false,
                     daysExported: max(result.totalCount, fallbackDaysToExport),
@@ -3380,7 +3690,9 @@ class SchedulingManager: ObservableObject {
             exportTarget: schedule.target,
             settingsSnapshot: await makeSettingsSnapshotForNewScheduledOperation(
                 target: schedule.target
-            )
+            ),
+            scheduleEnabledAt: schedule.enabledAt,
+            apiDestinationIdentity: schedule.target == .apiEndpoint ? apiIdentity(for: nil) : nil
         )
     }
 

@@ -181,6 +181,74 @@ impl DirectIphoneBackend {
             .wake_status_value(self.configuration.device_id, self.configuration.wake_window)
             .await
     }
+
+    async fn start_android_raw_export(
+        &self,
+        job_id: Uuid,
+        input: RawCorpusExportInput,
+        installation_id: Uuid,
+    ) -> Result<Value, BackendError> {
+        let provider_id = input
+            .provider_id
+            .unwrap_or_else(|| "health_connect".to_owned());
+        let date_selection = match input
+            .dates
+            .resolve(Local::now().date_naive())
+            .map_err(|_| {
+                BackendError::new("healthmd_invalid_export", "Invalid raw export dates.")
+            })? {
+            healthmd_protocol::models::DateSelection::Exact(range) => v2::DateSelection::Exact {
+                start_date: range.start,
+                end_date: range.end,
+            },
+            healthmd_protocol::models::DateSelection::AllAvailable(_) => {
+                v2::DateSelection::AllAvailable
+            }
+        };
+        let created_at = Utc::now();
+        let request = v2::ExportRequest {
+            job_id,
+            created_at,
+            expires_at: created_at + ChronoDuration::seconds(JOB_LIFETIME_SECONDS),
+            source_installation_id: installation_id,
+            date_selection,
+            product: v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                provider_id: provider_id.clone(),
+                format: match input.format {
+                    RawCorpusFormat::Json => v2::RawSnapshotFormat::Json,
+                    RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => {
+                        v2::RawSnapshotFormat::Ndjson
+                    }
+                },
+                scope: v2::RawSnapshotScope::AllAuthorizedSupportedData,
+                include_exercise_routes: input.include_exercise_routes,
+            },
+            destination: None,
+        };
+        let result = self
+            .client
+            .export_android(
+                request,
+                None,
+                Some(installation_id),
+                self.configuration.port,
+                input.timeout,
+            )
+            .await
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        Ok(raw_export_success(
+            job_id,
+            "android",
+            &provider_id,
+            match input.format {
+                RawCorpusFormat::Json => "json",
+                RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => "ndjson",
+            },
+            &result.receipt.status,
+            result.receipt.byte_count,
+            &result.receipt.sha256,
+        ))
+    }
 }
 
 #[async_trait]
@@ -335,72 +403,8 @@ impl HealthDataBackend for DirectIphoneBackend {
         match source_kind {
             SourceKind::Ios => self.start_ios_raw_export(input, job_id).await,
             SourceKind::Android => {
-                let provider_id = input
-                    .provider_id
-                    .unwrap_or_else(|| "health_connect".to_owned());
-                let date_selection =
-                    match input
-                        .dates
-                        .resolve(Local::now().date_naive())
-                        .map_err(|_| {
-                            BackendError::new(
-                                "healthmd_invalid_export",
-                                "Invalid raw export dates.",
-                            )
-                        })? {
-                        healthmd_protocol::models::DateSelection::Exact(range) => {
-                            v2::DateSelection::Exact {
-                                start_date: range.start,
-                                end_date: range.end,
-                            }
-                        }
-                        healthmd_protocol::models::DateSelection::AllAvailable(_) => {
-                            v2::DateSelection::AllAvailable
-                        }
-                    };
-                let created_at = Utc::now();
-                let request = v2::ExportRequest {
-                    job_id,
-                    created_at,
-                    expires_at: created_at + ChronoDuration::seconds(JOB_LIFETIME_SECONDS),
-                    source_installation_id: selected.installation_id.0,
-                    date_selection,
-                    product: v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
-                        provider_id: provider_id.clone(),
-                        format: match input.format {
-                            RawCorpusFormat::Json => v2::RawSnapshotFormat::Json,
-                            RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => {
-                                v2::RawSnapshotFormat::Ndjson
-                            }
-                        },
-                        scope: v2::RawSnapshotScope::AllAuthorizedSupportedData,
-                        include_exercise_routes: input.include_exercise_routes,
-                    },
-                    destination: None,
-                };
-                let result = self
-                    .client
-                    .export_android(
-                        request,
-                        None,
-                        Some(selected.installation_id.0),
-                        self.configuration.port,
-                        input.timeout,
-                    )
+                self.start_android_raw_export(job_id, input, selected.installation_id.0)
                     .await
-                    .map_err(|error| backend_error(&error, Some(job_id)))?;
-                Ok(raw_export_success(
-                    job_id,
-                    "android",
-                    &provider_id,
-                    match input.format {
-                        RawCorpusFormat::Json => "json",
-                        RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => "ndjson",
-                    },
-                    &result.receipt.status,
-                    result.receipt.byte_count,
-                    &result.receipt.sha256,
-                ))
             }
         }
     }

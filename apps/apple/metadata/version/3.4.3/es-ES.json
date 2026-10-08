@@ -1,0 +1,3 @@
+{
+  "whatsNew": "Health.md 3.4.3 mejora la recuperación de las exportaciones programadas y aclara los recordatorios sobre exportaciones gratuitas.\n\n• Las programaciones de los perfiles de exportación restablecen sus notificaciones al volver a abrir la app y evitan intentos de recuperación duplicados.\n• Mejoras en la configuración de las notificaciones programadas y en la recuperación tras errores temporales de entrega.\n• Los recordatorios de actualización muestran correctamente cuántas exportaciones gratuitas has usado."
+}

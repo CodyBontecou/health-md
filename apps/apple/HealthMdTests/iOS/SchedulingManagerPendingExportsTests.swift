@@ -1078,7 +1078,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             },
             scheduledExportQuotaAccess: { _ in true },
             scheduledExportQuotaRecorder: { _ in },
-            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) },
+            scheduledAPIDestinationResolver: { _ in syntheticScheduledAPIDestination() }
         )
 
         await manager.performSilentPushExport(fireDate: fireDate)
@@ -1121,7 +1122,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             },
             scheduledExportQuotaAccess: { _ in true },
             scheduledExportQuotaRecorder: { _ in },
-            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) }
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 8, minute: 1) },
+            scheduledAPIDestinationResolver: { _ in syntheticScheduledAPIDestination() }
         )
 
         await manager.performSilentPushExport(fireDate: fireDate)
@@ -1168,7 +1170,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             },
             scheduledExportQuotaAccess: { _ in true },
             scheduledExportQuotaRecorder: { _ in },
-            now: { self.date(year: 2026, month: 5, day: 18, hour: 9, minute: 1) }
+            now: { self.date(year: 2026, month: 5, day: 18, hour: 9, minute: 1) },
+            scheduledAPIDestinationResolver: { _ in syntheticScheduledAPIDestination() }
         )
 
         await manager.performSilentPushExport(fireDate: fireDate, kind: .todayRefresh)
@@ -1474,7 +1477,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             scheduledExportQuotaAccess: quotaAccess,
             scheduledExportQuotaRecorder: quotaRecorder,
             now: { resolvedNow },
-            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: entryDefaults ?? .standard)
+            scheduledEntryStore: ScheduledExportEntryStore(userDefaults: entryDefaults ?? .standard),
+            scheduledAPIDestinationResolver: { _ in syntheticScheduledAPIDestination() }
         )
     }
 
@@ -1542,6 +1546,8 @@ final class SchedulingManagerPendingExportsTests: XCTestCase {
             notificationMetadata: ["notification": ExportNotificationType.pendingExport.rawValue],
             exportTarget: exportTarget,
             sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
+            apiDestinationIdentity: exportTarget == .apiEndpoint
+                ? ScheduledAPIEndpointIdentity(destination: syntheticScheduledAPIDestination(), bindingID: nil) : nil,
             calendar: calendar
         )
     }

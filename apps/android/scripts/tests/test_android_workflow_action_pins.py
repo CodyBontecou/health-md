@@ -152,13 +152,30 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         instrumentation = workflow.index(":app:connectedFdroidDebugAndroidTest")
         for command in ("shell input keyevent KEYCODE_WAKEUP", "shell wm dismiss-keyguard"):
             self.assertLess(workflow.index(command), instrumentation)
-        diagnostics = workflow.split("- name: Retain synthetic instrumentation diagnostics", 1)[1].split("\n  fdroid:", 1)[0]
+        diagnostics = workflow.split("- name: Retain instrumentation reports and per-test results", 1)[1].split("\n  fdroid:", 1)[0]
         for required in (
-            "if: always()", "if-no-files-found: warn", "retention-days: 7",
+            "if: ${{ always() }}", "if-no-files-found: warn", "retention-days: 7",
             "apps/android/healthmd-core/build/outputs/androidTest-results/",
             "apps/android/app/build/outputs/androidTest-results/",
         ):
             self.assertIn(required, diagnostics)
+    def test_ci_sdk_setup_explicitly_installs_supported_packages(self) -> None:
+        for name in ("android-ci.yml", "practice-ci.yml"):
+            workflow = (ROOT / ".github/workflows" / name).read_text()
+            sdk_steps = [
+                step
+                for step in re.split(r"(?m)^      - ", workflow)
+                if re.search(r"(?m)^\s*uses: android-actions/setup-android@", step)
+            ]
+            self.assertTrue(sdk_steps, f"{name} must set up the SDK")
+            for step in sdk_steps:
+                with self.subTest(workflow=name, step=step.splitlines()[0]):
+                    packages = re.search(r"(?m)^\s+packages:\s*([^\n#]+)", step)
+                    self.assertIsNotNone(
+                        packages,
+                        "Override setup-android's obsolete 'tools platform-tools' default",
+                    )
+                    self.assertEqual(["platform-tools"], packages.group(1).split())
 
     def test_instrumentation_declares_a_ready_software_ime_before_accessibility_tests(self) -> None:
         workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()

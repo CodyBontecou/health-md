@@ -1,0 +1,3 @@
+{
+  "whatsNew": "Health.md 3.4.3 migliora il ripristino delle esportazioni pianificate e rende più chiari i promemoria sulle esportazioni gratuite.\n\n• Le pianificazioni dei profili di esportazione ripristinano le notifiche quando riapri l’app ed evitano tentativi di recupero duplicati.\n• Migliorate la configurazione delle notifiche pianificate e la gestione degli errori temporanei di invio.\n• I promemoria di upgrade mostrano correttamente quante esportazioni gratuite hai utilizzato."
+}

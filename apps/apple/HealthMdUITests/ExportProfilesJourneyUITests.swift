@@ -22,18 +22,18 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
     private func openSettingsTab(_ app: XCUIApplication) {
         let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        XCTAssertTrue(settingsTab.waitUntilExists(timeout: 10))
+        if !settingsTab.isSelected { settingsTab.tap() }
     }
 
     /// Opens the Export Profiles management sheet from Settings.
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
         openSettingsTab(app)
         let row = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
+        XCTAssertTrue(row.waitUntilExists(timeout: 10), "Export Profiles row should exist in Settings")
         row.tap()
         XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
             "management sheet should open from Settings"
         )
     }
@@ -42,23 +42,24 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     /// now creates a blank profile, so it is not the duplication surface these journeys exercise.
     private func duplicateDefaultProfile(_ app: XCUIApplication) {
         let defaultRow = app.buttons["export.profiles.row.Default"]
-        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(defaultRow.waitUntilExists(timeout: 5))
         defaultRow.tap()
 
         let duplicate = app.buttons["Duplicate"]
-        for _ in 0..<6 where !(duplicate.exists && duplicate.isHittable) {
+        for _ in 0..<6 {
+            if duplicate.exists && duplicate.isHittable { break }
             app.swipeUp()
         }
-        XCTAssertTrue(duplicate.waitForExistence(timeout: 5), "profile detail should offer duplication")
+        XCTAssertTrue(duplicate.waitUntilExists(timeout: 5), "profile detail should offer duplication")
         XCTAssertTrue(duplicate.isHittable, "Duplicate should be tappable")
         duplicate.tap()
 
         let keepDuplicate = app.buttons["Keep It"]
-        if keepDuplicate.waitForExistence(timeout: 2) {
+        if keepDuplicate.waitUntilExists(timeout: 2) {
             keepDuplicate.tap()
         }
         app.navigationBars.buttons.firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Export Profiles"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.navigationBars["Export Profiles"].waitUntilExists(timeout: 5))
     }
 
     // MARK: - Journey A: migration + Settings entry
@@ -71,15 +72,19 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         // than rendered as a status pill on the Settings entry row.
         openSettingsTab(app)
         let row = app.buttons["export.profiles.entry"]
-        XCTAssertTrue(row.waitForExistence(timeout: 10), "Export Profiles row should exist in Settings")
+        XCTAssertTrue(row.waitUntilExists(timeout: 10), "Export Profiles row should exist in Settings")
         snap("01-settings-profiles-row")
         let configuredValue = expectation(for: NSPredicate(format: "value == 'Configured'"), evaluatedWith: row)
         wait(for: [configuredValue], timeout: 10)
 
         openProfilesManagementSheet(app)
         XCTAssertTrue(
-            app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5),
+            app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5),
             "management list should show the migrated Default profile"
+        )
+        XCTAssertFalse(
+            app.buttons["export.profiles.row.Default 2"].waitUntilExists(timeout: 1),
+            "the second-profile fixture must be opt-in and reset between launches"
         )
         snap("01b-management-default-profile")
     }
@@ -90,65 +95,65 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launch()
         openProfilesManagementSheet(app)
-        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5))
 
         // Duplicate from the profile detail action; the existing active profile remains active.
         duplicateDefaultProfile(app)
         XCTAssertTrue(
-            app.staticTexts["Default 2"].waitForExistence(timeout: 5),
+            app.staticTexts["Default 2"].waitUntilExists(timeout: 5),
             "duplicate should be created with a unique name"
         )
         snap("03-duplicated-profile-active")
 
         // Rename the duplicated profile from its detail actions.
         let duplicatedRow = app.buttons["export.profiles.row.Default 2"]
-        XCTAssertTrue(duplicatedRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(duplicatedRow.waitUntilExists(timeout: 5))
         duplicatedRow.tap()
         let rename = app.buttons["Rename…"]
-        XCTAssertTrue(rename.waitForExistence(timeout: 5))
+        XCTAssertTrue(rename.waitUntilExists(timeout: 5))
         rename.tap()
         let field = app.alerts.textFields.firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertTrue(field.waitUntilExists(timeout: 5))
         field.tap()
-        // The alert pre-fills the current profile name; replace it wholesale.
-        field.typeText(String(repeating: "\u{8}", count: 40))
-        field.typeText("Weekly Sleep")
+        // The alert pre-fills the current profile name; replace only that text.
+        XCTAssertEqual(field.value as? String, "Default 2")
+        field.typeText(String(repeating: "\u{8}", count: "Default 2".count) + "Weekly Sleep")
         app.alerts.buttons["Save"].tap()
         XCTAssertTrue(
-            app.navigationBars["Weekly Sleep"].waitForExistence(timeout: 5),
+            app.navigationBars["Weekly Sleep"].waitUntilExists(timeout: 5),
             "detail navigation title should follow the rename"
         )
         app.navigationBars.buttons.firstMatch.tap() // back to the list
         XCTAssertTrue(
-            app.staticTexts["Weekly Sleep"].firstMatch.waitForExistence(timeout: 5),
+            app.staticTexts["Weekly Sleep"].firstMatch.waitUntilExists(timeout: 5),
             "rename should update the management list"
         )
         snap("04-renamed-profile")
 
         // Duplication preserves the current active profile. Delete "Weekly Sleep" from its detail.
         let weeklyRow = app.buttons["export.profiles.row.Weekly Sleep"]
-        XCTAssertTrue(weeklyRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(weeklyRow.waitUntilExists(timeout: 5))
         weeklyRow.tap()
         let delete = app.buttons["Delete Profile…"]
-        XCTAssertTrue(delete.waitForExistence(timeout: 5))
+        XCTAssertTrue(delete.waitUntilExists(timeout: 5))
         delete.tap()
         let confirm = app.buttons.matching(
             NSPredicate(format: "label BEGINSWITH 'Delete '")
         ).firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+        XCTAssertTrue(confirm.waitUntilExists(timeout: 5))
         confirm.tap()
         XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
             "deleting from detail should return to the management list"
         )
         snap("05-after-delete")
 
         // Last-profile guard: with one profile left, Delete must be disabled.
         let defaultRow = app.buttons["export.profiles.row.Default"]
-        XCTAssertTrue(defaultRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(defaultRow.waitUntilExists(timeout: 5))
         defaultRow.tap()
         let guardedDelete = app.buttons["Delete Profile…"]
-        XCTAssertTrue(guardedDelete.waitForExistence(timeout: 5))
+        XCTAssertTrue(guardedDelete.waitUntilExists(timeout: 5))
         XCTAssertFalse(guardedDelete.isEnabled, "the last remaining profile must not be deletable")
         snap("06-last-profile-guard")
     }
@@ -160,34 +165,36 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         app.launch()
 
         let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 10))
+        XCTAssertTrue(scheduleTab.waitUntilExists(timeout: 10))
         scheduleTab.tap()
 
         // Profile Schedules card appears below the legacy schedule card.
         let card = app.staticTexts["Profile Schedules"]
-        XCTAssertTrue(card.waitForExistence(timeout: 10), "Profile Schedules card should exist")
+        XCTAssertTrue(card.waitUntilExists(timeout: 10), "Profile Schedules card should exist")
         app.swipeUp()
         if !card.isHittable { app.swipeUp() }
         snap("07-schedule-tab-profiles")
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier ENDSWITH '.discardRecovery'")).count, 0,
+                       "a profile with no pending recovery must not offer discard")
 
         XCTAssertTrue(
-            app.staticTexts["No profile schedules enabled."].waitForExistence(timeout: 5),
+            app.staticTexts["No profile schedules enabled."].waitUntilExists(timeout: 5),
             "empty-state footer should appear when no profile schedules are enabled"
         )
         XCTAssertTrue(
-            app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5),
+            app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5),
             "each profile should have a schedule row"
         )
 
         // Enable the Default profile's schedule. The row should immediately
         // reflect its seeded daily cadence and replace the empty-state footer.
         let toggle = app.switches["Schedule Default"]
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5))
+        XCTAssertTrue(toggle.waitUntilExists(timeout: 5))
         toggle.tap()
         XCTAssertTrue(
             app.staticTexts.matching(
                 NSPredicate(format: "label BEGINSWITH 'Daily at'")
-            ).firstMatch.waitForExistence(timeout: 5),
+            ).firstMatch.waitUntilExists(timeout: 5),
             "enabled schedule should show its seeded daily cadence"
         )
         XCTAssertTrue(
@@ -199,22 +206,22 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         // Open the cadence editor through the row's dedicated action. The
         // profile name is intentionally read-only after the accessibility split.
         let editSchedule = app.buttons["Edit schedule for Default"]
-        XCTAssertTrue(editSchedule.waitForExistence(timeout: 5))
+        XCTAssertTrue(editSchedule.waitUntilExists(timeout: 5))
         editSchedule.tap()
         let enabledToggle = app.switches["Enabled"]
-        XCTAssertTrue(enabledToggle.waitForExistence(timeout: 5), "cadence editor sheet should open")
+        XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "cadence editor sheet should open")
         snap("09-cadence-editor")
 
         // The standard-width editor keeps its three native cadence buttons;
         // constrained widths use the separately covered adaptive menu fallback.
         let weekly = app.buttons["Weekly"].firstMatch
-        XCTAssertTrue(weekly.waitForExistence(timeout: 5), "weekly cadence should be available")
+        XCTAssertTrue(weekly.waitUntilExists(timeout: 5), "weekly cadence should be available")
         weekly.tap()
         app.buttons["Save"].firstMatch.tap()
         XCTAssertTrue(
             app.staticTexts.matching(
                 NSPredicate(format: "label CONTAINS 'Weekly on'")
-            ).firstMatch.waitForExistence(timeout: 5),
+            ).firstMatch.waitUntilExists(timeout: 5),
             "row summary should reflect the weekly cadence"
         )
         snap("10-weekly-cadence-saved")
@@ -223,53 +230,65 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     // MARK: - Journey D: dedicated management view
 
     func testQA_ManageProfilesViewDetailCopyIDActivateAndRename() {
-        let app = UITestLaunchHelper.firstRunExportApp()
+        let app = UITestLaunchHelper.firstRunExportApp(duplicateExportProfile: true)
         app.launch()
         openProfilesManagementSheet(app)
-        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5))
 
-        // Create a second profile so activation switching is observable.
-        duplicateDefaultProfile(app)
-        XCTAssertTrue(app.staticTexts["Default 2"].waitForExistence(timeout: 5))
+        // Start with an inactive copy; Journey B covers the actual duplication UI.
+        XCTAssertTrue(app.staticTexts["Default 2"].waitUntilExists(timeout: 5))
 
         // Both profiles are visible with their names.
-        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Default 2"].firstMatch.waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default"].firstMatch.waitUntilExists(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Default 2"].firstMatch.waitUntilExists(timeout: 5))
 
         // Open the inactive duplicate's detail via its stable row identifier.
         let duplicateRow = app.buttons["export.profiles.row.Default 2"]
-        XCTAssertTrue(duplicateRow.waitForExistence(timeout: 5), "profile rows should expose stable identifiers")
+        XCTAssertTrue(duplicateRow.waitUntilExists(timeout: 5), "profile rows should expose stable identifiers")
         duplicateRow.tap()
         XCTAssertTrue(
-            app.buttons["export.profiles.makeActive"].waitForExistence(timeout: 5),
+            app.buttons["export.profiles.makeActive"].waitUntilExists(timeout: 5),
             "inactive profile detail should offer activation"
         )
-        XCTAssertTrue(app.staticTexts["Profile ID"].waitForExistence(timeout: 5), "detail should expose the profile ID card")
-        XCTAssertTrue(app.staticTexts["Output"].waitForExistence(timeout: 5), "detail should summarize the frozen output settings")
-        XCTAssertTrue(app.staticTexts["Schedule"].waitForExistence(timeout: 5), "detail should show schedule status")
+        XCTAssertTrue(app.staticTexts["Profile ID"].waitUntilExists(timeout: 5), "detail should expose the profile ID card")
+        XCTAssertTrue(app.staticTexts["Output"].waitUntilExists(timeout: 5), "detail should summarize the frozen output settings")
+        XCTAssertTrue(app.staticTexts["Schedule"].waitUntilExists(timeout: 5), "detail should show schedule status")
         snap("12-profile-detail")
 
         // Copy the profile ID for CLI/automation references.
+        let profileID = app.staticTexts.matching(
+            NSPredicate(
+                format: "label MATCHES %@",
+                "[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}"
+            )
+        ).firstMatch
+        XCTAssertTrue(profileID.waitUntilExists(timeout: 5), "detail should expose the exact profile UUID")
+        let expectedCopiedID = profileID.label
+        XCTAssertNotNil(UUID(uuidString: expectedCopiedID))
         let copy = app.buttons["export.profiles.copyID"]
-        XCTAssertTrue(copy.waitForExistence(timeout: 5))
+        XCTAssertTrue(copy.waitUntilExists(timeout: 5))
+        copy.tap()
+        // CI can finish tap synchronization after the former three-second feedback timeout.
+        // A delayed accessibility client must still be able to confirm the completed copy.
+        Thread.sleep(forTimeInterval: 6)
         let copied = expectation(
             for: NSPredicate(format: "value == 'Copied'"),
             evaluatedWith: copy
         )
-        copy.tap()
         wait(for: [copied], timeout: 5)
+        snap("12a-copied-profile-id")
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()
         XCTAssertTrue(
-            app.navigationBars["Export Profiles"].waitForExistence(timeout: 10),
+            app.navigationBars["Export Profiles"].waitUntilExists(timeout: 10),
             "activating from detail should return to the management list"
         )
         app.buttons["export.profiles.row.Default 2"].tap()
         XCTAssertTrue(
             app.staticTexts
                 .matching(NSPredicate(format: "label CONTAINS 'Active profile'"))
-                .firstMatch.waitForExistence(timeout: 5),
+                .firstMatch.waitUntilExists(timeout: 5),
             "activated profile should show the active banner"
         )
         XCTAssertFalse(
@@ -277,22 +296,40 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             "the active profile should not offer activation"
         )
         snap("13-activated-banner")
+        let reopenedCopy = app.buttons["export.profiles.copyID"]
+        XCTAssertTrue(reopenedCopy.waitUntilExists(timeout: 5))
+        XCTAssertEqual(reopenedCopy.value as? String, "Not copied", "copy feedback should reset when the detail is reopened")
 
         // Rename from the detail actions.
         app.buttons["Rename…"].tap()
         let field = app.alerts.textFields.firstMatch
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
+        XCTAssertTrue(field.waitUntilExists(timeout: 5))
         field.tap()
-        field.typeText(String(repeating: "\u{8}", count: 40))
-        field.typeText("Daily Everything")
+        XCTAssertEqual(field.value as? String, "Default 2")
+        field.typeText(String(repeating: "\u{8}", count: "Default 2".count))
+        field.press(forDuration: 1)
+        let paste = app.menuItems["Paste"].exists ? app.menuItems["Paste"] : app.buttons["Paste"]
+        XCTAssertTrue(paste.waitUntilExists(timeout: 5), "the copied profile ID should be available to paste")
+        // Anchor the menu's observed hit point to the intended alert field. Targeting the
+        // menu itself makes XCTest mistake the rename alert for an interruption and cancel it.
+        let pasteFrame = paste.frame
+        XCTAssertFalse(pasteFrame.isEmpty)
+        XCTAssertTrue(app.frame.contains(pasteFrame), "the Paste action should be on screen")
+        let fieldFrame = field.frame
+        field.coordinate(withNormalizedOffset: .zero).withOffset(
+            CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)
+        ).tap()
+        XCTAssertEqual(field.value as? String, expectedCopiedID, "Copy must place this profile's exact UUID on the clipboard")
+        snap("13a-copied-id-pasted")
+        field.typeText(String(repeating: "\u{8}", count: expectedCopiedID.count) + "Daily Everything")
         app.alerts.buttons["Save"].tap()
         XCTAssertTrue(
-            app.navigationBars["Daily Everything"].waitForExistence(timeout: 5),
+            app.navigationBars["Daily Everything"].waitUntilExists(timeout: 5),
             "detail navigation title should follow the rename"
         )
         app.navigationBars.buttons.firstMatch.tap() // back to the list
         XCTAssertTrue(
-            app.staticTexts["Daily Everything"].firstMatch.waitForExistence(timeout: 5),
+            app.staticTexts["Daily Everything"].firstMatch.waitUntilExists(timeout: 5),
             "list should show the renamed profile"
         )
         snap("14-renamed-in-list")

@@ -473,6 +473,11 @@
     <string name="profile_schedule_refresh_interval">更新間隔</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d 時間</string>
     <string name="profile_schedule_refresh_summary">今日を %1$d 時間ごとに更新</string>
+    <string name="profile_schedule_discard_recovery">保留中の復旧を破棄</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s の保留中の復旧を破棄</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s の保留中の復旧を破棄しますか？</string>
+    <string name="profile_schedule_discard_recovery_body">このプロファイルのスケジュール済み再試行を停止し、保留中の日付と保存済みエクスポート設定を削除します。次のスケジュール実行では、現在のプロファイルとスケジュールを使用します。プロファイル、API 認証情報、エクスポート履歴、エクスポート済みデータは保持されます。完了したアップロードや書き込み済みファイルを元に戻すことはできません。</string>
+    <string name="profile_schedule_discard_recovery_failed">保留中の復旧を完全に破棄できませんでした。プロファイルを確認して再試行してください。</string>
     <string name="schedule_date_window_today">今日</string>
     <string name="schedule_export_past_days">過去の日をエクスポートする</string>
     <string name="schedule_today_summary">実行ごとに今日のデータがエクスポートされるため、現在の日次ファイルを最新の状態に保つことができます。同じ日のコンテンツの重複を避けるには、上書きまたは更新書き込みモードを使用します。</string>

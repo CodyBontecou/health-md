@@ -47,6 +47,12 @@ v1 was pre-canonical and the capability is unreleased (`planned`, needs-QA). The
 - Development-era v1 artifacts (fixtures, host-staged files) are regenerated or staged as v2; none were ever user-produced.
 - Every producer and consumer of the shared-setup family — contracts manifest, shared-core consumers, Apple, Android, CLI gates, website references — must acknowledge the removal in the same integration cycle, per the repository contract-change checklist.
 
+## Inventory audit amendment (2026-10-07)
+
+For PR #194, the repo owner approved a narrow exception to the native field-coverage inventory byte freeze: new native fields may receive `prohibited` entries with a null contract path and exclusion evidence. Existing rows and mappings remain frozen, as do the public v2 schema and all existing fixture bytes. The [normative policy and pinned baseline](../../packages/contracts/shared-setup/v2/contract.md#native-field-coverage-freeze) define the allowed update and its regression guards.
+
+Local recovery bookkeeping must remain visible to coverage audits without becoming portable configuration. This exception avoids inventing a public schema revision for excluded state; it does not authorize new shareable fields or waive a version decision for mapping changes. It leaves v2-only readers/writers, deferred/planned status, and all outstanding physical-device and accessibility gates unchanged.
+
 ## Provenance and cross-references
 
 - Decision quotes above: repo owner, 2026-09-05, direct instruction to the cycle-9 coordinator; executed by fleet cycle 10 (contracts, Apple, Android, docs lanes).

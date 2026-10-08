@@ -620,6 +620,11 @@
     <string name="profile_schedule_refresh_interval">Intervalle d’actualisation</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Actualise aujourd’hui toutes les %1$d h</string>
+    <string name="profile_schedule_discard_recovery">Abandonner la récupération en attente</string>
+    <string name="profile_schedule_discard_recovery_named">Abandonner la récupération en attente pour %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Abandonner la récupération en attente pour %1$s ?</string>
+    <string name="profile_schedule_discard_recovery_body">Arrête la nouvelle tentative planifiée de ce profil et supprime ses dates en attente et ses réglages d’exportation enregistrés. La prochaine exécution planifiée utilise le profil et la planification actuels. Votre profil, vos identifiants API, l’historique des exportations et les données déjà exportées sont conservés. Cela ne peut pas annuler un téléversement ou un fichier déjà écrit.</string>
+    <string name="profile_schedule_discard_recovery_failed">La récupération en attente n’a pas pu être entièrement abandonnée. Vérifiez le profil et réessayez.</string>
     <string name="schedule_date_window_today">Aujourd\'hui</string>
     <string name="schedule_export_past_days">Exporter les jours passés</string>
     <string name="schedule_today_summary">Chaque exécution exporte les données du jour afin que votre fichier quotidien actuel reste à jour. Utilisez le mode d\'écriture Remplacer ou Mettre à jour pour éviter de dupliquer le contenu du jour même.</string>

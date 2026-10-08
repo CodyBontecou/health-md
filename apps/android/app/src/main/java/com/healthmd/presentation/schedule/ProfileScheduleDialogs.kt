@@ -156,6 +156,26 @@ internal fun ProfileScheduleDeleteDialog(
     }
 }
 
+@Composable
+internal fun ProfileScheduleDiscardRecoveryDialog(
+    profileName: String,
+    onDiscard: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ProfileScheduleDialog(onDismiss) {
+        ProfileScheduleDialogContent(
+            title = stringResource(R.string.profile_schedule_discard_recovery_title, profileName),
+            confirmLabel = stringResource(R.string.profile_schedule_discard_recovery),
+            onConfirm = onDiscard, onDismiss = onDismiss,
+            tag = ProfileScheduleTags.DISCARD_RECOVERY_DIALOG, destructive = true,
+        ) {
+            Text(stringResource(R.string.profile_schedule_discard_recovery_body),
+                style = MaterialTheme.typography.bodyMedium, color = AppColors.textPrimary,
+                modifier = Modifier.fillMaxWidth())
+        }
+    }
+}
+
 /** Separate native window with unchanged anchor locals; no display/font setting overrides. */
 @Composable
 private fun ProfileScheduleDialog(onDismiss: () -> Unit, content: @Composable () -> Unit) {

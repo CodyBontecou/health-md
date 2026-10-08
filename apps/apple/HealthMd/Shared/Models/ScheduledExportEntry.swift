@@ -44,6 +44,10 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
     var lastExportDate: Date?
     /// Scheduled fire date of the most recent successful Today Refresh.
     var lastTodayRefreshDate: Date?
+    /// Durable fence for explicitly abandoned recovery; never owned by editor drafts.
+    var recoveryGeneration: Int = 0
+    /// Suppresses the abandoned occurrence without pretending it succeeded.
+    var recoveryDiscardedAt: Date?
 
     init(
         id: UUID = UUID(),
@@ -89,6 +93,28 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
         self.lastTodayRefreshDate = lastTodayRefreshDate
     }
 
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        profileID = try c.decode(UUID.self, forKey: .profileID)
+        isEnabled = try c.decode(Bool.self, forKey: .isEnabled)
+        enabledAt = try c.decodeIfPresent(Date.self, forKey: .enabledAt)
+        frequency = try c.decode(ScheduleFrequency.self, forKey: .frequency)
+        customInterval = try c.decode(Int.self, forKey: .customInterval)
+        customUnit = try c.decode(ScheduleIntervalUnit.self, forKey: .customUnit)
+        customAnchorDate = try c.decode(Date.self, forKey: .customAnchorDate)
+        preferredHour = try c.decode(Int.self, forKey: .preferredHour)
+        preferredMinute = try c.decode(Int.self, forKey: .preferredMinute)
+        weekday = try c.decode(Int.self, forKey: .weekday)
+        lookbackDays = try c.decode(Int.self, forKey: .lookbackDays)
+        todayRefreshEnabled = try c.decode(Bool.self, forKey: .todayRefreshEnabled)
+        todayRefreshIntervalHours = try c.decode(Int.self, forKey: .todayRefreshIntervalHours)
+        lastExportDate = try c.decodeIfPresent(Date.self, forKey: .lastExportDate)
+        lastTodayRefreshDate = try c.decodeIfPresent(Date.self, forKey: .lastTodayRefreshDate)
+        recoveryGeneration = try c.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
+        recoveryDiscardedAt = try c.decodeIfPresent(Date.self, forKey: .recoveryDiscardedAt)
+    }
+
     /// Projects this entry onto the legacy schedule shape so every shipped
     /// `ScheduleDateMath` occurrence rule applies verbatim to entries.
     /// `target` is not part of date math and carries a placeholder.
@@ -108,7 +134,7 @@ struct ScheduledExportEntry: Codable, Identifiable, Equatable {
             todayRefreshIntervalHours: todayRefreshIntervalHours,
             lastExportDate: lastExportDate,
             lastTodayRefreshDate: lastTodayRefreshDate,
-            enabledAt: enabledAt
+            enabledAt: recoveryDiscardedAt.map { max(enabledAt ?? $0, $0) } ?? enabledAt
         )
     }
 }
@@ -207,8 +233,19 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// store is full and the entry's profile is not already present.
     @discardableResult
     func upsert(_ entry: ScheduledExportEntry) -> Bool {
+        reloadFromDefaults()
         if let index = entries.firstIndex(where: { $0.profileID == entry.profileID }) {
-            entries[index] = entry
+            let stored = entries[index]
+            let startsEnabledPeriod = !stored.isEnabled && entry.isEnabled
+            guard !startsEnabledPeriod || stored.recoveryGeneration < Int.max else { return false }
+            var merged = entry
+            merged.lastExportDate = stored.lastExportDate
+            merged.lastTodayRefreshDate = stored.lastTodayRefreshDate
+            merged.recoveryGeneration = stored.recoveryGeneration + (startsEnabledPeriod ? 1 : 0)
+            merged.recoveryDiscardedAt = stored.recoveryDiscardedAt
+            merged.enabledAt = stored.isEnabled == entry.isEnabled
+                ? stored.enabledAt : (entry.isEnabled ? now() : nil)
+            entries[index] = merged
             persist()
             return true
         }
@@ -222,15 +259,28 @@ final class ScheduledExportEntryStore: ObservableObject {
     /// and upserts. Returns false when no entry exists for the profile.
     @discardableResult
     func update(profileID: UUID, _ change: (inout ScheduledExportEntry) -> Void) -> Bool {
-        guard var entry = entry(profileID: profileID) else { return false }
-        change(&entry)
-        return upsert(entry)
+        reloadFromDefaults()
+        guard let index = entries.firstIndex(where: { $0.profileID == profileID }) else { return false }
+        let current = entries[index]
+        var changed = current
+        change(&changed)
+        if changed.isEnabled != current.isEnabled {
+            if changed.isEnabled {
+                guard current.recoveryGeneration < Int.max else { return false }
+                changed.recoveryGeneration = current.recoveryGeneration + 1
+            }
+            changed.enabledAt = changed.isEnabled ? now() : nil
+        }
+        entries[index] = changed
+        persist()
+        return true
     }
 
     /// Removes the entry bound to a profile. Deleting a profile must delete
     /// its entry; the store never orphans entries.
     @discardableResult
     func delete(profileID: UUID) -> Bool {
+        reloadFromDefaults()
         guard let index = entries.firstIndex(where: { $0.profileID == profileID }) else {
             return false
         }
@@ -245,15 +295,33 @@ final class ScheduledExportEntryStore: ObservableObject {
     func recordSuccess(
         profileID: UUID,
         kind: ScheduledExportKind,
-        occurrenceDate: Date
+        occurrenceDate: Date,
+        expectedRecoveryGeneration: Int? = nil
     ) -> Bool {
-        update(profileID: profileID) { entry in
+        if let expectedRecoveryGeneration,
+           entry(profileID: profileID)?.recoveryGeneration != expectedRecoveryGeneration {
+            return false
+        }
+        return update(profileID: profileID) { entry in
             switch kind {
             case .completedDay:
                 entry.lastExportDate = max(entry.lastExportDate ?? occurrenceDate, occurrenceDate)
             case .todayRefresh:
                 entry.lastTodayRefreshDate = max(entry.lastTodayRefreshDate ?? occurrenceDate, occurrenceDate)
             }
+        }
+    }
+
+    /// Invalidate first: cancellation cannot await all export callbacks. Keep both success
+    /// frontiers and schedule configuration, and wait for the next ordinary occurrence.
+    @discardableResult
+    func discardPendingRecovery(profileID: UUID) -> Bool {
+        guard let current = entry(profileID: profileID), current.recoveryGeneration < Int.max else {
+            return false
+        }
+        return update(profileID: profileID) {
+            $0.recoveryGeneration += 1
+            $0.recoveryDiscardedAt = now()
         }
     }
 
@@ -268,6 +336,7 @@ final class ScheduledExportEntryStore: ObservableObject {
         legacy: ExportSchedule,
         defaultProfileID: UUID
     ) -> Bool {
+        reloadFromDefaults()
         guard entries.isEmpty, legacy.isEnabled else { return false }
 
         let entry = ScheduledExportEntry(
@@ -308,6 +377,8 @@ final class ScheduledExportEntryStore: ObservableObject {
         let profileID: UUID
         let kind: ScheduledExportKind
         let fireDate: Date
+        let recoveryGeneration: Int
+        let enabledAt: Date?
         /// Data days to export for a completed-day occurrence. Always empty
         /// for Today Refresh, which re-exports only the current day.
         let exportDates: [Date]
@@ -352,6 +423,8 @@ final class ScheduledExportEntryStore: ObservableObject {
                         profileID: entry.profileID,
                         kind: occurrence.kind,
                         fireDate: occurrence.fireDate,
+                        recoveryGeneration: entry.recoveryGeneration,
+                        enabledAt: entry.enabledAt,
                         exportDates: exportDates
                     )
                 }

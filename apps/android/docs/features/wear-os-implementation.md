@@ -1,6 +1,6 @@
 # Wear OS implementation checklist
 
-> **Deferred release scope:** Wear OS is excluded from Android `1.9.1`. The Play phone app currently hides Wear settings and does not advertise or start Data Layer synchronization. The implementation below is unpublished preview work targeted for requalification in `1.10.0`; this document is not a gate for the current phone-only release.
+> **Deferred release scope:** Wear OS is excluded from Android `1.9.3`. The Play phone app currently hides Wear settings and does not advertise or start Data Layer synchronization. The implementation below is unpublished preview work targeted for requalification in `1.10.0`; this document is not a gate for the current phone-only release.
 
 The expanded evidence-based audit is maintained in [`wear-os-completion-audit.md`](wear-os-completion-audit.md). It is authoritative for remaining manual, hardware, CI, signing, and Play gates; passing local proxies must not override it.
 

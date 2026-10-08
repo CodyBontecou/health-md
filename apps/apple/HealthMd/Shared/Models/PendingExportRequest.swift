@@ -35,6 +35,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     /// Display name captured at queue time for notifications and history
     /// labels. Not used for resolution — `profileID` is authoritative.
     let profileName: String?
+    /// Local runtime authority, not part of the exported health-data contract.
+    let recoveryGeneration: Int
+    let scheduleEnabledAt: Date?
+    let apiDestinationIdentity: ScheduledAPIEndpointIdentity?
     /// When a scheduled run attempted this request and preserved unresolved
     /// dates for retry. An attempted request is a preserved retry: bulk
     /// fallback re-arm cancellation must never delete it (only its exact-ID
@@ -79,6 +83,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         sleepCaptureContext: AppleSleepCaptureContext? = nil,
         profileID: UUID? = nil,
         profileName: String? = nil,
+        recoveryGeneration: Int = 0,
+        scheduleEnabledAt: Date? = nil,
+        apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil,
         attemptedAt: Date? = nil,
         calendar: Calendar = .current
     ) {
@@ -105,6 +112,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.sleepCaptureContext = sleepCaptureContext ?? settingsSnapshot?.sleepCaptureContext
         self.profileID = source == .scheduled ? profileID : nil
         self.profileName = source == .scheduled ? profileName : nil
+        self.recoveryGeneration = source == .scheduled ? recoveryGeneration : 0
+        self.scheduleEnabledAt = source == .scheduled ? scheduleEnabledAt : nil
+        self.apiDestinationIdentity = source == .scheduled ? apiDestinationIdentity : nil
         self.attemptedAt = source == .scheduled ? attemptedAt : nil
     }
 
@@ -140,6 +150,13 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         // profile-free and keep their legacy execution path.
         profileID = try container.decodeIfPresent(UUID.self, forKey: .profileID)
         profileName = try container.decodeIfPresent(String.self, forKey: .profileName)
+        recoveryGeneration = try container.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
+        scheduleEnabledAt = try container.decodeIfPresent(Date.self, forKey: .scheduleEnabledAt)
+        // Legacy API work lacks proof of its original destination. Do not synthesize it
+        // from mutable preferences on resume; execution will fail closed.
+        apiDestinationIdentity = try container.decodeIfPresent(
+            ScheduledAPIEndpointIdentity.self, forKey: .apiDestinationIdentity
+        )
         // Pre-marker persisted requests decode as never-attempted; the
         // fallback-window heuristic covers those during migration.
         attemptedAt = try container.decodeIfPresent(Date.self, forKey: .attemptedAt)
@@ -247,6 +264,7 @@ struct PendingExportStore: PendingExportStoring {
             && existing.scheduledFireDate == request.scheduledFireDate
             && existing.scheduledKind == request.scheduledKind
             && existing.profileID == request.profileID
+            && existing.recoveryGeneration == request.recoveryGeneration
             && request.scheduledFireDate != nil
     }
 

@@ -630,6 +630,11 @@
     <string name="profile_schedule_refresh_interval">Интервал обновления</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ч</string>
     <string name="profile_schedule_refresh_summary">Обновляет сегодня каждые %1$d ч</string>
+    <string name="profile_schedule_discard_recovery">Отменить ожидающее восстановление</string>
+    <string name="profile_schedule_discard_recovery_named">Отменить ожидающее восстановление для %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">Отменить ожидающее восстановление для %1$s?</string>
+    <string name="profile_schedule_discard_recovery_body">Останавливает запланированную повторную попытку этого профиля и удаляет его ожидающие даты и сохранённые настройки экспорта. Следующий запланированный запуск использует текущие профиль и расписание. Ваш профиль, учётные данные API, история экспорта и уже экспортированные данные сохраняются. Это не может отменить уже выполненную загрузку или записанный файл.</string>
+    <string name="profile_schedule_discard_recovery_failed">Не удалось полностью отменить ожидающее восстановление. Проверьте профиль и повторите попытку.</string>
     <string name="schedule_date_window_today">Сегодня</string>
     <string name="schedule_export_past_days">Экспортировать прошлые дни</string>
     <string name="schedule_today_summary">При каждом прогоне экспортируются текущие данные, поэтому ваш текущий ежедневный файл может оставаться актуальным. Используйте режим записи «Перезаписать» или «Обновить», чтобы избежать дублирования контента в тот же день.</string>

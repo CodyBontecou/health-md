@@ -6,6 +6,11 @@ enum ScheduledExportCompletion: Equatable {
     case preservedDeviceLocked
     case preservedFailure
     case preservedWithoutAttempt
+    case discarded
+}
+
+enum ScheduledExportPreparationError: Error {
+    case invalidated
 }
 
 @MainActor
@@ -20,6 +25,9 @@ final class ScheduledExportCoordinator {
     private let calendar: Calendar
     private let now: () -> Date
     private let makeID: () -> UUID
+    /// Runtime-owned authority. Recheck after suspensions before checkpointing or
+    /// advertising recovery; a discarded request must never be resurrected.
+    var shouldRetainRequest: @MainActor (PendingExportRequest) -> Bool = { _ in true }
 
     init(
         pendingExportStore: PendingExportStoring,
@@ -40,6 +48,7 @@ final class ScheduledExportCoordinator {
         fireDate: Date,
         kind: ScheduledExportKind = .completedDay,
         profile: ScheduledProfileRequestContext? = nil,
+        apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil,
         makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
     ) async throws -> PendingExportRequest {
         let request = try await makePendingScheduledExportRequest(
@@ -47,10 +56,16 @@ final class ScheduledExportCoordinator {
             fireDate: fireDate,
             kind: kind,
             profile: profile,
+            apiDestinationIdentity: apiDestinationIdentity,
             makeSettingsSnapshot: makeSettingsSnapshot
         )
+        guard shouldRetainRequest(request) else { throw ScheduledExportPreparationError.invalidated }
         try pendingExportStore.upsert(request)
         try await exportNotificationScheduler.schedulePendingExportNotification(for: request)
+        guard try isRetained(request) else {
+            try discard(request)
+            throw ScheduledExportPreparationError.invalidated
+        }
         return request
     }
 
@@ -59,6 +74,10 @@ final class ScheduledExportCoordinator {
         _ request: PendingExportRequest,
         result: ExportOrchestrator.ExportResult
     ) async throws -> ScheduledExportCompletion {
+        guard try isRetained(request) else {
+            try discard(request)
+            return .discarded
+        }
         let retryRequest: PendingExportRequest
         let requestCalendar = frozenCalendar(for: request.originalCalendarTimeZoneIdentifier)
         if let remainingDates = result.remainingDates(from: request.dates, calendar: requestCalendar) {
@@ -86,6 +105,10 @@ final class ScheduledExportCoordinator {
 
         if result.primaryFailureReason == .deviceLocked {
             try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: retryRequest)
+            guard try isRetained(retryRequest) else {
+                try discard(retryRequest)
+                return .discarded
+            }
             return .preservedDeviceLocked
         }
 
@@ -94,6 +117,10 @@ final class ScheduledExportCoordinator {
             // retries only unresolved dates instead of duplicating completed
             // local/Connected Mac files.
             try await exportNotificationScheduler.sendImmediatePendingExportNotification(for: retryRequest)
+            guard try isRetained(retryRequest) else {
+                try discard(retryRequest)
+                return .discarded
+            }
             return .preservedPartialSuccess
         }
 
@@ -108,6 +135,19 @@ final class ScheduledExportCoordinator {
         let profileName: String
         let target: ExportTargetSelection
         let settings: ExportSettingsSnapshot
+        var recoveryGeneration: Int = 0
+        var enabledAt: Date? = nil
+        var apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil
+    }
+
+    private func isRetained(_ request: PendingExportRequest) throws -> Bool {
+        guard shouldRetainRequest(request) else { return false }
+        return try pendingExportStore.loadAll().contains { $0.id == request.id }
+    }
+
+    private func discard(_ request: PendingExportRequest) throws {
+        exportNotificationScheduler.cancelPendingExportNotification(id: request.id)
+        try pendingExportStore.remove(id: request.id)
     }
 
     private func makePendingScheduledExportRequest(
@@ -115,6 +155,7 @@ final class ScheduledExportCoordinator {
         fireDate: Date,
         kind: ScheduledExportKind = .completedDay,
         profile: ScheduledProfileRequestContext? = nil,
+        apiDestinationIdentity: ScheduledAPIEndpointIdentity?,
         makeSettingsSnapshot: () async -> ExportSettingsSnapshot? = { nil }
     ) async throws -> PendingExportRequest {
         let existingRequest = try pendingExportStore.loadAll().first { request in
@@ -122,9 +163,11 @@ final class ScheduledExportCoordinator {
                 && request.scheduledFireDate == fireDate
                 && request.scheduledKind == kind
                 && request.profileID == profile?.profileID
+                && request.recoveryGeneration == (profile?.recoveryGeneration ?? 0)
         }
         if let existingRequest {
-            return existingRequest
+            if shouldRetainRequest(existingRequest) { return existingRequest }
+            try discard(existingRequest)
         }
 
         let captureContext = AppleSleepCaptureContext.resolve(
@@ -160,6 +203,9 @@ final class ScheduledExportCoordinator {
             sleepCaptureContext: frozenSettings?.sleepCaptureContext ?? captureContext,
             profileID: profile?.profileID,
             profileName: profile?.profileName,
+            recoveryGeneration: profile?.recoveryGeneration ?? 0,
+            scheduleEnabledAt: profile?.enabledAt ?? schedule.enabledAt,
+            apiDestinationIdentity: profile?.apiDestinationIdentity ?? apiDestinationIdentity,
             calendar: requestCalendar
         )
     }

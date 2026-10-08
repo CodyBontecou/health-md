@@ -12,6 +12,7 @@ cargo test --workspace --all-features --locked
 cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
 rustup run 1.85.0 cargo check -p healthmd-core -p healthmd-protocol -p healthmd-core-uniffi --all-features --locked
 python3 scripts/import-native-registry.py --check
+python3 scripts/test_import_native_registry.py
 python3 scripts/generate-registry-adapters.py --check
 python3 scripts/generate-sleep-profile-registry.py --check
 python3 ../contracts/validate.py
@@ -27,7 +28,7 @@ python3 ../contracts/validate.py
 
 It owns stable semantic and persisted native identities, order, source units/aggregation metadata, aliases, output keys, profile availability, and explicit platform non-equivalences. It does not own SDK type objects or runtime availability decisions.
 
-`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. `generate-registry-adapters.py` projects the authoritative JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; edit the registry, not generated rows.
+`import-native-registry.py` checks the immutable pre-cutover Apple/Android snapshots plus the reviewed semantic crosswalk and is retained as independent migration evidence. It preserves the canonical registry's reviewed `known_capability_ids` subset rather than importing every new product capability. The subset must cover every metric capability, preserve product-manifest order, and match current platform availability; adding unrelated automation capabilities does not invalidate the registry hash or durable pins. `generate-registry-adapters.py` projects the authoritative JSON into thin Swift/Kotlin catalog constants and generated website/reference data. Generated regions are committed and checked for drift; edit the registry, not generated rows.
 
 `metric-registry-v2.json` is a separate, successor-only inventory for `apple_health_data_v11` and `android_sleep_v6`, derived by `generate-sleep-profile-registry.py`, which also generates Android's and Apple's separate successor registry-hash constants. It does not replace v1, change its hash, or change the native catalogs' legacy default. Android Light and Apple Core have distinct semantic identities in this inventory; v6 never emits the historical Core alias. Explicit successor sessions use independent semantic input/canonical model v2 and render input/artifact plan v2 alongside registry v2; historical defaults, schemas and exact fixtures remain v1. Daily successor rendering and `sleep::read_public_sleep_context` are shared-core compatibility foundations, not evidence of qualified native capture, writers or readers. See [the qualification contract](../contracts/sleep-attribution/v1/contract.md).
 

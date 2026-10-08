@@ -1,5 +1,8 @@
 package com.healthmd.presentation.accessibility
 
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.UiDevice
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,8 +17,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -62,6 +63,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     ProfileScheduleRow(sampleProfile(), entry.value),
                     onToggle = { actions += "toggle:$it"; entry.value = entry.value.copy(isEnabled = it) },
                     onOpenEditor = { actions += "edit" }, onDelete = { actions += "delete" },
+                    onDiscardRecovery = { actions += "discard" },
                 )
             }
         }
@@ -376,6 +378,45 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
+    fun discardRecoveryRequiresConfirmationHonorsProtectionAndKeepsTheProfile() {
+        val state = mutableStateOf(ProfileSchedulesUiState(listOf(ProfileScheduleRow(sampleProfile(), sampleEntry()))))
+        val protected = mutableStateOf(false)
+        val actions = mutableListOf<String>()
+        setContent { TestSection(state, protected, actions) }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).scrollIfPossible()
+            .assertContentDescriptionEquals(text(R.string.profile_schedule_discard_recovery_named, LONG_NAME))
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertExists()
+        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
+        assertTrue(actions.isEmpty())
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = true }
+        // Protected content is hidden from merged accessibility semantics; use
+        // the child's geometry to exercise the production pointer-blocking overlay.
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true)
+            .scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
+            .performTouchInput { click() }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertDoesNotExist()
+        assertEquals(listOf("blocked"), actions)
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.runOnIdle { protected.value = true }
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked"), actions)
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked", "discard:$ID"), actions)
+        assertEquals(sampleProfile(), state.value.rows.single().profile)
+        assertEquals(sampleEntry().copy(pendingExports = emptyList(), recoveryGeneration = 1L),
+            state.value.rows.single().entry)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).assertDoesNotExist()
+    }
+
+    @Test
     fun newDraftDefaultsAndBlankProfileSaveGuardRemainUnchanged() {
         val id = mutableStateOf("")
         val saved = mutableListOf<ScheduledProfileEntry>()
@@ -411,6 +452,14 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     },
                     onOpenEditor = { actions += "editor:$it"; state.value = state.value.copy(editingProfileId = it) },
                     onDeleteProfile = { actions += "delete:$it" }, onAddProfile = { actions += "add" },
+                    onDiscardRecovery = { id ->
+                        actions += "discard:$id"
+                        state.value = state.value.copy(rows = state.value.rows.map { row ->
+                            if (row.profile.id == id) row.copy(entry = row.entry!!.copy(
+                                pendingExports = emptyList(), recoveryGeneration = row.entry!!.recoveryGeneration + 1,
+                            )) else row
+                        })
+                    },
                     onSaveEntry = { actions += "save"; state.value = state.value.copy(editingProfileId = null) },
                 )
             }
