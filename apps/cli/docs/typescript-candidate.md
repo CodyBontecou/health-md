@@ -36,73 +36,98 @@ The frozen 84 disposable filesystem negatives retain all 63 preceding cases and 
 
 Eligibility remains a synthetic gate-only owned metadata handoff with zero personal observations and an original-Scope lifetime. Its accepted 154 frozen literals and six independent Scope reentry regressions prove this private boundary; they do not authenticate iOS eligibility, source/purpose/channel, durable grants, report/export, public profiles or OS budgets. The separately frozen discovery normalizer is not part of core authority. Existing public exports, launchers, Rust, native bundles and user state retain their separate qualification. Roll back the predecessor committed guard/cohort and packed CLI together.
 
-## Source Catalog successor authority
+## Historical Source Catalog authority
 
-The mandatory consumer authority is the fixed tracked
-`core-ts-source-catalog-v1.json` cohort: 58 complete source/build inputs and
-36 core module outputs. Its raw SHA256 and byte length are fixed in the guard;
-there is no selectable predecessor profile, discovery, hash refresh or own
-refresh-receipt dependency. Source and installed packed-core trees must match
-these complete maps. The unexported private Catalog adds its source/test and
-JS/declaration pair; all 56 predecessor inputs and 34 module bytes remain exact.
-Package exports, locks, compiler identities and one physical Effect installation
-retain their existing checks. The 53-file producer output inventory includes
-36 core modules, 15 test entries and two metadata files; packed consumers admit
-only the fixed 36-module set.
+The immutable `core-ts-source-catalog-v1.json` cohort retains its exact 58
+source/build inputs, 36 core module/declaration files and six strict tracked
+implementation receipts. Its accepted integration remains historical private
+portable evidence. The original codec cohort and Catalog literal-data
+scope, bounded raw evidence, closed semantic chain and false admission flags
+remain unchanged. Catalog's current passed implementation receipt is distinct
+from its three historical partial/approval/archive embedded blobs. Historical
+scratch paths remain inert provenance labels.
 
-Six tracked implementation receipts must be byte-identical, passed and accepted
-at exact task/source/patch/review fingerprints. Catalog's `40aae…` receipt has a
-separate strict private metadata-only synthetic target and stage. It does not
-admit real sources, payloads, grants, storage, native hosts or public consumers.
-The five codec authorities retain their original strict checks. The refresh
-receipt itself is never an implementation authority.
+All 456 whole filesystem cases and original bindings are preserved: 203 run
+against the historical codec 56/34 profile and 253 against the Source Catalog
+58/36 profile. These profiles remain internal test stimuli. Both receive the
+original `scripts/check-boundaries.mjs` bytes from the authenticated 8,065-byte
+base64 literal (SHA-256 `3493efc…`) before pristine source validation. The
+normal source now has the accepted repaired guard (`09076b02…`). Runtime
+reconstruction uses the bounded literal, with closed fields, canonical base64,
+exact length and SHA-256; it requires no Git executable, historical checkout,
+or scratch-file read. All earlier 36 module bytes remain unchanged.
 
-The immutable predecessor `7e20…` cohort remains historical 56/34 authority.
-Its Catalog96 `CatalogLiteralDataAuthority` still gives no implementation,
-behavior, runtime, module, grant, public or consumer admission. Its original
-partial receipt `4f1c…`, approval `2340…` and reviewed archive `eda5…` are three
-bounded authenticated embedded raw blobs, with closed names/keys, canonical
-base64, exact lengths/SHA256 and the original semantic chain. Historical scratch
-paths are provenance labels; the guard never opens them. The tracked current
-passed Catalog receipt is never required to be partial or substituted by these
-historical literals.
+## Query and desktop usage successor
 
-The frozen catalog contains 456 filesystem mutation scenes. All 203 original
-whole objects run on owned disposable historical 56/34 copies. Another 203
-scenes cover the current 58/36 profile, with explicit current tracked-receipt
-and embedded-evidence reconciliation; 50 additional current scenes cover the
-new inputs/modules, strict Catalog receipt, successor cohort, complete sets,
-symlinks, false admission flags and all three embedded blobs. Historical runs
-are labeled separately and never claimed as current coverage. The two added
-traversal cases retain exact modules outside the copied package and reject links
-at `dist` and `dist/core` through the same standalone output validator used by
-ordinary admission. Source and output fixture checks share the actual ordinary
-validation implementations; consumer wrappers always bind the current maps.
-Validators use
-fixed action/target/profile stimuli; IDs only label observations, and expected
-failures are assertions after mutation and validator selection. Source,
-installed packages, tracked authorities and scratch evidence are not mutated.
-Every scene owns a fresh disposable copy, and cleanup removes only its owned
-temporary tree. These 456 scenes are source-defined and remain unrun until the
-coordinator authorizes qualification.
+The mandatory consumer guard now binds the independently reviewed immutable
+`core-ts-query-usage-v1.json` cohort, SHA-256
+`a006edbe5577fc46cfb1057cf67591f6aed8b25d0c187b05ccfd950b3a711c45`,
+1,651,134 bytes. It requires all 64 exact source/config/test inputs and all 40
+exact emitted core modules/declarations, plus the complete 59-file producer
+output set in the source component. Exactly six new source/test/vector inputs,
+four emitted core files and the repaired boundary script extend the predecessor.
+Manifest, exports and lockfiles remain unchanged. Typed-value and desktop
+projection modules remain private and unexported.
 
-The accepted unchanged Catalog producer reported 1359 portable passes and
-19 boundary negatives. Its complete 58 inputs and 53 outputs remain credited
-producer evidence. One pre-execution audit receipt pin `b5dd…` was subsequently
-normalized to accepted `40aae…`; the old raw archive is preserved. The original
-33 producer pins stay historical evidence, with 32 unchanged current matches
-and one explicit receipt-only reconciliation. This is not a changed physical
-tool or a producer rerun, and producer proof alone does not install this CLI
-consumer.
+The unchanged accepted full producer execution passed 1,544 emitted tests with
+20 portable modules, one physical Effect installation and 19 boundary negatives.
+Its complete source/output maps, 676 tool/runtime rows and three archive rows
+are frozen producer evidence. Tool/runtime and scratch review references are
+audit metadata; the guard does not turn them into new consumer dependencies.
+Historical 1,359-test evidence cannot qualify the changed batch.
 
-After independent source review, qualification requires an exclusive
-coordinator window: exact pinned offline `npm ci --offline --install-links
---engine-strict --no-audit --no-fund` in this CLI component, then full
-`npm run check`. No execution is authorized by this source-only update.
-Static development and selected-test lanes in `scripts/typescript-dev/README.md`
-can aid later authorized iteration; they cannot replace the full qualification
-check. Current MCP/result sources retain their own review and test obligations.
-Native bundles, health/source grants, real pipes, full public profiles and Rust
-retirement remain separate. Rollback restores a matching predecessor source,
-packed output and guard only through a separately reviewed task; it cannot
-silently ignore extra Catalog files or adopt fresh hashes.
+Normal admission requires the six historical strict implementation receipts,
+final typed-value receipt `8e92cf…`, final desktop receipt `b9da69…`, and the
+separately pinned accepted Source Catalog admission receipt. Raw lengths/hashes,
+exact task/source/patch/review fingerprints, passed result, accepted review,
+portable proof class and precise private targets are checked. The two new
+producers retain their full limitations and remaining qualification arrays.
+Root's final schema review records the current receipt pins; its earlier desktop
+`62d5…` metadata pin remains historical. This task's receipt is never a reverse
+pin or implementation authority.
+
+The frozen corpus contains 617 negative scenes and 12 positive controls. The
+first 456 negative objects and profile bindings remain unchanged. The 161 new
+literal actions cover each new module/test/vector input, the changed boundary
+script, new JS/declaration files, malformed/missing/tampered/extra/symlink paths,
+strict producer and predecessor receipts, qualification omissions, cohort maps,
+false admission flags and historical-boundary evidence. Pristine current and
+historical source/module profiles, strict receipts/cohort and exact root output
+directory exclusions supply the positive controls.
+
+The guard copies owned disposable trees, validates each pristine scene, applies
+its explicit filesystem or JSON action and calls the same validator used by
+normal admission. Paths, groups and operations select only the mutation and
+validator. IDs label observations afterward; expected outcomes are post-action
+assertions. JSON changes never refresh expected hashes. Symlink targets retain
+pristine data outside the copied tree; root, `dist`, `dist/core` and descendant
+links are checked. Execution records contain complete ordered negative IDs,
+profiles and actual fixed rejection codes, positive IDs and acknowledged cleanup.
+They are emitted only after actual validation and temporary-tree removal.
+
+This source update has not executed the 617 negatives, 12 positives, installation,
+compiler, runtime or full CLI check. The installed CLI package still contains the
+historical 36 files; 40 current source artifacts are pack-eligible emitted files.
+Qualification requires independent source review and a separately reserved Root
+window for the pinned Node 24.21.0/npm 11.19.0 command:
+
+```sh
+npm ci --offline --install-links --engine-strict --ignore-scripts --no-audit --no-fund
+npm run check
+```
+
+The installation uses the approved offline cache, curated environment and empty
+npm configurations. Current CLI/MCP sources retain their own qualification
+requirements. Passing evidence may credit the unchanged complete core batch;
+no additional producer run is needed unless relevant inputs change.
+
+Finite native witness observations qualify only their recorded macOS/Swift/SDK
+cases. They do not admit arbitrary Foundation values or native profiles. Actual
+capture, browser/classification privacy, source/grant authentication, durable
+storage or collectors, archive payload access, public contracts, unrestricted
+full historical sessions, donor adoption and Rust retirement remain unqualified.
+The 365-day mirror cannot reconstruct discarded short sessions, precollector
+history or crash gaps; Windows/Linux and the required iOS exact-session S06
+follow-up remain separate. Rollback restores a matching predecessor source,
+packed output and guard through review; it cannot ignore extra current inputs
+or silently adopt fresh hashes.

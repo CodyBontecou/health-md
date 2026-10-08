@@ -390,8 +390,70 @@ async function auditSourceCatalogCohort(path) {
   return value;
 }
 const sourceCatalogCohort = await auditSourceCatalogCohort(sourceCatalogCohortPath);
-const qualifiedInputPins = sourceCatalogCohort.input_pins;
-const qualifiedArtifacts = sourceCatalogCohort.output_pins;
+// Mandatory immutable successor; predecessor profiles remain test-only authorities.
+const queryUsageCohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json");
+const queryUsageCohortSha256 = "a006edbe5577fc46cfb1057cf67591f6aed8b25d0c187b05ccfd950b3a711c45";
+const queryUsageProfile = "current_query_usage_64_40";
+async function auditQueryUsageCohort(path) {
+  await auditRawDocument(path, {bytes:1651134,sha256:queryUsageCohortSha256}, "reviewed_core_cohort_bytes_drift");
+  const value = JSON.parse(await readFile(path,"utf8"));
+  assert.equal(value.task_id,"CORE-COHORT-QUERY-USAGE");
+  assert.equal(value.committed_source_sha,"32f38da439c0489648e99933c99d88805b76ca7b");
+  assert.deepEqual(value.runtime,{node:"24.21.0",npm:"11.19.0"});
+  assert.equal(value.input_count,64); assert.equal(value.output_count,40); assert.equal(value.emitted_output_count,59);
+  assert.equal(Object.keys(value.input_pins).length,64); assert.equal(Object.keys(value.output_pins).length,40);
+  assert.equal(value.complete_emitted_output_rows.length,59);
+  assert.deepEqual(Object.fromEntries(value.complete_current_input_rows.map(r=>[r.path,r.sha256])),value.input_pins);
+  assert.deepEqual(Object.fromEntries(value.complete_emitted_output_rows.map(r=>[r.path,r.sha256])),value.complete_emitted_output_pins);
+  assert.deepEqual(Object.fromEntries(Object.entries(value.complete_emitted_output_pins).filter(([p])=>p.startsWith("dist/core/"))),value.output_pins);
+  assert.deepEqual(value.historical_source_catalog_authority.complete_historical_cohort,sourceCatalogCohort);
+  assert.equal(value.historical_source_catalog_authority.cohort.sha256,sourceCatalogCohortSha256);
+  assert.deepEqual(value.catalog_literal_data_authority,sourceCatalogCohort.catalog_literal_data_authority);
+  assert.deepEqual(value.closed_catalog_semantic_validation,sourceCatalogCohort.closed_catalog_semantic_validation);
+  for(const [p,digest] of Object.entries(sourceCatalogCohort.input_pins)) {
+    if(p!=="scripts/check-boundaries.mjs") assert.equal(value.input_pins[p],digest);
+  }
+  assert.equal(value.input_pins["scripts/check-boundaries.mjs"],"09076b02e2230e4a1c30277b2a58268f4372e998411b4acd1bd31672fdb905d5");
+  for(const [p,digest] of Object.entries(sourceCatalogCohort.output_pins)) assert.equal(value.output_pins[p],digest);
+  assert.equal(value.consumer_runtime_authority.required_current_profile,queryUsageProfile);
+  assert.equal(value.consumer_runtime_authority.no_profile_selection_by_consumer,true);
+  assert.equal(value.consumer_runtime_authority.no_own_receipt_reverse_pin,true);
+  assert.equal(value.consumer_runtime_authority.historical_profiles_test_only,true);
+  assert.equal(value.consumer_runtime_authority.scratch_paths_audit_only,true);
+  assert.equal(value.consumer_runtime_authority.no_new_grant_native_public_authority,true);
+  assert.deepEqual(Object.keys(value.qualification).sort(),["archive_payload_admission","collector_admission","consumer_admission","donor_source_adoption","native_profile_admission","physical_capture_admission","proof_class","public_profile_admission","rust_retirement_admission","source_grant_admission","status","storage_transaction_admission","unrestricted_full_history_admission"].sort());
+  for(const [name,flag] of Object.entries(value.qualification)) if(name.endsWith("_admission")||name==="donor_source_adoption")assert.equal(flag,false);
+  for(const flags of Object.values(value.producer_qualification_boundaries))for(const flag of Object.values(flags))assert.equal(flag,false);
+  assert.deepEqual(Object.keys(value.normal_implementation_authorities).sort(),[...Object.keys(sourceCatalogCohort.normal_implementation_authorities),"QUERY-TYPED-VALUES","USAGE-DESKTOP-SESSION-PROJECTION"].sort());
+  for(const [task,authority] of Object.entries(sourceCatalogCohort.normal_implementation_authorities))assert.deepEqual(value.normal_implementation_authorities[task],authority);
+  assert.equal(value.normal_implementation_authorities["QUERY-TYPED-VALUES"].receipt.sha256,"8e92cf61648fd47396031dfb1077e755828a726bb8db665fe03d3f100eae1789");
+  assert.equal(value.normal_implementation_authorities["USAGE-DESKTOP-SESSION-PROJECTION"].receipt.sha256,"b9da698595221fd8ec0039ca3bcb8f0ad1786f285763fbea3b8f4c0ce9ac195e");
+  assert.deepEqual(value.negative_fixture_catalog.cases.slice(0,456),sourceCatalogCohort.negative_fixture_catalog.cases);
+  assert.deepEqual(value.negative_fixture_catalog.execution_profile_bindings.slice(0,456),sourceCatalogCohort.negative_fixture_catalog.execution_profile_bindings);
+  assert.equal(value.negative_fixture_catalog.cases.length,617);assert.equal(value.negative_fixture_catalog.execution_profile_bindings.length,617);
+  assert.equal(value.positive_fixture_catalog.case_count,12);assert.equal(value.positive_fixture_catalog.cases.length,12);
+  assert.equal(value.physical_toolchain_authority.complete_accepted_runtime_rows.length,676);
+  assert.equal(value.physical_toolchain_authority.complete_accepted_archive_rows.length,3);
+  assert.deepEqual(value.physical_toolchain_authority.component_metadata_lock_pins,sourceCatalogCohort.physical_toolchain_authority.component_metadata_lock_pins);
+  assert.deepEqual(value.producer_evidence.counts,{tests:1544,suites:0,pass:1544,fail:0,cancelled:0,skipped:0,todo:0});
+  assert.equal(value.producer_evidence.source_modules,20);assert.equal(value.producer_evidence.effect_installations,1);
+  assert.equal(value.producer_evidence.boundary_negatives,19);
+  return value;
+}
+const queryUsageCohort = await auditQueryUsageCohort(queryUsageCohortPath);
+const qualifiedInputPins = queryUsageCohort.input_pins;
+const qualifiedArtifacts = queryUsageCohort.output_pins;
+function decodeHistoricalBoundary(blob) {
+  const fail=()=>assert.fail("historical_input_evidence_bytes_drift");
+  if(!blob||typeof blob!=="object"||Array.isArray(blob))return fail();
+  if(JSON.stringify(Object.keys(blob).sort())!==JSON.stringify(["version","encoding","historical_path","bytes","sha256","data"].sort()))return fail();
+  if(blob.version!==1||blob.encoding!=="base64"||blob.historical_path!=="packages/healthmd-core-ts/scripts/check-boundaries.mjs"||blob.bytes!==8065||blob.sha256!=="3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09"||typeof blob.data!=="string")return fail();
+  if(blob.data.length!==4*Math.ceil(8065/3)||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(blob.data))return fail();
+  const bytes=Buffer.from(blob.data,"base64");
+  if(bytes.length!==8065||hash(bytes)!==blob.sha256||bytes.toString("base64")!==blob.data)return fail();
+  return bytes;
+}
+const historicalBoundaryBytes=decodeHistoricalBoundary(queryUsageCohort.historical_input_reconstruction.blob);
 assert.equal(hash(sourceManifest), qualifiedInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 const codecTaskNames = ["CORE-CANDIDATE-CODEC-API", "PARSE-EXACT-JSON-NUMBERS", "PARSE-EXACT-JSON-VALUES", "SERIALIZE-CANONICAL-JSON", "SERIALIZE-EXACT-NUMBERS"];
 assert.deepEqual(Object.keys(codecCohort.normal_implementation_authorities).sort(), codecTaskNames);
@@ -423,6 +485,26 @@ for(const name of currentTaskNames) {
     assert.equal(authority.proof_class,"portable_synthetic");
   } else assert.deepEqual(authority,codecCohort.normal_implementation_authorities[name]);
 }
+// Current producer receipts and accepted predecessor admission are strict raw authorities.
+async function auditQueryUsageAuthority(authority,path=resolve("../../",authority.receipt.path)) {
+  const value=await auditCodecAuthority(authority,path);
+  assert.deepEqual(value.target,authority.required_target,"qualified_core_receipt_required");
+  assert.deepEqual(value.limitations,authority.limitations,"qualified_core_receipt_required");
+  assert.deepEqual(value.remaining_qualification,authority.remaining_qualification,"qualified_core_receipt_required");
+  assert.deepEqual(value.review,authority.raw_review_metadata,"qualified_core_receipt_required");
+  return value;
+}
+async function auditSourceCatalogAdmission(path=resolve("../../",queryUsageCohort.historical_source_catalog_authority.receipt.path)) {
+  const authority=queryUsageCohort.historical_source_catalog_authority;
+  await auditRawDocument(path,authority.receipt,"qualified_core_receipt_bytes_drift");
+  const value=JSON.parse(await readFile(path,"utf8"));
+  for(const [key,expected] of Object.entries(authority.required_receipt_semantics))assert.deepEqual(value[key],expected,"qualified_core_receipt_required");
+  assert.equal(value.result,"passed");assert.equal(value.review.status,"accepted");assert.equal(value.proof_class,"portable_synthetic");
+  assert.equal(value.review.fingerprint,value.source_sha+"+"+value.patch_digest);
+  return value;
+}
+for(const task of ["QUERY-TYPED-VALUES","USAGE-DESKTOP-SESSION-PROJECTION"])await auditQueryUsageAuthority(queryUsageCohort.normal_implementation_authorities[task]);
+await auditSourceCatalogAdmission();
 function closedKeys(value, keys) {
   assert.ok(typeof value === "object" && value !== null && !Array.isArray(value), "catalog_literal_authority_mismatch");
   assert.deepEqual(Object.keys(value).sort(), [...keys].sort(), "catalog_literal_authority_mismatch");
@@ -557,8 +639,17 @@ async function validateOutputPackage(directory, outputPins, inputPins) {
 }
 async function auditCoreInputs(directory) { await validateSourceInputs(directory, qualifiedInputPins); }
 async function auditCore(directory) { await validateOutputPackage(directory, qualifiedArtifacts, qualifiedInputPins); }
+async function validateCompleteProducerOutputs(directory) {
+  const files=await tree(join(directory,"dist"));
+  assert.deepEqual(files.map(p=>p.slice(directory.length+1)),Object.keys(queryUsageCohort.complete_emitted_output_pins).sort(),"core_complete_output_file_set_drift");
+  for(const row of queryUsageCohort.complete_emitted_output_rows) {
+    const bytes=await readFile(join(directory,row.path));
+    assert.equal(bytes.length,row.bytes,"core_complete_output_bytes_drift");
+    assert.equal(hash(bytes),row.sha256,"core_complete_output_bytes_drift");
+  }
+}
 await auditCoreInputs(source);
-await auditCore(source); await auditCore(installed);
+await auditCore(source); await validateCompleteProducerOutputs(source); await auditCore(installed);
 // Action-only mutation driver. IDs label observations AFTER the validator runs;
 // expected failures are assertions only, never validator or mutation inputs.
 const negativeIdentityCases=[];
@@ -693,15 +784,26 @@ async function mutateFile(path,action,target,retained) {
  if(action==="replace with exact historical4f partial bytes"){await writeFile(path,catalogCurrentBytes);return;}
  const value=parseCatalogRaw(await readFile(path));await writeFile(path,JSON.stringify(changeJson(value,action,target)));
 }
+const negativeOutcomes=[];
+const positiveIdentityCases=[];
+async function expectActualRejection(validate,expected) {
+  let caught;
+  try{await validate();}catch(error){caught=error;}
+  assert.ok(caught,"fixture_mutation_was_accepted");
+  const allowed=new Set(["ENOENT","candidate_build_symlink_unreviewed","candidate_source_symlink_unreviewed","catalog_literal_evidence_bytes_drift","core_build_bytes_drift","core_build_file_set_drift","core_input_bytes_drift","core_input_file_set_drift","core_manifest_drift","historical_input_evidence_bytes_drift","install_packed_core_with_install_links","qualified_core_receipt_bytes_drift","reviewed_core_cohort_bytes_drift"]);
+  const actual=caught.code==="ENOENT"?"ENOENT":[...allowed].find(code=>code!=="ENOENT"&&String(caught.message).includes(code));
+  assert.ok(actual,"fixture_rejection_not_fixed");assert.equal(actual,expected);
+  return actual;
+}
 const temporary=await mkdtemp(join(tmpdir(),"healthmd-catalog-cohort-negatives-"));
 try {
- const currentProfile={inputPins:qualifiedInputPins,outputPins:qualifiedArtifacts};
+ const currentProfile={inputPins:sourceCatalogCohort.input_pins,outputPins:sourceCatalogCohort.output_pins};
  const historicalProfile={inputPins:codecCohort.input_pins,outputPins:codecCohort.output_pins};
  const profiles=new Map([["current_source_catalog_58_36",currentProfile],["historical_exact_codecs_56_34",historicalProfile]]);
  const bases=new Map();
  for(const [name,profile]of profiles) {
   const base=join(temporary,name);await mkdir(base);
-  for(const path of Object.keys(profile.inputPins)){const dest=join(base,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));}
+  for(const path of Object.keys(profile.inputPins)){const dest=join(base,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,path==="scripts/check-boundaries.mjs"?historicalBoundaryBytes:await readFile(join(source,path)));}
   for(const path of Object.keys(profile.outputPins)){const dest=join(base,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));}
   await auditFixtureInputs(base,profile.inputPins);await auditFixturePackage(base,profile.outputPins,profile.inputPins);bases.set(name,base);
  }
@@ -772,13 +874,122 @@ try {
    else validate=()=>auditRawDocument(file,pin,kind);
   }
   // IDs and expected_failure are used only here, after action/validator selection.
-  if(row.expected_failure==="ENOENT")await assert.rejects(validate(),{code:"ENOENT"});else await assert.rejects(validate(),new RegExp(row.expected_failure));
+  negativeOutcomes.push({id:row.id,profile:binding.profile,rejection:await expectActualRejection(validate,row.expected_failure)});
   negativeIdentityCases.push(row.id);negativeExecutionProfiles.push(binding.profile);
  }
  assert.deepEqual(negativeIdentityCases,cases.map(row=>row.id));
  assert.equal(negativeExecutionProfiles.filter(p=>p==="historical_exact_codecs_56_34").length,203);
  assert.equal(negativeExecutionProfiles.filter(p=>p==="current_source_catalog_58_36").length,253);
+  // Structured successor actions operate only on owned copies and choose the
+  // same source/module/raw-authority validators used by normal admission.
+  const successorProfile={inputPins:qualifiedInputPins,outputPins:qualifiedArtifacts};
+  profiles.set(queryUsageProfile,successorProfile);
+  const successorBase=join(temporary,queryUsageProfile);await mkdir(successorBase);
+  for(const path of Object.keys(qualifiedInputPins)) {
+    const dest=join(successorBase,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));
+  }
+  for(const path of Object.keys(qualifiedArtifacts)) {
+    const dest=join(successorBase,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));
+  }
+  await auditFixtureInputs(successorBase,qualifiedInputPins);await auditFixturePackage(successorBase,qualifiedArtifacts,qualifiedInputPins);
+  bases.set(queryUsageProfile,successorBase);
+  const receiptValidators=new Map([
+    ...["QUERY-TYPED-VALUES","USAGE-DESKTOP-SESSION-PROJECTION"].map(task=>{
+      const authority=queryUsageCohort.normal_implementation_authorities[task];
+      return [authority.receipt.path,file=>auditQueryUsageAuthority(authority,file)];
+    }),
+    [queryUsageCohort.historical_source_catalog_authority.receipt.path,file=>auditSourceCatalogAdmission(file)]
+  ]);
+  function ownedPath(root,path) {
+    assert.equal(typeof path,"string","unrealized_fixture_action");
+    assert.ok(path.length>0&&!path.startsWith("/")&&!path.split("/").some(p=>p===".."||p==="."||p===""),"unrealized_fixture_action");
+    return join(root,path);
+  }
+  async function mutateStructuredFile(file,action,retained) {
+    switch(action.op) {
+      case "none":return;
+      case "remove":await rm(file);return;
+      case "append_bytes":await writeFile(file,Buffer.concat([await readFile(file),Buffer.from(action.utf8,"utf8")]));return;
+      case "replace_malformed_bytes":assert.match(action.hex,/^(?:[0-9a-f]{2})+$/);await writeFile(file,Buffer.from(action.hex,"hex"));return;
+      case "symlink_to_retained_original":await rm(file);await symlink(retained,file);return;
+      case "symlink_directory_to_retained_original":await rm(file,{recursive:true});await symlink(retained,file,"dir");return;
+      case "create_file":await mkdir(dirname(file),{recursive:true});await writeFile(file,action.utf8,"utf8");return;
+      case "json_set":case "json_delete": {
+        assert.equal(typeof action.pointer,"string");assert.ok(action.pointer.startsWith("/"));
+        const parts=action.pointer.slice(1).split("/").map(p=>p.replace(/~1/g,"/").replace(/~0/g,"~"));
+        assert.ok(parts.every(p=>!['__proto__','constructor','prototype'].includes(p)),"unrealized_fixture_action");
+        const value=JSON.parse(await readFile(file,"utf8"));let cursor=value;
+        for(const p of parts.slice(0,-1)){assert.ok(Object.hasOwn(cursor,p),"unrealized_fixture_action");cursor=cursor[p];}
+        const key=parts.at(-1);
+        if(action.op==="json_delete"){assert.ok(Object.hasOwn(cursor,key),"unrealized_fixture_action");delete cursor[key];}
+        else cursor[key]=action.value;
+        await writeFile(file,JSON.stringify(value));return;
+      }
+      default:assert.fail("unrealized_fixture_action");
+    }
+  }
+  async function prepareStructuredScene(action,profileName) {
+    const profile=profiles.get(profileName);assert.ok(profile,"unreviewed_fixture_profile");
+    const dir=join(temporary,"successor-scene");await rm(dir,{recursive:true,force:true});await mkdir(dir);
+    let validate,file,retained;
+    if(action.group==="source"||action.group==="module") {
+      const copy=join(dir,"copy");await cp(bases.get(profileName),copy,{recursive:true});
+      validate=action.group==="source"?()=>auditFixtureInputs(copy,profile.inputPins):()=>auditFixturePackage(copy,profile.outputPins,profile.inputPins);
+      // Verify pristine copy through the same validator before every stimulus.
+      await validate();
+      if(action.op!=="none") {
+        if(action.path==="installed core root") {assert.equal(action.group,"module");file=copy;retained=bases.get(profileName);}
+        else {file=ownedPath(copy,action.path);retained=ownedPath(bases.get(profileName),action.path);}
+        await mutateStructuredFile(file,action,retained);
+      }
+      return validate;
+    }
+    if(action.group==="receipt"||action.group==="cohort") {
+      if(action.group==="receipt") {
+        const validator=receiptValidators.get(action.path);assert.ok(validator,"unreviewed_fixture_target");
+        const original=resolve("../../",action.path);file=join(dir,"authority.json");retained=original;
+        await writeFile(file,await readFile(original));validate=()=>validator(file);
+      } else {
+        assert.equal(action.path,"docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json","unreviewed_fixture_target");
+        file=join(dir,"cohort.json");retained=queryUsageCohortPath;
+        await writeFile(file,await readFile(retained));validate=()=>auditQueryUsageCohort(file);
+      }
+      await validate();await mutateStructuredFile(file,action,retained);return validate;
+    }
+    if(action.group==="historical_blob") {
+      assert.equal(action.path,"historical_boundary_script","unreviewed_fixture_target");
+      file=join(dir,"boundary-blob.json");let blob=structuredClone(queryUsageCohort.historical_input_reconstruction.blob);
+      await writeFile(file,JSON.stringify(blob));validate=async()=>decodeHistoricalBoundary(JSON.parse(await readFile(file,"utf8")));
+      await validate();
+      if(action.op==="remove_blob")blob=null;
+      else if(action.op==="tamper_base64")blob.data=(blob.data[0]==="A"?"B":"A")+blob.data.slice(1);
+      else if(action.op==="replace_blob_with_path")blob={path:"/private/tmp/unreviewed"};
+      else assert.fail("unrealized_fixture_action");
+      await writeFile(file,JSON.stringify(blob));return validate;
+    }
+    assert.fail("unrealized_fixture_action");
+  }
+  for(const row of queryUsageCohort.positive_fixture_catalog.cases) {
+    const action={...row.action,group:row.group,path:row.action.path??row.target};
+    const validate=await prepareStructuredScene(action,row.profile);
+    await validate();assert.equal(row.expected,"accepted");positiveIdentityCases.push(row.id);
+  }
+  for(let i=456;i<queryUsageCohort.negative_fixture_catalog.cases.length;i++) {
+    const row=queryUsageCohort.negative_fixture_catalog.cases[i];
+    const binding=queryUsageCohort.negative_fixture_catalog.execution_profile_bindings[i];
+    assert.equal(binding.fixture_index,i);assert.equal(binding.profile,queryUsageProfile);assert.equal(binding.candidate_profile_selectable,false);
+    const validate=await prepareStructuredScene(row.action,binding.profile);
+    const rejection=await expectActualRejection(validate,row.expected_failure);
+    negativeIdentityCases.push(row.id);negativeExecutionProfiles.push(binding.profile);
+    negativeOutcomes.push({id:row.id,profile:binding.profile,rejection});
+  }
+  assert.deepEqual(negativeIdentityCases,queryUsageCohort.negative_fixture_catalog.cases.map(r=>r.id));
+  assert.deepEqual(negativeExecutionProfiles,queryUsageCohort.negative_fixture_catalog.execution_profile_bindings.map(r=>r.profile));
+  assert.deepEqual(negativeOutcomes.map(r=>r.rejection),queryUsageCohort.negative_fixture_catalog.cases.map(r=>r.expected_failure));
+  assert.deepEqual(positiveIdentityCases,queryUsageCohort.positive_fixture_catalog.cases.map(r=>r.id));
 } finally {await rm(temporary,{recursive:true,force:true});}
+await assert.rejects(lstat(temporary),{code:"ENOENT"});
+const filesystemCleanupAcknowledged=true;
 
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
@@ -805,8 +1016,8 @@ const core = await import(coreUrl); const host = await import(hostUrl);
 const codecs = await import(import.meta.resolve("@healthmd/core-ts/candidate/codecs"));
 assert.deepEqual(Object.keys(codecs).sort(), ["createCanonicalJsonSerializer", "createExactJsonCodec", "createExactJsonNumberParser", "serializeExactJsonNumber"]);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
-console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(qualifiedArtifacts).length, qualifiedCoreInputs: Object.keys(qualifiedInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases, negativeExecutionProfiles }));
+await new Promise((done, fail) => process.stdout.write(JSON.stringify({ qualifiedCoreFiles: Object.keys(qualifiedArtifacts).length, qualifiedCoreInputs: Object.keys(qualifiedInputPins).length, packedLocalCore: true,
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, completeProducerOutputs:59, negativeIdentityCases, negativeExecutionProfiles, negativeOutcomes, positiveIdentityCases, filesystemCleanupAcknowledged }) + "\n", error => error ? fail(error) : done()));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));

@@ -41,3 +41,10 @@ which this Effect rule did not reject. The verified probe uses a direct assertio
 arbitrary type assertions still require review. The first selected run also exposed
 fixture-relative path assumptions; selected bundles now use the existing `dist/tests`
 layout. Both issues were corrected before the passing results above.
+
+The subsequent query/usage CLI integration's syntax and source/test static checks passed
+together in 261 ms under the bounded supervisor. This ran no runtime tests. The retained
+report is `/private/tmp/healthmd-query-usage-cli-development-first.json`, with separate
+syntax and static logs beside it. It does not qualify the new packed core or replace the
+CLI's pending full integration check. The expanded core's existing passing 1,544-test
+qualification remains reusable only while its recorded relevant inputs stay unchanged.

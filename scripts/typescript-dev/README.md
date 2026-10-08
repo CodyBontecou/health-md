@@ -59,6 +59,28 @@ for behavioral feedback. Before accepting a component change, run its existing f
 `npm run check` under the refactor's normal qualification procedure. Do not rerun a passing
 full check unless relevant inputs changed or a failure or unresolved concern warrants it.
 
+Choose the smallest lane that answers the current question:
+
+| Change or checkpoint | Required feedback |
+| --- | --- |
+| Typed API, service requirements or union changes | Static checks; compile-only probes when protecting a public type contract |
+| Runtime behavior in a bounded module | Static checks plus exact selected test entries covering the changed behavior |
+| Dependency or import changes, or preparing integration | Affected tests; inspect the reported selection |
+| Stable component acceptance | Existing full qualification check and affected consumer gates |
+| Documentation only | Review links and commands; no runtime suite unless executable behavior changed |
+
+On a long-running dirty branch, `affected` compares all tracked changes against its base
+and includes untracked files. It can legitimately select a large suite, especially while
+core and CLI changes coexist. Use `selected` for an explicitly scoped implementation
+iteration, then use `affected` at integration. Do not invent a narrower base merely to
+exclude relevant changes. Selection narrows runtime tests; static checks still cover all
+component source and test code.
+
+Keep a passing check's input identity and result with the task evidence. Credit unchanged
+producer checks when validating a consumer-only change; rerun when a relevant source,
+dependency, configuration, fixture or tool changes. Development output is feedback, not
+authority to bypass frozen cohorts or native and public-contract qualification.
+
 Prefer compile-time proof for service requirements, discriminated-union exhaustiveness
 and invalid typed combinations. Use compile-only negative probes with `@ts-expect-error`
 when a public type contract needs regression protection: the compiler must reject the

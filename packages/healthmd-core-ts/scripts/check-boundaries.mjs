@@ -7,7 +7,7 @@ import { build } from "esbuild";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const sourceRoot = path.join(root, "src");
-const allowedEffect = new Set(["effect/Context", "effect/Effect", "effect/Data", "effect/Schema", "effect/Result"]);
+const allowedEffect = new Set(["effect/Context", "effect/Effect", "effect/Data", "effect/Schema", "effect/Result", "effect/Cause"]);
 const builtins = new Set(builtinModules.map((name) => name.replace(/^node:/, "")));
 
 /** Conservative admission lexer: rejects even comments/string mentions of host names. */

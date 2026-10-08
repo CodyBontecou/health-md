@@ -17901,7 +17901,7 @@
       "stream": "personal_data",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
+      "status": "done",
       "claim": null,
       "prerequisites": [
         "BASE-DONOR-USAGE-MAC",
@@ -17938,7 +17938,12 @@
         "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
         "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
         "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
-        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json"
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+        "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json",
+        "scripts/typescript-dev/README.md"
       ],
       "allowed_paths": [
         "packages/healthmd-core-ts/src/usage-desktop/session-projection.ts",
@@ -17947,7 +17952,6 @@
         "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
       ],
       "shared_resources": [
-        "core-component-build",
         "private-usage-desktop-session-projection-interface"
       ],
       "target": {
@@ -18276,14 +18280,21 @@
       "rollback": "Revert only private candidate files; retain production authority and donor readable stores/history.",
       "deletion_gate": "No source adoption, production promotion, retained-state or Rust/reference deletion.",
       "qualification": {
-        "status": "pending",
         "proof_class": "portable_synthetic",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
+        ]
       },
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "ROOT with independent /root/desktop_repair_review",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+eb75f06f9737702e5c4dfdca64fbb9a7d15ff30599e39f4005a6dd3b04567bf6",
+        "evidence": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+          "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b",
+          "bytes": 6318
+        }
       },
       "blocker": null,
       "priority": 320,
@@ -18293,6 +18304,640 @@
         "source_revision": "75d53472d73402cf3b3e210075ccd4e36e05cfde",
         "packet_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
         "child_pointer": "#/children/0"
+      },
+      "Stage2_required_shared_resources": [
+        "core-component-build",
+        "private-usage-desktop-session-projection-interface"
+      ],
+      "coordinator_verification_resources": [
+        "core-component-build"
+      ],
+      "Stage1_claim_boundary": {
+        "stage": "independent interface/full literal freeze before code",
+        "write_paths": [
+          "packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+          "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
+        ],
+        "scope": "Two files only: typed closed interface + complete independently sourced literal corpus in vector file, own partial receipt. No implementation/test-driver/build/install/runtime/core/index/export/lock/cohort edits. Compiler/test execution awaits separate finite coordinator clearance.",
+        "stage2_policy": "Independently accepted complete Stage1 packet before source/test-driver permission. Coarse shared interfaces private; core build exclusively coordinator-owned and batched after both source deltas are frozen."
+      },
+      "native_source_witness_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_native_reference_review_accepted",
+        "manifest": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/pre-execution-manifest.json",
+          "sha256": "e411167f6dd945cd5215509fcba021bf04281da39f28061ab373fdcd93e2dcf0",
+          "bytes": 3591
+        },
+        "scope": "One bounded Swift compilation of exact native typedvalue/encoder/decoder/canonicalDate source extracts + one46-row synthetic source witness and6Date/1subtraction probes. No product/app/nativecollector/client/data/store qualification. No source/expected candidate generation. Owned temporary module cache, compiler/library source reference semantics only.",
+        "deadline_ms": 60000,
+        "output_cap_bytes": 1048576,
+        "cleanup_ms": 3000
+      },
+      "native_source_witness_observation": {
+        "result": "passed_native_reference_witness",
+        "qualification": false,
+        "manifest": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/pre-execution-manifest.json",
+          "bytes": 3591,
+          "sha256": "e411167f6dd945cd5215509fcba021bf04281da39f28061ab373fdcd93e2dcf0"
+        },
+        "report": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/execution-report.json",
+          "bytes": 4054,
+          "sha256": "17c71d7b67f902369656fa42d742228ad4a488b245cca0d667bb3744744dc92e"
+        },
+        "output": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/native-output.json",
+          "bytes": 11656,
+          "sha256": "af7aab0daeaf88bd381900fb915dc1a9c11d28ee1480aaef169ea91a669b960e"
+        },
+        "scope": "46fixed synthetic native codec inputs/6Date constructors/1Date subtraction. Exact selectednative source, currentmacOS26.5.1 Swift6.3.3 SDK26.5 target26.0 only; notcandidate or fullnative qualification.",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-native-query-source-witness-effect-baseline-review.json",
+          "sha256": "ab2a8220f0bbced1d8ea27da90e81d31988f5bf322da5d6e06d9ab16f1b5a034",
+          "bytes": 4668,
+          "result": "accepted_exact_recorded_macos_source_observations_only",
+          "scope": "Stage1 source-reference evidence only; no full native profile, iOS, collector, product, client or retirement qualification."
+        }
+      },
+      "Stage1_original_evidence_boundary_review": {
+        "path": "/private/tmp/healthmd-desktop-original-evidence-boundary-effect-baseline-review.json",
+        "sha256": "c88d53c5484f966f0e14e1ab06a995c6b2c3f70b87fa437855111f2da1ba4766",
+        "bytes": 3062,
+        "result": "changes_required_before_Stage1_freeze",
+        "required_change": "Normal projection read returns the accepted reference-only wrapper; inline original evidence is removed. Original archive materialization remains separately granted or deferred. Author must refreeze full interface and literal expected corpus before implementation."
+      },
+      "Stage1_current_author_freeze": {
+        "path": "/private/tmp/healthmd-desktop-session-projection-whitelist-freeze.json",
+        "sha256": "302b935b10def1201614835e53397b1e820d4576b89d63efa0f8cf9cd2cfe773",
+        "bytes": 1105,
+        "status": "pending_independent_review",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+40cc1f9e5813c170b1705d116fb9211ead878d4f9b05debd3928341dead6e5e2",
+        "scope": "45 pre-code literals and corrected source whitelist/descriptor interface only."
+      },
+      "Stage1_reference_wrapper_review": {
+        "status": "changes_required",
+        "path": "/private/tmp/healthmd-desktop-session-stage1-reference-wrapper-effect-baseline-review.json",
+        "sha256": "468e432904590350d5d45d38d2bacef179df71b00bdc80b13f714c3dd95ac47a",
+        "bytes": 5288,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+0d77af9956bb9abdc5aab1599e65fdd20fe9101c062137fc33f721d9426d6f53",
+        "scope": "Projection-only source whitelist and explicit trusted evidence/classification descriptor required before Stage2."
+      },
+      "Stage1_author_freeze_history": [
+        {
+          "path": "/private/tmp/healthmd-usage-desktop-session-stage1-reference-wrapper-freeze.json",
+          "sha256": "ae9c74876de2002965f863e200466fdda173e399aea25da671acd813f9d588f8",
+          "bytes": 867,
+          "status": "pending_independent_review",
+          "scope": "Author-proposed interface and source-derived literal corpus only. No implementation, compiler, execution, native admission or accepted packet asserted."
+        }
+      ],
+      "Stage1_independent_review": {
+        "status": "accepted",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+40cc1f9e5813c170b1705d116fb9211ead878d4f9b05debd3928341dead6e5e2",
+        "reviewer": "/root/effect_baseline_review",
+        "path": "/private/tmp/healthmd-desktop-session-projection-whitelist-effect-baseline-review.json",
+        "sha256": "9b2d0246df38fc7312f0a4aea4ea8d3daf3bb2d04603288e3851c0602286541b",
+        "bytes": 5384,
+        "scope": "Pre-code closed interface and45whole literal strategies only; no runtime or task completion."
+      },
+      "Stage2_authorization": {
+        "owner": "/root",
+        "status": "bounded_source_and_test_driver_authorized",
+        "base_revision": "32f38da439c0489648e99933c99d88805b76ca7b",
+        "accepted_stage1_fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+40cc1f9e5813c170b1705d116fb9211ead878d4f9b05debd3928341dead6e5e2",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/usage-desktop/session-projection.ts",
+          "packages/healthmd-core-ts/tests/usage-desktop-session-projection.test.ts",
+          "packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+          "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
+        ],
+        "frozen_vector": {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+          "sha256": "6adefd5eb9b836a4bf585068229e510b91993a8bb8cd4be0f64dc2d9843d69ff",
+          "bytes": 375184
+        },
+        "scope": "Implement exact accepted private interface and action-only test driver. Preserve45wholeexpectedobjects and81obligations. No index/package/lock/exports/guard/cohort/native/plan writes. No compiler/runtime/build/install by writer; coordinator alone executes fast static/selected feedback and later one stable batched producer qualification under reserved resources.",
+        "verification_owner": "/root",
+        "source_review_owner": "/root/effect_baseline_review",
+        "remaining": "Full implementation/behavioral producer review, successor consumer cohort, actual source adapter/native/profile/grant/archive/storage/public qualification remain open.",
+        "allowed_vector_type_only_amendment": {
+          "reviewer": "/root/effect_baseline_review",
+          "status": "accepted_proposal_applied_raw_binding_pending",
+          "path": "/private/tmp/healthmd-desktop-session-input-reference-union-effect-baseline-review.json",
+          "sha256": "4e843ef285e92a97f9d74d0c1899335baa2a2c24893e42376aafd2dccff5cd6b",
+          "bytes": 3175,
+          "exact_type_delta": {
+            "interface": "SessionSourceDescriptor",
+            "member": "source_evidence_ref",
+            "old": "readonly source_evidence_ref:{readonly state:\"known\";readonly value:string};",
+            "new": "readonly source_evidence_ref:{readonly state:\"known\";readonly value:string}|{readonly state:\"unknown\";readonly reason:\"not_reported\"};",
+            "output_SourceEvidenceReference": "unchanged known/value",
+            "all45cases": "unchanged"
+          },
+          "all45canonical_cases_sha256": "5e1dead89e20bcc95cd987aee0c498f02aa2b26ccba1b98a5a45491093dfdbc0",
+          "scope": "Only input descriptor ref union change; original raw vector archived, type-line inverse and all whole cases/81obligations must stay exact. Runtime/source/static acceptance remains pending."
+        },
+        "allowed_source_derived_counter_amendment": {
+          "status": "accepted_proposal_applied_raw_binding_pending",
+          "reviewer": "/root/effect_baseline_review",
+          "path": "/private/tmp/healthmd-desktop-session-three-raw-counter-amendment-effect-baseline-review.json",
+          "sha256": "9b68ecd659fec3a9a59866442a72ae8fe1ef6304e082bcaa9ab3c3071f2aedea",
+          "bytes": 8175,
+          "whole_expected_amendments": [
+            {
+              "case_id": "session-invalid-duration-nonfinite",
+              "unchanged_stimulus_sha256": "b0269d6965258191d1f65d9edbd3994585d941429fa0d4968bf2555b3fb8e36b",
+              "whole_expected": {
+                "kind": "fixed_failure",
+                "failure": "invalid_source",
+                "metadata": null,
+                "record_json": null,
+                "original_evidence_json": null,
+                "counts": {
+                  "source_allocations": 1,
+                  "source_release_attempts": 1,
+                  "source_release_ACKs": 1,
+                  "source_reads": 1,
+                  "original_materializations": 1,
+                  "codec_decodes": 0,
+                  "codec_encodes": 0,
+                  "title_observations": 0,
+                  "publication_returns": 0,
+                  "property_traps": 0,
+                  "descriptor_calls": 1
+                },
+                "native_date_algorithm_qualified": false,
+                "native_capture_qualified": false,
+                "automatic_clock_inconsistent": false,
+                "original_bits_preserved": false,
+                "return_after_cleanup_ACK": false,
+                "status_wrapper": null,
+                "archive_read_calls": 0,
+                "normal_raw_evidence_materializations": 0,
+                "admitted_projection_materializations": 1,
+                "auxiliary_value_observations": 0,
+                "auxiliary_value_materializations": 0
+              },
+              "exact_expected_delta": {
+                "counts.original_materializations": {
+                  "old": 0,
+                  "new": 1
+                },
+                "admitted_projection_materializations": {
+                  "old": 0,
+                  "new": 1
+                }
+              }
+            },
+            {
+              "case_id": "session-invalid-duration-bit-grammar",
+              "unchanged_stimulus_sha256": "b1ec113d3626d5ef0b6b692bebf62ed96e20da22f6e5e9bb8310b4d57e7e2928",
+              "whole_expected": {
+                "kind": "fixed_failure",
+                "failure": "invalid_source",
+                "metadata": null,
+                "record_json": null,
+                "original_evidence_json": null,
+                "counts": {
+                  "source_allocations": 1,
+                  "source_release_attempts": 1,
+                  "source_release_ACKs": 1,
+                  "source_reads": 1,
+                  "original_materializations": 1,
+                  "codec_decodes": 0,
+                  "codec_encodes": 0,
+                  "title_observations": 0,
+                  "publication_returns": 0,
+                  "property_traps": 0,
+                  "descriptor_calls": 1
+                },
+                "native_date_algorithm_qualified": false,
+                "native_capture_qualified": false,
+                "automatic_clock_inconsistent": false,
+                "original_bits_preserved": false,
+                "return_after_cleanup_ACK": false,
+                "status_wrapper": null,
+                "archive_read_calls": 0,
+                "normal_raw_evidence_materializations": 0,
+                "admitted_projection_materializations": 1,
+                "auxiliary_value_observations": 0,
+                "auxiliary_value_materializations": 0
+              },
+              "exact_expected_delta": {
+                "counts.original_materializations": {
+                  "old": 0,
+                  "new": 1
+                },
+                "admitted_projection_materializations": {
+                  "old": 0,
+                  "new": 1
+                }
+              }
+            },
+            {
+              "case_id": "session-source-crosswire-rejected-before-codec",
+              "unchanged_stimulus_sha256": "d08ac4128249f849ba384c05f72747d999d1b45a611ca49648d7d0fb32799c4b",
+              "whole_expected": {
+                "kind": "fixed_failure",
+                "failure": "scope_not_authorized",
+                "metadata": null,
+                "record_json": null,
+                "original_evidence_json": null,
+                "counts": {
+                  "source_allocations": 1,
+                  "source_release_attempts": 1,
+                  "source_release_ACKs": 1,
+                  "source_reads": 1,
+                  "original_materializations": 1,
+                  "codec_decodes": 0,
+                  "codec_encodes": 0,
+                  "title_observations": 0,
+                  "publication_returns": 0,
+                  "property_traps": 0,
+                  "descriptor_calls": 1
+                },
+                "native_date_algorithm_qualified": false,
+                "native_capture_qualified": false,
+                "automatic_clock_inconsistent": false,
+                "original_bits_preserved": false,
+                "return_after_cleanup_ACK": false,
+                "status_wrapper": null,
+                "archive_read_calls": 0,
+                "normal_raw_evidence_materializations": 0,
+                "admitted_projection_materializations": 1,
+                "auxiliary_value_observations": 0,
+                "auxiliary_value_materializations": 0
+              },
+              "exact_expected_delta": {
+                "counts.original_materializations": {
+                  "old": 0,
+                  "new": 1
+                },
+                "admitted_projection_materializations": {
+                  "old": 0,
+                  "new": 1
+                }
+              }
+            }
+          ],
+          "scope": "Exactly six scalar0-to1 counter changes in three whole cases. All stimuli/42otherexpectations/errors/payload/status/cleanup/81obligations unchanged; source ordering proves primitive receipt before semantic rejection. Not generated from candidate execution."
+        }
+      },
+      "Stage2_current_source_freeze": {
+        "path": "/private/tmp/healthmd-desktop-Scope-type-only-repair-freeze.json",
+        "sha256": "a809af20453b8149fae5b2bfe9b187d546821789a136abc30c463cd7d775f1c5",
+        "bytes": 1712,
+        "status": "type_only_scope_delta_and_separate_cause_admission_review_accepted",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+eb75f06f9737702e5c4dfdca64fbb9a7d15ff30599e39f4005a6dd3b04567bf6",
+        "scope": "Source-only runtime Scope import removed; type usage remains; exact Cause policy amendment recorded independently; actual full core check passed pending producer evidence review."
+      },
+      "Stage2_source_review": {
+        "path": "/private/tmp/healthmd-desktop-session-stage2-repaired-source-independent-review.json",
+        "bytes": 8071,
+        "sha256": "fc1e1f0b3845b365964c997d5e8d9dcddf3c10e2ddad6b2ebe615db7cd889191",
+        "status": "accepted_for_root_fast_static_selected_execution_only",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+1702c78c292e5eb80b743dfd3dcfebb92a08784b41cde0b5db4f767bbde0e099"
+      },
+      "Stage2_supplement_strategy_authorization": {
+        "owner": "/root",
+        "status": "accepted_bounded_source_and_driver_repair_authorized",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/usage-desktop/session-projection.ts",
+          "packages/healthmd-core-ts/tests/usage-desktop-session-projection.test.ts",
+          "packages/healthmd-core-ts/tests/usage-desktop-session-projection-vectors.ts",
+          "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json"
+        ],
+        "scope": "Implement accepted6 lifecycle+4preservationobserver strategy, preserve45whole+81 and all6+4literals. Fix one-slot reservation, source_failed fallback, actualpreservationobservations and currentreceipt metadata. No writerexecution; Rootfastlane onlyafter concretefreeze/source review."
+      },
+      "Stage2_supplement_strategy_review": {
+        "status": "accepted_before_bounded_repair",
+        "reviewer": "/root/effect_baseline_review",
+        "path": "/private/tmp/healthmd-desktop-session-supplemental-strategy-effect-baseline-review.json",
+        "sha256": "307244fb8ef67932ad9a6f669c20b41baac1907ba679780f43c7287b0c862b57",
+        "bytes": 5824,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+6587d2078c967ab2b13f926122438c8f5c459d1c39f64ce32b51146472f4027d"
+      },
+      "Stage2_source_freeze_history": [
+        {
+          "path": "/private/tmp/healthmd-desktop-session-stage2-source-freeze.json",
+          "sha256": "a42f3482f12c4c56db18f8b46282061bb891213e82e86a8cdd46d847783bcf8f",
+          "bytes": 1723,
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+2cfca7892daf757e29e1a0c5d73e92de4989791e208eb6eee8352d05aa858998",
+          "status": "pending_independent_full_source_driver_review",
+          "scope": "45frozenwholecases plus raw companion defined; no compiler/runtime execution or qualification."
+        },
+        {
+          "path": "/private/tmp/healthmd-desktop-session-stage2-repaired-source-freeze.json",
+          "sha256": "48f9d68d783aadeb5d182b6df1a1981598ed6ea756c56f7912b77c559a04f0cb",
+          "bytes": 2531,
+          "status": "independent_review_accepted_for_development_execution",
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+1702c78c292e5eb80b743dfd3dcfebb92a08784b41cde0b5db4f767bbde0e099",
+          "scope": "Protected single factory slot, source_failed fallback and actual preservation observer; 45 whole cases,81 obligations and accepted6+4 supplement unchanged. Forecast56 unexecuted."
+        },
+        {
+          "path": "/private/tmp/healthmd-desktop-release-finalizer-defect-repair-freeze.json",
+          "sha256": "1179bb798cb1ba5fe7ee05adbba05f8a8238a543bcc90ca687ad902b7617e594",
+          "bytes": 1535,
+          "status": "exact_finalizer_delta_review_accepted",
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+5c85413a36dd20c9324d5ebe06616fb2f8ccb5fb75fadd4946bb4a9c016cac20",
+          "scope": "Single registered finalizer failure changes typed Fail to supported tracked Die; source, vector and literal outcomes unchanged."
+        }
+      ],
+      "Stage2_source_review_history": [
+        {
+          "status": "changes_required",
+          "path": "/private/tmp/healthmd-desktop-session-stage2-source-effect-baseline-review.json",
+          "sha256": "71b95e701ba516e348176c396948afb7fd6fd4034aea1f8d1816eacbdd553c4a",
+          "bytes": 7753,
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+2cfca7892daf757e29e1a0c5d73e92de4989791e208eb6eee8352d05aa858998"
+        }
+      ],
+      "development_execution_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_development_resources_released",
+        "manifest": {
+          "path": "/private/tmp/healthmd-desktop-session-focused-second.inputs.json",
+          "bytes": 196365,
+          "sha256": "c5ed35f655d19bd5b31b5adf2c60ddaf6c167e89c41005b34f5033f716ba66c5"
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-desktop-session-focused-second.mjs",
+          "bytes": 4562,
+          "sha256": "3bca2a93a0ea575621dc01c722ae0af3b0dc7463f127dc1cdfe18b19d6459d46"
+        },
+        "review": {
+          "path": "/private/tmp/healthmd-desktop-release-finalizer-defect-repair-independent-review.json",
+          "bytes": 4257,
+          "sha256": "044596c2f048f4762a0a0d30fd995395667fcec56a416262da0b125d9d0e1181"
+        },
+        "argv": [
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "/Users/codybontecou/dev/health-md/scripts/typescript-dev/dev.mjs",
+          "selected",
+          "core",
+          "tests/usage-desktop-session-projection.test.ts"
+        ],
+        "deadline_ms": 60000,
+        "cap_bytes": 4194304,
+        "cleanup_ms": 3000,
+        "scope": "development_only_static_and_selected_desktop_session_tests"
+      },
+      "development_execution_observation": {
+        "path": "/private/tmp/healthmd-desktop-session-focused-second.json",
+        "sha256": "429260504c4c7778f8eeb99adadc78c75bf171994066fca13f812205c2e2181e",
+        "bytes": 7345,
+        "result": "passed",
+        "wall_ms": 538,
+        "qualification": false,
+        "counts": {
+          "tests": 56,
+          "suites": 0,
+          "pass": 56,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "cleanup_ack": true,
+        "log": {
+          "path": "/private/tmp/healthmd-desktop-session-focused-second.log",
+          "sha256": "58451d08ab819ec97fef29f56f25b21e4d1ac5f6d68f7e0b6f8a6c8ffb3f03be",
+          "bytes": 5383
+        },
+        "scope": "development_only_static_and_selected_desktop_session_tests",
+        "independent_review_status": "accepted_development_only",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-desktop-session-focused-second-independent-review.json",
+          "bytes": 6123,
+          "sha256": "f1748b79a08b5a289a0e58a737837c2e006c166d7241a8d8e9bdfebe8555c3e9",
+          "status": "accepted_development_only"
+        }
+      },
+      "development_execution_history": [
+        {
+          "authorization": {
+            "owner": "/root",
+            "status": "terminal_static_failure_resources_released",
+            "manifest": {
+              "path": "/private/tmp/healthmd-desktop-session-focused-first.inputs.json",
+              "bytes": 196363,
+              "sha256": "2edcab35c28fca257311006b8bd6a9526ce2a090057a4f707e30fb01aad4774b"
+            },
+            "harness": {
+              "path": "/private/tmp/healthmd-desktop-session-focused-first.mjs",
+              "bytes": 4561,
+              "sha256": "a8b6972e3bbdd2766e8424b512ea3949f5a1e30b9927b91cdb4ce47bd46ff475"
+            },
+            "review": {
+              "path": "/private/tmp/healthmd-desktop-session-stage2-repaired-source-independent-review.json",
+              "bytes": 8071,
+              "sha256": "fc1e1f0b3845b365964c997d5e8d9dcddf3c10e2ddad6b2ebe615db7cd889191"
+            },
+            "argv": [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "/Users/codybontecou/dev/health-md/scripts/typescript-dev/dev.mjs",
+              "selected",
+              "core",
+              "tests/usage-desktop-session-projection.test.ts"
+            ],
+            "deadline_ms": 60000,
+            "cap_bytes": 4194304,
+            "cleanup_ms": 3000,
+            "scope": "development_only_static_and_selected_desktop_session_tests"
+          },
+          "observation": {
+            "path": "/private/tmp/healthmd-desktop-session-focused-first.json",
+            "sha256": "146dab4836be85d11f1c49e00dd98af970734124342530214253b6b448eb86e9",
+            "bytes": 2668,
+            "result": "failed",
+            "wall_ms": 401,
+            "qualification": false,
+            "runtime_tests_executed": 0,
+            "source_after_matches": true,
+            "cleanup_ack": true,
+            "log": {
+              "path": "/private/tmp/healthmd-desktop-session-focused-first.log",
+              "sha256": "96e1bec94262110e93f9572de96583f61909ee938ece10e8520ded88c59ffe39",
+              "bytes": 505
+            },
+            "diagnostics": [
+              "TS2375 finalizer145 Effect SessionFailure incompatible with never error channel",
+              "TS377003 missingEffectError SessionFailure in finalizer expected type"
+            ],
+            "scope": "Static source checks passed; test static check failed before runtime."
+          }
+        }
+      ],
+      "Stage2_finalizer_delta_review": {
+        "path": "/private/tmp/healthmd-desktop-release-finalizer-defect-repair-independent-review.json",
+        "bytes": 4257,
+        "sha256": "044596c2f048f4762a0a0d30fd995395667fcec56a416262da0b125d9d0e1181",
+        "status": "accepted_for_root_fast_static_selected_execution_only",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+5c85413a36dd20c9324d5ebe06616fb2f8ccb5fb75fadd4946bb4a9c016cac20"
+      },
+      "batched_core_execution_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_resources_released",
+        "manifest": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.inputs.json",
+          "bytes": 291459,
+          "sha256": "faa3eb804386d40693451d172a5d1c2c3525976537dfa5ec3c09c82178415f14"
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.mjs",
+          "bytes": 4452,
+          "sha256": "21b43dd4c9b3da0649dd381e0b280e4e6c777a10034dfff58fbb4c93b4c4b6b7"
+        },
+        "review": {
+          "path": "/private/tmp/healthmd-desktop-Cause-portability-admission-independent-review.json",
+          "bytes": 5325,
+          "sha256": "845e2f7970021bcf2ea4a83e8d134b9e77e27f123940816a2eddb4bfd89b1991"
+        },
+        "argv": [
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+          "run",
+          "check"
+        ],
+        "cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+        "deadline_ms": 300000,
+        "cap_bytes": 16777216,
+        "cleanup_ms": 3000,
+        "scope": "Fresh full check after actual failing boundary gate and exact Scope/Cause source/policy repair; source64 current; all1544whole tests plus unchanged19boundary negatives required."
+      },
+      "batched_core_execution_observation": {
+        "path": "/private/tmp/healthmd-query-usage-batched-core-second.json",
+        "sha256": "344be616d50aa0f2a596ba263ebdfc0074d8f3e7a6d0f896683f6cb26e0cd484",
+        "bytes": 120356,
+        "result": "accepted_private_portable_synthetic_producer_evidence",
+        "wall_ms": 3313,
+        "counts": {
+          "tests": 1544,
+          "suites": 0,
+          "pass": 1544,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "cleanup_ack": true,
+        "log": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.log",
+          "sha256": "5beec57e11488ada14cff3e8c06b27cb6b9fb2597fc96b4781ea5f54c88e5162",
+          "bytes": 114218
+        },
+        "core_output_count": 59,
+        "qualification": false,
+        "scope": "Actual complete core check passed; producer receipt acceptance and successor CLI cohort/consumer checks remain pending.",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+          "bytes": 6318,
+          "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b"
+        }
+      },
+      "coordinator_portability_admission_amendment": {
+        "owner": "/root",
+        "status": "exact_module_admission_independently_accepted",
+        "write_paths": [
+          "packages/healthmd-core-ts/scripts/check-boundaries.mjs"
+        ],
+        "proposed_delta": "Add exact effect/Cause to approved pure Effect modules. No root effect, wildcard, Scope runtime, host modules, dependencies or consumer admission. Existing19 negative boundary cases remain required.",
+        "evidence": "Actual first batched full check passed1544whole runtime tests but rejected desktop runtime Scope and Cause. Source author separately changes unused runtime Scope to type-only. Cause.fromReasons and Cause.makeInterruptReason preserve captured interruption reasons while omitting private provider defects.",
+        "scope_exception": "Bounded coordinator-only exception to source writer no-guard scope, independently reviewed before execution; no author guard writes and no public/consumer/native/profile grant or Rust retirement authority.",
+        "review": {
+          "path": "/private/tmp/healthmd-desktop-Cause-portability-admission-independent-review.json",
+          "bytes": 5325,
+          "sha256": "845e2f7970021bcf2ea4a83e8d134b9e77e27f123940816a2eddb4bfd89b1991"
+        },
+        "freeze": {
+          "path": "/private/tmp/healthmd-desktop-Cause-portability-admission-freeze.json",
+          "bytes": 1223,
+          "sha256": "a5ce6206f92344944b0f918a67b8d8bb4157670493a8de663fc0516d36a760ac"
+        }
+      },
+      "batched_core_execution_history": [
+        {
+          "authorization": {
+            "owner": "/root",
+            "status": "terminal_portability_failure_resources_released",
+            "task_ids": [
+              "QUERY-TYPED-VALUES",
+              "USAGE-DESKTOP-SESSION-PROJECTION"
+            ],
+            "manifest": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.inputs.json",
+              "bytes": 290387,
+              "sha256": "729412e123d718aae46f923862e79030ed4ac2c39ee7b74e8515e81f3510c56c"
+            },
+            "harness": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.mjs",
+              "bytes": 4451,
+              "sha256": "33730a4c50c5db72da51a01154581af9252007504a8652f6c20fcf7a540bec42"
+            },
+            "argv": [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+              "run",
+              "check"
+            ],
+            "cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+            "deadline_ms": 300000,
+            "cap_bytes": 16777216,
+            "cleanup_ms": 3000,
+            "scope": "One stable combined core full check with actual current64 source map and independently reviewed source/selected execution; immutable1359 historical+129typed+56desktop whole titles. Exact new output maps collected after build; successor CLI cohort remains a separate subsequent gate."
+          },
+          "observation": {
+            "path": "/private/tmp/healthmd-query-usage-batched-core-first.json",
+            "sha256": "635298b1c4a0b58f2989f624b8b0c17e6bc4c4666b8e2ddd88b931a4de540b2c",
+            "bytes": 120198,
+            "result": "failed_portability_gate_after_all_runtime_tests_passed",
+            "wall_ms": 2824,
+            "counts": {
+              "tests": 1544,
+              "suites": 0,
+              "pass": 1544,
+              "fail": 0,
+              "cancelled": 0,
+              "skipped": 0,
+              "todo": 0
+            },
+            "source_after_matches": true,
+            "cleanup_ack": true,
+            "log": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.log",
+              "sha256": "1ca2888771affcd407cc8e08d124165f752ac6e814ace235edab6877e46a44f6",
+              "bytes": 120429
+            },
+            "qualification": false,
+            "diagnostics": [
+              "portable_forbidden_import effect/Scope in each new source module"
+            ]
+          }
+        }
+      ],
+      "final_receipt": {
+        "path": "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json",
+        "sha256": "b9da698595221fd8ec0039ca3bcb8f0ad1786f285763fbea3b8f4c0ce9ac195e",
+        "bytes": 367587
+      },
+      "accepted_source_execution_review": {
+        "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+        "bytes": 6318,
+        "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b"
+      },
+      "final_metadata_review": {
+        "path": "/private/tmp/healthmd-query-usage-final-producer-receipt-root-review.json",
+        "bytes": 2026,
+        "sha256": "a81c09564dc7cbf7f056683cf4b20695a1067617862f88af55894824f3e1494f"
+      },
+      "final_receipt_schema_review": {
+        "path": "/private/tmp/healthmd-query-usage-final-producer-receipt-schema-root-review.json",
+        "bytes": 1691,
+        "sha256": "c096491663aa41283b05c012ea0ea01aadecd7e08a3fb66e675e14cd1871b36c"
       }
     },
     {
@@ -33130,7 +33775,7 @@
       "stream": "core_cli",
       "phase": "M03",
       "kind": "implementation",
-      "status": "not_started",
+      "status": "done",
       "prerequisites": [
         "BASE-CLI",
         "BASE-CORE",
@@ -33197,7 +33842,12 @@
         "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
         "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
         "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
-        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+        "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json",
+        "scripts/typescript-dev/README.md"
       ],
       "allowed_paths": [
         "packages/healthmd-core-ts/src/query/typed-values.ts",
@@ -33206,8 +33856,7 @@
         "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json"
       ],
       "shared_resources": [
-        "private-typed-values-interface",
-        "core-component-build"
+        "private-typed-values-interface"
       ],
       "target": {
         "platform": "portable",
@@ -33444,14 +34093,27 @@
       "blocker": null,
       "priority": 111,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/desktop_repair_review; ROOT accepted source and execution",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+a5f19694f7c86281fdba608dc0d01f37a49e789a7dcd40ffc4d8a5c859d4ee0b",
+        "source_and_Stage1_review": {
+          "path": "/private/tmp/healthmd-query-typed-values-amended-independent-review.json",
+          "sha256": "f611a7cbafcd0b586c5ea1ee1f104407ab61fb17c072337b613946f277bece5e",
+          "bytes": 6770
+        },
+        "accepted_execution_review": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+          "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b",
+          "bytes": 6318
+        },
+        "evidence": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-query.json",
@@ -33461,7 +34123,449 @@
         "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
         "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
       },
-      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs.",
+      "Stage2_required_shared_resources": [
+        "private-typed-values-interface",
+        "core-component-build"
+      ],
+      "coordinator_verification_resources": [
+        "core-component-build"
+      ],
+      "Stage1_claim_boundary": {
+        "stage": "independent interface/full literal freeze before code",
+        "write_paths": [
+          "packages/healthmd-core-ts/tests/query-typed-values-vectors.ts",
+          "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json"
+        ],
+        "scope": "Two files only: typed closed interface + complete independently sourced literal corpus in vector file, own partial receipt. No implementation/test-driver/build/install/runtime/core/index/export/lock/cohort edits. Compiler/test execution awaits separate finite coordinator clearance.",
+        "stage2_policy": "Independently accepted complete Stage1 packet before source/test-driver permission. Coarse shared interfaces private; core build exclusively coordinator-owned and batched after both source deltas are frozen."
+      },
+      "native_source_witness_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_native_reference_review_accepted",
+        "manifest": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/pre-execution-manifest.json",
+          "sha256": "e411167f6dd945cd5215509fcba021bf04281da39f28061ab373fdcd93e2dcf0",
+          "bytes": 3591
+        },
+        "scope": "One bounded Swift compilation of exact native typedvalue/encoder/decoder/canonicalDate source extracts + one46-row synthetic source witness and6Date/1subtraction probes. No product/app/nativecollector/client/data/store qualification. No source/expected candidate generation. Owned temporary module cache, compiler/library source reference semantics only.",
+        "deadline_ms": 60000,
+        "output_cap_bytes": 1048576,
+        "cleanup_ms": 3000
+      },
+      "native_source_witness_observation": {
+        "result": "passed_native_reference_witness",
+        "qualification": false,
+        "manifest": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/pre-execution-manifest.json",
+          "bytes": 3591,
+          "sha256": "e411167f6dd945cd5215509fcba021bf04281da39f28061ab373fdcd93e2dcf0"
+        },
+        "report": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/execution-report.json",
+          "bytes": 4054,
+          "sha256": "17c71d7b67f902369656fa42d742228ad4a488b245cca0d667bb3744744dc92e"
+        },
+        "output": {
+          "path": "/private/tmp/healthmd-native-query-source-witness/native-output.json",
+          "bytes": 11656,
+          "sha256": "af7aab0daeaf88bd381900fb915dc1a9c11d28ee1480aaef169ea91a669b960e"
+        },
+        "scope": "46fixed synthetic native codec inputs/6Date constructors/1Date subtraction. Exact selectednative source, currentmacOS26.5.1 Swift6.3.3 SDK26.5 target26.0 only; notcandidate or fullnative qualification.",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-native-query-source-witness-effect-baseline-review.json",
+          "sha256": "ab2a8220f0bbced1d8ea27da90e81d31988f5bf322da5d6e06d9ab16f1b5a034",
+          "bytes": 4668,
+          "result": "accepted_exact_recorded_macos_source_observations_only",
+          "scope": "Stage1 source-reference evidence only; no full native profile, iOS, collector, product, client or retirement qualification."
+        }
+      },
+      "Stage1_current_author_freeze": {
+        "path": "/private/tmp/healthmd-query-typed-values-stage1-author-freeze.json",
+        "sha256": "3b8ea45d05af9285dcf13c25ca9d191f0a35871cb5e03ec014ac8ee7eec89fb5",
+        "bytes": 4322,
+        "status": "pending_independent_review",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+b3e973f44a2c5c8b5b4a5ae5d6968294a3310790784cab03a1462b02a5910961",
+        "scope": "128 pre-code literals, explicit timestamp bits operands and scanner boundary corrections only."
+      },
+      "Stage1_native_amended_review": {
+        "status": "changes_required",
+        "path": "/private/tmp/healthmd-query-typed-values-independent-review.json",
+        "sha256": "24cc2cba135a6f1b92b0c89fe3608bd1c4ba1992300392718a9573d7a9a98b8c",
+        "bytes": 7390,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+302fe8dc4dbcc804546b94103d887c613ac70d7fbf8a531e4a399252e25d09c8",
+        "scope": "Close timestamp issuer bits operands, boundary encode stimuli, and numeric/key/ignored-subtree scanner limit corpus before implementation."
+      },
+      "Stage1_author_freeze_history": [
+        {
+          "path": "/private/tmp/healthmd-query-typed-values-stage1-author-freeze.json",
+          "sha256": "e1119b48b5c42521ec042d539a6bfebabdc485309f6fddbfd95aaae117de3c28",
+          "bytes": 2687,
+          "status": "pending_independent_review",
+          "scope": "Author-proposed interface and source-derived literal corpus only. No implementation, compiler, execution, native admission or accepted packet asserted.",
+          "archived_path": "/private/tmp/healthmd-query-typed-values-before-TV1-TV2-TV3/freeze-before.json"
+        }
+      ],
+      "Stage1_independent_review": {
+        "status": "accepted",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+b3e973f44a2c5c8b5b4a5ae5d6968294a3310790784cab03a1462b02a5910961",
+        "reviewer": "/root/typed_values_review",
+        "path": "/private/tmp/healthmd-query-typed-values-amended-independent-review.json",
+        "sha256": "f611a7cbafcd0b586c5ea1ee1f104407ab61fb17c072337b613946f277bece5e",
+        "bytes": 6770,
+        "scope": "Pre-code closed private interface and128whole literal strategies only; no runtime, full native profile or task completion."
+      },
+      "Stage2_authorization": {
+        "owner": "/root",
+        "status": "bounded_source_and_test_driver_authorized",
+        "base_revision": "32f38da439c0489648e99933c99d88805b76ca7b",
+        "accepted_stage1_fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+b3e973f44a2c5c8b5b4a5ae5d6968294a3310790784cab03a1462b02a5910961",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/query/typed-values.ts",
+          "packages/healthmd-core-ts/tests/query-typed-values.test.ts",
+          "packages/healthmd-core-ts/tests/query-typed-values-vectors.ts",
+          "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json"
+        ],
+        "frozen_vector": {
+          "path": "packages/healthmd-core-ts/tests/query-typed-values-vectors.ts",
+          "sha256": "76f1fa20c3901132824ecd598fd67a5dfbad5741ec3288ff202b9ea7a37674d0",
+          "bytes": 636882
+        },
+        "scope": "Implement exact accepted private interface and action-only test driver. Preserve128wholeexpectedobjects and all source/native evidence. No index/package/lock/exports/guard/cohort/native/plan writes. No compiler/runtime/build/install by writer; coordinator alone executes fast static/selected feedback and later one stable batched producer qualification under reserved resources.",
+        "verification_owner": "/root",
+        "source_review_owner": "/root/typed_values_review",
+        "remaining": "Full implementation/behavioral producer review, successor consumer cohort, full native/Foundation/iOS/source/grant/storage/public qualification remain open."
+      },
+      "Stage2_current_source_freeze": {
+        "path": "/private/tmp/healthmd-query-typed-values-stage2-source-freeze.json",
+        "sha256": "35d866f55f5fa691c4fba5f04494458f0188a452270909e0dc54d45d93a681d9",
+        "bytes": 4216,
+        "status": "annotation_delta_review_accepted_development_execution_passed",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+a5f19694f7c86281fdba608dc0d01f37a49e789a7dcd40ffc4d8a5c859d4ee0b",
+        "scope": "Runtime-preserving explicit never callee and FixedTypedFailure helper annotations accepted independently; actual static and 129 selected tests passed. Full producer batch and consumer qualification pending."
+      },
+      "Stage2_source_independent_review": {
+        "status": "accepted_for_root_development_execution_only",
+        "path": "/private/tmp/healthmd-query-typed-values-stage2-independent-source-review.json",
+        "sha256": "2e0320151c3f018f68c9d8b452ab59208b8991795d8f8a8308857200a58192c1",
+        "bytes": 7508,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+524bacb6127b8dbd1ff44e789ab988364fc561e99560c4bfbe1f91d84e39ba41"
+      },
+      "development_execution_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_development_resources_released",
+        "manifest": {
+          "path": "/private/tmp/healthmd-query-typed-values-focused-third.inputs.json",
+          "sha256": "f1fe51fb7176ca12474d9748e74db1706f9d785b3105b29217c40784d08f3278",
+          "bytes": 195914
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-query-typed-values-focused-third.mjs",
+          "sha256": "42ca1edc32ca7384061c1c295e037f9249db119cad483e05c98727b8d4955310",
+          "bytes": 4406
+        },
+        "review": {
+          "path": "/private/tmp/healthmd-query-typed-values-runScene-error-independent-review.json",
+          "sha256": "3f63970262207ca9d78fb7edb14e2a6d2e432a49dbd36eea206a46c0c25d12a8",
+          "bytes": 3937
+        },
+        "source_fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+a5f19694f7c86281fdba608dc0d01f37a49e789a7dcd40ffc4d8a5c859d4ee0b",
+        "argv": [
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "/Users/codybontecou/dev/health-md/scripts/typescript-dev/dev.mjs",
+          "selected",
+          "core",
+          "tests/query-typed-values.test.ts"
+        ],
+        "deadline_ms": 60000,
+        "cap_bytes": 4194304,
+        "cleanup_ms": 3000,
+        "scope": "Static/selected typed-value development only, freshly pinned desktop draft held after source/test repair but before supplementarydriverappend. No desktop behavior or full qualification."
+      },
+      "development_execution_observation": {
+        "path": "/private/tmp/healthmd-query-typed-values-focused-third.json",
+        "sha256": "29c13b58f7e9b5ebae662ed81ba8bf5b248b67474449576ee7ce484109eefecf",
+        "bytes": 11946,
+        "result": "passed",
+        "wall_ms": 460,
+        "qualification": false,
+        "counts": {
+          "tests": 129,
+          "suites": 0,
+          "pass": 129,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "cleanup_ack": true,
+        "log": {
+          "path": "/private/tmp/healthmd-query-typed-values-focused-third.log",
+          "sha256": "b78392988ffb15255c6f8637a9472e5b570b15b7755e83befb49dbfd92c1b129",
+          "bytes": 10725
+        },
+        "scope": "development_only_static_and_selected_typed_value_tests",
+        "independent_review_status": "accepted_development_only",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-query-typed-values-focused-third-independent-review.json",
+          "sha256": "fb6c58f3c08242c48fad9cf0a97103456a5c05ad6a1825624ee5e7ca12910618",
+          "bytes": 4016,
+          "status": "accepted_development_only",
+          "scope": "129 selected typed tests, exact titles, unchanged typed inputs and finite cleanup; later desktop bytes need fresh static checks. No full producer, consumer, native or public qualification."
+        }
+      },
+      "Stage2_source_freeze_history": [
+        {
+          "path": "/private/tmp/healthmd-query-typed-values-stage2-source-freeze.json",
+          "sha256": "aa66de68a9718e23db85cf83d79e9c4e78ed1714809a9e606fdbf1b6880d4955",
+          "bytes": 1779,
+          "status": "pending_independent_full_source_driver_review",
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+524bacb6127b8dbd1ff44e789ab988364fc561e99560c4bfbe1f91d84e39ba41",
+          "scope": "128wholecases plus raw companion defined; no compiler/runtime execution or qualification."
+        },
+        {
+          "path": "/private/tmp/healthmd-query-typed-values-stage2-source-freeze.json",
+          "sha256": "af9385cd5a365db21400ac02ec068763816f7d74ef5d6ce1d8e78ad85b75f864",
+          "bytes": 3015,
+          "status": "pending_minimal_never_type_delta_review",
+          "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+c088cc86473557dce1d5295e36d501af45d7f3aab6517295d719f1a3fce949d8",
+          "scope": "Explicit existingnever callee type only; runtime guard/test/vector preserved; next static/selected run pending."
+        }
+      ],
+      "development_execution_history": [
+        {
+          "authorization": {
+            "owner": "/root",
+            "status": "terminal_static_failure_resources_released",
+            "manifest": {
+              "path": "/private/tmp/healthmd-query-typed-values-focused-first.inputs.json",
+              "sha256": "ad625dece9170aef8b2a0726cbb73a80917812f74f370c1cc31702c8e2c4bb0c",
+              "bytes": 195913
+            },
+            "harness": {
+              "path": "/private/tmp/healthmd-query-typed-values-focused-first.mjs",
+              "sha256": "dd37302ebbad3330120291ed7efac5e9a5b8f574f32913b83f318ccd98c7a76c",
+              "bytes": 4406
+            },
+            "argv": [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "/Users/codybontecou/dev/health-md/scripts/typescript-dev/dev.mjs",
+              "selected",
+              "core",
+              "tests/query-typed-values.test.ts"
+            ],
+            "deadline_ms": 60000,
+            "cap_bytes": 4194304,
+            "cleanup_ms": 3000,
+            "scope": "Only static/selected typed-value development feedback; full stable producer batch remains pending. Core writer files held until terminal."
+          },
+          "observation": {
+            "path": "/private/tmp/healthmd-query-typed-values-focused-first.json",
+            "sha256": "ed6c216dec63e74b619e7ee71362b19ce5e4a830fb5f6f44e537ef0e8a92c1c9",
+            "bytes": 2628,
+            "result": "failed",
+            "wall_ms": 229,
+            "qualification": false,
+            "source_after_matches": true,
+            "cleanup_ack": true,
+            "diagnostics": [
+              "TS2538 typed-values.ts75 unchecked index may be undefined",
+              "TS18047 typed-values.ts86 regex match may be null"
+            ],
+            "scope": "Development static source check only; no runtime tests, full producer or consumer check executed."
+          }
+        },
+        {
+          "authorization": {
+            "owner": "/root",
+            "status": "terminal_static_failure_resources_released",
+            "manifest": {
+              "path": "/private/tmp/healthmd-query-typed-values-focused-second.inputs.json",
+              "sha256": "80d366de89dab6ce5764d1ed759d64c5c1c38776e36ed073818adfe5372e21f8",
+              "bytes": 195914
+            },
+            "harness": {
+              "path": "/private/tmp/healthmd-query-typed-values-focused-second.mjs",
+              "sha256": "43e5ba5a99b6db2cd3a2e768398aa5297f4a12d5f27a1850afe81eb66bd33be8",
+              "bytes": 4407
+            },
+            "review": {
+              "path": "/private/tmp/healthmd-query-typed-values-explicit-never-independent-review.json",
+              "sha256": "0a026d5097960de93e7c5b539d43c785acf87caf27067011dac573c06465ce07",
+              "bytes": 4181
+            },
+            "source_fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+c088cc86473557dce1d5295e36d501af45d7f3aab6517295d719f1a3fce949d8",
+            "argv": [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "/Users/codybontecou/dev/health-md/scripts/typescript-dev/dev.mjs",
+              "selected",
+              "core",
+              "tests/query-typed-values.test.ts"
+            ],
+            "deadline_ms": 60000,
+            "cap_bytes": 4194304,
+            "cleanup_ms": 3000,
+            "scope": "Only static/selected typed-value development feedback; full stable producer batch remains pending. Core writer files held until terminal."
+          },
+          "observation": {
+            "path": "/private/tmp/healthmd-query-typed-values-focused-second.json",
+            "sha256": "e51ac0d2e533f54e7184b3fbfb3f604c2e235cdafac2261debd157a2316097cb",
+            "bytes": 2629,
+            "result": "failed",
+            "wall_ms": 396,
+            "qualification": false,
+            "source_after_matches": true,
+            "cleanup_ack": true,
+            "diagnostics": [
+              "TS2375 query-typed-values.test.ts294 declarednever error channel omitsFixedTypedFailure",
+              "TS377003 Effect missingEffectError at same helper return"
+            ],
+            "scope": "Static sources passed; static tests failed before runtime. No runtime or fullsuite executed."
+          }
+        }
+      ],
+      "batched_core_execution_authorization": {
+        "owner": "/root",
+        "status": "terminal_pass_resources_released",
+        "manifest": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.inputs.json",
+          "bytes": 291459,
+          "sha256": "faa3eb804386d40693451d172a5d1c2c3525976537dfa5ec3c09c82178415f14"
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.mjs",
+          "bytes": 4452,
+          "sha256": "21b43dd4c9b3da0649dd381e0b280e4e6c777a10034dfff58fbb4c93b4c4b6b7"
+        },
+        "review": {
+          "path": "/private/tmp/healthmd-desktop-Cause-portability-admission-independent-review.json",
+          "bytes": 5325,
+          "sha256": "845e2f7970021bcf2ea4a83e8d134b9e77e27f123940816a2eddb4bfd89b1991"
+        },
+        "argv": [
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+          "run",
+          "check"
+        ],
+        "cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+        "deadline_ms": 300000,
+        "cap_bytes": 16777216,
+        "cleanup_ms": 3000,
+        "scope": "Fresh full check after actual failing boundary gate and exact Scope/Cause source/policy repair; source64 current; all1544whole tests plus unchanged19boundary negatives required."
+      },
+      "batched_core_execution_observation": {
+        "path": "/private/tmp/healthmd-query-usage-batched-core-second.json",
+        "sha256": "344be616d50aa0f2a596ba263ebdfc0074d8f3e7a6d0f896683f6cb26e0cd484",
+        "bytes": 120356,
+        "result": "accepted_private_portable_synthetic_producer_evidence",
+        "wall_ms": 3313,
+        "counts": {
+          "tests": 1544,
+          "suites": 0,
+          "pass": 1544,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "cleanup_ack": true,
+        "log": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second.log",
+          "sha256": "5beec57e11488ada14cff3e8c06b27cb6b9fb2597fc96b4781ea5f54c88e5162",
+          "bytes": 114218
+        },
+        "core_output_count": 59,
+        "qualification": false,
+        "scope": "Actual complete core check passed; producer receipt acceptance and successor CLI cohort/consumer checks remain pending.",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+          "bytes": 6318,
+          "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b"
+        }
+      },
+      "batched_core_execution_history": [
+        {
+          "authorization": {
+            "owner": "/root",
+            "status": "terminal_portability_failure_resources_released",
+            "task_ids": [
+              "QUERY-TYPED-VALUES",
+              "USAGE-DESKTOP-SESSION-PROJECTION"
+            ],
+            "manifest": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.inputs.json",
+              "bytes": 290387,
+              "sha256": "729412e123d718aae46f923862e79030ed4ac2c39ee7b74e8515e81f3510c56c"
+            },
+            "harness": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.mjs",
+              "bytes": 4451,
+              "sha256": "33730a4c50c5db72da51a01154581af9252007504a8652f6c20fcf7a540bec42"
+            },
+            "argv": [
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+              "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+              "run",
+              "check"
+            ],
+            "cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+            "deadline_ms": 300000,
+            "cap_bytes": 16777216,
+            "cleanup_ms": 3000,
+            "scope": "One stable combined core full check with actual current64 source map and independently reviewed source/selected execution; immutable1359 historical+129typed+56desktop whole titles. Exact new output maps collected after build; successor CLI cohort remains a separate subsequent gate."
+          },
+          "observation": {
+            "path": "/private/tmp/healthmd-query-usage-batched-core-first.json",
+            "sha256": "635298b1c4a0b58f2989f624b8b0c17e6bc4c4666b8e2ddd88b931a4de540b2c",
+            "bytes": 120198,
+            "result": "failed_portability_gate_after_all_runtime_tests_passed",
+            "wall_ms": 2824,
+            "counts": {
+              "tests": 1544,
+              "suites": 0,
+              "pass": 1544,
+              "fail": 0,
+              "cancelled": 0,
+              "skipped": 0,
+              "todo": 0
+            },
+            "source_after_matches": true,
+            "cleanup_ack": true,
+            "log": {
+              "path": "/private/tmp/healthmd-query-usage-batched-core-first.log",
+              "sha256": "1ca2888771affcd407cc8e08d124165f752ac6e814ace235edab6877e46a44f6",
+              "bytes": 120429
+            },
+            "qualification": false,
+            "diagnostics": [
+              "portable_forbidden_import effect/Scope in each new source module"
+            ]
+          }
+        }
+      ],
+      "final_receipt": {
+        "path": "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json",
+        "sha256": "8e92cf61648fd47396031dfb1077e755828a726bb8db665fe03d3f100eae1789",
+        "bytes": 270016
+      },
+      "accepted_source_execution_review": {
+        "path": "/private/tmp/healthmd-query-usage-batched-core-second-independent-review.json",
+        "bytes": 6318,
+        "sha256": "d4aba019b26595b0dbed7ef29d263f21b2783caf7f873595ded1d9abc99e9d1b"
+      },
+      "final_metadata_review": {
+        "path": "/private/tmp/healthmd-query-usage-final-producer-receipt-root-review.json",
+        "bytes": 2026,
+        "sha256": "a81c09564dc7cbf7f056683cf4b20695a1067617862f88af55894824f3e1494f"
+      },
+      "final_receipt_schema_review": {
+        "path": "/private/tmp/healthmd-query-usage-final-producer-receipt-schema-root-review.json",
+        "bytes": 1691,
+        "sha256": "c096491663aa41283b05c012ea0ea01aadecd7e08a3fb66e675e14cd1871b36c"
+      }
     },
     {
       "id": "QUERY-COVERAGE-CONTRACT",
@@ -34200,7 +35304,74 @@
         "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
         "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
       },
-      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs.",
+      "profile_independent_preimage_requirement": {
+        "status": "pending_independent_coordinator_amendment_review",
+        "basis": "Accepted SPLIT-QUERY-METRIC-SERIES pure_metric_contract_dependency_resolution requires shared cursors to admit the metric operation canonical preimage without accepting a coverage-only token.",
+        "original_card_contract_preserved": {
+          "outcome": "Pure owned logical-query/dataset/install binding preimage and cursor structure. Trusted coarse CursorAuthority accepts exact owned payload canonicalbytes and returns bounded sign/verify result; deterministic fake vectors expected exact input+fixed failure before implementation. Preserve native payload/envelope/decode unknown-key and base64 behavior; real HMAC/SHA/key custody/constant-time auth native successor. Candidate caller/source/purpose/frontier binding is trusted host context, not invented native wire fields or JSON flags.",
+          "prerequisites": [
+            "QUERY-COVERAGE-CONTRACT"
+          ],
+          "acceptance": [
+            "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+            "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+            "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+            "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+            "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+          ],
+          "verification": [
+            {
+              "cwd": "packages/healthmd-core-ts",
+              "argv": [
+                "npm",
+                "run",
+                "check"
+              ],
+              "availability": "existing",
+              "executed_during_planning": false,
+              "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+              "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+            }
+          ],
+          "allowed_paths": [
+            "packages/healthmd-core-ts/src/query/cursor-binding.ts",
+            "packages/healthmd-core-ts/tests/query-cursor-binding.test.ts",
+            "packages/healthmd-core-ts/tests/query-cursor-binding-vectors.ts",
+            "docs/migration/effect-refactor/receipts/QUERY-CURSOR-BINDING.json"
+          ],
+          "shared_resources": [
+            "private-cursor-binding-interface",
+            "core-component-build"
+          ]
+        },
+        "source": {
+          "path": "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+          "sha256": "54b13797c7f94170aae77d33bd89a27fdb8a9b3e6c03fce796df2eefd01141ee",
+          "bytes": 60997,
+          "range_start": 1468,
+          "range_end": 1547,
+          "range_sha256": "c071f88bf71ab38ed8133900900364ed91658fa90b2b2af08f2078e4cae477b6",
+          "range_bytes": 2894
+        },
+        "requirements": [
+          "Freeze one profile-independent owned canonical query-preimage boundary before implementation. Coverage and metric operations supply their own independently qualified canonical request bytes through this boundary; cursor module does not decode or reconstruct an operation request.",
+          "Preimage ownership must bind the originating operation/profile, captured original Scope/callback/current trusted caller/source/detail/destination/purpose/grant/frontier context. A caller string or structurally similar coverage token is not admission. Define owned source-handoff/current/post-await/expiry semantics and bounded immutable byte access explicitly at Stage1.",
+          "Retain actual native request fingerprint fields and exact source canonical bytes, excluding page.cursor and including page limits. Preserve CursorPayload offset/query/dataset/binding and CursorEnvelope payload/mac; no new private grant/profile/frontier fields are inserted into native wire JSON.",
+          "Coarse captured digest/sign/verify capabilities operate on actual owned byte preimages, using independently derived fixed synthetic inputs only until separately qualified real SHA/HMAC/native canonical implementations exist. No expected-value lookup, fake crypto parity or canonical-profile substitution.",
+          "Freeze full positive and negative cases for at least coverage and metric preimages, wrong operation/profile/owner/callback/expired scope, forged caller bytes and revocation/frontier mismatch. Query-family modules retain their own full request grammar and page bounds; cross-operation cursors reject under the same real private binding interface."
+        ],
+        "scope": "Coordinator planning amendment only; no task claim, source implementation, current native profile/wire change, full crypto/grant/public qualification or precursor dependency completion."
+      },
+      "profile_independent_preimage_amendment_review": {
+        "status": "accepted_planning_only",
+        "reviewer": "/root/effect_baseline_review",
+        "path": "/private/tmp/healthmd-query-cursor-profile-independent-amendment-effect-baseline-review.json",
+        "sha256": "9df5563a8e15b6bfb345f98f87090f8345d4a72b3034d44ba9dba4a198e80f82",
+        "bytes": 3390,
+        "canonical_field_sha256": "f14fd00b4034e36fff3ec1b0325b03d4342b92a17ff96ee6ca752e9686b85891",
+        "scope": "No dependency completion or implementation/execution admission. Full shared interface and both operation families literal review remain required."
+      }
     },
     {
       "id": "QUERY-CONTEXT-COVERAGE-LENS",
@@ -42763,6 +43934,312 @@
         "receipts": []
       },
       "priority": 107
+    },
+    {
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "coverage": [
+        "C02",
+        "C03",
+        "K01",
+        "C14",
+        "C16"
+      ],
+      "risk_ids": [
+        "F05",
+        "F15"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private query and usage cohort successor"
+      },
+      "proof_class": "portable_synthetic",
+      "reviewer_role": "Independent full source/cohort/authority/guard/consumer-contract reviewer; ROOT final task admission and acceptance.",
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "credit_policy": "Credit the independently accepted unchanged current batched typed-value/desktop producer full check; historical1359 producer alone cannot qualify the changed batch."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--offline",
+            "--install-links",
+            "--engine-strict",
+            "--ignore-scripts",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing",
+          "required_runtime": "Pinned Node24.21.0/npm11.19.0, existing approvedcache, ignorescripts curatedenv, emptyconfigs/tool+archive proof; bounded root execution after separate clearance."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Actual frozen complete CLI tests/negativecases/module identity; do not forecast a count while MCP author source may change."
+        }
+      ],
+      "consumers": "Private CLI/MCP portable candidate module source admission only; Catalog private APIs remain unexported, common operation/source/grant/public/runtime/transport bindings separately owned.",
+      "deletion_gate": "No actual source grants, payload reads, storage transactions, native/public product qualification, donor acquisition, Rust retirement, release/adoption/lifecycle authority.",
+      "id": "CORE-COHORT-QUERY-USAGE",
+      "title": "Admit the complete typed-value and desktop-projection core batch to the CLI candidate",
+      "outcome": "One immutable complete successor source/module cohort admits the independently accepted private typed-value and desktop-session producer batch; the historical source-catalog authority remains preserved.",
+      "status": "done",
+      "claim": null,
+      "blocker": null,
+      "priority": 107,
+      "prerequisites": [
+        "QUERY-TYPED-VALUES",
+        "USAGE-DESKTOP-SESSION-PROJECTION",
+        "CORE-COHORT-SOURCE-CATALOG"
+      ],
+      "required_decisions": [],
+      "read_required": [
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "scripts/typescript-dev/README.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json",
+        "docs/migration/effect-refactor/receipts/USAGE-DESKTOP-SESSION-PROJECTION.json",
+        "apps/cli/scripts/check-candidate.mjs"
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json"
+      ],
+      "shared_resources": [
+        "private-core-cohort-query-usage-interface",
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "coordinator_verification_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "resource_stage_rules": [
+        "Stage1 may claim only new cohort and own partial receipt after both producer implementations and their full batched component check are independently accepted. No guard edit, install or build from Stage1 alone.",
+        "Root separately reserves core build and CLI build/qualified-core-input resources for finite integration. Use fast static/selected lanes for iteration; credit unchanged passing relevant full checks."
+      ],
+      "fixture_inputs": "Preserve every whole historical filesystem mutation object and accepted source-catalog authority. Add independently source-derived full literal mutations for both new modules/tests/vectors/receipts and actual source/module delta; enumerate the entire closure before guard code.",
+      "acceptance": [
+        "Both producer receipts must be passed and independently accepted with their exact current source/patch fingerprints and the actual full batched core check. Do not treat native witness observations as complete native profile admission. Freeze the complete actual source, output, packed-module, tool/runtime/lock and receipt maps before guard changes; no forecast counts or discovery-generated acceptance.",
+        "Retain historical source-catalog and earlier cohort authorities unchanged, including all456 whole prior filesystem cases and their actual normal versus historical rejection semantics. New cohort authenticates the entire current source/module set, not only the two new modules. No own receipt reverse-pin.",
+        "Guard uses the same validators on normal and actual mutation paths. New source/module/receipt/cohort malformed, missing, tampered, extra and symlink cases must run on owned disposable copies; IDs and expected fields never select acceptance behavior. Native, archive, grant, collector, public and retirement qualification stay false for these private modules.",
+        "Credit the already accepted batched full core producer check only while all relevant source/output/tool/runtime/lock inputs stay unchanged. Run fast static and selected tests during repairs; rerun full producer only after relevant change or unresolved failure.",
+        "After stable guard/source/cohort freeze, perform or independently credit the exact bounded offline scripts-disabled CLI installation and run the full CLI check with complete installed graph, one Effect identity, source/module preservation, ordered mutation outcomes, lossless logs and acknowledged cleanup. Never admit unfinished core changes via the historical source-catalog cohort."
+      ],
+      "rollback": "Restore the historical source-catalog consumer binding only with its exact matching core inputs and packed modules; preserve new private sources for a reviewed successor or revert them explicitly. No implicit extra-input bypass.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json",
+      "review": {
+        "evidence": {
+          "bytes": 7482,
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second-independent-runtime-review.json",
+          "sha256": "4b6b205eaba44d817bf83e9ac624ac15c7dd94006468ec89da1b2db9a1453904"
+        },
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+7fc662dd6fccadb9e1f6400594b0f9c9c978c87943d09eec74080df14aa29f40",
+        "qualification": "Exact private portable synthetic TypeScript CLI consumer cohort at the repaired three-source-path fingerprint only; actual ordinary authority,617 negative scenes,12 positive controls and721 component tests now have complete accepted evidence. Final own receipt still requires faithful evidence/target/schema/history reconciliation.",
+        "reviewer": "independent desktop_repair_review",
+        "status": "accepted"
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json"
+        ]
+      },
+      "coordinator_card_admission": {
+        "status": "independent_card_review_accepted_before_claim",
+        "source": "32f38da439c0489648e99933c99d88805b76ca7b",
+        "scope": "Successor integration only after current two domain producers are accepted; no execution authority from this planning card."
+      },
+      "read_after_prerequisite_completion": [
+        "packages/healthmd-core-ts/src/query/typed-values.ts",
+        "packages/healthmd-core-ts/src/usage-desktop/session-projection.ts"
+      ],
+      "card_review_before_claim": {
+        "status": "accepted_preclaim_planning_only",
+        "card_sha256": "813c701eb868510d4cdbe674db1d1008fbb85ba555d324d5f58644059d76c974",
+        "reviewer": "/root/effect_baseline_review",
+        "path": "/private/tmp/healthmd-core-cohort-query-usage-card-effect-baseline-review.json",
+        "sha256": "4283fcfdfc87c919e6e2c672f5bf2d41a065e044cceed77ed0f0457cc991c142",
+        "bytes": 2512,
+        "scope": "No claim, Stage1 execution, builder reservation, cohort authority or producer acceptance inferred."
+      },
+      "Stage1_authorization": {
+        "owner": "/root",
+        "status": "bounded_cohort_and_partial_receipt_authorized",
+        "scope": "Exactly new cohort and own partial receipt after accepted current1544producer and exact final producer receipts. Freeze complete current64inputs/59outputs/40pack-eligible files and source-derived full mutation corpus before guardcode. Preserve all456whole historical cases, reconstruct old boundary script via authenticated immutable literal rather than livefile. No ownreversepin, no author guard/install/build/runtime/native/public writes."
+      },
+      "Stage1_review": {
+        "status": "accepted_complete_pre_code_cohort_and_literal_strategy_only",
+        "reviewer": "/root/desktop_repair_review",
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+a006edbe5577fc46cfb1057cf67591f6aed8b25d0c187b05ccfd950b3a711c45",
+        "path": "/private/tmp/healthmd-core-cohort-query-usage-stage1-independent-review.json",
+        "sha256": "669ac8d7a5d245ef6d2c38e52e15cad2a3c7379bb957cef80acc8692e881fb29",
+        "bytes": 8771
+      },
+      "Stage2_authorization": {
+        "owner": "/root",
+        "status": "bounded_guard_and_docs_implementation_authorized",
+        "write_paths": [
+          "docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json",
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json"
+        ],
+        "frozen_cohort_sha256": "a006edbe5577fc46cfb1057cf67591f6aed8b25d0c187b05ccfd950b3a711c45",
+        "scope": "Implement exact accepted617negative+12positive action strategies with common normal/mutation validators, preserve456historical objects/profiles and authenticated old boundaryscript reconstruction. Frozen cohort unchanged. Only guard/docs/ownpartialreceipt edits; no core/dependency/package/lock/install/compiler/runtime/build/plan writes. Root alone reserves finite CLIbuilder/qualified-core-input resources after stable reviewed source freeze."
+      },
+      "Stage2_source_freeze": {
+        "path": "/private/tmp/healthmd-core-cohort-query-usage-stage2-source-freeze.json",
+        "sha256": "d8190b73c994a412e7701315de726b0d072f834912a44a4eb0a02305ac3b570f",
+        "bytes": 915,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+f3e7990f6911dac89d42d0c7ed62796ccc72df6114ca4f23be9aade1eb28786d",
+        "status": "superseded_by_accepted_stdout_repair_fingerprint_preserved_in_history"
+      },
+      "Stage2_review": {
+        "status": "accepted_for_root_finite_syntax_static_offline_install_full_cli_check",
+        "path": "/private/tmp/healthmd-core-cohort-query-usage-stage2-independent-review.json",
+        "sha256": "fc75ff0faf18fea1dc077c69d12639b9260102b322b195d72ce0c47de70404e2",
+        "bytes": 8262,
+        "fingerprint": "32f38da439c0489648e99933c99d88805b76ca7b+f3e7990f6911dac89d42d0c7ed62796ccc72df6114ca4f23be9aade1eb28786d"
+      },
+      "integration_execution_authorization": {
+        "owner": "/root",
+        "status": "complete_accepted_resources_released",
+        "scope": "Stable source/guard/cohort independently reviewed. Core1544evidence credited unchanged; only finite CLI lanes under recorded current149CLI/64core/59outputs/40packed-eligible617negatives12positives. No new source writer or core rerun.",
+        "finite_install_manifest": {
+          "path": "/private/tmp/healthmd-query-usage-cli-install-first.inputs.json",
+          "sha256": "40dacf90ebbf2521161cd9ea2086747684d86dc42ef552157aacc3d9c9d43b1a",
+          "bytes": 194367
+        },
+        "finite_install_harness": {
+          "path": "/private/tmp/healthmd-query-usage-cli-install-first.mjs",
+          "sha256": "0f8ae8a60a0a075247a0f5f3a4dd8f7d5710ae536de04e045d58aa922eee1a51",
+          "bytes": 5334
+        },
+        "preexecution_review": {
+          "path": "/private/tmp/healthmd-query-usage-cli-two-phase-preexecution-independent-review.json",
+          "sha256": "73784ca4f76021f0efcd77ecc29b5e378fa174033a8e3d6d3cc88badf9547063",
+          "bytes": 7201,
+          "status": "accepted_install_then_full_check_conditionally_on_install_success"
+        },
+        "install_observation": {
+          "path": "/private/tmp/healthmd-query-usage-cli-install-first.json",
+          "sha256": "0ba07a97fed258a1f74aadb07a7b7ac6c9d33bbfb93f3a2ba1c5c8e7105999df",
+          "bytes": 19668,
+          "result": "passed",
+          "wall_ms": 1474
+        },
+        "first_check_failure": {
+          "result": "failed_evidence_parsing",
+          "log": {
+            "path": "/private/tmp/healthmd-query-usage-cli-check-first.log",
+            "bytes": 207173,
+            "sha256": "412cb8662fa5bae9ca9d31312b5b3ec56f4eac344a4400c53ed3ee06667cc174"
+          },
+          "observed_tests": 721,
+          "observed_pass": 721,
+          "classification": "async_stdout_summary_interleaved_with_inherited_child_build_output",
+          "limits": "No full acceptance or complete boundary parsing from this run; harness threw before report and original supervisor metadata not independently recoverable."
+        },
+        "output_repair_freeze": {
+          "path": "/private/tmp/healthmd-query-usage-cli-output-repair-freeze.json",
+          "bytes": 846,
+          "sha256": "76292f9dcbd4952ffd2b7afa6e0449ad04a6e8e78edaba22c2a12ffb112a747d"
+        },
+        "first_check_failed_inspection": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-first.failed-parse-inspection.json",
+          "bytes": 1167,
+          "sha256": "e15b281ca16c2d5219505fafa20159b984263ac0575cacdd0c76af7de1a99d1a"
+        },
+        "repair_independent_review": {
+          "path": "/private/tmp/healthmd-query-usage-cli-output-repair-independent-review.json",
+          "sha256": "234a3d7540ece629455263c0f2a5a0e47243b664b1a54e029e090ed208ea44b0",
+          "bytes": 6935
+        },
+        "second_check_harness": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second.mjs",
+          "sha256": "4b223eeca6f7981a81615f78bde0c89ae072413d3209f02bd4ba3578efb707f5",
+          "bytes": 7254
+        },
+        "second_check_manifest": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second.inputs.json",
+          "sha256": "9cde7e1dfa3165786a902ab01911d10c2c7a7f3fc9f60cfd6d0fa9e1ee3d1df4",
+          "bytes": 194774
+        },
+        "second_check_clearance": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second-final-preexecution-independent-review.json",
+          "bytes": 1919,
+          "sha256": "c78615ff45781f17c3a396d4aa48d86fb0a7e975aee4e2cda10f10d6915665bd"
+        },
+        "second_check_observation": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second.json",
+          "sha256": "b7e951543b664854f30603604c85e4dc94eac69c678ce5d2338d3ed7da34dcdf",
+          "bytes": 252393
+        },
+        "repair_development_observation": {
+          "path": "/private/tmp/healthmd-query-usage-cli-development-second.json",
+          "sha256": "61ee9075a15fd146d1c77e8cd41b334a2b511a74e557a1bf49625f167b0083ae",
+          "bytes": 3186
+        },
+        "complete_producer_runtime_credit_postflight": {
+          "path": "/private/tmp/healthmd-query-usage-core-runtime-credit-postflight.json",
+          "bytes": 629,
+          "sha256": "b35eb4d3aef7786e7338435ed8e159a2a4858283efc18c26dd7939a361927c77"
+        },
+        "runtime_independent_review": {
+          "path": "/private/tmp/healthmd-query-usage-cli-check-second-independent-runtime-review.json",
+          "sha256": "4b6b205eaba44d817bf83e9ac624ac15c7dd94006468ec89da1b2db9a1453904",
+          "bytes": 7482
+        }
+      },
+      "integration_development_observation": {
+        "result": "passed",
+        "scope": "syntax_and_static_only_no_runtime_or_admission",
+        "report": {
+          "path": "/private/tmp/healthmd-query-usage-cli-development-first.json",
+          "sha256": "893a27a79166a20f02b92f54881fda0ef7ae16a826b2feb6afc74982250c9b7e",
+          "bytes": 3184
+        },
+        "wall_ms": 261
+      },
+      "final_receipt_independent_review": {
+        "path": "/private/tmp/healthmd-core-cohort-query-usage-final-receipt-independent-review.json",
+        "sha256": "e93df4841af6571aa3b1d35dcb82693dad281fefe055d6b232884e2a3291cf5c",
+        "bytes": 4902
+      },
+      "final_receipt_root_metadata_review": {
+        "path": "/private/tmp/healthmd-query-usage-cohort-final-receipt-root-metadata-review.json",
+        "sha256": "76d132e9b7f2208a920e26606e57e68814e51b8d4b4d2ef2e804532b887baf1e",
+        "bytes": 633
+      }
     }
   ]
 }
