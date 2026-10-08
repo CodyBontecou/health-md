@@ -19,6 +19,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.TimeFormatPreference
+import com.healthmd.domain.model.UnitPreference
 import com.healthmd.domain.model.BodyData
 import com.healthmd.domain.model.HeartData
 import com.healthmd.domain.model.NutritionData
@@ -124,6 +125,48 @@ class HostCoreDailyAggregatePlannerTest {
         val text = result.plan.items.single().content.decodeToString()
         assertThat(text).contains("weight_kg: 72.125\n")
         assertThat(text).contains("schema_profile: android-sleep-v6\n")
+    }
+
+    @Test
+    fun requestedDisplayUnitsNeverRelabelCanonicalMachineQuantities() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val data = HealthData(LocalDate.of(2026, 11, 1), body = BodyData(weight = 72.125, height = 1.75125))
+        val jsonDocuments = mutableListOf<String>()
+        for (preference in UnitPreference.entries) {
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                formatCustomization = FormatCustomization(unitPreference = preference),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("weight", "height")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(data, settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("host-display-units", "host-display-units-session"))
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot read ambient clock") }).plan(request)
+            val markdown = result.plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            val bases = result.plan.items.single { it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            for (document in listOf(markdown, bases)) {
+                assertThat(document).contains("weight_kg: 72.125\n")
+                assertThat(document).contains("height_m: 1.75125\n")
+            }
+            val csv = result.plan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
+            assertThat(csv).contains(",Weight,72.125,kg,")
+            assertThat(csv).contains(",Height,1.75125,m,")
+            assertThat(csv).contains(",unit_system,metric,")
+            if (preference == UnitPreference.IMPERIAL) {
+                assertThat(markdown).contains("159.0 lbs")
+                assertThat(markdown).contains("5'8\"")
+            } else {
+                assertThat(markdown).contains("72.1 kg")
+                assertThat(markdown).contains("175.1 cm")
+            }
+            val json = result.plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()
+            val root = Json.parseToJsonElement(json).jsonObject
+            assertThat(root.getValue("body").jsonObject.getValue("weight").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
+            assertThat(root.getValue("body").jsonObject.getValue("height").jsonPrimitive.content.toDouble()).isEqualTo(1.75125)
+            assertThat(root.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content })
+                .containsExactly("weight_kg", "kg", "height_m", "m")
+            jsonDocuments.add(json)
+        }
+        assertThat(jsonDocuments.distinct()).hasSize(1)
     }
 
     @Test

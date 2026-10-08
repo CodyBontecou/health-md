@@ -455,8 +455,45 @@ pub struct RenderMetric {
     pub public_value: Value,
     pub display_value: String,
     pub unit: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_human_presentation"
+    )]
+    pub human_presentation: Option<RenderHumanPresentation>,
     pub timestamp: Option<String>,
     pub ordinal: u32,
+}
+
+/// Successor-only human prose; never used as CSV, frontmatter or JSON authority.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RenderHumanPresentation {
+    pub display_value: String,
+    pub unit: String,
+}
+
+fn deserialize_human_presentation<'de, D>(
+    deserializer: D,
+) -> Result<Option<RenderHumanPresentation>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    RenderHumanPresentation::deserialize(deserializer).map(Some)
+}
+
+impl RenderMetric {
+    pub(crate) fn human_display_value(&self) -> &str {
+        self.human_presentation
+            .as_ref()
+            .map_or(&self.display_value, |human| &human.display_value)
+    }
+
+    pub(crate) fn human_unit(&self) -> &str {
+        self.human_presentation
+            .as_ref()
+            .map_or(&self.unit, |human| &human.unit)
+    }
 }
 
 /// One planned individual Markdown entry.
@@ -1203,6 +1240,13 @@ fn validate_day(
             validate_small_text(text)?;
         }
         validate_optional_small_text(&metric.unit)?;
+        if let Some(human) = &metric.human_presentation {
+            if !config.profile.is_wake_date() || !metric.public_value.is_number() {
+                return Err(RenderError::PresentationMismatch);
+            }
+            validate_small_text(&human.display_value)?;
+            validate_optional_small_text(&human.unit)?;
+        }
         for path in &metric.json_path {
             validate_small_text(path)?;
         }
@@ -2132,6 +2176,27 @@ mod tests {
                 SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
                     unreachable!("successors have separate contract cases")
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn historical_profiles_reject_successor_human_presentation_including_null() {
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AndroidFrozenV4,
+            SemanticProfile::AndroidAnalyticalV5,
+        ] {
+            for human in [json!({"display_value":"159.0", "unit":"lbs"}), Value::Null] {
+                let (config, semantic) = input_bytes(profile);
+                let mut session = RenderSession::from_json(&config, &semantic).unwrap();
+                let mut batch = render_batch();
+                batch["days"][0]["metrics"][0]["human_presentation"] = human;
+                assert!(
+                    session
+                        .process_batch(&serde_json::to_vec(&batch).unwrap(), || false)
+                        .is_err()
+                );
             }
         }
     }

@@ -9,7 +9,6 @@ import com.healthmd.data.export.ObsidianBasesExporter
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.SleepDayAttribution
-import com.healthmd.domain.model.UnitPreference
 import org.junit.Assert.assertThrows
 import java.time.ZoneId
 import com.healthmd.domain.model.DailyNoteInjectionSettings
@@ -103,7 +102,6 @@ class DailyAggregateExportPlannerTest {
             settings.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
             settings.copy(executionSleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
             settings.copy(includeGranularData = true),
-            settings.copy(formatCustomization = settings.formatCustomization.copy(unitPreference = UnitPreference.IMPERIAL)),
             settings.copy(formatCustomization = settings.formatCustomization.copy(includeLegacyAndroidAliases = true)),
         )
         for (candidate in incompatible) {

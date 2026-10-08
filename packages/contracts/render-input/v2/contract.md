@@ -24,6 +24,12 @@ Successor decimal public values are parsed with correctly rounded binary64 conve
 
 Artifact plan v2 has the same bounded destination-neutral item grammar and write operations as v1, with the successor-only profile set. Native code must verify the plan/item before any side effect. Existing fingerprint/transcript, raw source ownership and opaque committed spool bytes are unaffected.
 
+## Human presentation and canonical machine values
+
+A successor metric may carry an optional `human_presentation` object with required `display_value` and `unit` strings. It is an internal native presentation fact for numeric metrics, used only in Markdown prose and custom-template metric sections. The normal `public_value`, `display_value` and `unit` remain the attested canonical machine projection used by JSON, frontmatter/Bases and CSV. CSV successor metadata declares the canonical metric unit system independently of the requested human preference. A formatted height in centimeters or feet/inches must never label a canonical meter value as those units.
+
+The field is omitted when absent; explicit null, incomplete objects and unknown members reject. Historical render-input-v1 profiles reject the field and retain their exact grammar/bytes. This is an addition to the unshipped v2 preparation grammar, with no new daily profile, artifact-plan or direct-wire identity. Earlier draft receivers may reject it and must not be treated as negotiated successor consumers. Android's concrete summary planner now prepares requested native display units while retaining canonical machine quantities. Apple's human projection for the new handoff remains `planned`, with target **Issue #104 native requested-presentation qualification**; its existing canonical projections are unchanged. Detail/workout/provider coverage, production negotiation and device qualification remain separate enabling obligations.
+
 ## Managed Markdown merge
 
 Successor merge is separate from the frozen historical policies. Both incoming and nonempty existing documents must declare the same complete source/profile/version/clock/attribution/owner/clipping authority and use the same metadata surface. An empty target accepts a valid new successor document. Unversioned or historical content, conflicting or ambiguous authority, Android Core aliases and changing metadata-on/off surfaces fail closed. An explicit user-selected overwrite is a different operation; merge never grants migration approval or silently restores disabled frontmatter.

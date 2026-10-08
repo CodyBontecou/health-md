@@ -330,11 +330,13 @@ fn append_metric_line(
     write!(
         output,
         "{} **{}:** {}",
-        config.markdown.bullet, metric.label, metric.display_value
+        config.markdown.bullet,
+        metric.label,
+        metric.human_display_value()
     )
     .map_err(|_| RenderError::SerializationFailed)?;
-    if !metric.unit.is_empty() {
-        write!(output, " {}", metric.unit).map_err(|_| RenderError::SerializationFailed)?;
+    if !metric.human_unit().is_empty() {
+        write!(output, " {}", metric.human_unit()).map_err(|_| RenderError::SerializationFailed)?;
     }
     output.push('\n');
     Ok(())
@@ -386,7 +388,9 @@ fn render_custom_template(
             .map(|metric| {
                 format!(
                     "- **{}:** {} {}",
-                    metric.label, metric.display_value, metric.unit
+                    metric.label,
+                    metric.human_display_value(),
+                    metric.human_unit()
                 )
                 .trim_end()
                 .to_owned()
@@ -447,14 +451,7 @@ pub(crate) fn render_csv(
             ("schema", "healthmd.health_data"),
             ("schema_version", version.as_str()),
             ("schema_profile", profile.public_profile_id()),
-            (
-                "unit_system",
-                if profile.is_apple() {
-                    "metric"
-                } else {
-                    config.unit_system.id()
-                },
-            ),
+            ("unit_system", "metric"),
             (
                 "time_context.calendar_timezone",
                 config.calendar_time_zone.as_str(),

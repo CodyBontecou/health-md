@@ -379,7 +379,12 @@ object HealthMdRenderInputAdapter {
             val semanticValue = value.getValue("value").jsonObject
             val public = publicValue(semanticValue)
             val presentationField = presentationFields[outputKey]
-            val unit = presentationField?.unit?.takeIf(String::isNotEmpty) ?: output.unit.ifEmpty {
+            val isClock = outputKey == "sleep_bedtime" || outputKey == "sleep_wake"
+            val unit = if (nativeWakeDateContext != null && public is JsonPrimitive && !public.isString && !isClock) {
+                canonicalSummaryUnits.getValue(outputKey).ifEmpty {
+                    semanticValue["unit"]?.jsonObject?.get("id")?.jsonPrimitive?.content ?: "unitless"
+                }
+            } else presentationField?.unit?.takeIf(String::isNotEmpty) ?: output.unit.ifEmpty {
                 semanticValue["unit"]?.jsonObject?.get("id")?.jsonPrimitive?.content ?: "unitless"
             }
             val frontmatterKey = presentationCustomization.frontmatterConfig.outputKey(outputKey) ?: outputKey
@@ -407,6 +412,17 @@ object HealthMdRenderInputAdapter {
                 } else presentationField?.value?.toString() ?: displayValue(public)
                 put("display_value", display)
                 put("unit", unit)
+                if (nativeWakeDateContext != null && public is JsonPrimitive && !public.isString && !isClock && presentationField?.value != null) {
+                    put("human_presentation", buildJsonObject {
+                        if (outputKey == "height_m" && presentationData?.body?.height != null) {
+                            put("display_value", presentationCustomization.unitConverter.formatHeight(presentationData.body.height))
+                            put("unit", "")
+                        } else {
+                            put("display_value", presentationField.value.toString())
+                            put("unit", presentationField.unit)
+                        }
+                    })
+                }
                 put("timestamp", clock?.toString()?.let(::JsonPrimitive) ?: JsonNull)
                 put("ordinal", ordinal)
             }

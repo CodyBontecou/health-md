@@ -99,8 +99,7 @@ class FrozenDailyAggregateExportRequest private constructor(
                     context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
                 // Source clocks are validated before successor presentation; historical
                 // native bodies and detailed exports remain independently gated.
-                require(settings.formatCustomization.unitPreference == UnitPreference.METRIC &&
-                    !settings.includeGranularData && !settings.formatCustomization.includeLegacyAndroidAliases &&
+                require(!settings.includeGranularData && !settings.formatCustomization.includeLegacyAndroidAliases &&
                     data.compatibilityProvenance == null && data.workouts.isEmpty() &&
                     data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
                     "wake-date native presentation is not qualified"
