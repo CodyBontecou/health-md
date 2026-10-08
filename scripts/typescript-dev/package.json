@@ -1,0 +1,17 @@
+{
+  "name": "@healthmd/typescript-dev",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": "24.21.0", "npm": "11.19.0" },
+  "packageManager": "npm@11.19.0",
+  "scripts": {
+    "check": "node --test runner.test.mjs",
+    "check:static": "node dev.mjs check",
+    "test:affected": "node dev.mjs affected",
+    "test:selected": "node dev.mjs selected",
+    "test:runner": "node --test runner.test.mjs",
+    "setup": "node setup.mjs"
+  },
+  "devDependencies": { "@effect/tsgo": "0.51.0", "typescript": "7.0.2" }
+}
