@@ -27,6 +27,7 @@ Recovery rules:
 - A saved `night_begins` context remains authoritative even if today's preference is `morning_ends`.
 - A saved `morning_ends` context stays unavailable even if today's preference is `night_begins`.
 - A pending operation with no immutable attribution context cannot start additional capture. The application does not invent one from today's settings, rewrite the job, erase its journal or relabel existing items. The user may explicitly request a separate new operation.
+- Unreadable or unsupported pending-store payloads reject reads and subsequent mutations with a bounded error; they do not become an empty queue or get replaced by a new save. This applies to the updated app. Isolation from older binaries that still use the historical store key remains part of successor downgrade/rollback qualification.
 - Existing captured spool/partition bytes and acknowledged frontiers are not recaptured or transcoded by this repair. Journal versions and existing fingerprint/engine/protocol authorities are unchanged.
 - Historical records whose `ExportTimeContext.sleepDayAttribution` is absent retain their historical meaning. An absent field in a *pending operation snapshot* is not evidence that its mutable draft-era preference was pinned.
 

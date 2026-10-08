@@ -23,6 +23,34 @@ final class PendingExportRequestTests: XCTestCase {
         super.tearDown()
     }
 
+    func testUnsupportedSavedAuthorityNeverBecomesAnEmptyStoreOrGetsOverwritten() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(dates: [Date(timeIntervalSince1970: 1_793_505_600)], source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: TimeZone(identifier: "UTC")!, sleepDayAttribution: .nightBegins))
+        try store.upsert(request)
+        let initial = try XCTUnwrap(defaults.data(forKey: PendingExportStore.storageKey))
+        var records = try XCTUnwrap(JSONSerialization.jsonObject(with: initial) as? [[String: Any]])
+        var context = try XCTUnwrap(records[0]["sleepCaptureContext"] as? [String: Any])
+        context["exportProfileID"] = "apple-v99"
+        records[0]["sleepCaptureContext"] = context
+        let unreadable = try JSONSerialization.data(withJSONObject: records, options: [.sortedKeys])
+        defaults.set(unreadable, forKey: PendingExportStore.storageKey)
+        XCTAssertThrowsError(try store.loadAll(), "Unsupported authority must not masquerade as an empty journal") {
+            XCTAssertEqual($0 as? PendingExportStoreError, .unreadableJournal)
+            XCTAssertFalse($0.localizedDescription.contains("apple-v99"))
+        }
+        let mutations: [() throws -> Void] = [
+            { try store.upsert(PendingExportRequest(dates: [Date()], source: .shortcut)) },
+            { try store.remove(id: request.id) },
+            { try store.clearCompletedRequests(ids: [request.id]) },
+        ]
+        for mutation in mutations {
+            defaults.set(unreadable, forKey: PendingExportStore.storageKey)
+            XCTAssertThrowsError(try mutation())
+            XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), unreadable)
+        }
+    }
+
     func testStoreReloadsRequestWithMultipleDates() throws {
         let store = PendingExportStore(userDefaults: defaults)
         let request = PendingExportRequest(
@@ -352,12 +380,26 @@ final class PendingExportRequestTests: XCTestCase {
         XCTAssertEqual(try store.loadAll(), [pending])
     }
 
+    func testAbsentJournalIsEmptyButUnexpectedStoredTypeCannotBeReplaced() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        XCTAssertEqual(try store.loadAll(), [])
+        defaults.set("unsupported-storage-value", forKey: PendingExportStore.storageKey)
+        XCTAssertThrowsError(try store.loadAll()) {
+            XCTAssertEqual($0 as? PendingExportStoreError, .unreadableJournal)
+        }
+        XCTAssertThrowsError(try store.upsert(PendingExportRequest(dates: [Date()], source: .shortcut)))
+        XCTAssertEqual(defaults.string(forKey: PendingExportStore.storageKey), "unsupported-storage-value")
+    }
+
     func testCorruptPersistedDataFailsSafelyWithoutCrashing() throws {
         defaults.set(Data("not-json".utf8), forKey: PendingExportStore.storageKey)
 
         let store = PendingExportStore(userDefaults: defaults)
 
-        XCTAssertEqual(try store.loadAll(), [])
+        XCTAssertThrowsError(try store.loadAll()) {
+            XCTAssertEqual($0 as? PendingExportStoreError, .unreadableJournal)
+        }
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), Data("not-json".utf8))
     }
 
     func testNotificationIdentifierIsDeterministicForRequest() {

@@ -171,6 +171,14 @@ protocol PendingExportStoring {
     func notificationIdentifier(for request: PendingExportRequest) -> String
 }
 
+nonisolated enum PendingExportStoreError: Error, LocalizedError, Equatable {
+    case unreadableJournal
+
+    var errorDescription: String? {
+        String(localized: "Saved pending exports cannot be read by this app version. They have been preserved.")
+    }
+}
+
 struct PendingExportStore: PendingExportStoring {
     static let storageKey = "pendingExportRequests"
 
@@ -190,10 +198,15 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     func loadAll() throws -> [PendingExportRequest] {
-        guard let data = userDefaults.data(forKey: Self.storageKey) else {
-            return []
+        guard let stored = userDefaults.object(forKey: Self.storageKey) else { return [] }
+        guard let data = stored as? Data else { throw PendingExportStoreError.unreadableJournal }
+        do {
+            return try decoder.decode([PendingExportRequest].self, from: data)
+        } catch {
+            // An older app or unreadable profile is not an empty journal. Every
+            // mutation reads first, so rejection preserves the original bytes.
+            throw PendingExportStoreError.unreadableJournal
         }
-        return (try? decoder.decode([PendingExportRequest].self, from: data)) ?? []
     }
 
     func upsert(_ request: PendingExportRequest) throws {
