@@ -174,9 +174,9 @@ distribution_policy="$(dirname "$0")/../app/src/main/java/com/healthmd/domain/di
 listing="$(dirname "$0")/../play-console/listing/en-US/full-description.txt"
 
 jq -e '
-  .schemaVersion == 1 and .releaseVersionName == "1.9.2" and
+  .schemaVersion == 1 and .releaseVersionName == "1.9.3" and
   .googlePlay.phone.status == "release_candidate" and
-  .googlePlay.phone.versionCode == 40 and
+  .googlePlay.phone.versionCode == 41 and
   .googlePlay.phone.testingTrack == "internal" and
   .googlePlay.phone.productionTrack == "production" and
   .googlePlay.wear.status == "deferred" and

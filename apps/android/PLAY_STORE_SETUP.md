@@ -1,6 +1,6 @@
 # Google Play Store deployment
 
-Health.md currently publishes the Android phone app only. The Wear OS companion is deferred to the planned `1.10.0` qualification cycle and is not included in the `1.9.2` Play upload or production promotion. See `release-scope.json`.
+Health.md currently publishes the Android phone app only. The Wear OS companion is deferred to the planned `1.10.0` qualification cycle and is not included in the `1.9.3` Play upload or production promotion. See `release-scope.json`.
 
 ## Protected release environment
 

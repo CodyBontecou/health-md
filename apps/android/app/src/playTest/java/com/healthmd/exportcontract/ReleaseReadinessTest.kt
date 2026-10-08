@@ -25,8 +25,8 @@ class ReleaseReadinessTest {
     fun appVersion_isPreparedForScheduledSnapshotRecoveryRelease() {
         val buildGradle = readRepoFile("app/build.gradle.kts")
 
-        assertTrue(buildGradle.contains("versionCode = 40"))
-        assertTrue(buildGradle.contains("versionName = \"1.9.2\""))
+        assertTrue(buildGradle.contains("versionCode = 41"))
+        assertTrue(buildGradle.contains("versionName = \"1.9.3\""))
     }
 
     @Test
@@ -41,7 +41,7 @@ class ReleaseReadinessTest {
 
         releaseNotesByPath.forEach { (path, releaseNotes) ->
             assertTrue("Expected $path to match the canonical Play release notes", releaseNotes == canonicalReleaseNotes)
-            assertTrue(releaseNotes.contains("v1.9.2"))
+            assertTrue(releaseNotes.contains("v1.9.3"))
             assertTrue(releaseNotes.contains("Raw API Snapshot"))
             assertTrue(releaseNotes.contains("API endpoints and folders"))
             assertTrue(releaseNotes.contains("lookback and Today Refresh"))
@@ -63,8 +63,8 @@ class ReleaseReadinessTest {
         val wearManifest = readRepoFile("wear/src/main/AndroidManifest.xml")
         val wearCapabilities = readRepoFile("wear/src/main/res/values/wear.xml")
 
-        assertTrue(releaseScope.contains("\"releaseVersionName\": \"1.9.2\""))
-        assertTrue(releaseScope.contains("\"versionCode\": 40"))
+        assertTrue(releaseScope.contains("\"releaseVersionName\": \"1.9.3\""))
+        assertTrue(releaseScope.contains("\"versionCode\": 41"))
         assertTrue(releaseScope.contains("\"status\": \"deferred\""))
         assertTrue(releaseScope.contains("\"published\": false"))
         assertTrue(releaseScope.contains("\"runtimeAdvertisedByPhone\": false"))

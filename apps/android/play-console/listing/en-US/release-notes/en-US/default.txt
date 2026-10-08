@@ -1,4 +1,4 @@
-v1.9.2 — Reliable scheduled snapshots and recovery
+v1.9.3 — Reliable scheduled snapshots and recovery
 
 • Scheduled Raw API Snapshot exports now use your profile’s raw format for both API endpoints and folders, including lookback and Today Refresh.
 • Discard pending recovery from a profile schedule to clear a stuck backlog while keeping your profile, credentials, and export history.
