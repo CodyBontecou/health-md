@@ -51,6 +51,118 @@ final class PendingExportRequestTests: XCTestCase {
         }
     }
 
+    func testWakeDateJobSurvivesAnOlderWriterReplacingTheHistoricalQueue() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(
+            dates: [date(year: 2026, month: 5, day: 14, hour: 7)], source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds),
+            calendar: calendar
+        )
+        try store.upsert(request)
+        // A downgraded binary knows only the original array key. Its empty-queue
+        // fallback/new save must not erase a job whose ownership it cannot understand.
+        defaults.set(Data("[]".utf8), forKey: PendingExportStore.storageKey)
+        XCTAssertEqual(try PendingExportStore(userDefaults: defaults).loadAll(), [request])
+    }
+
+    func testDifferentAttributionsCoexistWithoutRewritingHistoricalQueueBytes() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let ownerDates = [date(year: 2026, month: 5, day: 14, hour: 7)]
+        let night = PendingExportRequest(dates: ownerDates, source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
+            calendar: calendar)
+        let morning = PendingExportRequest(dates: ownerDates, source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds),
+            calendar: calendar)
+        try store.upsert(night)
+        let original = try XCTUnwrap(defaults.data(forKey: PendingExportStore.storageKey))
+        try store.upsert(morning)
+        XCTAssertEqual(Set(try store.loadAll().map(\.id)), Set([night.id, morning.id]))
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), original)
+        try store.remove(id: morning.id)
+        XCTAssertEqual(try store.loadAll(), [night])
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), original)
+    }
+
+    func testUnsupportedSuccessorJournalPreservesBothQueuesOnEveryMutation() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let night = PendingExportRequest(dates: [Date()], source: .shortcut)
+        let morning = PendingExportRequest(dates: [Date()], source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds))
+        try store.upsert(night)
+        try store.upsert(morning)
+        let originalNight = try XCTUnwrap(defaults.data(forKey: PendingExportStore.storageKey))
+        let originalMorning = try XCTUnwrap(defaults.data(forKey: PendingExportStore.successorStorageKey))
+        var future = try XCTUnwrap(JSONSerialization.jsonObject(with: originalMorning) as? [String: Any])
+        future["version"] = 99
+        let futureBytes = try JSONSerialization.data(withJSONObject: future, options: [.sortedKeys])
+        defaults.set(futureBytes, forKey: PendingExportStore.successorStorageKey)
+        XCTAssertThrowsError(try store.loadAll()) {
+            XCTAssertEqual($0 as? PendingExportStoreError, .unreadableJournal)
+        }
+        let mutations: [() throws -> Void] = [
+            { try store.upsert(night) }, { try store.remove(id: morning.id) },
+            { try store.clearCompletedRequests(ids: [night.id, morning.id]) },
+        ]
+        for mutation in mutations {
+            XCTAssertThrowsError(try mutation())
+            XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), originalNight)
+            XCTAssertEqual(defaults.data(forKey: PendingExportStore.successorStorageKey), futureBytes)
+        }
+    }
+
+    func testAnExistingJobCannotChangeItsAttributionOrCapturedClock() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let initial = PendingExportRequest(dates: [Date()], source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds),
+            calendar: calendar)
+        try store.upsert(initial)
+        let original = try XCTUnwrap(defaults.data(forKey: PendingExportStore.successorStorageKey))
+        let alternatives = [
+            AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
+            AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Pacific/Honolulu")!, sleepDayAttribution: .morningEnds),
+        ]
+        for context in alternatives {
+            let changed = PendingExportRequest(id: initial.id, dates: initial.dates, source: .shortcut,
+                sleepCaptureContext: context, calendar: calendar)
+            XCTAssertThrowsError(try store.upsert(changed)) {
+                XCTAssertEqual($0 as? PendingExportStoreError, .incompatibleRequestAuthority)
+            }
+            XCTAssertEqual(try store.loadAll(), [initial])
+            XCTAssertEqual(defaults.data(forKey: PendingExportStore.successorStorageKey), original)
+            XCTAssertNil(defaults.object(forKey: PendingExportStore.storageKey))
+        }
+    }
+
+    func testAlreadyPersistedDraftJobIsNotMovedOrUpgradedToTheNewNamespace() throws {
+        let request = PendingExportRequest(dates: [Date()], source: .scheduled,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds))
+        let bytes = try JSONEncoder().encode([request])
+        defaults.set(bytes, forKey: PendingExportStore.storageKey)
+        let store = PendingExportStore(userDefaults: defaults)
+        XCTAssertEqual(try store.loadAll(), [request])
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), bytes)
+        XCTAssertThrowsError(try request.recoveredSleepCaptureContext())
+        let retry = request.markingAttempted(at: Date())
+        try store.upsert(retry)
+        XCTAssertEqual(try store.loadAll(), [retry])
+        XCTAssertNil(defaults.object(forKey: PendingExportStore.successorStorageKey))
+    }
+
+    func testDuplicateIdentityAcrossQueuesRejectsMutationWithoutChoosingAProfile() throws {
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(dates: [Date()], source: .shortcut,
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .morningEnds))
+        try store.upsert(request)
+        let original = try XCTUnwrap(defaults.data(forKey: PendingExportStore.successorStorageKey))
+        let duplicate = try JSONEncoder().encode([request])
+        defaults.set(duplicate, forKey: PendingExportStore.storageKey)
+        XCTAssertThrowsError(try store.loadAll())
+        XCTAssertThrowsError(try store.remove(id: request.id))
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), duplicate)
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.successorStorageKey), original)
+    }
+
     func testStoreReloadsRequestWithMultipleDates() throws {
         let store = PendingExportStore(userDefaults: defaults)
         let request = PendingExportRequest(

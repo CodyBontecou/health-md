@@ -64,6 +64,12 @@ Opt-in host tests take empty and populated native sleep days through the concret
 
 SDK aggregate quantities in the successor semantic adapter come from native typed facts rather than rounded display strings. Synthetic matrix controls cover raw binary64 values, integer counts and presentation-unit independence. Historical adapters and frozen native bytes remain unchanged. This internal fidelity correction is not a change to which unrelated measurements the sleep setting captures.
 
+## Durable folder journal isolation
+
+New `android_sleep_v6` scheduled-folder artifact journals are stored beside the historical directory in `scheduled-folder-export-v1.sleep-attribution-v1`. Historical binaries only know `scheduled-folder-export-v1`, so their file deletion or replacement cannot erase the new journal. The artifact journal grammar/version, captured bytes, engine pin and plan digest remain unchanged. Already stored draft journals retain their original location; loading/retrying never migrates or upgrades them.
+
+The updated store locates a job in either directory and rejects an ambiguous identity, malformed payload or incompatible profile without replacing it. A save for an existing operation must retain its exact engine pin, settings digest, destination and owner dates. Once its immutable artifact plan is READY, a save cannot replace the plan or return to capture. Explicit discard removes that operation from either namespace. The parent directory is synced before admitting the isolated directory’s first journal; failed sync is retried even when the directory already exists. Synthetic IO controls cover historical-file deletion, immutable identity/plan bytes, acknowledgments, unsupported payloads, duplicate identity, draft-location retention and failed parent sync. These persistence controls do not admit production v6 capture or prove real Health Connect/provider behavior. Profile-entry residuals, scheduler admission/settings storage, direct journals and complete v6 downgrade/resume admission remain separate enabling work.
+
 ## New actions versus recovery
 
 Scheduled acceptance reads the device setting once. Scheduled runs restore the accepted snapshot. Interactive activation/editing restores output configuration, not a pending capture: a separately requested new export resolves fresh device authority. Those paths must remain distinct so old-profile activation does not grant an old job new capture authority.

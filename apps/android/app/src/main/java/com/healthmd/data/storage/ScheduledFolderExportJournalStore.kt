@@ -1,6 +1,7 @@
 package com.healthmd.data.storage
 
 import android.content.Context
+import com.healthmd.domain.exportengine.AndroidExportProfile
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.ExportFailureReason
@@ -100,8 +101,16 @@ class ScheduledFolderExportJournalStore private constructor(
         ::syncDirectoryOnAndroid,
     )
 
-    internal constructor(directory: File, @Suppress("UNUSED_PARAMETER") testOnly: Unit = Unit) :
-        this(directory, { true })
+    internal constructor(
+        directory: File,
+        @Suppress("UNUSED_PARAMETER") testOnly: Unit = Unit,
+        directorySync: (File) -> Boolean = { true },
+    ) : this(directory, directorySync)
+
+    // Historical binaries only know DIRECTORY_NAME. Successor journals keep the
+    // same immutable grammar but are never exposed in that directory on creation.
+    private val successorDirectory = File(directory.parentFile, "${directory.name}.sleep-attribution-v1")
+    private val journalDirectories get() = listOf(directory, successorDirectory)
 
     private val mutex = Mutex()
     private val json = Json {
@@ -115,20 +124,8 @@ class ScheduledFolderExportJournalStore private constructor(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 if (!validOperationId(operationId)) return@withLock ScheduledFolderJournalLoad.Corrupt
-                purgeTemporaryFiles()
-                val file = fileFor(operationId)
-                if (!file.exists()) return@withLock ScheduledFolderJournalLoad.Missing
-                if (!file.isFile || file.length() !in 1..MAX_JOURNAL_FILE_BYTES) {
-                    return@withLock ScheduledFolderJournalLoad.Corrupt
-                }
-                val journal = runCatching {
-                    json.decodeFromString<ScheduledFolderExportJournal>(file.readText())
-                }.getOrNull() ?: return@withLock ScheduledFolderJournalLoad.Corrupt
-                if (!isStructurallyValid(journal) || journal.operationId != operationId) {
-                    ScheduledFolderJournalLoad.Corrupt
-                } else {
-                    ScheduledFolderJournalLoad.Found(journal)
-                }
+                journalDirectories.forEach(::purgeTemporaryFiles)
+                loadLocked(operationId)
             }
         }
 
@@ -136,10 +133,26 @@ class ScheduledFolderExportJournalStore private constructor(
         withContext(Dispatchers.IO) {
             mutex.withLock {
                 if (!isStructurallyValid(journal)) return@withLock false
-                if (!directory.exists() && !directory.mkdirs()) return@withLock false
-                purgeTemporaryFiles()
-                val target = fileFor(journal.operationId)
-                val temporary = File(directory, ".${target.name}.${System.nanoTime()}.tmp")
+                val existing = loadLocked(journal.operationId)
+                if (existing == ScheduledFolderJournalLoad.Corrupt) return@withLock false
+                if (existing is ScheduledFolderJournalLoad.Found &&
+                    !preservesAuthority(existing.journal, journal)
+                ) return@withLock false
+                val targetDirectory = if (existing is ScheduledFolderJournalLoad.Found) {
+                    // Preserve a draft journal's original location; do not migrate its bytes.
+                    journalDirectories.single { fileFor(journal.operationId, it).exists() }
+                } else {
+                    val pin = ExportEnginePinCodec.decodeOrNull(journal.enginePinJson) ?: return@withLock false
+                    if (pin.profile == AndroidExportProfile.android_sleep_v6) successorDirectory else directory
+                }
+                if (!targetDirectory.exists() && !targetDirectory.mkdirs()) return@withLock false
+                // The new directory name must be durable before its first accepted job.
+                // Repeat on retry even if mkdir succeeded before a previous sync failed.
+                val parent = targetDirectory.parentFile ?: return@withLock false
+                if (!directorySync(parent)) return@withLock false
+                purgeTemporaryFiles(targetDirectory)
+                val target = fileFor(journal.operationId, targetDirectory)
+                val temporary = File(targetDirectory, ".${target.name}.${System.nanoTime()}.tmp")
                 try {
                     val encodedBytes = json.encodeToString(journal)
                         .toByteArray(StandardCharsets.UTF_8)
@@ -163,7 +176,7 @@ class ScheduledFolderExportJournalStore private constructor(
                             StandardCopyOption.REPLACE_EXISTING,
                         )
                     }
-                    check(directorySync(directory))
+                    check(directorySync(targetDirectory))
                     true
                 } catch (_: Exception) {
                     false
@@ -175,9 +188,36 @@ class ScheduledFolderExportJournalStore private constructor(
 
     internal suspend fun discard(operationId: String) = withContext(Dispatchers.IO) {
         mutex.withLock {
-            if (validOperationId(operationId)) runCatching { fileFor(operationId).delete() }
+            if (validOperationId(operationId)) {
+                journalDirectories.forEach { location -> runCatching { fileFor(operationId, location).delete() } }
+            }
         }
     }
+
+    private fun loadLocked(operationId: String): ScheduledFolderJournalLoad {
+        val files = journalDirectories.map { fileFor(operationId, it) }.filter { it.exists() }
+        if (files.isEmpty()) return ScheduledFolderJournalLoad.Missing
+        if (files.size != 1) return ScheduledFolderJournalLoad.Corrupt
+        val file = files.single()
+        if (!file.isFile || file.length() !in 1..MAX_JOURNAL_FILE_BYTES) return ScheduledFolderJournalLoad.Corrupt
+        val journal = runCatching {
+            json.decodeFromString<ScheduledFolderExportJournal>(file.readText())
+        }.getOrNull() ?: return ScheduledFolderJournalLoad.Corrupt
+        if (!isStructurallyValid(journal) || journal.operationId != operationId ||
+            (file.parentFile == successorDirectory &&
+                ExportEnginePinCodec.decodeOrNull(journal.enginePinJson)?.profile != AndroidExportProfile.android_sleep_v6)
+        ) return ScheduledFolderJournalLoad.Corrupt
+        return ScheduledFolderJournalLoad.Found(journal)
+    }
+
+    private fun preservesAuthority(
+        existing: ScheduledFolderExportJournal,
+        next: ScheduledFolderExportJournal,
+    ): Boolean = existing.enginePinJson == next.enginePinJson &&
+        existing.settingsSnapshotSha256 == next.settingsSnapshotSha256 &&
+        existing.folderUri == next.folderUri && existing.ownerDates == next.ownerDates &&
+        (existing.phase != ScheduledFolderJournalPhase.READY ||
+            (next.phase == ScheduledFolderJournalPhase.READY && existing.planSha256 == next.planSha256))
 
     internal fun isStructurallyValid(journal: ScheduledFolderExportJournal): Boolean {
         if (journal.schema != ScheduledFolderExportJournal.SCHEMA ||
@@ -267,14 +307,14 @@ class ScheduledFolderExportJournalStore private constructor(
         return true
     }
 
-    private fun purgeTemporaryFiles() {
-        directory.listFiles { file -> file.name.startsWith('.') && file.name.endsWith(".tmp") }
+    private fun purgeTemporaryFiles(location: File) {
+        location.listFiles { file -> file.name.startsWith('.') && file.name.endsWith(".tmp") }
             ?.take(MAX_TEMP_FILES_TO_PURGE)
             ?.forEach { file -> runCatching { file.delete() } }
     }
 
-    private fun fileFor(operationId: String): File =
-        File(directory, "${sha256Hex(operationId.toByteArray(StandardCharsets.UTF_8))}.json")
+    private fun fileFor(operationId: String, location: File): File =
+        File(location, "${sha256Hex(operationId.toByteArray(StandardCharsets.UTF_8))}.json")
 
     private fun validOperationId(value: String): Boolean = value.matches(OPERATION_ID)
 

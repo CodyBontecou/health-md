@@ -190,14 +190,33 @@ protocol PendingExportStoring {
 
 nonisolated enum PendingExportStoreError: Error, LocalizedError, Equatable {
     case unreadableJournal
+    case incompatibleRequestAuthority
 
     var errorDescription: String? {
-        String(localized: "Saved pending exports cannot be read by this app version. They have been preserved.")
+        switch self {
+        case .unreadableJournal:
+            String(localized: "Saved pending exports cannot be read by this app version. They have been preserved.")
+        case .incompatibleRequestAuthority:
+            String(localized: "This pending export cannot change its saved capture authority. Start a separate export.")
+        }
     }
 }
 
 struct PendingExportStore: PendingExportStoring {
     static let storageKey = "pendingExportRequests"
+    static let successorStorageKey = "pendingExportRequests.sleep-attribution.v1"
+
+    private enum Queue: CaseIterable {
+        case historical, successor
+        var key: String { self == .historical ? PendingExportStore.storageKey : PendingExportStore.successorStorageKey }
+    }
+
+    private struct SuccessorJournal: Codable {
+        let schema: String
+        let version: Int
+        let requests: [PendingExportRequest]
+        static let schemaID = "healthmd.pending_exports.sleep_attribution"
+    }
 
     private let userDefaults: UserDefaults
     private let encoder: JSONEncoder
@@ -215,35 +234,79 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     func loadAll() throws -> [PendingExportRequest] {
-        guard let stored = userDefaults.object(forKey: Self.storageKey) else { return [] }
-        guard let data = stored as? Data else { throw PendingExportStoreError.unreadableJournal }
+        sorted(try loadQueues().values.flatMap { $0 })
+    }
+
+    private func loadQueues() throws -> [Queue: [PendingExportRequest]] {
+        var queues: [Queue: [PendingExportRequest]] = [:]
         do {
-            return try decoder.decode([PendingExportRequest].self, from: data)
+            for queue in Queue.allCases {
+                guard let stored = userDefaults.object(forKey: queue.key) else {
+                    queues[queue] = []
+                    continue
+                }
+                guard let data = stored as? Data else { throw PendingExportStoreError.unreadableJournal }
+                switch queue {
+                case .historical:
+                    queues[queue] = try decoder.decode([PendingExportRequest].self, from: data)
+                case .successor:
+                    let journal = try decoder.decode(SuccessorJournal.self, from: data)
+                    guard journal.schema == SuccessorJournal.schemaID, journal.version == 1,
+                          journal.requests.allSatisfy(Self.requiresProfileIsolation) else {
+                        throw PendingExportStoreError.unreadableJournal
+                    }
+                    queues[queue] = journal.requests
+                }
+            }
+            let ids = queues.values.flatMap { $0.map(\.id) }
+            guard Set(ids).count == ids.count else { throw PendingExportStoreError.unreadableJournal }
+            return queues
         } catch {
-            // An older app or unreadable profile is not an empty journal. Every
-            // mutation reads first, so rejection preserves the original bytes.
             throw PendingExportStoreError.unreadableJournal
         }
     }
 
+    private static func requiresProfileIsolation(_ request: PendingExportRequest) -> Bool {
+        request.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            || request.settingsSnapshot?.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            || request.settingsSnapshot?.appleExportEnginePin.map { $0.profile != AppleExportEnginePin.profileID } == true
+    }
+
+    private func sameCaptureAuthority(_ lhs: PendingExportRequest, _ rhs: PendingExportRequest) -> Bool {
+        lhs.sleepCaptureContext == rhs.sleepCaptureContext
+            && lhs.settingsSnapshot?.sleepCaptureContext == rhs.settingsSnapshot?.sleepCaptureContext
+            && lhs.settingsSnapshot?.appleExportEnginePin == rhs.settingsSnapshot?.appleExportEnginePin
+            && lhs.originalCalendarTimeZoneIdentifier == rhs.originalCalendarTimeZoneIdentifier
+    }
+
     func upsert(_ request: PendingExportRequest) throws {
-        var requests = try loadAll()
-        requests.removeAll { existing in
-            existing.id == request.id || shouldReplace(existing: existing, with: request)
+        let queues = try loadQueues()
+        let existingQueue = queues.first { $0.value.contains { $0.id == request.id } }
+        if let existing = existingQueue?.value.first(where: { $0.id == request.id }),
+           !sameCaptureAuthority(existing, request) {
+            throw PendingExportStoreError.incompatibleRequestAuthority
         }
+        // Never move a persisted draft job out of its original namespace on upgrade.
+        // New successor work goes where historical binaries cannot discover or replace it.
+        let queue = existingQueue?.key ?? (Self.requiresProfileIsolation(request) ? .successor : .historical)
+        var requests = queues[queue, default: []]
+        requests.removeAll { $0.id == request.id || shouldReplace(existing: $0, with: request) }
         requests.append(request)
-        try save(requests)
+        try saveChanges([queue: requests])
     }
 
     func remove(id: PendingExportRequest.ID) throws {
-        let remaining = try loadAll().filter { $0.id != id }
-        try save(remaining)
+        try clearCompletedRequests(ids: [id])
     }
 
     func clearCompletedRequests(ids: Set<PendingExportRequest.ID>) throws {
         guard !ids.isEmpty else { return }
-        let remaining = try loadAll().filter { !ids.contains($0.id) }
-        try save(remaining)
+        let queues = try loadQueues()
+        var changes: [Queue: [PendingExportRequest]] = [:]
+        for (queue, requests) in queues where requests.contains(where: { ids.contains($0.id) }) {
+            changes[queue] = requests.filter { !ids.contains($0.id) }
+        }
+        try saveChanges(changes)
     }
 
     func notificationIdentifier(for request: PendingExportRequest) -> String {
@@ -251,6 +314,7 @@ struct PendingExportStore: PendingExportStoring {
     }
 
     private func shouldReplace(existing: PendingExportRequest, with request: PendingExportRequest) -> Bool {
+        guard sameCaptureAuthority(existing, request) else { return false }
         if existing.source == .shortcut && request.source == .shortcut {
             return existing.dates == request.dates
         }
@@ -268,14 +332,26 @@ struct PendingExportStore: PendingExportStoring {
             && request.scheduledFireDate != nil
     }
 
-    private func save(_ requests: [PendingExportRequest]) throws {
-        let sorted = requests.sorted { lhs, rhs in
-            if lhs.createdAt == rhs.createdAt {
-                return lhs.id.uuidString < rhs.id.uuidString
-            }
+    private func sorted(_ requests: [PendingExportRequest]) -> [PendingExportRequest] {
+        requests.sorted { lhs, rhs in
+            if lhs.createdAt == rhs.createdAt { return lhs.id.uuidString < rhs.id.uuidString }
             return lhs.createdAt < rhs.createdAt
         }
-        let data = try encoder.encode(sorted)
-        userDefaults.set(data, forKey: Self.storageKey)
+    }
+
+    private func saveChanges(_ changes: [Queue: [PendingExportRequest]]) throws {
+        // Encode every changed queue before modifying either key. An encoding failure
+        // must preserve all bytes, and unrelated historical bytes are never re-encoded.
+        var encoded: [Queue: Data] = [:]
+        for (queue, requests) in changes {
+            switch queue {
+            case .historical:
+                encoded[queue] = try encoder.encode(sorted(requests))
+            case .successor:
+                encoded[queue] = try encoder.encode(SuccessorJournal(
+                    schema: SuccessorJournal.schemaID, version: 1, requests: sorted(requests)))
+            }
+        }
+        for (queue, data) in encoded { userDefaults.set(data, forKey: queue.key) }
     }
 }
