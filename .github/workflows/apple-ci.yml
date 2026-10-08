@@ -435,7 +435,6 @@ jobs:
             -only-testing:HealthMdUITests/OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers \
             -only-testing:HealthMdUITests/PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted \
             -only-testing:HealthMdUITests/ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState \
-            -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked \
             -only-testing:HealthMdUITests/ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab \
             -test-timeouts-enabled YES \

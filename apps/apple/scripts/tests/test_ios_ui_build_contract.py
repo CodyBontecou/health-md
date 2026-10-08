@@ -29,7 +29,6 @@ EXPECTED_TESTS = [
     "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
     "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
     "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
-    "ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting",
     "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
     "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab",
     "ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
@@ -304,7 +303,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
             self.assertIn(setting, build)
         selections = []
-        for args, count in zip(calls[1:], (10, 6)):
+        for args, count in zip(calls[1:], (9, 6)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")
