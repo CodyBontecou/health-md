@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 import path from "node:path";
+import vm from "node:vm";
 
 const expectedV7Visualizations = [
   "metric-trend",
@@ -29,6 +30,8 @@ test("generated website catalog includes every plugin visualization exactly once
   const catalog = await readJson("../assets/visualizations-catalog.json");
   assert.equal(catalog.schema, "healthmd.visualization_catalog");
   assert.equal(catalog.schemaVersion, 1);
+  const externalSources = await readJson("../external-sources.json");
+  assert.equal(catalog.sourceRevision, externalSources.obsidian_plugin.revision);
   assert.ok(Array.isArray(catalog.visualizations));
   const ids = catalog.visualizations.map((item) => item.type);
   assert.equal(new Set(ids).size, ids.length);
@@ -133,7 +136,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "d9bd050949dde067f32ea49381ca58e7ccbcf21d");
+  assert.equal(externalSources.obsidian_plugin.revision, "06452a6aadce5cded80b2204a382d11430e64af1");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
@@ -168,4 +171,30 @@ test("generated plugin source map is reproducible and contains no local checkout
   assert.ok(!serialized.includes("/Users/"));
   assert.ok(!serialized.includes("/private/var/"));
   assert.ok(!serialized.includes("github.workspace"));
+});
+
+
+test("pinned browser bundle parses actual Apple and Android successor files", {
+  skip: !process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+}, async () => {
+  const element = () => ({ style: {}, getContext: () => ({}), appendChild() {}, setAttribute() {} });
+  const document = { documentElement: element(), createElement: element, addEventListener() {} };
+  const window = { document, screen: {}, devicePixelRatio: 1, addEventListener() {} };
+  const context = vm.createContext({ window, document, navigator: { userAgent: "", platform: "" },
+    console, setTimeout, clearTimeout, Intl });
+  vm.runInContext(await readFile(new URL("../assets/healthmd-plugin-visualizations.js", import.meta.url), "utf8"), context);
+  const api = window.HealthMdPluginVisualizations;
+  const pin = await readJson("../external-sources.json");
+  assert.equal(api.sourceRevision, pin.obsidian_plugin.revision);
+  for (const [profile, nativeStage, unsupportedStage] of [["apple-v11", "coreSleep", "lightSleep"], ["android-sleep-v6", "lightSleep", "coreSleep"]]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/sleep-successor", `${profile}-dst`, "2026-11-01.json"), "utf8");
+    const day = api.parseHealthDay(input);
+    assert.equal(day.schema_profile, profile);
+    assert.equal(day.timeContext.sleep_day_attribution, "morning_ends");
+    assert.equal(day.timeContext.calendar_timezone, "America/New_York");
+    assert.ok(day.sleep[nativeStage] > 0);
+    assert.equal(day.sleep[unsupportedStage], undefined);
+    assert.equal(day.sleep.sleepStages.length, 0);
+  }
 });
