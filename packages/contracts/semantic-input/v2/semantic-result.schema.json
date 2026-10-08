@@ -269,7 +269,7 @@
       "const": 4
     },
     "registry_sha256": {
-      "const": "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073"
+      "const": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"
     },
     "profile_revision": {
       "enum": [
@@ -282,7 +282,7 @@
     },
     "profile": {
       "enum": [
-        "apple_health_data_v10",
+        "apple_health_data_v11",
         "android_sleep_v6"
       ]
     },
@@ -419,7 +419,7 @@
       "properties": {
         "schema_profile": {
           "enum": [
-            "apple-v10",
+            "apple-v11",
             "android-sleep-v6"
           ]
         },
@@ -462,7 +462,7 @@
       "then": {
         "properties": {
           "profile": {
-            "const": "apple_health_data_v10"
+            "const": "apple_health_data_v11"
           },
           "profile_revision": {
             "const": 2
@@ -484,7 +484,7 @@
       "then": {
         "properties": {
           "profile": {
-            "const": "apple_health_data_v10"
+            "const": "apple_health_data_v11"
           },
           "rollups": {
             "items": {

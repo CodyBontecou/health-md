@@ -32,7 +32,7 @@
     },
     "profile": {
       "enum": [
-        "apple_health_data_v10",
+        "apple_health_data_v11",
         "android_sleep_v6"
       ]
     },

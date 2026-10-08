@@ -71,18 +71,18 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
         XCTAssertEqual(operation.artifacts.count, 4)
         XCTAssertEqual(operation.selectedPlan.artifactPlanVersion, 2)
-        XCTAssertEqual(operation.selectedPlan.profile, .appleHealthDataV10)
+        XCTAssertEqual(operation.selectedPlan.profile, .appleHealthDataV11)
         for planned in operation.artifacts {
             let text = try XCTUnwrap(String(data: planned.artifact.inlineData, encoding: .utf8))
             switch planned.format {
             case .json:
                 let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: planned.artifact.inlineData) as? [String: Any])
-                XCTAssertEqual(root["schema_version"] as? Int, 10)
+                XCTAssertEqual(root["schema_version"] as? Int, 11)
                 XCTAssertEqual((root["sleep"] as? [String: Any])?["totalDuration"] as? Double, 55_800.5)
                 XCTAssertEqual((root["activity"] as? [String: Any])?["activeCalories"] as? Double, 123.875)
             case .markdown, .obsidianBases:
-                XCTAssertTrue(text.contains("schema_version: 10\n"))
-                XCTAssertTrue(text.contains("schema_profile: apple-v10\n"))
+                XCTAssertTrue(text.contains("schema_version: 11\n"))
+                XCTAssertTrue(text.contains("schema_profile: apple-v11\n"))
                 XCTAssertTrue(text.contains("sleep_day_attribution: morning_ends\n"))
                 XCTAssertTrue(text.contains("sleep_owner_day_rule: session_end_date\n"))
                 XCTAssertTrue(text.contains("sleep_interval_clipping: none\n"))
@@ -95,8 +95,8 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                 XCTAssertFalse(text.contains("sleep_light_hours"))
             case .csv:
                 XCTAssertTrue(text.hasPrefix("Date,Category,Metric,Value,Unit,Timestamp\n"))
-                XCTAssertTrue(text.contains("2026-11-01,Metadata,schema_version,10,,\n"))
-                XCTAssertTrue(text.contains("2026-11-01,Metadata,schema_profile,apple-v10,,\n"))
+                XCTAssertTrue(text.contains("2026-11-01,Metadata,schema_version,11,,\n"))
+                XCTAssertTrue(text.contains("2026-11-01,Metadata,schema_profile,apple-v11,,\n"))
                 XCTAssertTrue(text.contains("2026-11-01,Metadata,time_context.sleep_owner_day_rule,session_end_date,,\n"))
                 let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("2026-11-01,Sleep,Total Sleep,") })
                 XCTAssertEqual(Double(row.components(separatedBy: ",")[3]), 15.50013888888889)
@@ -128,8 +128,8 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual(json.count, 2)
         for artifact in json {
             let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: artifact.inlineData) as? [String: Any])
-            XCTAssertEqual(root["schema_profile"] as? String, "apple-v10")
-            XCTAssertEqual(root["schema_version"] as? Int, 10)
+            XCTAssertEqual(root["schema_profile"] as? String, "apple-v11")
+            XCTAssertEqual(root["schema_version"] as? Int, 11)
             XCTAssertEqual((root["time_context"] as? [String: String])?["sleep_interval_clipping"], "none")
             if root["date"] as? String == "2026-11-01" {
                 XCTAssertNil(root["sleep"])
@@ -143,7 +143,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             let text = try XCTUnwrap(String(data: markdown.artifact.inlineData, encoding: .utf8))
             XCTAssertFalse(text.hasPrefix("---\n"))
             XCTAssertTrue(text.contains("Health.md sleep attribution: `morning_ends`"))
-            XCTAssertTrue(text.contains("Profile: `apple-v10`; calendar timezone: `America/New_York`"))
+            XCTAssertTrue(text.contains("Profile: `apple-v11`; calendar timezone: `America/New_York`"))
             XCTAssertTrue(text.contains("owner rule: `session_end_date`; clipping: `none`"))
         }
         let emptyBases = try XCTUnwrap(operation.artifacts.first {
@@ -226,10 +226,10 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             "sleep_total", "sleep_core", "sleep_in_bed", "sleep_bedtime", "sleep_wake", "steps", "active_energy",
         ]
         let encoded: [String: Any] = [
-            "engine": "rust", "profile": "apple_health_data_v10", "public_schema": "healthmd.health_data",
-            "public_schema_version": 10, "core_api_version": 4, "semantic_input_version": 2,
+            "engine": "rust", "profile": "apple_health_data_v11", "public_schema": "healthmd.health_data",
+            "public_schema_version": 11, "core_api_version": 4, "semantic_input_version": 2,
             "canonical_model_version": 2, "render_input_version": 2, "artifact_plan_version": 2,
-            "registry_version": 2, "registry_sha256": "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073",
+            "registry_version": 2, "registry_sha256": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
             "semantic_profile_revision": 1, "render_profile_revision": 2,
             "core_source_revision": "synthetic-planner-contract", "calendar_time_zone": context.calendarTimeZoneIdentifier,
         ]
@@ -283,10 +283,10 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
             "sleep_total", "sleep_core", "sleep_in_bed", "sleep_bedtime", "sleep_wake", "steps", "active_energy",
         ]
         let pin = try JSONDecoder().decode(AppleExportEnginePin.self, from: Data("""
-            {"engine":"rust","profile":"apple_health_data_v10","public_schema":"healthmd.health_data",
-             "public_schema_version":10,"core_api_version":4,"semantic_input_version":2,
+            {"engine":"rust","profile":"apple_health_data_v11","public_schema":"healthmd.health_data",
+             "public_schema_version":11,"core_api_version":4,"semantic_input_version":2,
              "canonical_model_version":2,"render_input_version":2,"artifact_plan_version":2,
-             "registry_version":2,"registry_sha256":"c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073",
+             "registry_version":2,"registry_sha256":"709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
              "semantic_profile_revision":1,"render_profile_revision":2,
              "core_source_revision":"synthetic-planner-contract","calendar_time_zone":"America/New_York"}
             """.utf8))
@@ -305,14 +305,14 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
         XCTAssertEqual(operation.authority, .rust)
         XCTAssertEqual(operation.pin, pin)
-        XCTAssertEqual(operation.selectedPlan.profile, .appleHealthDataV10)
+        XCTAssertEqual(operation.selectedPlan.profile, .appleHealthDataV11)
         XCTAssertEqual(operation.selectedPlan.artifactPlanVersion, 2)
         XCTAssertEqual(operation.artifacts.count, 1)
         let artifact = try XCTUnwrap(operation.artifacts.first?.artifact)
         XCTAssertEqual(artifact.relativePath, "Health/2026-11-01.json")
         let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: artifact.inlineData) as? [String: Any])
-        XCTAssertEqual(root["schema_version"] as? Int, 10)
-        XCTAssertEqual(root["schema_profile"] as? String, "apple-v10")
+        XCTAssertEqual(root["schema_version"] as? Int, 11)
+        XCTAssertEqual(root["schema_profile"] as? String, "apple-v11")
         XCTAssertEqual(root["date"] as? String, "2026-11-01")
         XCTAssertEqual(root["time_context"] as? [String: String], [
             "calendar_timezone": "America/New_York", "timestamp_timezone": "UTC",

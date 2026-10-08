@@ -6,7 +6,7 @@
       "id": "healthmd.product_capabilities",
       "version": 1,
       "path": "packages/contracts/product-capabilities.json",
-      "sha256": "406460acf76ad3e323288628fe1cf375756ca7025d85b2d6b777e02390afd98c",
+      "sha256": "28f04a6ad417d562de22c7231a33ef9fe3d1b024bd4d98d197a909ddd783dfa0",
       "implementations": [
         "packages/contracts/validate.py",
         "apps/apple/HealthMdTests/Contracts/ProductCapabilityManifestTests.swift",
@@ -697,7 +697,7 @@
       "fixtures": [
         {
           "path": "packages/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
-          "sha256": "19d0ef63a084c6907500b63db189070324bb0d2af65d152bbd0a7e042c3be49b",
+          "sha256": "87bcfe86b503a06b6e03f0d2bafc3bda68ffe98510254f50c1eaebf5ea8f07ed",
           "provenance": "Emitted by Kotlin semantic/render adapters from synthetic SDK aggregate facts; replayed by real Rust sessions against literal expected reductions. Not a native public-writer or device qualification golden.",
           "mirrors": []
         },

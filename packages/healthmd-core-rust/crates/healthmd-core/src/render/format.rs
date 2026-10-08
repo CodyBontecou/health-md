@@ -648,20 +648,20 @@ pub(crate) fn public_json_entries(
     public_fields.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
     let mut entries = Vec::new();
     match profile {
-        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
-            let wake_date = profile == SemanticProfile::AppleHealthDataV10;
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
+            let wake_date = profile == SemanticProfile::AppleHealthDataV11;
             entries.push((
                 "schema".to_owned(),
                 Value::String("healthmd.health_data".to_owned()),
             ));
             entries.push((
                 "schema_version".to_owned(),
-                Value::from(if wake_date { 10 } else { 8 }),
+                Value::from(if wake_date { 11 } else { 8 }),
             ));
             if wake_date {
                 entries.push((
                     "schema_profile".to_owned(),
-                    Value::String("apple-v10".to_owned()),
+                    Value::String("apple-v11".to_owned()),
                 ));
             }
             entries.push(("date".to_owned(), Value::String(day.owner_date.clone())));

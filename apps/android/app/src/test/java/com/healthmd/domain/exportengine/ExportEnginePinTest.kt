@@ -37,7 +37,7 @@ class ExportEnginePinTest {
     fun successorPinSelectsIndependentV2ContractsWithoutRepinningHistoricalDefaults() {
         val registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
             registryVersion = 2u,
-            registrySha256 = "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073",
+            registrySha256 = "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
         )
         val readiness = testReadiness()
         val pin = ExportEnginePin.create(
@@ -68,7 +68,7 @@ class ExportEnginePinTest {
         val readiness = testReadiness()
         val registry = testRegistry(AndroidExportProfile.android_sleep_v6).copy(
             registryVersion = 2u,
-            registrySha256 = "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073",
+            registrySha256 = "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78",
         )
         val pin = ExportEnginePin.create(
             engine = ExportEngineMode.rust,

@@ -80,7 +80,7 @@ pub fn read_public_sleep_context(
     time_context: Option<&Value>,
 ) -> Result<PublicSleepContext, SleepProfileError> {
     let successor = match (source, schema_version) {
-        (SleepSource::Apple, 10) => Some("apple-v10"),
+        (SleepSource::Apple, 11) => Some("apple-v11"),
         (SleepSource::Android, 6) => Some("android-sleep-v6"),
         _ => None,
     };

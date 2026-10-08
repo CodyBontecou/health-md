@@ -23,8 +23,8 @@ pub enum MetricRegistryProfile {
     AndroidFrozenV4,
     /// Android additive analytical v5.
     AndroidAnalyticalV5,
-    /// Apple wake-date daily v10, explicitly requested from registry v2.
-    AppleHealthDataV10,
+    /// Apple wake-date daily v11, explicitly requested from registry v2.
+    AppleHealthDataV11,
     /// Android wake-date daily v6, explicitly requested from registry v2.
     AndroidSleepV6,
 }
@@ -37,7 +37,7 @@ impl MetricRegistryProfile {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
-            Self::AppleHealthDataV10 => "apple_health_data_v10",
+            Self::AppleHealthDataV11 => "apple_health_data_v11",
             Self::AndroidSleepV6 => "android_sleep_v6",
         }
     }
@@ -49,7 +49,7 @@ impl MetricRegistryProfile {
             Self::AppleHealthDataV8 | Self::AndroidFrozenV4 | Self::AndroidAnalyticalV5 => {
                 REGISTRY_VERSION
             }
-            Self::AppleHealthDataV10 | Self::AndroidSleepV6 => SLEEP_REGISTRY_VERSION,
+            Self::AppleHealthDataV11 | Self::AndroidSleepV6 => SLEEP_REGISTRY_VERSION,
         }
     }
 }
@@ -530,7 +530,7 @@ fn expected_profile_ids(version: u32) -> HashSet<&'static str> {
             "android_frozen_v4",
             "android_analytical_v5",
         ]),
-        SLEEP_REGISTRY_VERSION => HashSet::from(["apple_health_data_v10", "android_sleep_v6"]),
+        SLEEP_REGISTRY_VERSION => HashSet::from(["apple_health_data_v11", "android_sleep_v6"]),
         _ => HashSet::new(),
     }
 }

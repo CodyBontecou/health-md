@@ -33,7 +33,7 @@ pub fn merge_profile_markdown(
         SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => {
             Ok(android_merge(existing, generated))
         }
-        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
             wake_date::merge(profile, existing, generated, preserve_preamble)
         }
     }

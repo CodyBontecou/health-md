@@ -3619,7 +3619,7 @@ def validate_sleep_successor_pair(root: Path, handoff: Any, plan: Any) -> None:
     except (ValueError, ZoneInfoNotFoundError):
         fail(f"{context}: invalid captured timezone")
     expected_profile = {
-        "apple_health_data_v10": "apple-v10",
+        "apple_health_data_v11": "apple-v11",
         "android_sleep_v6": "android-sleep-v6",
     }[semantic["profile"]]
     if result["sleep_capture_context"] != {

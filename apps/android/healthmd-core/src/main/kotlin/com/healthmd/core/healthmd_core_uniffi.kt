@@ -3834,9 +3834,9 @@ enum class CoreMetricRegistryProfile {
      */
     ANDROID_ANALYTICAL_V5,
     /**
-     * Apple wake-date daily v10, selected explicitly from registry v2.
+     * Apple wake-date daily v11, selected explicitly from registry v2.
      */
-    APPLE_HEALTH_DATA_V10,
+    APPLE_HEALTH_DATA_V11,
     /**
      * Android wake-date daily v6, selected explicitly from registry v2.
      */

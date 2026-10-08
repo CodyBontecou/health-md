@@ -23,8 +23,8 @@ final class WakeDateJSONExporterTests: XCTestCase {
         day.body.weight = 72.125
         let expected = try day.toJSONDataThrowing(customization: Self.imperialCustomization, captureContext: context)
         let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: expected) as? [String: Any])
-        XCTAssertEqual(root["schema_version"] as? Int, 10)
-        XCTAssertEqual(root["schema_profile"] as? String, "apple-v10")
+        XCTAssertEqual(root["schema_version"] as? Int, 11)
+        XCTAssertEqual(root["schema_profile"] as? String, "apple-v11")
         XCTAssertEqual(root["date"] as? String, "2026-11-01")
         XCTAssertEqual(root["type"] as? String, "health-data")
         XCTAssertEqual(root["unit_system"] as? String, "metric")
@@ -182,8 +182,8 @@ final class WakeDateJSONExporterTests: XCTestCase {
         let bytes = try day.toJSONDataThrowing(customization: Self.customization, captureContext: context)
         let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
         XCTAssertEqual(root["schema"] as? String, "healthmd.health_data")
-        XCTAssertEqual(root["schema_version"] as? Int, 10)
-        XCTAssertEqual(root["schema_profile"] as? String, "apple-v10")
+        XCTAssertEqual(root["schema_version"] as? Int, 11)
+        XCTAssertEqual(root["schema_profile"] as? String, "apple-v11")
         XCTAssertEqual(root["date"] as? String, "2026-11-01")
         XCTAssertEqual(root["type"] as? String, "health-data")
         XCTAssertEqual(root["time_context"] as? [String: String], [

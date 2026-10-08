@@ -13,13 +13,13 @@ fn apple_successor_input() -> (Value, Value, Vec<Value>) {
     let case = &fixture["cases"][0];
     let mut config = case["configuration"].clone();
     let mut result = case["semantic_result"].clone();
-    config["profile"] = json!("apple_health_data_v10");
+    config["profile"] = json!("apple_health_data_v11");
     config["registry_version"] = json!(2);
     config["registry_sha256"] = json!(SLEEP_REGISTRY_SHA256);
     result["profile"] = config["profile"].clone();
     result["registry_sha256"] = config["registry_sha256"].clone();
     result["sleep_capture_context"] = json!({
-        "schema_profile": "apple-v10", "calendar_timezone": "Asia/Kathmandu",
+        "schema_profile": "apple-v11", "calendar_timezone": "Asia/Kathmandu",
         "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
         "sleep_interval_clipping": "none"
     });
@@ -443,8 +443,8 @@ fn supplied_native_csv_keeps_rows_and_rejects_incomplete_or_conflicting_authorit
     config["formats"] = json!(["csv"]);
     let mut rows = [
         ("schema", "healthmd.health_data"),
-        ("schema_version", "10"),
-        ("schema_profile", "apple-v10"),
+        ("schema_version", "11"),
+        ("schema_profile", "apple-v11"),
         ("time_context.calendar_timezone", "Asia/Kathmandu"),
         ("time_context.timestamp_timezone", "UTC"),
         ("time_context.sleep_day_attribution", "morning_ends"),
@@ -549,7 +549,7 @@ fn supplied_native_json_retains_its_payload_but_cannot_relabel_historical_author
     let (mut config, semantic, mut batches) = apple_successor_input();
     config["formats"] = json!(["json"]);
     let native = json!({
-        "schema":"healthmd.health_data", "schema_version":10, "schema_profile":"apple-v10",
+        "schema":"healthmd.health_data", "schema_version":11, "schema_profile":"apple-v11",
         "date":"2026-07-25", "time_context":{
             "calendar_timezone":"Asia/Kathmandu", "timestamp_timezone":"UTC",
             "sleep_day_attribution":"morning_ends", "sleep_owner_day_rule":"session_end_date", "sleep_interval_clipping":"none"
@@ -732,7 +732,7 @@ fn wake_date_api_envelopes_keep_profile_and_clock_including_failure_only_batches
     for (mut config, mut semantic, mut batches, version, profile, source) in [
         {
             let (c, s, b) = apple_successor_input();
-            (c, s, b, 10, "apple-v10", "ios")
+            (c, s, b, 11, "apple-v11", "ios")
         },
         {
             let (c, s, b) = android_successor_input();
@@ -821,7 +821,7 @@ fn completed_wake_date_semantics_prevent_renderer_timezone_reinterpretation() {
     let config = json!({
         "schema":"healthmd.semantic_session_config", "semantic_input_version":2,
         "canonical_model_version":2, "registry_version":2, "registry_sha256":SLEEP_REGISTRY_SHA256,
-        "profile_revision":1, "session_id":"clock-authority", "profile":"apple_health_data_v10",
+        "profile_revision":1, "session_id":"clock-authority", "profile":"apple_health_data_v11",
         "calendar_time_zone":"America/Los_Angeles", "selected_selection_ids":[],
         "disabled_output_keys":[], "retain_platform_extensions":false, "rollup_periods":[]
     });
@@ -837,7 +837,7 @@ fn completed_wake_date_semantics_prevent_renderer_timezone_reinterpretation() {
     assert_eq!(
         result["sleep_capture_context"],
         json!({
-            "schema_profile":"apple-v10", "calendar_timezone":"America/Los_Angeles",
+            "schema_profile":"apple-v11", "calendar_timezone":"America/Los_Angeles",
             "sleep_day_attribution":"morning_ends", "sleep_owner_day_rule":"session_end_date",
             "sleep_interval_clipping":"none"
         })
@@ -871,8 +871,8 @@ fn apple_wake_date_json_identifies_its_authority_even_with_no_sleep_values() {
     assert_eq!(plan.items.len(), 1);
     let doc: Value = serde_json::from_slice(&plan.items[0].content).unwrap();
     assert_eq!(doc["schema"], "healthmd.health_data");
-    assert_eq!(doc["schema_version"], 10);
-    assert_eq!(doc["schema_profile"], "apple-v10");
+    assert_eq!(doc["schema_version"], 11);
+    assert_eq!(doc["schema_profile"], "apple-v11");
     assert_eq!(
         doc["time_context"],
         json!({
@@ -895,12 +895,12 @@ fn apple_wake_date_formats_keep_attribution_when_metadata_is_disabled() {
             let text = std::str::from_utf8(&item.content).unwrap();
             if has_extension(&item.relative_path, "json") {
                 let doc: Value = serde_json::from_slice(&item.content).unwrap();
-                assert_eq!(doc["schema_version"], 10);
+                assert_eq!(doc["schema_version"], 11);
                 assert_eq!(doc["time_context"]["sleep_day_attribution"], "morning_ends");
             } else if has_extension(&item.relative_path, "csv") {
                 for (key, value) in [
-                    ("schema_version", "10"),
-                    ("schema_profile", "apple-v10"),
+                    ("schema_version", "11"),
+                    ("schema_profile", "apple-v11"),
                     ("time_context.calendar_timezone", "Asia/Kathmandu"),
                     ("time_context.timestamp_timezone", "UTC"),
                     ("time_context.sleep_day_attribution", "morning_ends"),
@@ -915,8 +915,8 @@ fn apple_wake_date_formats_keep_attribution_when_metadata_is_disabled() {
             } else if item.relative_path.contains("/Bases/") || metadata {
                 assert!(text.starts_with("---\n"));
                 for field in [
-                    "schema_version: 10",
-                    "schema_profile: apple-v10",
+                    "schema_version: 11",
+                    "schema_profile: apple-v11",
                     "sleep_day_attribution: morning_ends",
                     "sleep_owner_day_rule: session_end_date",
                     "sleep_interval_clipping: none",
@@ -929,7 +929,7 @@ fn apple_wake_date_formats_keep_attribution_when_metadata_is_disabled() {
                     "Morning ends",
                     "morning_ends",
                     "whole sessions",
-                    "apple-v10",
+                    "apple-v11",
                     "Asia/Kathmandu",
                     "UTC",
                     "session_end_date",

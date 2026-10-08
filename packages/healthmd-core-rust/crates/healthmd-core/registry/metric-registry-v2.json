@@ -10303,7 +10303,7 @@
   ],
   "profiles": [
     {
-      "id": "apple_health_data_v10",
+      "id": "apple_health_data_v11",
       "ordered_selection_ids": [
         "sleep_total",
         "sleep_bedtime",
@@ -12348,9 +12348,9 @@
       ],
       "platform": "apple",
       "profile_revision": 1,
-      "public_profile_id": "apple-v10",
+      "public_profile_id": "apple-v11",
       "public_schema": "healthmd.health_data",
-      "public_schema_version": 10,
+      "public_schema_version": 11,
       "unavailable_selection_ids": []
     },
     {

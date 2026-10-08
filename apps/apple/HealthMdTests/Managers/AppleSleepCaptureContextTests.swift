@@ -67,7 +67,7 @@ final class AppleSleepCaptureContextTests: XCTestCase {
     func testFreshWakeDateAuthorityCarriesAnExplicitSuccessorProfile() throws {
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(context)) as? [String: Any])
-        XCTAssertEqual(object["exportProfileID"] as? String, "apple-v10",
+        XCTAssertEqual(object["exportProfileID"] as? String, "apple-v11",
                        "A draft-era attribution value alone is not approval for a new profile")
     }
 
@@ -84,6 +84,21 @@ final class AppleSleepCaptureContextTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(restored), bytes, "Do not upgrade or rewrite a draft pending context")
     }
 
+    func testRetiredV10DraftAuthorityIsPreservedWithoutUpgrading() throws {
+        let bytes = Data(#"{"calendarTimeZoneIdentifier":"GMT","exportProfileID":"apple-v10","sleepDayAttribution":"morning_ends"}"#.utf8)
+        let restored = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: bytes)
+        XCTAssertEqual(restored.exportProfileID, "apple-v10")
+        XCTAssertThrowsError(try restored.requireShippedProfile()) {
+            XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unversionedAttribution)
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        XCTAssertEqual(try encoder.encode(restored), bytes)
+        let day = HealthData(date: Date(timeIntervalSince1970: 1_700_000_000),
+            timeContext: ExportTimeContext(timeZone: restored.timeZone, sleepDayAttribution: .morningEnds))
+        XCTAssertThrowsError(try day.toJSONDataThrowing(captureContext: restored))
+    }
+
     func testHistoricalNightAuthorityRetainsItsExactEncoding() throws {
         let bytes = Data(#"{"calendarTimeZoneIdentifier":"GMT","sleepDayAttribution":"night_begins"}"#.utf8)
         let restored = try JSONDecoder().decode(AppleSleepCaptureContext.self, from: bytes)
@@ -96,7 +111,7 @@ final class AppleSleepCaptureContextTests: XCTestCase {
     }
 
     func testAttributionProfileMismatchFailsWithABoundedError() throws {
-        for (mode, profile) in [("night_begins", "apple-v10"), ("morning_ends", "apple-v8"), ("morning_ends", "private-invalid-profile")] {
+        for (mode, profile) in [("night_begins", "apple-v11"), ("morning_ends", "apple-v8"), ("morning_ends", "private-invalid-profile")] {
             let object = ["calendarTimeZoneIdentifier": "UTC", "sleepDayAttribution": mode, "exportProfileID": profile]
             let bytes = try JSONSerialization.data(withJSONObject: object)
             XCTAssertThrowsError(try JSONDecoder().decode(AppleSleepCaptureContext.self, from: bytes)) {

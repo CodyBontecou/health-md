@@ -51,7 +51,7 @@ fn canonical_day(
 ) -> Result<RenderDay, RenderError> {
     let registry = metric_registry_snapshot(
         if config.profile.is_apple() {
-            MetricRegistryProfile::AppleHealthDataV10
+            MetricRegistryProfile::AppleHealthDataV11
         } else {
             MetricRegistryProfile::AndroidSleepV6
         },

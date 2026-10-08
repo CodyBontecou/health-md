@@ -13,10 +13,12 @@ A user can choose which daily export owns a sleep session. A capture operation r
 | Apple | `apple-v8` | 8 | historical `night_begins` |
 | Android | `android-frozen-v4` | 4 | historical `night_begins` |
 | Android | `android-analytical-v5` | 5 | historical `night_begins` |
-| Apple | `apple-v10` | 10 | `morning_ends` |
+| Apple | `apple-v11` | 11 | `morning_ends` |
 | Android | `android-sleep-v6` | 6 | `morning_ends` |
 
 Apple v5/v6/v7 remain readable historical Night begins documents. Apple v8 and Android v4/v5 writers, signatures, fixtures and already captured bytes remain immutable. Night begins remains the default and selects its existing native profile. New Morning ends operations select the explicitly versioned successor, not a relabeled old writer. The Apple and Android successor grammars remain native profiles; their different payloads do not claim a unified daily grammar merely because they share an attribution rule. Unified daily v9 remains a separate proposal.
+
+The 2026-10-08 allocation audit reserves Apple daily v11 for sleep ownership because the separate WHOOP/cloud workstream already defines daily v10 and `apple_health_data_v10` for Night begins plus WHOOP provider-v2 cycle steps. Draft sleep v10 contexts and artifacts do not become approved v11 inputs; their bytes/markers remain intact and unavailable. The retired synthetic v10 fixture is rejection evidence, not a supported writer profile. This reallocation changes no shipped schema, default, raw archive or protocol.
 
 ## Owner-day and clipping
 
@@ -34,7 +36,7 @@ Afternoon naps belong to their end date. Source offsets, nanoseconds, identities
 
 ## Exported authority
 
-Self-describing daily documents declare their native version and profile. A successor JSON record has `schema: healthmd.health_data`, `schema_version: 10` or `6`, and `schema_profile: apple-v10` or `android-sleep-v6`. Native Android analytical aliases, where retained, must agree with the canonical identity and cannot identify the output as v4/v5.
+Self-describing daily documents declare their native version and profile. A successor JSON record has `schema: healthmd.health_data`, `schema_version: 11` or `6`, and `schema_profile: apple-v11` or `android-sleep-v6`. Native Android analytical aliases, where retained, must agree with the canonical identity and cannot identify the output as v4/v5.
 
 Its `time_context` contains:
 
@@ -50,7 +52,7 @@ Its `time_context` contains:
 
 The calendar timezone is the frozen owner-date authority. Apple and canonical API timestamps remain UTC. Where a native Android local format retains its existing timezone-less calendar clock representation, `timestamp_timezone` must truthfully declare the captured calendar timezone rather than claim UTC; exact source timestamp representations remain independently authoritative. The shared attribution meaning is identical in either representation.
 
-The three sleep fields are a single atomic authority: missing, unknown or contradictory values are rejected, not defaulted. A successor needs a valid calendar timezone and a timestamp timezone of UTC or the declared calendar timezone. Apple v10 requires UTC machine timestamps. Existing versions cannot opt into Morning ends merely by adding a field.
+The three sleep fields are a single atomic authority: missing, unknown or contradictory values are rejected, not defaulted. A successor needs a valid calendar timezone and a timestamp timezone of UTC or the declared calendar timezone. Apple v11 requires UTC machine timestamps. Existing versions cannot opt into Morning ends merely by adding a field.
 
 CSV retains its existing column/header contract and emits `Metadata` rows for `schema`, `schema_version`, `schema_profile`, `time_context.calendar_timezone`, `time_context.timestamp_timezone`, and the three `time_context.sleep_*` fields. Markdown/Bases use the equivalent frontmatter when enabled. Metadata-off Markdown must still visibly identify the successor profile, timezone and wake-date/whole-session meaning without reintroducing frontmatter or optional health metadata; updated readers must recognize that explicit attribution declaration. It must not masquerade as an ordinary unversioned Night begins note.
 
@@ -64,7 +66,7 @@ Raw/extract readers preserve the source daily version and time context in record
 
 Connected peers must explicitly advertise successor support before a new Morning ends job can capture/transfer data for peer-side rendering. A missing capability means unsupported, never permission to let an older Mac discard attribution and write v8. Already captured artifact bytes remain opaque and authoritative during recovery.
 
-Range/period output cannot call Morning ends data Apple v8 source data or rules v8. Historical calendar v8 and range v9 outputs remain immutable. Successor Apple roll-ups require a separate `healthmd.rollup_summary` v11 profile identifying Apple v10 source/rules and exported attribution; existing independent range v9 is not rewritten. Clinician reports must label the captured attribution without altering their source archive meaning.
+Range/period output cannot call Morning ends data Apple v8 source data or rules v8. Historical calendar v8 and range v9 outputs remain immutable. Successor Apple roll-ups require a separate `healthmd.rollup_summary` v11 profile identifying Apple v11 source/rules and exported attribution; existing independent range v9 is not rewritten. Clinician reports must label the captured attribution without altering their source archive meaning.
 
 ## Durable authority and migration
 
@@ -75,7 +77,7 @@ New internal contexts persist the approved native profile/attribution revision a
 - New Morning ends contexts remain Morning ends after a preference change to Night begins, and the reverse holds for saved Night begins contexts.
 - Recovery commits existing immutable spool/partition bytes before considering fresh capture availability. It never recaptures, transcodes, retags or erases them.
 - A version/profile incompatibility or missing capture authority fails closed with a bounded health-free error while retaining the job. A downgrade cannot reinterpret an unrecognized successor as a legacy default.
-- New profile-aware registry inventory is independently versioned. Do not repin the historical v1 registry or change old renderer revisions merely to add profiles. Successor registry v2 contains only `apple_health_data_v10` and `android_sleep_v6`; old profiles continue to request v1 explicitly. In v2 Android `sleep_light` and Apple `sleep_core` are `platform_distinct` native identities with the counterpart reported unavailable, not a Core/Light alias. Android v6 emits `sleep_light_hours`, never `sleep_core_hours`. Historical v1 mappings and outputs remain unchanged.
+- New profile-aware registry inventory is independently versioned. Do not repin the historical v1 registry or change old renderer revisions merely to add profiles. Successor registry v2 contains only `apple_health_data_v11` and `android_sleep_v6`; old profiles continue to request v1 explicitly. In v2 Android `sleep_light` and Apple `sleep_core` are `platform_distinct` native identities with the counterpart reported unavailable, not a Core/Light alias. Android v6 emits `sleep_light_hours`, never `sleep_core_hours`. Historical v1 mappings and outputs remain unchanged.
 - Append/merge behavior must not silently combine conflicting ownership under a single old schema identity. Explicit new exports may replace user-selected outputs; migration is never an automatic historical rewrite.
 
 ## Internal handoff versioning

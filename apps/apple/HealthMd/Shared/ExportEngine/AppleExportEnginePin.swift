@@ -18,7 +18,7 @@ nonisolated enum ExportEngineMode: String, CaseIterable, Codable, Sendable {
 /// planned it. The pin contains no health values, dates, destination paths, or credentials.
 nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     static let profileID = "apple_health_data_v8"
-    static let wakeDateProfileID = "apple_health_data_v10"
+    static let wakeDateProfileID = "apple_health_data_v11"
     static let wakeDateHandoffVersion: UInt32 = 2
     private static let supportedCoreAPIVersion: UInt32 = 4
     private static let supportedRenderInputVersion: UInt32 = 1
@@ -163,7 +163,7 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
 
     var hasExplicitWakeDateContracts: Bool {
         isWakeDate && engine == .rust
-            && publicSchema == HealthMdExportSchema.identifier && publicSchemaVersion == 10
+            && publicSchema == HealthMdExportSchema.identifier && publicSchemaVersion == 11
             && coreAPIVersion == Self.supportedCoreAPIVersion
             && semanticInputVersion == Self.wakeDateHandoffVersion
             && canonicalModelVersion == Self.wakeDateHandoffVersion
@@ -181,7 +181,7 @@ nonisolated struct AppleExportEnginePin: Codable, Equatable, Sendable {
     ) throws {
         guard hasExplicitWakeDateContracts,
               registrySnapshot.profileId == Self.wakeDateProfileID,
-              registrySnapshot.publicProfileId == "apple-v10",
+              registrySnapshot.publicProfileId == "apple-v11",
               registrySnapshot.publicSchema == publicSchema,
               registrySnapshot.publicSchemaVersion == publicSchemaVersion,
               registrySnapshot.registryVersion == registryVersion,

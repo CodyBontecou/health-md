@@ -115,7 +115,7 @@
       "platforms": {
         "apple": {
           "state": "planned",
-          "target": "Issue #104 sleep-attribution-successor-profile-review: approve versioned owner-day/clipping semantics with exported attribution metadata, qualify Apple/core/CLI/website/API/direct and external Obsidian readers, and pass immutable operation/durable recovery gates before enabling morning_ends. Apple v10 and unified-v9 remain unapproved candidates."
+          "target": "Issue #104 sleep-attribution-successor-profile-review: approve versioned owner-day/clipping semantics with exported attribution metadata, qualify Apple/core/CLI/website/API/direct and external Obsidian readers, and pass immutable operation/durable recovery gates before enabling morning_ends. Apple v11 and unified-v9 remain unapproved candidates."
         },
         "android": {
           "state": "planned",

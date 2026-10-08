@@ -7,12 +7,12 @@ use serde_json::{Value, json};
 #[test]
 fn wake_date_authority_survives_a_daily_document_with_no_sleep_values() {
     let day: Value = serde_json::from_str(include_str!(
-        "../../../../contracts/sleep-attribution/v1/fixtures/apple-v10-empty-sleep.json"
+        "../../../../contracts/sleep-attribution/v1/fixtures/apple-v11-empty-sleep.json"
     ))
     .expect("synthetic successor fixture");
     let context = read_public_sleep_context(
         SleepSource::Apple,
-        10,
+        11,
         day.get("schema_profile").and_then(Value::as_str),
         day.get("time_context"),
     )
@@ -24,16 +24,16 @@ fn wake_date_authority_survives_a_daily_document_with_no_sleep_values() {
         Some("America/Los_Angeles")
     );
     assert_eq!(context.timestamp_timezone.as_deref(), Some("UTC"));
-    assert_eq!(context.successor_profile.as_deref(), Some("apple-v10"));
+    assert_eq!(context.successor_profile.as_deref(), Some("apple-v11"));
 }
 
 #[test]
 fn wake_date_registry_is_separate_from_the_immutable_night_begins_registry() {
-    let profile: MetricRegistryProfile = serde_json::from_str("\"apple_health_data_v10\"")
+    let profile: MetricRegistryProfile = serde_json::from_str("\"apple_health_data_v11\"")
         .expect("explicit successor registry profile");
     let successor = metric_registry_snapshot(profile, 2).expect("versioned successor inventory");
-    assert_eq!(successor.public_profile_id, "apple-v10");
-    assert_eq!(successor.public_schema_version, 10);
+    assert_eq!(successor.public_profile_id, "apple-v11");
+    assert_eq!(successor.public_schema_version, 11);
     assert_eq!(successor.registry_version, 2);
 
     let historical = metric_registry_snapshot(MetricRegistryProfile::AppleHealthDataV8, 1)
@@ -114,15 +114,15 @@ fn successor_metadata_is_atomic_and_cannot_fall_back_to_night_begins() {
         let mut missing = valid.clone();
         missing.as_object_mut().unwrap().remove(key);
         assert_eq!(
-            read_public_sleep_context(SleepSource::Apple, 10, Some("apple-v10"), Some(&missing)),
+            read_public_sleep_context(SleepSource::Apple, 11, Some("apple-v11"), Some(&missing)),
             Err(SleepProfileError::InvalidMetadata)
         );
         let mut contradictory = valid.clone();
         contradictory[key] = json!("private-invalid-value");
         let error = read_public_sleep_context(
             SleepSource::Apple,
-            10,
-            Some("apple-v10"),
+            11,
+            Some("apple-v11"),
             Some(&contradictory),
         )
         .unwrap_err();
@@ -130,13 +130,13 @@ fn successor_metadata_is_atomic_and_cannot_fall_back_to_night_begins() {
         assert!(!error.to_string().contains("private-invalid-value"));
     }
     assert_eq!(
-        read_public_sleep_context(SleepSource::Apple, 10, None, Some(&valid)),
+        read_public_sleep_context(SleepSource::Apple, 11, None, Some(&valid)),
         Err(SleepProfileError::UnsupportedProfile)
     );
     assert_eq!(
         read_public_sleep_context(
             SleepSource::Apple,
-            10,
+            11,
             Some("android-sleep-v6"),
             Some(&valid)
         ),
@@ -163,7 +163,7 @@ fn successor_clock_authority_is_validated_instead_of_using_the_reader_timezone()
         Some("America/Los_Angeles")
     );
     assert_eq!(
-        read_public_sleep_context(SleepSource::Apple, 10, Some("apple-v10"), Some(&context)),
+        read_public_sleep_context(SleepSource::Apple, 11, Some("apple-v11"), Some(&context)),
         Err(SleepProfileError::InvalidTimezone)
     );
     context["timestamp_timezone"] = json!("UTC");
@@ -194,4 +194,25 @@ fn historical_absence_preserves_only_the_immutable_night_begins_meaning() {
         assert_eq!(context.successor_profile, None);
         assert_eq!(context.calendar_timezone, None);
     }
+}
+
+#[test]
+fn wake_date_identity_cannot_reuse_the_whoop_v10_identity() {
+    let authority = json!({
+        "calendar_timezone": "America/New_York",
+        "timestamp_timezone": "UTC",
+        "sleep_day_attribution": "morning_ends",
+        "sleep_owner_day_rule": "session_end_date",
+        "sleep_interval_clipping": "none"
+    });
+    assert_eq!(
+        read_public_sleep_context(SleepSource::Apple, 10, Some("apple-v10"), Some(&authority)),
+        Err(SleepProfileError::UnsupportedProfile),
+        "The old draft identity is not a qualified sleep profile"
+    );
+    let context =
+        read_public_sleep_context(SleepSource::Apple, 11, Some("apple-v11"), Some(&authority))
+            .expect("Wake-date exports need their own versioned identity");
+    assert_eq!(context.successor_profile.as_deref(), Some("apple-v11"));
+    assert!(serde_json::from_str::<MetricRegistryProfile>("\"apple_health_data_v10\"").is_err());
 }

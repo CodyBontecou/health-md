@@ -221,7 +221,7 @@ extension HealthData {
             }
             return nil
         }
-        guard context.exportProfileID == "apple-v10" else {
+        guard context.exportProfileID == "apple-v11" else {
             throw AppleWakeDateJSONError.incompatibleCaptureAuthority
         }
         if let start = snapshot.sleep.bedtime, let end = snapshot.sleep.wakeTime {
@@ -284,8 +284,8 @@ extension HealthData {
         ]
 
         if let context = wakeDateContext {
-            json["schema_version"] = 10
-            json["schema_profile"] = "apple-v10"
+            json["schema_version"] = 11
+            json["schema_profile"] = "apple-v11"
             json["date"] = HealthKitDailyOwnershipMetadata.ownerDate(
                 for: snapshot.date, calendarTimeZoneIdentifier: context.calendarTimeZoneIdentifier
             )

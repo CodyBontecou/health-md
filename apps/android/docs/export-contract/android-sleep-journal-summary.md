@@ -22,7 +22,7 @@ Health Connect sleep reads use a sleep-only interval. For requested dates `first
 
 `morning_ends` would assign a whole source session to the calendar date of its end, without noon clipping. That changes public meaning and cannot ship under immutable Apple v8 or Android v4/v5 identities. The repository and current writer contexts reject this mode before provider reads or output. The settings control disables new selection; stored values remain unchanged and unavailable, rather than being coerced to `night_begins`. A changed preference applies only to a separately requested new operation, never to a saved explicit capture context.
 
-Apple v10, Android v6 and unified-v9 are unapproved candidates. Enabling alternate attribution requires profile approval, exported metadata, consumer adoption and durable-context qualification. It is not authorized by an internal window-rule constant or a unchanged structural signature.
+Apple v11, Android v6 and unified-v9 are unapproved candidates. Enabling alternate attribution requires profile approval, exported metadata, consumer adoption and durable-context qualification. It is not authorized by an internal window-rule constant or a unchanged structural signature.
 
 The same device-local raw values remain in DataStore (`sleep_day_attribution`) and Apple UserDefaults (`healthKit.sleepDayAttribution`). Portable Share My Setup does not import them. Apple internal durable journals now retain their operation context separately from portable/wire encoding; missing or unapproved recovery contexts remain unavailable without journal erasure. Android passes one explicit context across capture chunks and does not substitute provider-native single-day semantics after an empty authoritative range.
 

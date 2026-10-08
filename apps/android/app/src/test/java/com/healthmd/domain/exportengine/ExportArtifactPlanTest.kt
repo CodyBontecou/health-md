@@ -99,7 +99,7 @@ class ExportArtifactPlanTest {
             assertThat(widened.issue).isEqualTo(ExportArtifactPlanValidationIssue.VERSION)
         }
         val otherPlatform = assertThrows(ExportArtifactPlanValidationException::class.java) {
-            ExportArtifactPlan.fromCore(core.copy(profile = CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V10))
+            ExportArtifactPlan.fromCore(core.copy(profile = CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11))
         }
         assertThat(otherPlatform.issue).isEqualTo(ExportArtifactPlanValidationIssue.PROFILE)
     }

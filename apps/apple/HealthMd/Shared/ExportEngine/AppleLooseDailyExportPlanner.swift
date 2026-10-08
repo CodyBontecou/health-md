@@ -81,7 +81,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
     }
 
     func loadContext(profile: CoreMetricRegistryProfile) async throws -> AppleLooseDailyCoreContext {
-        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV10 else {
+        guard profile == .appleHealthDataV8 || profile == .appleHealthDataV11 else {
             throw AppleLooseDailyExportPlannerError.rustPlanningFailed
         }
         return try await runDetached {
@@ -89,7 +89,7 @@ nonisolated struct SystemAppleLooseDailyCoreExecutor: AppleLooseDailyCoreExecuti
             return AppleLooseDailyCoreContext(
                 buildInfo: try service.buildInfo(),
                 registry: try service.metricRegistry(profile: profile,
-                    expectedRegistryVersion: profile == .appleHealthDataV10
+                    expectedRegistryVersion: profile == .appleHealthDataV11
                         ? HealthMdSleepProfileContract.registryVersion : 1)
             )
         }
@@ -405,7 +405,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         let context: AppleLooseDailyCoreContext
         do {
             context = try await coreExecutor.loadContext(profile: wakeDateContext == nil
-                ? .appleHealthDataV8 : .appleHealthDataV10)
+                ? .appleHealthDataV8 : .appleHealthDataV11)
         } catch is CancellationError {
             throw CancellationError()
         } catch {
@@ -694,7 +694,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
             || records.contains { $0.timeContext.sleepDayAttribution == .morningEnds }
         guard requestsWakeDate else { return nil }
         guard let context, context.sleepDayAttribution == .morningEnds,
-              context.exportProfileID == "apple-v10",
+              context.exportProfileID == "apple-v11",
               let identifier = settings.calendarTimeZoneIdentifier,
               TimeZone(identifier: identifier)?.identifier == context.calendarTimeZoneIdentifier,
               settings.appleExportEnginePin?.calendarTimeZoneIdentifier == identifier,

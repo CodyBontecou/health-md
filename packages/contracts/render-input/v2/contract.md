@@ -2,7 +2,7 @@
 
 Status: owner-authorized implementation, not production-qualified.
 
-This independently versioned boundary accepts only `apple_health_data_v10` and `android_sleep_v6`, canonical model/semantic input v2 and registry v2. Historical render input/artifact plan v1, schemas, closed profiles, frozen bytes and merge behavior remain unchanged. The default build-info versions remain the legacy defaults; callers must select successor versions explicitly, never infer them from latest app/build metadata.
+This independently versioned boundary accepts only `apple_health_data_v11` and `android_sleep_v6`, canonical model/semantic input v2 and registry v2. Historical render input/artifact plan v1, schemas, closed profiles, frozen bytes and merge behavior remain unchanged. The default build-info versions remain the legacy defaults; callers must select successor versions explicitly, never infer them from latest app/build metadata.
 
 ## Authority
 

@@ -2,4 +2,4 @@
 // Successor-only authority; historical build-info and registry defaults stay v1.
 package com.healthmd.core
 
-const val HEALTHMD_SLEEP_REGISTRY_SHA256: String = "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073"
+const val HEALTHMD_SLEEP_REGISTRY_SHA256: String = "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"

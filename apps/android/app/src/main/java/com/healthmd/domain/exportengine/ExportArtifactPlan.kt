@@ -260,7 +260,7 @@ object CoreArtifactPlanConverter {
             CoreMetricRegistryProfile.ANDROID_SLEEP_V6 ->
                 AndroidExportProfile.android_sleep_v6
             CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
-            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V10 ->
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V11 ->
                 invalid(ExportArtifactPlanValidationIssue.PROFILE)
         },
         items = plan.items.map { item ->

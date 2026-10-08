@@ -120,7 +120,7 @@ enum HealthMdRenderInputAdapter {
 
         let wakeDate = registry.profileId == AppleExportEnginePin.wakeDateProfileID
         if wakeDate {
-            guard registry.publicProfileId == "apple-v10", registry.publicSchemaVersion == 10,
+            guard registry.publicProfileId == "apple-v11", registry.publicSchemaVersion == 11,
                   registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
                   registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256,
                   semanticProfileRevision == 1,
@@ -130,11 +130,11 @@ enum HealthMdRenderInputAdapter {
                   semanticRollups.isEmpty, options.api == nil, !options.formats.isEmpty,
                   Set(options.formats).isSubset(of: ["json", "markdown", "obsidian_bases", "csv"]),
                   let captureContext, captureContext.sleepDayAttribution == .morningEnds,
-                  captureContext.exportProfileID == "apple-v10",
+                  captureContext.exportProfileID == "apple-v11",
                   TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
                       == captureContext.calendarTimeZoneIdentifier,
                   root["sleep_capture_context"] as? [String: String] == [
-                      "schema_profile": "apple-v10", "calendar_timezone": calendarTimeZoneIdentifier,
+                      "schema_profile": "apple-v11", "calendar_timezone": calendarTimeZoneIdentifier,
                       "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
                       "sleep_interval_clipping": "none",
                   ] else { throw AdapterError.invalidSemanticResult }

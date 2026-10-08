@@ -522,15 +522,15 @@ nonisolated enum HealthMdSemanticInputAdapter {
         captureContext: AppleSleepCaptureContext?
     ) throws -> UInt32 {
         if registry.profileId == AppleExportEnginePin.wakeDateProfileID {
-            guard registry.publicProfileId == "apple-v10",
+            guard registry.publicProfileId == "apple-v11",
                   registry.publicSchema == HealthMdExportSchema.identifier,
-                  registry.publicSchemaVersion == 10, registry.profileRevision == 1,
+                  registry.publicSchemaVersion == 11, registry.profileRevision == 1,
                   registry.registryVersion == HealthMdSleepProfileContract.registryVersion,
                   registry.registrySha256 == HealthMdSleepProfileContract.registrySHA256 else {
                 throw AdapterError.invalidRegistry
             }
             guard let captureContext, captureContext.sleepDayAttribution == .morningEnds,
-                  captureContext.exportProfileID == "apple-v10",
+                  captureContext.exportProfileID == "apple-v11",
                   TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier
                       == captureContext.calendarTimeZoneIdentifier else {
                 throw AdapterError.invalidCaptureAuthority

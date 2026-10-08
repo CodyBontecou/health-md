@@ -13,7 +13,7 @@
   "$defs": {
     "profile": {
       "enum": [
-        "apple_health_data_v10",
+        "apple_health_data_v11",
         "android_sleep_v6"
       ]
     },
@@ -75,7 +75,7 @@
           "const": 2
         },
         "registry_sha256": {
-          "const": "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073"
+          "const": "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78"
         },
         "profile_revision": {
           "const": 1

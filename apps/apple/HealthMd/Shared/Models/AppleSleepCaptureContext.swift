@@ -15,7 +15,7 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
     init(timeZone: TimeZone, sleepDayAttribution: SleepDayAttribution) {
         self.calendarTimeZoneIdentifier = timeZone.identifier
         self.sleepDayAttribution = sleepDayAttribution
-        self.exportProfileID = sleepDayAttribution == .morningEnds ? "apple-v10" : nil
+        self.exportProfileID = sleepDayAttribution == .morningEnds ? "apple-v11" : nil
     }
 
     var timeZone: TimeZone { TimeZone(identifier: calendarTimeZoneIdentifier)! }
@@ -34,7 +34,7 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
     }
 
     func requireShippedProfile() throws {
-        if sleepDayAttribution == .morningEnds && exportProfileID != "apple-v10" {
+        if sleepDayAttribution == .morningEnds && exportProfileID != "apple-v11" {
             throw AvailabilityError.unversionedAttribution
         }
         guard sleepDayAttribution.isAvailableForShippedProfiles else { throw AvailabilityError.unapprovedAttribution }
@@ -51,8 +51,8 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
         self.sleepDayAttribution = try container.decode(SleepDayAttribution.self, forKey: .sleepDayAttribution)
         self.exportProfileID = try container.decodeIfPresent(String.self, forKey: .exportProfileID)
         if let profile = exportProfileID {
-            let expected = sleepDayAttribution == .morningEnds ? "apple-v10" : "apple-v8"
-            guard profile == expected else {
+            let expected = sleepDayAttribution == .morningEnds ? "apple-v11" : "apple-v8"
+            guard profile == expected || (sleepDayAttribution == .morningEnds && profile == "apple-v10") else {
                 throw DecodingError.dataCorruptedError(forKey: .exportProfileID, in: container,
                                                        debugDescription: "Invalid capture export profile")
             }

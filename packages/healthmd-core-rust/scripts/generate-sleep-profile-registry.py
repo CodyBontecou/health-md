@@ -29,7 +29,7 @@ def successor_document() -> dict:
     document = json.loads(original)
     old_profiles = {p["id"]: p for p in document["profiles"]}
     apple = copy.deepcopy(old_profiles["apple_health_data_v8"])
-    apple.update(id="apple_health_data_v10", public_profile_id="apple-v10", public_schema_version=10)
+    apple.update(id="apple_health_data_v11", public_profile_id="apple-v11", public_schema_version=11)
     android = copy.deepcopy(old_profiles["android_analytical_v5"])
     android.update(id="android_sleep_v6", public_profile_id="android-sleep-v6", public_schema_version=6)
 

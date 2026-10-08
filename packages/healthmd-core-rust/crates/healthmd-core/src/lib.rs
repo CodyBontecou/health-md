@@ -35,7 +35,7 @@ pub const REGISTRY_SHA256: &str =
 pub const SLEEP_REGISTRY_VERSION: u32 = 2;
 /// SHA-256 of the separately embedded successor inventory, never a v1 repin.
 pub const SLEEP_REGISTRY_SHA256: &str =
-    "c1854454bee84b6d74cee1d7457d3fde1f484ef74963a656adba503c91cb9073";
+    "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78";
 /// Source revision supplied by reproducible native packaging scripts.
 pub const CORE_SOURCE_REVISION: &str = match option_env!("HEALTHMD_CORE_SOURCE_REVISION") {
     Some(revision) => revision,

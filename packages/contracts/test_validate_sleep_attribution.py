@@ -35,7 +35,7 @@ class SleepAttributionValidationTests(unittest.TestCase):
             ('render_configuration', 'calendar_time_zone', 'UTC'),
             ('semantic_configuration', 'calendar_time_zone', 'Invalid/Timezone'),
             ('render_configuration', 'registry_sha256', '0' * 64),
-            ('render_configuration', 'profile', 'apple_health_data_v10'),
+            ('render_configuration', 'profile', 'apple_health_data_v11'),
             ('render_configuration', 'session_id', 'other-session'),
             ('render_configuration', 'profile_revision', 2),
             ('semantic_configuration', 'semantic_input_version', 1),
@@ -51,7 +51,7 @@ class SleepAttributionValidationTests(unittest.TestCase):
 
     def test_missing_and_conflicting_sleep_authority(self):
         original = copy.deepcopy(self.handoff)
-        for key, value in [('schema_profile', 'apple-v10'), ('calendar_timezone', 'UTC'),
+        for key, value in [('schema_profile', 'apple-v11'), ('calendar_timezone', 'UTC'),
                            ('sleep_day_attribution', 'night_begins'),
                            ('sleep_owner_day_rule', 'session_start_date'),
                            ('sleep_interval_clipping', 'noon')]:
@@ -79,7 +79,7 @@ class SleepAttributionValidationTests(unittest.TestCase):
     def test_plan_identity_and_content(self):
         original = copy.deepcopy(self.plan)
         for key, value in [('request_id', 'other'), ('session_id', 'other'),
-                           ('profile', 'apple_health_data_v10'), ('total_byte_count', 0)]:
+                           ('profile', 'apple_health_data_v11'), ('total_byte_count', 0)]:
             with self.subTest(key=key):
                 self.plan = copy.deepcopy(original)
                 self.plan[key] = value

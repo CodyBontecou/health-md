@@ -47,7 +47,7 @@ pub enum SemanticProfile {
     AppleHealthDataV8,
     AndroidFrozenV4,
     AndroidAnalyticalV5,
-    AppleHealthDataV10,
+    AppleHealthDataV11,
     AndroidSleepV6,
 }
 
@@ -57,7 +57,7 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => "apple_health_data_v8",
             Self::AndroidFrozenV4 => "android_frozen_v4",
             Self::AndroidAnalyticalV5 => "android_analytical_v5",
-            Self::AppleHealthDataV10 => "apple_health_data_v10",
+            Self::AppleHealthDataV11 => "apple_health_data_v11",
             Self::AndroidSleepV6 => "android_sleep_v6",
         }
     }
@@ -67,11 +67,11 @@ impl SemanticProfile {
     }
 
     pub(crate) const fn is_apple(self) -> bool {
-        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV10)
+        matches!(self, Self::AppleHealthDataV8 | Self::AppleHealthDataV11)
     }
 
     pub(crate) const fn is_wake_date(self) -> bool {
-        matches!(self, Self::AppleHealthDataV10 | Self::AndroidSleepV6)
+        matches!(self, Self::AppleHealthDataV11 | Self::AndroidSleepV6)
     }
 
     pub(crate) const fn public_schema_version(self) -> u32 {
@@ -79,7 +79,7 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => 8,
             Self::AndroidFrozenV4 => 4,
             Self::AndroidAnalyticalV5 => 5,
-            Self::AppleHealthDataV10 => 10,
+            Self::AppleHealthDataV11 => 11,
             Self::AndroidSleepV6 => 6,
         }
     }
@@ -89,7 +89,7 @@ impl SemanticProfile {
             Self::AppleHealthDataV8 => "apple-v8",
             Self::AndroidFrozenV4 => "android-frozen-v4",
             Self::AndroidAnalyticalV5 => "android-analytical-v5",
-            Self::AppleHealthDataV10 => "apple-v10",
+            Self::AppleHealthDataV11 => "apple-v11",
             Self::AndroidSleepV6 => "android-sleep-v6",
         }
     }

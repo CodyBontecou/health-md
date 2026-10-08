@@ -816,8 +816,8 @@ fn profile_presentation_categories(
         SemanticProfile::AndroidAnalyticalV5 => {
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
         }
-        SemanticProfile::AppleHealthDataV10 => {
-            crate::registry::MetricRegistryProfile::AppleHealthDataV10
+        SemanticProfile::AppleHealthDataV11 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV11
         }
         SemanticProfile::AndroidSleepV6 => crate::registry::MetricRegistryProfile::AndroidSleepV6,
     };
@@ -1146,7 +1146,7 @@ fn validate_day(
     }
     match (config.profile, &day.archive_diagnostics) {
         (
-            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10,
+            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11,
             Some(diagnostics),
         ) => {
             if !matches!(
@@ -1700,7 +1700,7 @@ fn render_day(
         SemanticProfile::AndroidAnalyticalV5 => {
             android_analytical_v5::render_day(config, day, format)
         }
-        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
             sleep_profiles::render_day(config, day, format)
         }
     }
@@ -1709,7 +1709,7 @@ fn render_day(
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV10 => {
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
             formats.sort_by_key(|format| format.id());
         }
         SemanticProfile::AndroidFrozenV4
@@ -1985,7 +1985,7 @@ fn render_api_record(
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
-        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
             sleep_profiles::render_api_record(config, day, semantic)
         }
     }
@@ -2000,7 +2000,7 @@ fn render_api_envelope(
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
-        SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
             sleep_profiles::render_api_envelope(config, api, records)
         }
     }
@@ -2011,7 +2011,7 @@ pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
-        SemanticProfile::AppleHealthDataV10 => "apple_health_data_v10",
+        SemanticProfile::AppleHealthDataV11 => "apple_health_data_v11",
         SemanticProfile::AndroidSleepV6 => "android_sleep_v6",
     }
 }
@@ -2122,7 +2122,7 @@ mod tests {
                     assert!(text.contains("\"schemaProfile\": \"android-analytical-v5\""));
                     assert!(text.contains("\"schemaVersion\": 5"));
                 }
-                SemanticProfile::AppleHealthDataV10 | SemanticProfile::AndroidSleepV6 => {
+                SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
                     unreachable!("successors have separate contract cases")
                 }
             }
