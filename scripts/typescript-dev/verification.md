@@ -21,11 +21,20 @@ not qualified by these runs.
   after the selected/full development runs. Core source, compiler configs, package
   locks, qualification scripts and frozen cohorts were not changed by this work.
 
-The CLI source check passed, but checking its test code failed at
+The first CLI source check passed, but checking its test code failed at
 `apps/cli/tests/surfaces/stdio-framing.test.ts:96`: the Effect supplied to `runPromise`
 retains an `unknown` service requirement. TypeScript reports TS2379 and the Effect
-compiler additionally reports `missingEffectContext`. The frozen, uncompiled MCP
-candidate remains pending repair; this tool does not suppress or baseline that error.
+compiler additionally reports `missingEffectContext`. The candidate's typed helper
+and mutable Effect holder were repaired without diagnostic suppression.
+
+The latest focused CLI run passed all 296 stdio tests. Static checking took 315 ms;
+the development runner reported 1,522 ms including bundling and tests. The bounded
+supervisor measured 1,743 ms including launch and cleanup. Its retained log is
+`/private/tmp/healthmd-stdio-focused-development.log`; source, tools, packed core and
+all 53 core outputs matched before and after. This remains development evidence.
+The subsequent full CLI qualification command passed all 721 tests and 456 filesystem
+cases in 8,984 ms. The unchanged 1,359-test core producer was credited from its prior
+passing run, rather than rerun for these CLI-only repairs.
 
 During implementation, the first probe used a double assertion through `unknown`,
 which this Effect rule did not reject. The verified probe uses a direct assertion;

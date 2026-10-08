@@ -36,45 +36,73 @@ The frozen 84 disposable filesystem negatives retain all 63 preceding cases and 
 
 Eligibility remains a synthetic gate-only owned metadata handoff with zero personal observations and an original-Scope lifetime. Its accepted 154 frozen literals and six independent Scope reentry regressions prove this private boundary; they do not authenticate iOS eligibility, source/purpose/channel, durable grants, report/export, public profiles or OS budgets. The separately frozen discovery normalizer is not part of core authority. Existing public exports, launchers, Rust, native bundles and user state retain their separate qualification. Roll back the predecessor committed guard/cohort and packed CLI together.
 
-## Exact codec successor authority
+## Source Catalog successor authority
 
-`core-ts-exact-codecs-v1.json` records the reviewed producer's complete 56 inputs
-and 34 core module outputs. The 43-input/26-module eligibility cohort described
-above remains immutable historical authority: all 41 other input bytes and all
-26 module bytes are retained. The successor adds twelve Number/Value/Canonical
-JSON/facade source, test and vector inputs and eight module outputs, with the
-reviewed package/README replacements and one additional Catalog literal vector.
-The private literal `@healthmd/core-ts/candidate/codecs` exposes the four original
-codec functions and their selected types; no reader, AST, token type, wildcard,
-extra dependency or separate Effect installation is admitted.
+The mandatory consumer authority is the fixed tracked
+`core-ts-source-catalog-v1.json` cohort: 58 complete source/build inputs and
+36 core module outputs. Its raw SHA256 and byte length are fixed in the guard;
+there is no selectable predecessor profile, discovery, hash refresh or own
+refresh-receipt dependency. Source and installed packed-core trees must match
+these complete maps. The unexported private Catalog adds its source/test and
+JS/declaration pair; all 56 predecessor inputs and 34 module bytes remain exact.
+Package exports, locks, compiler identities and one physical Effect installation
+retain their existing checks. The 53-file producer output inventory includes
+36 core modules, 15 test entries and two metadata files; packed consumers admit
+only the fixed 36-module set.
 
-Five tracked implementation receipts must remain raw-byte identical, passed,
-and accepted at their exact task/source/patch/review fingerprints. Catalog uses
-a separate closed `CatalogLiteralDataAuthority`: its 96-scene vector and current
-partial receipt are tracked, while its exact original Stage1 approval and
-original partial receipt are embedded as canonical base64 in the cohort.
-The guard verifies the blob schema, canonical encoding, original byte lengths
-and SHA256 before strict UTF-8/JSON parsing and exact semantic chain checks.
-Historical scratch paths and producer-host compiler locations are audit
-provenance only; consumer checks never require or open those paths. Catalog's
-partial literal approval gives no implementation, behavior, runtime, module,
-grant, public or consumer authority. Its source and test remain absent.
+Six tracked implementation receipts must be byte-identical, passed and accepted
+at exact task/source/patch/review fingerprints. Catalog's `40aae…` receipt has a
+separate strict private metadata-only synthetic target and stage. It does not
+admit real sources, payloads, grants, storage, native hosts or public consumers.
+The five codec authorities retain their original strict checks. The refresh
+receipt itself is never an implementation authority.
 
-The guard's 203 frozen filesystem failures retain all 84 historical cases and
-add 119 exact input/output/receipt/cohort/Catalog mutations. Each new mutation
-starts from an authenticated disposable baseline and calls the actual same
-validator used for ordinary inputs. Embedded evidence supplies owned local
-copies for the Catalog approval/archive tests; altered hashes are never adopted.
-Only the owned temporary tree is removed. Source, installed packages, accepted
-cohorts and receipts are never mutated by the negative drivers.
+The immutable predecessor `7e20…` cohort remains historical 56/34 authority.
+Its Catalog96 `CatalogLiteralDataAuthority` still gives no implementation,
+behavior, runtime, module, grant, public or consumer admission. Its original
+partial receipt `4f1c…`, approval `2340…` and reviewed archive `eda5…` are three
+bounded authenticated embedded raw blobs, with closed names/keys, canonical
+base64, exact lengths/SHA256 and the original semantic chain. Historical scratch
+paths are provenance labels; the guard never opens them. The tracked current
+passed Catalog receipt is never required to be partial or substituted by these
+historical literals.
 
-Qualification requires the coordinator's sequential exclusive core check,
-pinned offline `npm ci --offline --install-links --engine-strict --no-audit
---no-fund` in this CLI component, then its full `npm run check`. Actual check and
-integration status is recorded in the task receipt and execution plan; the
-producer's 1253 portable tests/19 guards alone do not install this consumer.
-The separately frozen CLI result envelope remains uncompiled prospective work
-until its own checks and review; this cohort does not admit its public grammar
-or rendering. Native bundles, source reads, health grants, exports, full public
-profiles and Rust retirement retain their separate owners and qualification.
-Rollback restores the predecessor guard/cohort and packed CLI together.
+The frozen catalog contains 456 filesystem mutation scenes. All 203 original
+whole objects run on owned disposable historical 56/34 copies. Another 203
+scenes cover the current 58/36 profile, with explicit current tracked-receipt
+and embedded-evidence reconciliation; 50 additional current scenes cover the
+new inputs/modules, strict Catalog receipt, successor cohort, complete sets,
+symlinks, false admission flags and all three embedded blobs. Historical runs
+are labeled separately and never claimed as current coverage. The two added
+traversal cases retain exact modules outside the copied package and reject links
+at `dist` and `dist/core` through the same standalone output validator used by
+ordinary admission. Source and output fixture checks share the actual ordinary
+validation implementations; consumer wrappers always bind the current maps.
+Validators use
+fixed action/target/profile stimuli; IDs only label observations, and expected
+failures are assertions after mutation and validator selection. Source,
+installed packages, tracked authorities and scratch evidence are not mutated.
+Every scene owns a fresh disposable copy, and cleanup removes only its owned
+temporary tree. These 456 scenes are source-defined and remain unrun until the
+coordinator authorizes qualification.
+
+The accepted unchanged Catalog producer reported 1359 portable passes and
+19 boundary negatives. Its complete 58 inputs and 53 outputs remain credited
+producer evidence. One pre-execution audit receipt pin `b5dd…` was subsequently
+normalized to accepted `40aae…`; the old raw archive is preserved. The original
+33 producer pins stay historical evidence, with 32 unchanged current matches
+and one explicit receipt-only reconciliation. This is not a changed physical
+tool or a producer rerun, and producer proof alone does not install this CLI
+consumer.
+
+After independent source review, qualification requires an exclusive
+coordinator window: exact pinned offline `npm ci --offline --install-links
+--engine-strict --no-audit --no-fund` in this CLI component, then full
+`npm run check`. No execution is authorized by this source-only update.
+Static development and selected-test lanes in `scripts/typescript-dev/README.md`
+can aid later authorized iteration; they cannot replace the full qualification
+check. Current MCP/result sources retain their own review and test obligations.
+Native bundles, health/source grants, real pipes, full public profiles and Rust
+retirement remain separate. Rollback restores a matching predecessor source,
+packed output and guard only through a separately reviewed task; it cannot
+silently ignore extra Catalog files or adopt fresh hashes.

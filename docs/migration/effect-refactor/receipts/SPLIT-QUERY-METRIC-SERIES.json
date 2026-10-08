@@ -1,0 +1,505 @@
+{
+  "task_id": "SPLIT-QUERY-METRIC-SERIES",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_revision": "03569f310c737decb20478df96e679b9a87b3c73",
+  "source_patch_digest": "1ec27b927d1a115c65c97e6dc67fe9c8be44f1f685e2863aa13f98ab397a2322",
+  "review_fingerprint": "03569f310c737decb20478df96e679b9a87b3c73+1ec27b927d1a115c65c97e6dc67fe9c8be44f1f685e2863aa13f98ab397a2322",
+  "inputs": {
+    "packet": {
+      "path": "docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "sha256": "4e5111da00cf79f52e71a8365cd0f0580479bf590bbfd30e55748e65f3aab2da",
+      "bytes": 271457
+    },
+    "source_pins": [
+      {
+        "path": "AGENTS.md",
+        "current_sha256": "830901de59e2afe2023a35bddaa6a1b620d8b40f14bad33d9675ccdadda75f0d",
+        "current_bytes": 6509,
+        "assigned_source_sha256": "830901de59e2afe2023a35bddaa6a1b620d8b40f14bad33d9675ccdadda75f0d",
+        "assigned_source_bytes": 6509,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/AGENTS.md",
+        "current_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "current_bytes": 860,
+        "assigned_source_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+        "assigned_source_bytes": 860,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/README.md",
+        "current_sha256": "2185850836e6660f5ed41876d72737aad80e00997c71b91984c982615b409cc1",
+        "current_bytes": 4123,
+        "assigned_source_sha256": "2185850836e6660f5ed41876d72737aad80e00997c71b91984c982615b409cc1",
+        "assigned_source_bytes": 4123,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-research.md",
+        "current_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "current_bytes": 13361,
+        "assigned_source_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+        "assigned_source_bytes": 13361,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+        "current_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "current_bytes": 284562,
+        "assigned_source_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+        "assigned_source_bytes": 284562,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/architecture/cross-platform-unification-policy.md",
+        "current_sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+        "current_bytes": 9482,
+        "assigned_source_sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+        "assigned_source_bytes": 9482,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/core-cli.md",
+        "current_sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+        "current_bytes": 5578,
+        "assigned_source_sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+        "assigned_source_bytes": 5578,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/cloud-release.md",
+        "current_sha256": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+        "current_bytes": 6107,
+        "assigned_source_sha256": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+        "assigned_source_bytes": 6107,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "current_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "current_bytes": 201152,
+        "assigned_source_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "assigned_source_bytes": 201152,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "current_sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
+        "current_bytes": 244805,
+        "assigned_source_sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
+        "assigned_source_bytes": 244805,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/cloud.json",
+        "current_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+        "current_bytes": 131059,
+        "assigned_source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+        "assigned_source_bytes": 131059,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/query.ts",
+        "current_sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "current_bytes": 8929,
+        "assigned_source_sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100",
+        "assigned_source_bytes": 8929,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/normalize.ts",
+        "current_sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "current_bytes": 2808,
+        "assigned_source_sha256": "bfa2b22abba44e22bbfc60d50dac8df5654acf3f296b49b59ed812d8cd11fa45",
+        "assigned_source_bytes": 2808,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/healthmd-core-ts/tests/query-traversal-vectors.ts",
+        "current_sha256": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "current_bytes": 9069,
+        "assigned_source_sha256": "ee70ea97d59a83993c0b50ecdf3b8dd08b5796d379b007fcaea450a7dcc0c12a",
+        "assigned_source_bytes": 9069,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "current_sha256": "72f56754e04653b9262394932b9baaac0468cc96a8b498dd11c35be989f00118",
+        "current_bytes": 54211,
+        "assigned_source_sha256": "72f56754e04653b9262394932b9baaac0468cc96a8b498dd11c35be989f00118",
+        "assigned_source_bytes": 54211,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "current_sha256": "1658be7cf1db8ad530356eebf2e986a501ef223f57ffc2571a9540817e57916f",
+        "current_bytes": 8432,
+        "assigned_source_sha256": "1658be7cf1db8ad530356eebf2e986a501ef223f57ffc2571a9540817e57916f",
+        "assigned_source_bytes": 8432,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "current_sha256": "b6b2de86e7cfd0c03c7105ae65750b23189ab7f163e4823ee4d983bcc0445feb",
+        "current_bytes": 6998,
+        "assigned_source_sha256": "b6b2de86e7cfd0c03c7105ae65750b23189ab7f163e4823ee4d983bcc0445feb",
+        "assigned_source_bytes": 6998,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "current_sha256": "54b13797c7f94170aae77d33bd89a27fdb8a9b3e6c03fce796df2eefd01141ee",
+        "current_bytes": 60997,
+        "assigned_source_sha256": "54b13797c7f94170aae77d33bd89a27fdb8a9b3e6c03fce796df2eefd01141ee",
+        "assigned_source_bytes": 60997,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "current_sha256": "2e4de29fd916b7b313f6c3c9840ff1cee6dce1460186db2891282401b00eb79f",
+        "current_bytes": 45870,
+        "assigned_source_sha256": "2e4de29fd916b7b313f6c3c9840ff1cee6dce1460186db2891282401b00eb79f",
+        "assigned_source_bytes": 45870,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+        "current_sha256": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0",
+        "current_bytes": 70600,
+        "assigned_source_sha256": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0",
+        "assigned_source_bytes": 70600,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "current_sha256": "233bd08c54357afcecc74091bae37a68b5fd6e32818e34b09777273ac621d1af",
+        "current_bytes": 44578,
+        "assigned_source_sha256": "233bd08c54357afcecc74091bae37a68b5fd6e32818e34b09777273ac621d1af",
+        "assigned_source_bytes": 44578,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "current_sha256": "2f6f584624d0d75077f466cbffcb3d7c03229db2bc342908d8b721f0b930f23b",
+        "current_bytes": 24546,
+        "assigned_source_sha256": "2f6f584624d0d75077f466cbffcb3d7c03229db2bc342908d8b721f0b930f23b",
+        "assigned_source_bytes": 24546,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/apple/docs/features/export-schema.md",
+        "current_sha256": "f5d604b16a14e7aa6a1647c8c3cf9b63a40ebdd0db0096994e323d80a3691d07",
+        "current_bytes": 25451,
+        "assigned_source_sha256": "f5d604b16a14e7aa6a1647c8c3cf9b63a40ebdd0db0096994e323d80a3691d07",
+        "assigned_source_bytes": 25451,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/android/AGENTS.md",
+        "current_sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c",
+        "current_bytes": 2502,
+        "assigned_source_sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c",
+        "assigned_source_bytes": 2502,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/android/docs/features/json-export.md",
+        "current_sha256": "7d5d66eca6185a514a27c23755f2a7f7d99dd1319b00d439ae6599bb859a27ba",
+        "current_bytes": 4635,
+        "assigned_source_sha256": "7d5d66eca6185a514a27c23755f2a7f7d99dd1319b00d439ae6599bb859a27ba",
+        "assigned_source_bytes": 4635,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "current_sha256": "082ade5953c87e0ce17c1da2722612d4f37010c63eaafb76d3d628c1fe0b8b5f",
+        "current_bytes": 15238,
+        "assigned_source_sha256": "082ade5953c87e0ce17c1da2722612d4f37010c63eaafb76d3d628c1fe0b8b5f",
+        "assigned_source_bytes": 15238,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/DirectCodecs.kt",
+        "current_sha256": "aaf292a27bd7aec2ef0ebee6a6ae56e9e30741ac2c0995c30e798d2d3c268e5a",
+        "current_bytes": 10631,
+        "assigned_source_sha256": "aaf292a27bd7aec2ef0ebee6a6ae56e9e30741ac2c0995c30e798d2d3c268e5a",
+        "assigned_source_bytes": 10631,
+        "current_equals_assigned": true
+      },
+      {
+        "path": "packages/contracts/product-capabilities.json",
+        "current_sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+        "current_bytes": 29834,
+        "assigned_source_sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+        "assigned_source_bytes": 29834,
+        "current_equals_assigned": true
+      }
+    ],
+    "historical_blob_pins": [
+      {
+        "path": "apps/apple/docs/reference/generated/automation/api-export-v1.json",
+        "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "sha256": "8a200410fc28852e0ab43b3b57855a4acded031335fd08b56ecc22b704d381ba",
+        "bytes": 2214
+      },
+      {
+        "path": "apps/apple/docs/reference/generated/automation/api-export-v2-provider-sidecar.json",
+        "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "sha256": "94283e6cd273aca0a09d9b4a0ab333f8c77b7113e263df85eaabcaefd2878a4b",
+        "bytes": 7656
+      },
+      {
+        "path": "apps/apple/docs/reference/generated/core/summary-day.json",
+        "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "sha256": "5d905cc0786109af1a20271eb1812f889207d2459c1882b784e2b252a6794f05",
+        "bytes": 27750
+      },
+      {
+        "path": "packages/contracts/provider-sections/v2/fixtures/whoop-complete.providers.json",
+        "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+        "sha256": "1780342891ea3975509f43af86a01656f37d503dac9d94ab8fed06650e4c84c3",
+        "bytes": 3653
+      }
+    ],
+    "task_preclaim_card_sha256": "c4c00334996e597e7bb8d6e51f801d3f2fdc4751f76543e2e7f3496bf22e6257",
+    "independent_gap_review_sha256": "a48f2905867ce4d0dca2eeeff23f4db8f39ef35d54e1fb1735b55069e3641d2d"
+  },
+  "checks": [],
+  "observations": [
+    {
+      "result": "passed",
+      "procedure": "Read current task and original HOSTED clauses; inspect existing query tasks/remaining packets and native source branches",
+      "expected": "raw metric evaluator must remain tracked; page traversal is not evaluator",
+      "observed": "Four proposed executable boundaries include metric contract/pure evaluator, raw lens, Effect operation and retained adapter; HOSTED actual adapter dependency required before planning completion unlock",
+      "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "case_id": "source-derived-metric-boundary"
+    },
+    {
+      "result": "passed",
+      "procedure": "Read immutable donor fixtures via exact Git objects and current native/Android source instructions",
+      "expected": "historical donor10 api1/2 distinct native8 and Android4/5",
+      "observed": "Four exact historical raw blobs and28 current+assigned source pins retained; no profile promotion",
+      "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "case_id": "source-profile-distinction"
+    }
+  ],
+  "counts": {
+    "children": 4,
+    "disjoint_child_paths": 16,
+    "internal_edges": 4,
+    "source_pins": 28,
+    "historical_blobs": 4,
+    "source_ranges": 12,
+    "independent_minima": 54
+  },
+  "limitations": [
+    "No implementation/test/compiler/build/runtime execution. Child minima are required Stage1 source-derived seeds, not already-approved full child codec byte corpus.",
+    "No public/native parity, source grants, durable hosted provider, actual snapshot/cursor crypto, package/cohort or Rust-retirement qualification.",
+    "Scope covers selected summary metrics only; all native other families/full context and history retained under named obligations.",
+    "Planning completion cannot satisfy HOSTED implementation prerequisite; ROOT must add actual adapter dependency when children merge."
+  ],
+  "remaining_qualification": [
+    "ROOT review/apply this exact plan/receipt merge and actual manifest validation; independent packet planning review is accepted",
+    "Each child Stage1 full interfaces/literals/profile/canonical port resolution before implementation",
+    "Each producer check and separate complete consumer source/module authority successor",
+    "Whole native/public/otherquery/realhosted/durable/history obligations"
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "03569f310c737decb20478df96e679b9a87b3c73+1ec27b927d1a115c65c97e6dc67fe9c8be44f1f685e2863aa13f98ab397a2322",
+    "evidence": {
+      "independent_review": {
+        "path": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json",
+        "sha256": "4f198633a1b04a69106581a4f4d61b43229a0d675fa9afce6f1f7ab2cb0750ce",
+        "bytes": 4071
+      },
+      "packet": {
+        "path": "docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+        "sha256": "4e5111da00cf79f52e71a8365cd0f0580479bf590bbfd30e55748e65f3aab2da",
+        "bytes": 271457
+      },
+      "scope": "Bounded planning only; children and HOSTED implementation/runtime remain pending."
+    }
+  },
+  "stage1_historical_partial": {
+    "result": "partial",
+    "acceptance": [
+      {
+        "clause": "At most four atomic implementation children with actual source-profile/typed-value/contract/dependency/path/check/resource boundaries; preserve raw-export evaluation instead of substituting already-rendered query pages.",
+        "result": "pending_independent_planning_review",
+        "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json"
+      },
+      {
+        "clause": "Identify exact source-producing profiles and source-derived metric selection, exact values/units, owner dates, status, coverage, ordering and evidence; preserve unsupported/unknown/archive-only distinctions and shared Apple/Android semantics.",
+        "result": "pending_independent_planning_review",
+        "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json"
+      },
+      {
+        "clause": "Separate pure projection/reduction from common Effect lifetime/current grant/cursor operation and retained-source adapter. No test-local or hosted duplicate evaluator. Typed-value and request/cursor prerequisites remain implementation dependencies.",
+        "result": "pending_independent_planning_review",
+        "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json"
+      },
+      {
+        "clause": "Keep original HOSTED acceptance and test-only paths unchanged; after reviewed children are merged, make the retained adapter an explicit HOSTED prerequisite. The 14 admitted-page cases are partial traversal tests, not raw-export evaluation proof.",
+        "result": "pending_independent_planning_review",
+        "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json"
+      },
+      {
+        "clause": "Record other query families and full native/private hosted integration as remaining existing obligations. Planning does not qualify implementation, promote public profiles or retire Rust.",
+        "result": "pending_independent_planning_review",
+        "evidence": "docs/migration/effect-refactor/expansions/split-query-metric-series.json"
+      }
+    ],
+    "review": {
+      "status": "pending",
+      "reviewer": null,
+      "fingerprint": "03569f310c737decb20478df96e679b9a87b3c73+1ec27b927d1a115c65c97e6dc67fe9c8be44f1f685e2863aa13f98ab397a2322"
+    },
+    "raw_receipt_sha256": "909a4db09ed9547112fa6b0688e6ed1cec752b427e1060806472a99847e45848",
+    "bytes": 17831,
+    "archive_path": "/private/tmp/healthmd-split-query-metric-series-plan-merge-proposal/original-partial-receipt.json"
+  },
+  "source_sha": "03569f310c737decb20478df96e679b9a87b3c73",
+  "patch_digest": "1ec27b927d1a115c65c97e6dc67fe9c8be44f1f685e2863aa13f98ab397a2322",
+  "patch_digest_method": "SHA256 sorted nonreceipt path UTF8 + NUL + raw bytes + NUL; one packet path; no receipt self-reference",
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-QUERY-METRIC-SERIES.json"
+  ],
+  "acceptance_results": [
+    {
+      "criterion": "At most four atomic implementation children with actual source-profile/typed-value/contract/dependency/path/check/resource boundaries; preserve raw-export evaluation instead of substituting already-rendered query pages.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json; docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "qualification": "Independent accepted decomposition planning only; no implementation/runtime credit."
+    },
+    {
+      "criterion": "Identify exact source-producing profiles and source-derived metric selection, exact values/units, owner dates, status, coverage, ordering and evidence; preserve unsupported/unknown/archive-only distinctions and shared Apple/Android semantics.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json; docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "qualification": "Independent accepted decomposition planning only; no implementation/runtime credit."
+    },
+    {
+      "criterion": "Separate pure projection/reduction from common Effect lifetime/current grant/cursor operation and retained-source adapter. No test-local or hosted duplicate evaluator. Typed-value and request/cursor prerequisites remain implementation dependencies.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json; docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "qualification": "Independent accepted decomposition planning only; no implementation/runtime credit."
+    },
+    {
+      "criterion": "Keep original HOSTED acceptance and test-only paths unchanged; after reviewed children are merged, make the retained adapter an explicit HOSTED prerequisite. The 14 admitted-page cases are partial traversal tests, not raw-export evaluation proof.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json; docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "qualification": "Independent accepted decomposition planning only; no implementation/runtime credit."
+    },
+    {
+      "criterion": "Record other query families and full native/private hosted integration as remaining existing obligations. Planning does not qualify implementation, promote public profiles or retire Rust.",
+      "result": "passed",
+      "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json; docs/migration/effect-refactor/expansions/split-query-metric-series.json",
+      "qualification": "Independent accepted decomposition planning only; no implementation/runtime credit."
+    }
+  ],
+  "inspection_summary": {
+    "procedure": "Read complete accepted packet, review, current manage schema and current task graph; exact source-only merge inverse",
+    "observed": "Four independently accepted cards,16 disjoint paths,four internal edges,54 pre-code seeds,profile/canonical gates; HOSTED actual adapter prerequisite added before planning done",
+    "evidence": "/private/tmp/healthmd-split-query-metric-series-effect-baseline-review.json",
+    "commands_executed": "None; ROOT must run actual manage check after reviewing and applying proposal."
+  },
+  "planning_merge_proposal": {
+    "added_child_ids": [
+      "QUERY-METRIC-SERIES-CORE",
+      "QUERY-METRIC-CONTEXT-LENS",
+      "QUERY-METRIC-SERIES-OPERATION",
+      "HOSTED-RETAINED-QUERY-ADAPTER"
+    ],
+    "internal_edges": [
+      {
+        "from": "QUERY-METRIC-SERIES-CORE",
+        "to": "QUERY-METRIC-CONTEXT-LENS"
+      },
+      {
+        "from": "QUERY-METRIC-SERIES-CORE",
+        "to": "QUERY-METRIC-SERIES-OPERATION"
+      },
+      {
+        "from": "QUERY-METRIC-CONTEXT-LENS",
+        "to": "QUERY-METRIC-SERIES-OPERATION"
+      },
+      {
+        "from": "QUERY-METRIC-SERIES-OPERATION",
+        "to": "HOSTED-RETAINED-QUERY-ADAPTER"
+      }
+    ],
+    "HOSTED_actual_adapter_dependency": "HOSTED-RETAINED-QUERY-ADAPTER",
+    "HOSTED_acceptance_and_paths_exact_preserved": true,
+    "schema_only_normalizations": [
+      {
+        "id": "QUERY-METRIC-SERIES-CORE",
+        "changes": {
+          "priority": {
+            "before": "absent",
+            "after": 104
+          },
+          "verification/0/availability": {
+            "before": "existing_installed_component",
+            "after": "existing"
+          }
+        },
+        "reason": "manage.py needed priority and closed availability enum existing/created_by_this_task/created_by_prerequisite; no command/profile/path/interface/fixture/semantics change"
+      },
+      {
+        "id": "QUERY-METRIC-CONTEXT-LENS",
+        "changes": {
+          "priority": {
+            "before": "absent",
+            "after": 105
+          },
+          "verification/0/availability": {
+            "before": "existing_installed_component",
+            "after": "existing"
+          }
+        },
+        "reason": "manage.py needed priority and closed availability enum existing/created_by_this_task/created_by_prerequisite; no command/profile/path/interface/fixture/semantics change"
+      },
+      {
+        "id": "QUERY-METRIC-SERIES-OPERATION",
+        "changes": {
+          "priority": {
+            "before": "absent",
+            "after": 106
+          },
+          "verification/0/availability": {
+            "before": "existing_installed_component",
+            "after": "existing"
+          }
+        },
+        "reason": "manage.py needed priority and closed availability enum existing/created_by_this_task/created_by_prerequisite; no command/profile/path/interface/fixture/semantics change"
+      },
+      {
+        "id": "HOSTED-RETAINED-QUERY-ADAPTER",
+        "changes": {
+          "priority": {
+            "before": "absent",
+            "after": 107
+          },
+          "verification/0/availability": {
+            "before": "existing_installed_component",
+            "after": "existing"
+          }
+        },
+        "reason": "manage.py needed priority and closed availability enum existing/created_by_this_task/created_by_prerequisite; no command/profile/path/interface/fixture/semantics change"
+      }
+    ],
+    "coordinator_apply_required": true,
+    "actual_manifest_validation": "unrun",
+    "resource_policy": "No task/resource claimed by proposal; future claim and verification windows staged by ROOT under exact accepted scopes."
+  }
+}

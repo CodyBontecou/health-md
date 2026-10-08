@@ -362,8 +362,36 @@ async function auditCodecCohort(path) {
   return value;
 }
 const codecCohort = await auditCodecCohort(codecCohortPath);
-const qualifiedInputPins = codecCohort.input_pins;
-const qualifiedArtifacts = codecCohort.output_pins;
+// The current consumer has exactly one mandatory authority. Fixture profiles below
+// are internal disposable-copy stimuli and cannot select the consumer's cohort.
+const sourceCatalogCohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json");
+const sourceCatalogCohortSha256 = "67828453f4fefc1b4c689507af9064ef1ab48672537a9360dc617da80964343d";
+async function auditSourceCatalogCohort(path) {
+  const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink(), "reviewed_core_cohort_bytes_drift");
+  const bytes = await readFile(path);
+  assert.equal(bytes.length, 856230, "reviewed_core_cohort_bytes_drift");
+  assert.equal(hash(bytes), sourceCatalogCohortSha256, "reviewed_core_cohort_bytes_drift");
+  const value = JSON.parse(bytes);
+  assert.equal(value.task_id, "CORE-COHORT-SOURCE-CATALOG");
+  assert.equal(value.committed_source_sha, "227d323346773b938dba2e2f567a8d6cf33a09db");
+  assert.deepEqual(value.runtime, {node:"24.21.0",npm:"11.19.0"});
+  assert.equal(value.input_count,58); assert.equal(value.output_count,36);
+  assert.equal(Object.keys(value.input_pins).length,58); assert.equal(Object.keys(value.output_pins).length,36);
+  assert.deepEqual(value.historical_exact_codecs_authority.complete_historical_cohort, codecCohort);
+  assert.deepEqual(value.catalog_literal_data_authority,codecCohort.catalog_literal_data_authority);
+  assert.deepEqual(value.closed_catalog_semantic_validation,codecCohort.closed_catalog_semantic_validation);
+  for(const [path,digest] of Object.entries(codecCohort.input_pins)) assert.equal(value.input_pins[path],digest);
+  for(const [path,digest] of Object.entries(codecCohort.output_pins)) assert.equal(value.output_pins[path],digest);
+  assert.deepEqual(value.negative_fixture_catalog.cases.slice(0,203),codecCohort.negative_fixture_catalog.cases);
+  assert.equal(value.negative_fixture_catalog.cases.length,456);
+  assert.equal(value.consumer_runtime_authority.required_current_profile,"current_source_catalog_58_36");
+  assert.equal(value.consumer_runtime_authority.no_profile_selection_by_consumer,true);
+  assert.equal(value.consumer_runtime_authority.no_own_receipt_reverse_pin,true);
+  return value;
+}
+const sourceCatalogCohort = await auditSourceCatalogCohort(sourceCatalogCohortPath);
+const qualifiedInputPins = sourceCatalogCohort.input_pins;
+const qualifiedArtifacts = sourceCatalogCohort.output_pins;
 assert.equal(hash(sourceManifest), qualifiedInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
 const codecTaskNames = ["CORE-CANDIDATE-CODEC-API", "PARSE-EXACT-JSON-NUMBERS", "PARSE-EXACT-JSON-VALUES", "SERIALIZE-CANONICAL-JSON", "SERIALIZE-EXACT-NUMBERS"];
 assert.deepEqual(Object.keys(codecCohort.normal_implementation_authorities).sort(), codecTaskNames);
@@ -383,6 +411,18 @@ async function auditCodecAuthority(authority, path = resolve("../../", authority
   return value;
 }
 for (const name of codecTaskNames) await auditCodecAuthority(codecCohort.normal_implementation_authorities[name]);
+const currentTaskNames = [...codecTaskNames,"DATASTORE-SOURCE-CATALOG"].sort();
+assert.deepEqual(Object.keys(sourceCatalogCohort.normal_implementation_authorities).sort(),currentTaskNames);
+for(const name of currentTaskNames) {
+  const authority=sourceCatalogCohort.normal_implementation_authorities[name];
+  const receipt=await auditCodecAuthority(authority);
+  if(name==="DATASTORE-SOURCE-CATALOG") {
+    assert.equal(receipt.stage,authority.required_stage);
+    assert.deepEqual(receipt.target,authority.required_target);
+    assert.equal(authority.required_result,"passed"); assert.equal(authority.required_review_status,"accepted");
+    assert.equal(authority.proof_class,"portable_synthetic");
+  } else assert.deepEqual(authority,codecCohort.normal_implementation_authorities[name]);
+}
 function closedKeys(value, keys) {
   assert.ok(typeof value === "object" && value !== null && !Array.isArray(value), "catalog_literal_authority_mismatch");
   assert.deepEqual(Object.keys(value).sort(), [...keys].sort(), "catalog_literal_authority_mismatch");
@@ -430,8 +470,11 @@ closedKeys(codecCohort.embedded_raw_evidence, ["catalog_stage1_approval", "catal
 const catalogApprovalBytes = embeddedCatalogBytes("catalog_stage1_approval", catalogAuthority.independent_stage1_approval);
 const catalogArchivedBytes = embeddedCatalogBytes("catalog_reviewed_partial_receipt", catalogAuthority.reviewed_partial_receipt_archive);
 const catalogApproval = parseCatalogRaw(catalogApprovalBytes); const catalogArchived = parseCatalogRaw(catalogArchivedBytes);
-const catalogCurrentBytes = await readFile(resolve("../../", catalogAuthority.current_partial_receipt.path));
-const catalogCurrent = await auditCatalogEvidence(catalogAuthority.current_partial_receipt, resolve("../../", catalogAuthority.current_partial_receipt.path));
+// Historical partial raw bytes are authenticated embedded evidence, never the
+// current tracked passed implementation receipt or a scratch filesystem input.
+const catalogCurrentBytes = decodeHistoricalBlob(sourceCatalogCohort.embedded_raw_evidence.catalog_accepted_stage1_partial,
+  sourceCatalogCohort.embedded_raw_evidence_contract.original_raw_expected.catalog_accepted_stage1_partial);
+const catalogCurrent = parseCatalogRaw(catalogCurrentBytes);
 for (const value of [catalogApproval, catalogArchived, catalogCurrent]) {
   assert.equal(value.task_id, catalogAuthority.task_id); assert.equal(value.source_sha, catalogAuthority.source_sha);
   assert.equal(value.patch_digest, catalogAuthority.patch_digest);
@@ -450,9 +493,22 @@ assert.equal(catalogCurrent.history[1].receipt.sha256, catalogAuthority.reviewed
 assert.deepEqual(catalogCurrent.interface, catalogArchived.interface);
 const catalogVectorBytes = await readFile(resolve("../../", catalogAuthority.vector.path));
 assert.equal(catalogVectorBytes.length, catalogAuthority.vector.bytes); assert.equal(hash(catalogVectorBytes), catalogAuthority.vector.sha256);
-for (const path of catalogAuthority.absent_component_paths) {
-  try { await lstat(join(source, path)); assert.fail("catalog_literal_module_admission_forbidden"); }
-  catch (error) { if (error.code !== "ENOENT") throw error; }
+closedKeys(sourceCatalogCohort.embedded_raw_evidence,sourceCatalogCohort.embedded_raw_evidence_contract.allowed_blob_names);
+let embeddedTotal=0;
+for(const name of sourceCatalogCohort.embedded_raw_evidence_contract.allowed_blob_names) {
+  const bytes=decodeHistoricalBlob(sourceCatalogCohort.embedded_raw_evidence[name],sourceCatalogCohort.embedded_raw_evidence_contract.original_raw_expected[name]);
+  embeddedTotal+=bytes.length;
+}
+assert.equal(embeddedTotal,sourceCatalogCohort.embedded_raw_evidence_contract.max_total_decoded_bytes);
+function decodeHistoricalBlob(blob,pin) {
+  const fail=()=>assert.fail("catalog_literal_evidence_bytes_drift");
+  if(!blob||typeof blob!=="object"||Array.isArray(blob))return fail();
+  if(JSON.stringify(Object.keys(blob).sort())!==JSON.stringify(["version","encoding","bytes","sha256","historical_path","data"].sort()))return fail();
+  if(blob.version!==1||blob.encoding!=="base64"||blob.bytes!==pin.bytes||blob.sha256!==pin.sha256||typeof blob.historical_path!=="string"||typeof blob.data!=="string")return fail();
+  if(!Number.isSafeInteger(blob.bytes)||blob.bytes<=0||blob.bytes>115680||blob.data.length!==4*Math.ceil(blob.bytes/3)||!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(blob.data))return fail();
+  const bytes=Buffer.from(blob.data,"base64");
+  if(bytes.toString("base64")!==blob.data||bytes.length!==pin.bytes||hash(bytes)!==pin.sha256)return fail();
+  return bytes;
 }
 
 async function tree(directory, skipBins = false) {
@@ -476,328 +532,253 @@ async function inputTree(directory, current = directory) {
   }
   return files.sort();
 }
-async function auditCoreInputs(directory) {
+// Ordinary admission and disposable profiles share these exact algorithms.
+// The ordinary wrappers always bind the current authenticated maps.
+async function validateSourceInputs(directory, inputPins) {
   const files = await inputTree(directory);
-  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(qualifiedInputPins).sort(), "core_input_file_set_drift");
-  for (const [path, digest] of Object.entries(qualifiedInputPins)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_input_bytes_drift");
+  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(inputPins).sort(), "core_input_file_set_drift");
+  for (const [path, digest] of Object.entries(inputPins)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_input_bytes_drift");
 }
-await auditCoreInputs(source);
-async function auditCore(directory) {
-  assert.equal((await lstat(directory)).isSymbolicLink(), false, "install_packed_core_with_install_links");
-  assert.deepEqual(await readFile(join(directory, "package.json")), sourceManifest, "core_manifest_drift");
+async function validateOutputPackage(directory, outputPins, inputPins) {
+  const rootStat = await lstat(directory);
+  assert.equal(rootStat.isSymbolicLink(), false, "install_packed_core_with_install_links");
+  assert.ok(rootStat.isDirectory(), "candidate_file_type_unreviewed");
+  // Check both traversal components before reading any module. Descendant
+  // checks alone cannot detect a symlink used as the traversal root.
+  for (const component of ["dist", "dist/core"]) {
+    const stat = await lstat(join(directory, component));
+    if (stat.isSymbolicLink()) throw new Error("candidate_build_symlink_unreviewed");
+    assert.ok(stat.isDirectory(), "candidate_file_type_unreviewed");
+  }
+  assert.equal(hash(await readFile(join(directory, "package.json"))), inputPins["package.json"], "core_manifest_drift");
   const files = await tree(join(directory, "dist/core"));
-  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(qualifiedArtifacts).sort(), "core_build_file_set_drift");
-  for (const [path, digest] of Object.entries(qualifiedArtifacts)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_build_bytes_drift");
+  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(outputPins).sort(), "core_build_file_set_drift");
+  for (const [path, digest] of Object.entries(outputPins)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_build_bytes_drift");
 }
+async function auditCoreInputs(directory) { await validateSourceInputs(directory, qualifiedInputPins); }
+async function auditCore(directory) { await validateOutputPackage(directory, qualifiedArtifacts, qualifiedInputPins); }
+await auditCoreInputs(source);
 await auditCore(source); await auditCore(installed);
-// Exercise actual filesystem failures in disposable copies, never alter installed/source packages.
-const negativeIdentityCases = [];
-const temporary = await mkdtemp(join(tmpdir(), "healthmd-cli-identity-"));
+// Action-only mutation driver. IDs label observations AFTER the validator runs;
+// expected failures are assertions only, never validator or mutation inputs.
+const negativeIdentityCases=[];
+const negativeExecutionProfiles=[];
+const retainedDocumentPins={
+  "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json": {
+    "bytes": 256121,
+    "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055"
+  },
+  "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json": {
+    "bytes": 47904,
+    "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761"
+  },
+  "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json": {
+    "bytes": 34945,
+    "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853"
+  },
+  "docs/migration/effect-refactor/cohorts/core-ts-personal-v1.json": {
+    "bytes": 11123,
+    "sha256": "a81df759ee321cf530137d9a6de6d18de2c3a4e42b92907444bde4e057f6b579"
+  },
+  "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json": {
+    "bytes": 90390,
+    "sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f"
+  },
+  "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json": {
+    "bytes": 197544,
+    "sha256": "fbf14b4f4a714bd17433a5c3fbe89ccc46b9425d8d94ac6b9921610ecf5d019f"
+  },
+  "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json": {
+    "bytes": 133600,
+    "sha256": "40aae1e46eaaa42a5d9220473b13ebe90af3453a5a6f33e2b947ca6f783752c5"
+  },
+  "docs/migration/effect-refactor/receipts/IOS-USAGE-ELIGIBILITY.json": {
+    "bytes": 336408,
+    "sha256": "9a6e7da735c732dabe7dc1d77a1ff9d6aee0ee75bdb41cdf2e23a47e9862a93e"
+  },
+  "docs/migration/effect-refactor/receipts/LOCATION-POINT-PROJECTION.json": {
+    "bytes": 34523,
+    "sha256": "2709b73dfa64db2ba58e28b60cd9457e372e8e20c7e4175647927f750e167aca"
+  },
+  "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-NUMBERS.json": {
+    "bytes": 83618,
+    "sha256": "88fb9788d17a2c777b50eb306db516ec5682623fb4c6ad43c728d0604c324abb"
+  },
+  "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json": {
+    "bytes": 143547,
+    "sha256": "9227a4fd1e488fb58f3c68983827e7b4b53712e84ae1a49f349a47cbb7164c5c"
+  },
+  "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json": {
+    "bytes": 24593,
+    "sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859"
+  },
+  "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json": {
+    "bytes": 376555,
+    "sha256": "df942abf9eff71fc4b53ffc42968a48e8aff7f47c887910fd05bfd9306bc7e1f"
+  },
+  "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json": {
+    "bytes": 42459,
+    "sha256": "9100d985d40af66c026624c4050713477127f195dc9f20f45bbb20047f9d1f3e"
+  }
+};
+// Ordinary retained raw gates and mutation copies share this exact validator.
+// Strict normal receipt semantics above remain an additional mandatory gate.
+for(const [path,pin]of Object.entries(retainedDocumentPins))
+ await auditRawDocument(resolve("../../",path),pin,path.includes("/cohorts/")?"reviewed_core_cohort_bytes_drift":"qualified_core_receipt_bytes_drift");
+const historicalEvidence=new Map([
+ [catalogAuthority.current_partial_receipt.path,{bytes:catalogCurrentBytes,pin:catalogAuthority.current_partial_receipt}],
+ [catalogAuthority.independent_stage1_approval.path,{bytes:catalogApprovalBytes,pin:catalogAuthority.independent_stage1_approval}],
+ [catalogAuthority.reviewed_partial_receipt_archive.path,{bytes:catalogArchivedBytes,pin:catalogAuthority.reviewed_partial_receipt_archive}]
+]);
+async function auditRawDocument(path,pin,kind,missingDisposition="filesystem") {
+ assert.ok(["filesystem","embedded_literal"].includes(missingDisposition),"unreviewed_evidence_disposition");
+ if(missingDisposition==="embedded_literal")assert.equal(kind,"catalog_literal_evidence_bytes_drift");
+ try {
+  const stat=await lstat(path);assert.ok(stat.isFile()&&!stat.isSymbolicLink(),kind);
+  const bytes=await readFile(path);assert.equal(bytes.length,pin.bytes,kind);assert.equal(hash(bytes),pin.sha256,kind);
+ } catch(error) {
+  // Missing authenticated historical evidence is a fixed evidence failure.
+  // Ordinary source/package/receipt absence retains its filesystem disposition.
+  if(missingDisposition==="embedded_literal"&&error?.code==="ENOENT")assert.fail(kind);
+  throw error;
+ }
+}
+async function auditFixtureInputs(root,pins) { await validateSourceInputs(root,pins); }
+async function auditFixturePackage(root,pins,inputPins) { await validateOutputPackage(root,pins,inputPins); }
+const jsonMutations=new Map([
+ ["set committed_source_sha to unreviewed in disposable JSON",v=>{v.committed_source_sha="unreviewed";}],
+ ["change committed_source_sha without updating expected hash",v=>{v.committed_source_sha="unreviewed";}],
+ ["set review.status to pending in disposable JSON",v=>{v.review.status="pending";}],
+ ["set review.status pending",v=>{v.review.status="pending";}],
+ ["add review.status pending in disposable JSON",v=>{v.review={status:"pending"};}],
+ ["set /review/status to pending in disposable JSON",v=>{v.review.status="pending";}],
+ ["set /result to pending in disposable JSON",v=>{v.result="pending";}],
+ ["set /result to unreviewed in disposable JSON (original partial, always changes bytes)",v=>{v.result="unreviewed";}],
+ ["add ./candidate/unreviewed export",v=>{v.exports["./candidate/unreviewed"]="./dist/core/index.js";}],
+ ["add an unlisted CatalogLiteralDataAuthority field in disposable JSON; never update expected hash",v=>{v.catalog_literal_data_authority.unlisted=true;}],
+ ["add unlisted top-level authority field",v=>{v.unlisted=true;}],
+ ["change proof_class to native-qualified in disposable JSON",v=>{v.proof_class="native-qualified";}],
+ ["set proof_class to native-qualified",v=>{v.proof_class="native-qualified";}],
+ ["change patch_digest in disposable JSON",v=>{v.patch_digest="unrelated_literal";}],
+ ["change history[1].receipt.sha256 in disposable JSON",v=>{v.history[1].receipt.sha256="unrelated_literal";}],
+ ["change receipt.sha256 in disposable approval JSON",v=>{v.receipt.sha256="unrelated_literal";}],
+ ["set review.fingerprint to Stage1 fingerprint",v=>{v.review.fingerprint=catalogFingerprint;}],
+ ["set task_id to arbitrary synthetic string",v=>{v.task_id="unrelated_literal";}],
+ ["remove source-catalog source/test from fixed input map",v=>{delete v.input_pins["src/repository/source-catalog.ts"];delete v.input_pins["tests/source-catalog.test.ts"];}],
+ ["remove repository/source-catalog js/dts from map",v=>{delete v.output_pins["dist/core/repository/source-catalog.js"];delete v.output_pins["dist/core/repository/source-catalog.d.ts"];}],
+ ["use historical CatalogLiteralDataAuthority as implementation receipt",v=>{v.normal_implementation_authorities["DATASTORE-SOURCE-CATALOG"]=v.catalog_literal_data_authority;}],
+ ["make actual consumer require scratch authority path",v=>{v.consumer_runtime_authority.required_scratch_path="/private/tmp/unreviewed";}],
+ ["add current refresh ownreceipt into normal_implementation_authorities or required runtime authority",v=>{v.normal_implementation_authorities["CORE-COHORT-SOURCE-CATALOG"]={receipt:{path:"docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json"}};}],
+ ["add arbitrary unreviewed implementation receipt discovered from directory",v=>{v.normal_implementation_authorities.UNREVIEWED={receipt:{path:"docs/migration/effect-refactor/receipts/UNREVIEWED.json"}};}]
+]);
+function changeJson(value,action,target) {
+ const fixed=jsonMutations.get(action);if(fixed){fixed(value);return value;}
+ const pointer=action.match(/^set (\/[a-z_\/]+) to unrelated_literal in disposable JSON; never update expected hash$/);
+ if(pointer){const parts=pointer[1].slice(1).split("/");let cursor=value;for(const p of parts.slice(0,-1))cursor=cursor[p];cursor[parts.at(-1)]="unrelated_literal";return value;}
+ const flag=action.match(/^set catalog_literal_data_authority.exact_scope.([a-z_]+) true in disposable JSON; never update expected hash$/);
+ if(flag){assert.ok(Object.hasOwn(catalogScope,flag[1]));value.catalog_literal_data_authority.exact_scope[flag[1]]=true;return value;}
+ if(action==="set false flag true without changing expected raw hash") {const parts=target.split(".");let cursor=value;for(const p of parts.slice(0,-1))cursor=cursor[p];cursor[parts.at(-1)]=true;return value;}
+ assert.fail("unrealized_fixture_action");
+}
+const removeActions=new Set(["remove","absent disposable path","remove exact file","remove exact successor cohort","remove exact tracked accepted receipt"]);
+const symlinkActions=new Set(["replace with symlink to retained original","replace exact file with symlink to retained original outside disposable input tree","replace exact file with symlink to retained original outside disposable module tree","replace with symlink to retained external original","replace cohort with symlink to original"]);
+async function mutateFile(path,action,target,retained) {
+ if(removeActions.has(action)){await rm(path);return;}
+ if(symlinkActions.has(action)){await rm(path);await symlink(retained,path);return;}
+ if(["replace bytes with export {}; LF","replace exact bytes with export {}; LF","add export {}; LF"].includes(action)){await writeFile(path,"export {};\n");return;}
+ if(action==="replace bytes with unreviewed metadata LF"){await writeFile(path,"unreviewed metadata\n");return;}
+ if(action.startsWith("append LF to disposable raw")){await writeFile(path,Buffer.concat([await readFile(path),Buffer.from("\n")]));return;}
+ if(action==="append unreviewed comment to disposable vector"){await writeFile(path,Buffer.concat([await readFile(path),Buffer.from("\n// unreviewed\n")]));return;}
+ if(action==="replace one byte without changing expected hash"){const bytes=await readFile(path);bytes[0]^=1;await writeFile(path,bytes);return;}
+ if(action==="replace with exact historical4f partial bytes"){await writeFile(path,catalogCurrentBytes);return;}
+ const value=parseCatalogRaw(await readFile(path));await writeFile(path,JSON.stringify(changeJson(value,action,target)));
+}
+const temporary=await mkdtemp(join(tmpdir(),"healthmd-catalog-cohort-negatives-"));
 try {
-  const inputCopy = join(temporary, "inputs");
-  for (const path of Object.keys(qualifiedInputPins)) {
-    const target = join(inputCopy, path); await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, await readFile(join(source, path)));
+ const currentProfile={inputPins:qualifiedInputPins,outputPins:qualifiedArtifacts};
+ const historicalProfile={inputPins:codecCohort.input_pins,outputPins:codecCohort.output_pins};
+ const profiles=new Map([["current_source_catalog_58_36",currentProfile],["historical_exact_codecs_56_34",historicalProfile]]);
+ const bases=new Map();
+ for(const [name,profile]of profiles) {
+  const base=join(temporary,name);await mkdir(base);
+  for(const path of Object.keys(profile.inputPins)){const dest=join(base,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));}
+  for(const path of Object.keys(profile.outputPins)){const dest=join(base,path);await mkdir(dirname(dest),{recursive:true});await writeFile(dest,await readFile(join(source,path)));}
+  await auditFixtureInputs(base,profile.inputPins);await auditFixturePackage(base,profile.outputPins,profile.inputPins);bases.set(name,base);
+ }
+ const cases=sourceCatalogCohort.negative_fixture_catalog.cases,bindings=sourceCatalogCohort.negative_fixture_catalog.execution_profile_bindings;
+ assert.equal(cases.length,456);assert.equal(bindings.length,456);
+ for(let i=0;i<cases.length;i++) {
+  const row=cases[i],binding=bindings[i];assert.equal(binding.fixture_index,i);assert.equal(binding.candidate_profile_selectable,false);
+  const profile=profiles.get(binding.profile);assert.ok(profile,"unreviewed_fixture_profile");
+  const dir=join(temporary,"scene");await rm(dir,{recursive:true,force:true});await mkdir(dir);
+  let validate;
+  const target=row.target.replace(/^packages\/healthmd-core-ts\//,"");
+  if(target==="installed core root") {
+   assert.equal(row.mutation,"symlink to sibling core","unrealized_fixture_action");
+   const link=join(dir,"linked");await symlink(bases.get(binding.profile),link,"dir");validate=()=>auditFixturePackage(link,profile.outputPins,profile.inputPins);
+  } else if(target.startsWith("src/")||target.startsWith("tests/")||target==="README.md"||target==="package.json") {
+   const copy=join(dir,"inputs");await cp(bases.get(binding.profile),copy,{recursive:true});
+   // Remove generated modules before source audit: only exact component-root dist is excluded.
+   const path=join(copy,target);await mkdir(dirname(path),{recursive:true});
+   await mutateFile(path,row.mutation,target,join(bases.get(binding.profile),target));
+   validate=target==="package.json"?()=>auditFixturePackage(copy,profile.outputPins,profile.inputPins):()=>auditFixtureInputs(copy,profile.inputPins);
+  } else if(target==="dist"||target==="dist/core") {
+   assert.equal(binding.profile,"current_source_catalog_58_36","unreviewed_fixture_profile");
+   const action = target==="dist/core"
+    ? "replace owned copied dist/core directory with symlink to retained external exact36 modules"
+    : "replace owned copied dist directory with symlink to retained external exact dist/core36";
+   assert.equal(row.mutation,action,"unrealized_fixture_action");
+   const copy=join(dir,"packed");await cp(bases.get(binding.profile),copy,{recursive:true});
+   const retained=join(dir,"retained");await cp(bases.get(binding.profile),retained,{recursive:true});
+   await auditFixtureInputs(retained,profile.inputPins);
+   await auditFixturePackage(retained,profile.outputPins,profile.inputPins);
+   await auditFixturePackage(copy,profile.outputPins,profile.inputPins);
+   // Both endpoints are fixed descendants of this fresh scene, never caller paths.
+   for(const component of ["dist","dist/core"]) {
+    const stat=await lstat(join(copy,component));assert.ok(stat.isDirectory()&&!stat.isSymbolicLink(),"candidate_file_type_unreviewed");
+   }
+   const path=join(copy,target);await rm(path,{recursive:true});
+   await symlink(join(retained,target),path,"dir");
+   validate=()=>auditFixturePackage(copy,profile.outputPins,profile.inputPins);
+  } else if(target.startsWith("dist/core/")) {
+   const copy=join(dir,"packed");await cp(bases.get(binding.profile),copy,{recursive:true});const path=join(copy,target);await mkdir(dirname(path),{recursive:true});
+   await mutateFile(path,row.mutation,target,join(bases.get(binding.profile),target));validate=()=>auditFixturePackage(copy,profile.outputPins,profile.inputPins);
+  } else if(target.startsWith("embedded_raw_evidence.")) {
+   const name=target.slice("embedded_raw_evidence.".length),blob=sourceCatalogCohort.embedded_raw_evidence[name];assert.ok(blob);
+   const file=join(dir,"embedded.json");
+   if(["remove blob","change embedded raw base64 byte","replace closed blob with caller-controlled filesystem path"].includes(row.mutation)) {
+    let value=structuredClone(blob);
+    if(row.mutation==="remove blob")value=null;
+    else if(row.mutation==="change embedded raw base64 byte")value.data=(value.data[0]==="A"?"B":"A")+value.data.slice(1);
+    else value={path:"/private/tmp/unreviewed"};
+    await writeFile(file,JSON.stringify(value));validate=async()=>decodeHistoricalBlob(JSON.parse(await readFile(file,"utf8")),sourceCatalogCohort.embedded_raw_evidence_contract.original_raw_expected[name]);
+   } else {
+    const pin=sourceCatalogCohort.embedded_raw_evidence_contract.original_raw_expected[name];await writeFile(file,decodeHistoricalBlob(blob,pin));
+    await mutateFile(file,row.mutation,target,file+"-original");validate=()=>auditRawDocument(file,pin,"catalog_literal_evidence_bytes_drift","embedded_literal");
+   }
+  } else {
+   const file=join(dir,"authority.json");let original,pin,kind;
+   const historical= binding.profile==="historical_exact_codecs_56_34"?historicalEvidence.get(target):undefined;
+   if(historical){original=historical.bytes;pin=historical.pin;kind="catalog_literal_evidence_bytes_drift";}
+   else if(target.startsWith("historical_exact_codecs_authority.")){original=await readFile(sourceCatalogCohortPath);pin={bytes:856230,sha256:sourceCatalogCohortSha256};kind="reviewed_core_cohort_bytes_drift";}
+   else if(target===sourceCatalogCohortPath.replace(resolve("../../")+"/","")||target==="docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json") {original=await readFile(sourceCatalogCohortPath);pin={bytes:856230,sha256:sourceCatalogCohortSha256};kind="reviewed_core_cohort_bytes_drift";}
+   else {pin=retainedDocumentPins[target];assert.ok(pin,"unreviewed_fixture_target");original=await readFile(resolve("../../",target));kind=target.includes("/cohorts/")?"reviewed_core_cohort_bytes_drift":"qualified_core_receipt_bytes_drift";}
+   const retained=join(dir,"original.json");await writeFile(retained,original);await writeFile(file,original);
+   await auditRawDocument(file,pin,kind);
+   await mutateFile(file,row.mutation,target,retained);
+   const normal=Object.values(sourceCatalogCohort.normal_implementation_authorities).find(a=>a.receipt.path===target);
+   if(normal&&!historical)validate=()=>auditCodecAuthority(normal,file);
+   else if(pin.sha256===sourceCatalogCohortSha256)validate=()=>auditSourceCatalogCohort(file);
+   else validate=()=>auditRawDocument(file,pin,kind);
   }
-  await auditCoreInputs(inputCopy);
-  await writeFile(join(inputCopy, "src/index.ts"), "export {};\n");
-  await assert.rejects(auditCoreInputs(inputCopy), /core_input_bytes_drift/);
-  await writeFile(join(inputCopy, "src/index.ts"), await readFile(join(source, "src/index.ts")));
-  await writeFile(join(inputCopy, "src/unbuilt-extra.ts"), "export {};\n");
-  await assert.rejects(auditCoreInputs(inputCopy), /core_input_file_set_drift/);
-  const linked = join(temporary, "linked"); await symlink(installed, linked, "dir");
-  await assert.rejects(auditCore(linked), /install_packed_core_with_install_links/);
-  await rm(join(inputCopy, "src/unbuilt-extra.ts"));
-  await writeFile(join(inputCopy, "README.md"), "unreviewed metadata\n");
-  await assert.rejects(auditCoreInputs(inputCopy), /core_input_bytes_drift/);
-  await writeFile(join(inputCopy, "README.md"), await readFile(join(source, "README.md")));
-  const altered = join(temporary, "altered"); await cp(installed, altered, { recursive: true });
-  const alteredManifest = JSON.parse(await readFile(join(altered, "package.json"), "utf8"));
-  alteredManifest.exports["./candidate/unreviewed"] = "./dist/core/index.js";
-  await writeFile(join(altered, "package.json"), JSON.stringify(alteredManifest));
-  await assert.rejects(auditCore(altered), /core_manifest_drift/);
-  const stale = join(temporary, "stale"); await cp(installed, stale, { recursive: true });
-  await writeFile(join(stale, "dist/core/index.js"), "export {};\n");
-  await assert.rejects(auditCore(stale), /core_build_bytes_drift/);
-  await rm(join(inputCopy, "src/serialization/exact-json-numbers.ts"));
-  await assert.rejects(auditCoreInputs(inputCopy), /core_input_file_set_drift/);
-  await writeFile(join(inputCopy, "src/serialization/exact-json-numbers.ts"), "export {};\n");
-  await assert.rejects(auditCoreInputs(inputCopy), /core_input_bytes_drift/);
-  await rm(join(inputCopy, "src/serialization/exact-json-numbers.ts"));
-  await symlink(join(source, "src/serialization/exact-json-numbers.ts"), join(inputCopy, "src/serialization/exact-json-numbers.ts"));
-  await assert.rejects(auditCoreInputs(inputCopy), /candidate_source_symlink_unreviewed/);
-  const numericOutput = "dist/core/serialization/exact-json-numbers.js";
-  const changedNumeric = join(temporary, "changed-numeric"); await cp(installed, changedNumeric, { recursive: true });
-  await writeFile(join(changedNumeric, numericOutput), "export {};\n");
-  await assert.rejects(auditCore(changedNumeric), /core_build_bytes_drift/);
-  await rm(join(changedNumeric, numericOutput));
-  await assert.rejects(auditCore(changedNumeric), /core_build_file_set_drift/);
-  await writeFile(join(changedNumeric, numericOutput), await readFile(join(installed, numericOutput)));
-  await writeFile(join(changedNumeric, "dist/core/unreviewed.js"), "export {};\n");
-  await assert.rejects(auditCore(changedNumeric), /core_build_file_set_drift/);
-  await rm(join(changedNumeric, "dist/core/unreviewed.js"));
-  await rm(join(changedNumeric, numericOutput));
-  await symlink(join(installed, numericOutput), join(changedNumeric, numericOutput));
-  await assert.rejects(auditCore(changedNumeric), /candidate_build_symlink_unreviewed/);
-  const personalSource = "src/contracts/personal-slice.ts";
-  const personalInputCopy = join(temporary, "personal-inputs");
-  for (const path of Object.keys(qualifiedInputPins)) {
-    const target = join(personalInputCopy, path); await mkdir(dirname(target), { recursive: true });
-    await writeFile(target, await readFile(join(source, path)));
-  }
-  await auditCoreInputs(personalInputCopy);
-  await rm(join(personalInputCopy, personalSource));
-  await assert.rejects(auditCoreInputs(personalInputCopy), /core_input_file_set_drift/);
-  await writeFile(join(personalInputCopy, personalSource), "export {};\n");
-  await assert.rejects(auditCoreInputs(personalInputCopy), /core_input_bytes_drift/);
-  await rm(join(personalInputCopy, personalSource));
-  await symlink(join(source, personalSource), join(personalInputCopy, personalSource));
-  await assert.rejects(auditCoreInputs(personalInputCopy), /candidate_source_symlink_unreviewed/);
-  const personalOutput = "dist/core/contracts/personal-slice.js";
-  const changedPersonal = join(temporary, "changed-personal"); await cp(installed, changedPersonal, { recursive: true });
-  await writeFile(join(changedPersonal, personalOutput), "export {};\n");
-  await assert.rejects(auditCore(changedPersonal), /core_build_bytes_drift/);
-  await rm(join(changedPersonal, personalOutput));
-  await assert.rejects(auditCore(changedPersonal), /core_build_file_set_drift/);
-  await writeFile(join(changedPersonal, personalOutput), await readFile(join(installed, personalOutput)));
-  await writeFile(join(changedPersonal, "dist/core/contracts/unreviewed-personal.js"), "export {};\n");
-  await assert.rejects(auditCore(changedPersonal), /core_build_file_set_drift/);
-  await rm(join(changedPersonal, "dist/core/contracts/unreviewed-personal.js"));
-  await rm(join(changedPersonal, personalOutput));
-  await symlink(join(installed, personalOutput), join(changedPersonal, personalOutput));
-  await assert.rejects(auditCore(changedPersonal), /candidate_build_symlink_unreviewed/);
-  const unreviewedPersonal = join(temporary, "unreviewed-personal.json");
-  await writeFile(unreviewedPersonal, JSON.stringify({ ...personal, review: { ...personal.review, status: "pending" } }));
-  await assert.rejects(auditAuthority(cohort.personal_delta, unreviewedPersonal), /qualified_core_receipt_bytes_drift/);
-  const absentCohort = join(temporary, "absent-cohort.json");
-  await assert.rejects(auditPriorPersonalCohort(absentCohort), { code: "ENOENT" });
-  const tamperedCohort = join(temporary, "tampered-cohort.json");
-  await writeFile(tamperedCohort, JSON.stringify({ ...priorPersonal, committed_source_sha: "unreviewed" }));
-  await assert.rejects(auditPriorPersonalCohort(tamperedCohort), /reviewed_core_cohort_bytes_drift/);
-  const unreviewedDelta = join(temporary, "unreviewed-delta.json");
-  await writeFile(unreviewedDelta, JSON.stringify({ ...delta, review: { ...delta.review, status: "pending" } }));
-  await assert.rejects(auditAuthority(cohort.accepted_delta, unreviewedDelta), /qualified_core_receipt_bytes_drift/);
-  // Record retained cases only after their actual filesystem assertions above complete.
-  negativeIdentityCases.push(...["sibling-symlink", "stale-build", "unbuilt-source-edit", "extra-source-file", "unreviewed-metadata-edit", "unreviewed-packed-export", "missing-source-file", "new-module-edit", "source-symlink", "new-module-stale-output", "missing-output", "extra-output", "output-symlink", "absent-cohort", "tampered-cohort", "unreviewed-delta", "missing-personal-source", "personal-source-edit", "personal-source-symlink", "personal-output-stale", "missing-personal-output", "extra-personal-output", "personal-output-symlink", "unreviewed-personal-receipt"]);
-  const sliceSourcePaths = [
-  "src/location/point-projection.ts",
-  "src/operations/personal-slice.ts",
-  "tests/combined-slice-vectors.ts",
-  "tests/combined-slice.test.ts",
-  "tests/location-point-projection-vectors.ts",
-  "tests/location-point-projection.test.ts"
-];
-  const sliceOutputPaths = [
-  "dist/core/location/point-projection.d.ts",
-  "dist/core/location/point-projection.js",
-  "dist/core/operations/personal-slice.d.ts",
-  "dist/core/operations/personal-slice.js"
-];
-  for (const path of sliceSourcePaths) {
-    const copy = join(temporary, "slice-inputs");
-    await rm(copy, { recursive: true, force: true });
-    for (const input of Object.keys(qualifiedInputPins)) {
-      const target = join(copy, input); await mkdir(dirname(target), { recursive: true });
-      await writeFile(target, await readFile(join(source, input)));
-    }
-    await auditCoreInputs(copy);
-    await rm(join(copy, path));
-    await assert.rejects(auditCoreInputs(copy), /core_input_file_set_drift/);
-    negativeIdentityCases.push(`slice-source:${path}:missing`);
-    await writeFile(join(copy, path), "export {};\n");
-    await assert.rejects(auditCoreInputs(copy), /core_input_bytes_drift/);
-    negativeIdentityCases.push(`slice-source:${path}:edited`);
-    await rm(join(copy, path)); await symlink(join(source, path), join(copy, path));
-    await assert.rejects(auditCoreInputs(copy), /candidate_source_symlink_unreviewed/);
-    negativeIdentityCases.push(`slice-source:${path}:symlink`);
-  }
-  for (const path of sliceOutputPaths) {
-    const copy = join(temporary, "slice-outputs");
-    await rm(copy, { recursive: true, force: true }); await cp(installed, copy, { recursive: true });
-    await auditCore(copy);
-    await rm(join(copy, path));
-    await assert.rejects(auditCore(copy), /core_build_file_set_drift/);
-    negativeIdentityCases.push(`slice-output:${path}:missing`);
-    await writeFile(join(copy, path), "export {};\n");
-    await assert.rejects(auditCore(copy), /core_build_bytes_drift/);
-    negativeIdentityCases.push(`slice-output:${path}:stale`);
-    await rm(join(copy, path)); await symlink(join(installed, path), join(copy, path));
-    await assert.rejects(auditCore(copy), /candidate_build_symlink_unreviewed/);
-    negativeIdentityCases.push(`slice-output:${path}:symlink`);
-  }
-  const extraCopy = join(temporary, "slice-extra-output"); await cp(installed, extraCopy, { recursive: true });
-  await auditCore(extraCopy);
-  await writeFile(join(extraCopy, "dist/core/operations/unreviewed-slice.js"), "export {};\n");
-  await assert.rejects(auditCore(extraCopy), /core_build_file_set_drift/);
-  negativeIdentityCases.push("slice-extra-output");
-  await assert.rejects(auditPriorSlicesCohort(join(temporary, "absent-slice-cohort.json")), { code: "ENOENT" });
-  negativeIdentityCases.push("slice-cohort:absent");
-  const changedCohort = join(temporary, "changed-slice-cohort.json");
-  await writeFile(changedCohort, JSON.stringify({ ...priorSlices, committed_source_sha: "unreviewed" }));
-  await assert.rejects(auditPriorSlicesCohort(changedCohort), /reviewed_core_cohort_bytes_drift/);
-  negativeIdentityCases.push("slice-cohort:tampered");
-  for (const name of ["location_delta", "combined_delta"]) {
-    const authority = cohort[name]; const bytes = await readFile(resolve("../../", authority.receipt_path));
-    const copy = join(temporary, `${name}.json`);
-    await assert.rejects(auditAuthority(authority, copy), { code: "ENOENT" });
-    negativeIdentityCases.push(`slice-receipt:${name}:absent`);
-    await writeFile(copy, Buffer.concat([bytes, Buffer.from("\n")]));
-    await assert.rejects(auditAuthority(authority, copy), /qualified_core_receipt_bytes_drift/);
-    negativeIdentityCases.push(`slice-receipt:${name}:tampered`);
-    const value = JSON.parse(bytes);
-    await writeFile(copy, JSON.stringify({ ...value, review: { ...value.review, status: "pending" } }));
-    await assert.rejects(auditAuthority(authority, copy), /qualified_core_receipt_bytes_drift/);
-    negativeIdentityCases.push(`slice-receipt:${name}:unreviewed`);
-    await rm(copy);
-  }
-  // All 63 historical cases precede exactly the independently frozen 21 eligibility cases.
-  for (const path of Object.keys(cohort.ios_eligibility_delta.input_pins).sort()) {
-    const copy = join(temporary, "eligibility-inputs");
-    await rm(copy, { recursive: true, force: true });
-    for (const input of Object.keys(qualifiedInputPins)) {
-      const target = join(copy, input); await mkdir(dirname(target), { recursive: true });
-      await writeFile(target, await readFile(join(source, input)));
-    }
-    await auditCoreInputs(copy);
-    await rm(join(copy, path));
-    await assert.rejects(auditCoreInputs(copy), /core_input_file_set_drift/);
-    negativeIdentityCases.push(`eligibility-input:${path}:missing`);
-    await writeFile(join(copy, path), "export {};\n");
-    await assert.rejects(auditCoreInputs(copy), /core_input_bytes_drift/);
-    negativeIdentityCases.push(`eligibility-input:${path}:edited`);
-    await rm(join(copy, path)); await symlink(join(source, path), join(copy, path));
-    await assert.rejects(auditCoreInputs(copy), /candidate_source_symlink_unreviewed/);
-    negativeIdentityCases.push(`eligibility-input:${path}:symlink`);
-  }
-  for (const path of Object.keys(cohort.ios_eligibility_delta.output_pins).sort()) {
-    const copy = join(temporary, "eligibility-outputs");
-    await rm(copy, { recursive: true, force: true }); await cp(installed, copy, { recursive: true });
-    await auditCore(copy);
-    await rm(join(copy, path));
-    await assert.rejects(auditCore(copy), /core_build_file_set_drift/);
-    negativeIdentityCases.push(`eligibility-output:${path}:missing`);
-    await writeFile(join(copy, path), "export {};\n");
-    await assert.rejects(auditCore(copy), /core_build_bytes_drift/);
-    negativeIdentityCases.push(`eligibility-output:${path}:stale`);
-    await rm(join(copy, path)); await symlink(join(installed, path), join(copy, path));
-    await assert.rejects(auditCore(copy), /candidate_build_symlink_unreviewed/);
-    negativeIdentityCases.push(`eligibility-output:${path}:symlink`);
-  }
-  const eligibilityExtraCopy = join(temporary, "eligibility-extra-output");
-  await cp(installed, eligibilityExtraCopy, { recursive: true }); await auditCore(eligibilityExtraCopy);
-  await writeFile(join(eligibilityExtraCopy, "dist/core/usage-mobile/unreviewed-eligibility.js"), "export {};\n");
-  await assert.rejects(auditCore(eligibilityExtraCopy), /core_build_file_set_drift/);
-  negativeIdentityCases.push("eligibility-extra-output");
-  await assert.rejects(auditCohort(join(temporary, "absent-eligibility-cohort.json")), { code: "ENOENT" });
-  negativeIdentityCases.push("eligibility-cohort:absent");
-  const eligibilityChangedCohort = join(temporary, "changed-eligibility-cohort.json");
-  await writeFile(eligibilityChangedCohort, JSON.stringify({ ...cohort, committed_source_sha: "unreviewed" }));
-  await assert.rejects(auditCohort(eligibilityChangedCohort), /reviewed_core_cohort_bytes_drift/);
-  negativeIdentityCases.push("eligibility-cohort:tampered");
-  const eligibilityBytes = await readFile(resolve("../../", cohort.ios_eligibility_delta.receipt_path));
-  const eligibilityCopy = join(temporary, "eligibility-receipt.json");
-  await assert.rejects(auditAuthority(cohort.ios_eligibility_delta, eligibilityCopy), { code: "ENOENT" });
-  negativeIdentityCases.push("eligibility-receipt:absent");
-  await writeFile(eligibilityCopy, Buffer.concat([eligibilityBytes, Buffer.from("\n")]));
-  await assert.rejects(auditAuthority(cohort.ios_eligibility_delta, eligibilityCopy), /qualified_core_receipt_bytes_drift/);
-  negativeIdentityCases.push("eligibility-receipt:tampered");
-  const eligibilityValue = JSON.parse(eligibilityBytes);
-  await writeFile(eligibilityCopy, JSON.stringify({ ...eligibilityValue, review: { ...eligibilityValue.review, status: "pending" } }));
-  await assert.rejects(auditAuthority(cohort.ios_eligibility_delta, eligibilityCopy), /qualified_core_receipt_bytes_drift/);
-  negativeIdentityCases.push("eligibility-receipt:unreviewed");
-  assert.deepEqual(negativeIdentityCases, cohort.negative_fixture_catalog.cases.map(({ id }) => id), "frozen_negative_fixture_execution_drift");
-  assert.equal(negativeIdentityCases.length, 84);
-  await executeCodecFilesystemNegatives(temporary);
-  assert.deepEqual(negativeIdentityCases, codecCohort.negative_fixture_catalog.cases.map(({ id }) => id), "frozen_negative_fixture_execution_drift");
-  assert.equal(negativeIdentityCases.length, 203);
-} finally { await rm(temporary, { recursive: true, force: true }); }
-
-async function copyCurrentInputs(directory) {
-  await rm(directory, { recursive: true, force: true });
-  for (const path of Object.keys(qualifiedInputPins)) { const target = join(directory, path); await mkdir(dirname(target), { recursive: true }); await writeFile(target, await readFile(join(source, path))); }
-  await auditCoreInputs(directory);
-}
-async function copyCurrentPackage(directory) {
-  await rm(directory, { recursive: true, force: true }); await cp(installed, directory, { recursive: true }); await auditCore(directory);
-}
-function setPointer(value, pointer, replacement) {
-  const parts = pointer.split("/").slice(1); let current = value;
-  for (const part of parts.slice(0, -1)) { assert.ok(current[part] !== undefined); current = current[part]; }
-  current[parts.at(-1)] = replacement;
-}
-async function executeCodecFilesystemNegatives(temporary) {
-  const inputs = join(temporary, "codec-inputs"), packed = join(temporary, "codec-packed"), jsonCopy = join(temporary, "codec-evidence.json");
-  const evidence = new Map([
-    [catalogAuthority.current_partial_receipt.path, { pin: catalogAuthority.current_partial_receipt, bytes: catalogCurrentBytes }],
-    [catalogAuthority.independent_stage1_approval.path, { pin: catalogAuthority.independent_stage1_approval, bytes: catalogApprovalBytes }],
-    [catalogAuthority.reviewed_partial_receipt_archive.path, { pin: catalogAuthority.reviewed_partial_receipt_archive, bytes: catalogArchivedBytes }],
-  ]);
-  const cohortBytes = await readFile(codecCohortPath);
-  for (const row of codecCohort.negative_fixture_catalog.cases.slice(84)) {
-    let action;
-    if (row.id.startsWith("codec-input:") || row.id === "catalog-evidence:vector:unreviewed") {
-      await copyCurrentInputs(inputs);
-      const relative = row.target.replace(/^packages\/healthmd-core-ts\//, ""); assert.ok(Object.hasOwn(qualifiedInputPins, relative));
-      const target = join(inputs, relative);
-      if (row.id.endsWith(":missing")) await rm(target);
-      else if (row.id.endsWith(":symlink")) { await rm(target); await symlink(join(source, relative), target); }
-      else if (row.id === "catalog-evidence:vector:unreviewed") await writeFile(target, Buffer.concat([await readFile(target), Buffer.from("\n// unreviewed\n")]));
-      else await writeFile(target, "export {};\n");
-      action = () => auditCoreInputs(inputs);
-    } else if (row.id.startsWith("codec-output:") || row.id.startsWith("codec-extra:")) {
-      await copyCurrentPackage(packed); const target = join(packed, row.target);
-      if (row.id.startsWith("codec-extra:")) { assert.ok(row.target.startsWith("dist/core/serialization/unreviewed-")); await writeFile(target, "export {};\n"); }
-      else { assert.ok(Object.hasOwn(qualifiedArtifacts, row.target));
-        if (row.id.endsWith(":missing")) await rm(target);
-        else if (row.id.endsWith(":symlink")) { await rm(target); await symlink(join(installed, row.target), target); }
-        else await writeFile(target, "export {};\n");
-      }
-      action = () => auditCore(packed);
-    } else if (row.id.startsWith("codec-receipt:")) {
-      const authority = Object.values(codecCohort.normal_implementation_authorities).find(a => a.receipt.path === row.target); assert.ok(authority);
-      const bytes = await readFile(resolve("../../", authority.receipt.path)); await writeFile(jsonCopy, bytes); await auditCodecAuthority(authority, jsonCopy);
-      if (row.id.endsWith(":absent")) await rm(jsonCopy);
-      else if (row.id.endsWith(":tampered")) await writeFile(jsonCopy, Buffer.concat([bytes, Buffer.from("\n")]));
-      else { const value = JSON.parse(bytes); value.review.status = "pending"; await writeFile(jsonCopy, JSON.stringify(value)); }
-      action = () => auditCodecAuthority(authority, jsonCopy);
-    } else if (row.id.startsWith("exact-codecs-cohort:") || row.id.startsWith("catalog-authority:")) {
-      await writeFile(jsonCopy, cohortBytes); await auditCodecCohort(jsonCopy);
-      if (row.id.endsWith(":absent")) await rm(jsonCopy);
-      else { const value = JSON.parse(cohortBytes);
-        if (row.id.endsWith(":tampered")) value.committed_source_sha = "unreviewed";
-        else if (row.id.endsWith(":unreviewed")) value.review = { status: "pending" };
-        else if (row.id.endsWith(":unknown-field")) value.catalog_literal_data_authority.unlisted = true;
-        else { const field = row.id.slice("catalog-authority:false-".length, -"-admission".length); assert.ok(Object.hasOwn(catalogScope, field)); value.catalog_literal_data_authority.exact_scope[field] = true; }
-        await writeFile(jsonCopy, JSON.stringify(value));
-      }
-      action = () => auditCodecCohort(jsonCopy);
-    } else {
-      const original = evidence.get(row.target); assert.ok(original, "unrealized_catalog_evidence_stimulus");
-      await writeFile(jsonCopy, original.bytes); await auditCatalogEvidence(original.pin, jsonCopy);
-      if (row.id.endsWith(":absent")) await rm(jsonCopy);
-      else if (row.id.endsWith(":tampered")) await writeFile(jsonCopy, Buffer.concat([original.bytes, Buffer.from("\n")]));
-      else { const value = parseCatalogRaw(original.bytes);
-        if (row.id === "catalog-evidence:receipt:unreviewed") value.review.status = "pending";
-        else if (row.id === "catalog-evidence:approval:unreviewed") value.result = "pending";
-        else if (row.id === "catalog-evidence:reviewed-archive:unreviewed") value.result = "unreviewed";
-        else if (row.id.startsWith("catalog-receipt:mismatched-") || row.id.startsWith("catalog-approval:mismatched-")) {
-          const field = row.id.split(":mismatched-")[1]; const isReceipt = row.id.startsWith("catalog-receipt:");
-          const pointer = field === "fingerprint" && isReceipt ? "/review/fingerprint" : field === "scope" ? (isReceipt ? "/review/qualification" : "/proof_class") : "/" + field;
-          setPointer(value, pointer, "unrelated_literal");
-        } else if (row.id === "catalog-receipt:wrong-proof-class") value.proof_class = "native-qualified";
-        else if (row.id === "catalog-receipt:wrong-source-patch") value.patch_digest = "unrelated_literal";
-        else if (row.id === "catalog-chain:wrong-archive-link") value.history[1].receipt.sha256 = "unrelated_literal";
-        else if (row.id === "catalog-chain:approval-wrong-receipt") value.receipt.sha256 = "unrelated_literal";
-        else assert.fail("unrealized_catalog_evidence_mutation");
-        await writeFile(jsonCopy, JSON.stringify(value));
-      }
-      action = () => auditCatalogEvidence(original.pin, jsonCopy);
-    }
-    if (row.expected_failure === "ENOENT") await assert.rejects(action(), { code: "ENOENT" });
-    else await assert.rejects(action(), new RegExp(row.expected_failure));
-    negativeIdentityCases.push(row.id); // only after genuine validator failure matched
-  }
-}
+  // IDs and expected_failure are used only here, after action/validator selection.
+  if(row.expected_failure==="ENOENT")await assert.rejects(validate(),{code:"ENOENT"});else await assert.rejects(validate(),new RegExp(row.expected_failure));
+  negativeIdentityCases.push(row.id);negativeExecutionProfiles.push(binding.profile);
+ }
+ assert.deepEqual(negativeIdentityCases,cases.map(row=>row.id));
+ assert.equal(negativeExecutionProfiles.filter(p=>p==="historical_exact_codecs_56_34").length,203);
+ assert.equal(negativeExecutionProfiles.filter(p=>p==="current_source_catalog_58_36").length,253);
+} finally {await rm(temporary,{recursive:true,force:true});}
 
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
@@ -825,7 +806,7 @@ const codecs = await import(import.meta.resolve("@healthmd/core-ts/candidate/cod
 assert.deepEqual(Object.keys(codecs).sort(), ["createCanonicalJsonSerializer", "createExactJsonCodec", "createExactJsonNumberParser", "serializeExactJsonNumber"]);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
 console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(qualifiedArtifacts).length, qualifiedCoreInputs: Object.keys(qualifiedInputPins).length, packedLocalCore: true,
-  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases }));
+  physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases, negativeExecutionProfiles }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }
 const compiled = (await tree("dist/tests")).filter((path) => path.endsWith(".test.js"));

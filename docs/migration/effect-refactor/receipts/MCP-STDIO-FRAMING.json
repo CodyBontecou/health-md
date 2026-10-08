@@ -1,0 +1,1055 @@
+{
+  "task_id": "MCP-STDIO-FRAMING",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "stage": "accepted_full_private_portable_synthetic",
+  "source_sha": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+  "patch_digest": "582d958f7d2497dde87aefbc6cd13be1ec564a59ad11013cd9a08fcec5f3a497",
+  "patch_digest_method": "Sorted nonreceipt path UTF8+NUL+rawbytes+NUL;onlyvector,receipt excluded",
+  "changed_paths": [
+    "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+    "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "vector": {
+        "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+        "bytes": 972934
+      },
+      "source_profile": [
+        {
+          "path": "AGENTS.md",
+          "bytes": 6129,
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "current_sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "GLOSSARY.md",
+          "bytes": 3868,
+          "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+          "current_sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "bytes": 13361,
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "current_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "bytes": 284562,
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "current_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "bytes": 5578,
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "current_sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "bytes": 10054,
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "current_sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "bytes": 347600,
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "current_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "bytes": 95633,
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "current_sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "bytes": 12304,
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "current_sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+          "bytes": 26431,
+          "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "current_sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+          "bytes": 145883,
+          "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+          "current_sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+          "bytes": 33855,
+          "sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d",
+          "current_sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "bytes": 27886,
+          "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "current_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+          "bytes": 34945,
+          "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+          "current_sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+          "bytes": 124059,
+          "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+          "current_sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+          "bytes": 139864,
+          "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "current_sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "bytes": 860,
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "current_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/docs/typescript-candidate.md",
+          "bytes": 12400,
+          "sha256": "39cae98b21a19e96c94260b233771fabd3f17a311bd383fab9d58ce6e945b159",
+          "current_sha256": "39cae98b21a19e96c94260b233771fabd3f17a311bd383fab9d58ce6e945b159",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/package.json",
+          "bytes": 880,
+          "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+          "current_sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/package-lock.json",
+          "bytes": 28291,
+          "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+          "current_sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/scripts/build-candidate.mjs",
+          "bytes": 1574,
+          "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+          "current_sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/scripts/check-candidate.mjs",
+          "bytes": 66592,
+          "sha256": "3186cb9902dfba6bf7c230ae402500e344ea985539d9fb6abc6c45a686842d63",
+          "current_sha256": "3186cb9902dfba6bf7c230ae402500e344ea985539d9fb6abc6c45a686842d63",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/tsconfig.build.json",
+          "bytes": 144,
+          "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+          "current_sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/tsconfig.test.json",
+          "bytes": 123,
+          "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+          "current_sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "bytes": 256121,
+          "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+          "current_sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json",
+          "bytes": 105145,
+          "sha256": "4593fec8700e43af6e0dfea5f6919fe660a3bafed2275f6289968f30c4494646",
+          "current_sha256": "4593fec8700e43af6e0dfea5f6919fe660a3bafed2275f6289968f30c4494646",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/rust-toolchain.toml",
+          "bytes": 86,
+          "sha256": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d",
+          "current_sha256": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+          "bytes": 27301,
+          "sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+          "current_sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+          "bytes": 17008,
+          "sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+          "current_sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+          "bytes": 42108,
+          "sha256": "693aeb1507aed9ef2a2073da5497a84dce58d6da4431a273246561efaff6a3e5",
+          "current_sha256": "693aeb1507aed9ef2a2073da5497a84dce58d6da4431a273246561efaff6a3e5",
+          "current_equals_assigned": true
+        },
+        {
+          "path": "apps/cli/src/surfaces/result-envelope.ts",
+          "bytes": 31507,
+          "sha256": "b3d1e714f95a134aefd625d5b55ed00f68f1471f920ace043ca3a252c574ac5f",
+          "current_sha256": "b3d1e714f95a134aefd625d5b55ed00f68f1471f920ace043ca3a252c574ac5f",
+          "current_equals_assigned": true
+        }
+      ],
+      "primary_rust188": [
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/core/src/str/lossy.rs",
+          "path": "library/core/src/str/lossy.rs",
+          "sha256": "b0f1bca6d7c6dd2e204e16d1ab914d4831658dcc69c1213a451b498c6dd87656",
+          "bytes": 10376
+        },
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/core/src/str/validations.rs",
+          "path": "library/core/src/str/validations.rs",
+          "sha256": "3ac9e87a2742be12e44d641e75339156c6a989b577c84b8921b2ef78b8374f1d",
+          "bytes": 10573
+        },
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/core/src/str/mod.rs",
+          "path": "library/core/src/str/mod.rs",
+          "sha256": "ceead71cf9baad16b4f7d19405f9e38350f009432196165a727b6b81802b0994",
+          "bytes": 105355
+        },
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/core/src/char/methods.rs",
+          "path": "library/core/src/char/methods.rs",
+          "sha256": "fe7cea142bafa6e98f694fa25da0f4fa08047f97485e18db03fd905a5ec71fbd",
+          "bytes": 64443
+        },
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/core/src/unicode/unicode_data.rs",
+          "path": "library/core/src/unicode/unicode_data.rs",
+          "sha256": "09ee4cd2dc94a0a88ae423640adce08a2ec7ae1760918d45dd9372cc25929b8b",
+          "bytes": 116217
+        },
+        {
+          "url": "https://raw.githubusercontent.com/rust-lang/rust/1.88.0/library/alloc/src/string.rs",
+          "path": "library/alloc/src/string.rs",
+          "sha256": "f2f0e40703337a317cd0cce253020da219265525cfb6ef8acb279bb377c67860",
+          "bytes": 109601
+        }
+      ]
+    },
+    "locks_and_runtime": {
+      "source_only": true,
+      "execution": false
+    },
+    "artifact_and_native_interface": {},
+    "policy_migration_key_versions": {}
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "private synthetic stdio-framing"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+      "result": "passed",
+      "evidence": "Closed private source interface and full295 independent literals reviewed before implementation; bounded source amendments reviewed before application. Full296stdio runtime cases pass, including raw fixture companion. Numerical/JSON semantic parser and public parity remain separate obligations.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+      "result": "passed",
+      "evidence": "Exactly three private source/test/vector files and own receipt form task delta582d; no launcher/package/lock/export change. Root-owned cohort guard changes belong to separate taskdfe. Owned framing delegates semantic dispatch through existing coarse operation capability.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+      "result": "passed",
+      "evidence": "Full295 scenes exercise owned coarse fake I/O, originalScope/current checks, source/purpose/destination/suppression authority, identity and callback expiry before actual read/publication. No production grant or unavailable source promotion.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+      "result": "passed",
+      "evidence": "Raw chunk and reply bounds, foreign/proxy shape rejection, native trim/lossyUTF8 and fixed failure scenes pass. Framing never claims JSON.parse losslessness or full-size private RPC/native parser qualification; native2MiB/6MiB and private64KiB profiles remain distinct.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+      "result": "passed",
+      "evidence": "Actual fake owner Scope/cancellation/EOF/cleanup/ACK and publication ambiguity cases pass, including unchanged256cleanup failure precedence. Protected result mapping restores interruptibility only for actual work. This qualifies fake owned lifecycle, not real stdout or durable atomicity.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+      "result": "passed",
+      "evidence": "The31 historical source pins and native14command/21full13readonly MCP inventories remain unchanged; donor40time tools remain distinct obligations. Framing passes425priorCLI tests without promoting inventories into full public semantic/transport/state/native qualification.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    },
+    {
+      "criterion": "Preserve exact2MiBlinecontent bound, overflow drains throughLF and feeds { parse-error sentinel, EOFpartialline, trim/emptyline behavior and legacy lossyUTF8 conversion beforeJSON parsing. Stdout onlyJSONRPC response+LF/flush, diagnostics separate. Source ignores write failures; candidate safe owned-sink fault status is private and must not invent public response after failedpipe. Native pipe/lifecycle proof separate.",
+      "result": "passed",
+      "evidence": "All source-derived2MiB line/overflowLF/EOF/empty trim/lossyUTF8/outputLF/flush/sinkfault cases pass. Only259 lexical observation corrected from original LineView-only contract; native pipe/lifecycle and full-size semantic RPC remain separate.",
+      "proof_class": "portable_synthetic",
+      "scope_limit": "Private bounded portable synthetic proof only. Native/public/provider/customer storage/grants and Rust retirement remain separate."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "physical_cwd": "/Users/codybontecou/dev/health-md/apps/cli",
+      "physical_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.json",
+          "sha256": "2f4118c5d21dd6769a70c77ecf379ffa0a889b2ad70792edf3607045a5072936",
+          "bytes": 111807
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.log",
+          "sha256": "d7f4eb0b60f4a3171e5b3cfab569394881dc22a3f0d13e30eb30e35dc1f200ca",
+          "bytes": 97213
+        },
+        "inputs": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third-inputs.json",
+          "sha256": "39b6ec410e7f58e7c1ad79a70c454242bb429659887f125b40c50c4ae04f2161",
+          "bytes": 134519
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.mjs",
+          "sha256": "7583c3a4e6a2dce4bdf3feb10805ed09d06ddddb81d75331e4e9c18fb7595742",
+          "bytes": 6464
+        },
+        "wall_ms": 8984,
+        "counts": {
+          "tests": 721,
+          "suites": 0,
+          "pass": 721,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_cli": 149,
+        "source_core": 58,
+        "core_outputs": 53,
+        "packed_modules": 36,
+        "cli_outputs": 24,
+        "filesystem_cases": 456,
+        "raw_lossless": true,
+        "group_cleanup_ACK_and_ESRCH": true,
+        "core_producer_rerun": false,
+        "independent_review": {
+          "path": "/private/tmp/healthmd-stdio-and-cohort-green-actual-effect-baseline-review.json",
+          "sha256": "73af8989c9b166898ea5641db10218e424d9933f83b3f2013079511bc3571fab",
+          "bytes": 7052
+        }
+      }
+    }
+  ],
+  "observations": [
+    {
+      "case_id": "Stage1-source-profile-literal-freeze",
+      "result": "passed",
+      "procedure": "Read exactclaimedcard/readset/assignedGit bytes;pin official1.88Rust lossylines/White_Space source;derive literalraw/textrecipes and fullfakeownership observations beforecandidatecode.",
+      "expected": "Only2allowedpaths,all5taskminima, completeunique literalcorpus/profile evidence, no runtimeadoption.",
+      "observed": {
+        "case_count": 276,
+        "source_pins": 31,
+        "primary_files": 6,
+        "minima_preserved": true,
+        "execution": false
+      },
+      "evidence": {
+        "vector": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "sha256": "9808ae7db50778b5e594bed4c09ff9a35c99566014434b7883ac657f1a6c82be"
+      }
+    },
+    {
+      "result": "passed",
+      "case_id": "Stage1-reviewed-amendment-exact-inverse",
+      "procedure": "Apply ROOT-approved literal-only corrections and3closed-action rows; source-only Python full fixture inverse equality and raw byte hashing.",
+      "expected": "279unique rows/lifetime46;exact5counterfields+4oldpublicationfields only in original276,unchangedinterface/sourcepins/bounds;noexecution.",
+      "observed": {
+        "task_id": "MCP-STDIO-FRAMING",
+        "proof_class": "source_only_literal_inverse",
+        "old_vector_sha256": "9808ae7db50778b5e594bed4c09ff9a35c99566014434b7883ac657f1a6c82be",
+        "new_vector_sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+        "source_sha": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+        "patch_digest": "61e29273e1d0e4880f9515606858638da329a0a589b94e4c2e9c2ae8c2cc6a58",
+        "old_count": 276,
+        "new_count": 279,
+        "lifetime_count": 46,
+        "inverse_whole_fixture_equality": true,
+        "inverse_procedure": "Remove last3new rows,restorecasecount276,restoreexact5counterfields,removeexact4oldmandatorypublicationadditions. Entire original parsed fixture equal; typed interface prefix and suffix unchanged.",
+        "counter_changes": [
+          {
+            "case_id": "line-read-crosswire",
+            "path": "expected.counts.reply_issue_calls",
+            "old": 1,
+            "new": 0
+          },
+          {
+            "case_id": "line-read-close-during-await",
+            "path": "expected.counts.reply_issue_calls",
+            "old": 1,
+            "new": 0
+          },
+          {
+            "case_id": "piece-read-crosswire",
+            "path": "expected.counts.piece_read_calls",
+            "old": 0,
+            "new": 1
+          },
+          {
+            "case_id": "piece-read-close-during-await",
+            "path": "expected.counts.piece_read_calls",
+            "old": 0,
+            "new": 1
+          },
+          {
+            "case_id": "flush-gate-foreign-ticket",
+            "path": "expected.counts.flush_gate_calls",
+            "old": 1,
+            "new": 0
+          }
+        ],
+        "mandatory_publication_old_rows": [
+          "source-gate-saved-after-return",
+          "dispatcher-save-issuer-and-view",
+          "flush-gate-expired-before-postcurrent",
+          "terminal-foreign-Proxy-inspection"
+        ],
+        "mandatory_publication_new_rows": [
+          "sink-saved-lazy-read-after-write-callback-exit"
+        ],
+        "new_case_ids": [
+          "sink-saved-lazy-read-after-write-callback-exit",
+          "line-same-lazy-effect-reexecuted-after-current-revocation",
+          "piece-same-lazy-effect-reexecuted-after-current-revocation"
+        ],
+        "sourcepins_primary_bounds_and_all_other_fixture_fields_preserved": true,
+        "execution": false
+      },
+      "evidence": {
+        "inverse_report": "/private/tmp/healthmd-stdio-stage1-applied-amendment-inverse-report.json",
+        "sha256": "c2d453cb9dd21be612ddb349cf2aa8d3c3c5e6729de805ed92b43e75e79c47dc",
+        "proposal_sha256": "1fe9a6f6f7014db3f917ddd3e74f0552fec868e22f4778e82e8e50a0d03e60ff",
+        "independent_review_sha256": "780b2376ef53673939e1a531680457db8135ac63e94d03c731275bee0cb74cd9",
+        "mandatory_publication_review_sha256": "94b24a1417487df6727051bd431aabbee01fbef519d940bca524796f59ef927b"
+      }
+    },
+    {
+      "case_id": "Stage2-source-only-full-raw-freeze",
+      "result": "passed",
+      "procedure": "Write source/test only;read freshtaskbrief;hash three nonreceiptfiles and immutable279vector;static delimiter/source inspection only.",
+      "expected": "Exact source/test/receipt writes,vector immutable,279 literal assertions+companion defined before execution.",
+      "observed": {
+        "source_manifest": [
+          {
+            "path": "apps/cli/src/surfaces/stdio-framing.ts",
+            "sha256": "e6ece74fa1880fd3d87da8b54715f6b0097fabf4fccc5a4884503a9db981c703",
+            "bytes": 14761
+          },
+          {
+            "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+            "sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+            "bytes": 972934
+          },
+          {
+            "path": "apps/cli/tests/surfaces/stdio-framing.test.ts",
+            "sha256": "5f40ec6b77c6f2038ce2223a2eb058f80215b097fcd8d6b014148215e9962909",
+            "bytes": 21923
+          }
+        ],
+        "new_tests_forecast": 280,
+        "literal_tests_forecast": 279,
+        "execution": false,
+        "vector_unchanged": true,
+        "independent_review": "pending"
+      },
+      "evidence": {
+        "source_fingerprint": "3e3d685b4ba849f032f6df73e6025c2c1421e94e+31f23c541989bd59f50509923c16f8e79e4298aa455426e02a9a30caa88d9903",
+        "stage1_review_sha256": "4c969fab16ca04dfd76fa0655ea03debdf7406e2c92d0e3f2a81e7fde7282efe",
+        "prior_partial_archive": "/private/tmp/healthmd-stdio-before-stage2-source-freeze/MCP-STDIO-FRAMING.json"
+      }
+    },
+    {
+      "result": "passed",
+      "case_id": "reviewed-nine-finding-source-corpus-preservation",
+      "procedure": "Python raw JSON inverse comparison, exact proposal comparison, source/test static driver and raw-pin inspection",
+      "expected": "279 original expected objects unchanged; only approved flush ordinal2\u21924, exact16 reviewed additions,295 cases and checked closed driver",
+      "observed": {
+        "task_id": "MCP-STDIO-FRAMING",
+        "status": "passed_source_preservation_only",
+        "assigned_source": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+        "archived_original_four": "/private/tmp/healthmd-stdio-before-nine-reviewed-repairs",
+        "original_whole_cases": 279,
+        "preserved_whole_expected_objects": 279,
+        "inverse_whole_objects_equal": true,
+        "sole_original_stimulus_change": {
+          "case_id": "flush-gate-expired-before-postcurrent",
+          "field": "stimulus.actions[0].ordinal",
+          "before": 2,
+          "after": 4
+        },
+        "new_whole_cases_exact_reviewed_proposal": 16,
+        "total_primary_cases": 295,
+        "raw_hash_companion": 1,
+        "test_forecast": 296,
+        "historical_source_rows_preserved": 31,
+        "primary_rows_preserved": 6,
+        "static_typed_effect_service_witnesses": "closed runScene and arbitrary-A owner; checked real Scope.provide; no casts/suppression/service injection",
+        "model_limit": "raw_buffer_peak is independent source-admission accounting model, not candidate allocation/heap measurement",
+        "driver_inputs": "only stimulus, trusted generic semantic witnesses and real ownership/Effect observations; IDs/expected values only outside driver assertion loop",
+        "execution": "development static only; runtime296/full CLI qualification unrun",
+        "proposal": {
+          "path": "/private/tmp/healthmd-stdio-framing-nine-finding-repair-literal-proposal.json",
+          "sha256": "e8a49a6ae54a5acf8d386d895fb8aec31c1739e1b0ac662ca16a2c4f5b846d3a",
+          "bytes": 90089
+        },
+        "review": {
+          "path": "/private/tmp/healthmd-stdio-framing-amended-gap-proposal-effect-baseline-review.json",
+          "sha256": "c0e9aa1afba90676e001171df55edda0d548b5a00c8e0603bea39d8598f7b5d1",
+          "bytes": 6817
+        }
+      },
+      "evidence": [
+        {
+          "path": "/private/tmp/healthmd-stdio-nine-repairs-preservation-report.json",
+          "sha256": "39b21b7edb28cac1f0170c43d00952dc3ce2f039882d035efa6a9226df697d8a",
+          "bytes": 1691
+        }
+      ]
+    },
+    {
+      "case_id": "full-current-integrated-component-runtime",
+      "result": "passed",
+      "procedure": "Root pinned bounded full npmruncheck; independent raw ordered test/filesystem/source/tool/output/cleanup audit.",
+      "expected": "721orderedtests/456orderedfilesystemscenes/current149CLI58core53coreoutputs36packed/oneEffect/24CLIoutputs; no cancellation/skip/todo or supervisor faults.",
+      "observed": {
+        "counts": {
+          "tests": 721,
+          "suites": 0,
+          "pass": 721,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "filesystem_cases": 456,
+        "MCP_cases": 295,
+        "MCP_companion": 1,
+        "prior_CLI_tests": 425,
+        "core_producer_rerun": false,
+        "source_after_matches": true,
+        "cleanup_ACK_and_ESRCH": true
+      },
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.json",
+          "sha256": "2f4118c5d21dd6769a70c77ecf379ffa0a889b2ad70792edf3607045a5072936",
+          "bytes": 111807
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.log",
+          "sha256": "d7f4eb0b60f4a3171e5b3cfab569394881dc22a3f0d13e30eb30e35dc1f200ca",
+          "bytes": 97213
+        },
+        "inputs": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third-inputs.json",
+          "sha256": "39b6ec410e7f58e7c1ad79a70c454242bb429659887f125b40c50c4ae04f2161",
+          "bytes": 134519
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-integrated-cli-check-third.mjs",
+          "sha256": "7583c3a4e6a2dce4bdf3feb10805ed09d06ddddb81d75331e4e9c18fb7595742",
+          "bytes": 6464
+        },
+        "wall_ms": 8984,
+        "counts": {
+          "tests": 721,
+          "suites": 0,
+          "pass": 721,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_cli": 149,
+        "source_core": 58,
+        "core_outputs": 53,
+        "packed_modules": 36,
+        "cli_outputs": 24,
+        "filesystem_cases": 456,
+        "raw_lossless": true,
+        "group_cleanup_ACK_and_ESRCH": true,
+        "core_producer_rerun": false,
+        "independent_review": {
+          "path": "/private/tmp/healthmd-stdio-and-cohort-green-actual-effect-baseline-review.json",
+          "sha256": "73af8989c9b166898ea5641db10218e424d9933f83b3f2013079511bc3571fab",
+          "bytes": 7052
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Current full721CLI/456filesystem qualification and final receipt accepted for private bounded portable synthetic scope only.",
+    "Unchanged1359core producer proof credited from actual accepted run, no rerun.",
+    "raw_buffer_peak records limited admitted-slot model, not physical heap or native allocation proof.",
+    "Native pipe/device/public command semantics/provider/client/cloud/durable/grant/installed-state/rollout/Rust retirement gates remain required."
+  ],
+  "remaining_qualification": [
+    {
+      "owner": "independent fullsize codec/envelope author",
+      "next_packet": "SPLIT-MCP-FULLSIZE-ENVELOPE",
+      "trigger": "Before whole native2MiB line handling/publicstdioadmission",
+      "scope": "Exactsourcefullsizepostlossycodec/envelope integration,currentgrant/lifecycle/nativepipe proof; do notrelaxexisting64KprivateRpc here."
+    },
+    {
+      "owner": "MCP-STDIO-CONTROL author",
+      "trigger": "Accepted framinginterface andsourcefullcontrolfixtures",
+      "scope": "Native64inflight/32queue/64notifications initialize/cancel/progress/duplicateIDs andEOFcontrolcancellation remain separate."
+    },
+    {
+      "owner": "realCLI/nativehost/consumer reviewers",
+      "trigger": "Separatelyapprovedhost/externalclient window",
+      "scope": "FiveCLIhosts/signeddistribution/realpipes/device/auth/evaluator/export/jobs/publicnative andRustretirement open."
+    }
+  ],
+  "rollback": "Revert private files; retain current executable/state/readers/receipts and independently admitted packed cohort together. No user configuration mutation.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root/effect_baseline_review",
+    "fingerprint": "3e3d685b4ba849f032f6df73e6025c2c1421e94e+582d958f7d2497dde87aefbc6cd13be1ec564a59ad11013cd9a08fcec5f3a497",
+    "evidence": {
+      "path": "/private/tmp/healthmd-mcp-cohort-final-receipts-effect-baseline-review.json",
+      "sha256": "d6a4fc8e25e555aee58064dd871d722cc20e5916545215524d3310fcf05c084b",
+      "bytes": 3060
+    }
+  },
+  "resolved_authoring_attempts": [
+    {
+      "result": "partial",
+      "procedure": "Initial author-only literal draft static refinement",
+      "observed": "Initial260case draft archived before source-independent completion review; added EOF/scalar/expiredgate witnesses and corrected pre-decode/failed LineView observation windows. No tests/candidate execution.",
+      "evidence": "/private/tmp/healthmd-stdio-before-author-static-refinement"
+    },
+    {
+      "result": "failed",
+      "procedure": "Restricted officialRustrawsource reads",
+      "observed": "URLError for sixexactpaths;no bytes retained",
+      "resolution": "Auto-approvedhostreadonlyofficialsixpaths acquisition into/private/tmp;no compiler/install/repochange."
+    },
+    {
+      "result": "failed",
+      "procedure": "Independent full Stage1 literal review before code",
+      "observed": "5counter order/convention mismatches and missing saved-write/repeated-lazy-read lifetime groups; mandatory typed publication absent in4original completed lifetime terminal objects.",
+      "evidence": [
+        "/private/tmp/healthmd-stdio-framing-stage1-independent-review.json",
+        "/private/tmp/healthmd-stdio-stage1-amendment-proposal.json"
+      ],
+      "resolution": "ROOT-approved5countercorrections,3complete source-derived rows and5typedpublication additions applied before implementation. Original276wholefixture restored exactly by inverse; awaiting independent applied-delta review."
+    },
+    {
+      "result": "failed",
+      "procedure": "Initial source-only raw freeze script",
+      "observed": "Author assertion incorrectly assumed sorted finalfile was vector; hyphen-vector sorts before dot-test. No receipt/source write occurred; actual vector unchanged.",
+      "resolution": "Locate exact vector filename in measured manifest before assertion; sorted patch order unchanged."
+    }
+  ],
+  "implementation_source_manifest": [
+    {
+      "path": "apps/cli/src/surfaces/stdio-framing.ts",
+      "sha256": "91f32eac2d93a8ac6b614ff49817b38f13545aeb63972127e5c9a80ea45931fa",
+      "bytes": 15632
+    },
+    {
+      "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+      "sha256": "cd87897ff0432791e7900b6c53648f6abef8664ebdd20cbe93ae3f7b052b5a28",
+      "bytes": 1022461
+    },
+    {
+      "path": "apps/cli/tests/surfaces/stdio-framing.test.ts",
+      "sha256": "534c4733e2eca10702b2afba45e3cb8899e86feae35ac48c2d7335d6cb5f4a9a",
+      "bytes": 37690
+    }
+  ],
+  "stage1_independent_acceptance": {
+    "sha256": "4c969fab16ca04dfd76fa0655ea03debdf7406e2c92d0e3f2a81e7fde7282efe",
+    "vector_sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+    "patch_digest": "61e29273e1d0e4880f9515606858638da329a0a589b94e4c2e9c2ae8c2cc6a58",
+    "recorded_before_code_by": "ROOT"
+  },
+  "repair_history": [
+    {
+      "kind": "independent_precode_nine_finding_repair",
+      "prior_patch": "31f23c541989bd59f50509923c16f8e79e4298aa455426e02a9a30caa88d9903",
+      "prior_manifest": [
+        {
+          "path": "apps/cli/src/surfaces/stdio-framing.ts",
+          "sha256": "e6ece74fa1880fd3d87da8b54715f6b0097fabf4fccc5a4884503a9db981c703",
+          "bytes": 14761
+        },
+        {
+          "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+          "sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+          "bytes": 972934
+        },
+        {
+          "path": "apps/cli/tests/surfaces/stdio-framing.test.ts",
+          "sha256": "5f40ec6b77c6f2038ce2223a2eb058f80215b097fcd8d6b014148215e9962909",
+          "bytes": 21923
+        }
+      ],
+      "prior_exact_four_archive": "/private/tmp/healthmd-stdio-before-nine-reviewed-repairs",
+      "approved_strategy": {
+        "path": "/private/tmp/healthmd-stdio-framing-nine-finding-repair-literal-proposal.json",
+        "sha256": "e8a49a6ae54a5acf8d386d895fb8aec31c1739e1b0ac662ca16a2c4f5b846d3a",
+        "bytes": 90089
+      },
+      "independent_precode_acceptance": {
+        "path": "/private/tmp/healthmd-stdio-framing-amended-gap-proposal-effect-baseline-review.json",
+        "sha256": "c0e9aa1afba90676e001171df55edda0d548b5a00c8e0603bea39d8598f7b5d1",
+        "bytes": 6817
+      },
+      "preservation_report": {
+        "path": "/private/tmp/healthmd-stdio-nine-repairs-preservation-report.json",
+        "sha256": "39b21b7edb28cac1f0170c43d00952dc3ce2f039882d035efa6a9226df697d8a",
+        "bytes": 1691
+      },
+      "status": "source_repaired_development_static_pass_independent_full_source_review_pending",
+      "fixture_expected_changes": 0,
+      "sole_old_stimulus_change": {
+        "case_id": "flush-gate-expired-before-postcurrent",
+        "field": "stimulus.actions[0].ordinal",
+        "before": 2,
+        "after": 4
+      },
+      "new_independently_frozen_literals": 16
+    }
+  ],
+  "development_static_attempts": [
+    {
+      "result": "failed",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "scripts/typescript-dev/dev.mjs",
+        "check",
+        "cli"
+      ],
+      "cwd": ".",
+      "physical_cwd": "/Users/codybontecou/dev/health-md",
+      "exit_code": 1,
+      "elapsed_ms": 321,
+      "log": {
+        "path": "/private/tmp/healthmd-stdio-repair-static-first.log",
+        "sha256": "59281c53e02bccd371bdae494bc7b28fc3e9850901eac50d45f05a0b1637ed55",
+        "bytes": 2828
+      },
+      "diagnosis": "Callback-mutated nullable saved Effect locals were narrowed to never, inferring unknown error/context at post-terminal probes; changed to checked typed mutable holder. No casts or service injection."
+    },
+    {
+      "result": "passed",
+      "argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "scripts/typescript-dev/dev.mjs",
+        "check",
+        "cli"
+      ],
+      "cwd": ".",
+      "physical_cwd": "/Users/codybontecou/dev/health-md",
+      "exit_code": 0,
+      "log": {
+        "path": "/private/tmp/healthmd-stdio-repair-static-second.log",
+        "sha256": "a26fe4326f5b8dd53266f2bc79ffb2afa15620af8ce90d82a7ae6314babeab65",
+        "bytes": 85
+      },
+      "scope": "development source/test type diagnostics only; no fixture/runtime/full qualification execution",
+      "reported_static_ms": 135,
+      "physical_wall_ms": null,
+      "timing_note": "Earlier61ms field reflected a tool response estimate and does not establish physical check duration. Retained compiler log reports135ms; no rerun."
+    }
+  ],
+  "current_repair_notes": [
+    "The nine prior source strategies are preserved, with outer cleanup-result mapping protected and actual work restored interruptibly.",
+    "Original case256 and16 supplements remain exact. Only case259 lexical_lines changed to[] under independently reviewed original LineView-only observation contract; companion rawSHA follows that exact vector.",
+    "All counters/stimuli/provenance remain frozen. Earlier expectations and unrun source notes retained as historical."
+  ],
+  "historical_implementation_notes": [
+    "Private module owns raw hex admission,2MiB line/drain/EOF,source1.88 maximal invalid subpart decoding andUnicode16 trim,exact bound availability and ordered value/LF/flush. Coarse dispatcher owns semantic response, no JSONRPC evaluator copied.",
+    "Original Scope expiry replayable callback is separate from aggregate resource cleanup. IoOwner bracket is trusted coarse capability: required protected acquire/register/cleanup supplied by scoped fake protocol, not module-produced physical ACK. Module requires own issued ticket,use exactlyonce,reached EOF before full terminal and final Current.",
+    "Views captured with callback-live/Scope/membership/context before properties and lazy current EACHexecution/postawait; source/flush gates fixed failures, foreign/expired line/piece views null. Fixed own error codes omit provider reasons. Cleanupfailure poisons, external interruption retained; no revived original Scope.",
+    "Tests execute only inert stimuli/actions plus generic source_ping/source_parse_error/source_notification_no_response rendering after actual LineView. IDs/expected output do not enter driver. Byte recipe expectations normalized only outside driver for assertions. No candidate output used to amend literals.",
+    "279 full literal tests+1raw hash companion defined forecast only. Full typecheck/build/test/guard/cohort/CLI integration UNRUN. No consumer/native/fullsize RPC admission.",
+    "Test raw-buffer observer is independent source-profile byte accounting; physical memory/pipe/frame/serializer proof remains unqualified. ACK/busy original-close observations concern owned phase held to ACK/source ordering, not actual permission or native process."
+  ],
+  "historical_inspection_summary": "SourceonlyStage1. Complete closedtypedsource/sink/dispatcher/ACK/lifetime proposal and full independently source-derived literalrecipes; no candidateimplementation/test/build/Node/Rust/native execution. OfficialRust1.88primaryrawsource read only; no sourceadoption.",
+  "implementation_notes": [
+    "Current296stdio and full721CLI/456filesystem cases passed; complete concrete source/actual execution/final receipt independently accepted for private portable synthetic scope.",
+    "Current focused development315ms static/1522ms lane total/1743ms boundedwall; unchangedcoreproducer not rerun."
+  ],
+  "inspection_summary": "Accepted current582dprivate stdio source via full721/456, independently reviewed source-derived259amendment and actual execution.",
+  "historical_unrun_limitations_before_actual_checks": [
+    "Fixtures are proposed independently sourced expectations, not executed tests or actualallocation/ACK/nativepipe proof.",
+    "Expected full byte recipes include exactprimitive/count/length/SHA, neveroutputderivedfromcandidate.",
+    "Native2MiBraw/6MiBlossy versusexistingRPC64K/privatechunk4K/reply64K distinct; fullnativeRPCintegration separate.",
+    "Stage1privateinterface resourceonly; noCLI/commonbuilder admission.",
+    "No integration refresh/guard relaxation/private RPC cap lowering/common-source adoption/native device actions.",
+    "Development static source/test diagnostics passed only. All295 fixture cases, companion, lifecycle/ACK/counters/Unicode runtime and full CLI check remain unrun.",
+    "raw_buffer_peak and supplement admission peak are trusted independent source-accounting model observations, not observed candidate heap/allocation bounds.",
+    "Current code/tests/vector/receipt changed within authorized four-file source repair. No build/runtime/native/public/core/guard/cohort/package/lock/index/plan/Git changes or admission."
+  ],
+  "second_integrated_check": {
+    "result": "failed",
+    "qualification": false,
+    "report": {
+      "path": "/private/tmp/healthmd-integrated-cli-check-second.json",
+      "sha256": "a1a6951f26169ddb567acabde6050fb77ec2fca979aeeca9299e4fa9d956a812",
+      "bytes": 111983
+    },
+    "log": {
+      "path": "/private/tmp/healthmd-integrated-cli-check-second.log",
+      "sha256": "0b21708f62125f865082a698ee1d39a8b474406dccec24521d2cefffd3ba03fc",
+      "bytes": 118918
+    },
+    "independent_review": {
+      "path": "/private/tmp/healthmd-integrated-cli-second-failure-effect-baseline-review.json",
+      "sha256": "515602f5e117f86a66dc7d470d5a6b9289144fa2edfadf250aae62c76ca0892d",
+      "bytes": 2771
+    },
+    "counts": {
+      "tests": 721,
+      "pass": 719,
+      "fail": 2,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "filesystem_cases_passed": 456,
+    "unchanged_core_producer_credited": true,
+    "limits": "Actual failed full CLI check; no task completion or native/public qualification."
+  },
+  "bounded_runtime_repair_preapply_review": {
+    "path": "/private/tmp/healthmd-stdio-two-bounded-repairs-effect-baseline-review.json",
+    "sha256": "a32ce83db77111be8c21d6918ca2a18762fc429b42089f64aafc052b52031642",
+    "bytes": 9507
+  },
+  "historical_before_two_runtime_repairs": {
+    "patch_digest": "a4bcff42d8d58995449d21ec7633c5a845bb7ad6ca48bb22df43cdb068397fe1",
+    "stage": "stage2_reviewed_nine_finding_source_repair_static_development_pass_runtime_unrun",
+    "implementation_source_manifest": [
+      {
+        "path": "apps/cli/src/surfaces/stdio-framing.ts",
+        "sha256": "51ab1bb6bcd6bfc70003688e337a941e24e97010eefd2cea5404cc4b28f9b83d",
+        "bytes": 15586
+      },
+      {
+        "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "sha256": "d03410fe152751e5edb0e471afd0d7d4b2d723d04ed54c3e0f19c7b7c807a427",
+        "bytes": 1022750
+      },
+      {
+        "path": "apps/cli/tests/surfaces/stdio-framing.test.ts",
+        "sha256": "5c44172c575c37e324ddb3e5142fc64852def2579c83c817557df5327f64ac9b",
+        "bytes": 37690
+      }
+    ],
+    "review": {
+      "status": "pending",
+      "reviewer": null,
+      "fingerprint": "3e3d685b4ba849f032f6df73e6025c2c1421e94e+582d958f7d2497dde87aefbc6cd13be1ec564a59ad11013cd9a08fcec5f3a497"
+    },
+    "current_repair_notes": [
+      "All nine approved strategies implemented source-only: strict typed helper/observation envelope; attempted sink trace before failure; phase-accurate flush probe; genuine separately/same-factory seeded ownership; explicit raw admission-accounting classification; closure precedence; bounded issuer scalar scan; actual pending watcher and cancellation/null phase-handle latching.",
+      "Typed nominal objects are constructed before freezing in place, without brand casts; membership gates remain before foreign properties.",
+      "Every declared action is required to be reached by actual callbacks, and full expected fields are asserted after the stimulus-only driver. This is unexecuted test-source design, not a claim of actual295-case observations.",
+      "Original31 source captures preserved as historical. Root AGENTS reconciliation600bf06 and current root-owned guard/docs changes are separate integration evidence, not refreshed fixture authority.",
+      "Cohort files untouched. Root offline install is separate coordinator evidence and does not constitute MCP compilation/runtime qualification."
+    ],
+    "implementation_notes": [
+      "Current source repair preserves279 expectations, sole reviewed flush action change,16 exact reviewed supplements.295primary+1raw runtime cases remain unrun.",
+      "Development static source/test diagnostics passed; retained log reports135ms, physical total duration unavailable.",
+      "Historical implementation/inspection passages retained separately; current code is implemented but full runtime/native/public qualification remains pending."
+    ],
+    "inspection_summary": "Current concrete MCP repair source frozen for independent review; actual development static pass recorded. Runtime296 and fullCLI qualification unrun."
+  },
+  "third_integrated_check": {
+    "result": "passed",
+    "independent_review": {
+      "path": "/private/tmp/healthmd-stdio-and-cohort-green-actual-effect-baseline-review.json",
+      "sha256": "73af8989c9b166898ea5641db10218e424d9933f83b3f2013079511bc3571fab",
+      "bytes": 7052
+    },
+    "proof_class": "portable_synthetic",
+    "evidence": {
+      "report": {
+        "path": "/private/tmp/healthmd-integrated-cli-check-third.json",
+        "sha256": "2f4118c5d21dd6769a70c77ecf379ffa0a889b2ad70792edf3607045a5072936",
+        "bytes": 111807
+      },
+      "log": {
+        "path": "/private/tmp/healthmd-integrated-cli-check-third.log",
+        "sha256": "d7f4eb0b60f4a3171e5b3cfab569394881dc22a3f0d13e30eb30e35dc1f200ca",
+        "bytes": 97213
+      },
+      "inputs": {
+        "path": "/private/tmp/healthmd-integrated-cli-check-third-inputs.json",
+        "sha256": "39b6ec410e7f58e7c1ad79a70c454242bb429659887f125b40c50c4ae04f2161",
+        "bytes": 134519
+      },
+      "harness": {
+        "path": "/private/tmp/healthmd-integrated-cli-check-third.mjs",
+        "sha256": "7583c3a4e6a2dce4bdf3feb10805ed09d06ddddb81d75331e4e9c18fb7595742",
+        "bytes": 6464
+      },
+      "wall_ms": 8984,
+      "counts": {
+        "tests": 721,
+        "suites": 0,
+        "pass": 721,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0
+      },
+      "source_cli": 149,
+      "source_core": 58,
+      "core_outputs": 53,
+      "packed_modules": 36,
+      "cli_outputs": 24,
+      "filesystem_cases": 456,
+      "raw_lossless": true,
+      "group_cleanup_ACK_and_ESRCH": true,
+      "core_producer_rerun": false,
+      "independent_review": {
+        "path": "/private/tmp/healthmd-stdio-and-cohort-green-actual-effect-baseline-review.json",
+        "sha256": "73af8989c9b166898ea5641db10218e424d9933f83b3f2013079511bc3571fab",
+        "bytes": 7052
+      }
+    }
+  },
+  "focused_development_result": {
+    "result": "passed",
+    "qualification": false,
+    "report": {
+      "path": "/private/tmp/healthmd-stdio-focused-development.json",
+      "sha256": "30a9c5f034b4863d342642282ca69cc2510cf4290a31436f3a04272cd6c70b22",
+      "bytes": 35573
+    },
+    "log": {
+      "path": "/private/tmp/healthmd-stdio-focused-development.log",
+      "sha256": "0accf990b13dda32e473f4f1fb09d33745e4174a629b37003afb7a5a0ac7cc3c",
+      "bytes": 22901
+    },
+    "counts": {
+      "tests": 296,
+      "suites": 0,
+      "pass": 296,
+      "fail": 0,
+      "cancelled": 0,
+      "skipped": 0,
+      "todo": 0
+    },
+    "supervisor_wall_ms": 1743,
+    "static_ms": 315,
+    "runner_total_ms": 1522
+  },
+  "historical_partial_acceptance_results": [
+    {
+      "criterion": "Complete closed typed request/result/capability interface and independently sourced full exact input/expected vectors frozen by an independent reviewer BEFORE implementation/test/build. Literal proposals below are minimum cases; accepted fixture semantics never regenerated from candidate output. Resolve numerical/parser/serializer/TOML dependency contracts before byte-parity claims.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Exactly four private files only; no production launcher/package/lock/public wire/schema/version/core exports/guard/cohort edits. Current common operation owns behavior; adapters normalize/render/transport only, never duplicate native evaluator or export/state/pairing service.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    },
+    {
+      "criterion": "Preserve exact2MiBlinecontent bound, overflow drains throughLF and feeds { parse-error sentinel, EOFpartialline, trim/emptyline behavior and legacy lossyUTF8 conversion beforeJSON parsing. Stdout onlyJSONRPC response+LF/flush, diagnostics separate. Source ignores write failures; candidate safe owned-sink fault status is private and must not invent public response after failedpipe. Native pipe/lifecycle proof separate.",
+      "result": "partial",
+      "evidence": "FullStage1interface/literalproposal frozen;independentapproval and actualimplementation/check/nativeproof pending."
+    }
+  ],
+  "final_execution_review": {
+    "path": "/private/tmp/healthmd-stdio-and-cohort-green-actual-effect-baseline-review.json",
+    "sha256": "73af8989c9b166898ea5641db10218e424d9933f83b3f2013079511bc3571fab",
+    "bytes": 7052
+  }
+}
