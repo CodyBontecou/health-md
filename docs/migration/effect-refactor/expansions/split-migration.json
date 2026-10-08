@@ -1,0 +1,4302 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-MIGRATION",
+  "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+  "proof_class": "planning",
+  "status": "partial_pending_independent_review",
+  "outcome": "Six atomic schema/validator/staging/originalidentity/conflict/Undo children over one proposed browser-free Mac retained-state archive profile. Existing/native authorities remain.",
+  "max_children": 6,
+  "selected_design_ids": [
+    "C17",
+    "P03",
+    "L05",
+    "S04",
+    "O11",
+    "F13",
+    "F16"
+  ],
+  "input_pins": [
+    {
+      "path": "AGENTS.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+      "bytes": 6129,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "GLOSSARY.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+      "bytes": 3868,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "packages/healthmd-core-ts/AGENTS.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+      "bytes": 860,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "packages/healthmd-core-ts/README.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+      "bytes": 2988,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "packages/healthmd-core-ts/package.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+      "bytes": 1410,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "packages/healthmd-core-ts/package-lock.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+      "bytes": 27929,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "packages/healthmd-core-ts/scripts/check.mjs",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+      "bytes": 2766,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+      "bytes": 13361,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+      "bytes": 284562,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/architecture/cross-platform-unification-policy.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+      "bytes": 9482,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/personal-data.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+      "bytes": 5582,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/templates.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+      "bytes": 10054,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+      "bytes": 240223,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+      "bytes": 187239,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+      "bytes": 143057,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+      "bytes": 198804,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/hosts.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+      "bytes": 78215,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/native.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+      "bytes": 104080,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/core.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+      "bytes": 95633,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1",
+      "bytes": 14452,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601",
+      "bytes": 14220,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d",
+      "bytes": 18863,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+      "bytes": 14732,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "9c1f44fd63b564fe9a5d0ee6eaeff2a22f34615b1abfd59d8efe23bd4154b4ae",
+      "bytes": 18284,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c",
+      "bytes": 68436,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df",
+      "bytes": 34193,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-datastore.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
+      "bytes": 244805,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "3d15b81f6055217f5ec46cc8c7ceb0243cd8a2ba0380d67c3abc209b20adecbb",
+      "bytes": 39964,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-query.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+      "bytes": 201152,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "bf1cbbbb3ab88ddf04f7c204a7bfbd947a755252e9de1475be10a989b7860c26",
+      "bytes": 60953,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f",
+      "bytes": 139864,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974",
+      "bytes": 78932,
+      "current_assigned_Git_equal": true
+    },
+    {
+      "path": "docs/migration/effect-refactor/decisions/cloud-fault-model.md",
+      "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+      "sha256": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d",
+      "bytes": 5423,
+      "current_assigned_Git_equal": true
+    }
+  ],
+  "selected_design_row_pins": [
+    {
+      "id": "C17",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 586,
+      "text": "| C17 | Donor migration archive and settings/state handoff | Complete IDs/precision/lineage/settings/annotations/queue schema, manifests and safe import, browser exclusions, overlap/replacement/empty-day rules, rollback and inaccessible-grant/entitlement disclosure. |\n",
+      "sha256": "83eaef2de93b9d821595408a15de7aae97a70f1e7ccb28e5e3bbfe9927d69410"
+    },
+    {
+      "id": "P03",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 199,
+      "text": "| P03 — Donor installed-user migration | Accepted source/history/license maps; complete migration archives/readers, preview/conflict/Undo, source grants/destination handoff and entitlement/support plan. | Exact donor-to-new round trips including IDs, corrections, sessions/places/category assignments/queues; unknown legacy boundary certainty, discarded sessions and time precision preserved; repeat/interrupted import, browser exclusions and actual sandbox/purchase limits. |\n",
+      "sha256": "f09aa9b569fd9708f5a48d2b2aa89c070e60bbd267b582bd9c06e9c8a1b22585"
+    },
+    {
+      "id": "L05",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 205,
+      "text": "| L05 — Location transition | Installed-user/permission/app-group/entitlement and scheduler enrollment transition. | P03 source-specific receipts and authenticated routing migration/decommission; Health.md service/data boundaries retained. |\n",
+      "sha256": "6750a948033555e31636c95a4a7379035da9a17f7e759fdf39de4816b955eb6b"
+    },
+    {
+      "id": "S04",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 210,
+      "text": "| S04 — Usage exports and migration | Browser-free typed/summary and full retained-history profiles, complete available donor import, common schedules and optional reviewed sync compatibility. | JSON/CSV/YAML/Markdown/Obsidian/archive fixtures, past-range/session detail, title escaping/redaction, daily/hourly replacement, retention/partial receipts, dedup and P03 recovery. |\n",
+      "sha256": "88162682d5b1de55c271c04c6cb36274bec70c2e956b34396df334f2387f27a9"
+    },
+    {
+      "id": "O11",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 675,
+      "text": "| O11 | Proposed donor import/preview/commit/Undo and retention/deletion | P03/C17 bounded archive validation, stable identity, transactional conflict/replacement, recovery, source-store preservation and exact domain privacy scope. |\n",
+      "sha256": "ddbf1a144ee36b0a82a17f859f693337e930f9706594cfc7148596a62a8feb74"
+    },
+    {
+      "id": "F13",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 1053,
+      "text": "| F13 | Lossless donor identity/history/entitlement migration | P03/L05/S04 proves complete archive transfer with original precision/unknown provenance, transactional replay/Undo and rebind/support policy. Legacy exports/snapshot mirrors are accurately scoped and donor stores remain readable. |\n",
+      "sha256": "99c31d524a60552865fbab85bb6ed94fb0b27a054ee18ae64916bd0c86eca945"
+    },
+    {
+      "id": "F16",
+      "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+      "line": 1056,
+      "text": "| F16 | Full history versus source/API losses | S02/S04 retains all observed sessions beyond summaries and imports every available source record, declaring donor short-session/clock/crash/deletion gaps. S01 preserves historical aggregates; S06 remains required because no exact iOS app-session API is established. Aggregate shipping does not close it. |\n",
+      "sha256": "cbae218a4bfe07559299cfd740adb27710bfa5ce2c05878ffd4a83c846e40e85"
+    }
+  ],
+  "donor_committed_blob_pins": [
+    {
+      "path": "LICENSE",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+      "bytes": 34523,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Data/HistoryStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "5d686fe1779f7efb4cb825b1975c04c1a7e7aebb366295245dbbb273c0ed05d4",
+      "bytes": 54797,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "a816e35377bdf90f4d2615593aebb715c0b5c2a355e510594ef55f429d8967ad",
+      "bytes": 11012,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "470052af476f2fd34173449bfda26a3f77b66249f03443ff7085ad608c688415",
+      "bytes": 11746,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "3a3c91d99dd202fdd5119c1c3bcf36a630d275276ca5a1c5a96af8ac47ff8f6f",
+      "bytes": 22335,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Data/ScreenTimeDataService.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "1574c60faba00419c1bd557d1dc28ebf85c0ef3ed98663e9f84888398a4bd587",
+      "bytes": 133075,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Shared/Models/DeviceInfo.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "65219890e2b95f0e1bdbbc72b6d620d4e01db178b025c20dc51f1b8c5cb98545",
+      "bytes": 2756,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "e202d8b0254c7e0ee8727453feee6daee0434de7316e5e3c2bb39141ba4610ad",
+      "bytes": 6714,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Sync/TimeMdCloudSyncStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "04ea4ba4de53ed9b2d438397b6d141ddb36b42a5829d5f3e4df2ab3ea06dfb86",
+      "bytes": 1176,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Export/ExportModels.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "61376c0b73b3030c7f6431f0987f4d7526a898d2609f9792947218a6bd165d8e",
+      "bytes": 58939,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    },
+    {
+      "path": "time.md/Export/ExportFilterPreset.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "sha256": "8147f29f27ead2452d9948a8f963da8215853df487ae0c09d6eb8e90208ec871",
+      "bytes": 13039,
+      "read": "immutable git show only; no live state/runtime/dirty donor file read"
+    }
+  ],
+  "donor_literal_locators": [
+    {
+      "id": "usage-schema",
+      "path": "time.md/Data/HistoryStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 83,
+      "literal": "        CREATE TABLE IF NOT EXISTS usage (",
+      "raw_line_sha256": "0b91fb781741427a8af8a1237d643feac09099ca1e97e33d8aea188b5fee03a4"
+    },
+    {
+      "id": "source-null-and-legacy",
+      "path": "time.md/Data/HistoryStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 125,
+      "literal": "            WHERE metadata_hash LIKE 'cloudkit:%' AND sync_transport IS NULL",
+      "raw_line_sha256": "9b686f685bf8225746aa4298945b6ad331774a11ee10b0dad3c9ac79a97b6723"
+    },
+    {
+      "id": "local-unique",
+      "path": "time.md/Data/HistoryStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 147,
+      "literal": "            ON usage(app_name, source_timestamp, stream_type)",
+      "raw_line_sha256": "a143ee6d9fb58fcfa1ffdaa42e3e6d142eda6c4b567c45444a0dc18b0c98de47"
+    },
+    {
+      "id": "import-unique",
+      "path": "time.md/Data/HistoryStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 150,
+      "literal": "            ON usage(device_id, source_local_day, source_entry_id)",
+      "raw_line_sha256": "5b3b5373303b8545df63a79d022914f916a7c2384380c941840c8c392d81d900"
+    },
+    {
+      "id": "native-duration",
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 209,
+      "literal": "        let duration = Date().timeIntervalSince(start)",
+      "raw_line_sha256": "7a55caa0ac3f02e738396e6e324aac4599c1686ab3286434e26cfbf5b2995f51"
+    },
+    {
+      "id": "discarded-short",
+      "path": "time.md/Data/ActiveAppTracker.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 214,
+      "literal": "        guard duration >= minimumSessionDuration else { return }",
+      "raw_line_sha256": "0ec31daefb14d5fd72bad589b1c09fd30d5ab1a41df3cf432d1e5ea0fe2c97b5"
+    },
+    {
+      "id": "category-table",
+      "path": "time.md/Data/CategoryMappingStore.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 239,
+      "literal": "        CREATE TABLE IF NOT EXISTS \\(tableName) (",
+      "raw_line_sha256": "613c8e8f389e5350ad2ecf5ffe47ec91f4cea5d49ffad6af9e7a6b283cca02fb"
+    },
+    {
+      "id": "snapshot-order",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 102,
+      "literal": "        ORDER BY u.start_time ASC, u.id ASC",
+      "raw_line_sha256": "7152bc349633ffe1fa032834db8f349996f7ada664db694b214d4f03f93f6d26"
+    },
+    {
+      "id": "snapshot-row-alias",
+      "path": "time.md/Sync/TimeMdCloudSyncSnapshotBuilder.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 129,
+      "literal": "                id: \"macos-row-\\(rowId)\",",
+      "raw_line_sha256": "16379bd02b2b32860989367d345583d81255221c667f90b785cd313ad41e3f88"
+    },
+    {
+      "id": "mirror-filter",
+      "path": "time.md/Data/ScreenTimeAutoSaveWriter.swift",
+      "source_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+      "line": 388,
+      "literal": "        for row in rows where row.totalSeconds > 0 && row.sessionCount > 0 {",
+      "raw_line_sha256": "a5b62507b3f353911b9422073e197c934a4510da885b3ca03d967a2845cb756e"
+    }
+  ],
+  "inventory_pointer_pins": [
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "json_pointer": "/inputs",
+      "canonical_value_sha256": "4a01e5c40aa22ab0d88af1c749ebd54c21e1b1b6340dbd3e7562bad14aae971c"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "json_pointer": "/complete_transfer_requirements",
+      "canonical_value_sha256": "3f8144234a6219c9bf98cb7d51860dd793dc4d685985c1f3d0644886f15b31c7"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "json_pointer": "/common_contract_and_authority",
+      "canonical_value_sha256": "4222dc72cf198669bffe8b291b1abe1d2aa5f149ebb2e5af3f9bbecd944a059b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "json_pointer": "/grant_handoff_sequence",
+      "canonical_value_sha256": "bca432135f9a6c0bbd821643a93b1106cfa473974f57a04dfa229f7d4bdc57c1"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donors.json",
+      "json_pointer": "/open_owner_choices",
+      "canonical_value_sha256": "c149549b1e44770b627314c32123274739099e9efedf79ebe8cd9f799fc9f1c1"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/source_identity",
+      "canonical_value_sha256": "f6e0952ee54dfd8b7fdd769d98bcacaf6ce98e2a94faabc3778fad96246b6dc2"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/history",
+      "canonical_value_sha256": "b8c8b80b382e7527363257fe3ad94e7ae8838560994092aed4089554e5c85a6d"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/storage_migrations",
+      "canonical_value_sha256": "58a0546b5a63d805b0212da42db9e98e0cca42f41067b2dd8b244ddc80a062ef"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/exclusions",
+      "canonical_value_sha256": "d7f552497a5cd52579620a360f123a91d2864fd5233f6330a4137d351da6b4af"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/exports",
+      "canonical_value_sha256": "9f93721ba0d8013dccf29c14abb4a64b3494fc545bcedebf994bb515ce1944ea"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/sync",
+      "canonical_value_sha256": "e34dd7c793ce0ecb0fb6e74c9cf8e2c31c0e81b0661fd091eb687656c8132031"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/feature_map/1",
+      "canonical_value_sha256": "6f22ae149c0d5d063b5cfe56bc77db877d5dfab435785ed65ad04ec201c07896"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+      "json_pointer": "/feature_map/5",
+      "canonical_value_sha256": "c100000f94043f02a66049b0f5d54a77474239d941e8566527c4e06741a799b9"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "json_pointer": "/native_history",
+      "canonical_value_sha256": "369127c2afbb1a2ddb90278a9342f8c7ffafdfc1bc6fa731d4b3c2a1d8b8cda5"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "json_pointer": "/formatted_exports",
+      "canonical_value_sha256": "fa8afdc2eff9b29f8672bc186320c160eaa66caaea5e507c8c3b9255202a9613"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+      "json_pointer": "/watch_and_system_surfaces",
+      "canonical_value_sha256": "8c9f283c1d75e3aca94cf657fc3a5f7f0f247b175f9290430f0d4d97851c664f"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "json_pointer": "/history_and_precision",
+      "canonical_value_sha256": "bf03ac325fd5fc8c738deb13563a5ca95163de708440224a0fee31ffcfb4518e"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "json_pointer": "/exports",
+      "canonical_value_sha256": "d099fb7eeaa30a4f8419d3197b60f1edd67ae1547e3cd74a9e5aad86e742ccc8"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "json_pointer": "/ios",
+      "canonical_value_sha256": "28a7f5e126404e3df96ab1019f5a9469f7a5874d18219510100b9268cb6b4a3a"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "json_pointer": "/android_prototype",
+      "canonical_value_sha256": "0697298983a10b61db3c9434b6ccd764849f942362ebde83c1720bbf91c8dd0e"
+    },
+    {
+      "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+      "json_pointer": "/egress_and_services",
+      "canonical_value_sha256": "99d2549a55c1abf133ef465e58b9dc7a3e748315d3612a8493178f725889f619"
+    }
+  ],
+  "source_identity_and_admission": {
+    "inherited_donor_identity_maps": [
+      {
+        "id": "location",
+        "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+        "raw_sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+        "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "receipt_raw_sha256": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root/donor_mac_review",
+          "fingerprint": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735+51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f"
+        },
+        "inventory_source_revision": "5d2eb37093398cfff6dbefd7ae3d17a07e27c735",
+        "source_identity": {
+          "candidate_locator": "/Users/codybontecou/dev/iso.me",
+          "candidate_repository": "CodyBontecou/isome (design locator; no remote contacted)",
+          "candidate_revision": "08029281f2e30df83e83d06ba08617ce79ed76bd",
+          "candidate_parent": "ac174a63bf940fe4e307a53b3ce5b616260e990a",
+          "candidate_subject": "Add 1.7.12 release notes for Shortcuts expansion",
+          "status_porcelain_v1": [
+            " M IsoMe.xcodeproj/project.pbxproj",
+            " M IsoMe.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+            " M IsoMe/IsoMeApp.swift",
+            "?? IsoMe/Debug/"
+          ],
+          "tracked_patch_sha256": "bb59cbaa224e710fb534d7b5fd6b2db9dccfebde2d8255b1f93ef7a602a3f62e",
+          "patch_identity_method": "SHA256 raw git diff --binary HEAD bytes, plus per-path diff digests/numstat; source pin graph always uses immutable committed Git blobs. Dirty patch bodies not displayed or adopted.",
+          "tracked_dirty_records": [
+            {
+              "path": "IsoMe.xcodeproj/project.pbxproj",
+              "added_lines": 186,
+              "removed_lines": 155,
+              "tracked_patch_sha256": "2c4a694f0ad0cd5ba577cb4ee3c51edcfca6b1b6654b528dffa37cdf108b86b9",
+              "adopted": false,
+              "patch_body_disclosed": false
+            },
+            {
+              "path": "IsoMe.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved",
+              "added_lines": 10,
+              "removed_lines": 1,
+              "tracked_patch_sha256": "cc40bedbd863cb6911f3adda6526353a1e065fbb7462e93acfe6c56438401934",
+              "adopted": false,
+              "patch_body_disclosed": false
+            },
+            {
+              "path": "IsoMe/IsoMeApp.swift",
+              "added_lines": 6,
+              "removed_lines": 0,
+              "tracked_patch_sha256": "d3ba9a07977ddd35300454fb2d47bde98d311a4a4200f717cafc536d1b167544",
+              "adopted": false,
+              "patch_body_disclosed": false
+            }
+          ],
+          "untracked_metadata": [
+            {
+              "path": "IsoMe/Debug/DebugSelfie.swift",
+              "role": "debug source by path/name; exact behavior not inspected",
+              "content_inspected": false,
+              "sha256": null,
+              "adopted": false
+            }
+          ],
+          "patch_completeness": "Tracked diff identified; untracked debug content deliberately not read/hash-pinned. No full candidate dirty-tree/source acceptance inferred. Ignored runtime files not enumerated or read.",
+          "nearest_instructions": "No tracked AGENTS.md found in candidate tree; no donor changes authorized.",
+          "license": {
+            "path": "LICENSE",
+            "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+            "text_identity": "GNU Affero General Public License, Version3",
+            "admission": "Owner source/license/reuse review separate; no legal conclusion or code import."
+          },
+          "Q-DONOR-SOURCE": {
+            "state": "open",
+            "accepted_here": false,
+            "requirement": "Owner deliberately accepts immutable source/history/license/dependency maps and separately selects or rejects tracked/untracked patch. No automatic dirty-source adoption."
+          }
+        },
+        "observation_status": "Inherited accepted source-only observation; donor HEAD/dirt not freshly re-inspected or adopted."
+      },
+      {
+        "id": "mac",
+        "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "raw_sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+        "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "receipt_raw_sha256": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root/donor_mac_review",
+          "fingerprint": "b56fad0131798e4906f5e49a9612717ad484fe59+5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c"
+        },
+        "inventory_source_revision": "b56fad0131798e4906f5e49a9612717ad484fe59",
+        "source_identity": {
+          "candidate_locator": "/Users/codybontecou/dev/time.md",
+          "candidate_repository": "CodyBontecou/time.md (design locator; remote not contacted)",
+          "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+          "candidate_parent": "30c8c306f2fc09029bb5975126c3f41f36bb12a4",
+          "candidate_subject": "Remove unreachable feature surface and sync docs with reality",
+          "status_porcelain_v1": "empty",
+          "candidate_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "patch_method": "SHA256 raw git diff --binary HEAD; clean empty bytes; nonignored status only; ignored runtime files not inspected",
+          "dirty_patch_adopted": false,
+          "license": {
+            "path": "LICENSE",
+            "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+            "text_identity": "GNU Affero General Public License, Version 3",
+            "admission": "Separate owner license/reuse review required; no source import/legal conclusion"
+          },
+          "Q-DONOR-SOURCE": {
+            "state": "open",
+            "accepted_here": false,
+            "required": "Accept immutable source/history/license/dependency map and intended patch separately"
+          },
+          "nearest_donor_instructions": "No tracked AGENTS.md in candidate revision tree; no donor writes authorized",
+          "runtime_state_accessed": false
+        },
+        "observation_status": "Inherited accepted source-only observation; donor HEAD/dirt not freshly re-inspected or adopted."
+      },
+      {
+        "id": "mobile",
+        "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "raw_sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+        "receipt_path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "receipt_raw_sha256": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d",
+        "review": {
+          "status": "accepted",
+          "reviewer": "/root/donor_mac_review",
+          "fingerprint": "24d37c2ce5a76a4138e4780b95e29f840d679713+bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d"
+        },
+        "inventory_source_revision": "24d37c2ce5a76a4138e4780b95e29f840d679713",
+        "source_identity": {
+          "candidate_locator": "/Users/codybontecou/dev/time.md",
+          "candidate_repository": "CodyBontecou/time.md (design locator; no remote contacted)",
+          "candidate_revision": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+          "observed_HEAD": "2955ed07db9c649c77a128db59aed2ac0fef0bc5",
+          "status_porcelain_v1": [],
+          "tracked_patch_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "patch_method": "SHA256 raw git diff --binary HEAD bytes. Nonignored status only; no ignored runtime files inspected. No dirty adoption.",
+          "license": {
+            "path": "LICENSE",
+            "sha256": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+            "text_identity": "GNU Affero General Public License Version3; native module declares AGPL-3.0-only",
+            "reuse_admission": "Owner legal/source/dependency/history map selection remains separate; no legal conclusion/import."
+          },
+          "nearest_instructions": "No tracked AGENTS.md in immutable donor tree. No donor writes.",
+          "Q-DONOR-SOURCE": {
+            "state": "open",
+            "accepted_here": false
+          },
+          "accepted_mac_lineage": "donor-usage-mac.json same candidate revision; full native Mac sessions versus bounded summary mirror authority retained."
+        },
+        "observation_status": "Inherited accepted source-only observation; donor HEAD/dirt not freshly re-inspected or adopted."
+      }
+    ],
+    "adoption": false,
+    "Q-DONOR-SOURCE": "open; inventory/source/history/license/dirtymetadata accepted as evidence, not source adoption",
+    "first_profile": "Private proposed eligible Mac retained-state archive derived from source schema; not an existing complete donor archive or a legacy snapshot export. Nativeproducer/fullinstalledstate proof required.",
+    "current_native_history": "Allavailable retained rows/importedsource facts preserved without365day agecutoff. Under2sec donor-discarded/precollector/deleted/clock/crash-tail loss cannot reconstruct. Future observed shortsession retention required. NativeDateDoublearithmetic preserved not syntheticexactbasis.",
+    "privacy": "Browser/input fields excluded BEFORE observation/persistence/hash; authoritative actualapp/source classification plus currentseparategrant, never callerflag/string heuristic. Allowed nonbrowser title supplied by grantedAPI may include path/URL-lookingtext; no observe-then-contentfilter. Completeeligibleartifact may differ excludedoriginal; retain honest losses/no wholehashineligibleartifact.",
+    "nativeprofiles": "Health native authorities/frozen8/4/5 profile consumers unaffected; mobile aggregates notexactsessions; original SQLimported aggregates notclassifiedas nativeMacobserved sessions."
+  },
+  "closed_interface_proposal": {
+    "stage1": "Eachchild independently freezes completeTS discriminants/primitives/rawJSON/typedownedports/expectedbyte corpus before code. Exact schema/profile name/version/canonical bytegrammars/limits/digestalgorithm selected only for private technicalslice, public/source adoption separate. Literal minima are not final interfaces.",
+    "ownership": "Capture original factory codec/reader/current/originalScope lifetime once; privately issued WeakMap handles before any properties/Proxy; exact returned outcome/record not all tokenssamecallback. Replayable originalclosed signal registered beforecallbacks with no ownfinalizer join; finite masked completedallocation handoff, interruptible resourcefreeprepare, bracketowned partialcleanup/protectedACK/busy/currentcallbacks and phase watcher stopjoin. Escaped inner callback tokens expire immediately before postcurrent/ACK; no reprovide revives.",
+    "authority": "Everylazyread/source/page/rawfield/digest/materialize/encode/commit checks originalScope+binding+currentdistinctsource/detail/destination and latest independent delete/revoke/retentionfences; postawait recheck and sourcecallback reentry destination recheck, no payload/digest before metadata authorization. Trusted host capabilities not callerdescriptors/CLIflags/hashclaims.",
+    "boundedstreams": "Stage1 literal exact maxUTF8/depth/nodes/strings/record/page/outstanding/batch/output bounds; perpage bounded streaming must not impose totalhistory trimming. Complete terminalmanifest/counts/sourceidentity and immutable stable original enumeration independent transportrechunking. Nativefullschema/producer consistency separate.",
+    "commit": "One coarse transaction returns committed/definitely_not/ambiguous and fixed job/currentfrontier identity. Terminaldecision survives cancellation, never infer rollback from ACK; incompletecleanup poisons,no success. Crash/outbox/storage durability/providercrypto notfakes. Undo is new compare/version operation preserving newer data/suppression,not restore oldbackup or purge resurrection."
+  },
+  "children": [
+    {
+      "id": "MIGRATION-MAC-ARCHIVE-SCHEMA",
+      "title": "Migration Mac Archive Schema",
+      "outcome": "One pure private complete eligible Mac retained-state manifest/row schema over independently issued read-only eligible snapshot, not SQL reader. Fields preserve source row IDs/nullable origin/source_timestamp and duration nativeDouble bits/localtext/stream meaning/categories/inert preferences and declared state section coverage. Manifest stable original enumeration/partition and source revision/profile/schema/grant snapshot without caller authorization; each section complete/partial/unavailable/unknown separately. Current nonbrowser title detail only via trusted pre-observation classification+purpose API; excluded browser/input field families never read/copied/hashed. Ineligible original artifact cannot wholehash identity. Full grammar/limits/schema vs legacy evidence independently frozen before code; profile name/version private proposed.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "BASE-DOMAINS",
+        "PERSONAL-CONTRACT-REVIEW"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/mac-archive-schema.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-schema.test.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-schema-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-SCHEMA.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-mac-archive-schema-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One pure private complete eligible Mac retained-state manifest/row schema over independently issued read-only eligible snapshot, not SQL reader. Fields preserve source row IDs/nullable origin/source_timestamp and duration nativeDouble bits/localtext/stream meaning/categories/inert preferences and declared state section coverage. Manifest stable original enumeration/partition and source revision/profile/schema/grant snapshot without caller authorization; each section complete/partial/unavailable/unknown separately. Current nonbrowser title detail only via trusted pre-observation classification+purpose API; excluded browser/input field families never read/copied/hashed. Ineligible original artifact cannot wholehash identity. Full grammar/limits/schema vs legacy evidence independently frozen before code; profile name/version private proposed.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-mac-archive-schema-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "archive-all-history",
+            "input": {
+              "source_rows": [
+                {
+                  "id": "1",
+                  "age_days": 1200
+                },
+                {
+                  "id": "2",
+                  "age_days": 2
+                }
+              ],
+              "mirror_history_days": 365
+            },
+            "expected": {
+              "eligible_source_rows": 2,
+              "age_filter": false,
+              "mirror_is_full_archive": false
+            },
+            "source_basis": "/history;TRANSFER-05",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-precision",
+            "input": {
+              "duration_bits": "3fb999999999999a",
+              "source_timestamp_bits": "41d954fc4007e6b7",
+              "start_time_text": "2026-02-02T09:30:00"
+            },
+            "expected": {
+              "bits_and_text_unchanged": true,
+              "timezone_inferred": false,
+              "synthetic_exact_duration_rule": false
+            },
+            "source_basis": "native-duration;Personal81 native_source_arithmetic",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-row-null",
+            "input": {
+              "device_id": null,
+              "source_entry_id": null,
+              "source_timestamp": null
+            },
+            "expected": {
+              "retain_nulls": true,
+              "device_or_native_identity_fabricated": false
+            },
+            "source_basis": "usage-schema;source-null-and-legacy",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-title-preflight",
+            "input": {
+              "app_classification": "unknown",
+              "title_permission": true
+            },
+            "expected": {
+              "title_observe_or_hash_or_stage": false
+            },
+            "source_basis": "/exclusions;personal resolution-archive-excluded-title",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-inert-settings",
+            "input": {
+              "setting": "theme",
+              "value": "dark",
+              "old_destination_enrolled": true
+            },
+            "expected": {
+              "inert_preference_preview": true,
+              "destination_armed": false,
+              "capture_grant_transferred": false
+            },
+            "source_basis": "TRANSFER-04/13",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-unavailable-state",
+            "input": {
+              "annotations_history": "not_established",
+              "queue_state": "unavailable"
+            },
+            "expected": {
+              "invent_entities_or_empty_complete": false,
+              "state_coverage": "unavailable"
+            },
+            "source_basis": "/feature_map/1;/storage_migrations",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-snapshot-aggregate",
+            "input": {
+              "stream_type": "ios_app_usage",
+              "sync_transport": "cloudkit",
+              "bucket_duration_bits": "4082c00000000000"
+            },
+            "expected": {
+              "meaning": "source_aggregate",
+              "exact_session_boundaries": false,
+              "source_import_lineage_retained": true
+            },
+            "source_basis": "TRANSFER-08/11",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-eligible-identity",
+            "input": {
+              "original_artifact_contains_excluded_material": true
+            },
+            "expected": {
+              "whole_artifact_hash_or_copy": false,
+              "new_eligible_artifact_identity_distinct": true
+            },
+            "source_basis": "Personal resolution logical identity/exclusion policy",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-SCHEMA.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    },
+    {
+      "id": "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+      "title": "Migration Mac Archive Validator",
+      "outcome": "One owned bounded streaming validator produces privately issued VerifiedArchive only after wholemanifest/pages/counts/order/eligible-source binding and terminal completeness. Fixed failures/closed raw integers/UTF8/Unicode/depth/node/page/outstanding record bounds; no partial publication. Capture original codec+reader once, samefactory membership beforeproperties and exact return token identity. Coarse owned canonical eligiblebytes digest port with deterministic exactinput fake/fixedfailure; crypto/algorithm/canonical profile primitive host qualification separate, no caller checksum authority/CRC authentication.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/mac-archive-validator.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-validator.test.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-validator-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-VALIDATOR.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-mac-archive-validator-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One owned bounded streaming validator produces privately issued VerifiedArchive only after wholemanifest/pages/counts/order/eligible-source binding and terminal completeness. Fixed failures/closed raw integers/UTF8/Unicode/depth/node/page/outstanding record bounds; no partial publication. Capture original codec+reader once, samefactory membership beforeproperties and exact return token identity. Coarse owned canonical eligiblebytes digest port with deterministic exactinput fake/fixedfailure; crypto/algorithm/canonical profile primitive host qualification separate, no caller checksum authority/CRC authentication.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-mac-archive-validator-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "validate-shape",
+            "input": {
+              "schema_revision": true
+            },
+            "expected": {
+              "accept": false,
+              "code": "unsupported_shape",
+              "staged_bytes": 0
+            },
+            "source_basis": "Personal resolution-schema-boolean-version",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-unknown-profile",
+            "input": {
+              "schema_revision": "2",
+              "profile": "unreviewed"
+            },
+            "expected": {
+              "accept": false,
+              "code": "unsupported_shape"
+            },
+            "source_basis": "C17 independently versioned archive, no caller admission",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-complete-stream",
+            "input": {
+              "manifest_rows": "2",
+              "page_rows": [
+                1
+              ],
+              "terminal_page": false
+            },
+            "expected": {
+              "publish": false,
+              "code": "archive_incomplete"
+            },
+            "source_basis": "C17 complete available history;CLOUD complete-stream",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-integrity-port",
+            "input": {
+              "owned_eligible_bytes": "7b7d",
+              "fake_digest_result": "denied"
+            },
+            "expected": {
+              "accept": false,
+              "code": "archive_binding_mismatch",
+              "native_crypto_proven": false
+            },
+            "source_basis": "C17 trusted digest adapter;Scope ownedbytes",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-raw-counter",
+            "input": {
+              "row_id": "1e0",
+              "counter": "-0"
+            },
+            "expected": {
+              "accept": false,
+              "Number_before_grammar": false
+            },
+            "source_basis": "Personal closed canonical integer grammar",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-duplicate-ordinal",
+            "input": {
+              "original_ordinals": [
+                "0",
+                "0"
+              ]
+            },
+            "expected": {
+              "accept": false,
+              "code": "archive_identity_conflict"
+            },
+            "source_basis": "Personal original stable enumeration",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-excluded-detail",
+            "input": {
+              "field_class": "browser_title",
+              "archive_grant": true
+            },
+            "expected": {
+              "observe_field_value": false,
+              "accept_route": false
+            },
+            "source_basis": "TRANSFER-07;metadata exclusion before observation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-partial",
+            "input": {
+              "scope": "whole_eligible_state",
+              "coverage": "partial",
+              "strict": true
+            },
+            "expected": {
+              "stage_commit": false,
+              "code": "archive_incomplete"
+            },
+            "source_basis": "C17/P03 strict complete-state preview disclosure",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-VALIDATOR.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    },
+    {
+      "id": "MIGRATION-OWNED-STAGING",
+      "title": "Migration Owned Staging",
+      "outcome": "One Effect owned invisible staging boundary with captured current/originalScope and per lazy source/detail/job/independent frontier check beforeobservation and afterawait. Resourcefree interruptible prepare, finite masked completed allocation+originalScope finalizer registration, closed signal before trustedcallbacks withoutselfjoin, watcher phase stopjoin, innercallback expires before postcurrent/releaseACK; protected ACK/busy held; cleanup>externalinterrupt>closed>use precedence. Stage privately issued immutable verified descriptors; zero visible mutation before commit.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/owned-staging.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-staging.test.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-staging-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-STAGING.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-owned-staging-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect owned invisible staging boundary with captured current/originalScope and per lazy source/detail/job/independent frontier check beforeobservation and afterawait. Resourcefree interruptible prepare, finite masked completed allocation+originalScope finalizer registration, closed signal before trustedcallbacks withoutselfjoin, watcher phase stopjoin, innercallback expires before postcurrent/releaseACK; protected ACK/busy held; cleanup>externalinterrupt>closed>use precedence. Stage privately issued immutable verified descriptors; zero visible mutation before commit.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-owned-staging-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "stage-invisible",
+            "input": {
+              "pages": 2,
+              "validated_pages": 1
+            },
+            "expected": {
+              "query_visible": false,
+              "preview_only_owned_receipt": true
+            },
+            "source_basis": "C17/P03 stage atomic import",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-job-revoke",
+            "input": {
+              "source_grant": true,
+              "destination_grant": false
+            },
+            "expected": {
+              "materialized_pages": 0,
+              "commit_calls": 0,
+              "code": "scope_not_authorized"
+            },
+            "source_basis": "distinct source/detail/destination grants",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-source-reentry",
+            "input": {
+              "source_check_revokes_job": true,
+              "source_return": "permitted"
+            },
+            "expected": {
+              "page_reads": 0,
+              "materializations": 0,
+              "recheck_job": true
+            },
+            "source_basis": "accepted combined reentry obligation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-scope-close",
+            "input": {
+              "closed_during_lazy_read": true,
+              "reprovided_scope_live": true
+            },
+            "expected": {
+              "text": null,
+              "code": "owned_handoff_closed",
+              "release_ack": 1
+            },
+            "source_basis": "captured originalScope;no reprovide",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-escaped-view",
+            "input": {
+              "inner_callback_returned": true
+            },
+            "expected": {
+              "read_value": null,
+              "new_current_checks": 0
+            },
+            "source_basis": "actual inner callback expiry before postcurrent/ACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cancel-prepare",
+            "input": {
+              "phase": "resource_free_prepare",
+              "interrupt": true
+            },
+            "expected": {
+              "allocated_resources": 0,
+              "release_ack": 0
+            },
+            "source_basis": "owned bracket preparation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cancel-owned",
+            "input": {
+              "phase": "registered_completed_allocation",
+              "interrupt": true
+            },
+            "expected": {
+              "use_calls": 0,
+              "release_ack": 1,
+              "terminal_before_ack": false
+            },
+            "source_basis": "finite atomic handoff/protectedACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cleanup-fail",
+            "input": {
+              "release": "failed"
+            },
+            "expected": {
+              "publish": false,
+              "poisoned": true,
+              "successful_ack": false
+            },
+            "source_basis": "cleanupfailure precedence",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-STAGING.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    },
+    {
+      "id": "MIGRATION-ORIGINAL-IDENTITY",
+      "title": "Migration Original Identity",
+      "outcome": "One pure original logical record identity/conflict-key boundary retains exact original artifact/logical partition/ordinal/native aliases/revisions/device/install known/unknown plus lossless field vector. No content similarity, local unique key/source snapshot row alias is not global native event ID. Native source Date subtraction/profile distinct synthetic exactobserved grammar. Rechunk/idempotent links preserve original enumeration. Exact rational mixedepoch eligibility comparison delegates reviewed Personal codec; reject unrepresentable projections, no precisionrepair or sourceprofile guessing.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/original-identity.ts",
+        "packages/healthmd-core-ts/tests/migration-original-identity.test.ts",
+        "packages/healthmd-core-ts/tests/migration-original-identity-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-ORIGINAL-IDENTITY.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-original-identity-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One pure original logical record identity/conflict-key boundary retains exact original artifact/logical partition/ordinal/native aliases/revisions/device/install known/unknown plus lossless field vector. No content similarity, local unique key/source snapshot row alias is not global native event ID. Native source Date subtraction/profile distinct synthetic exactobserved grammar. Rechunk/idempotent links preserve original enumeration. Exact rational mixedepoch eligibility comparison delegates reviewed Personal codec; reject unrepresentable projections, no precisionrepair or sourceprofile guessing.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-original-identity-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "identity-scope-row",
+            "input": {
+              "local_id": "7",
+              "artifact_a": "A",
+              "artifact_b": "B"
+            },
+            "expected": {
+              "equivalent_without_lineage": false,
+              "global_id_from_row_id": false
+            },
+            "source_basis": "autoincrement not globally immutable",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-rechunk",
+            "input": {
+              "original_artifact": "A",
+              "logical_partition": "root",
+              "ordinal": "7",
+              "transport_pages": [
+                "p1",
+                "p2"
+              ]
+            },
+            "expected": {
+              "logical_keys": 1,
+              "page_not_identity": true
+            },
+            "source_basis": "Personal resolution-repartition-key",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-repeat",
+            "input": {
+              "same_original_key": true,
+              "same_lossless_fields": true
+            },
+            "expected": {
+              "new_logical_records": 0,
+              "evidence_links_retained": true
+            },
+            "source_basis": "Personal original-record-equality",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-precision-conflict",
+            "input": {
+              "same_key": true,
+              "rounded_canonical_equal": true,
+              "duration_bits_differ": true
+            },
+            "expected": {
+              "accept": false,
+              "code": "record_identity_conflict"
+            },
+            "source_basis": "Personal resolution-lossy-equality-conflict",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-cross-device",
+            "input": {
+              "device_A": "A",
+              "device_B": "B",
+              "same_app_time": true
+            },
+            "expected": {
+              "collapse": false,
+              "import_tuple_includes_device": true
+            },
+            "source_basis": "import-unique",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-native-origin-unknown",
+            "input": {
+              "stable_artifact_enumeration": false,
+              "native_identity": null
+            },
+            "expected": {
+              "automatic_merge": false,
+              "native_identity": "unknown"
+            },
+            "source_basis": "Personal missing stable import order",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-timezone-text",
+            "input": {
+              "source_timestamp_present": false,
+              "local_start_text": "2026-11-01T01:30:00"
+            },
+            "expected": {
+              "epoch_invented": false,
+              "timezone_invented": false,
+              "uncertainty_retained": true
+            },
+            "source_basis": "/history collector clock",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-returned-value",
+            "input": {
+              "same_callback_owns_A_B": true,
+              "returned_outcome": "A",
+              "probe": "B"
+            },
+            "expected": {
+              "wire": null,
+              "callback_authority_checks": 0,
+              "outcome_A_remains_usable": true
+            },
+            "source_basis": "exact returned value binding;CLI84 accepted obligation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-ORIGINAL-IDENTITY.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    },
+    {
+      "id": "MIGRATION-CONFLICT-COMMIT",
+      "title": "Migration Conflict Commit",
+      "outcome": "One Effect bounded conflict plan/accepted import commit on coarse transactional host port, no SQL field primitives. Preview original/current source+destination/source/detail+latest independent suppression, explicit confirmation, version/checkpoint compare and whole batch atomicity; current callback reentry and exact returned plan membership before materialization and finite commit handoff. Port returns committed/definitely_not/ambiguous with durable job identity, protected cleanupACK not rollback. Source-specific imported device/day empty-day replacement distinct from direct observations and other devices; never multiply aggregate/session rows or delete original evidence.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/conflict-commit.ts",
+        "packages/healthmd-core-ts/tests/migration-conflict-commit.test.ts",
+        "packages/healthmd-core-ts/tests/migration-conflict-commit-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-CONFLICT-COMMIT.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-conflict-commit-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect bounded conflict plan/accepted import commit on coarse transactional host port, no SQL field primitives. Preview original/current source+destination/source/detail+latest independent suppression, explicit confirmation, version/checkpoint compare and whole batch atomicity; current callback reentry and exact returned plan membership before materialization and finite commit handoff. Port returns committed/definitely_not/ambiguous with durable job identity, protected cleanupACK not rollback. Source-specific imported device/day empty-day replacement distinct from direct observations and other devices; never multiply aggregate/session rows or delete original evidence.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-conflict-commit-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "conflict-day-replacement",
+            "input": {
+              "source_device": "A",
+              "source_day": "2026-02-02",
+              "new_snapshot": [],
+              "other_device": "B"
+            },
+            "expected": {
+              "A_day_replacement_only": true,
+              "B_unchanged": true,
+              "empty_day_not_noop": true
+            },
+            "source_basis": "TRANSFER-08 source/day replacement",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-observed-vs-imported",
+            "input": {
+              "same_app_overlap": true,
+              "direct_fact": true,
+              "imported_summary": true
+            },
+            "expected": {
+              "raw_originals_retained": 2,
+              "no_double_count_or_synthetic_merge": true,
+              "source_precedence_explicit": true
+            },
+            "source_basis": "/history dedup/sync source precedence",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-delete-replay",
+            "input": {
+              "current_external_delete": true,
+              "old_archive": true,
+              "new_grant": true
+            },
+            "expected": {
+              "resurrect": false,
+              "publish": false
+            },
+            "source_basis": "Personal resolution-delete-backup-regrant;CLOUD suppression",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-frontier-moves",
+            "input": {
+              "preview_frontier": "1",
+              "commit_frontier": "2"
+            },
+            "expected": {
+              "commit": false,
+              "staging_visible": false,
+              "code": "scope_binding_mismatch"
+            },
+            "source_basis": "Personal frontier-before-commit",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-preview-not-accept",
+            "input": {
+              "previewed": true,
+              "explicit_confirmed_current": false
+            },
+            "expected": {
+              "commit": false,
+              "new_state": 0
+            },
+            "source_basis": "P03 preview explicit acceptance",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-ambiguous-commit",
+            "input": {
+              "commit_disposition": "ambiguous"
+            },
+            "expected": {
+              "code": "commit_ambiguous",
+              "retry_or_rollback_claim": false,
+              "reconcile_by_job_identity": true
+            },
+            "source_basis": "CLOUD ledger/outbox and P03",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-atomic-invalidbatch",
+            "input": {
+              "rows": [
+                "valid",
+                "invalid"
+              ]
+            },
+            "expected": {
+              "committed_rows": 0,
+              "checkpoint_changed": false
+            },
+            "source_basis": "accepted datastore bounded batch/checkpoint",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-cancel-aftercommit",
+            "input": {
+              "committed": true,
+              "cancel_requested": true
+            },
+            "expected": {
+              "disposition": "committed",
+              "claimed_rollback": false
+            },
+            "source_basis": "terminalledger decision and ACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-CONFLICT-COMMIT.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    },
+    {
+      "id": "MIGRATION-OWNED-UNDO",
+      "title": "Migration Owned Undo",
+      "outcome": "One Effect owned Undo for exactly one accepted import job, preserves prestate evidence and later data/corrections/checkpoint/frontiers. Current external delete/revoke/retention suppressions outside backup always win; no regrant/oldbackup/rename restoration. Compare lineage/version plan before one coarse host commit, terminal dispositions/idempotent retry/reconcile and protectedACK, recipient copies cannot be recalled. Donor store/readers remain untouched; real crash/fsync/restoration host proof separate.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-CONFLICT-COMMIT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/owned-undo.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-undo.test.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-undo-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-UNDO.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-owned-undo-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect owned Undo for exactly one accepted import job, preserves prestate evidence and later data/corrections/checkpoint/frontiers. Current external delete/revoke/retention suppressions outside backup always win; no regrant/oldbackup/rename restoration. Compare lineage/version plan before one coarse host commit, terminal dispositions/idempotent retry/reconcile and protectedACK, recipient copies cannot be recalled. Donor store/readers remain untouched; real crash/fsync/restoration host proof separate.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-owned-undo-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "undo-only-import",
+            "input": {
+              "imported_keys": [
+                "A"
+              ],
+              "later_new_key": "B"
+            },
+            "expected": {
+              "restore_pre_import_A": true,
+              "preserve_B": true
+            },
+            "source_basis": "P03 Undo newdata safety",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-later-correction",
+            "input": {
+              "import_job": "J",
+              "later_revision": "2"
+            },
+            "expected": {
+              "erase_later_revision": false,
+              "code": "undo_conflict"
+            },
+            "source_basis": "P03 correction version lineage",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-delete-fence",
+            "input": {
+              "pre_import_A_exists": true,
+              "latest_delete_A": true
+            },
+            "expected": {
+              "restore_A": false,
+              "code": "restoration_fenced"
+            },
+            "source_basis": "Personal resolution-delete-restore-denied",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-revoke-fence",
+            "input": {
+              "local_backup_allows": true,
+              "latest_external_revoke": true
+            },
+            "expected": {
+              "restore_visible_or_publish": false
+            },
+            "source_basis": "CLOUD latest independent suppression",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-repeat",
+            "input": {
+              "job": "J",
+              "undo_already_committed": true
+            },
+            "expected": {
+              "second_mutation": 0,
+              "same_terminal_receipt": true
+            },
+            "source_basis": "P03 idempotent Undo",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-ambiguous",
+            "input": {
+              "undo_commit": "ambiguous"
+            },
+            "expected": {
+              "retry_assumed_safe": false,
+              "code": "commit_ambiguous",
+              "ack_not_rollback": true
+            },
+            "source_basis": "P03/CLOUD ambiguous transaction ledger",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-donor-retained",
+            "input": {
+              "target_undo": true
+            },
+            "expected": {
+              "donor_sql_migrations_or_delete": false,
+              "donor_reader_still_required": true
+            },
+            "source_basis": "TRANSFER-07;F13",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-copy-limit",
+            "input": {
+              "recipient_downloaded": true,
+              "grant_revoked": true
+            },
+            "expected": {
+              "new_reads": false,
+              "recipient_recall_claim": false
+            },
+            "source_basis": "Personal recipient-copy limit",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing current scripts/check.mjs",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-UNDO.json",
+      "reviewer_role": "independent migration/privacy/state reviewer"
+    }
+  ],
+  "dependency_edges": [
+    [
+      "MIGRATION-MAC-ARCHIVE-SCHEMA",
+      "MIGRATION-MAC-ARCHIVE-VALIDATOR"
+    ],
+    [
+      "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+      "MIGRATION-OWNED-STAGING"
+    ],
+    [
+      "MIGRATION-MAC-ARCHIVE-SCHEMA",
+      "MIGRATION-ORIGINAL-IDENTITY"
+    ],
+    [
+      "MIGRATION-OWNED-STAGING",
+      "MIGRATION-CONFLICT-COMMIT"
+    ],
+    [
+      "MIGRATION-ORIGINAL-IDENTITY",
+      "MIGRATION-CONFLICT-COMMIT"
+    ],
+    [
+      "MIGRATION-CONFLICT-COMMIT",
+      "MIGRATION-OWNED-UNDO"
+    ]
+  ],
+  "selected_outcome_map": [
+    {
+      "design_id": "C17",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "P03",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "L05",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "S04",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "O11",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "F13",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    },
+    {
+      "design_id": "F16",
+      "children": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY",
+        "MIGRATION-CONFLICT-COMMIT",
+        "MIGRATION-OWNED-UNDO"
+      ],
+      "remaining": [
+        "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+        "MIGRATION-LOCATION-ALL-PROFILES",
+        "MIGRATION-MOBILE-HISTORY-S06",
+        "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+        "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+        "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+        "MIGRATION-CLOUD-RETIREMENT-ROLLBACK"
+      ],
+      "closure": "FirstMacarchive boundaries only; allother source/fullhistory/native/sourcepurpose/deepconsumer/durable/installeduser requirements map to concrete required nextowners/triggers; family open."
+    }
+  ],
+  "repository_baseline_mapping": [
+    {
+      "baseline_row": {
+        "id": "DOMAIN-001",
+        "outcome": "/native_history/storage",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/native_history/storage",
+          "canonical_value_sha256": "546f6374513faa2b639a9f9537bb697a8edfb0d9fe0adccd8818cc77235975e1"
+        },
+        "leaf_pointers": [
+          "/native_history/storage/source",
+          "/native_history/storage/implementation",
+          "/native_history/storage/history"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-BATCH-CHECKPOINT",
+      "real_remainder_owner": "DATASTORE-DURABLE-HOSTS",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-006",
+        "outcome": "/native_history/capture",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/native_history/capture",
+          "canonical_value_sha256": "a902ce069569d90e5f24fc78d507916e68d3a42a673ad474315e446ab0a82d0a"
+        },
+        "leaf_pointers": [
+          "/native_history/capture/source",
+          "/native_history/capture/native",
+          "/native_history/capture/restore",
+          "/native_history/capture/quality_compatibility",
+          "/native_history/capture/visit_matching_bounds/coordinate_match_meters",
+          "/native_history/capture/visit_matching_bounds/arrival_tolerance_seconds",
+          "/native_history/capture/visit_matching_bounds/duplicate_merge_meters",
+          "/native_history/capture/visit_matching_bounds/duplicate_merge_gap_seconds",
+          "/native_history/capture/boundary"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-COVERAGE",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-067",
+        "outcome": "/successor_source_admission/status",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/successor_source_admission/status",
+          "canonical_value_sha256": "ed4379147ce3430fa095da35ce65127239cd89e7445fd965b09d25d570cc720e"
+        },
+        "leaf_pointers": [
+          "/successor_source_admission/status"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-068",
+        "outcome": "/successor_source_admission/source",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/successor_source_admission/source",
+          "canonical_value_sha256": "e846e47d15037bd16de47c2d410df287be9b6bd3dfe7fe78b1555d40bd4b725d"
+        },
+        "leaf_pointers": [
+          "/successor_source_admission/source"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-069",
+        "outcome": "/successor_source_admission/retention",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/successor_source_admission/retention",
+          "canonical_value_sha256": "c940f012f023af12f5d81210a000d45cad7667d088e85591c601a680b510de4f"
+        },
+        "leaf_pointers": [
+          "/successor_source_admission/retention"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-RETENTION",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-070",
+        "outcome": "/successor_source_admission/health_boundary",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/successor_source_admission/health_boundary",
+          "canonical_value_sha256": "15a6215c8aa0ba925a8108a87f558f16ec4792a12b68c949fd0cf10870a9e3f2"
+        },
+        "leaf_pointers": [
+          "/successor_source_admission/health_boundary"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-071",
+        "outcome": "/successor_source_admission/deferred",
+        "route": "repository",
+        "evidence": {
+          "input_id": "location",
+          "json_pointer": "/successor_source_admission/deferred",
+          "canonical_value_sha256": "d11c2fd441389bf10a7bee9c963ccd587d573add9e207d08df105372acc8fd02"
+        },
+        "leaf_pointers": [
+          "/successor_source_admission/deferred"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-120",
+        "outcome": "/history/primary",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mac",
+          "json_pointer": "/history/primary",
+          "canonical_value_sha256": "9350c299c38608fb23a938801dbb9ca439e257e21e10800cc41be7089aace71b"
+        },
+        "leaf_pointers": [
+          "/history/primary/source",
+          "/history/primary/source_defined_path",
+          "/history/primary/table",
+          "/history/primary/columns/0",
+          "/history/primary/columns/1",
+          "/history/primary/columns/2",
+          "/history/primary/columns/3",
+          "/history/primary/columns/4",
+          "/history/primary/columns/5",
+          "/history/primary/columns/6",
+          "/history/primary/columns/7",
+          "/history/primary/columns/8",
+          "/history/primary/columns/9",
+          "/history/primary/columns/10",
+          "/history/primary/columns/11",
+          "/history/primary/columns/12",
+          "/history/primary/columns/13",
+          "/history/primary/meaning"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-BATCH-CHECKPOINT",
+      "real_remainder_owner": "DATASTORE-DURABLE-HOSTS",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-121",
+        "outcome": "/history/mirror",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mac",
+          "json_pointer": "/history/mirror",
+          "canonical_value_sha256": "f2cba86e594a370d0353e6ce104a2eb1a86bbfca88c5811a8096e75bddf06dd2"
+        },
+        "leaf_pointers": [
+          "/history/mirror/source",
+          "/history/mirror/path",
+          "/history/mirror/version",
+          "/history/mirror/history_days",
+          "/history/mirror/debounce_seconds",
+          "/history/mirror/fields/0",
+          "/history/mirror/fields/1",
+          "/history/mirror/fields/2",
+          "/history/mirror/fields/3",
+          "/history/mirror/fields/4",
+          "/history/mirror/fields/5",
+          "/history/mirror/behavior",
+          "/history/mirror/continuation_loss_evidence/0/path",
+          "/history/mirror/continuation_loss_evidence/0/line",
+          "/history/mirror/continuation_loss_evidence/0/literal",
+          "/history/mirror/continuation_loss_evidence/0/meaning",
+          "/history/mirror/continuation_loss_evidence/1/path",
+          "/history/mirror/continuation_loss_evidence/1/line",
+          "/history/mirror/continuation_loss_evidence/1/through_line",
+          "/history/mirror/continuation_loss_evidence/1/meaning",
+          "/history/mirror/continuation_loss_evidence/2/path",
+          "/history/mirror/continuation_loss_evidence/2/line",
+          "/history/mirror/continuation_loss_evidence/2/literal",
+          "/history/mirror/continuation_loss_evidence/2/meaning"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": "Retained lossy summary compatibility only; raw source sessions are full-history authority. Preserve continuation-hour/cross-midnight filtering loss and three synthetic regression obligations."
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-COVERAGE",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-124",
+        "outcome": "/history/identity",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mac",
+          "json_pointer": "/history/identity",
+          "canonical_value_sha256": "27679f8a9be60e88a45e90b882780db84d3d1fe7120dd5684d68dbd16750e177"
+        },
+        "leaf_pointers": [
+          "/history/identity/sources/0",
+          "/history/identity/sources/1",
+          "/history/identity/sources/2",
+          "/history/identity/tracker_device",
+          "/history/identity/sync_installation",
+          "/history/identity/record",
+          "/history/identity/legacy"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-BATCH-CHECKPOINT",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-125",
+        "outcome": "/history/dedup",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mac",
+          "json_pointer": "/history/dedup",
+          "canonical_value_sha256": "452afd4add5d17f1009d869ff26890257acbc86b516c935d714a8c14779590f0"
+        },
+        "leaf_pointers": [
+          "/history/dedup/sources/0",
+          "/history/dedup/sources/1",
+          "/history/dedup/sources/2",
+          "/history/dedup/local_unique/0",
+          "/history/dedup/local_unique/1",
+          "/history/dedup/local_unique/2",
+          "/history/dedup/local_predicate",
+          "/history/dedup/import_unique/0",
+          "/history/dedup/import_unique/1",
+          "/history/dedup/import_unique/2",
+          "/history/dedup/import_predicate",
+          "/history/dedup/order",
+          "/history/dedup/rollups"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-BATCH-CHECKPOINT",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-224",
+        "outcome": "/history_and_precision/source_paths",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/history_and_precision/source_paths",
+          "canonical_value_sha256": "5ca237e30ec99486f3ba05225948d15998a0308ebe2e57d401779c4dde71fb4d"
+        },
+        "leaf_pointers": [
+          "/history_and_precision/source_paths/0",
+          "/history_and_precision/source_paths/1",
+          "/history_and_precision/source_paths/2"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-225",
+        "outcome": "/history_and_precision/retained",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/history_and_precision/retained",
+          "canonical_value_sha256": "cb1a23d28a2e648c5de7972c2fdcce1effea424e9bb558b229f32e432daf9c7c"
+        },
+        "leaf_pointers": [
+          "/history_and_precision/retained"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-COVERAGE",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-226",
+        "outcome": "/history_and_precision/persistence",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/history_and_precision/persistence",
+          "canonical_value_sha256": "c128b384586b0e27d75a54476c7e99e6d2b97b84751862558358ccfab61935e3"
+        },
+        "leaf_pointers": [
+          "/history_and_precision/persistence"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-BATCH-CHECKPOINT",
+      "real_remainder_owner": "DATASTORE-DURABLE-HOSTS",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-227",
+        "outcome": "/history_and_precision/gaps",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/history_and_precision/gaps",
+          "canonical_value_sha256": "41fe8b66e7b7ab838c5953d1c0bfdc5583bd1e115a7f185c6974735a7ee940b2"
+        },
+        "leaf_pointers": [
+          "/history_and_precision/gaps"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-COVERAGE",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-228",
+        "outcome": "/history_and_precision/retention",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/history_and_precision/retention",
+          "canonical_value_sha256": "9e4d4c01ddb874acfab75f3592625eeda9c01b46ae63c33af722942dde525c32"
+        },
+        "leaf_pointers": [
+          "/history_and_precision/retention"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": null
+      },
+      "synthetic_boundary_child": "DATASTORE-RETENTION",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    },
+    {
+      "baseline_row": {
+        "id": "DOMAIN-251",
+        "outcome": "/exclusions/tokens",
+        "route": "repository",
+        "evidence": {
+          "input_id": "mobile",
+          "json_pointer": "/exclusions/tokens",
+          "canonical_value_sha256": "746087c9ea5f95643c073b4a5bbfdc32b6a8d42769341f5e10f750c4d8a3977e"
+        },
+        "leaf_pointers": [
+          "/exclusions/tokens"
+        ],
+        "current_facts": "Source-derived only: resolve the pinned evidence value; all bounds, losses and unrun states remain normative evidence.",
+        "successor_detail": "Missing identifiers/domains excluded; missing human label alone does not exclude an identified app. Opaque tokens do not acquire stable bundle identity or transferable grants; optional label resolution needs separate network purpose."
+      },
+      "synthetic_boundary_child": "DATASTORE-SOURCE-CATALOG",
+      "real_remainder_owner": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "trigger": "Before actual source/backend/full-history admission; original baseline loss/retention/provenance/unsupported facts retained",
+      "complete_source_obligation_closed": false
+    }
+  ],
+  "full_transfer_obligations": [
+    {
+      "id": "TRANSFER-01",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Original points/visits/places/recording-session UUIDs; derived outings separate; original correction metadata/Undo and photo associations without asset bytes. Preserve unknown boundary certainty/device provenance.",
+      "evidence": {
+        "input_id": "location",
+        "json_pointer": "/native_history",
+        "canonical_value_sha256": "369127c2afbb1a2ddb90278a9342f8c7ffafdfc1bc6fa731d4b3c2a1d8b8cda5"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-02",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Installation/sequence IDs, wirev1 pending/ack and all available session/visit/point queues; explicit retry/revoke/duplicate ordering. Do not reconstruct phone-discarded links.",
+      "evidence": {
+        "input_id": "location",
+        "json_pointer": "/watch_and_system_surfaces",
+        "canonical_value_sha256": "8c9f283c1d75e3aca94cf657fc3a5f7f0f247b175f9290430f0d4d97851c664f"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-03",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Eight historical format profiles remain bounded compatibility routes; CSV includes outings and Markdown reader accepts md+markdown. Fresh-ID legacy import cannot satisfy full graph roundtrip.",
+      "evidence": {
+        "input_id": "location",
+        "json_pointer": "/formatted_exports",
+        "canonical_value_sha256": "fa8afdc2eff9b29f8672bc186320c160eaa66caaea5e507c8c3b9255202a9613"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-04",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Supported inert units/capture/filter/templates/schedule preferences previewed; native bookmark/source/photo/destination grants rebound; old delivery never armed.",
+      "evidence": {
+        "input_id": "location",
+        "json_pointer": "/export_and_schedule_policy",
+        "canonical_value_sha256": "9ea686f643a17dc9c8ccf411d89f191069a254fcd0cce599ee011867b55a3c2c"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-05",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "All retained native usage rows beyond365day mirror including imported source facts; source epochs and civil text distinct. Under2sec discarded, missing crash tail, clock and precollector periods unrecoverable.",
+      "evidence": {
+        "input_id": "mac",
+        "json_pointer": "/history",
+        "canonical_value_sha256": "b8c8b80b382e7527363257fe3ad94e7ae8838560994092aed4089554e5c85a6d"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-06",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "All available app-category assignments with lineage; do not invent project entities or assignment revision history.",
+      "evidence": {
+        "input_id": "mac",
+        "json_pointer": "/feature_map/1",
+        "canonical_value_sha256": "6f22ae149c0d5d063b5cfe56bc77db877d5dfab435785ed65ad04ec201c07896"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-07",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Read-only full-state archive before destructive migration; excluded browser/input tables omitted before import, without executing donor dropping migrations on source.",
+      "evidence": {
+        "input_id": "mac",
+        "json_pointer": "/storage_migrations",
+        "canonical_value_sha256": "58a0546b5a63d805b0212da42db9e98e0cca42f41067b2dd8b244ddc80a062ef"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-08",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Preserve permitted imported snapshot provenance, per-source identity, day replacement/empty-day/deletion/overlap semantics and pending state; daily mirrors and200-record first page are not complete native transfer.",
+      "evidence": {
+        "input_id": "mac",
+        "json_pointer": "/sync",
+        "canonical_value_sha256": "e34dd7c793ce0ecb0fb6e74c9cf8e2c31c0e81b0661fd091eb687656c8132031"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-09",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "All retained settings/history/provider buckets and legacy daily keys beyond export-builder view;370key cap and rounded24h rows are source losses. Original raw precision when available; future full historical permitted buckets retained.",
+      "evidence": {
+        "input_id": "mobile",
+        "json_pointer": "/history_and_precision",
+        "canonical_value_sha256": "bf03ac325fd5fc8c738deb13563a5ca95163de708440224a0fee31ffcfb4518e"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-10",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "usage-export.v3 selected file is not complete archive: raw today-only reads, legacy totals omission, coverage and provider/config fields require scoped validation/redaction.",
+      "evidence": {
+        "input_id": "mobile",
+        "json_pointer": "/exports",
+        "canonical_value_sha256": "d099fb7eeaa30a4f8419d3197b60f1edd67ae1547e3cd74a9e5aad86e742ccc8"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-11",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Preserve original known source identity without inventing stable device IDs from names/model or default installation ID; source bucket times not exact per-app session boundaries.",
+      "evidence": {
+        "input_id": "mobile",
+        "json_pointer": "/ios",
+        "canonical_value_sha256": "28a7f5e126404e3df96ab1019f5a9469f7a5874d18219510100b9268cb6b4a3a"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-12",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Prototype finite UsageEvents, pairing/open/prewindow/null/locked gaps and rounded snapshots remain distinct from observed exact sessions; future checkpoint/grant/OEM proof required.",
+      "evidence": {
+        "input_id": "mobile",
+        "json_pointer": "/android_prototype",
+        "canonical_value_sha256": "0697298983a10b61db3c9434b6ccd764849f942362ebde83c1720bbf91c8dd0e"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    },
+    {
+      "id": "TRANSFER-13",
+      "disposition": "successor",
+      "target": "P03/C17 complete retained-state staging/import/Undo",
+      "requirement": "Archive allowed data only; do not migrate provider credentials, plaintextlegacyWorker settings, encrypted relay pairing keys, commerce grants or armed endpoints. Re-enroll purposes/destinations explicitly.",
+      "evidence": {
+        "input_id": "mobile",
+        "json_pointer": "/egress_and_services",
+        "canonical_value_sha256": "99d2549a55c1abf133ef465e58b9dc7a3e748315d3612a8493178f725889f619"
+      },
+      "proof": "Required synthetic full archive/replay/crash/conflict/rollback and installed-user qualification; not executed here."
+    }
+  ],
+  "retained81_contract_cases": [
+    {
+      "case_id": "combined-three-domains",
+      "input": {
+        "manifest_ref": "#/combined_manifest",
+        "records": [
+          "synthetic-health-1",
+          "synthetic-location-1",
+          "synthetic-usage-aggregate-1"
+        ]
+      },
+      "expected": {
+        "accept": true,
+        "domains": [
+          "health",
+          "location",
+          "device_usage"
+        ],
+        "record_count": 3,
+        "completeness": "partial",
+        "native_archive_complete": false
+      },
+      "evidence_refs": [
+        "domain-lineage",
+        "health-fixtures"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-scoped-same-dataset",
+      "input": {
+        "manifest_ref": "#/combined_manifest",
+        "selection_override": {
+          "domains": [
+            "health"
+          ]
+        }
+      },
+      "expected": {
+        "dataset_id": "synthetic-dataset-a",
+        "record_ids": [
+          "synthetic-health-1"
+        ],
+        "coverage_domains": [
+          "health"
+        ],
+        "no_location_or_usage_detail": true
+      },
+      "evidence_refs": [
+        "domain-lineage",
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "point-binary64-lossless",
+      "input": {
+        "record_ref": "#/records/1"
+      },
+      "expected": {
+        "timestamp_bits": "3ff0000000000001",
+        "epoch": "apple_reference_2001",
+        "invented_nanoseconds": false,
+        "latitude_bits": "3ff0000000000000",
+        "altitude_state": "absent"
+      },
+      "evidence_refs": [
+        "location-point"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-large-integer-lossless",
+      "input": {
+        "record_ref": "#/records/0"
+      },
+      "expected": {
+        "decimal": "9007199254740993",
+        "number_coercion": false,
+        "unit": "count"
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "health-negativezero-preserve",
+      "input": {
+        "value": {
+          "representation": "binary64",
+          "bits": "8000000000000000",
+          "unit": "count"
+        }
+      },
+      "expected": {
+        "bits": "8000000000000000",
+        "normalized_to_positive_zero": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "mixed-epoch-selection-precision",
+      "input": {
+        "record_ref": "#/records/1",
+        "selection_ref": "#/combined_manifest/selection"
+      },
+      "expected": {
+        "inside_requested_interval": true,
+        "point_bits_unchanged": "3ff0000000000001",
+        "comparison": "exact_binary_rational_epoch_conversion_required",
+        "round_timestamp_for_selection": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "timestamp-nanos-order",
+      "input": {
+        "left": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "9007199254740993",
+          "nanoseconds": 1,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        },
+        "right": {
+          "representation": "seconds_nanos",
+          "epoch": "unix",
+          "epoch_seconds": "9007199254740993",
+          "nanoseconds": 2,
+          "source_resolution": "nanosecond_representation_not_accuracy",
+          "uncertainty": {
+            "state": "unknown",
+            "reason": "not_reported"
+          }
+        }
+      },
+      "expected": {
+        "order": "left_before_right",
+        "Date_or_Number_ordering": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "native-calendar-not-inferred",
+      "input": {
+        "record_ref": "#/records/1"
+      },
+      "expected": {
+        "owner_date": "unknown",
+        "timezone": "unknown",
+        "derive_from_current_host_zone": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "mac-clock"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "aggregate-not-session",
+      "input": {
+        "record_ref": "#/records/2"
+      },
+      "expected": {
+        "kind": "usage_aggregate",
+        "duration_seconds": 600,
+        "bucket_seconds": 3600,
+        "synthesized_session": false,
+        "fill_whole_bucket": false
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "short-session-retained",
+      "input": {
+        "record_ref": "#/records/3"
+      },
+      "expected": {
+        "persist_future_observed": true,
+        "duration_seconds": 1,
+        "discard_below_two_seconds": false
+      },
+      "evidence_refs": [
+        "mac-clock"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "historical-donor-short-tail-gap",
+      "input": {
+        "donor_gap": [
+          "discarded_short",
+          "crash_unflushed",
+          "pre_collector"
+        ]
+      },
+      "expected": {
+        "reconstruct_exact_session": false,
+        "coverage": "partial",
+        "gap_retained": true
+      },
+      "evidence_refs": [
+        "mac-clock",
+        "mac-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "ios-exact-sessions-unestablished",
+      "input": {
+        "source": "ios_historical_usage_aggregate",
+        "requested_kind": "foreground_app_session"
+      },
+      "expected": {
+        "fabricate": false,
+        "outcome": "unavailable_for_this_source",
+        "S06": "required_open",
+        "aggregate_shipping_closes_S06": false
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "android-prototype-not-supported",
+      "input": {
+        "source": "donor_android_event_prototype"
+      },
+      "expected": {
+        "health_android_usage_state": "planned",
+        "native_build_capture_coverage_proof": "pending",
+        "claim_shared_support": false
+      },
+      "evidence_refs": [
+        "mobile-android"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unknown-empty-is-not-zero",
+      "input": {
+        "source_response": [],
+        "coverage": "unknown"
+      },
+      "expected": {
+        "known_usage_seconds": null,
+        "coverage": "unknown"
+      },
+      "evidence_refs": [
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unavailable-empty-is-not-zero",
+      "input": {
+        "source_response": [],
+        "coverage": "unavailable",
+        "reason": "source_policy_unavailable"
+      },
+      "expected": {
+        "known_usage_seconds": null,
+        "coverage": "unavailable",
+        "reason_preserved": true
+      },
+      "evidence_refs": [
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "observed-zero-only-evidence",
+      "input": {
+        "source_value": {
+          "representation": "unsigned_integer",
+          "decimal": "0",
+          "unit": "second"
+        },
+        "coverage": "complete",
+        "completion_evidence": "synthetic_source_receipt",
+        "scope": "synthetic_interval_only"
+      },
+      "expected": {
+        "known_zero": true,
+        "extend_to_other_period_device_detail": false
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "no-fabricated-completeness",
+      "input": {
+        "record_count": 0,
+        "source_observedSources_flag": true,
+        "source_receipt": null
+      },
+      "expected": {
+        "complete": false,
+        "coverage": "unknown"
+      },
+      "evidence_refs": [
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "hourly-daily-overlap",
+      "input": {
+        "hourly_duration_seconds": "600",
+        "daily_duration_seconds": "600",
+        "same_source_device_scope": true,
+        "same_overlap_group": "synthetic-hourly-daily-group"
+      },
+      "expected": {
+        "sum_seconds": "600",
+        "not_sum_seconds": "1200",
+        "method": "explicit_reviewed_projection_precedence",
+        "originals_retained": true
+      },
+      "evidence_refs": [
+        "mobile-history",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "cross-device-overlap",
+      "input": {
+        "source_a_total_seconds": "600",
+        "source_b_total_seconds": "600",
+        "identity_equivalence": "unknown"
+      },
+      "expected": {
+        "automatic_person_total_seconds": null,
+        "retain_separate_source_totals": true
+      },
+      "evidence_refs": [
+        "mobile-ios",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "same-key-same-bytes-replay",
+      "input": {
+        "lineage_key": "synthetic-key-a",
+        "original_bytes_digest": [
+          "synthetic-digest-a",
+          "synthetic-digest-a"
+        ]
+      },
+      "expected": {
+        "logical_records": 1,
+        "idempotent": true,
+        "source_lineage_retained": true
+      },
+      "evidence_refs": [
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "same-key-different-bytes-conflict",
+      "input": {
+        "lineage_key": "synthetic-key-a",
+        "original_bytes_digest": [
+          "synthetic-digest-a",
+          "synthetic-digest-b"
+        ]
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "record_identity_conflict",
+        "silent_replace": false
+      },
+      "evidence_refs": [
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "new-install-not-same-device-history",
+      "input": {
+        "device_id": "synthetic-device-a",
+        "installation_ids": [
+          "synthetic-install-a",
+          "synthetic-install-c"
+        ]
+      },
+      "expected": {
+        "preserve_two_installations": true,
+        "automatic_dedup": false
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "missing-donor-lineage",
+      "input": {
+        "original_device": "missing",
+        "source_record_id": "missing",
+        "import_artifact_id": "synthetic-artifact-a",
+        "partition": "synthetic-partition-a",
+        "ordinal": "0"
+      },
+      "expected": {
+        "original_identity": "unknown",
+        "import_identity": "stable_artifact_partition_ordinal",
+        "fabricated_device_or_session_link": false
+      },
+      "evidence_refs": [
+        "location-point",
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "correction-preserves-original",
+      "input": {
+        "original_record_id": "synthetic-location-1",
+        "correction_id": "synthetic-correction-a",
+        "correction_timestamp": "not_reported"
+      },
+      "expected": {
+        "original_immutable": true,
+        "correction_linked": true,
+        "timestamp_invented": false,
+        "undo": "append_reversal_preserving_original"
+      },
+      "evidence_refs": [
+        "location-visit",
+        "domain-transfer"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "visit-sentinel-not-observed",
+      "input": {
+        "arrival": "distantPast",
+        "departure": "distantFuture",
+        "donor_default": "automatic"
+      },
+      "expected": {
+        "sentinel_as_real_epoch": false,
+        "certainty": "unknown",
+        "default_proves_observation": false
+      },
+      "evidence_refs": [
+        "location-visit"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "outing-not-recording",
+      "input": {
+        "source_kind": "inferred_outing",
+        "summary_id": "synthetic-summary-a"
+      },
+      "expected": {
+        "recording_session_uuid": null,
+        "kind": "inferred_outing",
+        "inference_revision_required": true
+      },
+      "evidence_refs": [
+        "location-session"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "browser-app-duration-allowed",
+      "input": {
+        "record_ref": "#/records/2"
+      },
+      "expected": {
+        "app_duration_allowed_under_own_grants": true,
+        "window_title_or_domain_allowed": false,
+        "missing_human_label_omits_app": false
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "browser-title-before-observation",
+      "input": {
+        "app_class": "browser",
+        "requested_detail": "desktop_window_title",
+        "title_grant": true
+      },
+      "expected": {
+        "call_title_API": false,
+        "persist_title": false,
+        "queue_title": false,
+        "export_or_log_title": false,
+        "safe_code": "detail_excluded"
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "unknown-app-class-title-fails-closed",
+      "input": {
+        "app_class": "unknown",
+        "requested_detail": "desktop_window_title"
+      },
+      "expected": {
+        "call_title_API": false,
+        "persist_title": false,
+        "safe_code": "detail_unadmitted"
+      },
+      "evidence_refs": [
+        "mac-exclusions"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "excluded-import-before-staging",
+      "input": {
+        "incoming_fields": [
+          "browser_url",
+          "page_title",
+          "typed_text",
+          "mouse_coordinates"
+        ],
+        "migration_requested": true
+      },
+      "expected": {
+        "observe_payload": false,
+        "copy_to_staging_or_queue": false,
+        "quarantine_payload_copy": false,
+        "fixed_field_presence_report_only": true,
+        "source_donor_unchanged": true
+      },
+      "evidence_refs": [
+        "mac-exclusions",
+        "mobile-exclusions",
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "capture-not-export-grant",
+      "input": {
+        "capture": "allowed",
+        "display": "allowed",
+        "query": "allowed",
+        "export": "not_authorized",
+        "destination": "synthetic-local-file"
+      },
+      "expected": {
+        "export": false,
+        "automatic_grant": false,
+        "safe_code": "export_not_authorized"
+      },
+      "evidence_refs": [
+        "domain-grants",
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "report-view-not-record-export",
+      "input": {
+        "source": "standard_ios_report_sandbox",
+        "display": "allowed",
+        "export_request": true
+      },
+      "expected": {
+        "export": false,
+        "report_sandbox_escape": false,
+        "capability": "display_only"
+      },
+      "evidence_refs": [
+        "mobile-ios"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "future-uploads-not-auto-agent-grant",
+      "input": {
+        "upload_enrollment": "allowed",
+        "agent_current_snapshot": "allowed",
+        "agent_future_uploads": "not_granted"
+      },
+      "expected": {
+        "agent_new_upload_read": false,
+        "grant_future_scope_inferred": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "title-query-not-agent-share",
+      "input": {
+        "desktop_title_capture": "allowed",
+        "desktop_title_local_query": "allowed",
+        "agent_detail_grant": "absent"
+      },
+      "expected": {
+        "agent_title": false,
+        "upload_enrollment_implies_read": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "strict-scope-denied-no-leak",
+      "input": {
+        "selection_ref": "#/combined_manifest/selection",
+        "denied_detail": "location_exact_point",
+        "strictness": "strict"
+      },
+      "expected": {
+        "publish_manifest_or_record": false,
+        "partial_deliverable": false,
+        "safe_code": "scope_not_authorized",
+        "raw_record_id_or_coordinate_in_error": false
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "partial-scope-explicit",
+      "input": {
+        "selection_ref": "#/combined_manifest/selection",
+        "denied_domain": "location",
+        "strictness": "allow_partial"
+      },
+      "expected": {
+        "deliverable_domains": [
+          "health",
+          "device_usage"
+        ],
+        "omitted_scope_status": "unavailable",
+        "omitted_personal_payload": true,
+        "manifest_complete": false
+      },
+      "evidence_refs": [
+        "domain-grants",
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "grant-revoked-during-page",
+      "input": {
+        "grant_revision_before": "synthetic-grant1",
+        "grant_revision_now": "synthetic-revoked2"
+      },
+      "expected": {
+        "continue_page": false,
+        "publish_staged_results": false,
+        "recheck_source_purpose_destination": true
+      },
+      "evidence_refs": [
+        "domain-grants"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "selector-cursor-crosswire",
+      "input": {
+        "requested_dataset": "synthetic-dataset-a",
+        "cursor_dataset": "synthetic-dataset-b"
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "scope_binding_mismatch",
+        "binding_required": [
+          "caller",
+          "dataset",
+          "revision",
+          "source",
+          "purpose",
+          "selection",
+          "snapshot",
+          "grant_revision",
+          "expiry"
+        ]
+      },
+      "evidence_refs": [
+        "domain-lineage"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "geographic-health-distance-distinct",
+      "input": {
+        "location_path_distance": "synthetic_location_distance",
+        "health_distance": "distance_walking_running"
+      },
+      "expected": {
+        "alias_semantic_id": false,
+        "sum_as_same_statistic": false
+      },
+      "evidence_refs": [
+        "health-precision",
+        "location-point"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "frozen-health-profiles",
+      "input": {
+        "requested_profiles": [
+          "apple_health_data_v8",
+          "android_frozen_v4",
+          "android_analytical_v5"
+        ]
+      },
+      "expected": {
+        "bytes_or_grammar_changed": false,
+        "personal_candidate_admitted": false
+      },
+      "evidence_refs": [
+        "health-fixtures"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "summary-not-complete-transfer",
+      "input": {
+        "donor_artifacts": [
+          "mac365daymirror",
+          "mobile370snapshot",
+          "location_formatted_export"
+        ]
+      },
+      "expected": {
+        "complete_native_archive": false,
+        "required_full_retained_history": "all_available_permitted_native_state",
+        "credentials_purchases_armed_schedules_adopted": false
+      },
+      "evidence_refs": [
+        "domain-transfer",
+        "mac-mirror",
+        "location-transfer",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "complete-history-no-dashboard-cap",
+      "input": {
+        "available_history_days": "synthetic-more-than-370",
+        "page_limit_records": 4096
+      },
+      "expected": {
+        "iterate_all_available_authorized_pages": true,
+        "global_history_cap_days": null,
+        "invent_unavailable_history": false
+      },
+      "evidence_refs": [
+        "mac-history",
+        "mobile-history"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "nonfinite-or-overprecision",
+      "input": {
+        "number_bits": "7ff0000000000000",
+        "timestamp_nanos": 1000000000
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "invalid_exact_value",
+        "coerce_or_round": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "bounded-page-admission",
+      "input": {
+        "candidate_record_raw_bytes": 65537,
+        "candidate_page_record_count": 4097
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "candidate_limit_exceeded",
+        "claim_production_budget": false
+      },
+      "evidence_refs": [
+        "health-precision"
+      ],
+      "proof_class": "planning",
+      "execution": "literal_expected_before_future_codec_not_executed"
+    },
+    {
+      "case_id": "resolution-coordinate-endpoints",
+      "input": {
+        "latitude": "4056800000000000",
+        "longitude": "4066800000000000"
+      },
+      "expected": {
+        "canonical_status": "valid",
+        "latitude_degrees": 90,
+        "longitude_degrees": 180,
+        "wrap": false
+      }
+    },
+    {
+      "case_id": "resolution-coordinate-outside",
+      "input": {
+        "latitude": "4056c00000000000"
+      },
+      "expected": {
+        "canonical_status": "outside_canonical",
+        "reason": "coordinate_out_of_range",
+        "retain_eligible_original_evidence": true
+      }
+    },
+    {
+      "case_id": "resolution-nonfinite-coordinate",
+      "input": {
+        "latitude": "7ff8000000000000"
+      },
+      "expected": {
+        "canonical_status": "outside_canonical",
+        "canonical_value": null,
+        "retain_eligible_original_evidence": true
+      }
+    },
+    {
+      "case_id": "resolution-negative-speed-sentinel",
+      "input": {
+        "speed_bits": "bff0000000000000"
+      },
+      "expected": {
+        "state": "unavailable",
+        "reason": "native_invalid_speed",
+        "original_bits_retained": "bff0000000000000",
+        "complete_archive_silent_drop": false
+      }
+    },
+    {
+      "case_id": "resolution-negative-accuracy-sentinel",
+      "input": {
+        "accuracy_bits": "bff0000000000000"
+      },
+      "expected": {
+        "state": "unavailable",
+        "reason": "native_invalid_accuracy",
+        "coerce_zero": false
+      }
+    },
+    {
+      "case_id": "resolution-negativezero-speed",
+      "input": {
+        "speed_bits": "8000000000000000"
+      },
+      "expected": {
+        "canonical_status": "valid",
+        "bits": "8000000000000000"
+      }
+    },
+    {
+      "case_id": "resolution-reversed-session",
+      "input": {
+        "start_seconds": "2",
+        "end_seconds": "1",
+        "duration_bits": "bff0000000000000"
+      },
+      "expected": {
+        "canonical_status": "outside_canonical",
+        "reason": "clock_inconsistent",
+        "invent_session": false,
+        "retain_original": true
+      }
+    },
+    {
+      "case_id": "resolution-duration-disagreement",
+      "input": {
+        "start_seconds": "0",
+        "end_seconds": "1",
+        "duration_bits": "4000000000000000",
+        "basis": "synthetic_observation"
+      },
+      "expected": {
+        "canonical_status": "outside_canonical",
+        "repair_duration": false
+      }
+    },
+    {
+      "case_id": "resolution-zero-session",
+      "input": {
+        "start_seconds": "1",
+        "end_seconds": "1",
+        "duration_bits": "0000000000000000"
+      },
+      "expected": {
+        "canonical_status": "valid",
+        "retain": true,
+        "membership": "point"
+      }
+    },
+    {
+      "case_id": "resolution-original-record-equality",
+      "input": {
+        "same_key": true,
+        "same_lossless_field_vector": true,
+        "artifact_whitespace_changed": true,
+        "transport_page_changed": true
+      },
+      "expected": {
+        "logical_originals": 1,
+        "retain_two_import_evidence_links": true
+      }
+    },
+    {
+      "case_id": "resolution-lossy-equality-conflict",
+      "input": {
+        "same_key": true,
+        "canonical_values_equal": true,
+        "original_accuracy_bits_differ": true
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "record_identity_conflict"
+      }
+    },
+    {
+      "case_id": "resolution-repartition-key",
+      "input": {
+        "original_artifact_id": "synthetic-artifact",
+        "original_partition": "root",
+        "ordinal": "7",
+        "transport_pages": [
+          "page-a",
+          "page-b"
+        ]
+      },
+      "expected": {
+        "import_keys": 1,
+        "native_original_identity": "unknown",
+        "page_in_identity": false
+      }
+    },
+    {
+      "case_id": "resolution-missing-stable-import-order",
+      "input": {
+        "native_id": "unknown",
+        "stable_artifact_enumeration": false
+      },
+      "expected": {
+        "automatic_merge": false,
+        "import_identity": "unknown"
+      }
+    },
+    {
+      "case_id": "resolution-apple-unix-equality",
+      "input": {
+        "apple_bits": "0000000000000000",
+        "unix_seconds": "978307200",
+        "unix_nanos": 0
+      },
+      "expected": {
+        "order": "equal",
+        "stored_epoch_unchanged": true
+      }
+    },
+    {
+      "case_id": "resolution-dyadic-subnanosecond",
+      "input": {
+        "unix_bits": "3ff0000000000001",
+        "query_start_seconds": "1",
+        "query_start_nanos": 0,
+        "query_end_seconds": "1",
+        "query_end_nanos": 1
+      },
+      "expected": {
+        "membership": true,
+        "round_to_one_second": false,
+        "source_nanos_invented": false
+      }
+    },
+    {
+      "case_id": "resolution-half-open-end",
+      "input": {
+        "point_seconds": "1",
+        "start_seconds": "0",
+        "end_seconds": "1"
+      },
+      "expected": {
+        "membership": false
+      }
+    },
+    {
+      "case_id": "resolution-negative-floor-nanos",
+      "input": {
+        "epoch_seconds": "-1",
+        "nanoseconds": 999999999
+      },
+      "expected": {
+        "exact_seconds": "-1/1000000000",
+        "valid": true
+      }
+    },
+    {
+      "case_id": "resolution-aggregate-partial-strict",
+      "input": {
+        "bucket": [
+          "0",
+          "3600"
+        ],
+        "query": [
+          "1800",
+          "3600"
+        ],
+        "duration_seconds": "600",
+        "strictness": "strict"
+      },
+      "expected": {
+        "deliverable": false,
+        "safe_code": "aggregate_partial_overlap",
+        "estimated_seconds": null
+      }
+    },
+    {
+      "case_id": "resolution-aggregate-partial-allowed",
+      "input": {
+        "bucket": [
+          "0",
+          "3600"
+        ],
+        "query": [
+          "1800",
+          "3600"
+        ],
+        "strictness": "allow_partial"
+      },
+      "expected": {
+        "selected_aggregate_count": 0,
+        "coverage": "partial",
+        "complete": false
+      }
+    },
+    {
+      "case_id": "resolution-aggregate-whole-context",
+      "input": {
+        "bucket": [
+          "0",
+          "3600"
+        ],
+        "query": [
+          "1800",
+          "3600"
+        ],
+        "duration_seconds": "600",
+        "projection": "whole_bucket_context",
+        "whole_bucket_grant": true
+      },
+      "expected": {
+        "duration_seconds": "600",
+        "extends_beyond_selection": true,
+        "requested_interval_total": null
+      }
+    },
+    {
+      "case_id": "resolution-aggregate-context-denied",
+      "input": {
+        "projection": "whole_bucket_context",
+        "whole_bucket_grant": false
+      },
+      "expected": {
+        "materialize": false,
+        "safe_code": "scope_not_authorized"
+      }
+    },
+    {
+      "case_id": "resolution-observed-session-clip",
+      "input": {
+        "original": [
+          "0",
+          "10"
+        ],
+        "query": [
+          "3",
+          "7"
+        ],
+        "consistent_observation": true
+      },
+      "expected": {
+        "original": [
+          "0",
+          "10"
+        ],
+        "derived_interval": [
+          "3",
+          "7"
+        ],
+        "derived_duration_seconds": "4",
+        "derived_not_original": true
+      }
+    },
+    {
+      "case_id": "resolution-tombstone-replay",
+      "input": {
+        "tombstone_revision": "2",
+        "replay_original_revision": "1"
+      },
+      "expected": {
+        "query_visible": false,
+        "export_visible": false,
+        "original_evidence_immutable": true
+      }
+    },
+    {
+      "case_id": "resolution-correction-under-tombstone",
+      "input": {
+        "tombstone_current": true,
+        "correction_new": true,
+        "explicit_restore": false
+      },
+      "expected": {
+        "current_projection_visible": false
+      }
+    },
+    {
+      "case_id": "resolution-delete-backup-regrant",
+      "input": {
+        "deletion_fence_current": true,
+        "old_backup": true,
+        "new_capture_grant": true
+      },
+      "expected": {
+        "resurrect": false,
+        "publish": false
+      }
+    },
+    {
+      "case_id": "resolution-frontier-changes-before-commit",
+      "input": {
+        "page_frontier": "1",
+        "current_frontier": "2"
+      },
+      "expected": {
+        "commit": false,
+        "staged_visible": false,
+        "safe_code": "scope_binding_mismatch"
+      }
+    },
+    {
+      "case_id": "resolution-recipient-copy-limit",
+      "input": {
+        "recipient_already_downloaded": true,
+        "grant_now_revoked": true
+      },
+      "expected": {
+        "new_reads": false,
+        "recall_claim": false
+      }
+    },
+    {
+      "case_id": "resolution-schema-boolean-version",
+      "input": {
+        "payload_revision": true
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "unsupported_shape"
+      }
+    },
+    {
+      "case_id": "resolution-unknown-source-field",
+      "input": {
+        "new_source_field": true,
+        "same_canonical_projection": true
+      },
+      "expected": {
+        "silently_discard": false,
+        "admit_unreviewed_schema": false
+      }
+    },
+    {
+      "case_id": "resolution-archive-excluded-title",
+      "input": {
+        "browser_title_present": true,
+        "archive_grant": true
+      },
+      "expected": {
+        "observe_or_stage_title": false,
+        "complete_eligible_archive_includes_title": false
+      }
+    },
+    {
+      "case_id": "resolution-reasonless-sensor-absent",
+      "input": {
+        "altitude": {
+          "state": "absent"
+        },
+        "speed": {
+          "state": "absent"
+        }
+      },
+      "expected": {
+        "accept": true,
+        "reason_required": false
+      }
+    },
+    {
+      "case_id": "resolution-absent-sensor-wrong-value",
+      "input": {
+        "speed": {
+          "state": "absent",
+          "value": 0
+        }
+      },
+      "expected": {
+        "accept": false,
+        "safe_code": "unsupported_shape"
+      }
+    },
+    {
+      "case_id": "resolution-native-source-rounded-subtraction",
+      "input": {
+        "start_bits": "3fb999999999999a",
+        "end_bits": "3ff199999999999a",
+        "duration_bits": "3ff0000000000000",
+        "basis": "native_source_arithmetic"
+      },
+      "expected": {
+        "exact_endpoint_difference": "36028797018963971/36028797018963968",
+        "source_duration_bits_retained": "3ff0000000000000",
+        "automatic_clock_inconsistent": false,
+        "current_synthetic_admission": false,
+        "future_source_semantic_qualification": "required"
+      }
+    },
+    {
+      "case_id": "resolution-delete-restore-denied",
+      "input": {
+        "deletion_fence_current": true,
+        "explicit_restore_event": true,
+        "restore_revision_above_delete": true,
+        "new_grant": true
+      },
+      "expected": {
+        "restore": false,
+        "query_or_export": false,
+        "safe_code": "restoration_fenced"
+      }
+    },
+    {
+      "case_id": "resolution-authoritative-frontier-restore-denied",
+      "input": {
+        "current_external_suppression_journal": true,
+        "local_restore_event": true,
+        "backup_or_renamed_record": true
+      },
+      "expected": {
+        "restore": false,
+        "publish": false,
+        "safe_code": "restoration_fenced"
+      }
+    },
+    {
+      "case_id": "resolution-local-tombstone-reversible-only",
+      "input": {
+        "local_tombstone": true,
+        "deletion_or_revocation_fence": false,
+        "evidence_eligible": true,
+        "reviewed_restore_intent_and_current_grants": true
+      },
+      "expected": {
+        "candidate_local_reversal_permitted": true,
+        "override_external_frontier": false,
+        "durable_restoration_execution_qualified": false
+      }
+    },
+    {
+      "case_id": "resolution-unrepresentable-clipped-duration",
+      "input": {
+        "exact_duration": "36028797018963971/36028797018963968",
+        "accepted_rational_or_ticks_derivation_schema": false
+      },
+      "expected": {
+        "projection": false,
+        "round_to_binary64": false,
+        "safe_code": "exact_projection_unrepresentable"
+      }
+    }
+  ],
+  "remaining_family_work": [
+    {
+      "id": "MIGRATION-MAC-NATIVE-ARCHIVE-PRODUCER",
+      "owner": "Mac read-only archive/native storage owner",
+      "trigger": "Before claiming complete available donor archive or importing actual state",
+      "requirements": "Pin whole SQLite schema/profile+allavailable usage rows beyond365days/import aggregates/null precision and categories/availableannotations/inert preferences/openhint/pendingqueues across all eligible stores. Readonly snapshot consistent across stores; never call destructive HistoryStore URL/schema/input migrations on donor, no dirty patch adoption. Source metadata before excludedtitle/browserURL/domain/path/visits/input observation; allow granted nonbrowser title contents including URL-lookingtext without contentfilter. Issue distinct eligible artifact/identity, exactcanonical stream/hostcrypto/byte/rowbounds/counts/fullcollection completeness/durablecleanup. Native grant/sandbox/AX/entitlement/protecteddata/signing/physical/crossprocess binding proofs."
+    },
+    {
+      "id": "MIGRATION-LOCATION-ALL-PROFILES",
+      "owner": "Location archive/import/native queue coordinator",
+      "trigger": "Next P03/L05 packet before location installed-user migration admission",
+      "requirements": "All native point/visit/place/session/correction/photo references/UUIDgraph/unknownprovenance/watch device-install lineage/queues/ACK/recovery. Eight exports includingCSVoutings/md+markdown reader retain exact loss descriptions, legacy freshIDs not fullgraphroundtrip. Native permission/appgroup/bookmark/schedule webhook grants/queue/nativepayload enrollment rebind; no service or photo bytes inherited."
+    },
+    {
+      "id": "MIGRATION-MOBILE-HISTORY-S06",
+      "owner": "iOS historical usage entitlement and Android source acquisition owners",
+      "trigger": "Next complete mobile archive and required exact iOS sessions S06 packet before source admission",
+      "requirements": "All retained keys/history settings/raw aggregates/provider buckets/snapshotprecision/370keycaps/history gaps and supported eligibleexports distinct report sandbox. Android finiteUsageEvents lookback/open/prewindow/OEMgrants distinct, no shared exactsession fabrication. User requires future full observed/history sessions; initial iOS aggregates labeled exception only, S06 REQUIRED even APIunknown. Windows/Linux S05 and browser/input future owners retained."
+    },
+    {
+      "id": "MIGRATION-ALL-REPLAY-STATE-MATRICES",
+      "owner": "Datastore durable transaction/retention/recovery owner",
+      "trigger": "Before any real staging/import/conflict/Undo/backup promotion",
+      "requirements": "Actual host SQL/object atomicity/checkpoint/journal/outbox/fsync/crash/protectedpartialacquisition/cancel ACK/boundedstorage/concurrentwriter/retry/ambiguous ledger. Durable external latest delete/revoke/retention journal restorefailclosed absent/stale/wronglineage; accepted deletion purged data cannot restore. All17baseline/all13transfers/all81personal cases across source profiles; maintain all complete archive/settings/annotations/category/revision/opencheckpoint/queues/state matrices; no mixed health/GPS/session aggregate equivalence."
+    },
+    {
+      "id": "MIGRATION-HEALTH-AND-DEEP-CONSUMERS",
+      "owner": "Common exporters/query/codec/UI/CLI/MCP external consumers coordinator",
+      "trigger": "Before integrated archive/donor import becomes public feature or retainedsource replacement",
+      "requirements": "Retain frozen Apple8/Android4and5/full historical deep JSON/TOML/CSV/YAML/Markdown/Obsidian/evidence/archive/profile output consumers, full native health authority and commonqueries allfamilies. Sourceoriginalformats/profile serializer/numbers/time/civilscope/sourcecatalog/currenteligibility distinct. Common operations onejob/source selection same scoped/combined dataset, thin CLI/MCP14ordinary/21full13readonly separate donor40. Full preview/conflict/Undo/accessibility/boundedmultiyear UI receipts."
+    },
+    {
+      "id": "MIGRATION-SOURCE-SUPPORT-DESTINATION-HANDOFF",
+      "owner": "Source history/license/product/channel/privacy/support coordinator",
+      "trigger": "Before any donor source adoption/installed-user transition/services deployment",
+      "requirements": "Q-DONOR-SOURCE open AGPL/revision/history/dirty map separately accept; no codecopyadoption. Full source purpose/detail/capture/query/export/agentgrants distinct, entitled/nativechannels/commerce/purchases not inherited, endpoint/provider/cloud/service/credentials/keychain/UserDefaults re-enrollonly; Wake notificationonly/no data. Explicit support/recovery/source retirement history maps and rollout/oldnew installed users/signed physical routing."
+    },
+    {
+      "id": "MIGRATION-CLOUD-RETIREMENT-ROLLBACK",
+      "owner": "Cloud security/operations plus release/retirement coordinator",
+      "trigger": "Before hostedarchive/import/fullfamilyclosure/cutover/nativeRust retirement",
+      "requirements": "Complete stream authenticated/invisiblestage/SQLobjectledger/outbox/idempotencyquota/currenttenantpurposeperpage/grant/deletion suppression outside backups/restorewronglineagefailclosed, containing artifact erasure/recipientcopylimits; actual networkprovider/policy/keys/account/billingchoices unresolved. Production rollout/upgrade/downgrade/fullretainedstate read/import/export/Undo/recovery each donor/profile/currenthost physicalsignedclient matrices, allotherdomains and sourcepurpose proof before closingP03/C17/L05/S04/O11/F13/F16 or Rust retirement."
+    }
+  ],
+  "resources": {
+    "planning": [],
+    "future": "Perchild interface +exclusivecorebuilder claimed byROOT; no currentcode/cohort/package/guard/exports adoption. Actualsource/native/durable/profile proof separately claimed."
+  },
+  "qualification": {
+    "implementation": false,
+    "actual_archive": false,
+    "native": false,
+    "durable": false,
+    "source_adoption": false,
+    "public_contract": false,
+    "family_closed": false,
+    "Rust_retirement": false
+  },
+  "rollback": "Original donor/native stores/readers/health consumers untouched. Revert two planning docs only; all future Undo must preserve new data and external accepted suppression.",
+  "review": {
+    "status": "pending",
+    "reviewer": null
+  }
+}

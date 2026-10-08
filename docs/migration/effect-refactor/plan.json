@@ -6366,8 +6366,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-JOBS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-jobs.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-JOBS.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -6379,7 +6388,15 @@
         "status": "pending",
         "receipts": []
       },
-      "max_children": 6
+      "max_children": 6,
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "canonical_card_sha256": "9f9669e0ca7add1672e9bb6679295264e2940ba977e95cd58709ee8e8de204a9",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-split-jobs-preclaim-card.json",
+        "scope": "Docs2only/atmost6 bounded v1-v2 state readers/admission/one resume boundary; retain actual durable/provider/host/old-engine/consumer/retirement gates. No execution or source changes."
+      }
     },
     {
       "id": "SPLIT-SURFACES",
@@ -7024,20 +7041,77 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-MIGRATION.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-migration.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-MIGRATION.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf",
+        "evidence": {
+          "root_review": {
+            "path": "/private/tmp/healthmd-migration-root-independent-review.json",
+            "sha256": "d42ff3e379421311fbc8f4eb878dac70a1c2b554c2f9ebde1464806926c9e3c0"
+          },
+          "packet": {
+            "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+            "sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+            "bytes": 190361
+          },
+          "structural_validation": {
+            "executed_by": "/root",
+            "logical_cwd": ".",
+            "physical_cwd": "/Users/codybontecou/dev/health-md",
+            "argv": [
+              "python3",
+              "docs/migration/effect-refactor/manage.py",
+              "check"
+            ],
+            "result": "passed",
+            "atomic_tasks": 131,
+            "families": 86,
+            "choices": 16,
+            "provenance": "ROOT reported actual second managecheck PASS after plan-only availability normalization. Author read immutable rootreview/currentplan; no validator/product execution."
+          }
+        }
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-MIGRATION.json"
+        ]
       },
-      "max_children": 6
+      "max_children": 6,
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "canonical_card_sha256": "3e82928e5601ba68f7fcf3a7a0609e40f86d75b8d41ea5cdb9c1dfe4438e58c1",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-split-migration-preclaim-card.json",
+        "scope": "Exact bounded paths/resources only; Stage1 source/literal closure beforecode/build for codecAPI, docs2only/atmost6children for archive/import planning; no currentcohort/native/public/realdata/sourceadoption/Rustretirement."
+      },
+      "bounded_planning_admission": {
+        "children": 6,
+        "child_status": "not_started_unqualified",
+        "family_closed": false,
+        "actual_check": "PASS131/86/16 structural only; product tests not implied",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592"
+      },
+      "independent_review_evidence": {
+        "path": "/private/tmp/healthmd-migration-root-independent-review.json",
+        "sha256": "d42ff3e379421311fbc8f4eb878dac70a1c2b554c2f9ebde1464806926c9e3c0",
+        "scope": "bounded planning only"
+      }
     },
     {
       "id": "SPLIT-CLOUD-INGEST",
@@ -28896,8 +28970,24 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/serialization/index.ts",
+          "packages/healthmd-core-ts/package.json",
+          "packages/healthmd-core-ts/README.md",
+          "packages/healthmd-core-ts/tests/candidate-codec-api.test.ts",
+          "packages/healthmd-core-ts/tests/candidate-codec-api-vectors.ts",
+          "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "core-candidate-export-manifest"
+        ]
+      },
       "prerequisites": [
         "SPLIT-CODECS",
         "SERIALIZE-CANONICAL-JSON"
@@ -29095,14 +29185,39 @@
       "priority": 101,
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "ROOT",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+9a33a1d493fe6250a9a8724ff7834bfe1f3220a3085279655f8cab58a0b41c6d",
+        "evidence": [
+          {
+            "path": "/private/tmp/healthmd-codec-api-package-loader-repair-independent-review.json",
+            "sha256": "89f3e396477f5a864c2118193bc9ff3ad45938a6fa975f2114357e5bac3c94ca",
+            "bytes": 4301
+          },
+          {
+            "path": "/private/tmp/healthmd-codec-api-implementation-root-review.json",
+            "sha256": "bd8ed7bfc5c4421224efb3a30105cba9f8ecf94a6b1942786dfa8106ebd13e15",
+            "bytes": 3154
+          }
+        ],
+        "final_coordinator_receipt_review": {
+          "result": "accepted",
+          "reviewer": "/root/personal_codecs",
+          "evidence": {
+            "path": "/private/tmp/healthmd-codec-api-final-receipt-independent-review.json",
+            "sha256": "fd365c6573f4df12ebc9b9d422dfe3bda1136c25864d4f8df9226b7a96ea03cf",
+            "bytes": 3042,
+            "reviewed_receipt_sha256": "5324ec5a718398ddebf57d87d49d454759600fae5a2b1b56d4221f3528410681"
+          },
+          "scope": "Independent final receipt and actual runtime-proof review accepted for bounded portable synthetic codec facade only; packed consumer/cohort/native/public/profile qualification remains separate."
+        }
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
@@ -29111,7 +29226,54 @@
         "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
         "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
       },
-      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained.",
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "canonical_card_sha256": "1f1811b0c201725881f996dcbab80c12224f3afe8bbee59f99009d63cffcb021",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-codec-api-preclaim-card.json",
+        "scope": "Exact bounded paths/resources only; Stage1 source/literal closure beforecode/build for codecAPI, docs2only/atmost6children for archive/import planning; no currentcohort/native/public/realdata/sourceadoption/Rustretirement."
+      },
+      "exclusive_core_check_preparation": {
+        "status": "released_after_exact_success_and_final_independent_review",
+        "owner": "/root",
+        "source_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+9a33a1d493fe6250a9a8724ff7834bfe1f3220a3085279655f8cab58a0b41c6d",
+        "inputs_sha256": "39ddf37ac7d117cd7821a7cdfdbb1669c486c1de2e50ca10e821a679bf77e077",
+        "harness_sha256": "d3bb1de0c31ec3642363426f75a59a2b283f9e46598147964bd0f68435c7a963",
+        "independent_preparation_sha256": "b6cc109d137856b3b5806b87f9fd4b7acc6953e62e7e345a4813a46d9cec300e",
+        "clearance_path": "/private/tmp/healthmd-codec-api-core-check-root-clearance.json",
+        "clearance_sha256": "af1f754076b91c724aaa834f1ed47a2a16787a36bd70176a3553ffedefcca5c5",
+        "no_other_core_writes": true
+      },
+      "stage1_contract_review": {
+        "status": "accepted_source_only",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+bc54aa364f2d117058d3968627dbc3f013c0e3a73e91f4f5557c0f420915fa0d",
+        "evidence_path": "/private/tmp/healthmd-codec-api-stage1-independent-review.json",
+        "evidence_sha256": "c01a084b673fefbfb408a00e776676b23f08f1e69b234c67b306668a4b8f89b4",
+        "vector_sha256": "6e31af128f468748bc48c0b449e92188f6d0f185ef167a2edf49f7a127614db4",
+        "case_count": 80,
+        "runtime_qualified": false
+      },
+      "independent_final_review": {
+        "path": "/private/tmp/healthmd-codec-api-final-receipt-independent-review.json",
+        "sha256": "fd365c6573f4df12ebc9b9d422dfe3bda1136c25864d4f8df9226b7a96ea03cf",
+        "normalized_root_review_path": "/private/tmp/healthmd-codec-api-final-normalized-root-review.json",
+        "normalized_root_review_sha256": "95f0c2d2e48d7fc8dbede133c52fd211742419f831a250b853ed6451af2d9419",
+        "final_receipt_sha256": "fbf14b4f4a714bd17433a5c3fbe89ccc46b9425d8d94ac6b9921610ecf5d019f"
+      },
+      "actual_portable_proof": {
+        "tests": 1253,
+        "guards": 19,
+        "full_inputs": 56,
+        "full_outputs": 50,
+        "core_outputs": 34,
+        "retained_compiled_outputs": 45,
+        "raw_report_sha256": "2f5a625a45b7f3e1313443b47df42cf8efa0bcb7e52a24cf260ab008670f67ea",
+        "raw_log_sha256": "a38a5adc371aa7e3a2618758c1038c49bf98e7afe49315c1ae27db45fcbc0240",
+        "packed_consumer_admitted": false
+      }
     },
     {
       "id": "CORE-COHORT-EXACT-CODECS",
@@ -29262,9 +29424,9 @@
         "preserve_existing": true
       },
       "acceptance": [
-        "Stage1 ONLY new cohort+partial receipt: pin complete43/26 historical maps and all accepted new source/module outputs, exact package/lock/runtime/graph/raw receipts and independent reviews. No output discovery as acceptance, no own receipt reverse pin; review BEFORE guard/docs/build/install.",
+        "Stage1 ONLY new cohort+partial receipt: pin complete43/26 historical maps and all accepted new source/module outputs, exact package/lock/runtime/graph/raw passed-and-independently-accepted codec/API receipts. Define a separate closed CatalogLiteralDataAuthority for exact Catalog96 vector74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591, partial Stage1 receipt4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa and independent approval2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b; validate exact task/source/fingerprint/scope and source-only review, never relax the existing passed-and-accepted implementation receipt rule. No output discovery as acceptance, no own receipt reverse pin; review BEFORE guard/docs/build/install.",
         "Expected codec additions remain12 inputfiles and8moduleoutputs, plus reviewedreplacements package.json/README. One additional approved source-only Catalog96 literalinput is explicitly included (prospective56/34), with zero catalogbehavior/runtime/module/public admission. Reconcile complete actual accepted changedpaths/outputcontracts; never treat projectedcounts as passedmaps or ignore extras. Keep41other oldinputbytes/all26old moduleoutputs inclscalar unchanged unless separatelyreviewed generatedmetadata delta.",
-        "Retain all84 exact prior filesystem negatives; add missing/edited/symlink for each new source, missing/stale/symlink/extra JS/d.ts artifact, missing/tampered/unreviewed each accepted codec/API receipt and new cohort. Freeze full exact resulting count/catalog before implementation; no count guessed as coverage.",
+        "Retain all84 exact prior filesystem negatives; add missing/edited/symlink for each new source, missing/stale/symlink/extra JS/d.ts artifact, missing/tampered/unreviewed each accepted codec/API receipt and new cohort. Add missing/tampered/unreviewed Catalog literal approval evidence, mismatched task/source/fingerprint/scope, and attempts to infer Catalog runtime/module/grant/public admission from its data-only authority. Freeze the full exact resulting count/catalog before implementation; no count guessed as coverage.",
         "After independent authority/guard review, exclusive core check, pinned offline CLI npm ci --install-links --engine-strict --no-audit --no-fund, CLI npm run check sequentially with bounded commands/exact actual physical argv. One physical Effect graph, no symlink/deep import/self-refresh/automatic hash admission."
       ],
       "verification": [
@@ -29337,7 +29499,19 @@
         "Stage1_review_sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b",
         "partial_receipt_sha256": "4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa",
         "actual_producer_report_sha256": "cab2fea25544bf4de166c43fa9bd6e10591dbc56e0a3622c45a242953451735e",
-        "qualifies_catalog_behavior": false
+        "qualifies_catalog_behavior": false,
+        "catalog_authority_clarification": {
+          "status": "accepted_source_only_before_claim",
+          "reason": "Independent preclaim review required distinct exact approved literal-data authority and negative catalog; projected56/34 maps and strict implementation receipt rules unchanged.",
+          "independent_report_path": "/private/tmp/healthmd-exact-codecs-cohort-preclaim-independent-review.json",
+          "independent_report_sha256": "f3d00876ca74cc96af2bd14702fd5b7cda1583b966e6699fed17b192533900b5",
+          "previous_card_snapshot": "/private/tmp/healthmd-exact-codecs-cohort-before-explicit-catalog-authority-amendment.json",
+          "previous_snapshot_sha256": "99d3592331b589d6768cc78c9d0b7a9555c75fa131698ed66f4e788863f7956d",
+          "qualifies_catalog_behavior": false,
+          "amended_independent_report_path": "/private/tmp/healthmd-exact-codecs-cohort-preclaim-amended-independent-review.json",
+          "amended_independent_report_sha256": "049442baaa53ed71802d43b23e4784eddef9b5aeefb9bc3d6663ef01b329c499",
+          "canonical_card_sha256_at_independent_review": "e6a792d7e17c7182279191dc8e1ee0eed4f18d792e22d98c0be0cd70561e8ad2"
+        }
       }
     },
     {
@@ -34218,6 +34392,1517 @@
         "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
       },
       "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "MIGRATION-MAC-ARCHIVE-SCHEMA",
+      "title": "Migration Mac Archive Schema",
+      "outcome": "One pure private complete eligible Mac retained-state manifest/row schema over independently issued read-only eligible snapshot, not SQL reader. Fields preserve source row IDs/nullable origin/source_timestamp and duration nativeDouble bits/localtext/stream meaning/categories/inert preferences and declared state section coverage. Manifest stable original enumeration/partition and source revision/profile/schema/grant snapshot without caller authorization; each section complete/partial/unavailable/unknown separately. Current nonbrowser title detail only via trusted pre-observation classification+purpose API; excluded browser/input field families never read/copied/hashed. Ineligible original artifact cannot wholehash identity. Full grammar/limits/schema vs legacy evidence independently frozen before code; profile name/version private proposed.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "BASE-DOMAINS",
+        "PERSONAL-CONTRACT-REVIEW"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/mac-archive-schema.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-schema.test.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-schema-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-SCHEMA.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-mac-archive-schema-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One pure private complete eligible Mac retained-state manifest/row schema over independently issued read-only eligible snapshot, not SQL reader. Fields preserve source row IDs/nullable origin/source_timestamp and duration nativeDouble bits/localtext/stream meaning/categories/inert preferences and declared state section coverage. Manifest stable original enumeration/partition and source revision/profile/schema/grant snapshot without caller authorization; each section complete/partial/unavailable/unknown separately. Current nonbrowser title detail only via trusted pre-observation classification+purpose API; excluded browser/input field families never read/copied/hashed. Ineligible original artifact cannot wholehash identity. Full grammar/limits/schema vs legacy evidence independently frozen before code; profile name/version private proposed.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-mac-archive-schema-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "archive-all-history",
+            "input": {
+              "source_rows": [
+                {
+                  "id": "1",
+                  "age_days": 1200
+                },
+                {
+                  "id": "2",
+                  "age_days": 2
+                }
+              ],
+              "mirror_history_days": 365
+            },
+            "expected": {
+              "eligible_source_rows": 2,
+              "age_filter": false,
+              "mirror_is_full_archive": false
+            },
+            "source_basis": "/history;TRANSFER-05",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-precision",
+            "input": {
+              "duration_bits": "3fb999999999999a",
+              "source_timestamp_bits": "41d954fc4007e6b7",
+              "start_time_text": "2026-02-02T09:30:00"
+            },
+            "expected": {
+              "bits_and_text_unchanged": true,
+              "timezone_inferred": false,
+              "synthetic_exact_duration_rule": false
+            },
+            "source_basis": "native-duration;Personal81 native_source_arithmetic",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-row-null",
+            "input": {
+              "device_id": null,
+              "source_entry_id": null,
+              "source_timestamp": null
+            },
+            "expected": {
+              "retain_nulls": true,
+              "device_or_native_identity_fabricated": false
+            },
+            "source_basis": "usage-schema;source-null-and-legacy",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-title-preflight",
+            "input": {
+              "app_classification": "unknown",
+              "title_permission": true
+            },
+            "expected": {
+              "title_observe_or_hash_or_stage": false
+            },
+            "source_basis": "/exclusions;personal resolution-archive-excluded-title",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-inert-settings",
+            "input": {
+              "setting": "theme",
+              "value": "dark",
+              "old_destination_enrolled": true
+            },
+            "expected": {
+              "inert_preference_preview": true,
+              "destination_armed": false,
+              "capture_grant_transferred": false
+            },
+            "source_basis": "TRANSFER-04/13",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-unavailable-state",
+            "input": {
+              "annotations_history": "not_established",
+              "queue_state": "unavailable"
+            },
+            "expected": {
+              "invent_entities_or_empty_complete": false,
+              "state_coverage": "unavailable"
+            },
+            "source_basis": "/feature_map/1;/storage_migrations",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-snapshot-aggregate",
+            "input": {
+              "stream_type": "ios_app_usage",
+              "sync_transport": "cloudkit",
+              "bucket_duration_bits": "4082c00000000000"
+            },
+            "expected": {
+              "meaning": "source_aggregate",
+              "exact_session_boundaries": false,
+              "source_import_lineage_retained": true
+            },
+            "source_basis": "TRANSFER-08/11",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "archive-eligible-identity",
+            "input": {
+              "original_artifact_contains_excluded_material": true
+            },
+            "expected": {
+              "whole_artifact_hash_or_copy": false,
+              "new_eligible_artifact_identity_distinct": true
+            },
+            "source_basis": "Personal resolution logical identity/exclusion policy",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-SCHEMA.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-MAC-ARCHIVE-SCHEMA",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+      "title": "Migration Mac Archive Validator",
+      "outcome": "One owned bounded streaming validator produces privately issued VerifiedArchive only after wholemanifest/pages/counts/order/eligible-source binding and terminal completeness. Fixed failures/closed raw integers/UTF8/Unicode/depth/node/page/outstanding record bounds; no partial publication. Capture original codec+reader once, samefactory membership beforeproperties and exact return token identity. Coarse owned canonical eligiblebytes digest port with deterministic exactinput fake/fixedfailure; crypto/algorithm/canonical profile primitive host qualification separate, no caller checksum authority/CRC authentication.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/mac-archive-validator.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-validator.test.ts",
+        "packages/healthmd-core-ts/tests/migration-mac-archive-validator-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-VALIDATOR.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-mac-archive-validator-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One owned bounded streaming validator produces privately issued VerifiedArchive only after wholemanifest/pages/counts/order/eligible-source binding and terminal completeness. Fixed failures/closed raw integers/UTF8/Unicode/depth/node/page/outstanding record bounds; no partial publication. Capture original codec+reader once, samefactory membership beforeproperties and exact return token identity. Coarse owned canonical eligiblebytes digest port with deterministic exactinput fake/fixedfailure; crypto/algorithm/canonical profile primitive host qualification separate, no caller checksum authority/CRC authentication.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-mac-archive-validator-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "validate-shape",
+            "input": {
+              "schema_revision": true
+            },
+            "expected": {
+              "accept": false,
+              "code": "unsupported_shape",
+              "staged_bytes": 0
+            },
+            "source_basis": "Personal resolution-schema-boolean-version",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-unknown-profile",
+            "input": {
+              "schema_revision": "2",
+              "profile": "unreviewed"
+            },
+            "expected": {
+              "accept": false,
+              "code": "unsupported_shape"
+            },
+            "source_basis": "C17 independently versioned archive, no caller admission",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-complete-stream",
+            "input": {
+              "manifest_rows": "2",
+              "page_rows": [
+                1
+              ],
+              "terminal_page": false
+            },
+            "expected": {
+              "publish": false,
+              "code": "archive_incomplete"
+            },
+            "source_basis": "C17 complete available history;CLOUD complete-stream",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-integrity-port",
+            "input": {
+              "owned_eligible_bytes": "7b7d",
+              "fake_digest_result": "denied"
+            },
+            "expected": {
+              "accept": false,
+              "code": "archive_binding_mismatch",
+              "native_crypto_proven": false
+            },
+            "source_basis": "C17 trusted digest adapter;Scope ownedbytes",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-raw-counter",
+            "input": {
+              "row_id": "1e0",
+              "counter": "-0"
+            },
+            "expected": {
+              "accept": false,
+              "Number_before_grammar": false
+            },
+            "source_basis": "Personal closed canonical integer grammar",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-duplicate-ordinal",
+            "input": {
+              "original_ordinals": [
+                "0",
+                "0"
+              ]
+            },
+            "expected": {
+              "accept": false,
+              "code": "archive_identity_conflict"
+            },
+            "source_basis": "Personal original stable enumeration",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-excluded-detail",
+            "input": {
+              "field_class": "browser_title",
+              "archive_grant": true
+            },
+            "expected": {
+              "observe_field_value": false,
+              "accept_route": false
+            },
+            "source_basis": "TRANSFER-07;metadata exclusion before observation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "validate-partial",
+            "input": {
+              "scope": "whole_eligible_state",
+              "coverage": "partial",
+              "strict": true
+            },
+            "expected": {
+              "stage_commit": false,
+              "code": "archive_incomplete"
+            },
+            "source_basis": "C17/P03 strict complete-state preview disclosure",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-MAC-ARCHIVE-VALIDATOR.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-MAC-ARCHIVE-VALIDATOR",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "MIGRATION-OWNED-STAGING",
+      "title": "Migration Owned Staging",
+      "outcome": "One Effect owned invisible staging boundary with captured current/originalScope and per lazy source/detail/job/independent frontier check beforeobservation and afterawait. Resourcefree interruptible prepare, finite masked completed allocation+originalScope finalizer registration, closed signal before trustedcallbacks withoutselfjoin, watcher phase stopjoin, innercallback expires before postcurrent/releaseACK; protected ACK/busy held; cleanup>externalinterrupt>closed>use precedence. Stage privately issued immutable verified descriptors; zero visible mutation before commit.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-VALIDATOR"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/owned-staging.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-staging.test.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-staging-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-STAGING.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-owned-staging-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect owned invisible staging boundary with captured current/originalScope and per lazy source/detail/job/independent frontier check beforeobservation and afterawait. Resourcefree interruptible prepare, finite masked completed allocation+originalScope finalizer registration, closed signal before trustedcallbacks withoutselfjoin, watcher phase stopjoin, innercallback expires before postcurrent/releaseACK; protected ACK/busy held; cleanup>externalinterrupt>closed>use precedence. Stage privately issued immutable verified descriptors; zero visible mutation before commit.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-owned-staging-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "stage-invisible",
+            "input": {
+              "pages": 2,
+              "validated_pages": 1
+            },
+            "expected": {
+              "query_visible": false,
+              "preview_only_owned_receipt": true
+            },
+            "source_basis": "C17/P03 stage atomic import",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-job-revoke",
+            "input": {
+              "source_grant": true,
+              "destination_grant": false
+            },
+            "expected": {
+              "materialized_pages": 0,
+              "commit_calls": 0,
+              "code": "scope_not_authorized"
+            },
+            "source_basis": "distinct source/detail/destination grants",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-source-reentry",
+            "input": {
+              "source_check_revokes_job": true,
+              "source_return": "permitted"
+            },
+            "expected": {
+              "page_reads": 0,
+              "materializations": 0,
+              "recheck_job": true
+            },
+            "source_basis": "accepted combined reentry obligation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-scope-close",
+            "input": {
+              "closed_during_lazy_read": true,
+              "reprovided_scope_live": true
+            },
+            "expected": {
+              "text": null,
+              "code": "owned_handoff_closed",
+              "release_ack": 1
+            },
+            "source_basis": "captured originalScope;no reprovide",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-escaped-view",
+            "input": {
+              "inner_callback_returned": true
+            },
+            "expected": {
+              "read_value": null,
+              "new_current_checks": 0
+            },
+            "source_basis": "actual inner callback expiry before postcurrent/ACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cancel-prepare",
+            "input": {
+              "phase": "resource_free_prepare",
+              "interrupt": true
+            },
+            "expected": {
+              "allocated_resources": 0,
+              "release_ack": 0
+            },
+            "source_basis": "owned bracket preparation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cancel-owned",
+            "input": {
+              "phase": "registered_completed_allocation",
+              "interrupt": true
+            },
+            "expected": {
+              "use_calls": 0,
+              "release_ack": 1,
+              "terminal_before_ack": false
+            },
+            "source_basis": "finite atomic handoff/protectedACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "stage-cleanup-fail",
+            "input": {
+              "release": "failed"
+            },
+            "expected": {
+              "publish": false,
+              "poisoned": true,
+              "successful_ack": false
+            },
+            "source_basis": "cleanupfailure precedence",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-STAGING.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-OWNED-STAGING",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "MIGRATION-ORIGINAL-IDENTITY",
+      "title": "Migration Original Identity",
+      "outcome": "One pure original logical record identity/conflict-key boundary retains exact original artifact/logical partition/ordinal/native aliases/revisions/device/install known/unknown plus lossless field vector. No content similarity, local unique key/source snapshot row alias is not global native event ID. Native source Date subtraction/profile distinct synthetic exactobserved grammar. Rechunk/idempotent links preserve original enumeration. Exact rational mixedepoch eligibility comparison delegates reviewed Personal codec; reject unrepresentable projections, no precisionrepair or sourceprofile guessing.",
+      "stream": "personal_data",
+      "phase": "M03",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-MAC-ARCHIVE-SCHEMA"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/original-identity.ts",
+        "packages/healthmd-core-ts/tests/migration-original-identity.test.ts",
+        "packages/healthmd-core-ts/tests/migration-original-identity-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-ORIGINAL-IDENTITY.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-original-identity-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One pure original logical record identity/conflict-key boundary retains exact original artifact/logical partition/ordinal/native aliases/revisions/device/install known/unknown plus lossless field vector. No content similarity, local unique key/source snapshot row alias is not global native event ID. Native source Date subtraction/profile distinct synthetic exactobserved grammar. Rechunk/idempotent links preserve original enumeration. Exact rational mixedepoch eligibility comparison delegates reviewed Personal codec; reject unrepresentable projections, no precisionrepair or sourceprofile guessing.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-original-identity-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "identity-scope-row",
+            "input": {
+              "local_id": "7",
+              "artifact_a": "A",
+              "artifact_b": "B"
+            },
+            "expected": {
+              "equivalent_without_lineage": false,
+              "global_id_from_row_id": false
+            },
+            "source_basis": "autoincrement not globally immutable",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-rechunk",
+            "input": {
+              "original_artifact": "A",
+              "logical_partition": "root",
+              "ordinal": "7",
+              "transport_pages": [
+                "p1",
+                "p2"
+              ]
+            },
+            "expected": {
+              "logical_keys": 1,
+              "page_not_identity": true
+            },
+            "source_basis": "Personal resolution-repartition-key",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-repeat",
+            "input": {
+              "same_original_key": true,
+              "same_lossless_fields": true
+            },
+            "expected": {
+              "new_logical_records": 0,
+              "evidence_links_retained": true
+            },
+            "source_basis": "Personal original-record-equality",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-precision-conflict",
+            "input": {
+              "same_key": true,
+              "rounded_canonical_equal": true,
+              "duration_bits_differ": true
+            },
+            "expected": {
+              "accept": false,
+              "code": "record_identity_conflict"
+            },
+            "source_basis": "Personal resolution-lossy-equality-conflict",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-cross-device",
+            "input": {
+              "device_A": "A",
+              "device_B": "B",
+              "same_app_time": true
+            },
+            "expected": {
+              "collapse": false,
+              "import_tuple_includes_device": true
+            },
+            "source_basis": "import-unique",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-native-origin-unknown",
+            "input": {
+              "stable_artifact_enumeration": false,
+              "native_identity": null
+            },
+            "expected": {
+              "automatic_merge": false,
+              "native_identity": "unknown"
+            },
+            "source_basis": "Personal missing stable import order",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-timezone-text",
+            "input": {
+              "source_timestamp_present": false,
+              "local_start_text": "2026-11-01T01:30:00"
+            },
+            "expected": {
+              "epoch_invented": false,
+              "timezone_invented": false,
+              "uncertainty_retained": true
+            },
+            "source_basis": "/history collector clock",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "identity-returned-value",
+            "input": {
+              "same_callback_owns_A_B": true,
+              "returned_outcome": "A",
+              "probe": "B"
+            },
+            "expected": {
+              "wire": null,
+              "callback_authority_checks": 0,
+              "outcome_A_remains_usable": true
+            },
+            "source_basis": "exact returned value binding;CLI84 accepted obligation",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-ORIGINAL-IDENTITY.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-ORIGINAL-IDENTITY",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "MIGRATION-CONFLICT-COMMIT",
+      "title": "Migration Conflict Commit",
+      "outcome": "One Effect bounded conflict plan/accepted import commit on coarse transactional host port, no SQL field primitives. Preview original/current source+destination/source/detail+latest independent suppression, explicit confirmation, version/checkpoint compare and whole batch atomicity; current callback reentry and exact returned plan membership before materialization and finite commit handoff. Port returns committed/definitely_not/ambiguous with durable job identity, protected cleanupACK not rollback. Source-specific imported device/day empty-day replacement distinct from direct observations and other devices; never multiply aggregate/session rows or delete original evidence.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-OWNED-STAGING",
+        "MIGRATION-ORIGINAL-IDENTITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/conflict-commit.ts",
+        "packages/healthmd-core-ts/tests/migration-conflict-commit.test.ts",
+        "packages/healthmd-core-ts/tests/migration-conflict-commit-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-CONFLICT-COMMIT.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-conflict-commit-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect bounded conflict plan/accepted import commit on coarse transactional host port, no SQL field primitives. Preview original/current source+destination/source/detail+latest independent suppression, explicit confirmation, version/checkpoint compare and whole batch atomicity; current callback reentry and exact returned plan membership before materialization and finite commit handoff. Port returns committed/definitely_not/ambiguous with durable job identity, protected cleanupACK not rollback. Source-specific imported device/day empty-day replacement distinct from direct observations and other devices; never multiply aggregate/session rows or delete original evidence.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-conflict-commit-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "conflict-day-replacement",
+            "input": {
+              "source_device": "A",
+              "source_day": "2026-02-02",
+              "new_snapshot": [],
+              "other_device": "B"
+            },
+            "expected": {
+              "A_day_replacement_only": true,
+              "B_unchanged": true,
+              "empty_day_not_noop": true
+            },
+            "source_basis": "TRANSFER-08 source/day replacement",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-observed-vs-imported",
+            "input": {
+              "same_app_overlap": true,
+              "direct_fact": true,
+              "imported_summary": true
+            },
+            "expected": {
+              "raw_originals_retained": 2,
+              "no_double_count_or_synthetic_merge": true,
+              "source_precedence_explicit": true
+            },
+            "source_basis": "/history dedup/sync source precedence",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-delete-replay",
+            "input": {
+              "current_external_delete": true,
+              "old_archive": true,
+              "new_grant": true
+            },
+            "expected": {
+              "resurrect": false,
+              "publish": false
+            },
+            "source_basis": "Personal resolution-delete-backup-regrant;CLOUD suppression",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-frontier-moves",
+            "input": {
+              "preview_frontier": "1",
+              "commit_frontier": "2"
+            },
+            "expected": {
+              "commit": false,
+              "staging_visible": false,
+              "code": "scope_binding_mismatch"
+            },
+            "source_basis": "Personal frontier-before-commit",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-preview-not-accept",
+            "input": {
+              "previewed": true,
+              "explicit_confirmed_current": false
+            },
+            "expected": {
+              "commit": false,
+              "new_state": 0
+            },
+            "source_basis": "P03 preview explicit acceptance",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-ambiguous-commit",
+            "input": {
+              "commit_disposition": "ambiguous"
+            },
+            "expected": {
+              "code": "commit_ambiguous",
+              "retry_or_rollback_claim": false,
+              "reconcile_by_job_identity": true
+            },
+            "source_basis": "CLOUD ledger/outbox and P03",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-atomic-invalidbatch",
+            "input": {
+              "rows": [
+                "valid",
+                "invalid"
+              ]
+            },
+            "expected": {
+              "committed_rows": 0,
+              "checkpoint_changed": false
+            },
+            "source_basis": "accepted datastore bounded batch/checkpoint",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "conflict-cancel-aftercommit",
+            "input": {
+              "committed": true,
+              "cancel_requested": true
+            },
+            "expected": {
+              "disposition": "committed",
+              "claimed_rollback": false
+            },
+            "source_basis": "terminalledger decision and ACK",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-CONFLICT-COMMIT.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-CONFLICT-COMMIT",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "MIGRATION-OWNED-UNDO",
+      "title": "Migration Owned Undo",
+      "outcome": "One Effect owned Undo for exactly one accepted import job, preserves prestate evidence and later data/corrections/checkpoint/frontiers. Current external delete/revoke/retention suppressions outside backup always win; no regrant/oldbackup/rename restoration. Compare lineage/version plan before one coarse host commit, terminal dispositions/idempotent retry/reconcile and protectedACK, recipient copies cannot be recalled. Donor store/readers remain untouched; real crash/fsync/restoration host proof separate.",
+      "stream": "personal_data",
+      "phase": "M04",
+      "kind": "implementation",
+      "prerequisites": [
+        "MIGRATION-CONFLICT-COMMIT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C17",
+        "P03",
+        "O11"
+      ],
+      "risk_ids": [
+        "F13",
+        "F16"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+        "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+        "docs/migration/effect-refactor/inventories/donor-location.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+        "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
+        "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/migration/owned-undo.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-undo.test.ts",
+        "packages/healthmd-core-ts/tests/migration-owned-undo-vectors.ts",
+        "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-UNDO.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-owned-undo-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private synthetic eligible Mac retained-state archive"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "One Effect owned Undo for exactly one accepted import job, preserves prestate evidence and later data/corrections/checkpoint/frontiers. Current external delete/revoke/retention suppressions outside backup always win; no regrant/oldbackup/rename restoration. Compare lineage/version plan before one coarse host commit, terminal dispositions/idempotent retry/reconcile and protectedACK, recipient copies cannot be recalled. Donor store/readers remain untouched; real crash/fsync/restoration host proof separate.",
+      "fixture_inputs": "Independently freeze full closed input/result/error/ownership port grammar and literal bytes/state/cancel corpus at introduced vector path BEFORE implementation. Below8 cases are source-backed minima, not complete interfaces or donor-produced archives. Use exact source/blob/pointer pins and all retained source obligations.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/migration-owned-undo-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "undo-only-import",
+            "input": {
+              "imported_keys": [
+                "A"
+              ],
+              "later_new_key": "B"
+            },
+            "expected": {
+              "restore_pre_import_A": true,
+              "preserve_B": true
+            },
+            "source_basis": "P03 Undo newdata safety",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-later-correction",
+            "input": {
+              "import_job": "J",
+              "later_revision": "2"
+            },
+            "expected": {
+              "erase_later_revision": false,
+              "code": "undo_conflict"
+            },
+            "source_basis": "P03 correction version lineage",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-delete-fence",
+            "input": {
+              "pre_import_A_exists": true,
+              "latest_delete_A": true
+            },
+            "expected": {
+              "restore_A": false,
+              "code": "restoration_fenced"
+            },
+            "source_basis": "Personal resolution-delete-restore-denied",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-revoke-fence",
+            "input": {
+              "local_backup_allows": true,
+              "latest_external_revoke": true
+            },
+            "expected": {
+              "restore_visible_or_publish": false
+            },
+            "source_basis": "CLOUD latest independent suppression",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-repeat",
+            "input": {
+              "job": "J",
+              "undo_already_committed": true
+            },
+            "expected": {
+              "second_mutation": 0,
+              "same_terminal_receipt": true
+            },
+            "source_basis": "P03 idempotent Undo",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-ambiguous",
+            "input": {
+              "undo_commit": "ambiguous"
+            },
+            "expected": {
+              "retry_assumed_safe": false,
+              "code": "commit_ambiguous",
+              "ack_not_rollback": true
+            },
+            "source_basis": "P03/CLOUD ambiguous transaction ledger",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-donor-retained",
+            "input": {
+              "target_undo": true
+            },
+            "expected": {
+              "donor_sql_migrations_or_delete": false,
+              "donor_reader_still_required": true
+            },
+            "source_basis": "TRANSFER-07;F13",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          },
+          {
+            "case_id": "undo-copy-limit",
+            "input": {
+              "recipient_downloaded": true,
+              "grant_revoked": true
+            },
+            "expected": {
+              "new_reads": false,
+              "recipient_recall_claim": false
+            },
+            "source_basis": "Personal recipient-copy limit",
+            "case_status": "pre-code planning minimum; full closed Stage1 expected corpus required"
+          }
+        ],
+        "donor_source_locators": [
+          "usage-schema",
+          "source-null-and-legacy",
+          "local-unique",
+          "import-unique",
+          "native-duration",
+          "discarded-short",
+          "category-table",
+          "snapshot-order",
+          "snapshot-row-alias",
+          "mirror-filter"
+        ],
+        "source_profile": "proposed eligible read-only Mac retained-state snapshot; native producer not implemented; no actual SQLite consumed"
+      },
+      "acceptance": [
+        "Independently accepted full Stage1 typed interfaces and source-derived literals before code; no candidate-generated expectations or expected-driven fake ports.",
+        "Retain allavailable history/precision/original identities/categories/settings and unknowns; private paging never silently trims total archive; complete versus legacy/partial coverage explicit.",
+        "Trusted current source/detail/destination/latest external suppression and capturedoriginalScope before everylazy materialization and publication, exact returned token identity/innercallback expiry, owned atomic handoff/protectedACK/ambiguity as scoped interface requires.",
+        "All frozen literal scenarios and meaningful ownership/state/cancel/replay/foreignProxy/current reentry tests against actual candidate API; no native/durable/auth/crypto/source eligibility from fakes.",
+        "Exact new files only; no index/export/lock/package/guard/cohort/native/public migrations. Real archive producer/complete installed-state read/grants/crash/recovery/clients remain separate gates."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "precondition": "ROOT independently approves full Stage1 and complete frozen current/successor core input/output map and exclusive build window; pinned Node24.21/npm11.19. No build/install in this planning task.",
+          "expected": "actual immutable full fixture tests/source/output hashes and sourceboundaries/oneEffect; proposed counts are not runtime results",
+          "availability_evidence": "existing current scripts/check.mjs"
+        }
+      ],
+      "consumers": "Common UI/CLI/MCP import preview/commit/Undo adapters after separate admission; native archive producer and authorized durable host; health existing exporters/profile readers retained.",
+      "rollback": "Private candidate module removable; original donor/native/health public source and retained store readable; Undo never erases newer state or accepted suppression.",
+      "deletion_gate": "No donor/state/source/Rust retirement or production permission transfer.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/MIGRATION-OWNED-UNDO.json",
+      "reviewer_role": "independent migration/privacy/state reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-migration.json",
+        "child_id": "MIGRATION-OWNED-UNDO",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "f35115c9187ad8453f27e2524937c56ee09639893cf9211588166141e5b05592",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
     }
   ]
 }

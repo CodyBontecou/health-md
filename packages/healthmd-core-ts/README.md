@@ -11,3 +11,19 @@ Effect is the only runtime dependency. TypeScript 7 and esbuild use pinned optio
 Boundary checks traverse every own source module (including unused ones) and the neutral esbuild graph. They reject unsupported imports, nonliteral dynamic imports and host global references, and verify a single Effect installation. These checks are a candidate admission guard, not a complete native VM/global audit. Native host, public profile, signed release and retirement evidence remain separate.
 
 Packed hosts qualify the complete reviewed source/build input cohort and the sixteen accepted emitted files. CORE-CANDIDATE-API reviews only this export manifest and documentation metadata over the accepted REGISTRY-READER code authority; the historical registry receipt retains its original manifest hash. Future semantic source additions require separately reviewed cohort rebinding and affected host integration before CLI qualification. The registry reader still requires reviewed host byte binding; traversal fake byte attestations and transport completion do not prove native authorization, serialization, full query grammar or complete health coverage.
+
+The private `@healthmd/core-ts/candidate/codecs` subpath reexports the original
+`createExactJsonNumberParser`, `createExactJsonCodec`,
+`createCanonicalJsonSerializer`, and `serializeExactJsonNumber` functions.
+Its ten named types retain the original opaque handles and fixed failures.
+Compose the value factory's original `codec` and opaque `readerToken` into the
+serializer constructor; a token from another factory fails authentication.
+The facade exposes no reader, AST, named token type, wildcard, or new algorithm.
+It retains default serde numeric classes, strict UTF-8, decoded duplicate keys,
+UTF-8 key order, compact bytes and the explicit compact-LF policy under the
+original private budgets. Pure graph ownership grants no source, permission,
+or operation lifetime authority. Root exports and the six earlier package
+entries remain unchanged. A portable core check qualifies this facade's source
+and declarations; packed CLI/MCP adoption still requires the separately reviewed
+successor cohort and consumer binding. Catalog's 96-scene fixture remains
+Stage1 data-only and supplies no implementation or capability authority.

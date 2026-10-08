@@ -11,6 +11,10 @@
     "./candidate/catalog": { "types": "./dist/core/operations/catalog.d.ts", "import": "./dist/core/operations/catalog.js" },
     "./candidate/normalize": { "types": "./dist/core/operations/normalize.d.ts", "import": "./dist/core/operations/normalize.js" },
     "./candidate/query": { "types": "./dist/core/operations/query.d.ts", "import": "./dist/core/operations/query.js" },
+    "./candidate/codecs": {
+      "types": "./dist/core/serialization/index.d.ts",
+      "import": "./dist/core/serialization/index.js"
+    },
     "./candidate/registry": { "types": "./dist/core/contracts/registry.d.ts", "import": "./dist/core/contracts/registry.js" }
   },
   "files": ["dist/core"],
