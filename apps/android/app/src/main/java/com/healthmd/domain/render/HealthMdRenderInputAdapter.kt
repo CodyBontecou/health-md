@@ -342,6 +342,19 @@ object HealthMdRenderInputAdapter {
         val metricsBySelection = registry.metrics.associateBy { it.selectionId }
         val selectedOutputKeys = day.getValue("values").jsonArray
             .map { it.jsonObject.getValue("output_key").jsonPrimitive.content }
+        // Machine units come from the pinned profile, independently of rounded
+        // display values and the user's requested presentation units.
+        val canonicalSummaryUnits = if (nativeWakeDateContext != null) {
+            selectedOutputKeys.associateWith { key ->
+                val output = outputs[key] ?: throw AdapterException("registry output is invalid")
+                output.unit.ifEmpty {
+                    val units = output.selectionIds.map { selection ->
+                        metricsBySelection[selection]?.unit ?: throw AdapterException("registry unit is invalid")
+                    }.distinct()
+                    units.singleOrNull() ?: throw AdapterException("registry unit is ambiguous")
+                }
+            }
+        } else emptyMap()
         val presentationFields = presentationData?.let { data ->
             val fields = if (nativeWakeDateContext != null) {
                 HealthDataFields.extractForWakeDate(data, presentationCustomization.unitConverter, presentationCustomization.timeFormat)
@@ -417,6 +430,7 @@ object HealthMdRenderInputAdapter {
                     options,
                     selectedOutputKeys,
                     nativeWakeDateContext,
+                    canonicalSummaryUnits,
                 ),
             )
         }
@@ -428,6 +442,7 @@ object HealthMdRenderInputAdapter {
         options: Options,
         semanticOutputKeys: List<String>,
         nativeWakeDateContext: AndroidCaptureContext?,
+        canonicalSummaryUnits: Map<String, String>,
     ): JsonObject {
         if (data == null) {
             return buildJsonObject {
@@ -475,7 +490,23 @@ object HealthMdRenderInputAdapter {
         }
         val jsonRoot = if ("json" in options.formats || options.api != null) {
             val rendered = JsonExporter().export(data, customization, options.includeGranularData, captureContext = nativeWakeDateContext)
-            orderedJson(json.parseToJsonElement(rendered))
+            val payload = json.parseToJsonElement(rendered)
+            val prepared = if (nativeWakeDateContext != null) {
+                val root = payload as? JsonObject ?: throw AdapterException("native JSON units are invalid")
+                val inherited = root["units"] as? JsonObject ?: throw AdapterException("native JSON units are invalid")
+                val units = inherited.toMutableMap()
+                canonicalSummaryUnits.forEach { (key, unit) ->
+                    units[key]?.let { declared ->
+                        val value = declared as? JsonPrimitive
+                        if (value == null || !value.isString || value.content != unit) {
+                            throw AdapterException("native JSON units are incompatible")
+                        }
+                    }
+                    units[key] = JsonPrimitive(unit)
+                }
+                JsonObject(root.toMutableMap().apply { put("units", JsonObject(units.toSortedMap())) })
+            } else payload
+            orderedJson(prepared)
         } else {
             JsonNull
         }

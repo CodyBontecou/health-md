@@ -160,6 +160,38 @@ class HealthMdRenderInputAdapterTest {
         }
     }
 
+    @Test
+    fun nativeSelectedUnitsFollowFrozenRegistryAndRejectAmbiguousSelectionUnits() {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val base = registry().copy(registryVersion = 2u, registrySha256 = HEALTHMD_SLEEP_REGISTRY_SHA256,
+            profileId = "android_sleep_v6", publicProfileId = "android-sleep-v6", publicSchemaVersion = 6u)
+        val captured = HealthData(LocalDate.of(2026, 7, 25),
+            activity = ActivityData(steps = 1234, walkingRunningDistance = 1000.0))
+        fun encode(selected: CoreMetricRegistrySnapshot) = HealthMdRenderInputAdapter.encode(
+            successorResult(), selected, "UTC", HealthMdRenderInputAdapter.Options("unit-authority", listOf("json")),
+            presentationByOwnerDate = mapOf(captured.date.toString() to captured), captureContext = context,
+        )
+        for ((outputUnit, expected) in listOf("count" to "count", "steps" to "steps", "" to "count")) {
+            val encoded = encode(base.copy(outputs = base.outputs.map { it.copy(unit = outputUnit) }))
+            val root = Json.parseToJsonElement(encoded.batches.single().decodeToString()).jsonObject
+                .getValue("days").jsonArray.single().jsonObject.getValue("profile_documents").jsonObject
+                .getValue("json_root").jsonObject
+            val units = root.getValue("entries").jsonArray.single {
+                it.jsonObject.getValue("key").jsonPrimitive.content == "units"
+            }.jsonObject.getValue("value").jsonObject.getValue("entries").jsonArray.associate {
+                it.jsonObject.getValue("key").jsonPrimitive.content to
+                    it.jsonObject.getValue("value").jsonObject.getValue("value").jsonPrimitive.content
+            }
+            assertThat(units).containsExactly("steps", expected)
+        }
+        val ambiguous = base.copy(
+            metrics = base.metrics + base.metrics.single().copy(selectionId = "other-selection", unit = "kg"),
+            outputs = base.outputs.map { it.copy(unit = "", selectionIds = listOf("steps", "other-selection")) },
+        )
+        val failure = assertThrows(HealthMdRenderInputAdapter.AdapterException::class.java) { encode(ambiguous) }
+        assertThat(failure.message).isEqualTo("registry unit is ambiguous")
+    }
+
     private fun successorResult(): ByteArray {
         val old = Json.parseToJsonElement(semanticResult().decodeToString()).jsonObject
         return JsonObject(old.toMutableMap().apply {

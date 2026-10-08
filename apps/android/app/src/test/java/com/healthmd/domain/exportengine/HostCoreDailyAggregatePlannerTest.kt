@@ -91,6 +91,9 @@ class HostCoreDailyAggregatePlannerTest {
             if (item.relativePath.endsWith(".json")) {
                 val root = Json.parseToJsonElement(text).jsonObject
                 assertThat(root.getValue("schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
+                assertThat(root.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content }).containsExactly(
+                    "sleep_total_hours", "hours", "sleep_light_hours", "hours", "steps", "steps",
+                )
                 assertThat(root.getValue("schema_version").jsonPrimitive.content).isEqualTo("6")
                 assertThat(root.getValue("type").jsonPrimitive.content).isEqualTo("health-data")
                 assertThat(root.getValue("sleep").jsonObject.getValue("totalDuration").jsonPrimitive.content.toDouble()).isEqualTo(29700.0)
