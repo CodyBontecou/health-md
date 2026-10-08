@@ -50,6 +50,7 @@ fun SettingsScreen(
     onNavigateToClinicianReport: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
     onNavigateToSharedSetup: () -> Unit = {},
+    onNavigateToDiagnostics: () -> Unit = {},
 ) {
     val isPurchased by viewModel.isPurchased.collectAsStateWithLifecycle()
     val distributionPolicy = viewModel.distributionPolicy
@@ -150,6 +151,14 @@ fun SettingsScreen(
             subtitle = stringResource(R.string.settings_direct_cli_subtitle),
             icon = Icons.Outlined.Computer,
             onClick = onNavigateToDirectCli,
+        )
+
+        SettingsNavigationCard(
+            title = stringResource(R.string.diagnostics_title),
+            subtitle = stringResource(R.string.diagnostics_entry),
+            icon = Icons.Outlined.BugReport,
+            onClick = onNavigateToDiagnostics,
+            modifier = Modifier.testTag("diagnostics.entry"),
         )
 
         HealthDiagnosticsSection(

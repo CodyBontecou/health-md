@@ -3578,6 +3578,15 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
             fail(f"{context}: canonical Bases fixture must include all metric projections")
 
 
+def validate_diagnostics_fixture(root: Path, path: Path) -> None:
+    from diagnostics.validate import validate_fixture
+
+    try:
+        validate_fixture(root, path, validate_json_schema_subset, ContractValidationError)
+    except (OSError, ValueError, KeyError, AssertionError) as error:
+        fail(f"diagnostics: {error}")
+
+
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
     manifest_path = root / "packages/contracts/manifest.json"
     manifest = require_exact_keys(
@@ -3703,6 +3712,8 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_v2_profile_policy_fixture(fixture_path)
                 else:
                     fail(f"{fixture_context}: unknown healthmd.direct.android fixture file")
+            elif identifier == "healthmd.diagnostics":
+                validate_diagnostics_fixture(root, fixture_path)
             elif identifier == "healthmd.semantic_input":
                 if fixture_path.name == "range-profile-revision-v2.json":
                     validate_semantic_range_capability_fixture(fixture_path)

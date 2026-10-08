@@ -50,6 +50,7 @@ final class ScheduledExportCoordinator {
             makeSettingsSnapshot: makeSettingsSnapshot
         )
         try pendingExportStore.upsert(request)
+        DiagnosticRecorder.shared.record(.requestQueued, fields: [.operationId: .text(request.id.uuidString.lowercased()), .dayCount: .integer(Int64(request.dates.count))])
         try await exportNotificationScheduler.schedulePendingExportNotification(for: request)
         return request
     }

@@ -39,6 +39,24 @@
   ],
   "capabilities": [
     {
+      "id": "diagnostics.local_bundle",
+      "name": "Local diagnostic events and reviewed bundles",
+      "classification": "shared",
+      "summary": "Inspect bounded privacy-classified technical events, separately opt into recording/sharing peer context, attach any existing original files including health exports, and explicitly review/save/share a frozen local ZIP without automatic uploads or new health reads.",
+      "profiles": [],
+      "platforms": {
+        "apple": { "state": "available" },
+        "android": { "state": "available" }
+      },
+      "evidence": [
+        "packages/contracts/diagnostics/v1/contract.md",
+        "apps/apple/docs/features/diagnostics.md",
+        "apps/android/docs/features/diagnostics.md",
+        "apps/apple/HealthMdTests/Diagnostics/DiagnosticRecorderTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/diagnostics/DiagnosticStoreTest.kt"
+      ]
+    },
+    {
       "id": "export.daily-files",
       "name": "Daily local export files",
       "classification": "shared",

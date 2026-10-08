@@ -112,6 +112,8 @@ class ProductCapabilityManifestTest {
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
+            "direct.full_public_authorized_corpus",
+            "diagnostics.local_bundle",
         )
 
         val appleCapabilities = setOf(

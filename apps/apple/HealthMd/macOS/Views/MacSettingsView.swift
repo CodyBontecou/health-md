@@ -156,6 +156,7 @@ struct MacGeneralSettingsView: View {
     @EnvironmentObject var encryptedHealthContextManager: MacEncryptedHealthContextManager
     @State private var showClearConfirmation = false
     @State private var showEncryptedContextDeleteConfirmation = false
+    @State private var showDiagnostics = false
     @State private var showRetentionConfirmation = false
     @State private var retentionBoundary = Date()
     private let privacyPolicyURL = URL(string: "https://healthmd.app/privacy-policy.html")!
@@ -323,7 +324,14 @@ struct MacGeneralSettingsView: View {
             } header: {
                 BrandLabel("Feedback")
             }
+            Section {
+                Button("Diagnostics", systemImage: "doc.text.magnifyingglass") { showDiagnostics = true }
+                    .accessibilityIdentifier("diagnostics.entry")
+                Text("Inspect local technical events and choose what to share. No automatic uploads.")
+                    .font(BrandTypography.caption()).foregroundStyle(Color.textSecondary)
+            }
         }
+        .sheet(isPresented: $showDiagnostics) { DiagnosticsView() }
         .formStyle(.grouped)
         .geistDialog(
             isPresented: $showClearConfirmation,

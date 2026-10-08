@@ -17,15 +17,21 @@ final class WindowManager {
 class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        DiagnosticRecorder.shared.record(.appStarted)
         UNUserNotificationCenter.current().delegate = self
         // Notification permission is requested when the user enables a schedule.
     }
 
     func applicationDidBecomeActive(_ notification: Notification) {
+        DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("macos_application_did_become_active")])
         // Perform catch-up export if the schedule was missed while the app was inactive
         Task { @MainActor in
             await SchedulingManager.shared.performCatchUpExportIfNeeded()
         }
+    }
+
+    func applicationDidResignActive(_ notification: Notification) {
+        DiagnosticRecorder.shared.record(.nativeLifecycle, fields: [.nativeCallback: .text("macos_application_did_resign_active")])
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
@@ -54,6 +60,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         if response.notification.request.identifier.contains("export") {
+            DiagnosticRecorder.shared.record(.notificationTapped, fields: [.trigger: .text("notification")])
             NSApp.activate(ignoringOtherApps: true)
             WindowManager.shared.openMainWindow?()
         }
@@ -76,6 +83,7 @@ class MacAppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterD
     func application(_ application: NSApplication,
                      didReceiveRemoteNotification userInfo: [String: Any]) {
         guard userInfo["type"] as? String == "scheduled-export" else { return }
+        DiagnosticRecorder.shared.record(.triggerReceived, fields: [.trigger: .text("silent_push")])
         Task { @MainActor in
             await SchedulingManager.shared.performCatchUpExportIfNeeded()
         }

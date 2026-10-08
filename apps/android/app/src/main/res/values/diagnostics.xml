@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="diagnostics_title">Diagnostics</string>
+    <string name="diagnostics_entry">Inspect local technical events and choose what to share</string>
+    <string name="diagnostics_recording">Local Recording</string>
+    <string name="diagnostics_privacy">Diagnostics stay on this device until you save or share them. Operational events exclude health values, health record IDs, requested health dates, paths, endpoints, and credentials. They are not anonymous.</string>
+    <string name="diagnostics_enabled">Record Operational Events</string>
+    <string name="diagnostics_retention">Verbosity changes detail—not permission to collect health content. Retention: up to 7 days / 20 MiB. No automatic uploads.</string>
+    <string name="diagnostics_start_private">Record Private Context for 15 Minutes</string>
+    <string name="diagnostics_stop_private">Stop Private Recording</string>
+    <string name="diagnostics_private_description">V1 private context records peer names where available. It does not capture health payloads, credentials, or arbitrary error text. Private segments expire within 24 hours on the next app access.</string>
+    <string name="diagnostics_private_until">Private recording expires: %1$s</string>
+    <string name="diagnostics_clear">Clear All Diagnostics</string>
+    <string name="diagnostics_clear_question">Delete local events, prepared bundles, and attachment copies? This stops private recording. Exported files and shared copies are unaffected.</string>
+    <string name="diagnostics_select">Select Events</string>
+    <string name="diagnostics_hour">Last Hour</string>
+    <string name="diagnostics_day">Last 24 Hours</string>
+    <string name="diagnostics_week">Last 7 Days</string>
+    <string name="diagnostics_operation">Operation UUID (Optional)</string>
+    <string name="diagnostics_include_private">Include Recorded Private Context</string>
+    <string name="diagnostics_search">Search Event IDs or Fields</string>
+    <string name="diagnostics_refresh">Refresh Events</string>
+    <string name="diagnostics_summary">%1$d events · %2$d session drops · %3$d invalid · truncated=%4$s</string>
+    <string name="diagnostics_view_limit">Showing the newest 100 matching events. The bundle includes the selected snapshot, up to 10,000 events; any truncation is disclosed.</string>
+    <string name="diagnostics_attachments">Optional Attachments</string>
+    <string name="diagnostics_attachment_description">Add any existing files, including health exports or screenshots. Original bytes are copied unchanged and are NOT scrubbed. Source filenames are included. No new health reads are made. Limit: 50 files / 100 MiB.</string>
+    <string name="diagnostics_choose">Choose Files…</string>
+    <string name="diagnostics_remove">Remove %1$s</string>
+    <string name="diagnostics_prepare">Prepare Bundle</string>
+    <string name="diagnostics_review">Prepare and Review</string>
+    <string name="diagnostics_frozen">Frozen snapshot: %1$d events. Health content: %2$s. ZIP is not encrypted.</string>
+    <string name="diagnostics_reviewed">I Reviewed the Files I Want to Share</string>
+    <string name="diagnostics_share">Share Reviewed ZIP</string>
+    <string name="diagnostics_save">Save Reviewed ZIP</string>
+    <string name="diagnostics_share_question">Share This Diagnostic Bundle?</string>
+    <string name="diagnostics_share_warning">The ZIP is not encrypted. Included private context and attachments may expose health data or secrets. Public GitHub/Discord posts may be accessible to anyone. The destination controls its own copies; Health.md cannot recall them.</string>
+    <string name="diagnostics_share_confirm">Share This Bundle</string>
+    <string name="diagnostics_bundle_retention">Local bundles expire within 24 hours on the next app access, and only the newest 3 are retained. Saved or shared copies have their own retention.</string>
+    <string name="diagnostics_preview_truncated">\n\n[Preview truncated at 128 KiB. Full original file remains in the ZIP.]</string>
+    <string name="diagnostics_failure">Diagnostics operation failed. Check file access and local storage, then prepare and review again.</string>
+    <string name="diagnostics_invalid_operation">Operation ID must be a UUID.</string>
+    <string name="diagnostics_cancel">Cancel</string>
+    <string name="diagnostics_back">Back</string>
+</resources>

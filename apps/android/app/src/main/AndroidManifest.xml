@@ -282,6 +282,17 @@
                 android:resource="@xml/clinician_report_file_paths" />
         </provider>
 
+        <!-- Only final, explicitly reviewed diagnostics ZIP copies; never the log store. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.diagnostics"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/diagnostic_file_paths" />
+        </provider>
+
         <!-- Narrow read-only URI grant for explicitly shared setup documents. -->
         <provider
             android:name=".sharedsetup.SharedSetupFileProvider"
