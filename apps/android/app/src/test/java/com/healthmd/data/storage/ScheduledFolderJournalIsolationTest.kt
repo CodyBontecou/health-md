@@ -85,6 +85,8 @@ class ScheduledFolderJournalIsolationTest {
                     state = ScheduledFolderArtifactState.ACKNOWLEDGED, documentId = "synthetic-document",
                 ) })
             })
+            assertThat(store.save(initial.withArtifactState(ScheduledFolderArtifactState.BINDING, "synthetic-document"))).isTrue()
+            assertThat(store.save(initial.withArtifactState(ScheduledFolderArtifactState.BOUND, "synthetic-document"))).isTrue()
             assertThat(store.save(acknowledged)).isTrue()
             assertThat(store.load(initial.operationId)).isEqualTo(ScheduledFolderJournalLoad.Found(acknowledged))
         } finally { root.deleteRecursively() }
@@ -167,6 +169,89 @@ class ScheduledFolderJournalIsolationTest {
         File(historical.parentFile, "${historical.name}.sleep-attribution-v1"),
         "${sha256Hex(id.encodeToByteArray())}.json",
     )
+
+    @Test
+    fun acknowledgedArtifactCannotRegressOrChangeItsBoundDocument() = runTest {
+        val root = Files.createTempDirectory("synthetic-sleep-frontier").toFile()
+        try {
+            val historical = File(root, "scheduled-folder-export-v1")
+            val store = ScheduledFolderExportJournalStore(historical)
+            val plan = readyJournal("ack-frontier", "synthetic committed bytes")
+            val committed = plan.withArtifactState(ScheduledFolderArtifactState.ACKNOWLEDGED, "final-document")
+            assertThat(store.save(committed)).isTrue()
+            val file = isolatedFile(historical, committed.operationId)
+            val original = file.readBytes()
+            val alternatives = listOf(
+                committed.withArtifactState(ScheduledFolderArtifactState.BOUND, "final-document"),
+                committed.withArtifactState(ScheduledFolderArtifactState.PREPARED, null),
+                committed.withArtifactState(ScheduledFolderArtifactState.ACKNOWLEDGED, "replacement-document"),
+            )
+            alternatives.forEach { changed ->
+                assertThat(store.isStructurallyValid(changed)).isTrue()
+                assertThat(store.save(changed)).isFalse()
+                assertThat(file.readBytes()).isEqualTo(original)
+            }
+            assertThat(store.load(committed.operationId)).isEqualTo(ScheduledFolderJournalLoad.Found(committed))
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun stagedWrittenArtifactCannotRegressOrReplaceItsStagingIdentity() = runTest {
+        val root = Files.createTempDirectory("synthetic-sleep-frontier").toFile()
+        try {
+            val historical = File(root, "scheduled-folder-export-v1")
+            val store = ScheduledFolderExportJournalStore(historical)
+            val plan = readyJournal("staging-frontier", "synthetic staged bytes")
+            val staged = plan.withArtifactState(ScheduledFolderArtifactState.STAGING_WRITTEN, "staging-document")
+            assertThat(store.save(staged)).isTrue()
+            val file = isolatedFile(historical, staged.operationId)
+            val original = file.readBytes()
+            val alternatives = listOf(
+                staged.withArtifactState(ScheduledFolderArtifactState.STAGING_BOUND, "staging-document"),
+                staged.withArtifactState(ScheduledFolderArtifactState.STAGING_WRITTEN, "replacement-staging"),
+            )
+            alternatives.forEach { changed ->
+                assertThat(store.isStructurallyValid(changed)).isTrue()
+                assertThat(store.save(changed)).isFalse()
+                assertThat(file.readBytes()).isEqualTo(original)
+            }
+        } finally { root.deleteRecursively() }
+    }
+
+    @Test
+    fun stagedPromotionMayChangeDocumentIdentityOnlyAtItsVerifiedCommitStep() = runTest {
+        val root = Files.createTempDirectory("synthetic-sleep-frontier").toFile()
+        try {
+            val historical = File(root, "scheduled-folder-export-v1")
+            val store = ScheduledFolderExportJournalStore(historical)
+            val plan = readyJournal("promotion-frontier", "synthetic staged bytes")
+            assertThat(store.save(plan)).isTrue()
+            val binding = plan.withArtifactState(ScheduledFolderArtifactState.BINDING, null)
+            assertThat(store.save(binding)).isTrue()
+            assertThat(store.save(binding.withArtifactState(ScheduledFolderArtifactState.BOUND, "unobserved-final"))).isFalse()
+            val staging = plan.withArtifactState(ScheduledFolderArtifactState.STAGING_BOUND, "staging-document")
+            assertThat(store.save(staging)).isTrue()
+            assertThat(store.save(staging.withArtifactState(ScheduledFolderArtifactState.ACKNOWLEDGED, "staging-document"))).isFalse()
+            val written = plan.withArtifactState(ScheduledFolderArtifactState.STAGING_WRITTEN, "staging-document")
+            assertThat(store.save(written)).isTrue()
+            val promoted = plan.withArtifactState(ScheduledFolderArtifactState.BOUND, "renamed-final-document")
+            assertThat(store.save(promoted)).isTrue()
+            val acknowledged = promoted.withArtifactState(ScheduledFolderArtifactState.ACKNOWLEDGED, "renamed-final-document")
+            assertThat(store.save(acknowledged)).isTrue()
+            val file = isolatedFile(historical, plan.operationId)
+            val bytes = file.readBytes()
+            assertThat(store.save(acknowledged)).isTrue()
+            assertThat(file.readBytes()).isEqualTo(bytes)
+            assertThat(store.load(plan.operationId)).isEqualTo(ScheduledFolderJournalLoad.Found(acknowledged))
+        } finally { root.deleteRecursively() }
+    }
+
+    private fun ScheduledFolderExportJournal.withArtifactState(
+        state: ScheduledFolderArtifactState,
+        documentId: String?,
+    ) = copy(days = days.map { day ->
+        day.copy(artifacts = day.artifacts.map { it.copy(state = state, documentId = documentId) })
+    })
 
     private fun readyJournal(id: String, content: String): ScheduledFolderExportJournal {
         val bytes = content.encodeToByteArray()

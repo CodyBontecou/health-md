@@ -217,7 +217,43 @@ class ScheduledFolderExportJournalStore private constructor(
         existing.settingsSnapshotSha256 == next.settingsSnapshotSha256 &&
         existing.folderUri == next.folderUri && existing.ownerDates == next.ownerDates &&
         (existing.phase != ScheduledFolderJournalPhase.READY ||
-            (next.phase == ScheduledFolderJournalPhase.READY && existing.planSha256 == next.planSha256))
+            (next.phase == ScheduledFolderJournalPhase.READY && existing.planSha256 == next.planSha256 &&
+                preservesArtifactFrontier(existing, next)))
+
+    private fun preservesArtifactFrontier(
+        existing: ScheduledFolderExportJournal,
+        next: ScheduledFolderExportJournal,
+    ): Boolean {
+        val previousArtifacts = existing.days.flatMap { it.artifacts }
+        val nextArtifacts = next.days.flatMap { it.artifacts }
+        return previousArtifacts.size == nextArtifacts.size &&
+            previousArtifacts.zip(nextArtifacts).all { (previous, following) ->
+                previous.artifactId == following.artifactId && preservesArtifactCheckpoint(previous, following)
+            }
+    }
+
+    private fun preservesArtifactCheckpoint(
+        previous: ScheduledFolderJournalArtifact,
+        next: ScheduledFolderJournalArtifact,
+    ): Boolean {
+        if (previous.state == next.state) return previous.documentId == next.documentId
+        return when (previous.state) {
+            ScheduledFolderArtifactState.PREPARED -> next.state == ScheduledFolderArtifactState.BINDING
+            ScheduledFolderArtifactState.BINDING -> if (previous.documentId == null) {
+                next.state == ScheduledFolderArtifactState.STAGING_BOUND
+            } else {
+                next.state == ScheduledFolderArtifactState.BOUND && previous.documentId == next.documentId
+            }
+            ScheduledFolderArtifactState.STAGING_BOUND ->
+                next.state == ScheduledFolderArtifactState.STAGING_WRITTEN && previous.documentId == next.documentId
+            // SAF promotion can return a new document identity. The writer verifies
+            // the exact staged bytes and rename result before persisting this step.
+            ScheduledFolderArtifactState.STAGING_WRITTEN -> next.state == ScheduledFolderArtifactState.BOUND
+            ScheduledFolderArtifactState.BOUND ->
+                next.state == ScheduledFolderArtifactState.ACKNOWLEDGED && previous.documentId == next.documentId
+            ScheduledFolderArtifactState.ACKNOWLEDGED -> false
+        }
+    }
 
     internal fun isStructurallyValid(journal: ScheduledFolderExportJournal): Boolean {
         if (journal.schema != ScheduledFolderExportJournal.SCHEMA ||
