@@ -12,6 +12,45 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     // state that is unsafe during test teardown; see docs/testing/lifecycle-audit.md.
     private static var retainedSettings: [AdvancedExportSettings] = []
 
+    func testMixedNativeMetricsRetainSourcePrecisionAndUnselectedMetricsDoNotBlockPlanning() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = try XCTUnwrap(ExportDateFormatting.utcISO8601Formatter().date(from: "2026-11-01T04:00:00Z"))
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.activity.steps = 0
+        day.activity.walkingRunningDistance = 1_234.56789
+        day.heart.averageHeartRate = 70.125
+        day.vitals.bloodOxygenAvg = 0.975125
+        day.body.weight = 72.123456
+        day.nutrition.protein = 12.345678
+        let selected: Set<String> = ["steps", "distance_walking_running", "heart_rate_avg", "blood_oxygen", "weight", "dietary_protein"]
+        for selection in [selected, ["steps"]] {
+            let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selection)
+            let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = resolution else {
+                return XCTFail("Typed non-sleep metrics must reach the successor planner")
+            }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts where artifact.format == .markdown || artifact.format == .obsidianBases {
+                let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(text.contains("steps: 0\n"))
+                if selection == selected {
+                    for (key, expected) in [("average_heart_rate", 70.125), ("blood_oxygen_avg", 97.5125),
+                                            ("weight_kg", 72.123456), ("protein_g", 12.345678),
+                                            ("walking_running_km", 1.23456789)] {
+                        let line = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("\(key): ") }, key)
+                        let value = try XCTUnwrap(Double(line.dropFirst(key.count + 2)), key)
+                        XCTAssertEqual(value, expected, accuracy: 1e-12, key)
+                    }
+                } else {
+                    XCTAssertFalse(text.contains("weight_kg:"))
+                    XCTAssertFalse(text.contains("average_heart_rate:"))
+                }
+            }
+        }
+    }
+
     func testEveryDailyFormatSharesWakeDateAuthorityAndUnroundedSourceQuantities() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
@@ -165,7 +204,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
     }
 
     private func acceptedSnapshot(
-        context: AppleSleepCaptureContext, formats: Set<ExportFormat>
+        context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil
     ) throws -> ExportSettingsSnapshot {
         let suite = "AppleWakeDatePlannerFixture.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -183,7 +222,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         settings.exportTimeZoneOverride = context.timeZone
         settings.executionSleepCaptureContext = context
         settings.executionSleepCaptureContextIsFrozen = true
-        settings.metricSelection.enabledMetrics = [
+        settings.metricSelection.enabledMetrics = selectionIDs ?? [
             "sleep_total", "sleep_core", "sleep_in_bed", "sleep_bedtime", "sleep_wake", "steps", "active_energy",
         ]
         let encoded: [String: Any] = [
