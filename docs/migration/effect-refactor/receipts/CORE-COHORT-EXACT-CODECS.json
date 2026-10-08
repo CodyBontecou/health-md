@@ -1,0 +1,2128 @@
+{
+  "task_id": "CORE-COHORT-EXACT-CODECS",
+  "result": "passed",
+  "proof_class": "portable_synthetic",
+  "stage": "Actual_bounded_portable_synthetic_checks_passed",
+  "source_sha": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe",
+  "patch_digest": "88bf2c1b586b2bbb2e3d9126da36fd99ad8c2a1071c0c838c3b21518b6e6ad51",
+  "patch_digest_method": "SHA256 sorted three nonreceipt paths UTF8 + NUL + raw bytes + NUL, excludes own receipt",
+  "changed_paths": [
+    "apps/cli/scripts/check-candidate.mjs",
+    "apps/cli/docs/typescript-candidate.md",
+    "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+    "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "new_cohort": {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+        "bytes": 256121
+      },
+      "historical_cohort": {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+        "bytes": 47904
+      },
+      "producer_report": {
+        "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.json",
+        "bytes": 126638,
+        "sha256": "89d552191ddb6ca6644cf71984955429a7c03edb376a16107b81e72d9b4208ac"
+      },
+      "normal_implementation_authorities": {
+        "SERIALIZE-EXACT-NUMBERS": {
+          "task_id": "SERIALIZE-EXACT-NUMBERS",
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/SERIALIZE-EXACT-NUMBERS.json",
+            "sha256": "9100d985d40af66c026624c4050713477127f195dc9f20f45bbb20047f9d1f3e",
+            "bytes": 42459
+          },
+          "required_result": "passed",
+          "required_review_status": "accepted",
+          "source_sha": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd",
+          "patch_digest": "2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236",
+          "review_fingerprint": "d126bd6b29e4f11e17f3d15ff8edf27bbb3031bd+2bd52c36c9d6238e41207878b6b53469d4b62e1784b072186f949ca7485c3236",
+          "reviewer": "/root/effect_base_core",
+          "proof_class": "portable_synthetic"
+        },
+        "PARSE-EXACT-JSON-NUMBERS": {
+          "task_id": "PARSE-EXACT-JSON-NUMBERS",
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-NUMBERS.json",
+            "sha256": "88fb9788d17a2c777b50eb306db516ec5682623fb4c6ad43c728d0604c324abb",
+            "bytes": 83618
+          },
+          "required_result": "passed",
+          "required_review_status": "accepted",
+          "source_sha": "e94c6f4ef08024b3d3d12a2e85acfd5b36d652ad",
+          "patch_digest": "6b84632ae625110f9b5927a07e63b018defa897757bbf687edd0a051c7f11132",
+          "review_fingerprint": "e94c6f4ef08024b3d3d12a2e85acfd5b36d652ad+6b84632ae625110f9b5927a07e63b018defa897757bbf687edd0a051c7f11132",
+          "reviewer": "/root/donor_mac_review",
+          "proof_class": "portable_synthetic",
+          "independent_review": {
+            "path": "/private/tmp/healthmd-number-parser-final-independent-review.json",
+            "sha256": "2cc4eeeebee120d64ce72bc06e44ebd8c8ca68e301d11f0057e0a41d02a6d114",
+            "bytes": 2512
+          },
+          "independent_review_status": "accepted_bounded_private_parser"
+        },
+        "PARSE-EXACT-JSON-VALUES": {
+          "task_id": "PARSE-EXACT-JSON-VALUES",
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json",
+            "sha256": "9227a4fd1e488fb58f3c68983827e7b4b53712e84ae1a49f349a47cbb7164c5c",
+            "bytes": 143547
+          },
+          "required_result": "passed",
+          "required_review_status": "accepted",
+          "source_sha": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "patch_digest": "bbe78927ad0925d30d6d16efd160c352e0e0c3bef2292d0466694efa7b135373",
+          "review_fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+bbe78927ad0925d30d6d16efd160c352e0e0c3bef2292d0466694efa7b135373",
+          "reviewer": "/root",
+          "proof_class": "portable_synthetic",
+          "independent_review": {
+            "path": "/private/tmp/healthmd-json-values-final-root-review.json",
+            "sha256": "6d17bc73d133401e04c32b05ef8f90ed8fd28c3d29d1482b80afa284e32fa3b4",
+            "bytes": 2818
+          },
+          "independent_review_status": "accepted_final_source_receipt_and_actual_proof"
+        },
+        "SERIALIZE-CANONICAL-JSON": {
+          "task_id": "SERIALIZE-CANONICAL-JSON",
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json",
+            "sha256": "df942abf9eff71fc4b53ffc42968a48e8aff7f47c887910fd05bfd9306bc7e1f",
+            "bytes": 376555
+          },
+          "required_result": "passed",
+          "required_review_status": "accepted",
+          "source_sha": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988",
+          "patch_digest": "f00bf8fbc01834f21fc3079ba91694b1ab3fdae6693fa5f4d2519c4ae94750c9",
+          "review_fingerprint": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988+f00bf8fbc01834f21fc3079ba91694b1ab3fdae6693fa5f4d2519c4ae94750c9",
+          "reviewer": "/root",
+          "proof_class": "portable_synthetic",
+          "independent_review": {
+            "path": "/private/tmp/healthmd-canonical-json-final-normalized-root-review.json",
+            "sha256": "74f85c28422edc7e8a565bfdc9c41a4c185194255ea310cf001ae8ffbde7cd18",
+            "bytes": 2906
+          },
+          "independent_review_status": "accepted_bounded_portable_source_and_actual_core_check",
+          "historical_final_review_chain": [
+            {
+              "path": "/private/tmp/healthmd-canonical-json-final-independent-donor-review.json",
+              "sha256": "0e5a1c3fd763fa816f361580f7a51c4e2014bc71104ec559b024d984ca9b1acd",
+              "bytes": 3397
+            },
+            {
+              "path": "/private/tmp/healthmd-canonical-command-schema-independent-review.json",
+              "sha256": "0b496eb20a446dac268bd57931be516a48c28566554d018d6f239069b36733ca",
+              "bytes": 1612
+            }
+          ],
+          "review_scope_reconciliation": "Receipt historical final_independent_review pending string is not used to weaken authority: raw final normalized ROOT acceptance pins current df942 receipt, donor final review plus command-schema-only review link historical5b647 to current exact df942. Strict top-level passed/review.accepted/fingerprint remains mandatory."
+        },
+        "CORE-CANDIDATE-CODEC-API": {
+          "task_id": "CORE-CANDIDATE-CODEC-API",
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/CORE-CANDIDATE-CODEC-API.json",
+            "sha256": "fbf14b4f4a714bd17433a5c3fbe89ccc46b9425d8d94ac6b9921610ecf5d019f",
+            "bytes": 197544
+          },
+          "required_result": "passed",
+          "required_review_status": "accepted",
+          "source_sha": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "patch_digest": "9a33a1d493fe6250a9a8724ff7834bfe1f3220a3085279655f8cab58a0b41c6d",
+          "review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+9a33a1d493fe6250a9a8724ff7834bfe1f3220a3085279655f8cab58a0b41c6d",
+          "reviewer": "ROOT",
+          "proof_class": "portable_synthetic",
+          "independent_review": {
+            "path": "/private/tmp/healthmd-codec-api-final-receipt-independent-review.json",
+            "sha256": "fd365c6573f4df12ebc9b9d422dfe3bda1136c25864d4f8df9226b7a96ea03cf",
+            "bytes": 3042
+          },
+          "independent_review_status": "accepted",
+          "reviewed_receipt_history": [
+            {
+              "path": "/private/tmp/healthmd-codec-api-before-final-review-metadata-normalization.json",
+              "sha256": "5324ec5a718398ddebf57d87d49d454759600fae5a2b1b56d4221f3528410681",
+              "bytes": 196897
+            },
+            {
+              "path": "/private/tmp/healthmd-codec-api-before-rollback-schema-addition.json",
+              "sha256": "2996f371000216340abd3b1b2d460af2e34ed375a10514739502f3ca09096f1b",
+              "bytes": 197427
+            }
+          ]
+        }
+      },
+      "CatalogLiteralDataAuthority": {
+        "absent_component_paths": [
+          "src/repository/source-catalog.ts",
+          "tests/source-catalog.test.ts",
+          "dist/core/repository/source-catalog.js",
+          "dist/core/repository/source-catalog.d.ts"
+        ],
+        "case_count": 96,
+        "chain_rule": "Verify tracked current4f partial receipt and vector raw bytes plus original approval2340 and eda5 partial raw bytes decoded from the two embedded_raw_evidence blobs under strict canonical/length/SHA-before-parse policy. Approval exact task/source/patch/fingerprint/vector points to original eda5 embedded partial; current4f retains exact source/patch/interface, history[1] points to eda5, and accepted Stage1 review pins2340. Both receipts remain partial. Absolute historical approval/archive path fields are audit provenance ONLY, never live required filesystem inputs. Metadata appending accepted review/typecheck/queue never upgrades Catalog authority. Closed fields and exact booleans required; unknown keys/review-scope mismatch reject. Normal passed+accepted implementation validator cannot accept this authority.",
+        "current_partial_receipt": {
+          "bytes": 58737,
+          "path": "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
+          "sha256": "4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa"
+        },
+        "exact_scope": {
+          "behavior": false,
+          "consumer_admission": false,
+          "grant": false,
+          "implementation": false,
+          "literal_source_input_only": true,
+          "module": false,
+          "public": false,
+          "runtime": false
+        },
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0",
+        "independent_stage1_approval": {
+          "bytes": 4313,
+          "path": "/private/tmp/healthmd-source-catalog-amended-stage1-independent-review.json",
+          "sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b"
+        },
+        "kind": "CatalogLiteralDataAuthority",
+        "patch_digest": "32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0",
+        "required_approval_proof_class": "source_only_stage1_independent_review",
+        "required_approval_result": "accepted",
+        "required_current_receipt_proof_class": "portable_synthetic",
+        "required_receipt_result": "partial",
+        "required_receipt_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0",
+        "required_receipt_review_qualification": "Independent source/interface/literal acceptance only; no datastore behavioral or consumer admission.",
+        "required_receipt_review_status": "accepted_Stage1_interface_and_literals_only_implementation_pending",
+        "required_receipt_stage": "Stage1_96_literals_independently_accepted_implementation_queued",
+        "reviewed_partial_receipt_archive": {
+          "bytes": 52630,
+          "path": "/private/tmp/healthmd-source-catalog-before-stage1-acceptance-append/DATASTORE-SOURCE-CATALOG.json",
+          "sha256": "eda5dec7574e7dcfafffeeac7138ca1d278d9f15ee1b2bba5c97fac96ac19f42"
+        },
+        "source_sha": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "task_id": "DATASTORE-SOURCE-CATALOG",
+        "vector": {
+          "bytes": 467388,
+          "path": "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+          "sha256": "74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591"
+        },
+        "version": 1
+      },
+      "embedded_raw_evidence_manifest": {
+        "catalog_stage1_approval": {
+          "version": 1,
+          "encoding": "base64",
+          "historical_path": "/private/tmp/healthmd-source-catalog-amended-stage1-independent-review.json",
+          "bytes": 4313,
+          "sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b"
+        },
+        "catalog_reviewed_partial_receipt": {
+          "version": 1,
+          "encoding": "base64",
+          "historical_path": "/private/tmp/healthmd-source-catalog-before-stage1-acceptance-append/DATASTORE-SOURCE-CATALOG.json",
+          "bytes": 52630,
+          "sha256": "eda5dec7574e7dcfafffeeac7138ca1d278d9f15ee1b2bba5c97fac96ac19f42"
+        }
+      },
+      "Stage1_historical_producer_report": {
+        "path": "/private/tmp/healthmd-codec-api-core-check-root-first.json",
+        "sha256": "2f5a625a45b7f3e1313443b47df42cf8efa0bcb7e52a24cf260ab008670f67ea",
+        "bytes": 126297
+      }
+    },
+    "locks_and_runtime": {
+      "component_pins": {
+        "apps/cli/package.json": {
+          "path": "apps/cli/package.json",
+          "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2",
+          "bytes": 880
+        },
+        "apps/cli/package-lock.json": {
+          "path": "apps/cli/package-lock.json",
+          "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf",
+          "bytes": 28291
+        },
+        "packages/healthmd-core-ts/package.json": {
+          "path": "packages/healthmd-core-ts/package.json",
+          "sha256": "0a3d08770c6147b15dc0d56f3ff29888d7ce3822d0ba0879f0a1f494e9378bc0",
+          "bytes": 1553
+        },
+        "packages/healthmd-core-ts/package-lock.json": {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "bytes": 27929
+        },
+        "packages/healthmd-core-ts/.node-version": {
+          "path": "packages/healthmd-core-ts/.node-version",
+          "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "bytes": 8
+        }
+      },
+      "physical_tool_pins": [
+        {
+          "path": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "bytes": 122129232,
+          "sha256": "e4b5a3af0e05c75de2eae013904145f40fe7fc2a6e6f17510128bf45cca4e79b"
+        },
+        {
+          "path": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+          "bytes": 54,
+          "sha256": "8e5f6f3429f8cdbe693cdc29904e9d5a7b127a494bd15c804bd54c7403bfcbe7"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
+          "bytes": 15949,
+          "sha256": "b8dbdb140fdc9cba83ad04ea091a5dc64e1b57fc2d794a1046ff6b0d214e4ad7"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/effect/package.json",
+          "bytes": 2588,
+          "sha256": "569fd709b635b26e9d5851b3cf1958082da47a9778ee6d21cf4f47f3dbc41e6f"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/typescript/package.json",
+          "bytes": 3087,
+          "sha256": "3722b30210616a13a3213ded11575ba6b2dbab10c32a5ef67afca8513e27017e"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/esbuild/package.json",
+          "bytes": 3980,
+          "sha256": "9d0bc453f4e791553c4cc2298ba023b409241fd9801e494741666eb0f6051490"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/@types/node/package.json",
+          "bytes": 4068,
+          "sha256": "6e6bedd46e6541dce6fedbf7570c499a97476e1517123f0bdae4621dab023978"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/undici-types/package.json",
+          "bytes": 1193,
+          "sha256": "541adf5ec10733ecbf9278ec706914c76b1e5b25cccebdadb7ade8f3066ae052"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/typescript/bin/tsc",
+          "bytes": 44,
+          "sha256": "2219f428a7e55aaf1f7ad85b9b0f0cf5078aeb76ccc9a7c6036c92d48f492ffd"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/typescript/lib/tsc.js",
+          "bytes": 609,
+          "sha256": "cbdfbf11c26ed00dfc073155e316a42d6d6d8a387be61006b82fa9aa93ac572e"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/esbuild/bin/esbuild",
+          "bytes": 10590882,
+          "sha256": "10b6243df618d374bb2d5c9cfbe7052e1405f6aa4e53a6164f11a91b9f2e1384"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/@typescript/typescript-darwin-arm64/lib/tsc",
+          "bytes": 23653616,
+          "sha256": "a82f731365ad69d5c4c15f5e18fba4584bf3b7b839960172a76c3462b5114bf2"
+        },
+        {
+          "path": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts/node_modules/@esbuild/darwin-arm64/bin/esbuild",
+          "bytes": 10590882,
+          "sha256": "10b6243df618d374bb2d5c9cfbe7052e1405f6aa4e53a6164f11a91b9f2e1384"
+        },
+        {
+          "path": "/private/tmp/healthmd-mcp-empty-user.npmrc",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "/private/tmp/healthmd-mcp-empty-global.npmrc",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ]
+    },
+    "artifact_and_native_interface": {
+      "accepted_input_count": 56,
+      "accepted_core_output_count": 34,
+      "accepted_total_dist_outputs": 50,
+      "historical43_26_retained": true,
+      "new_successor_consumer_qualification": "Actual ROOT1253core check/19guards, offline CLI install, and full425CLI check/203guards passed; source56/module34/full50outputs/oneEffect retained. Bounded portable consumer binding only.",
+      "Stage1_historical_successor_consumer_qualification": "pending; no build/install/check executed"
+    },
+    "policy_migration_key_versions": {
+      "public_native_source_grant_change": false
+    },
+    "final_execution_inputs": {
+      "core_descriptor": {
+        "path": "/private/tmp/healthmd-exact-codecs-core-check-inputs.json",
+        "bytes": 88715,
+        "sha256": "bcf8184d8270a556c4c1f9d49da6407bfdc60192436ce8ead1d3fb43193b6b29"
+      },
+      "original_CLI_install_descriptor": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-check-inputs.json",
+        "bytes": 64531,
+        "sha256": "34ed8516bd357af4e69abd404f856ab13821bfd3895948f4d6c1c61393af455a"
+      },
+      "final_check_descriptor": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-runtime-repair-check-inputs.json",
+        "bytes": 71693,
+        "sha256": "4a630facfd64acaccf33a1418c251b667006a993f7c32c5e7fa66343ea68ebfe"
+      },
+      "final_check_preparation_review": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-runtime-repair-check-preparation-independent-review.json",
+        "bytes": 3614,
+        "sha256": "9dea0b6fceca55b5f75437e3f6f420a6ff8eaf942a5e2b19bf20038dba1bca90"
+      }
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "private candidate core-cohort-exact-codecs"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Stage1 ONLY new cohort+partial receipt: pin complete43/26 historical maps and all accepted new source/module outputs, exact package/lock/runtime/graph/raw passed-and-independently-accepted codec/API receipts. Define a separate closed CatalogLiteralDataAuthority for exact Catalog96 vector74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591, partial Stage1 receipt4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa and independent approval2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b; validate exact task/source/fingerprint/scope and source-only review, never relax the existing passed-and-accepted implementation receipt rule. No output discovery as acceptance, no own receipt reverse pin; review BEFORE guard/docs/build/install.",
+      "result": "passed",
+      "evidence": {
+        "source_reviews": [
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-cohort-portable-evidence-independent-review.json",
+            "bytes": 5011,
+            "sha256": "10797347b87ac699dcfe5e9a7c2805d996ca549edb1757d77648e194100e2c0a"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-stage2-independent-source-review.json",
+            "bytes": 4187,
+            "sha256": "b003a9a50be7e30e2ff5de0dde9b4a854caee4c3e17e6fbbd2b1f85fbf1d5235"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-final-cohort-evidence-independent-review.json",
+            "bytes": 7425,
+            "sha256": "5aca4b2a4fb23fb33aedb47926a7d7a5792ce3a94e5c3474e8d7813b33ae8064"
+          }
+        ],
+        "actual_check": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+          "bytes": 123554,
+          "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+        },
+        "scope": "Closed complete successor authority56/34; five strict passed accepted implementation receipts; tracked self-contained Catalog literal proofs only."
+      }
+    },
+    {
+      "criterion": "Expected codec additions remain12 inputfiles and8moduleoutputs, plus reviewedreplacements package.json/README. One additional approved source-only Catalog96 literalinput is explicitly included (prospective56/34), with zero catalogbehavior/runtime/module/public admission. Reconcile complete actual accepted changedpaths/outputcontracts; never treat projectedcounts as passedmaps or ignore extras. Keep41other oldinputbytes/all26old moduleoutputs inclscalar unchanged unless separatelyreviewed generatedmetadata delta.",
+      "result": "passed",
+      "evidence": {
+        "cohort": {
+          "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "bytes": 256121,
+          "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055"
+        },
+        "actual_core_check": {
+          "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.json",
+          "bytes": 126638,
+          "sha256": "89d552191ddb6ca6644cf71984955429a7c03edb376a16107b81e72d9b4208ac"
+        },
+        "actual_CLI_check": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+          "bytes": 123554,
+          "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+        },
+        "scope": "41oldsource bytes/26oldmodule bytes retained; accepted metadata2/additional13input/eightmodule deltas only."
+      }
+    },
+    {
+      "criterion": "Retain all84 exact prior filesystem negatives; add missing/edited/symlink for each new source, missing/stale/symlink/extra JS/d.ts artifact, missing/tampered/unreviewed each accepted codec/API receipt and new cohort. Add missing/tampered/unreviewed Catalog literal approval evidence, mismatched task/source/fingerprint/scope, and attempts to infer Catalog runtime/module/grant/public admission from its data-only authority. Freeze the full exact resulting count/catalog before implementation; no count guessed as coverage.",
+      "result": "passed",
+      "evidence": {
+        "actual_check": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+          "bytes": 123554,
+          "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+        },
+        "actual_log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.log",
+          "bytes": 44338,
+          "sha256": "e400cb9bb6de6347ff397b32b98f2083b25ee0170acaefed03db8cc00de4a49c"
+        },
+        "ordered_negative_ids": [
+          "sibling-symlink",
+          "stale-build",
+          "unbuilt-source-edit",
+          "extra-source-file",
+          "unreviewed-metadata-edit",
+          "unreviewed-packed-export",
+          "missing-source-file",
+          "new-module-edit",
+          "source-symlink",
+          "new-module-stale-output",
+          "missing-output",
+          "extra-output",
+          "output-symlink",
+          "absent-cohort",
+          "tampered-cohort",
+          "unreviewed-delta",
+          "missing-personal-source",
+          "personal-source-edit",
+          "personal-source-symlink",
+          "personal-output-stale",
+          "missing-personal-output",
+          "extra-personal-output",
+          "personal-output-symlink",
+          "unreviewed-personal-receipt",
+          "slice-source:src/location/point-projection.ts:missing",
+          "slice-source:src/location/point-projection.ts:edited",
+          "slice-source:src/location/point-projection.ts:symlink",
+          "slice-source:src/operations/personal-slice.ts:missing",
+          "slice-source:src/operations/personal-slice.ts:edited",
+          "slice-source:src/operations/personal-slice.ts:symlink",
+          "slice-source:tests/combined-slice-vectors.ts:missing",
+          "slice-source:tests/combined-slice-vectors.ts:edited",
+          "slice-source:tests/combined-slice-vectors.ts:symlink",
+          "slice-source:tests/combined-slice.test.ts:missing",
+          "slice-source:tests/combined-slice.test.ts:edited",
+          "slice-source:tests/combined-slice.test.ts:symlink",
+          "slice-source:tests/location-point-projection-vectors.ts:missing",
+          "slice-source:tests/location-point-projection-vectors.ts:edited",
+          "slice-source:tests/location-point-projection-vectors.ts:symlink",
+          "slice-source:tests/location-point-projection.test.ts:missing",
+          "slice-source:tests/location-point-projection.test.ts:edited",
+          "slice-source:tests/location-point-projection.test.ts:symlink",
+          "slice-output:dist/core/location/point-projection.d.ts:missing",
+          "slice-output:dist/core/location/point-projection.d.ts:stale",
+          "slice-output:dist/core/location/point-projection.d.ts:symlink",
+          "slice-output:dist/core/location/point-projection.js:missing",
+          "slice-output:dist/core/location/point-projection.js:stale",
+          "slice-output:dist/core/location/point-projection.js:symlink",
+          "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+          "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+          "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+          "slice-output:dist/core/operations/personal-slice.js:missing",
+          "slice-output:dist/core/operations/personal-slice.js:stale",
+          "slice-output:dist/core/operations/personal-slice.js:symlink",
+          "slice-extra-output",
+          "slice-cohort:absent",
+          "slice-cohort:tampered",
+          "slice-receipt:location_delta:absent",
+          "slice-receipt:location_delta:tampered",
+          "slice-receipt:location_delta:unreviewed",
+          "slice-receipt:combined_delta:absent",
+          "slice-receipt:combined_delta:tampered",
+          "slice-receipt:combined_delta:unreviewed",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+          "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+          "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+          "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+          "eligibility-extra-output",
+          "eligibility-cohort:absent",
+          "eligibility-cohort:tampered",
+          "eligibility-receipt:absent",
+          "eligibility-receipt:tampered",
+          "eligibility-receipt:unreviewed",
+          "codec-input:src/serialization/canonical-json.ts:missing",
+          "codec-input:src/serialization/canonical-json.ts:edited",
+          "codec-input:src/serialization/canonical-json.ts:symlink",
+          "codec-input:src/serialization/exact-json-number-parser.ts:missing",
+          "codec-input:src/serialization/exact-json-number-parser.ts:edited",
+          "codec-input:src/serialization/exact-json-number-parser.ts:symlink",
+          "codec-input:src/serialization/exact-json-value.ts:missing",
+          "codec-input:src/serialization/exact-json-value.ts:edited",
+          "codec-input:src/serialization/exact-json-value.ts:symlink",
+          "codec-input:src/serialization/index.ts:missing",
+          "codec-input:src/serialization/index.ts:edited",
+          "codec-input:src/serialization/index.ts:symlink",
+          "codec-input:tests/candidate-codec-api-vectors.ts:missing",
+          "codec-input:tests/candidate-codec-api-vectors.ts:edited",
+          "codec-input:tests/candidate-codec-api-vectors.ts:symlink",
+          "codec-input:tests/candidate-codec-api.test.ts:missing",
+          "codec-input:tests/candidate-codec-api.test.ts:edited",
+          "codec-input:tests/candidate-codec-api.test.ts:symlink",
+          "codec-input:tests/canonical-json-vectors.ts:missing",
+          "codec-input:tests/canonical-json-vectors.ts:edited",
+          "codec-input:tests/canonical-json-vectors.ts:symlink",
+          "codec-input:tests/canonical-json.test.ts:missing",
+          "codec-input:tests/canonical-json.test.ts:edited",
+          "codec-input:tests/canonical-json.test.ts:symlink",
+          "codec-input:tests/exact-json-number-parser-vectors.ts:missing",
+          "codec-input:tests/exact-json-number-parser-vectors.ts:edited",
+          "codec-input:tests/exact-json-number-parser-vectors.ts:symlink",
+          "codec-input:tests/exact-json-number-parser.test.ts:missing",
+          "codec-input:tests/exact-json-number-parser.test.ts:edited",
+          "codec-input:tests/exact-json-number-parser.test.ts:symlink",
+          "codec-input:tests/exact-json-value-vectors.ts:missing",
+          "codec-input:tests/exact-json-value-vectors.ts:edited",
+          "codec-input:tests/exact-json-value-vectors.ts:symlink",
+          "codec-input:tests/exact-json-value.test.ts:missing",
+          "codec-input:tests/exact-json-value.test.ts:edited",
+          "codec-input:tests/exact-json-value.test.ts:symlink",
+          "codec-input:tests/source-catalog-vectors.ts:missing",
+          "codec-input:tests/source-catalog-vectors.ts:edited",
+          "codec-input:tests/source-catalog-vectors.ts:symlink",
+          "codec-output:dist/core/serialization/canonical-json.d.ts:missing",
+          "codec-output:dist/core/serialization/canonical-json.d.ts:stale",
+          "codec-output:dist/core/serialization/canonical-json.d.ts:symlink",
+          "codec-output:dist/core/serialization/canonical-json.js:missing",
+          "codec-output:dist/core/serialization/canonical-json.js:stale",
+          "codec-output:dist/core/serialization/canonical-json.js:symlink",
+          "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:missing",
+          "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:stale",
+          "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:symlink",
+          "codec-output:dist/core/serialization/exact-json-number-parser.js:missing",
+          "codec-output:dist/core/serialization/exact-json-number-parser.js:stale",
+          "codec-output:dist/core/serialization/exact-json-number-parser.js:symlink",
+          "codec-output:dist/core/serialization/exact-json-value.d.ts:missing",
+          "codec-output:dist/core/serialization/exact-json-value.d.ts:stale",
+          "codec-output:dist/core/serialization/exact-json-value.d.ts:symlink",
+          "codec-output:dist/core/serialization/exact-json-value.js:missing",
+          "codec-output:dist/core/serialization/exact-json-value.js:stale",
+          "codec-output:dist/core/serialization/exact-json-value.js:symlink",
+          "codec-output:dist/core/serialization/index.d.ts:missing",
+          "codec-output:dist/core/serialization/index.d.ts:stale",
+          "codec-output:dist/core/serialization/index.d.ts:symlink",
+          "codec-output:dist/core/serialization/index.js:missing",
+          "codec-output:dist/core/serialization/index.js:stale",
+          "codec-output:dist/core/serialization/index.js:symlink",
+          "codec-extra:exact-json-number-parser:js",
+          "codec-extra:exact-json-number-parser:d.ts",
+          "codec-extra:exact-json-value:js",
+          "codec-extra:exact-json-value:d.ts",
+          "codec-extra:canonical-json:js",
+          "codec-extra:canonical-json:d.ts",
+          "codec-extra:index:js",
+          "codec-extra:index:d.ts",
+          "codec-receipt:SERIALIZE-EXACT-NUMBERS:absent",
+          "codec-receipt:SERIALIZE-EXACT-NUMBERS:tampered",
+          "codec-receipt:SERIALIZE-EXACT-NUMBERS:unreviewed",
+          "codec-receipt:PARSE-EXACT-JSON-NUMBERS:absent",
+          "codec-receipt:PARSE-EXACT-JSON-NUMBERS:tampered",
+          "codec-receipt:PARSE-EXACT-JSON-NUMBERS:unreviewed",
+          "codec-receipt:PARSE-EXACT-JSON-VALUES:absent",
+          "codec-receipt:PARSE-EXACT-JSON-VALUES:tampered",
+          "codec-receipt:PARSE-EXACT-JSON-VALUES:unreviewed",
+          "codec-receipt:SERIALIZE-CANONICAL-JSON:absent",
+          "codec-receipt:SERIALIZE-CANONICAL-JSON:tampered",
+          "codec-receipt:SERIALIZE-CANONICAL-JSON:unreviewed",
+          "codec-receipt:CORE-CANDIDATE-CODEC-API:absent",
+          "codec-receipt:CORE-CANDIDATE-CODEC-API:tampered",
+          "codec-receipt:CORE-CANDIDATE-CODEC-API:unreviewed",
+          "exact-codecs-cohort:absent",
+          "exact-codecs-cohort:tampered",
+          "exact-codecs-cohort:unreviewed",
+          "catalog-evidence:receipt:absent",
+          "catalog-evidence:receipt:tampered",
+          "catalog-evidence:receipt:unreviewed",
+          "catalog-evidence:approval:absent",
+          "catalog-evidence:approval:tampered",
+          "catalog-evidence:approval:unreviewed",
+          "catalog-evidence:reviewed-archive:absent",
+          "catalog-evidence:reviewed-archive:tampered",
+          "catalog-evidence:reviewed-archive:unreviewed",
+          "catalog-evidence:vector:unreviewed",
+          "catalog-receipt:mismatched-task_id",
+          "catalog-receipt:mismatched-source_sha",
+          "catalog-receipt:mismatched-fingerprint",
+          "catalog-receipt:mismatched-scope",
+          "catalog-approval:mismatched-task_id",
+          "catalog-approval:mismatched-source_sha",
+          "catalog-approval:mismatched-fingerprint",
+          "catalog-approval:mismatched-scope",
+          "catalog-authority:false-implementation-admission",
+          "catalog-authority:false-behavior-admission",
+          "catalog-authority:false-runtime-admission",
+          "catalog-authority:false-module-admission",
+          "catalog-authority:false-grant-admission",
+          "catalog-authority:false-public-admission",
+          "catalog-authority:false-consumer_admission-admission",
+          "catalog-authority:unknown-field",
+          "catalog-receipt:wrong-proof-class",
+          "catalog-receipt:wrong-source-patch",
+          "catalog-chain:wrong-archive-link",
+          "catalog-chain:approval-wrong-receipt"
+        ],
+        "actual_count": 203,
+        "scope": "84old+119new real disposable mutations/assertions, exact order, false/unknown/data-only attacks rejected."
+      }
+    },
+    {
+      "criterion": "After independent authority/guard review, exclusive core check, pinned offline CLI npm ci --install-links --engine-strict --no-audit --no-fund, CLI npm run check sequentially with bounded commands/exact actual physical argv. One physical Effect graph, no symlink/deep import/self-refresh/automatic hash admission.",
+      "result": "passed",
+      "evidence": {
+        "actual_passed_checks": [
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.json",
+            "bytes": 126638,
+            "sha256": "89d552191ddb6ca6644cf71984955429a7c03edb376a16107b81e72d9b4208ac"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-cli-install-root-first.json",
+            "bytes": 53815,
+            "sha256": "14d9344c6ba5db4204f3ab84d87369678d1a528a1252fbbb2701a0d67fc38015"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+            "bytes": 123554,
+            "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+          }
+        ],
+        "independent_actual_review": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+          "bytes": 4703,
+          "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+        },
+        "scope": "Exclusive sequential actual1253core/offlineinstall34packed/full425CLI/oneEffect; original successful install reused after exacttwo reviewed source row inverse."
+      }
+    }
+  ],
+  "checks": [
+    {
+      "cwd": "packages/healthmd-core-ts",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "physical_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "physical_cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+      "env": {
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/usr/bin:/bin",
+        "npm_config_cache": "/private/tmp/healthmd-effect-npm-cache",
+        "npm_config_offline": "true",
+        "npm_config_audit": "false",
+        "npm_config_fund": "false",
+        "npm_config_ignore_scripts": "true",
+        "npm_config_userconfig": "/private/tmp/healthmd-mcp-empty-user.npmrc",
+        "npm_config_globalconfig": "/private/tmp/healthmd-mcp-empty-global.npmrc"
+      },
+      "owner_home_required": "/Users/codybontecou",
+      "runner": "ROOT exclusive coordinator",
+      "wall_ms": 2685,
+      "deadline_ms": 300000,
+      "combined_output_cap_bytes": 16777216,
+      "cleanup_ms": 3000,
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.json",
+          "bytes": 126638,
+          "sha256": "89d552191ddb6ca6644cf71984955429a7c03edb376a16107b81e72d9b4208ac"
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.log",
+          "bytes": 88889,
+          "sha256": "eeb759272debe8960b142bb07b4b3f2e4a9b8a893d7449cf10a7bc726451317f"
+        },
+        "counts": {
+          "tests": 1253,
+          "suites": 0,
+          "pass": 1253,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "supervision": {
+          "result": "passed",
+          "code": 0,
+          "signal": null,
+          "reason": null,
+          "observed_output_bytes": 88889,
+          "retained_output_bytes": 88889,
+          "retained_raw_bytes": 88889,
+          "retained_raw_sha256": "eeb759272debe8960b142bb07b4b3f2e4a9b8a893d7449cf10a7bc726451317f",
+          "observed_raw_sha256": "eeb759272debe8960b142bb07b4b3f2e4a9b8a893d7449cf10a7bc726451317f",
+          "escalation": false,
+          "parent_reaped": true,
+          "group_absent": true,
+          "cleanup_ack": true,
+          "cleanup_deadline_missed": false,
+          "late_physical_cleanup_observed": false,
+          "group_observation": "absent_esrch",
+          "supervisor_os_faults": {
+            "group_query_denied": 0,
+            "group_query_unverified": 0,
+            "group_signal_denied": 0,
+            "group_signal_unverified": 0
+          }
+        },
+        "boundaries": {
+          "sourceModules": 17,
+          "effectInstallations": 1,
+          "negativeCases": [
+            "node-import",
+            "bare-node-import",
+            "react-import",
+            "native-import",
+            "environment",
+            "computed-global",
+            "aliased-global",
+            "unicode-global",
+            "dom",
+            "dynamic-import",
+            "template-import",
+            "ambient-escape",
+            "constructor-escape"
+          ],
+          "negativeGraphs": [
+            "transitive-node-import",
+            "transitive-native-import",
+            "unapproved-effect-host-module",
+            "relative-root-escape",
+            "transitive-global",
+            "computed-dynamic-with-comment"
+          ]
+        },
+        "full_outputs": [
+          {
+            "path": "core/contracts/exact-values.d.ts",
+            "bytes": 2374,
+            "sha256": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62"
+          },
+          {
+            "path": "core/contracts/exact-values.js",
+            "bytes": 6341,
+            "sha256": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4"
+          },
+          {
+            "path": "core/contracts/personal-slice.d.ts",
+            "bytes": 1809,
+            "sha256": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373"
+          },
+          {
+            "path": "core/contracts/personal-slice.js",
+            "bytes": 26601,
+            "sha256": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29"
+          },
+          {
+            "path": "core/contracts/registry.d.ts",
+            "bytes": 14209,
+            "sha256": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e"
+          },
+          {
+            "path": "core/contracts/registry.js",
+            "bytes": 15578,
+            "sha256": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7"
+          },
+          {
+            "path": "core/host-interfaces/capabilities.d.ts",
+            "bytes": 834,
+            "sha256": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235"
+          },
+          {
+            "path": "core/host-interfaces/capabilities.js",
+            "bytes": 523,
+            "sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef"
+          },
+          {
+            "path": "core/host-interfaces/faults.d.ts",
+            "bytes": 1117,
+            "sha256": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8"
+          },
+          {
+            "path": "core/host-interfaces/faults.js",
+            "bytes": 453,
+            "sha256": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0"
+          },
+          {
+            "path": "core/index.d.ts",
+            "bytes": 319,
+            "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8"
+          },
+          {
+            "path": "core/index.js",
+            "bytes": 175,
+            "sha256": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389"
+          },
+          {
+            "path": "core/location/point-projection.d.ts",
+            "bytes": 2048,
+            "sha256": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477"
+          },
+          {
+            "path": "core/location/point-projection.js",
+            "bytes": 10958,
+            "sha256": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a"
+          },
+          {
+            "path": "core/operations/catalog.d.ts",
+            "bytes": 2752,
+            "sha256": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88"
+          },
+          {
+            "path": "core/operations/catalog.js",
+            "bytes": 4725,
+            "sha256": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5"
+          },
+          {
+            "path": "core/operations/normalize.d.ts",
+            "bytes": 1075,
+            "sha256": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393"
+          },
+          {
+            "path": "core/operations/normalize.js",
+            "bytes": 2351,
+            "sha256": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e"
+          },
+          {
+            "path": "core/operations/personal-slice.d.ts",
+            "bytes": 6725,
+            "sha256": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091"
+          },
+          {
+            "path": "core/operations/personal-slice.js",
+            "bytes": 28234,
+            "sha256": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc"
+          },
+          {
+            "path": "core/operations/query.d.ts",
+            "bytes": 3966,
+            "sha256": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb"
+          },
+          {
+            "path": "core/operations/query.js",
+            "bytes": 6725,
+            "sha256": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+          },
+          {
+            "path": "core/serialization/canonical-json.d.ts",
+            "bytes": 524,
+            "sha256": "3616392a31adc75268697585fd03c8fffe13a5e17a164329a91f59334f52361b"
+          },
+          {
+            "path": "core/serialization/canonical-json.js",
+            "bytes": 7663,
+            "sha256": "60d3c1fea8aa7ed84c6a1f82466806eea3cffb366608749fe07090187e6d78c5"
+          },
+          {
+            "path": "core/serialization/exact-json-number-parser.d.ts",
+            "bytes": 894,
+            "sha256": "be7b339eac4b906e5c1f4f1a2471777062c35fe53f069bf3994618b1ba36cd9b"
+          },
+          {
+            "path": "core/serialization/exact-json-number-parser.js",
+            "bytes": 9315,
+            "sha256": "b93ebeacc0eb1885859136b9d66e0927bbe9ff24dd9d9f40351bf8ff76e6f807"
+          },
+          {
+            "path": "core/serialization/exact-json-numbers.d.ts",
+            "bytes": 482,
+            "sha256": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335"
+          },
+          {
+            "path": "core/serialization/exact-json-numbers.js",
+            "bytes": 5668,
+            "sha256": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+          },
+          {
+            "path": "core/serialization/exact-json-value.d.ts",
+            "bytes": 1895,
+            "sha256": "896703c555b76db2d955dbd573bf5bf15e3391c418b59377445a0fac5ad90256"
+          },
+          {
+            "path": "core/serialization/exact-json-value.js",
+            "bytes": 15912,
+            "sha256": "37840e6952d7c8a291ef3e58167160180b50e66c7d7cd80dd0d315c00f2cf9b1"
+          },
+          {
+            "path": "core/serialization/index.d.ts",
+            "bytes": 673,
+            "sha256": "cf8157321072f4b239ab5aa26a484aff870eb99ef200f0ab4054689cefb44cde"
+          },
+          {
+            "path": "core/serialization/index.js",
+            "bytes": 365,
+            "sha256": "b20688712e390fac869b32cf954847d4846e74aa3a69f702c6c40ab20a4fc3c6"
+          },
+          {
+            "path": "core/usage-mobile/ios-eligibility.d.ts",
+            "bytes": 3745,
+            "sha256": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9"
+          },
+          {
+            "path": "core/usage-mobile/ios-eligibility.js",
+            "bytes": 15167,
+            "sha256": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+          },
+          {
+            "path": "neutral-metafile.json",
+            "bytes": 20278,
+            "sha256": "de68b4b6eec89cc72e4f58bf9489506fad381fffdd80dca8a8fe7d18207fa251"
+          },
+          {
+            "path": "test-metafile.json",
+            "bytes": 54121,
+            "sha256": "06fef7470bbc1e2287c905868b68af9e6fd8df64941af92f628cc889ffc299ea"
+          },
+          {
+            "path": "tests/candidate-codec-api.test.js",
+            "bytes": 413849,
+            "sha256": "34957344be6f0da295a8287f7dff4bf56e88027478611d1bbd1ffa12d9c8be77"
+          },
+          {
+            "path": "tests/canonical-json.test.js",
+            "bytes": 176315,
+            "sha256": "f03938dcb0b8bf1cefca0e47b7fce24ee8a9bb84a0524fcf2c98913d0e23ee5c"
+          },
+          {
+            "path": "tests/catalog.test.js",
+            "bytes": 18693,
+            "sha256": "8f8fcb6d36090f76e1dd2c34bf60b54773fa08cff110b2346d1a349f8ba2b653"
+          },
+          {
+            "path": "tests/combined-slice.test.js",
+            "bytes": 442801,
+            "sha256": "81dcf8c1197c10658e5bfac43378c054d9a090a48a6ddaad4ae62f1487b4225c"
+          },
+          {
+            "path": "tests/exact-json-number-parser.test.js",
+            "bytes": 58563,
+            "sha256": "93bcc07ba1279fe5d3c701b55bb0be55dd84842a338da0aa1229bf4d00e98c91"
+          },
+          {
+            "path": "tests/exact-json-numbers.test.js",
+            "bytes": 15065,
+            "sha256": "a0ba68ab260e4ffcf07a570ca4275e97022dc60c1d096487afbc4b3015dbccd7"
+          },
+          {
+            "path": "tests/exact-json-value.test.js",
+            "bytes": 144279,
+            "sha256": "e39b93e37bf8e43d942a5b70f6b5ba9caceff41ff444b4ca74ca82415c05f6a3"
+          },
+          {
+            "path": "tests/exact-values.test.js",
+            "bytes": 29724,
+            "sha256": "9e74176483a9f05c9a28741a8e9274fa75d676f575ed7902b29d0a5553e07f05"
+          },
+          {
+            "path": "tests/foundation.test.js",
+            "bytes": 5396,
+            "sha256": "cec4fa4c507dd55bae6026bdb5fc3b187254caee9be304e61f3a4648f0d9ae46"
+          },
+          {
+            "path": "tests/location-point-projection.test.js",
+            "bytes": 292675,
+            "sha256": "94cf6e2e51a055918320226f5f2926ed5abfaab9ab683f0b0092c2264647112d"
+          },
+          {
+            "path": "tests/personal-codecs.test.js",
+            "bytes": 147434,
+            "sha256": "1eab0b6a65e32f245c27095dd45639f468e40d2d008832ac1b5146af41eaabf7"
+          },
+          {
+            "path": "tests/query-traversal.test.js",
+            "bytes": 32338,
+            "sha256": "4b7c0fc2023cf12782b4063c2d825732d6050b55617163581785103126b83171"
+          },
+          {
+            "path": "tests/registry.test.js",
+            "bytes": 30453,
+            "sha256": "b658b988e46ed6185ade3b90ae4405c8da91f02fad2730cfd1bff87e4ceff3ec"
+          },
+          {
+            "path": "tests/usage-mobile-ios-eligibility.test.js",
+            "bytes": 560569,
+            "sha256": "e945d079ee72da9afcb561548e089b232ac46f3a5dd6375d7980f4a0e3602166"
+          }
+        ],
+        "actual_executed_test_entries": [
+          "dist/tests/candidate-codec-api.test.js",
+          "dist/tests/canonical-json.test.js",
+          "dist/tests/catalog.test.js",
+          "dist/tests/combined-slice.test.js",
+          "dist/tests/exact-json-number-parser.test.js",
+          "dist/tests/exact-json-numbers.test.js",
+          "dist/tests/exact-json-value.test.js",
+          "dist/tests/exact-values.test.js",
+          "dist/tests/foundation.test.js",
+          "dist/tests/location-point-projection.test.js",
+          "dist/tests/personal-codecs.test.js",
+          "dist/tests/query-traversal.test.js",
+          "dist/tests/registry.test.js",
+          "dist/tests/usage-mobile-ios-eligibility.test.js"
+        ],
+        "execution_descriptor": {
+          "path": "/private/tmp/healthmd-exact-codecs-core-check-inputs.json",
+          "bytes": 88715,
+          "sha256": "bcf8184d8270a556c4c1f9d49da6407bfdc60192436ce8ead1d3fb43193b6b29"
+        }
+      }
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "ci",
+        "--offline",
+        "--install-links",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "result": "passed",
+      "physical_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "ci",
+        "--offline",
+        "--install-links",
+        "--engine-strict",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "physical_cwd": "/Users/codybontecou/dev/health-md/apps/cli",
+      "env": {
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/usr/bin:/bin",
+        "npm_config_cache": "/private/tmp/healthmd-effect-npm-cache",
+        "npm_config_offline": "true",
+        "npm_config_audit": "false",
+        "npm_config_fund": "false",
+        "npm_config_ignore_scripts": "true",
+        "npm_config_userconfig": "/private/tmp/healthmd-mcp-empty-user.npmrc",
+        "npm_config_globalconfig": "/private/tmp/healthmd-mcp-empty-global.npmrc"
+      },
+      "owner_home_required": "/Users/codybontecou",
+      "runner": "ROOT exclusive coordinator",
+      "wall_ms": 1110,
+      "deadline_ms": 300000,
+      "combined_output_cap_bytes": 16777216,
+      "cleanup_ms": 3000,
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-install-root-first.json",
+          "bytes": 53815,
+          "sha256": "14d9344c6ba5db4204f3ab84d87369678d1a528a1252fbbb2701a0d67fc38015"
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-install-root-first.log",
+          "bytes": 27,
+          "sha256": "f49b5e75f9976380ec389985c2e84da92c14f1d9e00573595c7f04f2a6f88cd4"
+        },
+        "counts": {},
+        "source_after_matches": true,
+        "supervision": {
+          "result": "passed",
+          "code": 0,
+          "signal": null,
+          "reason": null,
+          "observed_output_bytes": 27,
+          "retained_output_bytes": 27,
+          "retained_raw_bytes": 27,
+          "retained_raw_sha256": "f49b5e75f9976380ec389985c2e84da92c14f1d9e00573595c7f04f2a6f88cd4",
+          "observed_raw_sha256": "f49b5e75f9976380ec389985c2e84da92c14f1d9e00573595c7f04f2a6f88cd4",
+          "escalation": false,
+          "parent_reaped": true,
+          "group_absent": true,
+          "cleanup_ack": true,
+          "cleanup_deadline_missed": false,
+          "late_physical_cleanup_observed": false,
+          "group_observation": "absent_esrch",
+          "supervisor_os_faults": {
+            "group_query_denied": 0,
+            "group_query_unverified": 0,
+            "group_signal_denied": 0,
+            "group_signal_unverified": 0
+          }
+        },
+        "installed": {
+          "packedOutputs": [
+            {
+              "path": "contracts/exact-values.d.ts",
+              "bytes": 2374,
+              "sha256": "a15fd32ca6949781aec54932c085eb9518588f7601a76a44a4814806f1dabf62"
+            },
+            {
+              "path": "contracts/exact-values.js",
+              "bytes": 6341,
+              "sha256": "08902637f647e236778376553246823b5f2fffceafaeab8faaf6f4668b3584a4"
+            },
+            {
+              "path": "contracts/personal-slice.d.ts",
+              "bytes": 1809,
+              "sha256": "6a727c217d8beb905b29c4a08e145000cc8920d6dcd96d8c226a49c9ce7ef373"
+            },
+            {
+              "path": "contracts/personal-slice.js",
+              "bytes": 26601,
+              "sha256": "e92d867183005e54f7c10771da16abfaed5cee017e2b471e7f4f009a210dae29"
+            },
+            {
+              "path": "contracts/registry.d.ts",
+              "bytes": 14209,
+              "sha256": "806c9c9a8e38cd6d1174acf9a172614f74d14393b2b7ab787a1411504f17b14e"
+            },
+            {
+              "path": "contracts/registry.js",
+              "bytes": 15578,
+              "sha256": "9a3ae9e2c2efd898c5d6b164756f1e7595e02a51e0e81a16951af28fd830d7c7"
+            },
+            {
+              "path": "host-interfaces/capabilities.d.ts",
+              "bytes": 834,
+              "sha256": "c6386a83f4fb0a7b252c24cc3c93bc9279ecfe4c518a4be7156699af1866a235"
+            },
+            {
+              "path": "host-interfaces/capabilities.js",
+              "bytes": 523,
+              "sha256": "ae1516fb397db074c95fc14214b3a48f99192daa16f1d7ac00f047d9b1ed94ef"
+            },
+            {
+              "path": "host-interfaces/faults.d.ts",
+              "bytes": 1117,
+              "sha256": "0ed9a8ee5589dd01a66301f69dfa23d3074cfca8c5711e8c9a4a7bd85b58c6a8"
+            },
+            {
+              "path": "host-interfaces/faults.js",
+              "bytes": 453,
+              "sha256": "662d61db6a41fcfa2fcc25c42c51a756bbedb7d1c06371832a191f853995b4a0"
+            },
+            {
+              "path": "index.d.ts",
+              "bytes": 319,
+              "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8"
+            },
+            {
+              "path": "index.js",
+              "bytes": 175,
+              "sha256": "63a059cb8776538c00dfdfb915cb420f0f0b5fc586701c223d326548bda3e389"
+            },
+            {
+              "path": "location/point-projection.d.ts",
+              "bytes": 2048,
+              "sha256": "eaedd4663b925e9c81c76cfe207a6978849cfa83a6635ebfac0dcb051aa87477"
+            },
+            {
+              "path": "location/point-projection.js",
+              "bytes": 10958,
+              "sha256": "b9e49e27696bb85977b015f0c2e33c87aa5fe92ae948bfa4cd4265a1f2f3a79a"
+            },
+            {
+              "path": "operations/catalog.d.ts",
+              "bytes": 2752,
+              "sha256": "e7d7ab22db86ce272ac60b03e42abfb8dd7229da6c9b24e52c4ca83b38e1fe88"
+            },
+            {
+              "path": "operations/catalog.js",
+              "bytes": 4725,
+              "sha256": "42ad4c17796881e2b27b583cf986fa90e3f47e72d615d1da6dae7bb4b75c87b5"
+            },
+            {
+              "path": "operations/normalize.d.ts",
+              "bytes": 1075,
+              "sha256": "27e2f189c3b0cba9cdebef9f15dec7a72ac13ca0273bb1f5bc14db8e646cc393"
+            },
+            {
+              "path": "operations/normalize.js",
+              "bytes": 2351,
+              "sha256": "7c206f362e84b6bb79012bf48e224588b28b1362677a3ccb06b3ef734c11a00e"
+            },
+            {
+              "path": "operations/personal-slice.d.ts",
+              "bytes": 6725,
+              "sha256": "2b5a325719dd18baf155395b0397af3b20b2bd920fc83cd1a4ec0e33e1145091"
+            },
+            {
+              "path": "operations/personal-slice.js",
+              "bytes": 28234,
+              "sha256": "d88b66fb7953d8d4b3dd0c831bd790338bee82812fd55c50e549dd02afce5bbc"
+            },
+            {
+              "path": "operations/query.d.ts",
+              "bytes": 3966,
+              "sha256": "b15c634a496815a3332ae532e622630dcf334a8680e598c8fb457419057b55bb"
+            },
+            {
+              "path": "operations/query.js",
+              "bytes": 6725,
+              "sha256": "c335dbfac349c7c903a01dbc575198cb6b3f4129a239dc6a6e3b1ab6dcd7000e"
+            },
+            {
+              "path": "serialization/canonical-json.d.ts",
+              "bytes": 524,
+              "sha256": "3616392a31adc75268697585fd03c8fffe13a5e17a164329a91f59334f52361b"
+            },
+            {
+              "path": "serialization/canonical-json.js",
+              "bytes": 7663,
+              "sha256": "60d3c1fea8aa7ed84c6a1f82466806eea3cffb366608749fe07090187e6d78c5"
+            },
+            {
+              "path": "serialization/exact-json-number-parser.d.ts",
+              "bytes": 894,
+              "sha256": "be7b339eac4b906e5c1f4f1a2471777062c35fe53f069bf3994618b1ba36cd9b"
+            },
+            {
+              "path": "serialization/exact-json-number-parser.js",
+              "bytes": 9315,
+              "sha256": "b93ebeacc0eb1885859136b9d66e0927bbe9ff24dd9d9f40351bf8ff76e6f807"
+            },
+            {
+              "path": "serialization/exact-json-numbers.d.ts",
+              "bytes": 482,
+              "sha256": "f92c7b7b8bb671352a7b3f8b6d9519332b17286454fac0160636ec0c79a25335"
+            },
+            {
+              "path": "serialization/exact-json-numbers.js",
+              "bytes": 5668,
+              "sha256": "a1f00c5303d041806911778e8090ef177b4f4f7b8eed1561ab1afcc1f0f71268"
+            },
+            {
+              "path": "serialization/exact-json-value.d.ts",
+              "bytes": 1895,
+              "sha256": "896703c555b76db2d955dbd573bf5bf15e3391c418b59377445a0fac5ad90256"
+            },
+            {
+              "path": "serialization/exact-json-value.js",
+              "bytes": 15912,
+              "sha256": "37840e6952d7c8a291ef3e58167160180b50e66c7d7cd80dd0d315c00f2cf9b1"
+            },
+            {
+              "path": "serialization/index.d.ts",
+              "bytes": 673,
+              "sha256": "cf8157321072f4b239ab5aa26a484aff870eb99ef200f0ab4054689cefb44cde"
+            },
+            {
+              "path": "serialization/index.js",
+              "bytes": 365,
+              "sha256": "b20688712e390fac869b32cf954847d4846e74aa3a69f702c6c40ab20a4fc3c6"
+            },
+            {
+              "path": "usage-mobile/ios-eligibility.d.ts",
+              "bytes": 3745,
+              "sha256": "d0b793290a1504c2827e15be7e15d48c49aed4b4bc4258a2952e2bedbf827ca9"
+            },
+            {
+              "path": "usage-mobile/ios-eligibility.js",
+              "bytes": 15167,
+              "sha256": "3fd5c4fc12b3082ea69b35f1a9f985db78911d54d0555ed8189665145167c35c"
+            }
+          ],
+          "single_effect": true,
+          "tool_archive_source_hashes_match": true
+        },
+        "CLI_dist_preserved": true,
+        "original_execution_descriptor": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-inputs.json",
+          "bytes": 64531,
+          "sha256": "34ed8516bd357af4e69abd404f856ab13821bfd3895948f4d6c1c61393af455a"
+        }
+      }
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "passed",
+      "physical_argv": [
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+        "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "check"
+      ],
+      "physical_cwd": "/Users/codybontecou/dev/health-md/apps/cli",
+      "env": {
+        "PATH": "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin:/usr/bin:/bin",
+        "npm_config_cache": "/private/tmp/healthmd-effect-npm-cache",
+        "npm_config_offline": "true",
+        "npm_config_audit": "false",
+        "npm_config_fund": "false",
+        "npm_config_ignore_scripts": "true",
+        "npm_config_userconfig": "/private/tmp/healthmd-mcp-empty-user.npmrc",
+        "npm_config_globalconfig": "/private/tmp/healthmd-mcp-empty-global.npmrc"
+      },
+      "owner_home_required": "/Users/codybontecou",
+      "runner": "ROOT exclusive coordinator",
+      "wall_ms": 3187,
+      "deadline_ms": 300000,
+      "combined_output_cap_bytes": 16777216,
+      "cleanup_ms": 3000,
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+          "bytes": 123554,
+          "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.log",
+          "bytes": 44338,
+          "sha256": "e400cb9bb6de6347ff397b32b98f2083b25ee0170acaefed03db8cc00de4a49c"
+        },
+        "counts": {
+          "tests": 425,
+          "suites": 0,
+          "pass": 425,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "source_after_matches": true,
+        "supervision": {
+          "result": "passed",
+          "code": 0,
+          "signal": null,
+          "reason": null,
+          "observed_output_bytes": 44338,
+          "retained_output_bytes": 44338,
+          "retained_raw_bytes": 44338,
+          "retained_raw_sha256": "e400cb9bb6de6347ff397b32b98f2083b25ee0170acaefed03db8cc00de4a49c",
+          "observed_raw_sha256": "e400cb9bb6de6347ff397b32b98f2083b25ee0170acaefed03db8cc00de4a49c",
+          "escalation": false,
+          "parent_reaped": true,
+          "group_absent": true,
+          "cleanup_ack": true,
+          "cleanup_deadline_missed": false,
+          "late_physical_cleanup_observed": false,
+          "group_observation": "absent_esrch",
+          "supervisor_os_faults": {
+            "group_query_denied": 0,
+            "group_query_unverified": 0,
+            "group_signal_denied": 0,
+            "group_signal_unverified": 0
+          }
+        },
+        "boundary": {
+          "qualifiedCoreFiles": 34,
+          "qualifiedCoreInputs": 56,
+          "packedLocalCore": true,
+          "physicalEffectInstallations": 1,
+          "reviewedToolLaunchers": [
+            "esbuild",
+            "tsc"
+          ],
+          "serviceIdentity": true,
+          "negativeIdentityCases": [
+            "sibling-symlink",
+            "stale-build",
+            "unbuilt-source-edit",
+            "extra-source-file",
+            "unreviewed-metadata-edit",
+            "unreviewed-packed-export",
+            "missing-source-file",
+            "new-module-edit",
+            "source-symlink",
+            "new-module-stale-output",
+            "missing-output",
+            "extra-output",
+            "output-symlink",
+            "absent-cohort",
+            "tampered-cohort",
+            "unreviewed-delta",
+            "missing-personal-source",
+            "personal-source-edit",
+            "personal-source-symlink",
+            "personal-output-stale",
+            "missing-personal-output",
+            "extra-personal-output",
+            "personal-output-symlink",
+            "unreviewed-personal-receipt",
+            "slice-source:src/location/point-projection.ts:missing",
+            "slice-source:src/location/point-projection.ts:edited",
+            "slice-source:src/location/point-projection.ts:symlink",
+            "slice-source:src/operations/personal-slice.ts:missing",
+            "slice-source:src/operations/personal-slice.ts:edited",
+            "slice-source:src/operations/personal-slice.ts:symlink",
+            "slice-source:tests/combined-slice-vectors.ts:missing",
+            "slice-source:tests/combined-slice-vectors.ts:edited",
+            "slice-source:tests/combined-slice-vectors.ts:symlink",
+            "slice-source:tests/combined-slice.test.ts:missing",
+            "slice-source:tests/combined-slice.test.ts:edited",
+            "slice-source:tests/combined-slice.test.ts:symlink",
+            "slice-source:tests/location-point-projection-vectors.ts:missing",
+            "slice-source:tests/location-point-projection-vectors.ts:edited",
+            "slice-source:tests/location-point-projection-vectors.ts:symlink",
+            "slice-source:tests/location-point-projection.test.ts:missing",
+            "slice-source:tests/location-point-projection.test.ts:edited",
+            "slice-source:tests/location-point-projection.test.ts:symlink",
+            "slice-output:dist/core/location/point-projection.d.ts:missing",
+            "slice-output:dist/core/location/point-projection.d.ts:stale",
+            "slice-output:dist/core/location/point-projection.d.ts:symlink",
+            "slice-output:dist/core/location/point-projection.js:missing",
+            "slice-output:dist/core/location/point-projection.js:stale",
+            "slice-output:dist/core/location/point-projection.js:symlink",
+            "slice-output:dist/core/operations/personal-slice.d.ts:missing",
+            "slice-output:dist/core/operations/personal-slice.d.ts:stale",
+            "slice-output:dist/core/operations/personal-slice.d.ts:symlink",
+            "slice-output:dist/core/operations/personal-slice.js:missing",
+            "slice-output:dist/core/operations/personal-slice.js:stale",
+            "slice-output:dist/core/operations/personal-slice.js:symlink",
+            "slice-extra-output",
+            "slice-cohort:absent",
+            "slice-cohort:tampered",
+            "slice-receipt:location_delta:absent",
+            "slice-receipt:location_delta:tampered",
+            "slice-receipt:location_delta:unreviewed",
+            "slice-receipt:combined_delta:absent",
+            "slice-receipt:combined_delta:tampered",
+            "slice-receipt:combined_delta:unreviewed",
+            "eligibility-input:src/usage-mobile/ios-eligibility.ts:missing",
+            "eligibility-input:src/usage-mobile/ios-eligibility.ts:edited",
+            "eligibility-input:src/usage-mobile/ios-eligibility.ts:symlink",
+            "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:missing",
+            "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:edited",
+            "eligibility-input:tests/usage-mobile-ios-eligibility-vectors.ts:symlink",
+            "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:missing",
+            "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:edited",
+            "eligibility-input:tests/usage-mobile-ios-eligibility.test.ts:symlink",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:missing",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:stale",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.d.ts:symlink",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:missing",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:stale",
+            "eligibility-output:dist/core/usage-mobile/ios-eligibility.js:symlink",
+            "eligibility-extra-output",
+            "eligibility-cohort:absent",
+            "eligibility-cohort:tampered",
+            "eligibility-receipt:absent",
+            "eligibility-receipt:tampered",
+            "eligibility-receipt:unreviewed",
+            "codec-input:src/serialization/canonical-json.ts:missing",
+            "codec-input:src/serialization/canonical-json.ts:edited",
+            "codec-input:src/serialization/canonical-json.ts:symlink",
+            "codec-input:src/serialization/exact-json-number-parser.ts:missing",
+            "codec-input:src/serialization/exact-json-number-parser.ts:edited",
+            "codec-input:src/serialization/exact-json-number-parser.ts:symlink",
+            "codec-input:src/serialization/exact-json-value.ts:missing",
+            "codec-input:src/serialization/exact-json-value.ts:edited",
+            "codec-input:src/serialization/exact-json-value.ts:symlink",
+            "codec-input:src/serialization/index.ts:missing",
+            "codec-input:src/serialization/index.ts:edited",
+            "codec-input:src/serialization/index.ts:symlink",
+            "codec-input:tests/candidate-codec-api-vectors.ts:missing",
+            "codec-input:tests/candidate-codec-api-vectors.ts:edited",
+            "codec-input:tests/candidate-codec-api-vectors.ts:symlink",
+            "codec-input:tests/candidate-codec-api.test.ts:missing",
+            "codec-input:tests/candidate-codec-api.test.ts:edited",
+            "codec-input:tests/candidate-codec-api.test.ts:symlink",
+            "codec-input:tests/canonical-json-vectors.ts:missing",
+            "codec-input:tests/canonical-json-vectors.ts:edited",
+            "codec-input:tests/canonical-json-vectors.ts:symlink",
+            "codec-input:tests/canonical-json.test.ts:missing",
+            "codec-input:tests/canonical-json.test.ts:edited",
+            "codec-input:tests/canonical-json.test.ts:symlink",
+            "codec-input:tests/exact-json-number-parser-vectors.ts:missing",
+            "codec-input:tests/exact-json-number-parser-vectors.ts:edited",
+            "codec-input:tests/exact-json-number-parser-vectors.ts:symlink",
+            "codec-input:tests/exact-json-number-parser.test.ts:missing",
+            "codec-input:tests/exact-json-number-parser.test.ts:edited",
+            "codec-input:tests/exact-json-number-parser.test.ts:symlink",
+            "codec-input:tests/exact-json-value-vectors.ts:missing",
+            "codec-input:tests/exact-json-value-vectors.ts:edited",
+            "codec-input:tests/exact-json-value-vectors.ts:symlink",
+            "codec-input:tests/exact-json-value.test.ts:missing",
+            "codec-input:tests/exact-json-value.test.ts:edited",
+            "codec-input:tests/exact-json-value.test.ts:symlink",
+            "codec-input:tests/source-catalog-vectors.ts:missing",
+            "codec-input:tests/source-catalog-vectors.ts:edited",
+            "codec-input:tests/source-catalog-vectors.ts:symlink",
+            "codec-output:dist/core/serialization/canonical-json.d.ts:missing",
+            "codec-output:dist/core/serialization/canonical-json.d.ts:stale",
+            "codec-output:dist/core/serialization/canonical-json.d.ts:symlink",
+            "codec-output:dist/core/serialization/canonical-json.js:missing",
+            "codec-output:dist/core/serialization/canonical-json.js:stale",
+            "codec-output:dist/core/serialization/canonical-json.js:symlink",
+            "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:missing",
+            "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:stale",
+            "codec-output:dist/core/serialization/exact-json-number-parser.d.ts:symlink",
+            "codec-output:dist/core/serialization/exact-json-number-parser.js:missing",
+            "codec-output:dist/core/serialization/exact-json-number-parser.js:stale",
+            "codec-output:dist/core/serialization/exact-json-number-parser.js:symlink",
+            "codec-output:dist/core/serialization/exact-json-value.d.ts:missing",
+            "codec-output:dist/core/serialization/exact-json-value.d.ts:stale",
+            "codec-output:dist/core/serialization/exact-json-value.d.ts:symlink",
+            "codec-output:dist/core/serialization/exact-json-value.js:missing",
+            "codec-output:dist/core/serialization/exact-json-value.js:stale",
+            "codec-output:dist/core/serialization/exact-json-value.js:symlink",
+            "codec-output:dist/core/serialization/index.d.ts:missing",
+            "codec-output:dist/core/serialization/index.d.ts:stale",
+            "codec-output:dist/core/serialization/index.d.ts:symlink",
+            "codec-output:dist/core/serialization/index.js:missing",
+            "codec-output:dist/core/serialization/index.js:stale",
+            "codec-output:dist/core/serialization/index.js:symlink",
+            "codec-extra:exact-json-number-parser:js",
+            "codec-extra:exact-json-number-parser:d.ts",
+            "codec-extra:exact-json-value:js",
+            "codec-extra:exact-json-value:d.ts",
+            "codec-extra:canonical-json:js",
+            "codec-extra:canonical-json:d.ts",
+            "codec-extra:index:js",
+            "codec-extra:index:d.ts",
+            "codec-receipt:SERIALIZE-EXACT-NUMBERS:absent",
+            "codec-receipt:SERIALIZE-EXACT-NUMBERS:tampered",
+            "codec-receipt:SERIALIZE-EXACT-NUMBERS:unreviewed",
+            "codec-receipt:PARSE-EXACT-JSON-NUMBERS:absent",
+            "codec-receipt:PARSE-EXACT-JSON-NUMBERS:tampered",
+            "codec-receipt:PARSE-EXACT-JSON-NUMBERS:unreviewed",
+            "codec-receipt:PARSE-EXACT-JSON-VALUES:absent",
+            "codec-receipt:PARSE-EXACT-JSON-VALUES:tampered",
+            "codec-receipt:PARSE-EXACT-JSON-VALUES:unreviewed",
+            "codec-receipt:SERIALIZE-CANONICAL-JSON:absent",
+            "codec-receipt:SERIALIZE-CANONICAL-JSON:tampered",
+            "codec-receipt:SERIALIZE-CANONICAL-JSON:unreviewed",
+            "codec-receipt:CORE-CANDIDATE-CODEC-API:absent",
+            "codec-receipt:CORE-CANDIDATE-CODEC-API:tampered",
+            "codec-receipt:CORE-CANDIDATE-CODEC-API:unreviewed",
+            "exact-codecs-cohort:absent",
+            "exact-codecs-cohort:tampered",
+            "exact-codecs-cohort:unreviewed",
+            "catalog-evidence:receipt:absent",
+            "catalog-evidence:receipt:tampered",
+            "catalog-evidence:receipt:unreviewed",
+            "catalog-evidence:approval:absent",
+            "catalog-evidence:approval:tampered",
+            "catalog-evidence:approval:unreviewed",
+            "catalog-evidence:reviewed-archive:absent",
+            "catalog-evidence:reviewed-archive:tampered",
+            "catalog-evidence:reviewed-archive:unreviewed",
+            "catalog-evidence:vector:unreviewed",
+            "catalog-receipt:mismatched-task_id",
+            "catalog-receipt:mismatched-source_sha",
+            "catalog-receipt:mismatched-fingerprint",
+            "catalog-receipt:mismatched-scope",
+            "catalog-approval:mismatched-task_id",
+            "catalog-approval:mismatched-source_sha",
+            "catalog-approval:mismatched-fingerprint",
+            "catalog-approval:mismatched-scope",
+            "catalog-authority:false-implementation-admission",
+            "catalog-authority:false-behavior-admission",
+            "catalog-authority:false-runtime-admission",
+            "catalog-authority:false-module-admission",
+            "catalog-authority:false-grant-admission",
+            "catalog-authority:false-public-admission",
+            "catalog-authority:false-consumer_admission-admission",
+            "catalog-authority:unknown-field",
+            "catalog-receipt:wrong-proof-class",
+            "catalog-receipt:wrong-source-patch",
+            "catalog-chain:wrong-archive-link",
+            "catalog-chain:approval-wrong-receipt"
+          ]
+        },
+        "primary_result_literal_ids": [
+          "cli-envelope-auto-terminal",
+          "cli-envelope-auto-pipe",
+          "cli-envelope-operation-failure",
+          "cli-envelope-parse-failure",
+          "cli-envelope-raw-bypass",
+          "cli-envelope-wake-code-alias",
+          "forced-json-terminal",
+          "forced-human-pipe",
+          "forced-json-pipe",
+          "json-human-conflict-pipe",
+          "json-human-conflict-terminal",
+          "local-discovery-exit-zero",
+          "raw-human-mode-still-exact",
+          "raw-no-terminal-LF-fabrication",
+          "common-throwing-proxy",
+          "common-revoked-proxy",
+          "common-coercible-object",
+          "common-malformed-json",
+          "common-escaped-duplicate-key",
+          "common-noncanonical-integer",
+          "common-UTF16-lone-high",
+          "common-UTF16-lone-low",
+          "common-UTF8-overbudget",
+          "common-depth-overbudget",
+          "common-node-overbudget",
+          "mode-Proxy",
+          "mode-revoked-Proxy",
+          "mode-nonboolean",
+          "mode-unknown-field",
+          "mode-duplicate-decoded-key",
+          "mode-overbudget",
+          "foreign-outcome-Proxy",
+          "foreign-outcome-revoked-Proxy",
+          "foreign-authentic-outcome-other-factory",
+          "foreign-mode-Proxy",
+          "foreign-authentic-mode-other-factory",
+          "private-unadmitted-jsonl_stdout_and_receipt_stderr",
+          "private-unadmitted-artifact_destination",
+          "private-unadmitted-jsonl_destination_and_receipt",
+          "Scope-closed-before-common",
+          "Scope-close-inside-common",
+          "Scope-close-inside-after-common-current",
+          "deny-before-render",
+          "Scope-close-inside-renderer-before-read",
+          "Scope-close-during-Deferred-value-read-current",
+          "revoke-between-same-renderer-read-effect-executions",
+          "renderer-defect-fixed",
+          "common-defect-fixed",
+          "foreign-renderer-byte-result",
+          "byte-issuer-overbudget",
+          "deny-before-output-allocation",
+          "Scope-close-before-output-allocation",
+          "late-completed-output-allocation-on-cancel",
+          "interrupt-pending-uncompleted-output-allocation",
+          "Scope-close-inside-completed-output-allocation",
+          "deny-after-output-allocation",
+          "delayed-byte-read-revoke-Scope-live",
+          "Scope-close-during-Deferred-byte-read-current",
+          "sink-defect-after-observed-output",
+          "revoke-between-two-same-byte-effect-reads",
+          "Scope-close-inside-sink-after-read",
+          "releaseACK-pending-blocks-exit",
+          "release-defect-poisons-factory",
+          "Scope-close-inside-releaseACK",
+          "deny-after-ACK-before-exit",
+          "foreign-Proxy-request-OWN-value",
+          "foreign-Proxy-request-OWN-bytes",
+          "foreign-revoked-Proxy-value",
+          "foreign-revoked-Proxy-bytes",
+          "escaped-common-issuer-dead-at-after-common",
+          "escaped-renderer-view-and-issuer-dead-at-after-render",
+          "escaped-sink-view-dead-at-after-publication",
+          "escaped-sink-view-dead-before-releaseACK",
+          "escaped-read-cannot-reprovide-original-lifetime",
+          "foreign-raw-validation-witness",
+          "Scope-close-inside-raw-validator",
+          "output_write_failed-fixed-owned-kind",
+          "success_error_shaped-fixed-owned-kind",
+          "byte-issuer-invalid-Unicode",
+          "owned-output-busy-until-releaseACK",
+          "raw-validation-Proxy-shape-never-authority",
+          "external-originalScope-close-during-prepare",
+          "external-originalScope-close-during-registered-wait",
+          "same-common-callback-unbound-own-value-is-not-readable-for-returned-outcome"
+        ],
+        "unique_primary_result_literal_count": 84,
+        "full_CLI_outputs": [
+          {
+            "path": "candidate/candidate-host.d.ts",
+            "bytes": 1398,
+            "sha256": "b626ca0d77c93557e0818285d60e6c5e7dbd54815abd4f59c0b11c885fb59d20"
+          },
+          {
+            "path": "candidate/candidate-host.js",
+            "bytes": 2126,
+            "sha256": "d9d0f456859c4ee41b33a76cdc7f29b7bad2e2aa64e2c1d707aa9cc789d12230"
+          },
+          {
+            "path": "candidate/cli/query.d.ts",
+            "bytes": 1728,
+            "sha256": "271923cb97f21c4134448aec8a8d4009922ee58851596543c410bd563fba4d1d"
+          },
+          {
+            "path": "candidate/cli/query.js",
+            "bytes": 6222,
+            "sha256": "e3e9ae7cec6fa05db4b1e93f268fafc2b6146422980ff91e0d52b4892c268c74"
+          },
+          {
+            "path": "candidate/mcp/query.d.ts",
+            "bytes": 2247,
+            "sha256": "f57542998729efec35101b721e065820878ab111c9e9ff4106df8fb6484a47fb"
+          },
+          {
+            "path": "candidate/mcp/query.js",
+            "bytes": 5026,
+            "sha256": "c9a5888069e5bb126bf6bbe4104b63cf192f6040a11b33817ea9dce99b72f423"
+          },
+          {
+            "path": "candidate/surfaces/discovery-normalizer.d.ts",
+            "bytes": 3847,
+            "sha256": "a2de83654c965454a55fff13cf04ffc74e1b0ae5c111d816f20687ef73bba3ed"
+          },
+          {
+            "path": "candidate/surfaces/discovery-normalizer.js",
+            "bytes": 13267,
+            "sha256": "bbfba1b0c743062a2546d085dfe4a3bface84d825efe62e96cbd03719e960b6a"
+          },
+          {
+            "path": "candidate/surfaces/jsonrpc-envelope.d.ts",
+            "bytes": 7304,
+            "sha256": "ccd053e368f368f4a54b9c94e5622342838a264e1253bd0f8ee65ee936eff8b5"
+          },
+          {
+            "path": "candidate/surfaces/jsonrpc-envelope.js",
+            "bytes": 38249,
+            "sha256": "dc077be45bc39c53a768a11d900cc6655c878013dfa02de7e8305d15f268c2a7"
+          },
+          {
+            "path": "candidate/surfaces/result-envelope.d.ts",
+            "bytes": 9081,
+            "sha256": "6d16f7dfb0eb319784a3cef15f0d33e8f6ac97c5955bdb6c959feb4a91057f05"
+          },
+          {
+            "path": "candidate/surfaces/result-envelope.js",
+            "bytes": 25738,
+            "sha256": "8983509a65e079759fa6c76fcfe56f9e0b8537fe8f5bbe8027037c38b46feac0"
+          },
+          {
+            "path": "test-metafile.json",
+            "bytes": 35862,
+            "sha256": "b607c3fae9f956f08ca63f950d3e604e113c0a843a0213b9fbf392414cda575a"
+          },
+          {
+            "path": "tests/candidate-api.test.js",
+            "bytes": 7645,
+            "sha256": "dcb0703c9582f74700c54fe020d033a38f711f793e77ceb909370b6898093ba0"
+          },
+          {
+            "path": "tests/candidate-host.test.js",
+            "bytes": 9686,
+            "sha256": "947f4acee04c7ef592a668b6e8515ac21bab28fe11b2d0a73be4e4c72a96fc3f"
+          },
+          {
+            "path": "tests/cli-query.test.js",
+            "bytes": 21461,
+            "sha256": "96ba39ee4e10b5259e35e48d74d7a9bc6a234d7a283697be24768492e30a7b70"
+          },
+          {
+            "path": "tests/mcp-query.test.js",
+            "bytes": 30226,
+            "sha256": "27f4c166e8db95f17ba0c99cd73991d4bb188bede10cbca55ee7ef1045d25240"
+          },
+          {
+            "path": "tests/shared-slice-parity.test.js",
+            "bytes": 38112,
+            "sha256": "e48f38575a3cf08ba19085259d9e36df3bb2842836fbfff266fbfdbfeb944a0c"
+          },
+          {
+            "path": "tests/surfaces/discovery-normalizer.test.js",
+            "bytes": 93990,
+            "sha256": "477e264907c9e04b28272349235e7de35689fa96dfa699380c085da4e17395d7"
+          },
+          {
+            "path": "tests/surfaces/jsonrpc-envelope.test.js",
+            "bytes": 367992,
+            "sha256": "3838110f49bee3437db5878b534c055593d07a450ff9f9eca117b17b770e8071"
+          },
+          {
+            "path": "tests/surfaces/result-envelope.test.js",
+            "bytes": 279840,
+            "sha256": "1191c5ae2ab9c75a41c37ed5cca94fbdb0842d1d5d176cd6e3370ba4157cf4cb"
+          }
+        ],
+        "full50_core_output_lease": "Pinned producer.outputsAfter verified before and after by independently reviewed harness39e355; postflight_failure null",
+        "install_authority": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-install-root-first.json",
+          "bytes": 53815,
+          "sha256": "14d9344c6ba5db4204f3ab84d87369678d1a528a1252fbbb2701a0d67fc38015"
+        },
+        "execution_descriptor": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-runtime-repair-check-inputs.json",
+          "bytes": 71693,
+          "sha256": "4a630facfd64acaccf33a1418c251b667006a993f7c32c5e7fa66343ea68ebfe"
+        }
+      }
+    }
+  ],
+  "inspection_summary": "Exact source/authority freeze and reviewed repairs retained. ROOT actual1253core tests/19guards, one original offlineCLI install, and full425CLI tests/84result scenes/203filesystem negatives passed with source/output identity and bounded process cleanup. Synthetic private candidate slice only; native/public/release/cloud/Rustretirement remain open.",
+  "observations": [
+    {
+      "case_id": "Stage1-source-graph-freeze",
+      "result": "passed",
+      "procedure": "Fixed accepted source/output raw rehash and exact43/26 inverse baseline reconciliation",
+      "expected": "56inputs34coreoutputs with13inputs8modules and2metadata deltas only",
+      "observed": {
+        "normal_added_input_paths": [
+          "src/serialization/canonical-json.ts",
+          "src/serialization/exact-json-number-parser.ts",
+          "src/serialization/exact-json-value.ts",
+          "src/serialization/index.ts",
+          "tests/candidate-codec-api-vectors.ts",
+          "tests/candidate-codec-api.test.ts",
+          "tests/canonical-json-vectors.ts",
+          "tests/canonical-json.test.ts",
+          "tests/exact-json-number-parser-vectors.ts",
+          "tests/exact-json-number-parser.test.ts",
+          "tests/exact-json-value-vectors.ts",
+          "tests/exact-json-value.test.ts"
+        ],
+        "data_only_added_input_path": "tests/source-catalog-vectors.ts",
+        "metadata_replaced": [
+          "package.json",
+          "README.md"
+        ],
+        "added_module_output_paths": [
+          "dist/core/serialization/canonical-json.d.ts",
+          "dist/core/serialization/canonical-json.js",
+          "dist/core/serialization/exact-json-number-parser.d.ts",
+          "dist/core/serialization/exact-json-number-parser.js",
+          "dist/core/serialization/exact-json-value.d.ts",
+          "dist/core/serialization/exact-json-value.js",
+          "dist/core/serialization/index.d.ts",
+          "dist/core/serialization/index.js"
+        ],
+        "original_41_other_inputbytes_unchanged": true,
+        "original_26_modulebytes_unchanged": true
+      },
+      "evidence": {
+        "cohort": {
+          "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+          "bytes": 256121
+        },
+        "producer": {
+          "path": "/private/tmp/healthmd-codec-api-core-check-root-first.json",
+          "sha256": "2f5a625a45b7f3e1313443b47df42cf8efa0bcb7e52a24cf260ab008670f67ea",
+          "bytes": 126297
+        }
+      }
+    },
+    {
+      "case_id": "Stage2-guard-source-freeze",
+      "result": "passed",
+      "procedure": "Raw source-only hash and frozen cohort integrity inspection",
+      "expected": "Only guard/docs plus receipt; unchanged reviewed cohort/maps203catalog",
+      "observed": {
+        "nonreceipt_paths": [
+          {
+            "path": "apps/cli/docs/typescript-candidate.md",
+            "sha256": "39cae98b21a19e96c94260b233771fabd3f17a311bd383fab9d58ce6e945b159",
+            "bytes": 12400
+          },
+          {
+            "path": "apps/cli/scripts/check-candidate.mjs",
+            "sha256": "3186cb9902dfba6bf7c230ae402500e344ea985539d9fb6abc6c45a686842d63",
+            "bytes": 66592
+          },
+          {
+            "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+            "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+            "bytes": 256121
+          }
+        ],
+        "patch_digest": "88bf2c1b586b2bbb2e3d9126da36fd99ad8c2a1071c0c838c3b21518b6e6ad51",
+        "all_negatives_checks": "unrun"
+      },
+      "evidence": {
+        "independent_Stage1_sha256": "10797347b87ac699dcfe5e9a7c2805d996ca549edb1757d77648e194100e2c0a"
+      }
+    },
+    {
+      "case_id": "actual_full_bounded_component_check",
+      "result": "passed",
+      "procedure": "ROOT executes exact pinned reviewed full component check under fresh bounded process group; independent review rehashes raw reports/logs/source and matches exact case IDs.",
+      "expected": "425/425 CLI tests plus84 ordered unique result scenes and203 exact filesystem negatives; oneEffect, unchanged56core source/full50output map/34packed modules and cleanup ACK.",
+      "observed": {
+        "tests": 425,
+        "pass": 425,
+        "fail": 0,
+        "cancelled": 0,
+        "skipped": 0,
+        "todo": 0,
+        "result_scenes": 84,
+        "negative_drivers": 203,
+        "cleanup_ACK": true,
+        "parent_reaped": true,
+        "group_absent_ESRCH": true,
+        "postflight_failure": null
+      },
+      "evidence": {
+        "report": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+          "bytes": 123554,
+          "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+        },
+        "log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.log",
+          "bytes": 44338,
+          "sha256": "e400cb9bb6de6347ff397b32b98f2083b25ee0170acaefed03db8cc00de4a49c"
+        },
+        "independent_review": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+          "bytes": 4703,
+          "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+        }
+      }
+    }
+  ],
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe+88bf2c1b586b2bbb2e3d9126da36fd99ad8c2a1071c0c838c3b21518b6e6ad51",
+    "source_and_actual_evidence": [
+      {
+        "path": "/private/tmp/healthmd-exact-codecs-final-cohort-evidence-independent-review.json",
+        "bytes": 7425,
+        "sha256": "5aca4b2a4fb23fb33aedb47926a7d7a5792ce3a94e5c3474e8d7813b33ae8064"
+      },
+      {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+        "bytes": 4703,
+        "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+      }
+    ]
+  },
+  "rollback": "Revert private candidate module/export/cohort/binding; retained Rust and frozen authorities remain.",
+  "remaining_qualification": [
+    "Fixed56-input/34module private codec consumer binding only; future core/Catalog source or output additions require a separately reviewed successor cohort before CLI adoption.",
+    "Catalog96 is a source-only literal input; no Catalog source/test/runtime/module/grant/public/source-purpose authority admitted at this qualified snapshot.",
+    "No public schema/profile/fullserde parser/human/rawreceipt/native data/client/CI/release or Rust retirement qualification.",
+    "Own receipt remains outside guard authority; no automatic output discovery/refresh or hash admission. Historical41 other input bytes and26 module bytes retained."
+  ],
+  "resolved_history": [
+    {
+      "stage": "Original Stage1 source/pins passed inspection but independent portability finding changes_requested",
+      "source_fingerprint": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe+c8b1de7c26b3f72184f46e84852e6dd580256101a6a31e01fb6496253371dd55",
+      "cohort": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-before-portable-evidence-repair/original-cohort.json",
+        "sha256": "eb47038397d0539bd91ead32c734d53a19d4870500dad04012b4f28b26ad8810"
+      },
+      "receipt": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-before-portable-evidence-repair/original-partial-receipt.json",
+        "sha256": "33e50ad4e1ad5024b9c09dac40953bea69faed9a32c77cd12038a19a53133282"
+      },
+      "independent_review": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-stage1-independent-review.json",
+        "sha256": "eead10ddaeeb0941bd26e49452cd9828b5dccc2d3c0cbc909d67ff3351b062b2",
+        "result": "changes_requested"
+      },
+      "finding_id": "COHORT-STAGE1-TRACKED-EVIDENCE-PORTABILITY",
+      "resolution": "Exact2340 approval and eda5 original partial raw bytes embedded into already claimed tracked cohort. Scratch paths audit-only; tracked current strict implementation receipts unchanged; no execution.",
+      "superseded_provisional_review_history": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-stage1-provisional-before-portability-finding.json",
+        "sha256": "0149f68d8197f9d808d0d1a33d2faa96b3c3ee421c7bc412b80a2f7395168ece",
+        "bytes": 8596,
+        "disposition": "Provisional raw/semantic-only acceptance not dispatched to author/parent; superseded by ROOT portability concern confirmed independently before guard. All raw/source validations remain valid, no implementation execution."
+      },
+      "root_first_stage_audit": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-stage1-root-review.json",
+        "sha256": "6f37861f4d21c8964afcd9b89801c0718ace6b77bf57ca32cdf10297e439271e",
+        "bytes": 1453,
+        "scope": "Prior exact source/output/strict receipt/case-map audit; agrees portability-only finding; not new repair approval"
+      }
+    },
+    {
+      "stage": "Accepted repaired Stage1 before Stage2 guard/docs implementation",
+      "source_fingerprint": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe+7fc215aa07c7b8ecc130312f15ce73277d1ec4e51ba58ae678e2b95e7e0d3339",
+      "receipt_archive": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-before-stage1-acceptance-append.json",
+        "sha256": "2f843d8207f9f56e7ed02357c1cab87d331c505139ae7f17082c44432ebca164",
+        "bytes": 28342
+      },
+      "independent_acceptance": {
+        "path": "/private/tmp/healthmd-exact-codecs-cohort-portable-evidence-independent-review.json",
+        "sha256": "10797347b87ac699dcfe5e9a7c2805d996ca549edb1757d77648e194100e2c0a",
+        "bytes": 5011
+      },
+      "root_repair_review_sha256": "e7593bf8e43f7f3aada2d2cac5fe1dea08adc5cbe09f35e3d8a38988bb571242",
+      "scope": "Independent full embedded Catalog authority/cases accepted before source guard implementation; no execution."
+    },
+    {
+      "phase": "actual_full_core_install_and_CLI_check_completed_after_reviewed_repairs",
+      "prior_partial_receipt_archive": {
+        "path": "/private/tmp/healthmd-exact-codecs-before-final-receipts/CORE-COHORT-EXACT-CODECS-original-partial.json",
+        "bytes": 33662,
+        "sha256": "3f0839f9e1207c61fc6d455bda4dffac37e8a30008b42995dd4709d636c5e9c2"
+      },
+      "execution_owner": "/root",
+      "actual_core_report": {
+        "path": "/private/tmp/healthmd-exact-codecs-core-check-root-first.json",
+        "bytes": 126638,
+        "sha256": "89d552191ddb6ca6644cf71984955429a7c03edb376a16107b81e72d9b4208ac"
+      },
+      "actual_install_report": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-install-root-first.json",
+        "bytes": 53815,
+        "sha256": "14d9344c6ba5db4204f3ab84d87369678d1a528a1252fbbb2701a0d67fc38015"
+      },
+      "actual_CLI_report": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-runtime-repair-first.json",
+        "bytes": 123554,
+        "sha256": "7dd1f52b24d7657c5f9c43b8a08fb8f0a13b37d09f0306feb0240354e2242cff"
+      },
+      "independent_actual_review": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+        "bytes": 4703,
+        "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+      },
+      "original_install_descriptor_remains_authority": {
+        "path": "/private/tmp/healthmd-exact-codecs-cli-check-inputs.json",
+        "bytes": 64531,
+        "sha256": "34ed8516bd357af4e69abd404f856ab13821bfd3895948f4d6c1c61393af455a"
+      },
+      "failed_checks_retained": {
+        "first_compile_only_report": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-first.json",
+          "bytes": 80350,
+          "sha256": "d6d617af3ce289f729dacf6a674404db8e569a3f0ee77a8d92af1862a0cde83e"
+        },
+        "first_log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-first.log",
+          "bytes": 12208,
+          "sha256": "e079ba97911f3194841bec6be418d5f7e6d68042ab86d2d8cb501f03843e6b15"
+        },
+        "second425_369_56_report": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-type-repair-first.json",
+          "bytes": 260000,
+          "sha256": "453f206e84a858f15ffc981b6e7609099a6ae32dc4bc6817417f29ab43639564"
+        },
+        "second_log": {
+          "path": "/private/tmp/healthmd-exact-codecs-cli-check-root-type-repair-first.log",
+          "bytes": 187209,
+          "sha256": "2dfc067d37ea531700a663957adf4bef7b3588ea3106da7e8589728f95c8a47e"
+        }
+      },
+      "source_only_repairs": "Type-only three repairs retained; explicit uniform private stderr transcript2-field contract clarification plus interruption handler-before-readiness repair independently accepted. Production result source unchanged; no failed evidence relabeled passed."
+    }
+  ],
+  "portability_repair": {
+    "finding": "COHORT-STAGE1-TRACKED-EVIDENCE-PORTABILITY",
+    "current_raw_fields_preserved": true,
+    "full56_34_50_and41_26_preserved": true,
+    "all203_case_objects_unchanged": true,
+    "two_embedded_raws_exact": {
+      "catalog_stage1_approval": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b",
+      "catalog_reviewed_partial_receipt": "eda5dec7574e7dcfafffeeac7138ca1d278d9f15ee1b2bba5c97fac96ac19f42"
+    },
+    "consumer_runtime_no_scratch_inputs": true,
+    "normal_implementation_receipt_rule_unchanged": "five current tracked raw receipts mandatory passed/review.accepted/exact task-source-patch-fingerprint",
+    "stage": "Independent pre-code repair107973 approval and b003Stage2 source acceptance retained; actual1253core/offlineinstall/full425CLI/203guards passed. Self-contained tracked evidence consumers require no scratch runtime path.",
+    "Stage1_historical_preexecution_stage": "pre-code independent full repair approval pending; all checks unrun"
+  },
+  "source_freeze": {
+    "implementation_files": [
+      {
+        "path": "apps/cli/docs/typescript-candidate.md",
+        "sha256": "39cae98b21a19e96c94260b233771fabd3f17a311bd383fab9d58ce6e945b159",
+        "bytes": 12400
+      },
+      {
+        "path": "apps/cli/scripts/check-candidate.mjs",
+        "sha256": "3186cb9902dfba6bf7c230ae402500e344ea985539d9fb6abc6c45a686842d63",
+        "bytes": 66592
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+        "bytes": 256121
+      }
+    ],
+    "full_patch_digest": "88bf2c1b586b2bbb2e3d9126da36fd99ad8c2a1071c0c838c3b21518b6e6ad51",
+    "frozen_case_count": 203,
+    "frozen_input_count": 56,
+    "frozen_core_module_count": 34,
+    "all_execution": "Actual ROOT1253core/19guards, offlineinstall34packed, fullCLI425/84result/203filesystem negatives passed; raw reports and logical/physical commands in checks.",
+    "Stage2_preexecution_statement": "unrun"
+  },
+  "guard_implementation": {
+    "historical": "Original43/26/old receipt and all84 actual driver checks retained; disposable audits now use fixed56/34 complete successor, historical assertions keep original43/26 maps.",
+    "implementation_authorities": "Five current tracked raw receipts exact length/SHA, task, result passed, review.accepted, source/patch/reviewer/fingerprint and portable_synthetic; no relaxed partial accepted rule.",
+    "Catalog": "Closed pure metadata authority/schema/all7false; canonical padded base64 reencode/length/rawSHA before fatalUTF8 JSON; exact source/patch/fingerprint/partial stages/approval proof/vector/eda5 archive links/interface equality; queued source/test/modules absent. No scratch audit paths opened; approved raw evidence only decoded from tracked pinned cohort.",
+    "negatives": "Existing84 driver asserts retained and verified before exact119 new drivers. Every added row creates clean disposable source/package/receipt/cohort/embedded evidence copy and mutates action-only; actual same validator failure must match frozen label before case ID recorded. Complete ordered203 IDs asserted. No expected-keyed fake/automatic adoption.",
+    "runtime": "Same exact Node/npm/locks/versions/no new dependency/no symlink/oneEffect checks; literal codecs package resolution joins packed namespace identity graph, exact4 function namespace. Source/input roots reject unknown filetypes; only exact dist/node_modules excluded.",
+    "Stage2_preexecution_statement": "No Node/npm/compiler/build/check/install/CLI/native/device/source oracle execution; ROOT exclusive sequential checks pending independent implementation source review.",
+    "actual_execution": "ROOT sequential approved corecheck/offlineinstall/fullCLIcheck passed; retained2failedCLI runs and exact reviewed test/fixture corrections. All203 negative drivers actually ran through real validator assertions."
+  },
+  "limitations": [
+    "Actual bounded portable synthetic producer/consumer checks on pinned local Node24/npm11 only; not five-host distribution or remote CI qualification.",
+    "One physical Effect identity and34packed modules proved against fixed56source map; package packing adds no native/platform/source/credential/current-grant admission.",
+    "Catalog96 data-only approval and canonical embedded raw proofs never become Catalog implementation or public capability grants.",
+    "Retained failed checks and approved repairs remain historical evidence; no failure erased or renamed passed."
+  ]
+}

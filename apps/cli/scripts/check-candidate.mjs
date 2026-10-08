@@ -340,14 +340,128 @@ assert.deepEqual(artifacts, cohort.output_pins);
 assert.deepEqual(coreInputPins, eligibilityArtifact.complete_current_input_pins);
 assert.deepEqual(artifacts, eligibilityArtifact.complete_emitted_pins);
 assert.equal(Object.keys(artifacts).length, 26);
-assert.equal(hash(sourceManifest), coreInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
+// Current codec successor is a fixed tracked authority, distinct from the retained43/26.
+const codecCohortPath = resolve("../../docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json");
+const codecCohortSha256 = "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055";
+async function auditCodecCohort(path) {
+  const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink(), "reviewed_core_cohort_bytes_drift");
+  const bytes = await readFile(path); assert.equal(hash(bytes), codecCohortSha256, "reviewed_core_cohort_bytes_drift");
+  const value = JSON.parse(bytes);
+  assert.equal(value.task_id, "CORE-COHORT-EXACT-CODECS");
+  assert.equal(value.committed_source_sha, "1dfcca45c341eff72c89a67ed72638f4dc2db9fe");
+  assert.deepEqual(value.runtime, { node: "24.21.0", npm: "11.19.0" });
+  assert.equal(value.input_count, 56); assert.equal(value.output_count, 34);
+  assert.equal(Object.keys(value.input_pins).length, 56); assert.equal(Object.keys(value.output_pins).length, 34);
+  assert.deepEqual(value.historical43_26_authority.complete_historical_cohort, cohort);
+  assert.deepEqual(value.historical43_26_authority.input_pins, coreInputPins);
+  assert.deepEqual(value.historical43_26_authority.output_pins, artifacts);
+  for (const [path, digest] of Object.entries(coreInputPins)) if (!["package.json", "README.md"].includes(path)) assert.equal(value.input_pins[path], digest);
+  for (const [path, digest] of Object.entries(artifacts)) assert.equal(value.output_pins[path], digest);
+  assert.deepEqual(value.negative_fixture_catalog.cases.slice(0, 84), cohort.negative_fixture_catalog.cases);
+  assert.equal(value.negative_fixture_catalog.cases.length, 203);
+  return value;
+}
+const codecCohort = await auditCodecCohort(codecCohortPath);
+const qualifiedInputPins = codecCohort.input_pins;
+const qualifiedArtifacts = codecCohort.output_pins;
+assert.equal(hash(sourceManifest), qualifiedInputPins["package.json"], "reviewed_core_manifest_metadata_drift");
+const codecTaskNames = ["CORE-CANDIDATE-CODEC-API", "PARSE-EXACT-JSON-NUMBERS", "PARSE-EXACT-JSON-VALUES", "SERIALIZE-CANONICAL-JSON", "SERIALIZE-EXACT-NUMBERS"];
+assert.deepEqual(Object.keys(codecCohort.normal_implementation_authorities).sort(), codecTaskNames);
+async function auditCodecAuthority(authority, path = resolve("../../", authority.receipt.path)) {
+  const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink(), "qualified_core_receipt_bytes_drift");
+  const bytes = await readFile(path);
+  assert.equal(bytes.length, authority.receipt.bytes, "qualified_core_receipt_bytes_drift");
+  assert.equal(hash(bytes), authority.receipt.sha256, "qualified_core_receipt_bytes_drift");
+  const value = JSON.parse(bytes);
+  assert.equal(value.task_id, authority.task_id); assert.equal(value.result, "passed", "qualified_core_receipt_required");
+  assert.equal(value.review.status, "accepted", "qualified_core_receipt_required");
+  assert.equal(value.source_sha, authority.source_sha); assert.equal(value.patch_digest, authority.patch_digest);
+  assert.equal(value.review.fingerprint, authority.source_sha + "+" + authority.patch_digest);
+  assert.equal(value.review.fingerprint, authority.review_fingerprint); assert.equal(value.review.reviewer, authority.reviewer);
+  assert.equal(value.proof_class, "portable_synthetic");
+  // External review/archive references are preserved audit metadata, never filesystem inputs.
+  return value;
+}
+for (const name of codecTaskNames) await auditCodecAuthority(codecCohort.normal_implementation_authorities[name]);
+function closedKeys(value, keys) {
+  assert.ok(typeof value === "object" && value !== null && !Array.isArray(value), "catalog_literal_authority_mismatch");
+  assert.deepEqual(Object.keys(value).sort(), [...keys].sort(), "catalog_literal_authority_mismatch");
+}
+function embeddedCatalogBytes(name, expected) {
+  const blob = codecCohort.embedded_raw_evidence[name];
+  closedKeys(blob, ["version", "encoding", "historical_path", "bytes", "sha256", "data"]);
+  assert.equal(blob.version, 1); assert.equal(blob.encoding, "base64");
+  assert.equal(blob.historical_path, expected.path); // historical provenance only; never open it
+  assert.equal(blob.bytes, expected.bytes); assert.equal(blob.sha256, expected.sha256);
+  assert.ok(Number.isSafeInteger(blob.bytes) && blob.bytes > 0 && blob.bytes <= 52630);
+  assert.equal(typeof blob.data, "string");
+  assert.equal(blob.data.length, 4 * Math.ceil(blob.bytes / 3));
+  assert.match(blob.data, /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/);
+  const bytes = Buffer.from(blob.data, "base64");
+  assert.equal(bytes.toString("base64"), blob.data, "catalog_literal_evidence_bytes_drift");
+  assert.equal(bytes.length, expected.bytes, "catalog_literal_evidence_bytes_drift");
+  assert.equal(hash(bytes), expected.sha256, "catalog_literal_evidence_bytes_drift");
+  return bytes;
+}
+function parseCatalogRaw(bytes) { return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes)); }
+async function auditCatalogEvidence(pin, path) {
+  const stat = await lstat(path); assert.ok(stat.isFile() && !stat.isSymbolicLink(), "catalog_literal_evidence_bytes_drift");
+  const bytes = await readFile(path);
+  assert.equal(bytes.length, pin.bytes, "catalog_literal_evidence_bytes_drift");
+  assert.equal(hash(bytes), pin.sha256, "catalog_literal_evidence_bytes_drift");
+  return parseCatalogRaw(bytes);
+}
+const catalogAuthority = codecCohort.catalog_literal_data_authority;
+const expectedCatalogKeys = ["absent_component_paths", "case_count", "chain_rule", "current_partial_receipt", "exact_scope", "fingerprint", "independent_stage1_approval", "kind", "patch_digest", "required_approval_proof_class", "required_approval_result", "required_current_receipt_proof_class", "required_receipt_result", "required_receipt_review_fingerprint", "required_receipt_review_qualification", "required_receipt_review_status", "required_receipt_stage", "reviewed_partial_receipt_archive", "source_sha", "task_id", "vector", "version"];
+closedKeys(catalogAuthority, expectedCatalogKeys);
+assert.equal(catalogAuthority.kind, "CatalogLiteralDataAuthority"); assert.equal(catalogAuthority.version, 1);
+const catalogFingerprint = "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0";
+assert.equal(catalogAuthority.task_id, "DATASTORE-SOURCE-CATALOG");
+assert.equal(catalogAuthority.source_sha, "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc");
+assert.equal(catalogAuthority.patch_digest, "32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0");
+assert.equal(catalogAuthority.fingerprint, catalogFingerprint); assert.equal(catalogAuthority.case_count, 96);
+const catalogScope = { literal_source_input_only: true, implementation: false, behavior: false, runtime: false, module: false, grant: false, public: false, consumer_admission: false };
+closedKeys(catalogAuthority.exact_scope, Object.keys(catalogScope)); assert.deepEqual(catalogAuthority.exact_scope, catalogScope);
+assert.equal(catalogAuthority.vector.sha256, "74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591");
+assert.equal(catalogAuthority.current_partial_receipt.sha256, "4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa");
+assert.equal(catalogAuthority.independent_stage1_approval.sha256, "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b");
+assert.equal(catalogAuthority.reviewed_partial_receipt_archive.sha256, "eda5dec7574e7dcfafffeeac7138ca1d278d9f15ee1b2bba5c97fac96ac19f42");
+closedKeys(codecCohort.embedded_raw_evidence, ["catalog_stage1_approval", "catalog_reviewed_partial_receipt"]);
+const catalogApprovalBytes = embeddedCatalogBytes("catalog_stage1_approval", catalogAuthority.independent_stage1_approval);
+const catalogArchivedBytes = embeddedCatalogBytes("catalog_reviewed_partial_receipt", catalogAuthority.reviewed_partial_receipt_archive);
+const catalogApproval = parseCatalogRaw(catalogApprovalBytes); const catalogArchived = parseCatalogRaw(catalogArchivedBytes);
+const catalogCurrentBytes = await readFile(resolve("../../", catalogAuthority.current_partial_receipt.path));
+const catalogCurrent = await auditCatalogEvidence(catalogAuthority.current_partial_receipt, resolve("../../", catalogAuthority.current_partial_receipt.path));
+for (const value of [catalogApproval, catalogArchived, catalogCurrent]) {
+  assert.equal(value.task_id, catalogAuthority.task_id); assert.equal(value.source_sha, catalogAuthority.source_sha);
+  assert.equal(value.patch_digest, catalogAuthority.patch_digest);
+}
+assert.equal(catalogApproval.result, "accepted"); assert.equal(catalogApproval.proof_class, "source_only_stage1_independent_review");
+assert.equal(catalogApproval.fingerprint, catalogFingerprint); assert.deepEqual(catalogApproval.vector, catalogAuthority.vector);
+assert.equal(catalogApproval.receipt.sha256, catalogAuthority.reviewed_partial_receipt_archive.sha256);
+assert.equal(catalogApproval.receipt.bytes, catalogArchivedBytes.length);
+for (const value of [catalogCurrent, catalogArchived]) { assert.equal(value.result, "partial"); assert.equal(value.proof_class, "portable_synthetic"); }
+assert.equal(catalogCurrent.stage, "Stage1_96_literals_independently_accepted_implementation_queued");
+assert.equal(catalogCurrent.review.status, "accepted_Stage1_interface_and_literals_only_implementation_pending");
+assert.equal(catalogCurrent.review.fingerprint, catalogFingerprint);
+assert.equal(catalogCurrent.review.evidence_sha256, catalogAuthority.independent_stage1_approval.sha256);
+assert.equal(catalogCurrent.review.qualification, catalogAuthority.required_receipt_review_qualification);
+assert.equal(catalogCurrent.history[1].receipt.sha256, catalogAuthority.reviewed_partial_receipt_archive.sha256);
+assert.deepEqual(catalogCurrent.interface, catalogArchived.interface);
+const catalogVectorBytes = await readFile(resolve("../../", catalogAuthority.vector.path));
+assert.equal(catalogVectorBytes.length, catalogAuthority.vector.bytes); assert.equal(hash(catalogVectorBytes), catalogAuthority.vector.sha256);
+for (const path of catalogAuthority.absent_component_paths) {
+  try { await lstat(join(source, path)); assert.fail("catalog_literal_module_admission_forbidden"); }
+  catch (error) { if (error.code !== "ENOENT") throw error; }
+}
+
 async function tree(directory, skipBins = false) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (skipBins && entry.name === ".bin") continue;
     const path = join(directory, entry.name);
     if (entry.isSymbolicLink()) throw new Error("candidate_build_symlink_unreviewed");
-    if (entry.isDirectory()) files.push(...await tree(path, skipBins)); else if (entry.isFile()) files.push(path);
+    if (entry.isDirectory()) files.push(...await tree(path, skipBins)); else if (entry.isFile()) files.push(path); else throw new Error("candidate_file_type_unreviewed");
   }
   return files.sort();
 }
@@ -355,25 +469,25 @@ async function inputTree(directory, current = directory) {
   const files = [];
   for (const entry of await readdir(current, { withFileTypes: true })) {
     // Only these exact component-root output paths are outside the reviewed input tree.
-    if (current === directory && entry.isDirectory() && ["node_modules", "dist", "build"].includes(entry.name)) continue;
+    if (current === directory && entry.isDirectory() && ["node_modules", "dist"].includes(entry.name)) continue;
     const path = join(current, entry.name);
     if (entry.isSymbolicLink()) throw new Error("candidate_source_symlink_unreviewed");
-    if (entry.isDirectory()) files.push(...await inputTree(directory, path)); else if (entry.isFile()) files.push(path);
+    if (entry.isDirectory()) files.push(...await inputTree(directory, path)); else if (entry.isFile()) files.push(path); else throw new Error("candidate_file_type_unreviewed");
   }
   return files.sort();
 }
 async function auditCoreInputs(directory) {
   const files = await inputTree(directory);
-  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(coreInputPins).sort(), "core_input_file_set_drift");
-  for (const [path, digest] of Object.entries(coreInputPins)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_input_bytes_drift");
+  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(qualifiedInputPins).sort(), "core_input_file_set_drift");
+  for (const [path, digest] of Object.entries(qualifiedInputPins)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_input_bytes_drift");
 }
 await auditCoreInputs(source);
 async function auditCore(directory) {
   assert.equal((await lstat(directory)).isSymbolicLink(), false, "install_packed_core_with_install_links");
   assert.deepEqual(await readFile(join(directory, "package.json")), sourceManifest, "core_manifest_drift");
   const files = await tree(join(directory, "dist/core"));
-  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(artifacts).sort(), "core_build_file_set_drift");
-  for (const [path, digest] of Object.entries(artifacts)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_build_bytes_drift");
+  assert.deepEqual(files.map((path) => path.slice(directory.length + 1)), Object.keys(qualifiedArtifacts).sort(), "core_build_file_set_drift");
+  for (const [path, digest] of Object.entries(qualifiedArtifacts)) assert.equal(hash(await readFile(join(directory, path))), digest, "core_build_bytes_drift");
 }
 await auditCore(source); await auditCore(installed);
 // Exercise actual filesystem failures in disposable copies, never alter installed/source packages.
@@ -381,7 +495,7 @@ const negativeIdentityCases = [];
 const temporary = await mkdtemp(join(tmpdir(), "healthmd-cli-identity-"));
 try {
   const inputCopy = join(temporary, "inputs");
-  for (const path of Object.keys(coreInputPins)) {
+  for (const path of Object.keys(qualifiedInputPins)) {
     const target = join(inputCopy, path); await mkdir(dirname(target), { recursive: true });
     await writeFile(target, await readFile(join(source, path)));
   }
@@ -427,7 +541,7 @@ try {
   await assert.rejects(auditCore(changedNumeric), /candidate_build_symlink_unreviewed/);
   const personalSource = "src/contracts/personal-slice.ts";
   const personalInputCopy = join(temporary, "personal-inputs");
-  for (const path of Object.keys(coreInputPins)) {
+  for (const path of Object.keys(qualifiedInputPins)) {
     const target = join(personalInputCopy, path); await mkdir(dirname(target), { recursive: true });
     await writeFile(target, await readFile(join(source, path)));
   }
@@ -482,7 +596,7 @@ try {
   for (const path of sliceSourcePaths) {
     const copy = join(temporary, "slice-inputs");
     await rm(copy, { recursive: true, force: true });
-    for (const input of Object.keys(coreInputPins)) {
+    for (const input of Object.keys(qualifiedInputPins)) {
       const target = join(copy, input); await mkdir(dirname(target), { recursive: true });
       await writeFile(target, await readFile(join(source, input)));
     }
@@ -540,7 +654,7 @@ try {
   for (const path of Object.keys(cohort.ios_eligibility_delta.input_pins).sort()) {
     const copy = join(temporary, "eligibility-inputs");
     await rm(copy, { recursive: true, force: true });
-    for (const input of Object.keys(coreInputPins)) {
+    for (const input of Object.keys(qualifiedInputPins)) {
       const target = join(copy, input); await mkdir(dirname(target), { recursive: true });
       await writeFile(target, await readFile(join(source, input)));
     }
@@ -593,11 +707,102 @@ try {
   negativeIdentityCases.push("eligibility-receipt:unreviewed");
   assert.deepEqual(negativeIdentityCases, cohort.negative_fixture_catalog.cases.map(({ id }) => id), "frozen_negative_fixture_execution_drift");
   assert.equal(negativeIdentityCases.length, 84);
+  await executeCodecFilesystemNegatives(temporary);
+  assert.deepEqual(negativeIdentityCases, codecCohort.negative_fixture_catalog.cases.map(({ id }) => id), "frozen_negative_fixture_execution_drift");
+  assert.equal(negativeIdentityCases.length, 203);
 } finally { await rm(temporary, { recursive: true, force: true }); }
+
+async function copyCurrentInputs(directory) {
+  await rm(directory, { recursive: true, force: true });
+  for (const path of Object.keys(qualifiedInputPins)) { const target = join(directory, path); await mkdir(dirname(target), { recursive: true }); await writeFile(target, await readFile(join(source, path))); }
+  await auditCoreInputs(directory);
+}
+async function copyCurrentPackage(directory) {
+  await rm(directory, { recursive: true, force: true }); await cp(installed, directory, { recursive: true }); await auditCore(directory);
+}
+function setPointer(value, pointer, replacement) {
+  const parts = pointer.split("/").slice(1); let current = value;
+  for (const part of parts.slice(0, -1)) { assert.ok(current[part] !== undefined); current = current[part]; }
+  current[parts.at(-1)] = replacement;
+}
+async function executeCodecFilesystemNegatives(temporary) {
+  const inputs = join(temporary, "codec-inputs"), packed = join(temporary, "codec-packed"), jsonCopy = join(temporary, "codec-evidence.json");
+  const evidence = new Map([
+    [catalogAuthority.current_partial_receipt.path, { pin: catalogAuthority.current_partial_receipt, bytes: catalogCurrentBytes }],
+    [catalogAuthority.independent_stage1_approval.path, { pin: catalogAuthority.independent_stage1_approval, bytes: catalogApprovalBytes }],
+    [catalogAuthority.reviewed_partial_receipt_archive.path, { pin: catalogAuthority.reviewed_partial_receipt_archive, bytes: catalogArchivedBytes }],
+  ]);
+  const cohortBytes = await readFile(codecCohortPath);
+  for (const row of codecCohort.negative_fixture_catalog.cases.slice(84)) {
+    let action;
+    if (row.id.startsWith("codec-input:") || row.id === "catalog-evidence:vector:unreviewed") {
+      await copyCurrentInputs(inputs);
+      const relative = row.target.replace(/^packages\/healthmd-core-ts\//, ""); assert.ok(Object.hasOwn(qualifiedInputPins, relative));
+      const target = join(inputs, relative);
+      if (row.id.endsWith(":missing")) await rm(target);
+      else if (row.id.endsWith(":symlink")) { await rm(target); await symlink(join(source, relative), target); }
+      else if (row.id === "catalog-evidence:vector:unreviewed") await writeFile(target, Buffer.concat([await readFile(target), Buffer.from("\n// unreviewed\n")]));
+      else await writeFile(target, "export {};\n");
+      action = () => auditCoreInputs(inputs);
+    } else if (row.id.startsWith("codec-output:") || row.id.startsWith("codec-extra:")) {
+      await copyCurrentPackage(packed); const target = join(packed, row.target);
+      if (row.id.startsWith("codec-extra:")) { assert.ok(row.target.startsWith("dist/core/serialization/unreviewed-")); await writeFile(target, "export {};\n"); }
+      else { assert.ok(Object.hasOwn(qualifiedArtifacts, row.target));
+        if (row.id.endsWith(":missing")) await rm(target);
+        else if (row.id.endsWith(":symlink")) { await rm(target); await symlink(join(installed, row.target), target); }
+        else await writeFile(target, "export {};\n");
+      }
+      action = () => auditCore(packed);
+    } else if (row.id.startsWith("codec-receipt:")) {
+      const authority = Object.values(codecCohort.normal_implementation_authorities).find(a => a.receipt.path === row.target); assert.ok(authority);
+      const bytes = await readFile(resolve("../../", authority.receipt.path)); await writeFile(jsonCopy, bytes); await auditCodecAuthority(authority, jsonCopy);
+      if (row.id.endsWith(":absent")) await rm(jsonCopy);
+      else if (row.id.endsWith(":tampered")) await writeFile(jsonCopy, Buffer.concat([bytes, Buffer.from("\n")]));
+      else { const value = JSON.parse(bytes); value.review.status = "pending"; await writeFile(jsonCopy, JSON.stringify(value)); }
+      action = () => auditCodecAuthority(authority, jsonCopy);
+    } else if (row.id.startsWith("exact-codecs-cohort:") || row.id.startsWith("catalog-authority:")) {
+      await writeFile(jsonCopy, cohortBytes); await auditCodecCohort(jsonCopy);
+      if (row.id.endsWith(":absent")) await rm(jsonCopy);
+      else { const value = JSON.parse(cohortBytes);
+        if (row.id.endsWith(":tampered")) value.committed_source_sha = "unreviewed";
+        else if (row.id.endsWith(":unreviewed")) value.review = { status: "pending" };
+        else if (row.id.endsWith(":unknown-field")) value.catalog_literal_data_authority.unlisted = true;
+        else { const field = row.id.slice("catalog-authority:false-".length, -"-admission".length); assert.ok(Object.hasOwn(catalogScope, field)); value.catalog_literal_data_authority.exact_scope[field] = true; }
+        await writeFile(jsonCopy, JSON.stringify(value));
+      }
+      action = () => auditCodecCohort(jsonCopy);
+    } else {
+      const original = evidence.get(row.target); assert.ok(original, "unrealized_catalog_evidence_stimulus");
+      await writeFile(jsonCopy, original.bytes); await auditCatalogEvidence(original.pin, jsonCopy);
+      if (row.id.endsWith(":absent")) await rm(jsonCopy);
+      else if (row.id.endsWith(":tampered")) await writeFile(jsonCopy, Buffer.concat([original.bytes, Buffer.from("\n")]));
+      else { const value = parseCatalogRaw(original.bytes);
+        if (row.id === "catalog-evidence:receipt:unreviewed") value.review.status = "pending";
+        else if (row.id === "catalog-evidence:approval:unreviewed") value.result = "pending";
+        else if (row.id === "catalog-evidence:reviewed-archive:unreviewed") value.result = "unreviewed";
+        else if (row.id.startsWith("catalog-receipt:mismatched-") || row.id.startsWith("catalog-approval:mismatched-")) {
+          const field = row.id.split(":mismatched-")[1]; const isReceipt = row.id.startsWith("catalog-receipt:");
+          const pointer = field === "fingerprint" && isReceipt ? "/review/fingerprint" : field === "scope" ? (isReceipt ? "/review/qualification" : "/proof_class") : "/" + field;
+          setPointer(value, pointer, "unrelated_literal");
+        } else if (row.id === "catalog-receipt:wrong-proof-class") value.proof_class = "native-qualified";
+        else if (row.id === "catalog-receipt:wrong-source-patch") value.patch_digest = "unrelated_literal";
+        else if (row.id === "catalog-chain:wrong-archive-link") value.history[1].receipt.sha256 = "unrelated_literal";
+        else if (row.id === "catalog-chain:approval-wrong-receipt") value.receipt.sha256 = "unrelated_literal";
+        else assert.fail("unrealized_catalog_evidence_mutation");
+        await writeFile(jsonCopy, JSON.stringify(value));
+      }
+      action = () => auditCatalogEvidence(original.pin, jsonCopy);
+    }
+    if (row.expected_failure === "ENOENT") await assert.rejects(action(), { code: "ENOENT" });
+    else await assert.rejects(action(), new RegExp(row.expected_failure));
+    negativeIdentityCases.push(row.id); // only after genuine validator failure matched
+  }
+}
+
 const coreUrl = import.meta.resolve("@healthmd/core-ts");
 const hostUrl = import.meta.resolve("@healthmd/core-ts/host-interfaces");
 const actualEffect = await realpath(fileURLToPath(import.meta.resolve("effect/Effect")));
-const candidateUrls = ["catalog", "normalize", "query", "registry"].map((name) => import.meta.resolve(`@healthmd/core-ts/candidate/${name}`));
+const candidateUrls = ["catalog", "normalize", "query", "registry", "codecs"].map((name) => import.meta.resolve(`@healthmd/core-ts/candidate/${name}`));
 for (const url of [coreUrl, hostUrl, ...candidateUrls]) {
   assert.ok((await realpath(fileURLToPath(url))).startsWith((await realpath(installed)) + "/"), "core_export_escaped_packed_package");
   assert.equal(await realpath(createRequire(url).resolve("effect/Effect")), actualEffect, "effect_physical_identity_drift");
@@ -616,8 +821,10 @@ for (const path of await tree("node_modules", true)) {
 }
 assert.equal(effects.length, 1, "duplicate_effect_installation");
 const core = await import(coreUrl); const host = await import(hostUrl);
+const codecs = await import(import.meta.resolve("@healthmd/core-ts/candidate/codecs"));
+assert.deepEqual(Object.keys(codecs).sort(), ["createCanonicalJsonSerializer", "createExactJsonCodec", "createExactJsonNumberParser", "serializeExactJsonNumber"]);
 assert.equal(core.CandidateSession, host.CandidateSession, "service_identity_drift");
-console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(artifacts).length, qualifiedCoreInputs: Object.keys(coreInputPins).length, packedLocalCore: true,
+console.log(JSON.stringify({ qualifiedCoreFiles: Object.keys(qualifiedArtifacts).length, qualifiedCoreInputs: Object.keys(qualifiedInputPins).length, packedLocalCore: true,
   physicalEffectInstallations: effects.length, reviewedToolLaunchers: Object.keys(launchers), serviceIdentity: true, negativeIdentityCases }));
 function run(args) { const result = spawnSync(process.execPath, args, { stdio: "inherit" }); if (result.status !== 0) process.exit(result.status ?? 1); }
 if (!process.argv.includes("--tests-only")) { run(["node_modules/typescript/bin/tsc", "--project", "tsconfig.json"]); run(["scripts/build-candidate.mjs"]); }

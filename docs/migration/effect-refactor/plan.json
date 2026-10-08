@@ -24551,21 +24551,8 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "blocked",
-      "claim": {
-        "agent": "/root/donor_mac_review",
-        "base_revision": "5952cb86ad1d212efdebfabe3523a4f42aff1454",
-        "worktree": "/Users/codybontecou/dev/health-md",
-        "write_paths": [
-          "apps/cli/src/surfaces/result-envelope.ts",
-          "apps/cli/tests/surfaces/result-envelope.test.ts",
-          "apps/cli/tests/surfaces/result-envelope-vectors.ts",
-          "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
-        ],
-        "reserved_resources": [
-          "private-result-envelope-interface"
-        ]
-      },
+      "status": "done",
+      "claim": null,
       "prerequisites": [
         "CLI-DISCOVERY-NORMALIZER",
         "SLICE-PARITY"
@@ -24899,7 +24886,8 @@
           ],
           "availability": "existing",
           "executed_during_planning": false,
-          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+          "expected": "Actual pinned Node24.21.0/npm11.19.0 full425candidate tests,84resultscenes and203filesystem guard negatives passed with qualified56input/34packed-module core snapshot and one physicalEffect. Future source/output changes require separate consumer-cohort requalification.",
+          "historical_expected_before_successor_qualification": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
         }
       ],
       "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
@@ -24910,18 +24898,29 @@
       "deletion_gate": "No public promotion/Rust/source/reference/state/fixture/install retirement.",
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+        ]
       },
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+e1a39ec664492a235387e839d93d435a82a184bf931202b84a3ca3fafa389e86",
+        "source_and_actual_evidence": [
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-final-cohort-evidence-independent-review.json",
+            "bytes": 7425,
+            "sha256": "5aca4b2a4fb23fb33aedb47926a7d7a5792ce3a94e5c3474e8d7813b33ae8064"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+            "bytes": 4703,
+            "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+          }
+        ]
       },
-      "blocker": {
-        "reason": "Reviewed source is frozen; actual CLI check requires complete separately admitted current shared codec successor cohort, which remains not_started pending serializer/API qualification. Historical43/26 guard cannot be silently refreshed/substituted.",
-        "unblock_condition": "CORE-COHORT-EXACT-CODECS accepted current source/output delta and fresh ROOT exclusive cli-candidate-build+qualified-core window/source/test84freeze revalidation; then actual componentcheck."
-      },
+      "blocker": null,
       "priority": 71,
       "expansion_input": {
         "task_id": "SPLIT-SURFACES",
@@ -25045,7 +25044,68 @@
         "sha256": "fcc1950a1cfa5c14e0e07b61e802d3a2efb854cf10479bcd366ca0ca8f6ee098",
         "fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+6f5bcbdc215784e74bc1b9bee260292ee0b70a7e63c971d7601443011bfb9235"
       },
-      "stage2_source_execution_gate": "Exact84source/code repaired/frozen6f5bc and independently acceptedfcc195. No compile/runtime proof; CLI component execution still requires accepted whole codec successorcohort and exclusive cli-candidate-build+qualified-core resource window. Historical43/26 cannot be substituted or silently refreshed."
+      "stage2_source_execution_gate": "Actual full425CLI/84result/203guard check accepted; private56input/34module codec successor admitted under CORE-COHORT-EXACT-CODECS. Reviewed e1a39 source and typing/runtime amendment history retained; no public/native/fullrenderer or Rustretirement qualification.",
+      "coordinator_test_type_repair_authorization": {
+        "executor": "/root",
+        "allowed_actual_changes": [
+          "apps/cli/tests/surfaces/result-envelope.test.ts",
+          "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+        ],
+        "source_only_review_sha256": "24334f1ae51bf3fe5eb3f238790b62d1a7cc57363c0c745fb2dc50028871f231",
+        "new_fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+d078e0ea042169ce3cc8d7c772e65b0e4f105e47f292148a576bda00b9629fac",
+        "production_source_and_vector_unchanged": true,
+        "actual_tests_after_repair": 425,
+        "actual_result_after_repair": "Historical secondcheck failed56runtime assertions after typing passed; exact453f report retained in receipt.history, then separately reviewed runtime/observation repair and full425pass."
+      },
+      "coordinator_runtime_repair_authorization": {
+        "executor": "/root",
+        "allowed_actual_changes": [
+          "apps/cli/tests/surfaces/result-envelope.test.ts",
+          "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+          "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+        ],
+        "source_only_review": {
+          "path": "/private/tmp/healthmd-cli-result-runtime-repair-independent-review.json",
+          "bytes": 5215,
+          "sha256": "8ea4411037e4adb4df0d2f53ac854a3051ca74ad29c43cbb1ba390a515b40e5b"
+        },
+        "root_source_review": {
+          "path": "/private/tmp/healthmd-cli-result-runtime-repair-root-review.json",
+          "bytes": 1543,
+          "sha256": "670e415de037cd08d7ef90c33dd68e1392bf744c7d63b1d472f203fb9b0b4329"
+        },
+        "new_fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+e1a39ec664492a235387e839d93d435a82a184bf931202b84a3ca3fafa389e86",
+        "production_source_unchanged": true,
+        "approved_expected_corrections": [
+          "external-originalScope-close-during-prepare",
+          "external-originalScope-close-during-registered-wait"
+        ],
+        "all84_stimuli_and_other_expectations_unchanged": true,
+        "actual_tests_after_repair": 425,
+        "actual_result_after_repair": "passed425/425zeroothers with84orderedunique resultscenes/203guard cases"
+      },
+      "completed_claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "5952cb86ad1d212efdebfabe3523a4f42aff1454",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/surfaces/result-envelope.ts",
+          "apps/cli/tests/surfaces/result-envelope.test.ts",
+          "apps/cli/tests/surfaces/result-envelope-vectors.ts",
+          "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json"
+        ],
+        "reserved_resources": [
+          "private-result-envelope-interface"
+        ]
+      },
+      "final_receipt_metadata_review": {
+        "path": "/private/tmp/healthmd-cli-result-final-normalized-receipt-independent-review.json",
+        "bytes": 2761,
+        "sha256": "ebdc37cb54895c4199498e1b67a742cf36125d39d56a0659bdad9c8b4e0d90b1",
+        "reviewed_receipt_sha256": "1662baff41b73fe6a50a6552860c18b30c40e31d527a4ac994293752a45dc62d"
+      },
+      "completed_at": "2026-10-08T03:53:09Z",
+      "historical_stage2_source_execution_gate": "Exact84source/code repaired/frozen6f5bc and independently acceptedfcc195. No compile/runtime proof; CLI component execution still requires accepted whole codec successorcohort and exclusive cli-candidate-build+qualified-core resource window. Historical43/26 cannot be substituted or silently refreshed."
     },
     {
       "id": "MCP-JSONRPC-ENVELOPE",
@@ -26106,7 +26166,9 @@
         "apps/cli/scripts/build-candidate.mjs",
         "apps/cli/scripts/check-candidate.mjs",
         "apps/cli/tsconfig.build.json",
-        "apps/cli/tsconfig.test.json"
+        "apps/cli/tsconfig.test.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
       ],
       "allowed_paths": [
         "apps/cli/src/surfaces/stdio-framing.ts",
@@ -26185,7 +26247,7 @@
         "docs/migration/effect-refactor/inventories/cli.json#/bounds",
         "docs/migration/effect-refactor/inventories/cli.json#/cli/launcher"
       ],
-      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/historical40/24cohort/SLICEPARITY source contracts. Execution requires then-accepted complete CORE-COHORT-EXACT-CODECS successor guard/maps separately; Stage1 literals alone do not adopt it.",
       "fixture_details": {
         "introduced_path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
         "introduced_case_ids": [
@@ -26323,7 +26385,7 @@
           ],
           "availability": "existing",
           "executed_during_planning": false,
-          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidate tests, all203 fixed guard filesystem negatives, then-accepted complete source/packed-module cohort and one physical Effect. Existing recursive .test.ts builder. No common build/install authorized before independent interface/source freeze, complete successor consumer qualification, and exclusive resource window."
         }
       ],
       "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
@@ -26351,6 +26413,31 @@
         "child_pointer": "#/children/3",
         "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
         "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      },
+      "preclaim_scope_amendment": {
+        "status": "accepted_source_only_metadata_before_claim",
+        "reviewer": "/root",
+        "reason": "Historical40/24source and63guard count were stale. Keep historical authority; require completed separately accepted full codec successor and all203 filesystem guards for execution, with no prospective package admission or execution in Stage1.",
+        "original_card": {
+          "path": "/private/tmp/healthmd-mcp-stdio-framing-before-execution-metadata-amendment.json",
+          "sha256": "885047062403719cfc9f858c707b78053fc5a481479a7f3719c69d0c2e8f27a0",
+          "canonical_sha256": "9d8a2cfa7c5fd3e7ab1b94d1f325cdc369b47f564a31eb54eb05be700e487d0e"
+        },
+        "finding_review": {
+          "path": "/private/tmp/healthmd-mcp-stdio-framing-preclaim-independent-review.json",
+          "sha256": "fd6650e8e6e854fc697cf90d294db7604f439e04d4c496806cb1c64498421be2"
+        },
+        "changed_fields": [
+          "fixture_inputs",
+          "verification[0].expected",
+          "read_required +exact2successor source/receipt docs"
+        ],
+        "implementation_changes": false,
+        "historical_status_before_revalidation": "source_only_metadata_amended_pending_independent_revalidation",
+        "independent_revalidation": {
+          "path": "/private/tmp/healthmd-mcp-stdio-framing-amended-preclaim-independent-review.json",
+          "sha256": "9e097be67abd3ada87f9761a7803071ed9f5455b28ed843b01335f0a63e6c4e8"
+        }
       }
     },
     {
@@ -29406,23 +29493,8 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
-      "claim": {
-        "agent": "/root/android_release_host",
-        "base_revision": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe",
-        "worktree": "/Users/codybontecou/dev/health-md",
-        "write_paths": [
-          "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
-          "apps/cli/scripts/check-candidate.mjs",
-          "apps/cli/docs/typescript-candidate.md",
-          "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
-        ],
-        "reserved_resources": [
-          "core-component-build",
-          "cli-candidate-build",
-          "cli-candidate-qualified-core-inputs"
-        ]
-      },
+      "status": "done",
+      "claim": null,
       "prerequisites": [
         "SPLIT-CODECS",
         "CORE-CANDIDATE-CODEC-API",
@@ -29610,14 +29682,28 @@
       "priority": 101,
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe+88bf2c1b586b2bbb2e3d9126da36fd99ad8c2a1071c0c838c3b21518b6e6ad51",
+        "source_and_actual_evidence": [
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-final-cohort-evidence-independent-review.json",
+            "bytes": 7425,
+            "sha256": "5aca4b2a4fb23fb33aedb47926a7d7a5792ce3a94e5c3474e8d7813b33ae8064"
+          },
+          {
+            "path": "/private/tmp/healthmd-exact-codecs-cli-final-execution-independent-review.json",
+            "bytes": 4703,
+            "sha256": "6200bdd1ff8e23071b922d9aad2c8bf3f29a3facae1363ac741e1661bc0df6d6"
+          }
+        ]
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
@@ -29683,7 +29769,30 @@
         "literal_count": 203,
         "actual_negatives_executed": 0,
         "consumer_admission": false
-      }
+      },
+      "completed_claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
+      "final_receipt_metadata_review": {
+        "path": "/private/tmp/healthmd-exact-codecs-final-normalized-receipt-independent-review.json",
+        "bytes": 4080,
+        "sha256": "1fecf4ac47cb870a7ee4eb669f12543c3052ba5e3fcacdcb6a4f4024466a334c",
+        "reviewed_receipt_sha256": "4593fec8700e43af6e0dfea5f6919fe660a3bafed2275f6289968f30c4494646"
+      },
+      "completed_at": "2026-10-08T03:53:09Z"
     },
     {
       "id": "CLI-MCP-EXACT-CODEC-BINDING",

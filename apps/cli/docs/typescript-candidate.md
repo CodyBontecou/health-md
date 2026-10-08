@@ -35,3 +35,46 @@ The accepted private iOS eligibility successor cohort is `core-ts-ios-eligibilit
 The frozen 84 disposable filesystem negatives retain all 63 preceding cases and add 21: missing/edited/symlink for each of three inputs, missing/stale/symlink for each of two outputs, one extra output, absent/tampered successor cohort, and absent/tampered/unreviewed eligibility receipt. Each owned copy passes a clean baseline before mutation; only its temporary tree is removed. Complete fixed authority precedes filesystem discovery. Rebuild the core, refresh packed CLI offline with the pinned toolchain and existing cache, then run CLI/MCP checks sequentially under the exclusive core-output lease.
 
 Eligibility remains a synthetic gate-only owned metadata handoff with zero personal observations and an original-Scope lifetime. Its accepted 154 frozen literals and six independent Scope reentry regressions prove this private boundary; they do not authenticate iOS eligibility, source/purpose/channel, durable grants, report/export, public profiles or OS budgets. The separately frozen discovery normalizer is not part of core authority. Existing public exports, launchers, Rust, native bundles and user state retain their separate qualification. Roll back the predecessor committed guard/cohort and packed CLI together.
+
+## Exact codec successor authority
+
+`core-ts-exact-codecs-v1.json` records the reviewed producer's complete 56 inputs
+and 34 core module outputs. The 43-input/26-module eligibility cohort described
+above remains immutable historical authority: all 41 other input bytes and all
+26 module bytes are retained. The successor adds twelve Number/Value/Canonical
+JSON/facade source, test and vector inputs and eight module outputs, with the
+reviewed package/README replacements and one additional Catalog literal vector.
+The private literal `@healthmd/core-ts/candidate/codecs` exposes the four original
+codec functions and their selected types; no reader, AST, token type, wildcard,
+extra dependency or separate Effect installation is admitted.
+
+Five tracked implementation receipts must remain raw-byte identical, passed,
+and accepted at their exact task/source/patch/review fingerprints. Catalog uses
+a separate closed `CatalogLiteralDataAuthority`: its 96-scene vector and current
+partial receipt are tracked, while its exact original Stage1 approval and
+original partial receipt are embedded as canonical base64 in the cohort.
+The guard verifies the blob schema, canonical encoding, original byte lengths
+and SHA256 before strict UTF-8/JSON parsing and exact semantic chain checks.
+Historical scratch paths and producer-host compiler locations are audit
+provenance only; consumer checks never require or open those paths. Catalog's
+partial literal approval gives no implementation, behavior, runtime, module,
+grant, public or consumer authority. Its source and test remain absent.
+
+The guard's 203 frozen filesystem failures retain all 84 historical cases and
+add 119 exact input/output/receipt/cohort/Catalog mutations. Each new mutation
+starts from an authenticated disposable baseline and calls the actual same
+validator used for ordinary inputs. Embedded evidence supplies owned local
+copies for the Catalog approval/archive tests; altered hashes are never adopted.
+Only the owned temporary tree is removed. Source, installed packages, accepted
+cohorts and receipts are never mutated by the negative drivers.
+
+Qualification requires the coordinator's sequential exclusive core check,
+pinned offline `npm ci --offline --install-links --engine-strict --no-audit
+--no-fund` in this CLI component, then its full `npm run check`. Actual check and
+integration status is recorded in the task receipt and execution plan; the
+producer's 1253 portable tests/19 guards alone do not install this consumer.
+The separately frozen CLI result envelope remains uncompiled prospective work
+until its own checks and review; this cohort does not admit its public grammar
+or rendering. Native bundles, source reads, health grants, exports, full public
+profiles and Rust retirement retain their separate owners and qualification.
+Rollback restores the predecessor guard/cohort and packed CLI together.
