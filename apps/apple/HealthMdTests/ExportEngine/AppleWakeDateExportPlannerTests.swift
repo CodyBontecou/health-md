@@ -51,6 +51,53 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testRequestedHumanUnitsKeepAllFourMachineArtifactsCanonical() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = try XCTUnwrap(ExportDateFormatting.utcISO8601Formatter().date(from: "2026-11-01T04:00:00Z"))
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.body.weight = 72.125
+        day.body.height = 1.75125
+        day.activity.walkingRunningDistance = 1_234.125
+        day.vitals.bodyTemperatureAvg = 36.8125
+        day.nutrition.water = 1.375
+        var jsonDocuments: [Data] = []
+        for preference in [UnitPreference.metric, .imperial] {
+            let snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
+                selectionIDs: ["weight", "height", "distance_walking_running", "body_temperature", "dietary_water"],
+                unitPreference: preference)
+            let resolution = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
+                surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = resolution else {
+                return XCTFail("Both unit preferences must reach successor native preparation")
+            }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            for artifact in operation.artifacts where artifact.format == .markdown || artifact.format == .obsidianBases {
+                let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+                XCTAssertTrue(text.contains("weight_kg: 72.125\n"))
+                XCTAssertTrue(text.contains("height_m: 1.75125\n"))
+                XCTAssertTrue(text.contains("water_l: 1.375\n"))
+            }
+            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown }).artifact.inlineData, as: UTF8.self)
+            for expected in preference == .imperial
+                ? ["159.0 lbs", "5'8\"", "0.77 mi", "98.3°F", "46.5 oz"]
+                : ["72.1 kg", "175.1 cm", "1.23 km", "36.8°C", "1.38 L"] {
+                XCTAssertTrue(markdown.contains(expected), expected)
+            }
+            let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
+            XCTAssertTrue(csv.contains(",Weight,72.125,kg,"))
+            XCTAssertTrue(csv.contains(",Height,1.75125,m,"))
+            XCTAssertTrue(csv.contains(",unit_system,metric,"))
+            let bytes = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            XCTAssertEqual((root["body"] as? [String: Any])?["weight"] as? Double, 72.125)
+            XCTAssertEqual((root["body"] as? [String: Any])?["height"] as? Double, 1.75125)
+            XCTAssertEqual(root["unit_system"] as? String, "metric")
+            jsonDocuments.append(bytes)
+        }
+        XCTAssertEqual(jsonDocuments[0], jsonDocuments[1])
+    }
+
     func testEveryDailyFormatSharesWakeDateAuthorityAndUnroundedSourceQuantities() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
@@ -268,7 +315,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
 
     private func acceptedSnapshot(
         context: AppleSleepCaptureContext, formats: Set<ExportFormat>, selectionIDs: Set<String>? = nil,
-        rangeSummary: Bool = false
+        rangeSummary: Bool = false, unitPreference: UnitPreference = .metric
     ) throws -> ExportSettingsSnapshot {
         let suite = "AppleWakeDatePlannerFixture.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -276,6 +323,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = formats
+        settings.formatCustomization.unitPreference = unitPreference
         settings.writeMode = .overwrite
         settings.archiveExportFiles = false
         settings.summaryOnlyExport = false

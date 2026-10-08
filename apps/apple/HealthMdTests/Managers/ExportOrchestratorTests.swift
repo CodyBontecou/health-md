@@ -1473,6 +1473,8 @@ final class ExportOrchestratorTests: XCTestCase {
             vaultManager: vault, settings: settings, onProgress: { index, _, _ in
                 if index == 1 { manager.setSleepDayAttribution(.morningEnds) }
             })
+        XCTAssertTrue(result.failedDateDetails.isEmpty,
+            "Pinned export failures: \(result.failedDateDetails.map { String(describing: $0.reason) + ": " + ($0.errorDetails ?? "") })")
         XCTAssertEqual(result.successCount, 2)
         let records = try fileSystem.files.filter { !$0.key.hasSuffix("data_dictionary.json") }.map {
             try XCTUnwrap(JSONSerialization.jsonObject(with: Data($0.value.utf8)) as? [String: Any])

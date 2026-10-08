@@ -12,6 +12,7 @@ import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
+import com.healthmd.domain.model.UnitPreference
 import java.time.ZoneId
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -413,14 +414,11 @@ object HealthMdRenderInputAdapter {
                 put("display_value", display)
                 put("unit", unit)
                 if (nativeWakeDateContext != null && public is JsonPrimitive && !public.isString && !isClock && presentationField?.value != null) {
+                    val human = humanPresentation(public, outputKey, unit, presentationCustomization,
+                        presentationField.value.toString(), presentationField.unit)
                     put("human_presentation", buildJsonObject {
-                        if (outputKey == "height_m" && presentationData?.body?.height != null) {
-                            put("display_value", presentationCustomization.unitConverter.formatHeight(presentationData.body.height))
-                            put("unit", "")
-                        } else {
-                            put("display_value", presentationField.value.toString())
-                            put("unit", presentationField.unit)
-                        }
+                        put("display_value", human.first)
+                        put("unit", human.second)
                     })
                 }
                 put("timestamp", clock?.toString()?.let(::JsonPrimitive) ?: JsonNull)
@@ -665,6 +663,36 @@ object HealthMdRenderInputAdapter {
         "boolean" -> value.getValue("boolean")
         "text_list" -> value.getValue("items")
         else -> throw AdapterException("semantic value is invalid")
+    }
+
+    /** Native human prose uses requested units; machine projections remain canonical. */
+    private fun humanPresentation(
+        public: JsonPrimitive,
+        key: String,
+        unit: String,
+        customization: FormatCustomization,
+        fallbackValue: String,
+        fallbackUnit: String,
+    ): Pair<String, String> {
+        val value = public.content.toDoubleOrNull()?.takeIf(Double::isFinite)
+            ?: throw AdapterException("human quantity is invalid")
+        val converter = customization.unitConverter
+        val formatted = when (unit) {
+            "kg" -> converter.formatWeight(value)
+            "km" -> converter.formatDistance(value * 1_000)
+            "m" -> if (key == "height_m") converter.formatHeight(value) else converter.formatDistance(value)
+            "cm" -> converter.formatLength(value / 100)
+            "°", "°C" -> if (key == "skin_temperature_delta") {
+                // A temperature difference scales without an absolute-temperature offset.
+                val imperial = customization.unitPreference == UnitPreference.IMPERIAL
+                String.format(java.util.Locale.US, "%.2f%s", if (imperial) value * 9.0 / 5.0 else value,
+                    if (imperial) "°F" else "°C")
+            } else converter.formatTemperature(value)
+            "m/s" -> converter.formatSpeed(value)
+            "L" -> converter.formatVolume(value)
+            else -> return fallbackValue to fallbackUnit
+        }
+        return formatted to ""
     }
 
     private fun displayValue(value: JsonElement): String = when (value) {

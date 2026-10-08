@@ -60,6 +60,10 @@ Fresh production profile selection/capture, complete quantity/presentation/detai
 
 The external reader revision `11f805ae98233517d027317775e2033223c109d7` preserves daily successors and Apple range v11 across JSON/CSV/Markdown/Bases, rejects conflicting same-date or same-window authority, and displays captured range attribution/timezone. Native/core fixture byte hashes pin producer `3cb2a6b1f41675c301e5c3fe7eac35fb74770b4c`. The website and Apple onboarding bundle are regenerated from that reader pin; browser runtime tests parse actual native daily and range JSON. Local reader, website and resource qualification does not prove installation in a real Obsidian vault or qualify production routes.
 
+## Requested summary presentation
+
+The explicit native Apple-v11 summary planner accepts metric and imperial preferences under the same saved capture/profile authority. The new successor-only `human_presentation` render fact formats Markdown prose using native mass, height, distance, Celsius temperature, speed and water formatters. Canonical public numbers, numeric frontmatter/Bases, JSON and CSV keep their original precision and units. The human fact is never fed back into semantic values or machine output. Historical writers and signatures remain unchanged. Real packaged-core four-format controls verify both preferences and identical native JSON; the source-built Apple XCFramework must be prepared before testing new render grammar, independently of the host Rust dylib. Requested range/calendar presentation, detailed/source/provider/workout coverage, production routing and full device/accessibility qualification remain enabling work.
+
 ## Required enabling change
 
 The target above must include all of the following before the mode becomes available:

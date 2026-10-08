@@ -130,12 +130,13 @@ class HostCoreDailyAggregatePlannerTest {
     @Test
     fun requestedDisplayUnitsNeverRelabelCanonicalMachineQuantities() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
-        val data = HealthData(LocalDate.of(2026, 11, 1), body = BodyData(weight = 72.125, height = 1.75125))
+        val data = HealthData(LocalDate.of(2026, 11, 1), body = BodyData(weight = 72.125, height = 1.75125),
+            activity = ActivityData(walkingRunningDistance = 1_234.125))
         val jsonDocuments = mutableListOf<String>()
         for (preference in UnitPreference.entries) {
             val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(),
                 formatCustomization = FormatCustomization(unitPreference = preference),
-                metricSelection = MetricSelectionState(enabledMetrics = setOf("weight", "height")),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("weight", "height", "distance")),
                 executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
             val request = FrozenDailyAggregateExportRequest.capture(data, settings,
                 AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
@@ -146,6 +147,7 @@ class HostCoreDailyAggregatePlannerTest {
             for (document in listOf(markdown, bases)) {
                 assertThat(document).contains("weight_kg: 72.125\n")
                 assertThat(document).contains("height_m: 1.75125\n")
+                assertThat(document).contains("walking_running_km: 1.234125\n")
             }
             val csv = result.plan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
             assertThat(csv).contains(",Weight,72.125,kg,")
@@ -154,16 +156,53 @@ class HostCoreDailyAggregatePlannerTest {
             if (preference == UnitPreference.IMPERIAL) {
                 assertThat(markdown).contains("159.0 lbs")
                 assertThat(markdown).contains("5'8\"")
+                assertThat(markdown).contains("0.77 mi")
             } else {
                 assertThat(markdown).contains("72.1 kg")
                 assertThat(markdown).contains("175.1 cm")
+                assertThat(markdown).contains("1.23 km")
             }
             val json = result.plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()
             val root = Json.parseToJsonElement(json).jsonObject
             assertThat(root.getValue("body").jsonObject.getValue("weight").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
             assertThat(root.getValue("body").jsonObject.getValue("height").jsonPrimitive.content.toDouble()).isEqualTo(1.75125)
             assertThat(root.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content })
-                .containsExactly("weight_kg", "kg", "height_m", "m")
+                .containsExactly("weight_kg", "kg", "height_m", "m", "walking_running_km", "km")
+            jsonDocuments.add(json)
+        }
+        assertThat(jsonDocuments.distinct()).hasSize(1)
+    }
+
+    @Test
+    fun humanTemperatureDifferencesScaleWithoutAnAbsoluteOffsetAndWaterKeepsMachineLiters() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val data = HealthData(LocalDate.of(2026, 11, 1),
+            vitals = VitalsData(bodyTemperatureAvg = 36.8125, skinTemperatureDelta = -0.5),
+            nutrition = NutritionData(water = 1.375))
+        val jsonDocuments = mutableListOf<String>()
+        for (preference in UnitPreference.entries) {
+            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+                exportFormats = ExportFormat.entries.toSet(),
+                formatCustomization = FormatCustomization(unitPreference = preference),
+                metricSelection = MetricSelectionState(enabledMetrics = setOf("body_temp", "skin_temperature", "water")),
+                executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true),
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("host-human-temperature", "host-human-temperature-session"))
+            val result = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("cannot read ambient clock") }).plan(request)
+            val markdown = result.plan.items.single { it.relativePath.endsWith(".md") && !it.relativePath.endsWith("-bases.md") }.content.decodeToString()
+            for (expected in if (preference == UnitPreference.IMPERIAL)
+                listOf("98.3°F", "-0.90°F", "46.5 oz") else listOf("36.8°C", "-0.50°C", "1.38 L")) {
+                assertThat(markdown).contains(expected)
+            }
+            for (item in result.plan.items.filter { it.relativePath.endsWith(".md") }) {
+                assertThat(item.content.decodeToString()).contains("skin_temperature_delta: -0.5\n")
+                assertThat(item.content.decodeToString()).contains("water_l: 1.375\n")
+            }
+            val json = result.plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()
+            val root = Json.parseToJsonElement(json).jsonObject
+            assertThat(root.getValue("vitals").jsonObject.getValue("bodyTemperatureAvg").jsonPrimitive.content.toDouble()).isEqualTo(36.8125)
+            assertThat(root.getValue("vitals").jsonObject.getValue("skinTemperatureDelta").jsonPrimitive.content.toDouble()).isEqualTo(-0.5)
+            assertThat(root.getValue("unit_system").jsonPrimitive.content).isEqualTo("metric")
             jsonDocuments.add(json)
         }
         assertThat(jsonDocuments.distinct()).hasSize(1)

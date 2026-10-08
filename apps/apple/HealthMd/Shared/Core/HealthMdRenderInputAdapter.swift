@@ -396,7 +396,7 @@ enum HealthMdRenderInputAdapter {
             } else {
                 timestamp = NSNull()
             }
-            return [
+            var rendered: [String: Any] = [
                 "output_key": outputKey,
                 "category_id": categoryIdentifier(metric.categoryId),
                 "category_label": metric.categoryId,
@@ -409,6 +409,14 @@ enum HealthMdRenderInputAdapter {
                 "timestamp": timestamp,
                 "ordinal": ordinal,
             ]
+            if captureContext?.sleepDayAttribution == .morningEnds,
+               semanticValue["value_type"] as? String == "number", output.unit.lowercased() != "time",
+               let number = publicValue as? NSNumber, let snapshot = presentationSnapshot {
+                rendered["human_presentation"] = try humanPresentation(
+                    number: number, key: outputKey, unit: publicUnit, snapshot: snapshot
+                )
+            }
+            return rendered
         }
         let archiveDiagnostics: Any
         if let snapshot = presentationSnapshot {
@@ -645,6 +653,38 @@ enum HealthMdRenderInputAdapter {
             return items
         default: throw AdapterError.invalidPresentation
         }
+    }
+
+    /// Native human formatting is independent of attested machine quantities.
+    /// The dictionary and numeric CSV/frontmatter continue to use canonical units.
+    private static func humanPresentation(
+        number: NSNumber, key: String, unit: String, snapshot: ExportDataSnapshot
+    ) throws -> [String: String] {
+        let value = number.doubleValue
+        let converter = snapshot.converter
+        let formatted: String
+        switch unit {
+        case "kg": formatted = converter.formatWeight(value)
+        case "km": formatted = converter.formatDistance(value * 1_000)
+        case "m" where key == "height_m":
+            // The native formatter decomposes feet/inches using Int.
+            guard value.isFinite, abs(value) < Double(Int.max) / 100 else {
+                throw AdapterError.invalidPresentation
+            }
+            formatted = converter.formatHeight(value)
+        case "m":
+            guard value.isFinite, abs(value) < Double(Int.max) / 100 else {
+                throw AdapterError.invalidPresentation
+            }
+            formatted = converter.formatDistance(value)
+        case "cm": formatted = converter.formatLength(value / 100)
+        case "°C": formatted = converter.formatTemperature(value)
+        case "m/s": formatted = converter.formatSpeed(value)
+        case "L": formatted = converter.formatVolume(value)
+        default:
+            return ["display_value": snapshot.frontmatterMetrics[key] ?? number.stringValue, "unit": unit]
+        }
+        return ["display_value": formatted, "unit": ""]
     }
 
     private static func displayValue(_ value: Any) -> String {

@@ -714,7 +714,6 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
     ) -> Bool {
         (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
             && !settings.exportFormats.isEmpty && settings.exportFormats.isSubset(of: Set(ExportFormat.allCases))
-            && settings.formatCustomization.unitPreference == .metric
             && !settings.summaryOnlyExport
             && records.allSatisfy { $0.workouts.isEmpty && $0.providers?.isEmpty != false }
     }
