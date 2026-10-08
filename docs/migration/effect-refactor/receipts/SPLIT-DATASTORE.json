@@ -1,0 +1,709 @@
+{
+  "task_id": "SPLIT-DATASTORE",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+  "patch_digest": "aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242",
+  "patch_digest_method": "SHA256 sorted nonreceipt claimed paths; each repository-relative UTF8 path+NUL+raw bytes+NUL; receipt excluded to prevent self-reference. Exact two-path set digest separately frozen in scratch report after receipt write.",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-datastore.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json"
+  ],
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "packet": {
+        "path": "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "bytes": 244805,
+        "sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240"
+      },
+      "source_pins": [
+        {
+          "path": "AGENTS.md",
+          "bytes": 6129,
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "GLOSSARY.md",
+          "bytes": 3868,
+          "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "bytes": 13361,
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "bytes": 284562,
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "bytes": 9482,
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/personal-data.md",
+          "bytes": 5582,
+          "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "bytes": 10054,
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/source-revisions.md",
+          "bytes": 1745,
+          "sha256": "6f1b31ba8db04b5c4402634edb2b60b8eb7c82b182d229568048bcfe9d5d1888",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/donors.json",
+          "bytes": 240223,
+          "sha256": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/donor-location.json",
+          "bytes": 198804,
+          "sha256": "51dd89a982ba18c072eae935220a626e456f3e4baab7fa17c6d7321ca940409f",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/donor-usage-mac.json",
+          "bytes": 187239,
+          "sha256": "5847579b3a987ba49d41f572aeb105f98cbef730b4e2107fb6b29176443b089c",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/donor-usage-mobile.json",
+          "bytes": 143057,
+          "sha256": "bbfef9fe1576085ed006cb05b74ec7336adee09ffa4f4ed1a8cca309403a105d",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+          "bytes": 14452,
+          "sha256": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-LOCATION.json",
+          "bytes": 14732,
+          "sha256": "2e6708b405208f923a9347cbba6f0758b92039fee011127c16ac93a2d74f67b8",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MAC.json",
+          "bytes": 14220,
+          "sha256": "f3e30d3c0fc5cc760e8e9aaed337e129eeadd5cbb7bab5dd79f91ba456924601",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-DONOR-USAGE-MOBILE.json",
+          "bytes": 18863,
+          "sha256": "f8cec1de88b331ebff3d604802afba6b06e26a1c85c669d36dfc94a7a7e2649d",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-candidate.md",
+          "bytes": 13492,
+          "sha256": "0c50c6d13e48026c9ed81f0325fea73050d52d7b1aa744eb905eae4884b0349d",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+          "bytes": 68436,
+          "sha256": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+          "bytes": 34193,
+          "sha256": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-DRAFT.json",
+          "bytes": 11380,
+          "sha256": "2325ad12401e52963f00c622f3e81fb8210e7b6396604516595a7610cb3a8643",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+          "bytes": 18284,
+          "sha256": "9c1f44fd63b564fe9a5d0ee6eaeff2a22f34615b1abfd59d8efe23bd4154b4ae",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+          "bytes": 24593,
+          "sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json",
+          "bytes": 90390,
+          "sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "bytes": 860,
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "bytes": 2988,
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "bytes": 1410,
+          "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "bytes": 27929,
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/.node-version",
+          "bytes": 8,
+          "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/personal-slice.ts",
+          "bytes": 25746,
+          "sha256": "09e0df4038e6847bf2d13f80757e20da36eae09295c6c14e1c2ee9e48651a8e5",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/contracts/exact-values.ts",
+          "bytes": 7113,
+          "sha256": "2c56f1942f585a5cf3d2c5387d42c87ef2853255b2fc9ddda86e1666a15a4275",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/src/operations/personal-slice.ts",
+          "bytes": 30880,
+          "sha256": "02be2de8342e62b5f7c6da104588e055818bfa928aa1c2bbf4d9b14b1cce3b05",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/personal-codecs-vectors.ts",
+          "bytes": 120095,
+          "sha256": "274b6dc844d2da72ff283df5d194dc39002639b3a2038937db732278fda4406a",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/personal-codecs.test.ts",
+          "bytes": 12979,
+          "sha256": "01d960569d09d21d80c8b20b950b4c3a41e87cc154943bef2305a47f3a9ce197",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/combined-slice-vectors.ts",
+          "bytes": 345676,
+          "sha256": "2a87777579998eab5901cf4b3089c11bfad01789060904680d40ef7848d52b35",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/tests/combined-slice.test.ts",
+          "bytes": 22476,
+          "sha256": "3d767799c08456e4baa4b84f19af4680e6945f4cac849dac980525a812c29ae0",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+          "bytes": 47904,
+          "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+          "bytes": 171341,
+          "sha256": "2aeb43dc54043fef42e8f2ace7ddafb46c915d54b659034e2b1fc74143f207c0",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check.mjs",
+          "bytes": 2766,
+          "sha256": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+          "bytes": 8065,
+          "sha256": "3493efc125aede6d9132061ea8e23383928e1c9389109af4b92eb5097abb5f09",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        }
+      ],
+      "selected_design_rows": [
+        {
+          "id": "C14",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 583,
+          "text": "| C14 | Personal Data envelope/domain/store/capabilities | Independently versioned health/location/device_usage payloads, source/device identity, exact time/quality/provenance, annotations/inference/tombstones, capture/display/query/export status, independent domain/detail/destination grants. |",
+          "sha256": "45bc81a4a3e3716a7ea12efca2c9c2fa4a0a97c089fb61574624533831438342"
+        },
+        {
+          "id": "C16",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 585,
+          "text": "| C16 | Multi-source operations/protocol/catalog/schedules | New typed operations and negotiated wire capabilities, CLI/MCP/UI parity, source-local evaluation, mixed old/new health-only peers, caller/cursor binding, accepted scope/accounting/cancel and revision-aware merge/catch-up. |",
+          "sha256": "12da1d112c737d4e5d4fd42538330d7824cbd273fab330d4c0d5b91c7f3c1749"
+        },
+        {
+          "id": "P01",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 197,
+          "text": "| P01 \u2014 Personal dataset and repository | Common envelope/domain payloads, source catalog, scoped transactional repository, coverage/tombstone/correction/derivation contracts and retention policy. | C14 fixtures; annotations without invented timestamps, mixed aggregate/event precision, stable IDs, replay/rollback/deletion, encrypted/protected-data failure, exact health compatibility. |",
+          "sha256": "e80cc0bf489173b5606c423754720d48c6c2fe1821c2d7d87bc90730ede0fdcd"
+        },
+        {
+          "id": "O08",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 672,
+          "text": "| O08 | Proposed personal-data source/query/coverage/timeline CLI and MCP projections | P01/P02 source selection, bounded domain-aware records/reducers, independent availability/export grants, explicit cross-domain associations and coverage. |",
+          "sha256": "eda25a414ba9a5efd26ddbedee7da05849597aa48526bfc855a13f58bbd57817"
+        },
+        {
+          "id": "F15",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1055,
+          "text": "| F15 | False equivalence and duplicate totals across domains/devices | C14\u2013C16/K06 fixtures preserve source aggregate/session/visit/inference kinds, overlapping devices, hourly/daily replacement and independent coverage. No aliased health/GPS distance or fabricated missing data. |",
+          "sha256": "ffb406620b1b625c162affbb4ac84406f60cf3bdc7c0c42ea809f2f87be8f4bf"
+        },
+        {
+          "id": "K06",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "start_line": 647,
+          "end_line": 652,
+          "text": "### K06: personal dataset and new-domain semantics\n\nImplement P01/P02 and L01/S03 portable responsibilities alongside K01\u2013K05: tagged domain codecs, source catalog/coverage, scoped selection/repositories, location correction/session/outlier/outing algorithms, usage bucket/session/device/title models and reducers, explicit cross-domain association, and independently versioned summary/record/archive planning. C14\u2013C17 fixtures cover exact source precision, corrections/deletions, overlap/replacement, aggregate boundaries, title escaping/redaction, source/destination admission and migration identity.\n\nKeep these inside the same portable package and operation catalog. A location ExportKit adapter, Swift usage CLI analytics implementation or mobile TypeScript exporter may supply source evidence, but none remains a second permanent business authority after qualification. Native durable capture/storage, entitlement/report views and privileged OS calls remain host interfaces. Retain golden source fixtures plus independent invariants rather than using a new implementation to approve its own outputs.\n\n",
+          "sha256": "823d27ca8e0ed53fa107d2682ca70843b7d377aa57b65b34a9a95a64614cf731"
+        }
+      ],
+      "accepted_prerequisites": {
+        "BASE-DOMAINS": {
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/BASE-DOMAINS.json",
+            "bytes": 14452,
+            "sha256": "4ee85dc253932a6ac8c05becea89c3627d97c4e62ecedc8a0cadbcd87defdcd1",
+            "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650"
+          },
+          "proof_class": "planning",
+          "source_sha": "e9e9697a476c962c9df2762334b9623955f1a6ba",
+          "patch_digest": "67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d",
+          "review": {
+            "status": "accepted",
+            "reviewer": "/root/effect_base_core",
+            "fingerprint": "e9e9697a476c962c9df2762334b9623955f1a6ba+67b9dbc945c6e292e7cba25502e3afc43dcb9a35f4ba797b08124d044ef9e54d"
+          },
+          "scope_limit": "Only exact accepted source/planning or bounded portable synthetic scope; stale historical descriptions are not current qualification."
+        },
+        "PERSONAL-CONTRACT-REVIEW": {
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+            "bytes": 18284,
+            "sha256": "9c1f44fd63b564fe9a5d0ee6eaeff2a22f34615b1abfd59d8efe23bd4154b4ae",
+            "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650"
+          },
+          "proof_class": "planning",
+          "source_sha": "02988490309f45a913d14a802f7e421a6de27d26",
+          "patch_digest": "16d9a882eda2b5527ab2140f8a44d28fb4bf20720e9203fa45055ead229e8a4b",
+          "review": {
+            "status": "accepted",
+            "reviewer": "/root/donor_mac_review",
+            "fingerprint": "02988490309f45a913d14a802f7e421a6de27d26+16d9a882eda2b5527ab2140f8a44d28fb4bf20720e9203fa45055ead229e8a4b"
+          },
+          "scope_limit": "Only exact accepted source/planning or bounded portable synthetic scope; stale historical descriptions are not current qualification."
+        },
+        "PERSONAL-CODECS": {
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/PERSONAL-CODECS.json",
+            "bytes": 24593,
+            "sha256": "c627a6ce596ea971b079917eb078a5fae02faca57894609147b03921fe6fc859",
+            "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650"
+          },
+          "proof_class": "portable_synthetic",
+          "source_sha": "780a391041b31a5847865bfd0b62e391e0f8590f",
+          "patch_digest": "6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6",
+          "review": {
+            "status": "accepted",
+            "reviewer": "/root/donor_mac_review",
+            "fingerprint": "780a391041b31a5847865bfd0b62e391e0f8590f+6c6ad6086a3bb9e1b3d2a193cda4199d25d77e1e8df4546df529dc292638f2a6"
+          },
+          "scope_limit": "Only exact accepted source/planning or bounded portable synthetic scope; stale historical descriptions are not current qualification."
+        },
+        "COMBINED-SYNTHETIC": {
+          "receipt": {
+            "path": "docs/migration/effect-refactor/receipts/COMBINED-SYNTHETIC.json",
+            "bytes": 90390,
+            "sha256": "2a853237f7f7dc145d9ccf49b1948c158c4f7cbe838f5a3569f96cedeea89e5f",
+            "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650"
+          },
+          "proof_class": "portable_synthetic",
+          "source_sha": "62a1547eb6c856c55ca5731e20de7f27cef27fe7",
+          "patch_digest": "99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1",
+          "review": {
+            "status": "accepted",
+            "reviewer": "/root/android_release_host",
+            "fingerprint": "62a1547eb6c856c55ca5731e20de7f27cef27fe7+99c13271cb8226695249cdfea5e7e67c49a3ec2c2d7126bb869e72688438e3d1"
+          },
+          "scope_limit": "Only exact accepted source/planning or bounded portable synthetic scope; stale historical descriptions are not current qualification."
+        }
+      },
+      "source_case_authority": {
+        "case_count": 81,
+        "record_count": 4,
+        "case_map_sha256": "255c65dc9ba409b2aed6e5c2725a6da8ec58ca3d92e6ea990d5516c08c365ec5",
+        "repository_cases": 17,
+        "new_literal_proposals": 64
+      },
+      "preclaim_card": {
+        "path": "/private/tmp/healthmd-datastore-preclaim-card.json",
+        "bytes": 2579,
+        "sha256": "40a9761d0d875c07e86f95817aef14ce73359059d02941fd82e9e296771e5b76",
+        "canonical_sha256": "3b2700768ea36643e84bf90f7541397b92c7e2a3e1402ce649afdc2a78e157be"
+      }
+    },
+    "locks_and_runtime": {
+      "executed": false,
+      "source_pins_only": [
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "bytes": 1410,
+          "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "bytes": 27929,
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        },
+        {
+          "path": "packages/healthmd-core-ts/.node-version",
+          "bytes": 8,
+          "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f",
+          "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+          "assigned_git_current_equal": true
+        }
+      ]
+    },
+    "artifact_and_native_interface": {
+      "generated_outputs_read": false,
+      "native_or_donor_store_read": false,
+      "real_storage_or_cloud_action": false
+    },
+    "policy_migration_key_versions": {
+      "selected_public_profile": null,
+      "storage_backend_or_key_chosen": false,
+      "current_independent_suppression": "Normative child requirement; fake ports do not qualify host durability/recovery."
+    }
+  },
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": "Exact packet rawb7e3/patchaa6 independently accepted4b666 and ROOT final review fd7e88beff0ca7578f182fc9bbafa7b17ac7dc1ab5e98d50c145109ca07a55ba. Six unqualified cards merged and actualmanage check119 passed; planning scope only."
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": "Exact packet rawb7e3/patchaa6 independently accepted4b666 and ROOT final review fd7e88beff0ca7578f182fc9bbafa7b17ac7dc1ab5e98d50c145109ca07a55ba. Six unqualified cards merged and actualmanage check119 passed; planning scope only."
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": "Exact packet rawb7e3/patchaa6 independently accepted4b666 and ROOT final review fd7e88beff0ca7578f182fc9bbafa7b17ac7dc1ab5e98d50c145109ca07a55ba. Six unqualified cards merged and actualmanage check119 passed; planning scope only."
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": "Exact packet rawb7e3/patchaa6 independently accepted4b666 and ROOT final review fd7e88beff0ca7578f182fc9bbafa7b17ac7dc1ab5e98d50c145109ca07a55ba. Six unqualified cards merged and actualmanage check119 passed; planning scope only."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "/private/tmp/healthmd-datastore-root-merge-review.py"
+      ],
+      "result": "passed",
+      "evidence": "Actual final ROOT source/Git/design/pointer/baseline/transfer/case/card/graph/literal validator report /private/tmp/healthmd-datastore-root-merge-review.json sha256dbc45f6200db134ea9b9e76457bfc67d669f698dceea8c6c6e78d378c9ed00ad. Historical validator-only preparation mistakes retained in ROOT final review; no product commands."
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "check"
+      ],
+      "result": "passed",
+      "evidence": "Actual coordinator merge structural check: PASS119 atomic tasks/86families/16choices. Graph,pointers,state/evidence,claims valid; implementation/release not asserted."
+    }
+  ],
+  "inspection_summary": "39 complete current/assignedGit source pins;6 exactdesign rows;81 unchanged raw contract cases/fourrecords;17 repository baseline rows with independently verified RFC6901 hashes; all13 fulltransfer obligations retained;6 children/24 disjoint paths/64 independently sourced minimal scenes; no executable/product check applies to this planning task.",
+  "observations": [
+    {
+      "case_id": "source-pin-and-contract-preservation",
+      "result": "passed",
+      "procedure": "Read full source files/inventories/accepted receipts and compare current raw bytes to assigned Git; resolve17 donor inventory RFC6901 selected values; preserve81 raw cases and13 transfer obligations.",
+      "expected": "Assigned b3f6 source authority immutable, exact current bytes and accepted scope limits retained.",
+      "observed": "All39 source pins match assigned Git;17 repository selected-value hashes match;81 case map and13 transfer obligations copied unchanged.",
+      "evidence": "docs/migration/effect-refactor/expansions/split-datastore.json"
+    },
+    {
+      "case_id": "bounded-decomposition-static-inspection",
+      "result": "passed",
+      "procedure": "Construct at most6 children with exactly4 disjoint future paths each; dependencies source/coverage before single transaction plans; map all selected design obligations and concrete remaining owner/triggers.",
+      "expected": "No whole datastore/host/source/grant/retirement closure or new implementation authorized.",
+      "observed": "6 children24 disjoint paths;64 literal proposals; host/source/current suppression/erase-recovery/public/collisions/wholehistory remain explicit.",
+      "evidence": "docs/migration/effect-refactor/expansions/split-datastore.json"
+    }
+  ],
+  "limitations": [
+    "Planning source/interface/literal/dependency proposal only; independent review remains pending. No child implementation or runtime/storage correctness claimed.",
+    "No Node/npm/compiler/build/test/native/device/API/currentgenerated/donor/customer/cloud data execution or repo plan/Git mutation.",
+    "Bounded accepted synthetic codec/combined authorities do not establish durable repository, real grants, native profile eligibility, complete archive, multi-year history or public CLI/MCP parity.",
+    "Source catalog/coverage falsezero/no fabricated completeness and unchanged domain precision/healthprofile identities constrain later source admission; unsupported native/source arithmetic remains explicit.",
+    "Local tombstone, correction reversal and current external erase/revocation frontier differ; oldbackup/newgrant cannot override current independent journal. Real erasure/backup/restore/key deadlines remain later durablehost/deployed proof.",
+    "All proposed budgets and fake transaction/ACK/commit controls unmeasured; no AGPL source adoption/dirtypatch/service/secret/entitlement/retirement permission.",
+    "Current3b2dffe accepted private Values producer49/30/906+19 is measured but not accepted into historical43/26 consumer authority; packet source b3f remains immutable planning baseline."
+  ],
+  "remaining_qualification": [
+    "Independent acquisition/contracts/privacy review of exactsource+packetpatch BEFORE coordinator merges children.",
+    "ROOT source/resource/window/interface/literal freeze per child BEFORE implementation and actual standalone checks.",
+    "DATASTORE-DURABLE-HOSTS: Before any actual local collector partition/inbox/checkpoint/correction/deletion/retention backend adoption",
+    "DATASTORE-SOURCE-ADMISSION-HISTORY: Before ingesting actual location/usage/health originals or claiming full available history",
+    "DATASTORE-CORRECTION-UNDO-AND-DERIVATION: Before local reversal/visit/place/session/inference UI or persistent derivation admission",
+    "PERSONAL-QUERY-PROJECTION: Before full source catalog/query/timeline/coverage UI/CLI/MCP/catalog/protocol promotion",
+    "DATASTORE-COMPLETE-ARCHIVE-IMPORT: Before donor adopted code/data or installed-user transition",
+    "DATASTORE-PACKAGE-CONSUMER-COHORT: Before exports/package/API/CLI/MCP/native bundle consumes these future new source modules",
+    "DATASTORE-CLOUD-AND-RETIREMENT: Before hosted transfer/backup/delete/restore or source engine production cutover/deletion"
+  ],
+  "remaining_family_work": [
+    {
+      "id": "DATASTORE-DURABLE-HOSTS",
+      "owner": "personal_data native/storage/security coordinator",
+      "trigger": "Before any actual local collector partition/inbox/checkpoint/correction/deletion/retention backend adoption",
+      "requirements": [
+        "Backend/encryption/protected-data/schema upgrade/rolling compatible reader choice",
+        "Actual persisted transaction/replay/process kill/power loss/open-session recovery/ACK and retention at scale",
+        "Independent suppression/deletion journal outside snapshots/backups; failclosed missing current journal; restore-after-later-delete/revoke negative matrix",
+        "Measured physical live/version/index/key/backup erasure deadlines and durable recovery; no instant crypto-erasure claim"
+      ],
+      "proof_class": [
+        "host_integration",
+        "physical_device",
+        "signed_distribution"
+      ]
+    },
+    {
+      "id": "DATASTORE-SOURCE-ADMISSION-HISTORY",
+      "owner": "P01/L01/S01/S02 acquisition-contract coordinator",
+      "trigger": "Before ingesting actual location/usage/health originals or claiming full available history",
+      "requirements": [
+        "Full original source field/evidence grammar/equality/collision-safe stable identity and imported artifact enumeration",
+        "Native health remains source authority; no compulsory whole-corpus replication",
+        "All observed short sessions plus all available donor history; unknown precollector/discarded/crash tails/gaps stay unknown",
+        "Per-source clocks/precision/source arithmetic/source lookback/bucket reconciliation/unknown identity/source-purpose/channel/OS/protected eligibility",
+        "Browser/input/title exclusions before observation, persistence, evidence staging, archive or transfer"
+      ],
+      "proof_class": [
+        "planning",
+        "host_integration",
+        "physical_device",
+        "signed_distribution"
+      ]
+    },
+    {
+      "id": "DATASTORE-CORRECTION-UNDO-AND-DERIVATION",
+      "owner": "P01/L02/S03 domain algorithm coordinator",
+      "trigger": "Before local reversal/visit/place/session/inference UI or persistent derivation admission",
+      "requirements": [
+        "Append reversal preserving original; explicit restore under current grants cannot override independent external fence",
+        "Exact source-aware outlier/visit/outing/association/reducers/session clipping/unknown timing semantics, no invented timestamps",
+        "Saved places/categories/device states/title observations and cross-domain association remain distinct"
+      ],
+      "proof_class": [
+        "portable_synthetic",
+        "host_integration"
+      ]
+    },
+    {
+      "id": "PERSONAL-QUERY-PROJECTION",
+      "owner": "C16/O08/P02 common-operation coordinator",
+      "trigger": "Before full source catalog/query/timeline/coverage UI/CLI/MCP/catalog/protocol promotion",
+      "requirements": [
+        "Whole source-aware snapshot/cursor/caller binding; mixed health-only peers; strict/partial selection and bucket partial overlap",
+        "Daily/hourly replacement, source/device overlap never blind totals; semantic health/GPS/CLVisit/observed/inferred distinctions",
+        "One common operation/accounting/cancel/commit/recovery; no permanent donor Swift CLI/location export engine",
+        "Full retained history bounded paging; large exports/schedules/renderer/source-profile/Obsidian consumer gates"
+      ],
+      "proof_class": [
+        "portable_synthetic",
+        "host_integration",
+        "external_client"
+      ]
+    },
+    {
+      "id": "DATASTORE-COMPLETE-ARCHIVE-IMPORT",
+      "owner": "P03/C17/L05/S04 migration coordinator",
+      "trigger": "Before donor adopted code/data or installed-user transition",
+      "requirements": [
+        "All13 baseline transfer obligations, originals/IDs/precision/settings/annotations/categories/queues evidence",
+        "Archive/digest/version/partition/source schema validation, staging/conflict/commit/Undo/retry/crash/rollback matrix",
+        "Q-DONOR-SOURCE/Q-DONOR-SUPPORT/license/AGPL and signed purpose/support decisions; no dirty source adoption or donor service/secret inheritance",
+        "Original donor data/readers retained; no fake archive completeness or reconstructed missing historical facts"
+      ],
+      "proof_class": [
+        "planning",
+        "host_integration",
+        "physical_device",
+        "signed_distribution"
+      ]
+    },
+    {
+      "id": "DATASTORE-PACKAGE-CONSUMER-COHORT",
+      "owner": "portable/core consumer-admission coordinator",
+      "trigger": "Before exports/package/API/CLI/MCP/native bundle consumes these future new source modules",
+      "requirements": [
+        "Freeze complete source/generated set and exact export/cohort/current immutable prior receipts after each accepted producer delta",
+        "Current43/26 remains historical accepted authority; numeric46/28/Values prospective inputs do not silently selfrefresh consumer guards",
+        "One physical Effect/React where relevant/no Rust tool graph/source SDK isolated required host and public fixture gates"
+      ],
+      "proof_class": [
+        "portable_synthetic",
+        "host_integration"
+      ]
+    },
+    {
+      "id": "DATASTORE-CLOUD-AND-RETIREMENT",
+      "owner": "H00-H09 operational and rollout/retirement coordinator",
+      "trigger": "Before hosted transfer/backup/delete/restore or source engine production cutover/deletion",
+      "requirements": [
+        "Actual source-purpose/server-readable/device/owner/agent/destination/retention/key/current suppression semantics",
+        "Two-tenant deployed recovery/deletion/revoke-after-backup qualification; external recipient copy limit",
+        "Independent rollout/rollback/support matrix and full family closure; no Rust/reference/retained state deletion from syntheticchildren"
+      ],
+      "proof_class": [
+        "deployed_operational",
+        "signed_distribution",
+        "external_client"
+      ]
+    }
+  ],
+  "rollback": "Retain all native/Rust/frozen source profiles/readers/state/donor history; remove planning packet/future synthetic modules without production/user data migration.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242"
+  },
+  "acceptance_history_before_coordinator_merge": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "partial",
+      "evidence": "Planning packet fullsource/literal/proposed dependency andremaining work complete; mandatory independent review/ROOTmerge pending."
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "partial",
+      "evidence": "Planning packet fullsource/literal/proposed dependency andremaining work complete; mandatory independent review/ROOTmerge pending."
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "partial",
+      "evidence": "Planning packet fullsource/literal/proposed dependency andremaining work complete; mandatory independent review/ROOTmerge pending."
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "partial",
+      "evidence": "Planning packet fullsource/literal/proposed dependency andremaining work complete; mandatory independent review/ROOTmerge pending."
+    }
+  ],
+  "coordinator_final_review": {
+    "path": "/private/tmp/healthmd-split-datastore-final-root-review.json",
+    "sha256": "fd7e88beff0ca7578f182fc9bbafa7b17ac7dc1ab5e98d50c145109ca07a55ba"
+  },
+  "coordinator_merge": {
+    "children": [
+      "DATASTORE-SOURCE-CATALOG",
+      "DATASTORE-SOURCE-COVERAGE",
+      "DATASTORE-BATCH-CHECKPOINT",
+      "DATASTORE-CORRECTION",
+      "DATASTORE-LOCAL-TOMBSTONE",
+      "DATASTORE-RETENTION"
+    ],
+    "child_status": "not_started/unqualified",
+    "actual_structural_check": "PASS119 tasks/86families/16choices; no product tests or real data."
+  },
+  "independent_packet_review": {
+    "status": "accepted_bounded_planning_pending_root_merge",
+    "path": "/private/tmp/healthmd-split-datastore-independent-donor-review.json",
+    "sha256": "4b666079851a48c9e654730ef62346bff79c1f62b1cd4ffe2711931c4a0e0ac2",
+    "fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242"
+  }
+}
