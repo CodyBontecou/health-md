@@ -6530,8 +6530,17 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-datastore.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-DATASTORE.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
         "status": "pending",
@@ -6543,7 +6552,21 @@
         "status": "pending",
         "receipts": []
       },
-      "max_children": 6
+      "max_children": 6,
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+        "canonical_card_sha256": "3b2700768ea36643e84bf90f7541397b92c7e2a3e1402ce649afdc2a78e157be",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-datastore-preclaim-card.json",
+        "scope": "Atmost6 atomicdomainrepository children source/coverage + onecorrection/checkpoint/retentiontransaction perchild. Noimplementation/currentcoreoutputs/build/donoracquisition/healthdata/native/cloud/state/publicadmission. Preserveoriginalbaselineinputs/syntheticqualifications/AGPLlimits."
+      },
+      "independent_packet_review": {
+        "status": "accepted_bounded_planning_pending_root_merge",
+        "path": "/private/tmp/healthmd-split-datastore-independent-donor-review.json",
+        "sha256": "4b666079851a48c9e654730ef62346bff79c1f62b1cd4ffe2711931c4a0e0ac2",
+        "fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242"
+      }
     },
     {
       "id": "SPLIT-LOCATION",
@@ -9239,8 +9262,14 @@
       "deletion_gate": "No promotion, retirement, Rust/reference/reader deletion or source-domain admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json",
       "reviewer_role": "independent native/runtime/security reviewer",
-      "status": "in_progress",
-      "blocker": null,
+      "status": "blocked",
+      "blocker": {
+        "reason": "ExactrepositoryPixel7notfoundbyboundedADBget-state; noinstallation/runtimetestexecuted.",
+        "unblock_condition": "Ownerreconnects/authorizesUSBtarget andROOTrevalidatesexactsource/tool/APKpreflight withdedicatednativewindow.",
+        "evidence": "/private/tmp/healthmd-cold-Pixel7-root-preflight-results.json",
+        "evidence_sha256": "b2e22dfddc57222b79620709d6ba2161dab56751e79298366b9e1a406b5560b2",
+        "scope": "Taskenvironmentonly; goalcontinuesotherwork. Nativeimplementation14frozen, noactivewriterorcommandsuntilreconnection."
+      },
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
@@ -10306,7 +10335,7 @@
         "requires": "Exact14source776f/6staticbundle/37toolrawpins withappGradle190580override+639Gradle files.300s16MiB offline max2 strict assembly coldRelease+AndroidTest only. No lock/XML/source/core/cohort/consumer/dependencyacquisition/device actions; existinglocaltrustgap retained. ActualnewAPK inspection required beforeinstall/runtime."
       },
       "futures12_APK_read_inspection_clearance": {
-        "status": "approved_exact_readonly_newAPK_reinspection",
+        "status": "consumed_independently_accepted_static_owned_ABI",
         "reviewer": "/root",
         "inspector": "/root/android_release_host",
         "source_patch": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+776fd65baedb0755c3c548a9352a71d7b4e6cd50b681d6e1c1538ea9f802e146",
@@ -10319,6 +10348,55 @@
           "sha256": "55dbffd7281f42f7b1df554826c88f3be6841ff1178596e14191969f268c13b5"
         },
         "requires": "FIRST measureactualnewAPK/mappings+14source/6bundle;retainhistoryoldAPKcopy. ExistingpinnedSDK36aapt2/apksigner/JDK17 sixreadonly20s2MiBownedPGIDcommandswithACK;boundedPythonZIP/DEXheaderscurrent120closure. Fullnewsharedinstructionrefs plusoriginal100+2adapterminimum/26roots36members mustresolve againstactualclasses/R8super/interfaces;23VMarray+5hiddenframework remainexplicitplatformqualification limits. No compile/build/ADB/device/source/common/receipt/plan/Git changes."
+      },
+      "actual_futures12_APK_inspection": {
+        "result": "accepted_owned_dependency_static_ABI_runtime_unrun_platform_limits_retained",
+        "reviewer": "/root/android_release_host",
+        "path": "/private/tmp/healthmd-cold-futures12-actual-APK-independent-review.json",
+        "sha256": "62f27a6c10069238f8ff09dbef1114bbd86c32e1ba39f87c144fe15e81da4a48",
+        "verified": "New102refs84methods18fields/old100canonicalcontinuity+2adapter resolved;26actualclasses36members7ReactMethods;newAPKs manifests/same9a012cert/coldassets/historicassets/sixarm64ELFs exact. SixSDK20s2MiB actualcommandsACK/ESRCH andsource14bundle6/APK/mappingpre-post invariant. Runtimeunrun;23VMarray/fivehiddenframework and956otherplatformrefs notAPKalldefsqualification.",
+        "main_APK_sha256": "953394eb56482dbc4aa689a6917a8fcedbd47df3f1eec63e9f56caa7756c1479",
+        "test_APK_sha256": "c26c6b03ed71431f2f9f3600013fe27dfab0cff4997d3dd549639b4967a92767",
+        "main_mapping_sha256": "fc03b2e6582fb161b822285c8fd54d187a7b5c6adaccb910f15de73abf10a9e3"
+      },
+      "Pixel7_target_preflight_clearance": {
+        "status": "consumed_actual_exact_target_not_found_no_install",
+        "reviewer": "/root",
+        "source_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+776fd65baedb0755c3c548a9352a71d7b4e6cd50b681d6e1c1538ea9f802e146",
+        "root_tool_review": {
+          "path": "/private/tmp/healthmd-cold-Pixel7-root-host-tool-source-review.json",
+          "sha256": "abd200f3158705a37b8869d14fb48ab109e5f7ea6c292d299bfdd00ae0ba8a56"
+        },
+        "proposal": {
+          "path": "/private/tmp/healthmd-cold-Pixel7-runtime-source-proposal.json",
+          "sha256": "08bc36191c951f8096c87140a2104312ed2381e277d73411f6d38267e3929b69"
+        },
+        "requires": "ExistingownerhostADB1811 trustgapretained; exact6targetmetadata/PIDcommands10s64KiB each viafreshownedgroups, ownpackagepath onlyaftervalidateduser.14source6bundle2APK+sixADB/15toolrawpins before/after; serialrawmetadataonlyscratch. No install/runtime/build/globaldeviceinventory/customerdata/settingsmutation/UI/kill/permission/networkactions. BootcountGET independently accepted forlaterpreparedruntime."
+      },
+      "actual_Pixel7_preflight_history": [
+        {
+          "result": "partial_exact_target_not_found",
+          "executed_by": "/root",
+          "source_patch": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+776fd65baedb0755c3c548a9352a71d7b4e6cd50b681d6e1c1538ea9f802e146",
+          "report": "/private/tmp/healthmd-cold-Pixel7-root-preflight-results.json",
+          "report_sha256": "b2e22dfddc57222b79620709d6ba2161dab56751e79298366b9e1a406b5560b2",
+          "harness": "/private/tmp/healthmd-cold-Pixel7-root-preflight.mjs",
+          "harness_sha256": "46bf5448d4fb5307d249d4cdf47fd8b557c05160838bb397d3d1bea694a87461",
+          "executed_commands": 1,
+          "exit_code": 1,
+          "command_ms": 9,
+          "cleanup_ack": true,
+          "pins_unchanged": true,
+          "sandbox_permissions": "require_escalated",
+          "approval": "auto_review approved",
+          "limits": "Onlyexacttargetget-state ran. No install/runtime/UI/grant/healthdata/globalinventory/fallback/kill/settings orsource changes. Serial/rawADBtargetresult scratchonly. Reconnection requested; independentportableworkcontinues."
+        }
+      ],
+      "future_runtime_supervision_preparation_note": {
+        "status": "unexecuted_proposal_requires_root_resolution",
+        "source_builder_sha256": "b8dbdb140fdc9cba83ad04ea091a5dc64e1b57fc2d794a1046ff6b0d214e4ad7",
+        "finding": "Frozen runBounded accepts deadlineMs<=300000; runtime proposal outer910000 cannot be passed to it. Targetpreflight10s wasvalidandactual. No runtime/install attempted.",
+        "requires": "Before future runtime, prepare/review bounded ROOT outer supervision compatiblewith900000 inneroverallbudget, preservinginnerownedcommandgroupcleanup/finalreportgrace andtruthfulnestedgrouplimits. Do not blindlyincreasepinnednativehelperdeadline/changefull14manifest or use300souter thatmaykillrunner beforeinnercleanup. Sourceonlyscratchproposal withindependentreview first."
       }
     },
     {
@@ -24075,7 +24153,7 @@
       "kind": "implementation",
       "status": "in_progress",
       "claim": {
-        "agent": "/root/personal_codecs",
+        "agent": "/root/donor_mac_review",
         "base_revision": "5952cb86ad1d212efdebfabe3523a4f42aff1454",
         "worktree": "/Users/codybontecou/dev/health-md",
         "write_paths": [
@@ -24481,6 +24559,54 @@
           "cli-candidate-qualified-core-inputs"
         ],
         "requires_accepted_complete_codec_successor_cohort": true
+      },
+      "stage1_independent_review": {
+        "status": "changes_requested_allocation_contract_only",
+        "path": "/private/tmp/healthmd-cli-result-stage1-independent-donor-review.json",
+        "sha256": "27f9c8662e680785b88c7a7ea21caf1dfe2021a13fc92432ba25b73a43913645",
+        "reviewer": "/root/donor_mac_review",
+        "verified": "35current/Git42historical20locators/all81scenes+24derivedoutputs withoutmismatch; opaqueunregisteredallocationownershipgap beforeimplementation."
+      },
+      "allocation_stage1_amendment_clearance": {
+        "status": "approved_exact_v2_typedinterface_and_two_supplemental_scenes_sourceonly",
+        "reviewer": "/root",
+        "proposal": {
+          "path": "/private/tmp/healthmd-cli-result-allocation-amendment-v2.json",
+          "sha256": "8f8cb53f27a58b9f1eb0d7a99ffff4f11702894d8025fa191a4aaec24267d077"
+        },
+        "independent_review": {
+          "path": "/private/tmp/healthmd-cli-result-allocation-v2-independent-review.json",
+          "sha256": "9dcc093c3ed7ab1876b2d7a2c38d2205a98ebd5fcf9462849d4deaef3344ff62"
+        },
+        "requires": "Archivecurrent81vector/ROOTreceipt; replacetypedOutputWriterexactwithLease/capturedisLive+closedEffectprotocol, immediateoriginalexpire/signalfinalizer/no selfjoin, finiteatomicregistration, ownedwatcher stopjoin/ACKprotected/busy/terminalprecedence. Original81entireexpected/inputrecords unchanged; appendexacttwoindependentlyderivedclosurescenes fromv2. Freeze83fullvector+receipt beforeindepreview andcode. No implementation/commands/cohort/sourceconsumer/publicnativeadmission."
+      },
+      "stage1_amended_root_review": {
+        "status": "accepted_bounded_83_preimplementation_source_only",
+        "path": "/private/tmp/healthmd-cli-result-stage1-amended-root-review.json",
+        "sha256": "596afa9676e5e4b83937845ff7c403230636601884a4f8b8a433432c7187493b",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-cli-result-stage1-amended-independent-review.json",
+          "sha256": "71537bcb84c64a10bd4aea8c17260d50e1674ece5b9e2b58198c827f70b32095"
+        }
+      },
+      "implementation_clearance": {
+        "status": "approved_private_source_test_receipt_only",
+        "reviewer": "/root",
+        "source_fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+82cdeb1bae0cc8fc554fc1fe5dd9243332087ac1f1164493ade9474269fb9007",
+        "requires": "Implement exactcaptured originalScope/membership/current/innercallbackexpiry andapprovedscopedwriterwith83immutablefullscenes. Source/test andownreceipt only; nobuild/test/Node/npm/generated/currentcohort/index/package/guard/lock/native/device/sourceconsumer/public actions. Freeze all3nonreceipt paths thenindependentreview before boundedchecks; actualCLIcheckrequiresqualified whole successorcohort."
+      },
+      "writer_history": [
+        {
+          "previous": "/root/personal_codecs",
+          "next": "/root/donor_mac_review",
+          "reason": "Priorvectorauthor independentlyreviews Values; amendedStage1 reviewer now implements CLI, separatefinalreview bynonimplementerrequired."
+        }
+      ],
+      "stage2_independent_review": {
+        "status": "changes_requested_same_callback_value_binding",
+        "path": "/private/tmp/healthmd-cli-result-stage2-independent-source-review.json",
+        "sha256": "a96d4dd48e148460056cd5e73dc9083481fd34611b9b27cda7f1ea47f5f86faa",
+        "fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+fc258bd3f8747dbaaae2fdd857477695047cc76fe0ae98bf49123a4eca9c916a"
       }
     },
     {
@@ -27486,8 +27612,21 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/serialization/exact-json-value.ts",
+          "packages/healthmd-core-ts/tests/exact-json-value.test.ts",
+          "packages/healthmd-core-ts/tests/exact-json-value-vectors.ts",
+          "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json"
+        ],
+        "reserved_resources": [
+          "private-json-value-interface"
+        ]
+      },
       "prerequisites": [
         "SPLIT-CODECS",
         "PARSE-EXACT-JSON-NUMBERS"
@@ -27519,7 +27658,6 @@
         "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json"
       ],
       "shared_resources": [
-        "core-component-build",
         "private-json-value-interface"
       ],
       "source_input_refs": [
@@ -27805,14 +27943,16 @@
       "priority": 101,
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+bbe78927ad0925d30d6d16efd160c352e0e0c3bef2292d0466694efa7b135373"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-VALUES.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
@@ -27821,7 +27961,269 @@
         "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
         "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
       },
-      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained.",
+      "source_reconciliation": {
+        "preclaim_card": "/private/tmp/healthmd-json-values-preclaim-card.json",
+        "preclaim_sha256": "77d7ebc1f768be06eea0c4cefc1c76a119eacfb9361b16ff6399da59e04eef40",
+        "new_numeric_dependency_source_revision": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650",
+        "parser_source_path": "packages/healthmd-core-ts/src/serialization/exact-json-number-parser.ts",
+        "parser_source_sha256": "099505e1b4f9890848d8a159daf75f482bd24e647ba0f01a16c711bfeeebadbc",
+        "parser_receipt": "docs/migration/effect-refactor/receipts/PARSE-EXACT-JSON-NUMBERS.json",
+        "parser_review_fingerprint": "e94c6f4ef08024b3d3d12a2e85acfd5b36d652ad+6b84632ae625110f9b5927a07e63b018defa897757bbf687edd0a051c7f11132",
+        "scope": "Historical43/26 consumercohort staysunchanged/unadopted fornumeric. Current46/28 raw measuredactual691/19, no completecodec/cohort/export/frontend/native/publicbinding. Stage1sourceonly addsindependentcorpus, no execution."
+      },
+      "stage1_clearance": {
+        "status": "approved_vector_interface_receipt_only_before_implementation",
+        "reviewer": "/root",
+        "requires": "Fullclosedvalue/ownedvisitor/numericfactorycapture/bounds/parser string duplicate key UTF8order grammar andindependentsourceexpectedliterals beforecode. Onlyvector+receipt writes; no src/test implementation, Node/npm/compiler/tests/build/generatedcurrentoutputs/corecohort/guard/index/package/lock/CLI/native/device/plan/Git actions. Originalnumeric3source/scalarimmutable; source-only raw reads ofacceptednumeric/privateinterface okay; fullsourcepins/assignedbase patchfreeze thenindepreview."
+      },
+      "resource_stage_history": [
+        {
+          "released": [
+            "core-component-build"
+          ],
+          "reason": "Stage1onlysourcevectorinterface; corebuilder requiresseparatecheckclearance later."
+        },
+        {
+          "released": [
+            "core-component-build"
+          ],
+          "reason": "Fullactualprivatecorecheck906/19 accepted; new49/30successorconsumercohortunadopted."
+        }
+      ],
+      "stage1_freeze": {
+        "status": "consumed_independently_accepted_before_implementation",
+        "path": "/private/tmp/healthmd-json-values-stage1-freeze.json",
+        "sha256": "7ca9b817b11cc657e0123f8bc84ae6d1dd3944309a6cc55c54cb7af1478f2749",
+        "fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+f73594189bb6771d7819e0007b4f582ca2a005a8aeca5a9e5b6de55b84a45cd2",
+        "cases": 214
+      },
+      "stage1_independent_review": {
+        "path": "/private/tmp/healthmd-json-values-independent-stage1-review.json",
+        "sha256": "b22855f122f26d10ddad0ee9ac68b2f900f795ac585f9f5cea8504d3c85c5439"
+      },
+      "stage1_root_review": {
+        "path": "/private/tmp/healthmd-json-values-stage1-root-review.json",
+        "sha256": "15eb2ee1d0577c732fb5009cf32c24a5a3459107aef2e6305d54dedd427b88f8",
+        "status": "accepted_bounded_214_preimplementation_source_only"
+      },
+      "implementation_clearance": {
+        "status": "approved_private_source_test_receipt_only",
+        "reviewer": "/root",
+        "source_fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+f73594189bb6771d7819e0007b4f582ca2a005a8aeca5a9e5b6de55b84a45cd2",
+        "requires": "Exactfrozen214/interface/vectorunchanged; parser-ownedAST/token/capturedreader beforeprops, originalnumericparse/read, strictgrammarUTF8surrogates, globalnode/string/work/depth accounting includingrawkey/duplicates/reparses. Clarify262176totalnote onlyinreceipt. Writeownsrc/test/receipt only, full3nonreceiptpatchfreeze+independentreview BEFOREexecution. No Node/npm/build/generatedreads/index/package/lock/guard/cohort/CLI/native/device/plan/Git orpublicadmission."
+      },
+      "future_check_source_proposal": {
+        "status": "received_source_only_template_pending_authorfreeze_and_root_review",
+        "path": "/private/tmp/healthmd-values-core-check-source-proposal.json",
+        "sha256": "ad564f251a1a80719c08d63c178e6e67975fe9281a53f49c8e1b0af23dab6876",
+        "harness_template_sha256": "237bc8b32332df15979755a3d580a577701f9f423664a3b739afb407e475f18f",
+        "inputs_template_sha256": "ab844f427c62e4f61c73be974a73c2e74052678ccfc3f0cb12b8eea5924b82c7",
+        "limits": "Noexecutionclearance. Prospective49sourceandtestnames/counts/nullhashes requireactualauthorfreeze. Existingactual691/19baseline+46source/39compiledoutputs retained; complete43/26consumercohort unchanged."
+      },
+      "implementation_source_review": {
+        "status": "accepted_bounded_precheck_source",
+        "reviewer": "/root",
+        "path": "/private/tmp/healthmd-json-values-implementation-root-review.json",
+        "sha256": "2c1f666244593b5ed25002c1278c6d2acdc50bb4f876ac9898b640edc5f2c03c"
+      },
+      "core_check_execution_clearance": {
+        "status": "consumed_failed_single_test_assertion",
+        "reviewer": "/root",
+        "path": "/private/tmp/healthmd-values-core-check-root-preparation-review.json",
+        "sha256": "16d18cb95368b129a3989542435615c99b2a4700a5aa4b3e1762122c69b2a9c7",
+        "limits": "NoCLI/consumercohort/index/package/native/publicadmission; failurepreservedandprecisecorrectionreviewbeforeanyrerun."
+      },
+      "actual_core_check_attempt_history": [
+        {
+          "result": "failed_single_test_assertion_parsed_vs_reachable_nodes",
+          "executed_by": "/root",
+          "source_patch": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+17be1caa083f7eaa52b3368d8369386102bd72297425f3afc3175022f0581586",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+            "run",
+            "check"
+          ],
+          "logical_argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "cwd": "packages/healthmd-core-ts",
+          "wall_ms": 1061,
+          "exit_code": 1,
+          "counts": {
+            "tests": 906,
+            "suites": 0,
+            "pass": 905,
+            "fail": 1,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "report": "/private/tmp/healthmd-values-core-check-root-actual.json",
+          "report_sha256": "e2956de7922c0604d97ca11e8a7fd2c52762d7bed96c3e90347c8ccfb5c5a507",
+          "log": "/private/tmp/healthmd-values-core-check-root-actual.log",
+          "log_sha256": "8fb6a2b99fb7ae0b64afac3ef4900edf3a762e430f77c32d5083b7897f3cc7c5",
+          "source_before_after_equal": true,
+          "old39_compiled_outputs_preserved": true,
+          "cleanup_ack": true,
+          "actual_source_inputs": 49,
+          "actual_outputs": 43,
+          "boundary_negative_cases": null,
+          "limits": "Types/build/906tests actual; Nodefailedoneassertion andnpmcheckstoppedbeforeESnegativeguard. No fullpassedcheck/CLI/cohort/native/publicadmission. Failednode3 expectedparsed includesdiscardedvalue; finalreachablegraph2 afterLASTwins. Source/parser unchanged."
+        },
+        {
+          "result": "failed_portability_lexer_local_document_helper_name",
+          "executed_by": "/root",
+          "source_patch": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+35912cdeabc7d9e71d707ff1570ee164e4b7677e485de9635f7151566e6bc005",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+            "run",
+            "check"
+          ],
+          "logical_argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "cwd": "packages/healthmd-core-ts",
+          "wall_ms": 1106,
+          "exit_code": 1,
+          "counts": {
+            "tests": 906,
+            "suites": 0,
+            "pass": 906,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "report": "/private/tmp/healthmd-values-core-check-root-retry.json",
+          "report_sha256": "2a3b3a332ffd8925e23c41992d65cbd0a7d0df8fadc39edd8b902ec2ba516b3d",
+          "log": "/private/tmp/healthmd-values-core-check-root-retry.log",
+          "log_sha256": "8b5c5be335b828392356c02bd4d413e30e1fd2b63c0e0d0bc2d42fdf4eac1519",
+          "source_before_after_equal": true,
+          "old39_compiled_outputs_preserved": true,
+          "cleanup_ack": true,
+          "actual_source_inputs": 49,
+          "actual_outputs": 43,
+          "boundary_negative_cases": null,
+          "limits": "All906testspassed; overallcheckfailedbefore19ESnegativeguards becauseconservativelexer rejects4local helper/comment document tokens. No actualhostglobalaccess; no fullpassedcheck/CLI/cohort/native/publicadmission."
+        },
+        {
+          "result": "passed_complete_private_component_check",
+          "executed_by": "/root",
+          "source_patch": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+bbe78927ad0925d30d6d16efd160c352e0e0c3bef2292d0466694efa7b135373",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+            "run",
+            "check"
+          ],
+          "logical_argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "cwd": "packages/healthmd-core-ts",
+          "harness_wall_ms": 1082,
+          "deadline_ms": 300000,
+          "output_cap_bytes": 16777216,
+          "exit_code": 0,
+          "cleanup_ack": true,
+          "report": "/private/tmp/healthmd-values-core-check-root-final.json",
+          "report_sha256": "34efed926a2d7691f8808cdd860c15a7422a40e330b6f841235e0410c1eddce6",
+          "log": "/private/tmp/healthmd-values-core-check-root-final.log",
+          "log_sha256": "fa18e6b9c5440410fb2631c9ed8e488862db7b7fb7a1651bc021dcff420f65b4",
+          "actual_tests": {
+            "tests": 906,
+            "suites": 0,
+            "pass": 906,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "source_inputs": 49,
+          "core_outputs": 30,
+          "test_outputs": 12,
+          "all_dist_outputs": 44,
+          "negative_cases": 13,
+          "negative_graphs": 6,
+          "portable_source_modules": 15,
+          "effect_installations": 1,
+          "source_before_after_equal": true,
+          "old39_compiled_output_bytes_preserved": true,
+          "limits": [
+            "Standaloneprivate214parser+1companion andretained691 actual. No wholeconsumercohort/currentCLI/build/native/publictypedprofiles/serializeradmission.",
+            "Historical43/26 authority25b48unchanged; current49/30measuredonlyfuture CORE-COHORT-EXACT-CODECS owner."
+          ]
+        }
+      ],
+      "discarded_node_test_repair_clearance": {
+        "status": "consumed_exact_testonly_correction_accepted",
+        "reviewer": "/root",
+        "archive": "/private/tmp/healthmd-values-before-discarded-node-test-repair",
+        "requires": "Preserveall214frozeninputs/expectations/sourceparser/numeric/scalar/guard/toolpins. Onlycorrect test parsed_nodes assertion for duplicateLASTwins discarded-key-strings-at: independentlyassert originalinput2values/object parsed3, finalreachableobject+LASTstring2 and existinglastvalue bytes. Nochangingexpected3 to2/noignore/noimplementationfix/nootherfields weakening. Ownreceipt recordactualfailure/history; freeze new3patch/testonlydelta thenROOTreview before rerun. No Node/npm/build/outputs/CLI/coreindex/package/lock/cohort/native/device/plan/Git.",
+        "root_review": {
+          "path": "/private/tmp/healthmd-values-discarded-node-test-repair-root-review.json",
+          "sha256": "72055846b97f7a9f6a39cc92c86534d58ed1a153fda9b860c50801c47a43cae1"
+        }
+      },
+      "core_check_retry_clearance": {
+        "status": "consumed_906tests_pass_but_portability_lexer_failed",
+        "reviewer": "/root",
+        "source_patch": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+35912cdeabc7d9e71d707ff1570ee164e4b7677e485de9635f7151566e6bc005",
+        "harness": {
+          "path": "/private/tmp/healthmd-values-core-check-retry-harness.mjs",
+          "sha256": "32ad4d63acc0ff8069258b207491b9979acc52059c48870be6638b9189777d3f"
+        },
+        "inputs": {
+          "path": "/private/tmp/healthmd-values-core-check-retry-inputs.json",
+          "sha256": "943b56073caf17029d144f4c0012968e3eaae9e61266a32d3bf036b20a5aa88e"
+        },
+        "clearance": {
+          "path": "/private/tmp/healthmd-values-core-check-root-retry-clearance.json",
+          "sha256": "139d40453577a8fd78bbadc689d6d97189ce338960bd8fabd6900cf8a77da5b8"
+        },
+        "limits": "Onlytestbyteschangedin49inputs; source/tool/guard/package/43/26cohort/numeric/vectorunchanged;300s16MiB/freshownedgroupcleanup/same906fulltestexpectations+19ESguards. NoCLI/consumer/native/publicadmission."
+      },
+      "portable_helper_rename_clearance": {
+        "status": "consumed_exact_four_word_renames_accepted",
+        "reviewer": "/root",
+        "archive": "/private/tmp/healthmd-values-before-portable-helper-rename",
+        "requires": "Onlyrename localfunctiondocument andits2calls toparseInput; replacecomment entire document withentireJSONtext toavoidreservedword. Exactly4wordtokens, nological/API/test/vector/scalar/numeric/guard/cohort/index/package/lockchanges. Preservebothactualfailures; ownreceipt/sourcepatchfull3freeze thenindependentreview BEFORErerun. No build/Node/npm/outputreads/CLI/native/device/plan/Git.",
+        "root_review": {
+          "path": "/private/tmp/healthmd-values-portable-helper-rename-root-review.json",
+          "sha256": "75c2a1467cbab49dce288d8422c36333b6f3af171198b38ccd0ee1692b3cdddf"
+        }
+      },
+      "core_check_final_clearance": {
+        "status": "consumed_actual906_and19_pass",
+        "reviewer": "/root",
+        "source_patch": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+bbe78927ad0925d30d6d16efd160c352e0e0c3bef2292d0466694efa7b135373",
+        "harness": {
+          "path": "/private/tmp/healthmd-values-core-check-final-harness.mjs",
+          "sha256": "3978642cfc263d3b862bd61ce3de857f615abdb6a1ad949474d81d13a7fd4d46"
+        },
+        "inputs": {
+          "path": "/private/tmp/healthmd-values-core-check-final-inputs.json",
+          "sha256": "7d58357b9a787bef044cab4a7632c183881768341fab474445b59212163c9ce1"
+        },
+        "clearance": {
+          "path": "/private/tmp/healthmd-values-core-check-root-final-clearance.json",
+          "sha256": "a5fa7320906bcd2c9ddf16c539ac9561e8cd847f7ec06f6a2e57b5c4ba5ce361"
+        },
+        "limits": "Exact4localwordtokensonly; source49/newtest06a/vector47eeb/numeric/scalar/guard/package/43/26cohortunchanged;300s16MiB/full906+19ESguards. NoCLI/consumer/native/publicadmission."
+      },
+      "final_review": {
+        "path": "/private/tmp/healthmd-json-values-final-root-review.json",
+        "sha256": "6d17bc73d133401e04c32b05ef8f90ed8fd28c3d29d1482b80afa284e32fa3b4",
+        "receipt_sha256": "9227a4fd1e488fb58f3c68983827e7b4b53712e84ae1a49f349a47cbb7164c5c"
+      }
     },
     {
       "id": "SERIALIZE-CANONICAL-JSON",
