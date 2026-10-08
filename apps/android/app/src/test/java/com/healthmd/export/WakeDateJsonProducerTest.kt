@@ -13,6 +13,7 @@ import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.FormatCustomization
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.MetricSelectionState
 import com.healthmd.domain.model.SleepData
 import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.SleepSessionEntry
@@ -69,6 +70,10 @@ class WakeDateJsonProducerTest {
         assertThat(root.getValue("schema_version").jsonPrimitive.content).isEqualTo("6")
         assertThat(root.getValue("schema_profile").jsonPrimitive.content).isEqualTo("android-sleep-v6")
         assertThat(root.getValue("unit_system").jsonPrimitive.content).isEqualTo("metric")
+        assertThat(root.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content })
+            .containsAtLeast("sleep_total_hours", "hours", "sleep_light_hours", "hours",
+                "steps", "steps", "weight_kg", "kg", "height_m", "m")
+        assertThat(root.getValue("units").jsonObject).doesNotContainKey("sleep_core_hours")
         val time = root.getValue("time_context").jsonObject
         assertThat(time.getValue("calendar_timezone").jsonPrimitive.content).isEqualTo("America/New_York")
         assertThat(time.getValue("timestamp_timezone").jsonPrimitive.content).isEqualTo("UTC")
@@ -95,6 +100,28 @@ class WakeDateJsonProducerTest {
         assertThat(text).doesNotContain("coreSleep")
         assertThat(text).doesNotContain("sleep_core_hours")
         assertThat(text).doesNotContain("android-analytical-v5")
+    }
+
+    @Test
+    fun standaloneAndApiUnitsKeepSelectedZeroValuesAndIgnoreDisplayPreferences() {
+        val day = LocalDate.of(2026, 11, 1)
+        val record = HealthData(day, activity = ActivityData(steps = 0), body = BodyData(weight = 72.125, height = 1.75))
+            .filtered(MetricSelectionState(enabledMetrics = setOf("steps", "weight")))
+        for (preference in UnitPreference.entries) {
+            val settings = ExportSettings(formatCustomization = FormatCustomization(unitPreference = preference))
+            val native = Json.parseToJsonElement(JsonExporter().export(record,
+                settings.formatCustomization, captureContext = context)).jsonObject
+            val api = Json.parseToJsonElement(APIExportEnvelopeBuilder(JsonExporter()).buildWakeDate(
+                listOf(record), emptyList(), settings, day, day, context, Instant.parse("2026-11-02T12:00:00Z")
+            )).jsonObject.getValue("records").jsonArray.single().jsonObject
+            for (root in listOf(native, api)) {
+                assertThat(root.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content })
+                    .containsExactly("steps", "steps", "weight_kg", "kg")
+                assertThat(root.getValue("activity").jsonObject.getValue("steps").jsonPrimitive.content).isEqualTo("0")
+                assertThat(root.getValue("body").jsonObject.getValue("weight").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
+                assertThat(root.getValue("body").jsonObject).doesNotContainKey("height")
+            }
+        }
     }
 
     @Test
@@ -144,6 +171,8 @@ class WakeDateJsonProducerTest {
             .getValue("timestamp").jsonPrimitive.content).isEqualTo("2026-11-01T06:30:00.123456789Z")
         assertThat(record.getValue("body").jsonObject.getValue("weight").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
         assertThat(record.getValue("unit_system").jsonPrimitive.content).isEqualTo("metric")
+        assertThat(record.getValue("units").jsonObject.mapValues { it.value.jsonPrimitive.content })
+            .containsExactly("weight_kg", "kg")
         assertThat(root.getValue("exported_at").jsonPrimitive.content).isEqualTo("2026-11-02T12:00:00Z")
     }
 

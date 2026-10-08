@@ -3,6 +3,10 @@ package com.healthmd.data.export
 import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExactSourceTimestamp
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.HealthDataFields
+import com.healthmd.domain.model.UnitConverter
+import com.healthmd.domain.model.UnitPreference
+import com.healthmd.domain.registry.WakeDateSummaryUnits
 import com.healthmd.domain.model.SleepDayAttribution
 import java.time.Duration
 import java.time.Instant
@@ -82,6 +86,11 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             source["sleep"] = JsonObject(sleep)
         }
         val canonical = canonicalize(JsonObject(source), emptyList()) as JsonObject
+        val summaryUnits = HealthDataFields.extractForWakeDate(data, UnitConverter(UnitPreference.METRIC))
+            .filter { it.value != null && it.unit.isNotBlank() && it.unit != "time" }
+            .mapNotNull { field ->
+                WakeDateSummaryUnits.byOutputKey[field.key]?.takeIf { it.isNotBlank() }?.let { field.key to it }
+            }.toMap()
         return buildJsonObject {
             canonical.forEach { (key, value) -> if (key != "units") put(key, value) }
             put("date", data.date.toString())
@@ -90,8 +99,11 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
             put("schema_profile", "android-sleep-v6")
             put("time_context", timeContext)
             put("unit_system", "metric")
-            // Bound summary units are assembled by the profile-aware semantic/render consumer.
-            put("units", buildJsonObject {})
+            // Canonical summary output IDs use the independently frozen v2 registry.
+            // Source-only nested fields keep their native schema units.
+            put("units", buildJsonObject {
+                summaryUnits.toSortedMap().forEach { (key, unit) -> put(key, unit) }
+            })
         }
     }
 

@@ -493,18 +493,12 @@ object HealthMdRenderInputAdapter {
             val payload = json.parseToJsonElement(rendered)
             val prepared = if (nativeWakeDateContext != null) {
                 val root = payload as? JsonObject ?: throw AdapterException("native JSON units are invalid")
-                val inherited = root["units"] as? JsonObject ?: throw AdapterException("native JSON units are invalid")
-                val units = inherited.toMutableMap()
-                canonicalSummaryUnits.forEach { (key, unit) ->
-                    units[key]?.let { declared ->
-                        val value = declared as? JsonPrimitive
-                        if (value == null || !value.isString || value.content != unit) {
-                            throw AdapterException("native JSON units are incompatible")
-                        }
-                    }
-                    units[key] = JsonPrimitive(unit)
-                }
-                JsonObject(root.toMutableMap().apply { put("units", JsonObject(units.toSortedMap())) })
+                if (root["units"] !is JsonObject) throw AdapterException("native JSON units are invalid")
+                // Standalone preparation supplies v2 defaults. A completed semantic
+                // result owns the selected dictionary and its exact frozen registry;
+                // unselected presentation fields cannot widen that authority.
+                val units = canonicalSummaryUnits.toSortedMap().mapValues { JsonPrimitive(it.value) }
+                JsonObject(root.toMutableMap().apply { put("units", JsonObject(units)) })
             } else payload
             orderedJson(prepared)
         } else {
