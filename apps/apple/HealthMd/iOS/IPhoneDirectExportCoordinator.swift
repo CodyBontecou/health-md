@@ -341,10 +341,22 @@ final class IPhoneDirectExportCoordinator {
                 healthKitManager: healthKitManager
             )
             try checkCancellation(jobID: request.jobID)
+            _ = try Self.recoveredCaptureContext(
+                settingsSnapshot: prepared.settingsSnapshot,
+                sourceTimeZoneIdentifier: prepared.accepted.sourceTimeZoneIdentifier
+            )
             journal = prepared
             try saveJournal(prepared)
         }
 
+        // Already-spooled historical jobs may transfer their exact bytes without
+        // acquiring new capture authority. Partial jobs must agree before acceptance.
+        if journal.days.count < journal.accepted.resolvedDateIdentifiers.count {
+            _ = try Self.recoveredCaptureContext(
+                settingsSnapshot: journal.settingsSnapshot,
+                sourceTimeZoneIdentifier: journal.accepted.sourceTimeZoneIdentifier
+            )
+        }
         try await channel.send(.exportAccepted(journal.accepted))
         var current = journal
         if current.days.count < current.accepted.resolvedDateIdentifiers.count {
@@ -547,6 +559,18 @@ final class IPhoneDirectExportCoordinator {
         )
     }
 
+    /// Recover raw-capture authority independently of mutable preferences.
+    static func recoveredCaptureContext(
+        settingsSnapshot: ExportSettingsSnapshot,
+        sourceTimeZoneIdentifier: String
+    ) throws -> AppleSleepCaptureContext {
+        let context = try settingsSnapshot.recoveredSleepCaptureContext()
+        guard TimeZone(identifier: sourceTimeZoneIdentifier)?.identifier == context.calendarTimeZoneIdentifier else {
+            throw AppleSleepCaptureContext.AvailabilityError.incompatibleDurableAuthority
+        }
+        return context
+    }
+
     private func captureRemainingDays(
         _ supplied: IPhoneDirectExportJournal,
         channel: IPhoneDirectExportConnection,
@@ -554,10 +578,11 @@ final class IPhoneDirectExportCoordinator {
     ) async throws -> IPhoneDirectExportJournal {
         var journal = supplied
         let settings = journal.settingsSnapshot.makeAdvancedExportSettings()
-        let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
-        settings.exportTimeZoneOverride = TimeZone(
-            identifier: journal.accepted.sourceTimeZoneIdentifier
+        let captureContext = try Self.recoveredCaptureContext(
+            settingsSnapshot: journal.settingsSnapshot,
+            sourceTimeZoneIdentifier: journal.accepted.sourceTimeZoneIdentifier
         )
+        settings.exportTimeZoneOverride = captureContext.timeZone
         let dates = sourceDates(
             journal.accepted.resolvedDateIdentifiers,
             timeZoneIdentifier: journal.accepted.sourceTimeZoneIdentifier

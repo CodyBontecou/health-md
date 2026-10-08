@@ -198,6 +198,30 @@ final class AppleSleepCaptureContextTests: XCTestCase {
         XCTAssertThrowsError(try restored.validatedSleepCaptureContext(captureContext: opposite))
     }
 
+    #if os(iOS)
+    func testDirectRecoveryRejectsAcceptedClockConflictWithoutChangingSnapshot() throws {
+        let suite = "DirectSleepClockTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        var snapshot = ExportSettingsSnapshot.from(settings)
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+        snapshot.sleepCaptureContext = context
+        snapshot.calendarTimeZoneIdentifier = zone.identifier
+        let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        encoder.outputFormatting = [.sortedKeys]
+        let bytes = try encoder.encode(snapshot)
+        XCTAssertEqual(try IPhoneDirectExportCoordinator.recoveredCaptureContext(
+            settingsSnapshot: snapshot, sourceTimeZoneIdentifier: zone.identifier), context)
+        for conflictingClock in ["Europe/Berlin", "private-invalid-clock"] {
+            XCTAssertThrowsError(try IPhoneDirectExportCoordinator.recoveredCaptureContext(
+                settingsSnapshot: snapshot, sourceTimeZoneIdentifier: conflictingClock))
+        }
+        XCTAssertEqual(try encoder.encode(snapshot), bytes)
+    }
+    #endif
+
     private func resolveRepeatedly(in context: AppleSleepCaptureContext) async -> [AppleSleepCaptureContext] {
         await AppleSleepCaptureContext.pinned.withValue(context) {
             var values: [AppleSleepCaptureContext] = []
