@@ -7425,20 +7425,92 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-RELEASE.json",
       "reviewer_role": "independent cloud/security/operations or CI/release reviewer for the scoped packet",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-release.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-RELEASE.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+        "proof_class": "bounded_source_planning_only",
+        "evidence": [
+          {
+            "path": "/private/tmp/healthmd-release-root-source-review.json",
+            "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+            "bytes": 1512
+          },
+          {
+            "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+            "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+            "bytes": 8317
+          }
+        ],
+        "independent_source_reviewer": "/root/personal_codecs",
+        "implementation_qualification": false
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-RELEASE.json"
+        ]
       },
-      "max_children": 6
+      "max_children": 6,
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "canonical_card_sha256": "5b34f11de0d93a15330251aa8a12c3d7d6d555ec991569487962ff1750c740e6",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-split-release-preclaim-card.json",
+        "scope": "Docs2only, atmost6 exact target/channel/distribution-context/replacement-retirement prerequisite boundaries. Source-only assigned Git inventories and full existing release/engine/rollback consumers; no execution or external actions."
+      },
+      "independent_source_review": {
+        "status": "accepted_planning_only",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+        "evidence": {
+          "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+          "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+          "bytes": 8317
+        }
+      },
+      "coordinator_expansion_admission": {
+        "status": "reviewed_children_merged_unqualified",
+        "children": [
+          "RELEASE-CLI-EXACT-CI-PREFLIGHT",
+          "RELEASE-METRIC-REGISTRY-DETERMINISM",
+          "RELEASE-CLI-LINUX-X64-PREFLIGHT",
+          "RELEASE-FDROID-ARTIFACT-PREFLIGHT",
+          "RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION",
+          "RELEASE-PILOT-IOS8-MIGRATION-PREVIEW"
+        ],
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "root_source_review": {
+          "path": "/private/tmp/healthmd-release-root-source-review.json",
+          "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+          "bytes": 1512
+        },
+        "qualifies_family": false
+      },
+      "independent_final_receipt_review": {
+        "status": "accepted_planning_only",
+        "reviewer": "/root/donor_mac_review",
+        "fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+        "evidence": {
+          "path": "/private/tmp/healthmd-release-final-metadata-independent-review.json",
+          "sha256": "0332b7ee8a86282b8b297e0e2d3c68c1e270e8f75021026e5f0a6e9f33937c44"
+        },
+        "scope": "Narrow ROOT receipt normalization only; full source-independent packet acceptance remains Personal8fbd and ROOT6a52. No runtime qualification."
+      }
     },
     {
       "id": "NATIVE-IOS-RELEASE-PROBE",
@@ -29593,7 +29665,24 @@
         "status": "held",
         "owner": "/root/android_release_host",
         "execution_owner": "/root",
-        "stage": "Stage1 source-only; no build/install authority"
+        "stage": "Guard/docs/source implementation only authorized; no build/install until independent final source review and ROOT execution clearance."
+      },
+      "stage1_authority_review": {
+        "status": "accepted_source_only",
+        "reviewer": "/root",
+        "fingerprint": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe+7fc215aa07c7b8ecc130312f15ce73277d1ec4e51ba58ae678e2b95e7e0d3339",
+        "cohort_sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055",
+        "independent_review": {
+          "path": "/private/tmp/healthmd-exact-codecs-cohort-portable-evidence-independent-review.json",
+          "sha256": "10797347b87ac699dcfe5e9a7c2805d996ca549edb1757d77648e194100e2c0a"
+        },
+        "root_review": {
+          "path": "/private/tmp/healthmd-exact-codecs-cohort-portable-evidence-root-review.json",
+          "sha256": "e7593bf8e43f7f3aada2d2cac5fe1dea08adc5cbe09f35e3d8a38988bb571242"
+        },
+        "literal_count": 203,
+        "actual_negatives_executed": 0,
+        "consumer_admission": false
       }
     },
     {
@@ -37661,6 +37750,1503 @@
         "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
       },
       "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "RELEASE-CLI-EXACT-CI-PREFLIGHT",
+      "title": "Release Cli Exact Ci Preflight",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure exact-SHA CLI release CI classification/preflight result for current four source workflows, preserving hard push failures, immutable tag recovery and seven stable contexts. Closed supplied run observations only; no GitHub API/dispatch/ruleset mutation/publish and no externally required context admission.",
+      "deep_boundary": "One pure exact-SHA CLI release CI classification/preflight result for current four source workflows, preserving hard push failures, immutable tag recovery and seven stable contexts. Closed supplied run observations only; no GitHub API/dispatch/ruleset mutation/publish and no externally required context admission.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11"
+      ],
+      "risk_ids": [
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/checks/cli-exact-ci-preflight.py",
+        "docs/migration/effect-refactor/checks/test_cli_exact_ci_preflight.py",
+        "docs/migration/effect-refactor/fixtures/cli-exact-ci-preflight-v1.json",
+        "docs/migration/effect-refactor/receipts/RELEASE-CLI-EXACT-CI-PREFLIGHT.json"
+      ],
+      "shared_resources": [
+        "ci-exact-context-interface"
+      ],
+      "target": {
+        "platform": "source_only",
+        "channel": "exact CLI-release gate preflight",
+        "profile": "release-cli-exact-ci-preflight"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/cli-exact-ci-preflight-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/cli-exact-ci-preflight-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "exact-push-success",
+            "input": {
+              "run": {
+                "event": "push",
+                "head_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "status": "completed",
+                "conclusion": "success"
+              }
+            },
+            "expected": {
+              "classification": "success"
+            },
+            "source_basis": "qualify-exact-ci.py:79-118",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-wrong-sha",
+            "input": {
+              "run": {
+                "event": "push",
+                "head_sha": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "status": "completed",
+                "conclusion": "success"
+              },
+              "required_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "expected": {
+              "classification": "missing"
+            },
+            "source_basis": "qualify-exact-ci.py:79-118",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-pr-not-evidence",
+            "input": {
+              "event": "pull_request",
+              "success": true
+            },
+            "expected": {
+              "classification": "missing"
+            },
+            "source_basis": "qualify-exact-ci.py:79-118",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-hardfailure-not-maskable",
+            "input": {
+              "push_conclusion": "failure",
+              "dispatch_conclusion": "success"
+            },
+            "expected": {
+              "classification": "failure"
+            },
+            "source_basis": "qualify-exact-ci.py:79-118",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-cancelled-recovery",
+            "input": {
+              "push_conclusion": "cancelled",
+              "dispatch_status": "in_progress"
+            },
+            "expected": {
+              "classification": "active",
+              "production_release": false
+            },
+            "source_basis": "qualify-exact-ci.py:79-118",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-seven-contexts-retain",
+            "input": {
+              "candidate_successor_context_created": false
+            },
+            "expected": {
+              "remove_Core_Rust_CI": false,
+              "required_contexts_retained": 7
+            },
+            "source_basis": "/required_contexts",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-tag-version-identity",
+            "input": {
+              "tag": "v1.0.0",
+              "component": "CLI"
+            },
+            "expected": {
+              "CLI_tag_eligible": false,
+              "required_prefix": "healthmd-cli/v"
+            },
+            "source_basis": "/release_selectors; rootAGENTS",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "exact-admin-not-inspected",
+            "input": {
+              "workflow_source_tests_pass": true,
+              "external_ruleset_receipt": null
+            },
+            "expected": {
+              "external_context_transition_qualified": false
+            },
+            "source_basis": "/required_contexts",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [
+          "qualify-exact-ci.py:16-24",
+          "qualify-exact-ci.py:79-118",
+          "qualify-exact-ci.py:127-194",
+          "test_qualify_exact_ci.py:20-41",
+          "test_qualify_exact_ci.py:43-95"
+        ],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_cli_exact_ci_preflight.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-CLI-EXACT-CI-PREFLIGHT.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-CLI-EXACT-CI-PREFLIGHT",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "RELEASE-METRIC-REGISTRY-DETERMINISM",
+      "title": "Release Metric Registry Determinism",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One metric-registry generator-family deterministic raw output closure proof in an isolated supplied source-tree snapshot, using unchanged assigned registry/importer/generator and seven native/website outputs. Two independent regeneration passes, exact bytes/hash/order/default/classification/extra output failures; no registry relocation/publicschema/workflow mutation or other generator families.",
+      "deep_boundary": "One metric-registry generator-family deterministic raw output closure proof in an isolated supplied source-tree snapshot, using unchanged assigned registry/importer/generator and seven native/website outputs. Two independent regeneration passes, exact bytes/hash/order/default/classification/extra output failures; no registry relocation/publicschema/workflow mutation or other generator families.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C01"
+      ],
+      "risk_ids": [
+        "F08",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/checks/metric-registry-determinism.py",
+        "docs/migration/effect-refactor/checks/test_metric_registry_determinism.py",
+        "docs/migration/effect-refactor/fixtures/metric-registry-determinism-v1.json",
+        "docs/migration/effect-refactor/receipts/RELEASE-METRIC-REGISTRY-DETERMINISM.json"
+      ],
+      "shared_resources": [
+        "metric-registry-generator-family"
+      ],
+      "target": {
+        "platform": "source_only",
+        "channel": "metric-registry development",
+        "profile": "release-metric-registry-determinism"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/metric-registry-determinism-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/metric-registry-determinism-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "registry-byte-identity",
+            "input": {
+              "registry_raw_sha_changed": true
+            },
+            "expected": {
+              "unchanged_authority_qualified": false
+            },
+            "source_basis": "/generator_families/metric_registry",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-replay-order",
+            "input": {
+              "first_order": [
+                "a",
+                "b"
+              ],
+              "second_order": [
+                "b",
+                "a"
+              ]
+            },
+            "expected": {
+              "deterministic": false
+            },
+            "source_basis": "C01; generate-registry-adapters.py",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-stale-output",
+            "input": {
+              "one_of_seven_outputs_stale": true
+            },
+            "expected": {
+              "family_gate": false,
+              "fixture_refresh": false
+            },
+            "source_basis": "generate-registry-adapters.py:312-378",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-website-bytecopy",
+            "input": {
+              "registry_bytes": "{\"x\":1}\n",
+              "website_registry_bytes": "{\"x\":1}"
+            },
+            "expected": {
+              "unchanged_bytes": false
+            },
+            "source_basis": "generate-registry-adapters.py:312-378 copies REGISTRY.read_text unchanged",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-no-outputroot-flag",
+            "input": {
+              "argv": [
+                "--output-root",
+                "/synthetic"
+              ]
+            },
+            "expected": {
+              "source_flag_available": false,
+              "proposed_isolation": "complete private source-tree copy with supplied source-backed paths"
+            },
+            "source_basis": "generate-registry-adapters.py supports only --check",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-semantic-distinct",
+            "input": {
+              "mapping": "platform_distinct"
+            },
+            "expected": {
+              "coerce_to_shared": false
+            },
+            "source_basis": "C01/product policy",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-extra-output",
+            "input": {
+              "unmanifested_output": "synthetic.js"
+            },
+            "expected": {
+              "closure_accepted": false
+            },
+            "source_basis": "proposed exact family manifest boundary",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "registry-unrelated-output",
+            "input": {
+              "cleanup_requested": "user-export"
+            },
+            "expected": {
+              "cleanup_allowed": false
+            },
+            "source_basis": "H09/cloud-release cache cleanup exclusions",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [
+          "generate-registry-adapters.py:12-38",
+          "generate-registry-adapters.py:143-148",
+          "generate-registry-adapters.py:312-378"
+        ],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_metric_registry_determinism.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-METRIC-REGISTRY-DETERMINISM.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-METRIC-REGISTRY-DETERMINISM",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "RELEASE-CLI-LINUX-X64-PREFLIGHT",
+      "title": "Release Cli Linux X64 Preflight",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure x86_64-unknown-linux-gnu development candidate artifact preflight over trusted owned artifact manifest and separately supplied actual ELF/dependency/installedhost evidence. Bind both healthmd and healthmd-mcp/default local tool policy/exact source/runtime/lock/SBOM/checksum closure. No installation/build/provider/signer/release switch; metadata fake pass is not clean-host distribution qualification.",
+      "deep_boundary": "One pure x86_64-unknown-linux-gnu development candidate artifact preflight over trusted owned artifact manifest and separately supplied actual ELF/dependency/installedhost evidence. Bind both healthmd and healthmd-mcp/default local tool policy/exact source/runtime/lock/SBOM/checksum closure. No installation/build/provider/signer/release switch; metadata fake pass is not clean-host distribution qualification.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY",
+        "RELEASE-CLI-EXACT-CI-PREFLIGHT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11"
+      ],
+      "risk_ids": [
+        "F06",
+        "F07",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/checks/cli-linux-x64-preflight.py",
+        "docs/migration/effect-refactor/checks/test_cli_linux_x64_preflight.py",
+        "docs/migration/effect-refactor/fixtures/cli-linux-x64-preflight-v1.json",
+        "docs/migration/effect-refactor/receipts/RELEASE-CLI-LINUX-X64-PREFLIGHT.json"
+      ],
+      "shared_resources": [
+        "cli-linux-x64-release-artifact-interface"
+      ],
+      "target": {
+        "platform": "linux_x86_64",
+        "channel": "development unsigned preflight",
+        "profile": "release-cli-linux-x64-preflight"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/cli-linux-x64-preflight-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/cli-linux-x64-preflight-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "linux-x64-identity",
+            "input": {
+              "target": "aarch64-unknown-linux-gnu"
+            },
+            "expected": {
+              "selected_x64_artifact_admitted": false
+            },
+            "source_basis": "/distribution/binary_targets",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-two-programs",
+            "input": {
+              "programs": [
+                "healthmd"
+              ]
+            },
+            "expected": {
+              "distribution_closure_complete": false
+            },
+            "source_basis": "/distribution/binary_targets",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-default-features",
+            "input": {
+              "default_artifact_contains_http_oauth": true
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "/distribution/release_feature_policy",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-installed-toolchain",
+            "input": {
+              "runs_on_builder": true,
+              "clean_offline_host_receipt": null
+            },
+            "expected": {
+              "distribution_qualified": false
+            },
+            "source_basis": "/distribution/binary_targets",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-sbom",
+            "input": {
+              "manifestsha_bound": true,
+              "one_dependency_unlisted": true
+            },
+            "expected": {
+              "closure_qualified": false
+            },
+            "source_basis": "/distribution/closure",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-publiclatest",
+            "input": {
+              "tag": "healthmd-cli/v1.0.0"
+            },
+            "expected": {
+              "make_latest": false
+            },
+            "source_basis": "/distribution/install_command_identity",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-native-fake",
+            "input": {
+              "fake_native_lock_test_pass": true
+            },
+            "expected": {
+              "real_FS_credential_ABI_qualified": false
+            },
+            "source_basis": "F02/F09; /qualification_remaining",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "linux-x64-user-state",
+            "input": {
+              "existing_spool": "retained",
+              "candidate_package_remove": true
+            },
+            "expected": {
+              "delete_user_spool": false,
+              "old_install_and_reader_retained": true
+            },
+            "source_basis": "F07/F09",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_cli_linux_x64_preflight.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-CLI-LINUX-X64-PREFLIGHT.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-CLI-LINUX-X64-PREFLIGHT",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "RELEASE-FDROID-ARTIFACT-PREFLIGHT",
+      "title": "Release Fdroid Artifact Preflight",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One fdroidRelease unsigned candidate artifact preflight for current Android F-Droid graph/manifest/DEX/resources/ABI exclusion evidence, with source-backed forbidden OAuth/billing/telemetry/Wear content and exact actual artifact closure. No flavor/metadata recipe/dependency/public store changes; real Android packaged-artifact/clean two-build proof remains a separate gate.",
+      "deep_boundary": "One fdroidRelease unsigned candidate artifact preflight for current Android F-Droid graph/manifest/DEX/resources/ABI exclusion evidence, with source-backed forbidden OAuth/billing/telemetry/Wear content and exact actual artifact closure. No flavor/metadata recipe/dependency/public store changes; real Android packaged-artifact/clean two-build proof remains a separate gate.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY",
+        "RELEASE-CLI-EXACT-CI-PREFLIGHT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C11"
+      ],
+      "risk_ids": [
+        "F06"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/checks/fdroid-artifact-preflight.py",
+        "docs/migration/effect-refactor/checks/test_fdroid_artifact_preflight.py",
+        "docs/migration/effect-refactor/fixtures/fdroid-artifact-preflight-v1.json",
+        "docs/migration/effect-refactor/receipts/RELEASE-FDROID-ARTIFACT-PREFLIGHT.json"
+      ],
+      "shared_resources": [
+        "android-fdroid-artifact-interface"
+      ],
+      "target": {
+        "platform": "android",
+        "channel": "fdroidRelease unsigned preflight",
+        "profile": "release-fdroid-artifact-preflight"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/fdroid-artifact-preflight-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/fdroid-artifact-preflight-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "fdroid-unsigned-name",
+            "input": {
+              "artifact_basename": "app-play-release.apk"
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "verify-fdroid-artifact.sh:1-39",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-forbidden-billing",
+            "input": {
+              "coordinate": "com.android.billingclient:billing:8.0.0"
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "verify-fdroid-artifact.sh:1-39",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-forbidden-wear",
+            "input": {
+              "coordinate": "com.google.android.gms:play-services-wearable:synthetic"
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "verify-fdroid-artifact.sh:1-39",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-oauth-payload",
+            "input": {
+              "dex_class": "com.healthmd.presentation.oauth.OAuthCallbackActivity"
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "verify-fdroid-artifact.sh:40-120",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-four-abis",
+            "input": {
+              "abis": [
+                "arm64-v8a",
+                "armeabi-v7a",
+                "x86"
+              ]
+            },
+            "expected": {
+              "legacy_closure_complete": false,
+              "required_abis": 4
+            },
+            "source_basis": "verify-fdroid-artifact.sh:40-120",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-reproducibility",
+            "input": {
+              "one_build_only": true
+            },
+            "expected": {
+              "reproducible_qualified": false
+            },
+            "source_basis": "fdroid/reproducibility.md",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-pure-api-retain",
+            "input": {
+              "generic_local_API_enabled": true,
+              "cloud_permission_unselected": true
+            },
+            "expected": {
+              "OAuth_inclusion_authorized": false,
+              "shared_local_API_semantics_not_removed": true
+            },
+            "source_basis": "F06 plus retained native/source-purpose gates",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "fdroid-source-metadata-not-apk",
+            "input": {
+              "source_dependency_scan_pass": true,
+              "actual_APK_scan": null
+            },
+            "expected": {
+              "artifact_qualified": false
+            },
+            "source_basis": "F06; verify-fdroid-artifact source",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [
+          "verify-fdroid-artifact.sh:1-39",
+          "verify-fdroid-artifact.sh:40-120"
+        ],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_fdroid_artifact_preflight.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-FDROID-ARTIFACT-PREFLIGHT.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-FDROID-ARTIFACT-PREFLIGHT",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION",
+      "title": "Release Apple Journal Recovery Precondition",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One iOS development generated-file journal compatibility prerequisite report for complete retained versions1..6 and engine/protocol/capturedrange/derived reconciliation grammar against independent raw fixtures and retained native readers. Full expected read/default/profile decisions first; no writes/imported customer states/productionengine or Rust removal, no claim installed-state downgrade recovery from synthetic cases.",
+      "deep_boundary": "One iOS development generated-file journal compatibility prerequisite report for complete retained versions1..6 and engine/protocol/capturedrange/derived reconciliation grammar against independent raw fixtures and retained native readers. Full expected read/default/profile decisions first; no writes/imported customer states/productionengine or Rust removal, no claim installed-state downgrade recovery from synthetic cases.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "H09"
+      ],
+      "risk_ids": [
+        "F07",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/checks/apple-journal-recovery-precondition.py",
+        "docs/migration/effect-refactor/checks/test_apple_journal_recovery_precondition.py",
+        "docs/migration/effect-refactor/fixtures/apple-journal-recovery-precondition-v1.json",
+        "docs/migration/effect-refactor/receipts/RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION.json"
+      ],
+      "shared_resources": [
+        "apple-journal-recovery-interface"
+      ],
+      "target": {
+        "platform": "ios",
+        "channel": "development journal prerequisite",
+        "profile": "release-apple-journal-recovery-precondition"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/apple-journal-recovery-precondition-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/apple-journal-recovery-precondition-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "journal-supported-fullrange",
+            "input": {
+              "versions": [
+                1,
+                2,
+                3,
+                4,
+                5,
+                6
+              ]
+            },
+            "expected": {
+              "source_support": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "retirement_qualified": false
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:114-155",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-version-seven",
+            "input": {
+              "version": 7
+            },
+            "expected": {
+              "source_supported": false,
+              "reinterpret_as_v6": false
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:114-155",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-engine-threshold",
+            "input": {
+              "version": 1
+            },
+            "expected": {
+              "engine_pin_from_v2_required": false
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:180-192",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-protocol-v2",
+            "input": {
+              "version": 2,
+              "unexpected_protocol_pin": true
+            },
+            "expected": {
+              "protocol_pin_authority": null
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:180-192; testVersionTwoIgnoresUnexpectedProtocolPin",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-range-v5",
+            "input": {
+              "version": 5
+            },
+            "expected": {
+              "original_dates_and_timezone_preserved": true,
+              "recapture_narrow_residual_as_original": false
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:114-155",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-terminal-v6",
+            "input": {
+              "version": 6,
+              "no_data_dates": [
+                "2026-01-01"
+              ]
+            },
+            "expected": {
+              "terminal_derived_reconciliation_preserved": true,
+              "invent_daily_data": false
+            },
+            "source_basis": "IPhoneDirectFileJournal.swift:114-155",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-unproven-downgrade",
+            "input": {
+              "new_reader_passes": true,
+              "old_writer_roundtrip_proof": null
+            },
+            "expected": {
+              "Rust_or_engine_delete": false,
+              "upgrade_qualified": false
+            },
+            "source_basis": "F07/H09",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "journal-acklost-retain",
+            "input": {
+              "local_receipt_committed": true,
+              "peer_ack_lost": true
+            },
+            "expected": {
+              "completed_claim": false,
+              "destination_recommit": false,
+              "immutable_reconciliation_required": true
+            },
+            "source_basis": "/durable_lifecycle",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [
+          "IPhoneDirectFileJournal.swift:114-155",
+          "IPhoneDirectFileJournal.swift:180-192",
+          "IPhoneDirectFileJournal.swift:215-252"
+        ],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_apple_journal_recovery_precondition.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "RELEASE-PILOT-IOS8-MIGRATION-PREVIEW",
+      "title": "Release Pilot Ios8 Migration Preview",
+      "stream": "cloud_release",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure voluntary migration preview for a single accepted historical pilot original envelope profile: healthmd.api_export/1 ios healthmd.health_data/8. Bind retained original revision/blob/coverage/source/receipt identities, current independent suppression/consent/destination evidence and no credential reuse. No cloud/source admission/upload/re-enrollment/import/erasure/deployment; other pilot versions/profiles full-history/producer channels remain separate.",
+      "deep_boundary": "One pure voluntary migration preview for a single accepted historical pilot original envelope profile: healthmd.api_export/1 ios healthmd.health_data/8. Bind retained original revision/blob/coverage/source/receipt identities, current independent suppression/consent/destination evidence and no credential reuse. No cloud/source admission/upload/re-enrollment/import/erasure/deployment; other pilot versions/profiles full-history/producer channels remain separate.",
+      "prerequisites": [
+        "BASE-CI",
+        "BASE-HOST",
+        "BASE-NATIVE",
+        "SLICE-PARITY",
+        "BASE-CLOUD",
+        "CLOUD-FAULT-MODEL"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "H08"
+      ],
+      "risk_ids": [
+        "F07",
+        "F09"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "apps/android/AGENTS.md",
+        "apps/apple/AGENTS.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/cloud-release.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/inventories/ci.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/inventories/native.json",
+        "docs/migration/effect-refactor/inventories/cloud.json",
+        "docs/migration/effect-refactor/receipts/BASE-CI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/scripts/qualify-exact-ci.py",
+        "apps/cli/scripts/test_qualify_exact_ci.py",
+        "apps/cli/scripts/verify-release.py",
+        "apps/cli/dist-workspace.toml",
+        "apps/cli/release-identities.json",
+        "apps/cli/docs/releasing.md",
+        "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+        "apps/android/scripts/verify-fdroid-artifact.sh",
+        "apps/android/scripts/check-fdroid-reproducibility.sh",
+        "apps/android/fdroid/README.md",
+        "apps/android/fdroid/com.healthmd.android.yml",
+        "apps/android/fdroid/dependency-license-audit.md",
+        "apps/android/fdroid/reproducibility.md",
+        "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+        "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+        "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+        "docs/migration/effect-refactor/decisions/cloud-fault-model.md"
+      ],
+      "historical_source_read_required": [
+        {
+          "path": "apps/cloud/AGENTS.md",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "874693adabb43ba7176116c7ed002ad7669083f9f8a55355369da53ffc1a0528",
+          "bytes": 8169,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/envelope.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "3bb962d5f0a0f29744546e1b46a6c0bf38990ee6cdad24e2176ea0bf275b7594",
+          "bytes": 8492,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/exports.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "05b6836c26e044cf118a8dd0ec7957d36ed8ed600d44b9d96589a66093c37a11",
+          "bytes": 19068,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/apple-daily-profile.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "49e9c5c0780805a52e69438953e407e56c2a3d6699e2bc84ba842ce09d2f4cc7",
+          "bytes": 279,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        }
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/decisions/pilot-ios8-migration-preview-contract.json",
+        "docs/migration/effect-refactor/fixtures/pilot-ios8-migration-preview-v1.json",
+        "docs/migration/effect-refactor/checks/test_pilot_ios8_migration_preview.py",
+        "docs/migration/effect-refactor/receipts/RELEASE-PILOT-IOS8-MIGRATION-PREVIEW.json"
+      ],
+      "shared_resources": [
+        "pilot-ios8-preview-interface"
+      ],
+      "target": {
+        "platform": "source_only",
+        "channel": "historical pilot ios8 synthetic preview",
+        "profile": "release-pilot-ios8-migration-preview"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Independently accepted complete Stage1 full typed/raw corpus before implementation at docs/migration/effect-refactor/fixtures/pilot-ios8-migration-preview-v1.json; use exact assigned source/fixture/pointer pins and below8planning minima.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/fixtures/pilot-ios8-migration-preview-v1.json",
+        "literal_minima": [
+          {
+            "case_id": "pilot-legacy-ios8",
+            "input": {
+              "envelope": "healthmd.api_export",
+              "version": 1,
+              "source": "ios",
+              "daily_schema_version": 8
+            },
+            "expected": {
+              "preview_profile": "legacy_original_ios_daily8",
+              "native_v8_bumped": false,
+              "typed_v10_substitution": false
+            },
+            "source_basis": "/retained_profiles",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-android-distinct",
+            "input": {
+              "source": "android",
+              "daily_schema_version": 4
+            },
+            "expected": {
+              "selected_ios_preview_profile_eligible": false,
+              "original_preserved_by_separate_profile": true
+            },
+            "source_basis": "/retained_profiles",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-fullhistory-unknown",
+            "input": {
+              "uploaded_revisions": 2,
+              "phone_full_history_known": false
+            },
+            "expected": {
+              "full_phone_history_claim": false,
+              "coverage": "only_retained_uploaded_originals"
+            },
+            "source_basis": "/retained_profiles/archive_read",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-old-credentials",
+            "input": {
+              "pilot_token_present": true
+            },
+            "expected": {
+              "reuse_credentials": false,
+              "enrollment_or_agent_grant": false
+            },
+            "source_basis": "H08; cloud-release",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-current-suppression",
+            "input": {
+              "old_backup_before_delete": true,
+              "latest_external_suppression_available": false
+            },
+            "expected": {
+              "materialize_or_restore": false,
+              "fail_closed": true
+            },
+            "source_basis": "cloud-fault-model restore frontier",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-output-regrant",
+            "input": {
+              "old_exporter_consent": true,
+              "current_destination_grant": false
+            },
+            "expected": {
+              "publish": false,
+              "implicit_regrant": false
+            },
+            "source_basis": "H08/CLOUDFAULT current grant",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-identity-no-sideeffects",
+            "input": {
+              "preview_manifest_valid": true
+            },
+            "expected": {
+              "provider_calls": 0,
+              "commit_calls": 0,
+              "decommission": false
+            },
+            "source_basis": "Proposed pure one-profile voluntary preview boundary",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          },
+          {
+            "case_id": "pilot-US-budget-not-approval",
+            "input": {
+              "US_first": true,
+              "monthly_recommendation_USD": 500
+            },
+            "expected": {
+              "all_region_inventory_qualified": false,
+              "owner_spend_cap_selected": false,
+              "deployment_authorized": false
+            },
+            "source_basis": "ROOT recorded user preference/research only; H00/H07 remaining",
+            "status": "Source-derived preimplementation planning minimum; complete full raw/typed independent Stage1 corpus required before code, not candidate evidence"
+          }
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "source_and_evidence",
+          "ownership",
+          "release_policy",
+          "privacy_current_frontier",
+          "rollback"
+        ],
+        "source_range_ids": [],
+        "full_retained_corpus": "All retained workflow triggers/contexts/generator/consumer/cache/locks/distribution/native/state maps in packet remain obligatory. One child does not qualify other target/channel/source/retirement."
+      },
+      "acceptance": [
+        "Independent complete raw/typed Stage1 inputs/errors/source-profiles and expected literals accepted before implementation; no candidate generated expected corpus or metadata-only authenticity.",
+        "All frozen cases plus meaningful source/version/target/path/current/ownership/timeout/cancel/foreignProxy tests relevant to this one boundary; pure decisions have zero actualrelease/ACK/state/network side effects.",
+        "Exact source/locks/runtime/consumer/host fingerprints bound; default toolcatalog/bytes/profile/classification/generator outputs retained. Missing/incomplete evidence yields fixed unavailable/failure, not eligible production.",
+        "One exact target/channel/observableboundary and atmostfour claimedfiles; no source/module/workflow/schema/index/locks/production release mutation beyond separately reviewed scope. Actualhost/installed/fullconsumer/currentgrant/signed/store/externalsettings/GA/window/durable recovery proofs remain followups."
+      ],
+      "verification": [
+        {
+          "cwd": ".",
+          "argv": [
+            "python3",
+            "docs/migration/effect-refactor/checks/test_pilot_ios8_migration_preview.py"
+          ],
+          "availability": "created_by_this_task",
+          "availability_evidence": "Exact standalone unittest runner created at declared test path by this child after Stage1 approval; fixture loader closes full source grammar and no provider/native actions. No script exists or ran in planning.",
+          "precondition": "ROOT accepted complete Stage1/independent source corpus+runtime interpreter/tool source pins/exclusive appropriate resource and adapter/source-host policy. Actual generator/native/artifact checks separately authorized fingerprinted commands only.",
+          "expected": "Actual immutable independent corpus source-profile/target/error/ownership results; no forecast pass count or native qualification."
+        }
+      ],
+      "consumers": "Affected producers/consumers in retained full CI/host/native/cloud maps; thin common CLI/MCP and all public installs/profiles remain current authority. Website/externalObsidian/Practice/Wake independent.",
+      "rollback": "Remove candidate/preflight only. Retain original workflows/context names/current native/CLI/sourcehistory/installedstate and public artifacts/old engines; no actual deletion or external action authorized.",
+      "deletion_gate": "No active Rust/native/source/profile/customerstate retirement; exact production promotion and finished GA rollbackwindow separately scoped.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/RELEASE-PILOT-IOS8-MIGRATION-PREVIEW.json",
+      "reviewer_role": "independent target/channel/CI/state/cloud release reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 100,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "child_id": "RELEASE-PILOT-IOS8-MIGRATION-PREVIEW",
+        "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+        "packet_sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
+      },
+      "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
     }
   ]
 }

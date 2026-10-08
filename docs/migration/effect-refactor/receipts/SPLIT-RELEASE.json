@@ -1,0 +1,1719 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-RELEASE",
+  "source_sha": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+  "patch_digest": "fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+  "patch_digest_method": "SHA256 sole nonreceipt relativepath+NUL+raw UTF8 includingnewline+NUL; receipt excluded",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-release.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-RELEASE.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "result": "passed",
+  "proof_class": "planning",
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "packet": {
+        "path": "docs/migration/effect-refactor/expansions/split-release.json",
+        "sha256": "977c47c68017350dd9be46b2ca69c76309ca1bdd08fa432fc3a56229dc583204",
+        "bytes": 732329
+      },
+      "assigned_source_pins": [
+        {
+          "path": "AGENTS.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/AGENTS.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c",
+          "bytes": 2502,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/AGENTS.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "043f8c654e9de3489a654f3caba9ba448f4fe1e8704dea923310fc4d10520d13",
+          "bytes": 5233,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/cloud-release.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2198b70601a89b7d1c793752e1be6b3a0cb053f926c400450cc0c8bc93e2fe83",
+          "bytes": 6107,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/personal-data.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+          "bytes": 5582,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "bytes": 206477,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/native.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+          "bytes": 104080,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "bytes": 131059,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CI.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "a2b26a8908d73c8571e1a77ef31702395cb50f263452f8a020e70648778b68e8",
+          "bytes": 9585,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-NATIVE.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "1f57486a7d46c77a45d53c2de35f3fb6a7fd0f933d9db099abfd4f4ed5a8e211",
+          "bytes": 14614,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLOUD.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "7ceadf78af0969ba65c2fa124dbdfc4ab8ef1116396df362287d80de9799e5d5",
+          "bytes": 16448,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "bytes": 27886,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/qualify-exact-ci.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "33527d6bfac899029adddb72ffe47d7d0b6bc117d6f99e67dbd4da8552a276f6",
+          "bytes": 9012,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/test_qualify_exact_ci.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "741114266c4d6b33b5711d68c88ff668549c98adb5a3f10cf9c989b545ae1f42",
+          "bytes": 3171,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/verify-release.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "62b70adcc12f9de769d2a8264ce3af740c7fa3834b45fb2ffe895a99962c8654",
+          "bytes": 10833,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/dist-workspace.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "e26024ab2357702287ad3d3224338454e7b6ea4c1cf8a408ecfe25d8929b3b97",
+          "bytes": 1383,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/release-identities.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "558ec9af21ffe21322883ae67697092d6445f1fe887d3bb693945c7fe45e1291",
+          "bytes": 586,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/docs/releasing.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2cc1a6be5faa08db7f5dc09ffbed32020a93f08313efa0e2e6f4e0dfcd6fce46",
+          "bytes": 23540,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+          "bytes": 17863,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/scripts/verify-fdroid-artifact.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "94f6fc9f2401b56a31e06dcc5c833d0cd400c57734a93d30eac10f59430fa168",
+          "bytes": 7364,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/scripts/check-fdroid-reproducibility.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2115dadcf3b47d886ff20a636553f9fea2f38c1ad93c616384a8ecb469e770e8",
+          "bytes": 2848,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/fdroid/README.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "07c54a907886a28d922e6f595d3123f5b5abca9806695b503b84b926d0629073",
+          "bytes": 1690,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/fdroid/com.healthmd.android.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "b023bd3cccf23b5bed551c55c246225265abc9b0507c3f06e26926c30f456cfa",
+          "bytes": 1570,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/fdroid/dependency-license-audit.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "8cb96682be29be680d57f142b3a788e7a75f1d27cfe81a7d2aeed04960a9b6b8",
+          "bytes": 5193,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/fdroid/reproducibility.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "54ce3ea7c165e7e8fd27afd0cd51efc9f37191474d93d0b51c0dd76e44546397",
+          "bytes": 3545,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "bytes": 13109,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ad8a94dbdbe07b14a4a3fb9a3c80adb2dcc0c19eea06b4bfee256f4475d53619",
+          "bytes": 35920,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/cloud-fault-cases.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "07a75cfe6624acec4a6a3f12cb8ae6f52d9fe1dc1b67339affd2566587b2d974",
+          "bytes": 78932,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/cloud-fault-model.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "02adec90b5b23bee196de9f9b6573e2a1f05537767ae36a9a39eb830b8d1492d",
+          "bytes": 5423,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/README.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2248c21ed2fbb8eb7a1004df30b57b1ae45921c915cf5cf9f0ceac396e73e714",
+          "bytes": 15864,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-announce.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ff43a2bd458678f5db9bacec9b912d654a032292f20a4f062061899704cfb0ee",
+          "bytes": 17405,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "efa4285fd061d57a45ce17a1d522c396dac01946bdd7efaf4dd335357b05ddf8",
+          "bytes": 21909,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-google-play-access-audit.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "001712d2875c739233f14a12dd2b1fb3af1f71706ce6f1d864a8149f7d4e437b",
+          "bytes": 17026,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-promote-production-recover.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "b07edc41845cca78ca42d88c680a57d183bfc04b75bfdf41ef232951934afe38",
+          "bytes": 23222,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-promote-production.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "337d15f9ec1f3d8d36f0411c5ac0dbac25a4ee82107a28334b5813919996d4a7",
+          "bytes": 20367,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-release.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "b37c468f5ff225cebaff365c78c6a904a3369d5abbbbd2960bb2ee02c177fa27",
+          "bytes": 26169,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-wear-evidence-submit.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "035b82a9adb9f143ee636251e957b921765e7da5aa4217a302bf14e43377c30f",
+          "bytes": 3298,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-wear-evidence.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "3edfca72c5a5845ff1383c943706ca8b32f84311f8344756eb201837d7392650",
+          "bytes": 33056,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/android-wear-screenshots.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "10ae659d28a029c7dd09dac7bce8dcf43d68e0b8e5396e15ddb349b70c406c3b",
+          "bytes": 13019,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-announce.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "806e72c1309cff4965fb82957260400cda78fec2519b81112a5aa80ab6b96460",
+          "bytes": 19009,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-cancel-review-submission.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "a9809688fdccb63b34edbb7dadaefba92339cf2c6ff42fc5a2ac1b7c32152dd3",
+          "bytes": 3988,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "194d3c252f69ff1f54fb0292f066235455fb7997a98302327706fab89b4007db",
+          "bytes": 21712,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-nightly.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "989f496524b59ff6d582232934d84ede4e4eb0f76623a6eb473eb13013ff6bde",
+          "bytes": 4784,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-review-state.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "3f44dbec7fc4e8051f9156e4d6b01548f70cb6536e9a0c55d8efa51dd682addd",
+          "bytes": 5440,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-review-status.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "97efa23cc30c52fc0d1c4c7a0b55af8e83dcb27c9fef6b117b208489f2cffdbe",
+          "bytes": 3541,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/apple-submit-version.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "07427a47022a18d4b051724b611e21868cc6cbd5810188612ee1c5bc381cb34c",
+          "bytes": 7384,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/cli-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "e672ca9bf8ec69f613e4e50e8ee1cd1760cfc9c0d391484c6f17a1cc707a0233",
+          "bytes": 20760,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/cli-publish-crates.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c206798617f42e7d9021bfb0518f6c26b7cfd6adb9a527ba7fdc4780b5766d79",
+          "bytes": 6700,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/cli-release.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c22fdfabb2f6c052e6ab0ef8176f8ef98c6f084405af7e717ca20a028474900b",
+          "bytes": 62814,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/cli-sbom.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "927daad16dd0c0f3397520a7ae780a35641299209657cafcd53ba6462547f178",
+          "bytes": 3487,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/core-rust-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "80f3bfc7c41ea05811b3431891eeb612152ae2de0059d8ac1b9abf6ea5b3c3ca",
+          "bytes": 6867,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/core-typescript-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "4b00466ec6571377065ff2550c302839ed270a12c126ef12fc3ef5261095bbcb",
+          "bytes": 12770,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/practice-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "3d3121fcb6f7664424478112f36f497c0da46c6bb88a9c17a799bbae32ee0923",
+          "bytes": 13122,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/release-ios.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "96489fa745a3128a7752d5490d62ade62bfd137a0b0c81467f65dbbea0030e9b",
+          "bytes": 30574,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/release-macos.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "78931cc58aae4b4fa724b4daf1d7e779fd4b065cdd7142915544548ceab3b823",
+          "bytes": 28561,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/wake-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "65f18d3d1d48c8c3fc321f4d0966750aee51400a568fd7137f305ba29b61b6c0",
+          "bytes": 1460,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/workflows/website-ci.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "776f3c74228127b5c38379e2a76a28e29f5efd5967c68c24275b70d765b7203a",
+          "bytes": 5668,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "Makefile",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "704ba9cc151facf36b16d0d62d25c7317c0bf31b059adfcf9aa73532baf664d3",
+          "bytes": 3842,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".gitignore",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "384570ae153b22996ff9eb6753f77631a9473cf95d62a2afe820e048af7d1f67",
+          "bytes": 754,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": ".github/actions/component-changes/action.yml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c7cd517c8d1748c4688a794f616707fdf4fadf83be2aa034f61ce9dfda38c6e5",
+          "bytes": 4560,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/practice/AGENTS.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d14a7b0a23d5dceb145af89aa727c9731ba13f4220ba2853c53d98e4f0dfb551",
+          "bytes": 2801,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/wake/AGENTS.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "af05e0ecea4cec3f777bd70f3eb9492706e33ae40e6730fc3ebeb13bac309e96",
+          "bytes": 1627,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/Makefile",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "46335dfb1cbfc60abfc1066b1a9051fd1e7d769265008248bcb07effa7c62fe0",
+          "bytes": 8646,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/healthmd-core/build.gradle.kts",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "4fd628af0ac071d52086325042a0bcd775c9591a06dbbd8a66b7638b4b86c67f",
+          "bytes": 7307,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/gradle/wrapper/gradle-wrapper.properties",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d7010368a34c1c06df2bae1a85d8b24c39b2499c74ac892fc7e66d005dbd7b8a",
+          "bytes": 253,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/gradle/libs.versions.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd",
+          "bytes": 8646,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/Cargo.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "55c7b45a78c3c87918d93fce970196f50468e616e85583f8eeb283f14bc3d90d",
+          "bytes": 2646,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/Cargo.lock",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5",
+          "bytes": 88843,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/rust-toolchain.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d",
+          "bytes": 86,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/update-mcp-shared-assets.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "68325afdb1234f5ab4a7bfb4cb67c293d8c0fe5c83f0f9db4e45ac1b263fcbf2",
+          "bytes": 2392,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/smoke-crate-packages.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0236c1e94f2fff929821496a69b05018205f0296169170367b1e4dbee2c6e789",
+          "bytes": 9757,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/package.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "dbef5580d91967e5a8fc2cfca3702bd2157d5cf5046284e66605cf12a30bbfbc",
+          "bytes": 2814,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/package-lock.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "25fa7ccf700cb7bfbf7f86a3dcd3dccd5acc900bcbefd95e42afbff5cb145162",
+          "bytes": 31688,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/package.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "32924469a17d0767b99ee32f0eda12c53182ff0aa2163a32096f791d05737b80",
+          "bytes": 917,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/package-lock.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "fe5bd0937c80aff7ae25f44faeb37ff4b9ca03c0f2d347e831e67e9fc75a83e8",
+          "bytes": 248262,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/external-sources.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0ea940fab85168163691c2d2232527504162e717b7644052edf5644823bbc1f4",
+          "bytes": 149,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/reference-source.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "1ddeba3bbd989ec729d8d065b315fbb0ff70f7169d4601b9d87867397d468dcc",
+          "bytes": 80288,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/scripts/sync-export-reference.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "63136af2092a9720a567a16a8ad7bd3e2677662b8071951cdc704baf561d37e4",
+          "bytes": 48040,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/scripts/sync-agent-assets.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2af56dd9d6bc2d0e959aa0cb40ecd0934d75b3366cfc1e9a90ae61251ccba816",
+          "bytes": 10141,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/scripts/build-plugin-visualizations.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "683780e21fd9a186b9e86c8d14df2c2ba7de52d400b53fd72f559d2f55bd1ab7",
+          "bytes": 10741,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/scripts/sync-visualization-samples.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "51b9441e8a17b9e58cdee4e84185719572ae33cfb80cb9a495765c591acc7cca",
+          "bytes": 6645,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/practice/package.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "886dbb48ec342993c27fe2dd13075af79f763c2b45cea202c5006805eeabd33d",
+          "bytes": 2022,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/practice/package-lock.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "e2611aa94ded4c885116852468f4084e58ee667693d22bd1997ed8ab5a1b0c6f",
+          "bytes": 124895,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/wake/package.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "e5b49910365e26a22d0ca4c1a78e2b1413df28f8104bf1c230d53c270957ee12",
+          "bytes": 705,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/wake/package-lock.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "095f3cc02a546fce5c6e8003ba4e839be30d7818f05bc0e228d5cbd9829f9733",
+          "bytes": 88569,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "5efe86a7ad3b643e2415a11f6f2c4f530e82ccb2a3e5094897e64846b1d5b61f",
+          "bytes": 2018,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/Cargo.lock",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "fdbc69316d3556d8a2483d4821267a93ddfd8861acba3be1c850aabdcefada4b",
+          "bytes": 36294,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/rust-toolchain.toml",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "980c9752cb40dca3265ce4e3e31de1c369b469c9837be059b806ea93fe76799d",
+          "bytes": 86,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/contracts/manifest.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "8bc7b1bed5cc74e8fc49d98b7b8dac0a9301bd37e4a236f3a947c8eefe33c3d2",
+          "bytes": 38948,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/contracts/validate.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ca1f6fde2899e1ffac236bfea747e5e9a798a506c919edfb093d2eb34a58c23f",
+          "bytes": 181378,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/build-android-cdylibs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c9fa2aa274af58efdf8f2b6c540b7faaa9d16175c1ee77e8abb5dbea8a481e14",
+          "bytes": 4417,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/build-apple-xcframework.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "150f430eac9b5662492c26b0417c4af163891632f37c6f08c4b8c1e085ed2b31",
+          "bytes": 5190,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/generate-apple-bindings.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "f919857e421c629117017464df14cd025a4b00c1aba684adc330e11d58048841",
+          "bytes": 3076,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/generate-kotlin-bindings.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0d27dedcb6d42eee97ea246c1e4edb8f97b2bf6b48beeba1a9497aa271bfed0a",
+          "bytes": 831,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/generate-swift-bindings.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "7ec586f4b182768719d68635480af0c30d306cdd5d5d68d4cb2720fd927d4bde",
+          "bytes": 225,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/import-native-registry.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "5a4004fefe7526b118ff82222376df7088c6d0226112648ba54666aeabaa1045",
+          "bytes": 28395,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/inspect-android-aab.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "7f2a74bea86e6e9b7bf177241744be2a19fe60d5e169af8f9d11601276ea0d30",
+          "bytes": 2025,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/normalize-apple-xcframework.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "346d077285ba988ed508f9c7485e34642d61a79fd5f410ba4053bf9838fa7d84",
+          "bytes": 1262,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/normalize-kotlin-bindings.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2593493781b1234b9afe9300e9362daeb49ef3741e2e88e4978ecfbce4233a8c",
+          "bytes": 1375,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/prepare-apple-xcframework.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0d313add60063e7969b6d21a16f6ccc3046544dc37c6dd8b786a308209d04024",
+          "bytes": 1668,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "4aff5b3361e87df9f79df32654bd50d8380014b9eb71b64eeb9bce8052b3585e",
+          "bytes": 3496,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/generated-automation-reference-docs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2391fe59010a11c52d5b21bd8168e991bcb1693d4e7df0ea8d9ebc53933f0efb",
+          "bytes": 4005,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/generated-cli-reference-docs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "676c3aee9419e7a3694bceb58788878540820da45e4e0e974ae873b1bea6b2d5",
+          "bytes": 960,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/generated-export-docs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d4cccea3a3af0ed77b4fad658f41a2ba5e2f2984487e58ce00b56a08efdf0979",
+          "bytes": 2909,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/generated-individual-entry-docs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "9242ecd43b436884d2f4f499ac33e26b6c1a80502e7d4523c74d4e23ccea97e2",
+          "bytes": 2667,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/generated-rollup-reference-docs.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "f580acbb732d28335a3cd3d6cee0f13359ab499b5d8b68df869c4d5ee9f984e0",
+          "bytes": 2504,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/scripts/update-export-schema-signature.sh",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "24912ce1e2d42f437c20a84b1e409b905f0b69835b32fb025fa9b436fa49750b",
+          "bytes": 2209,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/core.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7",
+          "bytes": 95633,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/contracts/product-capabilities.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "6f624930f5bd85f38b6667228010d315a53ac51e78016fe12f4532cdca44f6bc",
+          "bytes": 29834,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v1.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "bytes": 501908,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/HealthMd/Shared/Models/HealthMetrics.swift",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "89de0f22a9f3f4809d63c3cbbe12cbdb35f1bbea6c65bb3258f61f7a91cac24b",
+          "bytes": 99271,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/HealthMd/Shared/Export/HealthMetricsDictionary.swift",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "5b2aa2b8f7c779d61d50d275452e9e2d1ae1a67a81b5d0ba0f72639df58fa2e0",
+          "bytes": 70600,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/domain/model/MetricSelection.kt",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "b57a7e2bebd84d134fd05518c94a8886e76005f8d3811f7794353c44f7e594b8",
+          "bytes": 36186,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ec9c8024b61c85ffa7a359cd54d7bef0c34c36fe1ff21660d1f2f4882a1ec309",
+          "bytes": 31352,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/android/docs/export-contract/android-ios-metric-parity-ledger.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "c1e96bcb1a627880d5190fdbadd375f0296ef035f35bdc9edb33562d742ecd62",
+          "bytes": 35711,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/src/content/docs/shared-metric-registry.md",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "21c8b5e9b5865ffa6087fe0ae1c4f607590c9b9aafd47efbbabf478c3e47b54a",
+          "bytes": 1094,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/docs-src/public/reference/metric-registry-v1.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "bytes": 501908,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-operations/src/registry.rs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "0d16820bf891bd5ac71741f7ac955887c3be289201a01893100f1886f3a2a827",
+          "bytes": 52174,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-operations/examples/generate_mcp_catalog.rs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2be027a9670f0c50ba7f717f228aab256dc2838d35aebbf4c87f32f10e5ef3f5",
+          "bytes": 362,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/assets/mcp-tools-v1.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "31377cf8ac0494d8410a2bd9cf69be0c65d1f0394517730e960f0f9a9016f52d",
+          "bytes": 116261,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/assets/query-visualization-v1.html",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ef9549f9df2dd39b138b36e7f950bb6802c1c256e52747f0e8963a345ed512cd",
+          "bytes": 36277,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-mcp/assets/metric-registry-v1.json",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99",
+          "bytes": 501908,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/apple/HealthMdCLI/Sources/HealthMdMCPCore/HealthMdMCPApp.swift",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "8f752f2a3f4fe37daa3d64ed9cafc27b4de3e53c4838d9a88bc44b33c8f0b60b",
+          "bytes": 37582,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "packages/contracts/test_validate_shared_setup.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ff1ba89d96422d80187637704c65fce98f00f7644c0cb921a7231cca657432e3",
+          "bytes": 34668,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/test_verify_release.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "4ab17844e1dd0ab541c7290fe93d3354b350ad10c00e774e9b252b462a258c4b",
+          "bytes": 5286,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/cli/scripts/test_verify_generated_release_metadata.py",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ffc956dcd7b0401b3d192d105712e2e6a2b1702188947be46ecf1b47482f07ad",
+          "bytes": 5153,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/about-page.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "f29186294c661a7c8d353178cfeb5bc41774b2bd940ca1476dbe6c2e86971a07",
+          "bytes": 6079,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/agent-publishing.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "ece29fe6dcb60a8a159ef15eaba399f1357c0f9063adda7836203c8c78df559c",
+          "bytes": 14500,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/attribution-worker.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "acd33e3b4ac40ea412671acb83ded61fe2d7940909e421454e5efd69ee29a6eb",
+          "bytes": 12938,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/landing-page.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "2df95982bd50b263f45903e882156f688981972c444822447dc1eceabba31cb1",
+          "bytes": 43040,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/locale-redirect.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "57d05e710d96def221f9e5fb4a96919a9b8614f3ba28a601abe08aecab975e61",
+          "bytes": 5445,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/localization.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "187f59b9b0135b1be89efe57c93db7f70b70c9885ee5d19432a60484beb78085",
+          "bytes": 8636,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/seo-landing-pages.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "d4c9f0952b43805bdd068c1fa15d5d9cfda7f15cfcb3164f7c947581390f3b51",
+          "bytes": 5144,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/vercel-config.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "da9884cb4d1c38ec3dc4021e2b6ca9b01dbc62db88e0ed8c9ecad1fcfb207b38",
+          "bytes": 3747,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        },
+        {
+          "path": "apps/website/test/visualization-catalog.test.mjs",
+          "source_revision": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b",
+          "sha256": "eb0000e371144c3c4ecda03d70b7365b479964355e1b587e10008091b93c0a1f",
+          "bytes": 8602,
+          "read_method": "immutable assigned git show only; no current generated/frozen uncommitted source consumed"
+        }
+      ],
+      "historical_pilot_pins": [
+        {
+          "path": "apps/cloud/AGENTS.md",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "874693adabb43ba7176116c7ed002ad7669083f9f8a55355369da53ffc1a0528",
+          "bytes": 8169,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/envelope.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "3bb962d5f0a0f29744546e1b46a6c0bf38990ee6cdad24e2176ea0bf275b7594",
+          "bytes": 8492,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/exports.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "05b6836c26e044cf118a8dd0ec7957d36ed8ed600d44b9d96589a66093c37a11",
+          "bytes": 19068,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        },
+        {
+          "path": "apps/cloud/src/apple-daily-profile.ts",
+          "source_revision": "56611bc65c625f620b9920eeec7cff36908ecc79",
+          "sha256": "49e9c5c0780805a52e69438953e407e56c2a3d6699e2bc84ba842ce09d2f4cc7",
+          "bytes": 279,
+          "qualification": "Accepted historical pilot source only, not imported/adopted/deployed/currentmain/region proof"
+        }
+      ],
+      "source_ranges": [
+        {
+          "id": "qualify-exact-ci.py:16-24",
+          "path": "apps/cli/scripts/qualify-exact-ci.py",
+          "start_line": 16,
+          "end_line": 24,
+          "source_sha256": "33527d6bfac899029adddb72ffe47d7d0b6bc117d6f99e67dbd4da8552a276f6",
+          "range_raw_sha256": "426357a92e8c81d935406ca598e51f36985e21de8dcdd7d1373212d30cdd15ea"
+        },
+        {
+          "id": "qualify-exact-ci.py:79-118",
+          "path": "apps/cli/scripts/qualify-exact-ci.py",
+          "start_line": 79,
+          "end_line": 118,
+          "source_sha256": "33527d6bfac899029adddb72ffe47d7d0b6bc117d6f99e67dbd4da8552a276f6",
+          "range_raw_sha256": "24132d3091b3580d2c2ffb95bf853b6bd7fe93b614a74fab1ce5693ccc6635b8"
+        },
+        {
+          "id": "qualify-exact-ci.py:127-194",
+          "path": "apps/cli/scripts/qualify-exact-ci.py",
+          "start_line": 127,
+          "end_line": 194,
+          "source_sha256": "33527d6bfac899029adddb72ffe47d7d0b6bc117d6f99e67dbd4da8552a276f6",
+          "range_raw_sha256": "23e5a6f1a866c8d61e7e07336bc0f2a27730e7e2b25551b886f195d72ff151cf"
+        },
+        {
+          "id": "test_qualify_exact_ci.py:20-41",
+          "path": "apps/cli/scripts/test_qualify_exact_ci.py",
+          "start_line": 20,
+          "end_line": 41,
+          "source_sha256": "741114266c4d6b33b5711d68c88ff668549c98adb5a3f10cf9c989b545ae1f42",
+          "range_raw_sha256": "97cc79ac9140975fa7122efa47a4d823b1731c3b01d075aaa17e7940e4c34c80"
+        },
+        {
+          "id": "test_qualify_exact_ci.py:43-95",
+          "path": "apps/cli/scripts/test_qualify_exact_ci.py",
+          "start_line": 43,
+          "end_line": 95,
+          "source_sha256": "741114266c4d6b33b5711d68c88ff668549c98adb5a3f10cf9c989b545ae1f42",
+          "range_raw_sha256": "23509cadcc344f26816b05119ebe1b09847736aae4646919d4467230316338f0"
+        },
+        {
+          "id": "generate-registry-adapters.py:12-38",
+          "path": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+          "start_line": 12,
+          "end_line": 38,
+          "source_sha256": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+          "range_raw_sha256": "0ee6ef4e4f13f4c18c5bbae306eef8d9b640cff6e2e9372b21d79e2e99bd0fb3"
+        },
+        {
+          "id": "generate-registry-adapters.py:143-148",
+          "path": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+          "start_line": 143,
+          "end_line": 148,
+          "source_sha256": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+          "range_raw_sha256": "65e6fa7271c4d309e062fc7594c492a4b15643885befaa858deb830219ebef03"
+        },
+        {
+          "id": "generate-registry-adapters.py:312-378",
+          "path": "packages/healthmd-core-rust/scripts/generate-registry-adapters.py",
+          "start_line": 312,
+          "end_line": 378,
+          "source_sha256": "27ed08f1275241bf161180fc47fba2d74f02ddf5e1f58e9c64784a260c927210",
+          "range_raw_sha256": "0f6b13c8b473881b7766be91343272f5b598c4aa121d0d5958944efdf3c44a30"
+        },
+        {
+          "id": "verify-fdroid-artifact.sh:1-39",
+          "path": "apps/android/scripts/verify-fdroid-artifact.sh",
+          "start_line": 1,
+          "end_line": 39,
+          "source_sha256": "94f6fc9f2401b56a31e06dcc5c833d0cd400c57734a93d30eac10f59430fa168",
+          "range_raw_sha256": "b6c5b56e5dceee85d898481f98321d7d2466278e7fb407b17b1365aa70c9cf36"
+        },
+        {
+          "id": "verify-fdroid-artifact.sh:40-120",
+          "path": "apps/android/scripts/verify-fdroid-artifact.sh",
+          "start_line": 40,
+          "end_line": 120,
+          "source_sha256": "94f6fc9f2401b56a31e06dcc5c833d0cd400c57734a93d30eac10f59430fa168",
+          "range_raw_sha256": "080a50d1c4b10106c09cf01f87600319ad4445e35cd7dfd631bdd584e40a2a46"
+        },
+        {
+          "id": "IPhoneDirectFileJournal.swift:114-155",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 114,
+          "end_line": 155,
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "range_raw_sha256": "fe5c8642767dc7d3bdf1dcabf77f12c562705bc9fb12be513f1ff7510abfb505"
+        },
+        {
+          "id": "IPhoneDirectFileJournal.swift:180-192",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 180,
+          "end_line": 192,
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "range_raw_sha256": "3946aa3e9cad2f450b8f210f65b3dca00a6fc0d033a8a7f9001607a1fdbee4b3"
+        },
+        {
+          "id": "IPhoneDirectFileJournal.swift:215-252",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 215,
+          "end_line": 252,
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "range_raw_sha256": "6d704c99ec7dab3261cc4ba9640f7f31c12cacf00266a92b62fd3ef64d54d3d4"
+        }
+      ],
+      "inventory_pointers": [
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/workflows",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "c6f9b7cc20dc93764288a47b481a5cec5530d2ddf3c94b63e806918d7e3feebe",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/required_contexts",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "abd04d386e3b2b2afe2e16f4e5e1e7299e59019250fa3ac46e06d7fffa3d921b",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/release_selectors",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "ed63a2db9c157e2d20c0431a1296eb2fa4ed766c5c51723742b3c4e36cac7d50",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/exact_cli_release",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "7c2e137cfb92e8387ced276295d59378a00757a357538cb65fbfccb80f1dec5a",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/generator_families",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "b9d38ffb11fc4815e04ab97861e5a49889124ab292d9ad78784323129fb2239e",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/generator_asset_pins",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "873fa01ba079ce4cf2843ead350951afa4d59e8b25391c24af35b0e4ddbaa953",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/cache_runtime_artifact_scopes",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "5b04d21b17bf28e590d5f4fe166e8ddfe4af788474015e827fd86136b1295e01",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/component_isolation",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "5c7a49f732fccc3d969b27fa47d042356bf6a82766db4f905f856d63e15665dd",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/current_command_locations",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "29714e159ea91df9db0e1d0c1a40e0d2a35e496d2ebe28a3c6a39a2511db236e",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/measurement_plan",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "4bc59290fc966d633f9b2b54b50f51ec9fb7054823cbc17ba1a9b335715ee54c",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/ci.json",
+          "pointer": "/pending_qualification",
+          "source_sha256": "8fb71e3bfbdf617abf61732c043aa1e6bbacd30edb127c8ff6a6bc8137d0f9d9",
+          "canonical_value_sha256": "f051909c0af163a9c68ce5dbc0707292512fee2991f2fd437bbfe47080a97a50",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/distribution",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "da73691973379b4f56cb308849682898a9322a13332fc8b990a391f1629d86b7",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/journals",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "48fe2da6d2187f9d6bbc61a57243e7aa31e32d94decdb7786a4a158421169904",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/durable_lifecycle",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "1f85307cb4caf8440b8308188bf673d05b0bec720977e97bf62939bffc95bac6",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/ci_consumers",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "d8d20d4ee54d991777fb7243d940e7ce513a1fbbf29b7193129cbba0004a4b7f",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/qualification_remaining",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "2e4c33eb50b559932a39901120e64049c2a7579616b83724ca3fa9b3f95d7bb0",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/native.json",
+          "pointer": "/host_proof_catalog",
+          "source_sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+          "canonical_value_sha256": "667a758da3b66e8efb2bb4c74df5d1ea269a2ba8e3f03637caa09a0eaa98e4ed",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/native.json",
+          "pointer": "/authority_and_state_retention",
+          "source_sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+          "canonical_value_sha256": "07c5da47c84205b19a0ffa308a81ea057b69f765b0bb362f155ae0d24f24a85c",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/native.json",
+          "pointer": "/qualification_status",
+          "source_sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+          "canonical_value_sha256": "d0b587ea60d46eea59747b688edc64889904dc7693edb638b83897ca061d9f46",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/native.json",
+          "pointer": "/consumers",
+          "source_sha256": "a70815dc0146c2101447b5970f0ccb8975997cbf0d64f38640bcac785a9047fb",
+          "canonical_value_sha256": "6741cfbd0233937b9a540f3c0fe1291447adea9d1470f3f5a228efd9ba2452b1",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "pointer": "/retained_profiles",
+          "source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "canonical_value_sha256": "edacd79a75d1535e82a4755deb8bc60fe9621134561c2b5fc30b1c68e268c7c9",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "pointer": "/source_identity",
+          "source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "canonical_value_sha256": "76cb9a8591de4d34b715609981af7fd095908596848f13d1d386b54d8a87096f",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "pointer": "/open_choices",
+          "source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "canonical_value_sha256": "7a3d567f0c060be58b06fb4348ce2fa3cd6f1a2cb7e189cf1cbe697ef1b16d59",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "pointer": "/deployment_profiles",
+          "source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "canonical_value_sha256": "1464a8451abf7a40f40d9b29a5b78b36737a02a69ce5f6d7bcddc0938943f485",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cloud.json",
+          "pointer": "/service_boundaries",
+          "source_sha256": "a02aa041f270df74aa25b4b43e4e50d62a0232d3e1e9d5c4f2561dc7e51a4c7b",
+          "canonical_value_sha256": "628ffa0998393f52025aedc3870109dbaa8ba83b435e06596f93bff2191c3080",
+          "canonicalization": "sortedkey compact UTF8 ensure_ascii false"
+        }
+      ],
+      "design_rows": [
+        {
+          "id": "C01",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 570,
+          "literal": "| C01 | Product capabilities and metric registry | Unchanged canonical bytes/IDs/order, truthful exact/alias/distinct classifications, native and website projection equivalence, unsupported/default selection persistence. |",
+          "literal_utf8_sha256": "5c5a39c8551bea3e84ed0782dc48f512f34d563af63d42f0f9753fac0ef95b91"
+        },
+        {
+          "id": "C11",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 580,
+          "literal": "| C11 | CLI guidance/error/result and MCP catalogs/resources | Surface envelopes and exit behavior, local discovery, existing command/tool identities, Apps/PNG negotiation, concurrency/cancellation and authorization. |",
+          "literal_utf8_sha256": "07b0d04f57a57a809c8b773318fe62ed8126da3243d94bdcd7f085cebdfb40e6"
+        },
+        {
+          "id": "H08",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 351,
+          "literal": "| H08 — Pilot/user transition and rollout | M08–M09; H07. | Verified voluntary archive migration and complete source/coverage receipts, separately rebound devices/agents, staged consented cohort, truthful product/store claims, support and prior-service rollback/decommission. |",
+          "literal_utf8_sha256": "4603a2bce37f509bca5c08ced9f9b4e5fedc6a941c9a489ad48de7ab23b1b18f"
+        },
+        {
+          "id": "H09",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 352,
+          "literal": "| H09 — Final cloud retirement/maintenance | M10 after admitted H08 rollout. | No Rust registry/runtime/tooling dependency, one common operation/query/export authority, independent service CI/deploy/runbooks and durable retained-data compatibility. |",
+          "literal_utf8_sha256": "439be06dea92d79230da1b2c60fe645c4e26951ed7a04b6550e799d030f38bd2"
+        },
+        {
+          "id": "F06",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1046,
+          "literal": "| F06 | Channel licensing/privacy/build-time exclusions | M02/M07 prove RN/native/JS dependency compatibility and F-Droid exclusion/reproducibility constraints; keep billing/provider/telemetry/Wear dependencies out of forbidden artifacts. |",
+          "literal_utf8_sha256": "94b01427ac75d227e46be11e6dcc6711324e563346e2c0df0d2bb2d39da964bf"
+        },
+        {
+          "id": "F07",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1047,
+          "literal": "| F07 | Old engine pins, journals, acknowledgements and downgrade | M04–M08 proves every retained state and compatible writer; drain old admissions only under existing bounded policy when a proven compatibility route is unavailable. |",
+          "literal_utf8_sha256": "420117012d58779aca5c2622dfe2966ac205b3f0a917078b268903b25dbebe0e"
+        },
+        {
+          "id": "F08",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1048,
+          "literal": "| F08 | Actual CI/test/disk benefit and runtime costs | M00/M02/M08 compare reproducible baselines and budgets, including native outputs and parallel worktrees. Revise implementation/cache strategy from measurements; preserve required tests. |",
+          "literal_utf8_sha256": "08ab9047bd9dd4be9d1129901d16df2e474cd8dd8692b89327ae9f19526148db"
+        },
+        {
+          "id": "F09",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1049,
+          "literal": "| F09 | Public Rust consumer/install retirement and external CI settings | M00/M08 inventories users/channels/required contexts and documents replacement/support transition; M10 waits for concrete reconciliation evidence. |",
+          "literal_utf8_sha256": "467b796ee188471bf2322e499b5ed2b72eaff2c5edc667bf830349f487201421"
+        }
+      ]
+    },
+    "locks_and_runtime": {
+      "immutable_source_only": true,
+      "build_or_runtime_executed": false,
+      "workflow_source_map": "All assigned .github/workflows YAML primary rawbytes parsed with PyYAML6.0.3 BaseLoader only, no CI dispatched."
+    },
+    "artifact_and_native_interface": {
+      "current_generated_or_candidate_artifacts_read": false,
+      "physical_or_installedstate_or_requiredsettings_proof": false
+    },
+    "policy_migration_key_versions": {
+      "sourceadmission_or_public_profiles": false,
+      "USfirst": "preference; regional inventory notqualified",
+      "500monthly": "research recommendation only; notowner cap/spend/deploy authorization"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": {
+        "observed": "Six one-boundary preflight/generator/recovery/preview children with24disjoint paths,142assignedGit pins/4historicalblobs/13ranges/25pointers/8designrows/27fullworkflow maps and48source-derived planning minima.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-release-root-source-review.json",
+            "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+            "bytes": 1512
+          },
+          {
+            "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+            "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+            "bytes": 8317
+          }
+        ],
+        "packet": "docs/migration/effect-refactor/expansions/split-release.json"
+      }
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": {
+        "observed": "Two acyclic internal edges, existing accepted baseline dependencies; all actual source-host/runtime/external context/release/recovery/retirement qualification separate.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-release-root-source-review.json",
+            "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+            "bytes": 1512
+          },
+          {
+            "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+            "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+            "bytes": 8317
+          }
+        ],
+        "packet": "docs/migration/effect-refactor/expansions/split-release.json"
+      }
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": {
+        "observed": "Every selected design outcome maps to reviewed children and eight explicit remaining owner/nextpacket/trigger/scope groups.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-release-root-source-review.json",
+            "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+            "bytes": 1512
+          },
+          {
+            "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+            "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+            "bytes": 8317
+          }
+        ],
+        "packet": "docs/migration/effect-refactor/expansions/split-release.json"
+      }
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": {
+        "observed": "ROOT merged the six unchanged proposals with coordinator schema scaffolding into unqualified not_started; actual manage.py check passed143tasks/86families/16choices. No family or implementation qualification.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-release-root-source-review.json",
+            "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+            "bytes": 1512
+          },
+          {
+            "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+            "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+            "bytes": 8317
+          }
+        ],
+        "packet": "docs/migration/effect-refactor/expansions/split-release.json",
+        "structural_command": {
+          "logical_argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "check"
+          ],
+          "cwd": ".",
+          "physical_cwd": "/Users/codybontecou/dev/health-md",
+          "executor": "/root",
+          "result": "passed",
+          "observed": {
+            "tasks": 143,
+            "families": 86,
+            "choices": 16
+          },
+          "evidence_kind": "Actual tool-return stdout observed by ROOT, not product or release qualification."
+        }
+      }
+    }
+  ],
+  "checks": [],
+  "resolved_authoring_attempts": [
+    {
+      "kind": "static input selection",
+      "result": "resolved",
+      "observed": "Initial gitshow of nonexistent apps/cli/AGENTS.md failed before any repo writes; nearest rootAGENTS used instead. No component command executed."
+    },
+    {
+      "kind": "static workflow YAML parsing",
+      "result": "resolved",
+      "observed": "Initial full workflows tree parse included README.md and failed BaseLoader token parse before repo writes. Filter exact yml/yaml workflows; README retained separately as assigned source metadata. No workflow command executed."
+    },
+    {
+      "status": "planning_review_and_coordinator_merge_accepted",
+      "prior_partial_receipt": {
+        "path": "/private/tmp/healthmd-release-before-final-planning-receipt.json",
+        "sha256": "9f666762dc27ddb609c1245cee1d9925813ad58d5cefc420a6cfc71d1dd6822f",
+        "bytes": 90347
+      },
+      "exact_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+      "source_reviews": [
+        {
+          "path": "/private/tmp/healthmd-release-root-source-review.json",
+          "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+          "bytes": 1512
+        },
+        {
+          "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+          "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+          "bytes": 8317
+        }
+      ],
+      "implementation_qualified": false
+    }
+  ],
+  "inspection_summary": {
+    "children": 6,
+    "future_disjoint_paths": 24,
+    "internal_edges": 2,
+    "literal_minima": 48,
+    "assigned_Git_inputs": 142,
+    "historical_pilot_blobs": 4,
+    "source_ranges": 13,
+    "inventory_pointers": 25,
+    "design_rows": 8,
+    "complete_assigned_workflows": 27,
+    "remaining_owner_trigger_groups": 8
+  },
+  "observations": [
+    {
+      "case_id": "release-assigned-source-workflow-provenance",
+      "result": "passed",
+      "procedure": "Python static assignedGit rawhashes/fullworkflow BaseLoader map/primary range/design and canonical RFC6901 pointer hashes, immutable accepted pilotblob digests; no workflow/runtime/provider/native commands.",
+      "expected": "Preserve complete assigned triggers/context aggregation/generator/cache/consumer/release/distribution/state maps with historicalrevision distinction, uncommitted candidatefiles unadopted.",
+      "observed": {
+        "children": 6,
+        "future_disjoint_paths": 24,
+        "internal_edges": 2,
+        "literal_minima": 48,
+        "assigned_Git_inputs": 142,
+        "historical_pilot_blobs": 4,
+        "source_ranges": 13,
+        "inventory_pointers": 25,
+        "design_rows": 8,
+        "complete_assigned_workflows": 27,
+        "remaining_owner_trigger_groups": 8
+      },
+      "evidence": "docs/migration/effect-refactor/expansions/split-release.json"
+    },
+    {
+      "case_id": "release-six-atomic-dag-source-minima",
+      "result": "passed",
+      "procedure": "Static JSON/disjointfile/topological dependency/literal counts/selected outcome ownertrigger mapping validation; source-derived 48 minima beforefutureStage1 corpus/code.",
+      "expected": "Atmost6one-target/channel/precondition children <=6paths; full requiredcontext/admin/GA/consumer/installedstate/fullhistory/oldengine/cloudregion/deletion Rustretirement open.",
+      "observed": "6children/24paths/2acyclicedges/48planningminima/8remainingownertrigger groups; no actual gate execution.",
+      "evidence": "docs/migration/effect-refactor/expansions/split-release.json"
+    },
+    {
+      "case_id": "release-independent-source-review-coordinator-merge",
+      "result": "passed",
+      "procedure": "ROOT independently replayed exact raw/source/range/design/pointer/workflow/fullretainedinventory and child DAG/minima invariants, and read accepted independent report; merged unqualified children.",
+      "expected": "Exact reviewed planning fingerprint, six unqualified atomic children and remaining owner triggers preserved.",
+      "observed": {
+        "fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+        "merged_children": [
+          "RELEASE-CLI-EXACT-CI-PREFLIGHT",
+          "RELEASE-METRIC-REGISTRY-DETERMINISM",
+          "RELEASE-CLI-LINUX-X64-PREFLIGHT",
+          "RELEASE-FDROID-ARTIFACT-PREFLIGHT",
+          "RELEASE-APPLE-JOURNAL-RECOVERY-PRECONDITION",
+          "RELEASE-PILOT-IOS8-MIGRATION-PREVIEW"
+        ],
+        "child_status": "not_started",
+        "product_checks": 0,
+        "structural_validation": {
+          "logical_argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "check"
+          ],
+          "cwd": ".",
+          "physical_cwd": "/Users/codybontecou/dev/health-md",
+          "executor": "/root",
+          "result": "passed",
+          "observed": {
+            "tasks": 143,
+            "families": 86,
+            "choices": 16
+          },
+          "evidence_kind": "Actual tool-return stdout observed by ROOT, not product or release qualification."
+        }
+      },
+      "evidence": [
+        {
+          "path": "/private/tmp/healthmd-release-root-source-review.json",
+          "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+          "bytes": 1512
+        },
+        {
+          "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+          "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+          "bytes": 8317
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Passed bounded source-only planning after full independent source review, ROOT source replay and child merge, and actual structural validation143tasks/86families/16choices. No product/native/public/full-family/retirement qualification.",
+    "Assigned tracked Git bytes only plus exact accepted pilot tracked blobs; no current generated/common/dist/cache/credential/account/state/SDK/device/provider/network/sourceoracle/build/install/CI/runtime/external actions.",
+    "Future children source_contract or synthetic proof only until actual fingerprinted host/target/channel/parser/consumer evidence passes. FiveCLIhosts/all mobile/sourcechannel/store/F-Droid/licensing/native journal1..6/installed oldengine compatible readwriter/downgrade/fullconsumer/GA+rollbackwindow unchanged and required.",
+    "Full workflow/generator/lock/cache maps retained; external required settings not inspected; historicalBASECI statements not fabricated as current settings. Current candidate source snapshots unadopted.",
+    "Optional cloud pilot profile8 preview doesnot import archives/tokens/enroll/deploy oradmithealthnative10/Android/session parity; allregion/policy/key/tenant/erasure/current independent suppression and voluntary complete migration/rollback/decommission separate. $500monthly recommendation not ownercap or spend authorization."
+  ],
+  "remaining_qualification": [
+    {
+      "id": "all_required_contexts",
+      "owner_role": "CI repository-settings owner",
+      "next_packet": "SPLIT-RELEASE-REQUIRED-CONTEXTS",
+      "trigger": "Actual integrated workflow exact-SHA runs and independently read authorized external ruleset/requiredcheck configuration before any context transition",
+      "scope": "All seven retained stable contexts plus every assigned workflow/path filter/aggregate/fork/read-only/fullrun/cache/consumer. New candidate or cloud context registration source is not external required-setting proof; skip/cancel/neutral never masks hard required failure; exactsource history retained."
+    },
+    {
+      "id": "other_generators",
+      "owner_role": "contracts/native/website generator owners",
+      "next_packet": "SPLIT-RELEASE-OTHER-GENERATOR-FAMILIES",
+      "trigger": "Selected metric family proof and independently scoped unchanged authorities before individual generator promotion",
+      "scope": "All productcapabilities/MCPcatalogApps/CSPPNG/UniFFIbindingnative libraries/Apple daily export&automation reference/website agents/external visualizations/Wake/Practice/cloud generators and snapshots; locks/output destinations/twice-generation/fixture/classification/versionprovenance exact; registry relocation distinct public semantics."
+    },
+    {
+      "id": "five_cli_hosts",
+      "owner_role": "CLI distribution and native host owners",
+      "next_packet": "SPLIT-RELEASE-CLI-HOST-MATRIX",
+      "trigger": "Full common public behavior/cohort/directcrypto/native capabilities + selected artifact evidence before any target release",
+      "scope": "All five current targets and both programs, actual clean offline install/upgrade/uninstall/nativecredentials/atomicdestination/locks/CLI-MCP realclients; signed/notarized MacDMGs and Windowscertificatepending, archives/Sigstore/provenance/SBOM/installer/Homebrew identities retained. Node runtime native deps are real measured artifacts; optinHTTP/OAuth excluded fromdefault. Componenttags/cratepublish order/latestApple policy unchanged."
+    },
+    {
+      "id": "mobile_store_channels",
+      "owner_role": "Apple and Android platform/channel release owners",
+      "next_packet": "SPLIT-RELEASE-MOBILE-STORE-CHANNELS",
+      "trigger": "Each platform/sourcepurpose/physical/capture/nativeUI/headless/API/SDK/build/signing/currentgenerated profiles admitted before channel packaging/store work",
+      "scope": "iOS/macOS/watch/widgets/extensions/AppIntents plus AndroidPlay/Wear/F-Droid distinct channel artifacts/entitlements/licensing/privacyall4ABIs/store metadata and real reproducibility/scanner. F-Droid frozen generic shared API remains, cloudpurpose unselected and forbidden OAuth/billing/telemetry/Wear exclusions independently scanned. Exact minOS/dependency/ABI/SBOM/permission matrices, no fabricated GA from candidate."
+    },
+    {
+      "id": "installed_state_recovery",
+      "owner_role": "native durable-state and migration owners",
+      "next_packet": "SPLIT-RELEASE-INSTALLED-STATE-RECOVERY",
+      "trigger": "Each reader/writer/source/profile/job/sourceengine route accepted before upgrade/downgrade or retirement admission",
+      "scope": "Full native generated journal1..6 plus independent raw/canonical journals, CLIv1/v2, Android retained jobspools/protocols/all engine/schema/profile/archive producer/currentgrant/frontier/cancel/acklost/ambiguouscommit and source/import/job reinstall/backups/fullhistory routes. Compatible oldwriters/sourcepurpose/endpoints/purchases remain; drain only if qualified route unavailable. No user spools/donorstate deleted by cachecleanup."
+    },
+    {
+      "id": "cloud_rollout_regions",
+      "owner_role": "cloud product/security/operations owner",
+      "next_packet": "SPLIT-RELEASE-CLOUD-ROLLOUT",
+      "trigger": "H00-H07 actual producer/purpose/tenant/auth/key/topology/region/subprocessor/backuprestore-erasure/client/loadsecurity evidence before pilot/user transitions",
+      "scope": "All pilot envelope/daily4/5/6/7/8/10/provider sidecars/embeddedoriginalarchives/source revisions and credentials separatelyrebound; no implicit source/nativev8 promotion ortyped equivalence. ActualUSfirst deployment policy/complete regions/copies/CDN/KMS/backup/support/consented cohort/priorendpointrollback/decommission independentlyreviewed. $500research recommendation not owner cap/spend/account/deploy authorization. Local account-free unchanged."
+    },
+    {
+      "id": "runtime_cache_budgets",
+      "owner_role": "CI performance and component build owners",
+      "next_packet": "SPLIT-RELEASE-MEASURED-BUDGETS",
+      "trigger": "Exact supported cold/hot builds and native parallel-worktree/runtimeartifact fingerprints measured before strategy/cache change",
+      "scope": "Complete assigned locks/cachekeys/build outputs/targets/actions/tool versions/currentcachehistory and VM/Worker/container dependencies; actual time/disk/memory/energy/load/cost/oneEffect artifacts and clean host reproducibility. Prior estimate/source metadata not accepted budgets. Cleanup excludes livehealth/donor/userexports/spools/unrelated worktrees."
+    },
+    {
+      "id": "final_rust_retirement",
+      "owner_role": "all-component architecture/release retirement coordinator",
+      "next_packet": "SPLIT-RELEASE-RUST-RETIREMENT",
+      "trigger": "Every promoted source/profile/consumer/channel has GA release+finished rollbackwindow and qualified complete installedstate/downgrade/recovery plus externalcontext/crateconsumer reconciliation",
+      "scope": "Specific active Rust/UniFFI/Cargo/nativebuild/library/cratepublishing/generator/CI/registrycouplings and duplicate logic deletion onepath atatime; historicalsource/tags/revisionmaps preserved. FreshnoRust checkout/install/consumer/VM/Worker/container/cloud+website/Practice/Wake gates and docs independent; no perpetually staged unassignedfeature or unqualifiedfallback. Planning preconditions never authorize deletion."
+    }
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20",
+    "proof_class": "bounded_source_planning_only",
+    "evidence": [
+      {
+        "path": "/private/tmp/healthmd-release-root-source-review.json",
+        "sha256": "6a52797ec98594c825f00766901f42d020c8b64e5dbd0d8da2def34bd2a0850a",
+        "bytes": 1512
+      },
+      {
+        "path": "/private/tmp/healthmd-split-release-independent-full-review.json",
+        "sha256": "8fbdce92951f32de72fde76ff547ff1191452838b102508d97684f06918fb406",
+        "bytes": 8317
+      }
+    ],
+    "independent_source_reviewer": "/root/personal_codecs",
+    "implementation_qualification": false
+  }
+}
