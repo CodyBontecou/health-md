@@ -87,7 +87,7 @@ jobs:
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
         with:
-          # The action's default also requests the discontinued legacy tools package.
+          # The action's default also requests the retired SDK 'tools' package.
           packages: platform-tools
 
       - name: Install pinned Google Play CLI
@@ -199,6 +199,17 @@ jobs:
           ./gradlew --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
           ./gradlew --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
+      - name: Retain failed JVM test reports
+        if: ${{ failure() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-jvm-failure-reports-${{ github.run_attempt }}
+          path: |
+            apps/android/app/build/reports/tests/
+            apps/android/app/build/test-results/
+          retention-days: 7
+          if-no-files-found: warn
+
       - name: Run Wear lint, assemble, and bundle
         run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
 
@@ -218,8 +229,8 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: ubuntu-24.04
-    # The complete accessibility matrix contributes 392 app tests in
-    # each F-Droid and Play variant, in addition to shared-core and direct CLI checks.
+    # The manual accessibility matrix selects 382 app cases; native input readiness
+    # adds three in each full F-Droid and Play variant, alongside core and CLI checks.
     # Preserve enough time to finish both variants on a cold hosted runner.
     timeout-minutes: 100
     defaults:
@@ -300,17 +311,18 @@ jobs:
             cd apps/android && ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedFdroidDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
             cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
 
-      - name: Upload instrumentation reports
-        if: ${{ !cancelled() }}
+      - name: Retain instrumentation reports and per-test results
+        if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: android-instrumentation-reports
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
           path: |
-            apps/android/healthmd-core/build/reports/androidTests/connected
-            apps/android/healthmd-core/build/outputs/androidTest-results/connected
-            apps/android/app/build/reports/androidTests/connected
-            apps/android/app/build/outputs/androidTest-results/connected
-          retention-days: 14
+            apps/android/app/build/reports/androidTests/connected/**
+            apps/android/app/build/outputs/androidTest-results/connected/**
+            apps/android/healthmd-core/build/reports/androidTests/connected/**
+            apps/android/healthmd-core/build/outputs/androidTest-results/connected/**
 
   fdroid:
     name: F-Droid clean build

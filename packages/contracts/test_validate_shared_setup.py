@@ -6,6 +6,7 @@ from __future__ import annotations
 import copy
 import hashlib
 import json
+import shutil
 import tempfile
 import unittest
 from pathlib import Path
@@ -837,6 +838,204 @@ class SharedSetupV2ValidationTests(unittest.TestCase):
                 local_native_values,
                 "prohibited URI",
             )
+
+
+class SharedSetupV2InventoryFreezeTests(unittest.TestCase):
+    def setUp(self) -> None:
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name).resolve()
+        self.directory = self.root / "packages/contracts/shared-setup/v2"
+        shutil.copytree(ROOT / "packages/contracts/shared-setup/v2", self.directory)
+
+    def test_unchanged_approved_inventories_and_public_assets_are_accepted(self) -> None:
+        validate.validate_shared_setup_v2_freeze(self.root)
+
+    def check_inventory_change(self, change: Any, error: str | None = None) -> None:
+        for platform in ("apple", "android"):
+            with self.subTest(platform=platform):
+                path = self.directory / f"{platform}-profile-field-coverage.json"
+                original = path.read_bytes()
+                payload = json.loads(original)
+                change(payload, platform)
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                try:
+                    if error is None:
+                        validate.validate_shared_setup_v2_freeze(self.root)
+                    else:
+                        with self.assertRaisesRegex(validate.ContractValidationError, error):
+                            validate.validate_shared_setup_v2_freeze(self.root)
+                finally:
+                    path.write_bytes(original)
+
+    def add_private_field(self, payload: dict[str, Any], platform: str) -> dict[str, Any]:
+        source = "ScheduledExportEntry" if platform == "apple" else "ScheduledProfileEntry"
+        field_key = "field" if platform == "apple" else "serialized_field"
+        row = copy.deepcopy(next(
+            row for row in payload["fields"]
+            if row["source_type"] == source and row[field_key] == "recoveryGeneration"
+        ))
+        row[field_key] = "futureRecoveryCounter"
+        if platform == "apple":
+            row["serialized_key"] = "futureRecoveryCounter"
+        evidence_key = "reason" if platform == "apple" else "evidence"
+        row[evidence_key] = "Synthetic local recovery authority; never portable setup intent."
+        payload["fields"].append(row)
+        return row
+
+    def test_existing_field_reclassification_is_rejected_on_both_platforms(self) -> None:
+        def change(payload: dict[str, Any], platform: str) -> None:
+            row = next(row for row in payload["fields"] if row["disposition"] == "portable")
+            row["disposition"] = "prohibited"
+            row["contract_path"] = None
+        self.check_inventory_change(change, "frozen field changed")
+
+    def test_new_shareable_inventory_fields_are_rejected_on_both_platforms(self) -> None:
+        def change(payload: dict[str, Any], platform: str) -> None:
+            row = self.add_private_field(payload, platform)
+            row["disposition"] = "portable"
+            row["contract_path"] = "profiles[].name"
+        self.check_inventory_change(change, "additions must be prohibited")
+
+    def test_new_prohibited_fields_with_null_path_and_evidence_are_accepted(self) -> None:
+        self.check_inventory_change(self.add_private_field)
+
+    def test_new_exclusion_can_be_inserted_without_reordering_frozen_rows(self) -> None:
+        def change(payload: dict[str, Any], platform: str) -> None:
+            row = self.add_private_field(payload, platform)
+            payload["fields"].remove(row)
+            payload["fields"].insert(0, row)
+        self.check_inventory_change(change)
+
+    def test_existing_field_removal_is_rejected(self) -> None:
+        self.check_inventory_change(lambda payload, _: payload["fields"].pop(0), "frozen field removed")
+
+    def test_approved_recovery_exclusions_cannot_be_removed_or_made_portable(self) -> None:
+        for operation in ("remove", "reclassify"):
+            with self.subTest(operation=operation):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    field_key = "field" if platform == "apple" else "serialized_field"
+                    row = next(row for row in payload["fields"] if row[field_key] == "recoveryGeneration")
+                    if operation == "remove":
+                        payload["fields"].remove(row)
+                    else:
+                        row["disposition"] = "portable"
+                        row["contract_path"] = "profiles[].name"
+                self.check_inventory_change(change, "frozen field (removed|changed)")
+
+    def test_existing_mapping_or_explanation_changes_are_rejected(self) -> None:
+        for property_name in ("contract_path", "explanation"):
+            with self.subTest(property=property_name):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    row = next(row for row in payload["fields"] if row["disposition"] == "portable")
+                    key = property_name if property_name != "explanation" else (
+                        "reason" if platform == "apple" else "evidence"
+                    )
+                    row[key] = "changed existing mapping or evidence"
+                self.check_inventory_change(change, "frozen field changed")
+
+    def test_inventory_metadata_and_existing_row_order_are_frozen(self) -> None:
+        self.check_inventory_change(
+            lambda payload, _: payload.update(schema_version=2), "metadata must remain frozen"
+        )
+        self.check_inventory_change(
+            lambda payload, _: payload["fields"].reverse(), "frozen field order changed"
+        )
+
+    def test_new_non_prohibited_classifications_are_rejected_even_without_path(self) -> None:
+        for disposition in (
+            "portable", "platform_extension", "destination_intent", "schedule_intent",
+            "derived_or_legacy", "local_only", "unknown",
+        ):
+            with self.subTest(disposition=disposition):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    self.add_private_field(payload, platform)["disposition"] = disposition
+                self.check_inventory_change(change, "additions must be prohibited")
+
+    def test_new_prohibited_field_cannot_have_a_contract_path(self) -> None:
+        for value in ("profiles[].name", "null", "", False):
+            with self.subTest(contract_path=value):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    self.add_private_field(payload, platform)["contract_path"] = value
+                self.check_inventory_change(change, "null contract_path")
+
+    def test_new_field_requires_exclusion_evidence_and_exact_row_shape(self) -> None:
+        for value in (None, "", " \t\n", 17):
+            with self.subTest(evidence=value):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    key = "reason" if platform == "apple" else "evidence"
+                    self.add_private_field(payload, platform)[key] = value
+                self.check_inventory_change(change, "non-empty exclusion evidence")
+        for operation in ("missing", "extra"):
+            with self.subTest(row_shape=operation):
+                def change(payload: dict[str, Any], platform: str) -> None:
+                    row = self.add_private_field(payload, platform)
+                    if operation == "missing":
+                        del row["contract_path"]
+                    else:
+                        row["portable_alias"] = "profiles[].name"
+                self.check_inventory_change(change, "object keys differ")
+
+    def test_duplicate_or_malformed_fields_are_rejected(self) -> None:
+        self.check_inventory_change(
+            lambda payload, _: payload["fields"].append(copy.deepcopy(payload["fields"][0])),
+            "duplicate field identity",
+        )
+        self.check_inventory_change(
+            lambda payload, _: payload.update(fields=None), "fields must be an array"
+        )
+        self.check_inventory_change(
+            lambda payload, platform: self.add_private_field(payload, platform).update(source_type=[]),
+            "field identity",
+        )
+        def invalid_kind(payload: dict[str, Any], platform: str) -> None:
+            key = "field_kind" if platform == "apple" else "coverage_kind"
+            self.add_private_field(payload, platform)[key] = "unknown"
+        self.check_inventory_change(invalid_kind, "invalid native field kind")
+
+    def test_duplicate_json_keys_in_native_inventories_are_rejected(self) -> None:
+        for platform in ("apple", "android"):
+            with self.subTest(platform=platform):
+                path = self.directory / f"{platform}-profile-field-coverage.json"
+                original = path.read_bytes()
+                path.write_bytes(b'{"schema":"ambiguous",' + original.lstrip()[1:])
+                try:
+                    with self.assertRaisesRegex(validate.ContractValidationError, "duplicate JSON"):
+                        validate.validate_shared_setup_v2_freeze(self.root)
+                finally:
+                    path.write_bytes(original)
+
+    def test_manifest_validation_cannot_skip_the_inventory_freeze_guard(self) -> None:
+        shutil.copyfile(ROOT / "packages/contracts/manifest.json", self.root / "packages/contracts/manifest.json")
+        path = self.directory / "apple-profile-field-coverage.json"
+        payload = json.loads(path.read_bytes())
+        payload["fields"].pop(0)
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(validate.ContractValidationError, "frozen field removed"):
+            validate.validate_manifest(self.root)
+
+    def test_baseline_cannot_be_rehashed_to_hide_an_inventory_change(self) -> None:
+        path = self.directory / "field-coverage-baseline-v1.json"
+        payload = json.loads(path.read_bytes())
+        payload["inventories"]["apple-profile-field-coverage.json"]["fields"].pop(0)
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        with self.assertRaisesRegex(validate.ContractValidationError, "baseline must remain byte-frozen"):
+            validate.validate_shared_setup_v2_freeze(self.root)
+
+    def test_public_schema_and_all_existing_fixture_bytes_remain_frozen(self) -> None:
+        for name in (
+            "shared-setup.schema.json", "fixtures/apple-shared-setup-v2.json",
+            "fixtures/android-shared-setup-v2.json", "fixtures/transaction-scenarios-v1.json",
+        ):
+            with self.subTest(asset=name):
+                path = self.directory / name
+                original = path.read_bytes()
+                path.write_bytes(original + b"\n")
+                try:
+                    with self.assertRaisesRegex(validate.ContractValidationError, "public schema or fixture changed"):
+                        validate.validate_shared_setup_v2_freeze(self.root)
+                finally:
+                    path.write_bytes(original)
 
 
 if __name__ == "__main__":

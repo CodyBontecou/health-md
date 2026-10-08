@@ -290,9 +290,10 @@ jobs:
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           tool_names = {tool["name"] for tool in tools}
-          assert len(tools) == 19
+          assert len(tools) == 21, sorted(tool_names)
           assert "healthmd_metric_chart" in tool_names
           assert {"healthmd_pairing_start", "healthmd_pairing_status"} <= tool_names
+          assert {"healthmd_export_raw", "healthmd_raw_artifact_read"} <= tool_names
           sleep = next(tool for tool in tools if tool["name"] == "healthmd_sleep_sessions")
           assert len(sleep["inputSchema"]["properties"]["dates"]["oneOf"]) == 2
           assert sleep["inputSchema"]["examples"][0]["all_pages"] is True

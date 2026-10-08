@@ -77,7 +77,7 @@ Existing required hosted CI, nightly, release, and exact-SHA qualification remai
 
 ## Android release trigger
 
-Android `1.9.1` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
+Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.
 
 `.github/workflows/android-release.yml` builds from an annotated `android/v<version>` tag. The tag must peel to a commit reachable from `origin/main`; its version must match `app/build.gradle.kts` and `release-scope.json`. The workflow re-runs the complete Android CI matrix against that exact SHA. A `google-play-qa` job reconstructs signing material only under `$RUNNER_TEMP`, requires the registered Play upload certificate, builds and inspects the phone AAB, removes the private key, and retains the signed artifact. A separate `google-play` job downloads that exact digest, re-verifies its signer and source identity, retains a SHA/tag/run-attempt/AAB-digest-bound intent, and only then requests a short-lived Play token and uploads to `internal`. A lost commit response is reconciled against the exact track instead of retrying the non-idempotent commit.
 

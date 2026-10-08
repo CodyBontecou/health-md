@@ -38,9 +38,9 @@ CLASSES=(
     com.healthmd.presentation.accessibility.SecondaryControlsAccessibilityTest
     com.healthmd.presentation.common.ConfigurationProtectionTest
 )
-# 39 parameterized methods x 10 displays, plus two protection regressions. Keep this
+# 38 parameterized methods x 10 displays, plus two protection regressions. Keep this
 # inventory in sync with intentional test changes; a partial/stale APK is not a pass.
-EXPECTED_TESTS=392
+EXPECTED_TESTS=382
 CLASS_FILTER="$(IFS=,; printf '%s' "${CLASSES[*]}")"
 ARGS=(-w -e class "$CLASS_FILTER")
 if [[ -n "$SCREENSHOTS" ]]; then

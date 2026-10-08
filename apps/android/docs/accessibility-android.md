@@ -72,13 +72,15 @@ The shared `AccessibilityTestHarness` supports five additional production-compos
 | `LargeDisplayAccessibilityTest` | 8 × 10 | 80 |
 | `MetricSelectionAccessibilityTest` | 6 × 10 | 60 |
 | `ProfileScheduleAccessibilityTest` | 8 × 10 | 80 |
-| `FormatCustomizationAccessibilityTest` | 7 × 10 | 70 |
+| `FormatCustomizationAccessibilityTest` | 6 × 10 | 60 |
 | `FrontmatterCustomizationAccessibilityTest` | 6 × 10 | 60 |
 | `SecondaryControlsAccessibilityTest` | 4 × 10 | 40 |
 | `ConfigurationProtectionTest` | Non-parameterized | 2 |
-| **Total** | | **392** |
+| **Total** | | **382** |
 
-New checks cover full labels/scale, bounded targets, selection roles/state, exact callbacks, caller rejection, search, editing, menus, save/cancel and live protection guards. **These are declared/compiled cases, not 392 executed passes.** Native dialogs use their own owner bounds. The fitted metric/frontmatter fixtures intercept the platform IME so a physical portrait inset cannot double-shrink a synthetic landscape viewport; their focus and IME-action checks still run, while actual keyboard resizing remains a manual gate. The format IME test separately combines real focus/keyboard visibility with an explicitly constrained remaining-height host; it does not reproduce every physical keyboard/window inset.
+New checks cover full labels/scale, bounded targets, selection roles/state, exact callbacks, caller rejection, search, editing, menus, save/cancel and live protection guards. **These are declared/compiled cases, not 382 executed passes.** Native dialogs use their own owner bounds. The fitted metric/frontmatter fixtures intercept the platform IME so a physical portrait inset cannot double-shrink a synthetic landscape viewport; their focus and IME-action checks still run, while actual keyboard resizing remains a manual gate.
+
+On 2026-10-07, the three UI methods with historical intermittent native-input failures were removed at the owner's request (30 display cases). Automated coverage no longer includes real-IME template editing, Save while the cadence field remains focused, or native Cancel/single-Back dismissal. Validate those paths with the manual QA checklist. Scheduler, recovery interruption, API identity and native input readiness regressions remain. The corrected methods had passed the latest completed hosted run before removal; these deletions do not establish a remaining product defect.
 
 Current integration validation on 2026-09-07: Play debug app and instrumentation APKs assembled; 188 unit suites, **1,314 passed / 1 skipped**, no failures/errors; `:app:lintPlayDebug` passed. The safe runner's **9 host-only mocked cases** passed. Its real Pixel invocation stopped at device preflight, before installation/instrumentation; no new screenshots were generated. Compilation fixes retained the assertions; the obsolete generic Add resource was removed after contextual actions replaced its last uses, without lint suppression or fixture weakening.
 
@@ -92,11 +94,11 @@ ANDROID_SERIAL=2C061FDH200CJN scripts/run-accessibility-ui-tests.sh /tmp/healthm
 ./gradlew :app:testPlayDebugUnitTest :app:lintPlayDebug
 ```
 
-The local runner verifies the selected device before building, assembles app/test APKs, and installs both explicitly with `adb -s <serial> install -r`. It invokes all seven classes and requires the complete 392-case success summary, rejecting failures, empty filters and partial/stale selections. Unlike connected-test cleanup, it does not uninstall the app or erase its data afterward. `scripts/test-accessibility-ui-runner.sh` tests targeting, failure/selection guards and screenshot transport with disposable fake Gradle/ADB binaries, without real device calls. Screenshots are opt-in, capture production composables with synthetic state, and contain no health measurements. Native popup contents retain the anchor's unchanged density/direction, and tests verify their font scale too. Popup windows themselves use the physical device's window bounds rather than the embedded synthetic viewport; this is not a certification of every OEM/window configuration.
+The local runner verifies the selected device before building, assembles app/test APKs, and installs both explicitly with `adb -s <serial> install -r`. It invokes all seven classes and requires the complete 382-case success summary, rejecting failures, empty filters and partial/stale selections. Unlike connected-test cleanup, it does not uninstall the app or erase its data afterward. `scripts/test-accessibility-ui-runner.sh` tests targeting, failure/selection guards and screenshot transport with disposable fake Gradle/ADB binaries, without real device calls. Screenshots are opt-in, capture production composables with synthetic state, and contain no health measurements. Native popup contents retain the anchor's unchanged density/direction, and tests verify their font scale too. Popup windows themselves use the physical device's window bounds rather than the embedded synthetic viewport; this is not a certification of every OEM/window configuration.
 
 ### Remaining usability opportunities
 
-- **Device gate:** reconnect the Pixel, run the complete compiled 392-case matrix, investigate failures, and inspect new synthetic 200% captures in both themes before accepting the new layouts.
+- **Device gate:** reconnect the Pixel, run the complete compiled 382-case matrix, investigate failures, and inspect new synthetic 200% captures in both themes before accepting the new layouts.
 - **Screen reader and keyboard:** follow the [manual QA checklist](accessibility-manual-qa.md) for actual TalkBack traversal, focus, native IME resizing and magnification. Automated semantics/geometry is not a substitute.
 - **Reading pace and discovery:** validate auto-advance timing, scroll discovery and text-only navigation with users. No subjective comfort or reading-pace result is claimed.
 

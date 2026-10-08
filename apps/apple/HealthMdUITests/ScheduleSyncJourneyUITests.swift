@@ -115,6 +115,20 @@ final class ScheduleSyncJourneyUITests: XCTestCase {
 
     // MARK: - Sync Journey
 
+    func testSyncView_showsDisconnectedState() throws {
+        let app = UITestLaunchHelper.syncApp(state: "disconnected")
+        app.launch()
+
+        // Navigate to sync tab
+        let syncTab = tabButton(in: app, identifier: UITestLaunchHelper.Tab.sync, label: "Sync")
+        XCTAssertTrue(syncTab.waitForExistence(timeout: 5))
+        syncTab.tap()
+
+        // Verify sync toggle is visible
+        let syncToggle = app.switches[UITestLaunchHelper.Sync.syncToggle]
+        XCTAssertTrue(syncToggle.waitForExistence(timeout: 5), "Sync toggle should be visible")
+    }
+
     func testSyncView_showsConnectedState() throws {
         let app = UITestLaunchHelper.syncApp(state: "connected")
         app.launch()

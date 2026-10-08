@@ -9,4 +9,4 @@ sdk_version=$(xcrun --sdk iphonesimulator --show-sdk-version)
 # framework crashes. Choose the newest runtime supported by the active SDK and
 # exclude newer beta runtimes that may also be installed on developer hosts.
 xcrun simctl list devices available -j \
-    | python3 "$script_dir/select_ios_simulator.py" --sdk-version "$sdk_version"
+    | python3 "$script_dir/select_ios_simulator.py" --sdk-version "$sdk_version" "$@"

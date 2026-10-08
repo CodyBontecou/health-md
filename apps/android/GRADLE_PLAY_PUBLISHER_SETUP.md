@@ -4,7 +4,7 @@ Gradle Play Publisher has been removed from the Android application modules. Mod
 
 ## Current phone-only release
 
-`release-scope.json` defines the active release boundary. Android `1.9.1` publishes only the phone `:app` artifact; `:wear` remains deferred for a later qualification cycle.
+`release-scope.json` defines the active release boundary. Android `1.9.3` publishes only the phone `:app` artifact; `:wear` remains deferred for a later qualification cycle.
 
 Gradle may build and test artifacts locally without Play credentials:
 

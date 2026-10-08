@@ -15,6 +15,108 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         }
     }
 
+    /// The sheet-local toast is duplicated by the app-level one behind the
+    /// sheet. Poll the live query and return the same tappable instance that
+    /// callers will interact with, rather than selecting a stale/fallback
+    /// element and querying again after the presentation animation.
+    private func waitForHittableToast(
+        in app: XCUIApplication,
+        timeout: TimeInterval = 10
+    ) -> XCUIElement? {
+        let deadline = Date().addingTimeInterval(timeout)
+        let predicate = NSPredicate(format: "identifier == %@", UITestLaunchHelper.ConfigurationProtection.toast)
+
+        repeat {
+            let toastQuery = app.buttons.matching(predicate)
+            if let toast = toastQuery.allElementsBoundByIndex.last(where: { $0.exists && $0.isHittable }) {
+                return toast
+            }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
+        } while Date() < deadline
+
+        return nil
+    }
+
+    /// Waits until an element both exists and is hittable, so taps land even
+    /// while sheet presentation or navigation-push animations are settling.
+    /// Generous by default: loaded CI runners can take several seconds for
+    /// sheet content to settle into a hittable state.
+    @discardableResult
+    private func waitHittable(_ element: XCUIElement, timeout: TimeInterval = 10) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isHittable == true"),
+            object: element
+        )
+        return XCTWaiter().wait(for: [expectation], timeout: timeout) == .completed
+    }
+
+    /// Scrolls the first scroll view until an element is hittable; detail
+    /// actions render lazily below the fold.
+    @discardableResult
+    private func scrollUntilHittable(_ element: XCUIElement, in app: XCUIApplication, maxSwipes: Int = 8) -> Bool {
+        for _ in 0..<maxSwipes where !(element.exists && element.isHittable) {
+            app.swipeUp()
+        }
+        return element.exists && element.isHittable
+    }
+
+    private func openProfilesManagementSheet(_ app: XCUIApplication) {
+        let settingsTab = app.tabBars.buttons["Settings"]
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
+        settingsTab.tap()
+
+        let profilesRow = app.buttons["export.profiles.entry"]
+        XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
+        profilesRow.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Export Profiles"].waitForExistence(timeout: 5),
+            "Profile management stays inspectable while configuration is protected"
+        )
+        XCTAssertTrue(
+            app.buttons["export.profiles.row.Default"].waitForExistence(timeout: 5),
+            "The migrated Default profile should remain readable"
+        )
+    }
+
+    func testBlockedChangeToastNavigatesToProtectionToggle() {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            configurationProtectionEnabled: true
+        )
+        app.launch()
+
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(exportButton.isHittable, "Manual export must remain available while configuration is protected")
+
+        let protectedControl = app.buttons[UITestLaunchHelper.Export.datePresetYesterdayButton]
+        scrollUntilExists(protectedControl, in: app)
+        XCTAssertTrue(protectedControl.waitForExistence(timeout: 5))
+        // The preset row can be only partially exposed above the tab bar while XCUITest still
+        // reports the button as hittable. Move it a bounded distance before tapping.
+        let scrollView = app.scrollViews.firstMatch
+        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
+            forDuration: 0.05,
+            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        )
+        XCTAssertTrue(waitHittable(protectedControl))
+        protectedControl.tap()
+
+        guard let toast = waitForHittableToast(in: app) else {
+            XCTFail("The visible configuration-protection toast should be tappable")
+            return
+        }
+        toast.tap()
+
+        let toggle = app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), "Tapping the toast should navigate to the protection setting")
+        let value = toggle.value as? String
+        XCTAssertTrue(value == "1" || value == "On" || value == "Enabled")
+    }
+
     func testManualExportAndPreviewRemainUsableWhileProtected() {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,
@@ -81,6 +183,95 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
             app.switches[UITestLaunchHelper.ConfigurationProtection.toggle]
                 .waitForExistence(timeout: 5),
             "The editor toast should dismiss the sheet and route to the protection toggle"
+        )
+    }
+
+    func testProtectedProfileDetailActionsAreBlocked() {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            configurationProtectionEnabled: true
+        )
+        app.launch()
+
+        openProfilesManagementSheet(app)
+        let defaultRow = app.buttons["export.profiles.row.Default"]
+        XCTAssertTrue(waitHittable(defaultRow), "The Default profile row should be tappable")
+        defaultRow.tap()
+        XCTAssertTrue(
+            app.buttons["export.profiles.edit.button"].waitForExistence(timeout: 5),
+            "Profile detail should stay inspectable while protected"
+        )
+
+        // Editing the frozen snapshot is rejected with the shared toast.
+        let editButton = app.buttons["export.profiles.edit.button"]
+        XCTAssertTrue(waitHittable(editButton))
+        editButton.tap()
+        XCTAssertNotNil(waitForHittableToast(in: app))
+        XCTAssertFalse(app.navigationBars["Edit Profile"].waitForExistence(timeout: 1))
+
+        // Schedule editing never opens the cadence sheet.
+        let editSchedule = app.buttons["Edit Schedule…"]
+        XCTAssertTrue(
+            scrollUntilHittable(editSchedule, in: app),
+            "The Edit Schedule action should be reachable in the scrollable profile detail"
+        )
+        editSchedule.tap()
+        XCTAssertNotNil(waitForHittableToast(in: app))
+        XCTAssertFalse(app.switches["Enabled"].waitForExistence(timeout: 1))
+
+        // Duplicating is rejected without creating a copy.
+        let duplicate = app.buttons["Duplicate"]
+        XCTAssertTrue(scrollUntilHittable(duplicate, in: app), "The Duplicate action should be reachable")
+        duplicate.tap()
+        XCTAssertNotNil(waitForHittableToast(in: app))
+        XCTAssertFalse(app.buttons["export.profiles.row.Default 2"].waitForExistence(timeout: 1))
+
+        // Renaming never presents the rename alert.
+        let rename = app.buttons["Rename…"]
+        XCTAssertTrue(scrollUntilHittable(rename, in: app), "The Rename action should be reachable")
+        rename.tap()
+        XCTAssertNotNil(waitForHittableToast(in: app))
+        XCTAssertFalse(app.alerts.firstMatch.waitForExistence(timeout: 1))
+
+        // With the migrated single Default profile, Delete is additionally
+        // disabled by the last-profile guard, so tapping it must present
+        // neither the confirmation dialog nor mutate anything.
+        let delete = app.buttons["Delete Profile…"]
+        XCTAssertTrue(scrollUntilHittable(delete, in: app), "The Delete action should be reachable")
+        XCTAssertFalse(delete.isEnabled, "The last remaining profile must not be deletable")
+        delete.tap()
+        XCTAssertFalse(app.staticTexts["Delete this profile?"].waitForExistence(timeout: 1))
+    }
+
+    func testProtectedProfileSchedulesCardIsLockedOnScheduleTab() {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            configurationProtectionEnabled: true
+        )
+        app.launch()
+
+        let scheduleTab = app.tabBars.buttons["Schedule"]
+        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
+        scheduleTab.tap()
+
+        let card = app.staticTexts["Profile Schedules"]
+        XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")
+
+        let protectedRegion = app.buttons[UITestLaunchHelper.ConfigurationProtection.protectedRegion]
+            .firstMatch
+        XCTAssertTrue(
+            protectedRegion.waitForExistence(timeout: 3),
+            "The per-profile schedules card must sit inside the shared lock"
+        )
+        protectedRegion.tap()
+        XCTAssertTrue(
+            app.buttons[UITestLaunchHelper.ConfigurationProtection.toast]
+                .waitForExistence(timeout: 3),
+            "Tapping a profile schedule row must surface the blocked-change toast"
         )
     }
 

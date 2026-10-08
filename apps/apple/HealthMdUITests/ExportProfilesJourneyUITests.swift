@@ -174,6 +174,8 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         app.swipeUp()
         if !card.isHittable { app.swipeUp() }
         snap("07-schedule-tab-profiles")
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "identifier ENDSWITH '.discardRecovery'")).count, 0,
+                       "a profile with no pending recovery must not offer discard")
 
         XCTAssertTrue(
             app.staticTexts["No profile schedules enabled."].waitUntilExists(timeout: 5),
@@ -261,13 +263,20 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             )
         ).firstMatch
         XCTAssertTrue(profileID.waitUntilExists(timeout: 5), "detail should expose the exact profile UUID")
-        let expectedProfileID = profileID.label
-        XCTAssertNotNil(UUID(uuidString: expectedProfileID))
+        let expectedCopiedID = profileID.label
+        XCTAssertNotNil(UUID(uuidString: expectedCopiedID))
         let copy = app.buttons["export.profiles.copyID"]
         XCTAssertTrue(copy.waitUntilExists(timeout: 5))
         copy.tap()
-        // Copy must remain correct when automation observes it after the three-second feedback expires.
-        Thread.sleep(forTimeInterval: 4)
+        // CI can finish tap synchronization after the former three-second feedback timeout.
+        // A delayed accessibility client must still be able to confirm the completed copy.
+        Thread.sleep(forTimeInterval: 6)
+        let copied = expectation(
+            for: NSPredicate(format: "value == 'Copied'"),
+            evaluatedWith: copy
+        )
+        wait(for: [copied], timeout: 5)
+        snap("12a-copied-profile-id")
 
         // Activate the profile: detail pops and the active banner reflects it.
         app.buttons["export.profiles.makeActive"].tap()
@@ -287,6 +296,9 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             "the active profile should not offer activation"
         )
         snap("13-activated-banner")
+        let reopenedCopy = app.buttons["export.profiles.copyID"]
+        XCTAssertTrue(reopenedCopy.waitUntilExists(timeout: 5))
+        XCTAssertEqual(reopenedCopy.value as? String, "Not copied", "copy feedback should reset when the detail is reopened")
 
         // Rename from the detail actions.
         app.buttons["Rename…"].tap()
@@ -296,23 +308,20 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         XCTAssertEqual(field.value as? String, "Default 2")
         field.typeText(String(repeating: "\u{8}", count: "Default 2".count))
         field.press(forDuration: 1)
-        let paste = app.menuItems["Paste"]
-        XCTAssertTrue(paste.waitUntilExists(timeout: 5), "the rename field should offer native clipboard paste")
-        // Targeting the menu item makes XCTest dismiss the rename alert as an interruption.
-        // Tap its measured frame through the application while retaining the exact paste assertion.
+        let paste = app.menuItems["Paste"].exists ? app.menuItems["Paste"] : app.buttons["Paste"]
+        XCTAssertTrue(paste.waitUntilExists(timeout: 5), "the copied profile ID should be available to paste")
+        // Anchor the menu's observed hit point to the intended alert field. Targeting the
+        // menu itself makes XCTest mistake the rename alert for an interruption and cancel it.
         let pasteFrame = paste.frame
-        let appFrame = app.frame
         XCTAssertFalse(pasteFrame.isEmpty)
-        XCTAssertTrue(appFrame.contains(pasteFrame), "the Paste action should be on screen")
-        app.coordinate(withNormalizedOffset: .zero).withOffset(
-            CGVector(dx: pasteFrame.midX - appFrame.minX, dy: pasteFrame.midY - appFrame.minY)
+        XCTAssertTrue(app.frame.contains(pasteFrame), "the Paste action should be on screen")
+        let fieldFrame = field.frame
+        field.coordinate(withNormalizedOffset: .zero).withOffset(
+            CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)
         ).tap()
-        XCTAssertEqual(
-            field.value as? String,
-            expectedProfileID,
-            "Copy profile ID must place the exact displayed UUID on the clipboard after its feedback disappears"
-        )
-        field.typeText(String(repeating: "\u{8}", count: expectedProfileID.count) + "Daily Everything")
+        XCTAssertEqual(field.value as? String, expectedCopiedID, "Copy must place this profile's exact UUID on the clipboard")
+        snap("13a-copied-id-pasted")
+        field.typeText(String(repeating: "\u{8}", count: expectedCopiedID.count) + "Daily Everything")
         app.alerts.buttons["Save"].tap()
         XCTAssertTrue(
             app.navigationBars["Daily Everything"].waitUntilExists(timeout: 5),

@@ -32,6 +32,12 @@ SHARED_SETUP_V2_SCHEMA_VERSION = 2
 SHARED_SETUP_V2_MAX_BYTES = 4_194_304
 SHARED_SETUP_V2_SIDECAR_MAX_BYTES = 4_194_304
 SHARED_SETUP_V2_UNDO_MAX_BYTES = 8_388_608
+SHARED_SETUP_V2_FIELD_BASELINE_PATH = (
+    "packages/contracts/shared-setup/v2/field-coverage-baseline-v1.json"
+)
+SHARED_SETUP_V2_FIELD_BASELINE_SHA256 = (
+    "1e04f0279f8560ea25b928c022206d965faa9129b855c4c7c1c74ee259485721"
+)
 SHARED_SETUP_TRANSACTION_SCENARIO_SCHEMA = "healthmd.shared_setup_transaction_scenarios"
 SHARED_SETUP_TRANSACTION_SCENARIO_VERSION = 1
 REGISTRY_PROFILE_TO_PUBLIC = {
@@ -1545,6 +1551,91 @@ def validate_unified_health_data_fixture(root: Path, path: Path) -> None:
         fail(f"{context}: Apple primary data must not be relabeled as RMSSD")
     if platform == "android" and "heart_rate_variability_sdnn" in semantic_ids:
         fail(f"{context}: Android primary data must not be relabeled as SDNN")
+
+
+def validate_shared_setup_v2_freeze(root: Path) -> None:
+    """Preserve v2 public bytes and every approved native inventory classification."""
+    context = "healthmd.shared_setup v2 freeze"
+    baseline_path = repository_path(root, SHARED_SETUP_V2_FIELD_BASELINE_PATH, context)
+    if hashlib.sha256(baseline_path.read_bytes()).hexdigest() != SHARED_SETUP_V2_FIELD_BASELINE_SHA256:
+        fail(f"{context}: field-coverage baseline must remain byte-frozen")
+    baseline = load_json(baseline_path, context)
+    directory = "packages/contracts/shared-setup/v2"
+    for relative_path, expected_hash in baseline["frozen_assets"].items():
+        path = repository_path(root, f"{directory}/{relative_path}", context)
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected_hash:
+            fail(f"{context}: public schema or fixture changed: {relative_path}")
+
+    def unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                fail(f"{context}: duplicate JSON key {key!r}")
+            result[key] = value
+        return result
+
+    for filename, reference in baseline["inventories"].items():
+        inventory_context = f"{context}.{filename}"
+        path = repository_path(root, f"{directory}/{filename}", inventory_context)
+        try:
+            payload = json.loads(
+                path.read_text(encoding="utf-8"),
+                object_pairs_hook=unique_object,
+                parse_constant=lambda value: fail(f"{inventory_context}: non-finite JSON number {value!r}"),
+            )
+        except (OSError, UnicodeDecodeError, ValueError, RecursionError) as error:
+            fail(f"{inventory_context}: invalid UTF-8 JSON: {error}")
+        if not isinstance(payload, dict):
+            fail(f"{inventory_context}: inventory must be an object")
+        metadata = {key: value for key, value in payload.items() if key != "fields"}
+        if hashlib.sha256(canonical_json(metadata)).hexdigest() != reference["metadata_sha256"]:
+            fail(f"{inventory_context}: inventory metadata must remain frozen")
+        fields = payload.get("fields")
+        if not isinstance(fields, list):
+            fail(f"{inventory_context}: fields must be an array")
+        field_key = "field" if filename.startswith("apple-") else "serialized_field"
+        current: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in fields:
+            if not isinstance(row, dict) or not all(
+                isinstance(row.get(key), str) and row[key].strip()
+                for key in ("source_type", field_key)
+            ):
+                fail(f"{inventory_context}: field identity must be two non-empty strings")
+            identity = (row["source_type"], row[field_key])
+            if identity in current:
+                fail(f"{inventory_context}: duplicate field identity {identity}")
+            current[identity] = row
+        frozen_identities = []
+        for row in reference["fields"]:
+            identity = (row["source_type"], row[field_key])
+            frozen_identities.append(identity)
+            if identity not in current:
+                fail(f"{inventory_context}: frozen field removed: {identity}")
+            if hashlib.sha256(canonical_json(current[identity])).hexdigest() != row["sha256"]:
+                fail(f"{inventory_context}: frozen field changed: {identity}")
+        frozen = set(frozen_identities)
+        if [identity for identity in current if identity in frozen] != frozen_identities:
+            fail(f"{inventory_context}: frozen field order changed")
+        apple = filename.startswith("apple-")
+        evidence_key = "reason" if apple else "evidence"
+        kind_key = "field_kind" if apple else "coverage_kind"
+        row_keys = {"source_type", field_key, kind_key, "disposition", "contract_path", evidence_key}
+        if apple:
+            row_keys.add("serialized_key")
+        for identity, row in current.items():
+            if identity in frozen:
+                continue
+            row_context = f"{inventory_context}.{identity}"
+            require_exact_keys(row, row_keys, row_context)
+            if row["disposition"] != "prohibited" or row["contract_path"] is not None:
+                fail(f"{row_context}: additions must be prohibited with a null contract_path")
+            if not isinstance(row[evidence_key], str) or not row[evidence_key].strip():
+                fail(f"{row_context}: additions require non-empty exclusion evidence")
+            allowed_kinds = payload["field_kinds"] if apple else {"descriptor", "supplemental"}
+            if not isinstance(row[kind_key], str) or row[kind_key] not in allowed_kinds:
+                fail(f"{row_context}: invalid native field kind")
+            if apple and (not isinstance(row["serialized_key"], str) or not row["serialized_key"].strip()):
+                fail(f"{row_context}: serialized_key must be a non-empty string")
 
 
 def _decode_shared_setup_json(fixture_bytes: bytes, context: str) -> Any:
@@ -3595,6 +3686,7 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
             f"contract manifest: schema_version must be integer "
             f"{MANIFEST_SCHEMA_VERSION}"
         )
+    validate_shared_setup_v2_freeze(root)
     contracts = manifest.get("contracts")
     if not isinstance(contracts, list) or not contracts:
         fail("contract manifest: contracts must be a non-empty array")
