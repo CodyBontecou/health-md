@@ -312,7 +312,7 @@ final class IPhoneDirectExportCoordinator {
 
         activeJobID = request.jobID
         let journal: IPhoneDirectExportJournal
-        if let persisted = try? loadJournal(jobID: request.jobID) {
+        if let persisted = try loadJournal(jobID: request.jobID) {
             guard persisted.version == IPhoneDirectExportJournal.legacyProtocolVersion
                     || persisted.version == IPhoneDirectExportJournal.currentVersion,
                   persisted.request == request else {
@@ -1219,12 +1219,12 @@ final class IPhoneDirectExportCoordinator {
         )
     }
 
-    private func loadJournal(jobID: UUID) throws -> IPhoneDirectExportJournal {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(
-            IPhoneDirectExportJournal.self,
-            from: Data(contentsOf: try jobDirectory(jobID).appendingPathComponent("journal.json"))
+    private func loadJournal(jobID: UUID) throws -> IPhoneDirectExportJournal? {
+        try IPhoneDirectJournalRecovery.load(
+            at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+            isSupported: { journal in
+                journal.request.jobID == jobID && (journal.version == IPhoneDirectExportJournal.legacyProtocolVersion || journal.version == IPhoneDirectExportJournal.currentVersion)
+            }
         )
     }
 

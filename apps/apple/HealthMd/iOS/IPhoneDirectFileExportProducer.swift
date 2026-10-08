@@ -117,7 +117,7 @@ final class IPhoneDirectFileExportProducer {
         var externalExportSucceeded = false
         defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         let journal: IPhoneDirectFileJournal
-        if let persisted = try? loadJournal(jobID: request.jobID) {
+        if let persisted = try loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
                   persisted.request == request,
                   persisted.accepted.peerBinding == peerBinding,
@@ -1584,12 +1584,12 @@ final class IPhoneDirectFileExportProducer {
         )
     }
 
-    private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal {
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        return try decoder.decode(
-            IPhoneDirectFileJournal.self,
-            from: Data(contentsOf: try jobDirectory(jobID).appendingPathComponent("journal.json"))
+    private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
+        try IPhoneDirectJournalRecovery.load(
+            at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+            isSupported: { journal in
+                journal.request.jobID == jobID && (IPhoneDirectFileJournal.isSupportedVersion(journal.version))
+            }
         )
     }
 

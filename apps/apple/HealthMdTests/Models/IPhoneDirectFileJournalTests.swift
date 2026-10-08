@@ -751,6 +751,79 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
     #endif
 
+    func testCorruptDirectJournalCannotBecomeNewWorkAndRetainsBytes() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("journal.json")
+        let bytes = Data("{invalid-private-journal".utf8)
+        try bytes.write(to: url)
+        XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url,
+            isSupported: { (journal: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(journal.version) }))
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+    }
+
+    func testMissingDirectJournalIsNewWorkOnlyWithoutRetainedSpoolFiles() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            XCTAssertNil(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            let spool = directory.appendingPathComponent("retained.bin")
+            let bytes = Data([1, 2, 3])
+            try bytes.write(to: spool)
+            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertEqual(try Data(contentsOf: spool), bytes)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    func testDirectJournalRoundTripAndUnknownVersionRetainExactBytes() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            let journal = try makeJournal()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.sortedKeys]
+            let bytes = try encoder.encode(journal)
+            try bytes.write(to: url)
+            let restored = try XCTUnwrap(IPhoneDirectJournalRecovery.load(at: url,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertEqual(restored.request, journal.request)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            object["version"] = 999
+            let unknown = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            try unknown.write(to: url)
+            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) })) { error in
+                XCTAssertEqual(error.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+            }
+            XCTAssertEqual(try Data(contentsOf: url), unknown)
+        }
+    }
+
+    func testDirectJournalRejectsNonFileAndSymbolicLinkWithoutChangingTarget() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            try FileManager.default.removeItem(at: url)
+            let target = directory.appendingPathComponent("original.json")
+            let bytes = Data("private-synthetic-checkpoint".utf8)
+            try bytes.write(to: target)
+            try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertEqual(try Data(contentsOf: target), bytes)
+            XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: url.path), target.path)
+        }
+    }
+
+    private func withDirectJournalDirectory(_ body: (URL) throws -> Void) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try body(directory)
+    }
+
     private func makeJournal() throws -> IPhoneDirectFileJournal {
         let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let peerBinding = DirectPeerBinding(

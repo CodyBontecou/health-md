@@ -261,3 +261,54 @@ struct IPhoneDirectFileJournal: Codable {
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
     }
 }
+
+/// Shared disk admission for raw and generated-file direct exports. Nil means
+/// new work; a retained journal must never silently become a new operation.
+enum IPhoneDirectJournalRecovery {
+    enum RecoveryError: LocalizedError {
+        case unreadableJournal
+        var errorDescription: String? { "The saved direct export journal is unavailable. Its files were retained." }
+    }
+
+    static func load<Journal: Decodable>(
+        at url: URL, isSupported: (Journal) -> Bool
+    ) throws -> Journal? {
+        let manager = FileManager.default
+        let attributes: [FileAttributeKey: Any]
+        do {
+            attributes = try manager.attributesOfItem(atPath: url.path)
+        } catch {
+            let failure = error as NSError
+            guard failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError else {
+                throw RecoveryError.unreadableJournal
+            }
+            // A missing journal beside retained spool files is incomplete work,
+            // not permission to capture a replacement using today's settings.
+            do {
+                guard try manager.contentsOfDirectory(atPath: url.deletingLastPathComponent().path).isEmpty else {
+                    throw RecoveryError.unreadableJournal
+                }
+            } catch {
+                let directoryFailure = error as NSError
+                guard directoryFailure.domain == NSCocoaErrorDomain,
+                      directoryFailure.code == NSFileReadNoSuchFileError else {
+                    throw RecoveryError.unreadableJournal
+                }
+            }
+            return nil
+        }
+        guard attributes[.type] as? FileAttributeType == .typeRegular else {
+            throw RecoveryError.unreadableJournal
+        }
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        do {
+            let journal = try decoder.decode(Journal.self, from: Data(contentsOf: url))
+            guard isSupported(journal) else { throw RecoveryError.unreadableJournal }
+            return journal
+        } catch {
+            // Never expose a path or decoder context containing saved values.
+            throw RecoveryError.unreadableJournal
+        }
+    }
+}
