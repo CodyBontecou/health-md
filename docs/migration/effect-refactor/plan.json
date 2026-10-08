@@ -6366,7 +6366,7 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-JOBS.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
@@ -6379,14 +6379,31 @@
       },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+        "proof_class": "bounded_source_planning_only",
+        "evidence": [
+          {
+            "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+            "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+            "bytes": 3482
+          },
+          {
+            "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+            "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+            "bytes": 4168
+          }
+        ],
+        "independent_repair_reviewer": "/root/personal_codecs",
+        "implementation_qualification": false
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-JOBS.json"
+        ]
       },
       "max_children": 6,
       "card_review_before_claim": {
@@ -6396,6 +6413,41 @@
         "canonical_card_sha256": "9f9669e0ca7add1672e9bb6679295264e2940ba977e95cd58709ee8e8de204a9",
         "reviewed_snapshot_path": "/private/tmp/healthmd-split-jobs-preclaim-card.json",
         "scope": "Docs2only/atmost6 bounded v1-v2 state readers/admission/one resume boundary; retain actual durable/provider/host/old-engine/consumer/retirement gates. No execution or source changes."
+      },
+      "independent_source_review": {
+        "status": "accepted_planning_only",
+        "reviewer": "/root/personal_codecs",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+        "evidence": {
+          "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+          "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441"
+        }
+      },
+      "coordinator_expansion_admission": {
+        "status": "reviewed_children_merged_unqualified",
+        "children": [
+          "JOB-V1-RECORD-READER",
+          "JOB-V2-RECORD-READER",
+          "JOB-TRANSFER-JOURNAL-READER",
+          "JOB-ADMISSION-ACCOUNTING",
+          "JOB-COMPLETED-RAW-ARTIFACT-READ",
+          "JOB-RESUME-RECONCILIATION"
+        ],
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "root_source_review": {
+          "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+          "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad"
+        },
+        "qualifies_family": false
+      },
+      "independent_final_receipt_review": {
+        "status": "accepted_planning_only",
+        "reviewer": "/root",
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+        "evidence": {
+          "path": "/private/tmp/healthmd-jobs-final-normalized-root-review.json",
+          "sha256": "c6f16e3670d0df25834eda5799f55978434637e687d79f7efcaab76c18dbd6f9"
+        }
       }
     },
     {
@@ -29282,8 +29334,23 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/android_release_host",
+        "base_revision": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "apps/cli/scripts/check-candidate.mjs",
+          "apps/cli/docs/typescript-candidate.md",
+          "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json"
+        ],
+        "reserved_resources": [
+          "core-component-build",
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ]
+      },
       "prerequisites": [
         "SPLIT-CODECS",
         "CORE-CANDIDATE-CODEC-API",
@@ -29512,6 +29579,21 @@
           "amended_independent_report_sha256": "049442baaa53ed71802d43b23e4784eddef9b5aeefb9bc3d6663ef01b329c499",
           "canonical_card_sha256_at_independent_review": "e6a792d7e17c7182279191dc8e1ee0eed4f18d792e22d98c0be0cd70561e8ad2"
         }
+      },
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "1dfcca45c341eff72c89a67ed72638f4dc2db9fe",
+        "canonical_card_sha256": "6c52fce06b96beac60c7df399e072fda4240a971aac082fe409b9a85a34cafcd",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-exact-codecs-cohort-preclaim-final-card.json",
+        "reviewed_snapshot_sha256": "600e0b8b33f750cccf843c770ed6f1c51e93d1ce281e271247066f96bdd73b18",
+        "scope": "Stage1 ONLY new full immutable cohort+partial receipt; strict passed implementation authority and separate exact approved Catalog data-only authority; complete frozen negatives independently reviewed before guard/docs/build/install."
+      },
+      "resource_lease": {
+        "status": "held",
+        "owner": "/root/android_release_host",
+        "execution_owner": "/root",
+        "stage": "Stage1 source-only; no build/install authority"
       }
     },
     {
@@ -35903,6 +35985,1682 @@
         "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+b78fcbce5f342e4d050b3ff60036efb5974cb1cf162db9722e19150fd9e58bbf"
       },
       "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; complete Stage1/source/host/durability/grants/installed-user/consumer gates retained."
+    },
+    {
+      "id": "JOB-V1-RECORD-READER",
+      "title": "Job V1 Record Reader",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure full retained v1 JobRecord decoder/validator into privately owned immutable records. Preserve all twelve states, camelCase optional fields, SwiftUUID/time, signed counters and literal version/expiry/message/artifact invariants; full ExportRequest and nested source-specific grammar. No journal reads, writes or migration.",
+      "deep_boundary": "One pure full retained v1 JobRecord decoder/validator into privately owned immutable records. Preserve all twelve states, camelCase optional fields, SwiftUUID/time, signed counters and literal version/expiry/message/artifact invariants; full ExportRequest and nested source-specific grammar. No journal reads, writes or migration.",
+      "prerequisites": [
+        "BASE-CLI",
+        "BASE-HOST"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/job.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/v1-record-reader.ts",
+        "packages/healthmd-core-ts/tests/job-v1-record-reader.test.ts",
+        "packages/healthmd-core-ts/tests/job-v1-record-reader-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-V1-RECORD-READER.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-v1-record-reader-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-v1-record-reader-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-v1-record-reader-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "v1-state-frontier",
+            "input": {
+              "states": [
+                "completed",
+                "failed",
+                "cancelled",
+                "cancellation_pending",
+                "awaiting_peer_acknowledgement"
+              ]
+            },
+            "expected": {
+              "terminal": [
+                true,
+                true,
+                true,
+                false,
+                false
+              ],
+              "resume_requires_source": [
+                false,
+                false,
+                false,
+                false,
+                true
+              ]
+            },
+            "source_basis": "job.rs:30-62",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-version",
+            "input": {
+              "version": 2
+            },
+            "expected": {
+              "valid_v1": false
+            },
+            "source_basis": "job.rs:65-197",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-negative-counter",
+            "input": {
+              "committedBytes": "-1"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "job.rs:65-197",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-expiry",
+            "input": {
+              "createdAt": "2026-01-01T00:00:00Z",
+              "expiresAt": "2026-01-08T00:00:01Z"
+            },
+            "expected": {
+              "valid": false,
+              "lifetime_seconds": 604800
+            },
+            "source_basis": "job.rs:65-197",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-artifact-basename",
+            "input": {
+              "relativePath": "a/b.json"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "job.rs:65-197",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-day-invariant",
+            "input": {
+              "processedDays": 2,
+              "totalDays": 1
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "job.rs:65-197",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-safe-message",
+            "input": {
+              "message": "SYNTHETIC\nSECRET"
+            },
+            "expected": {
+              "valid": false,
+              "echo": false
+            },
+            "source_basis": "job.rs:200-201",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v1-outer-extension",
+            "input": {
+              "outer_extra_member": {
+                "future": 1
+              }
+            },
+            "expected": {
+              "known_outer_fields_decoded": true,
+              "nested_unknown_policy": "source-specific",
+              "extension_lossless_rewrite_admitted": false
+            },
+            "source_basis": "JobRecord serde derives lack deny_unknown_fields; full raw bytes retained outside projection",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "job.rs:30-62",
+          "job.rs:65-197",
+          "job.rs:200-201"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-V1-RECORD-READER.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-V1-RECORD-READER",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "JOB-V2-RECORD-READER",
+      "title": "Job V2 Record Reader",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure full retained v2 V2JobRecord decoder/validator. Preserve snake_case/Chrono timestamps, exact u64, product-specific generated destination and raw no-destination, failure empty-details and product-bound artifact; no v1 reinterpretation or state writer.",
+      "deep_boundary": "One pure full retained v2 V2JobRecord decoder/validator. Preserve snake_case/Chrono timestamps, exact u64, product-specific generated destination and raw no-destination, failure empty-details and product-bound artifact; no v1 reinterpretation or state writer.",
+      "prerequisites": [
+        "BASE-CLI",
+        "BASE-HOST"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/v2_job.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/v2-record-reader.ts",
+        "packages/healthmd-core-ts/tests/job-v2-record-reader.test.ts",
+        "packages/healthmd-core-ts/tests/job-v2-record-reader-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-V2-RECORD-READER.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-v2-record-reader-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-v2-record-reader-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-v2-record-reader-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "v2-source-nil",
+            "input": {
+              "source_installation_id": "00000000-0000-0000-0000-000000000000"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-raw-destination",
+            "input": {
+              "product": "android_provider_native_snapshot_v1",
+              "destination_root": "synthetic"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-generated-destination",
+            "input": {
+              "product": "generated_files_v1",
+              "destination": null,
+              "destination_root": null
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-response-product",
+            "input": {
+              "request_product": "android_provider_native_snapshot_v1",
+              "response_product": "generated_files_v1"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-private-details",
+            "input": {
+              "failure_details": {
+                "synthetic": "secret"
+              }
+            },
+            "expected": {
+              "valid": false,
+              "echo": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-machine-status",
+            "input": {
+              "status": "Complete"
+            },
+            "expected": {
+              "valid": false
+            },
+            "source_basis": "v2_job.rs:28-156",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-counter-max",
+            "input": {
+              "committed_partitions": "16384",
+              "committed_bytes": "68719476736"
+            },
+            "expected": {
+              "counter_bounds_valid": true
+            },
+            "source_basis": "v2_job.rs:28-156; limits.rs:12-22",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "v2-outer-extension",
+            "input": {
+              "outer_extra_member": 1
+            },
+            "expected": {
+              "known_outer_fields_decoded": true,
+              "camelCase_to_snake_case_reinterpretation": false
+            },
+            "source_basis": "V2JobRecord serde derives; v1 explicit renames versus v2 field names",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "v2_job.rs:28-156"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-V2-RECORD-READER.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-V2-RECORD-READER",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "JOB-TRANSFER-JOURNAL-READER",
+      "title": "Job Transfer Journal Reader",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure tagged transfer-journal decoder exposing full immutable journal records for exactly raw-v1/file-v2-under-protocol-v1/receiver-v2-under-protocol-v2. Preserve complete request/accepted/session/manifests/partitions/commitPlans/outcome and destination identity profile defaults, not a generic unversioned journal. No opening spool or mutating frontier; full nested schemas and profile unknown/default rules frozen at Stage1.",
+      "deep_boundary": "One pure tagged transfer-journal decoder exposing full immutable journal records for exactly raw-v1/file-v2-under-protocol-v1/receiver-v2-under-protocol-v2. Preserve complete request/accepted/session/manifests/partitions/commitPlans/outcome and destination identity profile defaults, not a generic unversioned journal. No opening spool or mutating frontier; full nested schemas and profile unknown/default rules frozen at Stage1.",
+      "prerequisites": [
+        "JOB-V1-RECORD-READER",
+        "JOB-V2-RECORD-READER"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/transfer-journal-reader.ts",
+        "packages/healthmd-core-ts/tests/job-transfer-journal-reader.test.ts",
+        "packages/healthmd-core-ts/tests/job-transfer-journal-reader-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-TRANSFER-JOURNAL-READER.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-transfer-journal-reader-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-transfer-journal-reader-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-transfer-journal-reader-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "journal-version-profiles",
+            "input": {
+              "profiles": [
+                "v1_raw",
+                "v1_generated",
+                "v2_receiver"
+              ]
+            },
+            "expected": {
+              "journal_versions": [
+                1,
+                2,
+                2
+              ],
+              "application_protocols": [
+                1,
+                1,
+                2
+              ]
+            },
+            "source_basis": "/journals",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-envelope-bound",
+            "input": {
+              "byte_count": "67108865"
+            },
+            "expected": {
+              "read_admitted": false,
+              "parser_calls": 0
+            },
+            "source_basis": "limits.rs:12-22; load_journal ranges",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-job-binding",
+            "input": {
+              "request_job": "11111111-1111-4111-8111-111111111111",
+              "accepted_job": "22222222-2222-4222-8222-222222222222"
+            },
+            "expected": {
+              "resume_admitted": false
+            },
+            "source_basis": "/durable_lifecycle/admission",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-destination-binding",
+            "input": {
+              "saved_identity_matches_current": false
+            },
+            "expected": {
+              "generated_resume_admitted": false
+            },
+            "source_basis": "/destination_capability/binding",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-product-profile",
+            "input": {
+              "saved_product": "canonical_source_records_v1",
+              "resubmitted_product": "health_data_projection"
+            },
+            "expected": {
+              "same_job_reinterpretation": false
+            },
+            "source_basis": "/durable_lifecycle/admission",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-partition-order",
+            "input": {
+              "indexes": [
+                0,
+                2
+              ]
+            },
+            "expected": {
+              "contiguous_frontier": false,
+              "ack": false
+            },
+            "source_basis": "/durable_lifecycle/partition_commit",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-opaque-future-engine",
+            "input": {
+              "engine_authority": "unrecognized",
+              "journal_decode_success": true
+            },
+            "expected": {
+              "run_new_writer": false,
+              "route": "retained-engine-or-explicit-unavailable"
+            },
+            "source_basis": "F07; native exporter engine fields remain source-specific not fabricated CLI fields",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "journal-cancel-marker",
+            "input": {
+              "state": "cancellation_pending",
+              "peer_ack": false
+            },
+            "expected": {
+              "state_after_retry": "cancellation_pending",
+              "local_interruption_is_remote_cancel": false
+            },
+            "source_basis": "/durable_lifecycle/cancellation",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "raw_receiver.rs:40-59",
+          "file_receiver.rs:48-97",
+          "v2_receiver.rs:43-67"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-TRANSFER-JOURNAL-READER.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-TRANSFER-JOURNAL-READER",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "JOB-ADMISSION-ACCOUNTING",
+      "title": "Job Admission Accounting",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure admission/accounting plan over trusted bounded immutable quota/lease observations across v1 and v2, using checked exact u64 plus per-job remaining input/materialization reservations. Preserve count64/shared128GiB/64GiB perjob/3futurecopies/512MiB free-floor and active leases. No native enumeration, reservation/lock acquisition or cleanup admitted.",
+      "deep_boundary": "One pure admission/accounting plan over trusted bounded immutable quota/lease observations across v1 and v2, using checked exact u64 plus per-job remaining input/materialization reservations. Preserve count64/shared128GiB/64GiB perjob/3futurecopies/512MiB free-floor and active leases. No native enumeration, reservation/lock acquisition or cleanup admitted.",
+      "prerequisites": [
+        "BASE-CLI",
+        "BASE-HOST"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/limits.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/admission-accounting.ts",
+        "packages/healthmd-core-ts/tests/job-admission-accounting.test.ts",
+        "packages/healthmd-core-ts/tests/job-admission-accounting-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-ADMISSION-ACCOUNTING.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-admission-accounting-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-admission-accounting-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-admission-accounting-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "account-shared-count",
+            "input": {
+              "v1_jobs": 32,
+              "v2_jobs": 32,
+              "new_jobs": 1
+            },
+            "expected": {
+              "admit_new": false,
+              "shared_limit": 64
+            },
+            "source_basis": "/host_state/bounds",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-perjob-edge",
+            "input": {
+              "committed": "68719476735",
+              "incoming": "1"
+            },
+            "expected": {
+              "per_job_admitted": true,
+              "total": "68719476736"
+            },
+            "source_basis": "limits.rs:77-95",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-perjob-over",
+            "input": {
+              "committed": "68719476736",
+              "incoming": "1"
+            },
+            "expected": {
+              "admitted": false
+            },
+            "source_basis": "limits.rs:77-95",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-u64-overflow",
+            "input": {
+              "committed": "18446744073709551615",
+              "incoming": "1"
+            },
+            "expected": {
+              "admitted": false,
+              "wrap": false
+            },
+            "source_basis": "limits.rs:77-95",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-future-copies",
+            "input": {
+              "retained": "10",
+              "inputs": {
+                "job-a": "10"
+              },
+              "materializations": {}
+            },
+            "expected": {
+              "future": "30",
+              "effective": "40"
+            },
+            "source_basis": "limits.rs:390-443",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-materialized-saturation",
+            "input": {
+              "retained": "45",
+              "inputs": {
+                "job-a": "10"
+              },
+              "materializations": {
+                "job-a": "35"
+              }
+            },
+            "expected": {
+              "future": "0",
+              "effective": "45"
+            },
+            "source_basis": "limits.rs:390-443",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-cross-job-offset",
+            "input": {
+              "retained": "35",
+              "inputs": {
+                "job-a": "10"
+              },
+              "materializations": {
+                "job-b": "25"
+              }
+            },
+            "expected": {
+              "future": "30",
+              "effective": "65"
+            },
+            "source_basis": "limits.rs:390-443",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "account-reservation-release",
+            "input": {
+              "trusted_observation": {
+                "reservation_present": true,
+                "cancelled": true
+              }
+            },
+            "expected": {
+              "release_required": true,
+              "release_calls": 0,
+              "release_ack": 0,
+              "native_lock_proof": false
+            },
+            "source_basis": "limits.rs:StorageReservation Drop and private pure accounting decision over trusted observation; actual acknowledged native cancellation/release belongs to native_storage_destination / SPLIT-JOB-NATIVE-DESTINATIONS. No reservation-removal observation from pure function.",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "limits.rs:12-22",
+          "limits.rs:77-95",
+          "limits.rs:390-443"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-ADMISSION-ACCOUNTING.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-ADMISSION-ACCOUNTING",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "JOB-COMPLETED-RAW-ARTIFACT-READ",
+      "title": "Job Completed Raw Artifact Read",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One Effect common bounded completed raw artifact read over privately owned job/product-bound lease and original authority. v1 lookup only JobNotFound permits v2 fallback; wrong/corrupt/incomplete v1 does not. Full artifact host size/hash verification prerequisite, max65536 byte range through typed coarse port; no arbitrary file paths/full parse/extract/selectors/export workflow. Native full SHA/streaming semantics remain separate host proof.",
+      "deep_boundary": "One Effect common bounded completed raw artifact read over privately owned job/product-bound lease and original authority. v1 lookup only JobNotFound permits v2 fallback; wrong/corrupt/incomplete v1 does not. Full artifact host size/hash verification prerequisite, max65536 byte range through typed coarse port; no arbitrary file paths/full parse/extract/selectors/export workflow. Native full SHA/streaming semantics remain separate host proof.",
+      "prerequisites": [
+        "JOB-V1-RECORD-READER",
+        "JOB-V2-RECORD-READER",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/direct.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/completed-raw-artifact-read.ts",
+        "packages/healthmd-core-ts/tests/job-completed-raw-artifact-read.test.ts",
+        "packages/healthmd-core-ts/tests/job-completed-raw-artifact-read-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-COMPLETED-RAW-ARTIFACT-READ.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-completed-raw-artifact-read-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-completed-raw-artifact-read-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-completed-raw-artifact-read-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "artifact-completed-only",
+            "input": {
+              "state": "awaiting_peer_acknowledgement"
+            },
+            "expected": {
+              "read": false,
+              "open_calls": 0
+            },
+            "source_basis": "direct.rs:1441-1523",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-v1-error-no-fallback",
+            "input": {
+              "v1_record_result": "malformed"
+            },
+            "expected": {
+              "v2_lookup": 0,
+              "fixed_failure": true
+            },
+            "source_basis": "direct.rs:1441-1523",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-v1-notfound-v2",
+            "input": {
+              "v1_record_result": "job_not_found",
+              "v2_completed_product": "android_provider_native_snapshot_v1"
+            },
+            "expected": {
+              "v2_lookup": 1,
+              "format": "source_JSON_or_NDJSON",
+              "provider": "source_retained_android_provider"
+            },
+            "source_basis": "direct.rs:1441-1523",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-profile-non-equivalence",
+            "input": {
+              "profile": "canonical_source_records_v1"
+            },
+            "expected": {
+              "health_data_projection_substitution": false,
+              "full_corpus_preserved": true
+            },
+            "source_basis": "/workflows/4",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-chunk-bound",
+            "input": {
+              "length": 65537
+            },
+            "expected": {
+              "read_calls": 0,
+              "admitted": false
+            },
+            "source_basis": "/schemas/raw_artifact_chunk; /workflows/4",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-current-revoke",
+            "input": {
+              "revoke_destination_during_source_check": true
+            },
+            "expected": {
+              "lazy_read_calls": 0,
+              "published_bytes": 0,
+              "release_ack": 1
+            },
+            "source_basis": "proposed private current gate; Personal81 and perread common operation obligations",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-crosswire",
+            "input": {
+              "lease_job": "job-a",
+              "returned_token_job": "job-b"
+            },
+            "expected": {
+              "payload_materializations": 0,
+              "published_bytes": 0,
+              "release_ack": 1
+            },
+            "source_basis": "proposed private exact-value binding before properties",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "artifact-release-failure",
+            "input": {
+              "chunk_read_success": true,
+              "cleanup_failed": true
+            },
+            "expected": {
+              "published_bytes": 0,
+              "fixed_cleanup_failure": true,
+              "claim_cleanup_ack": false
+            },
+            "source_basis": "proposed owned bracket; no actual durable host proof",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "direct.rs:1441-1523",
+          "raw_receiver.rs:451-570"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-COMPLETED-RAW-ARTIFACT-READ.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-COMPLETED-RAW-ARTIFACT-READ",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
+    },
+    {
+      "id": "JOB-RESUME-RECONCILIATION",
+      "title": "Job Resume Reconciliation",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "outcome": "One pure immutable resume reconciliation decision for descriptor/frontier/spool-verification observations plus retained job status. Matching valid spool =>already committed without accounting; v1 invalidspool=>rollback affected suffix, v2=>replace sameindex, changeddescriptor/gap reject; final ackretry distinct from recommit/cancel. No provider, transport, journal/storage mutation or new engine admission.",
+      "deep_boundary": "One pure immutable resume reconciliation decision for descriptor/frontier/spool-verification observations plus retained job status. Matching valid spool =>already committed without accounting; v1 invalidspool=>rollback affected suffix, v2=>replace sameindex, changeddescriptor/gap reject; final ackretry distinct from recommit/cancel. No provider, transport, journal/storage mutation or new engine admission.",
+      "prerequisites": [
+        "JOB-V1-RECORD-READER",
+        "JOB-V2-RECORD-READER",
+        "JOB-TRANSFER-JOURNAL-READER",
+        "JOB-ADMISSION-ACCOUNTING"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C03",
+        "C09",
+        "O04",
+        "O05",
+        "O06"
+      ],
+      "risk_ids": [
+        "F02",
+        "F07"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "GLOSSARY.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/hosts.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "apps/cli/tests/shared-slice-parity-vectors.ts",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "docs/migration/effect-refactor/expansions/split-query.json",
+        "docs/migration/effect-refactor/expansions/split-datastore.json",
+        "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+        "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+        "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+        "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+        "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+        "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+        "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+        "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/jobs/resume-reconciliation.ts",
+        "packages/healthmd-core-ts/tests/job-resume-reconciliation.test.ts",
+        "packages/healthmd-core-ts/tests/job-resume-reconciliation-vectors.ts",
+        "docs/migration/effect-refactor/receipts/JOB-RESUME-RECONCILIATION.json"
+      ],
+      "shared_resources": [
+        "core-component-build",
+        "private-resume-reconciliation-interface"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private retained health job source-profile candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Complete independently approved Stage1 full closed typed interfaces and raw literal corpus at packages/healthmd-core-ts/tests/job-resume-reconciliation-vectors.ts before implementation; this packet source/fixture pins and eight exact planning minima below are mandatory, not a complete pre-approved corpus.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/job-resume-reconciliation-vectors.ts",
+        "literal_minima": [
+          {
+            "case_id": "resume-ack-lost-verified",
+            "input": {
+              "profile": "v1_raw",
+              "requested_index": 0,
+              "saved_descriptor_equal": true,
+              "spool_size_and_digest_verified": true
+            },
+            "expected": {
+              "decision": "already_committed",
+              "count_increment": 0
+            },
+            "source_basis": "raw_receiver.rs:238-330",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-changed-descriptor",
+            "input": {
+              "profile": "v2_receiver",
+              "saved_descriptor_equal": false
+            },
+            "expected": {
+              "decision": "reject",
+              "ack": false
+            },
+            "source_basis": "v2_receiver.rs:267-344",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-v1-lost-spool",
+            "input": {
+              "profile": "v1_generated",
+              "requested_index": 1,
+              "saved_frontier": [
+                0,
+                1,
+                2
+              ],
+              "spool_valid": false
+            },
+            "expected": {
+              "decision": "rollback_suffix",
+              "retained_frontier": [
+                0
+              ],
+              "request_index": 1
+            },
+            "source_basis": "file_receiver.rs:553-642",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-v2-lost-spool",
+            "input": {
+              "profile": "v2_receiver",
+              "requested_index": 1,
+              "saved_frontier": [
+                0,
+                1,
+                2
+              ],
+              "spool_valid": false
+            },
+            "expected": {
+              "decision": "replace_partition",
+              "replacement_index": 1,
+              "drop_unaffected_suffix": false
+            },
+            "source_basis": "v2_receiver.rs:267-344",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-gap",
+            "input": {
+              "profile": "v2_receiver",
+              "saved_frontier": [
+                0
+              ],
+              "requested_index": 2
+            },
+            "expected": {
+              "decision": "reject",
+              "ack": false
+            },
+            "source_basis": "v2_receiver.rs:267-344",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-awaiting-final-ack",
+            "input": {
+              "local_receipt_committed": true,
+              "peer_completion_confirmed": false
+            },
+            "expected": {
+              "state": "awaiting_peer_acknowledgement",
+              "recommit_destination": false,
+              "retry_final_ack": true
+            },
+            "source_basis": "/durable_lifecycle/final_commit",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-ambiguous-native-commit",
+            "input": {
+              "native_commit": "ambiguous",
+              "local_cancel": true
+            },
+            "expected": {
+              "rollback_claim": false,
+              "new_commit": false,
+              "decision": "reconcile_with_original_job"
+            },
+            "source_basis": "proposed candidate host ledger, actual durable proof deferred",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          },
+          {
+            "case_id": "resume-source-spool-lost",
+            "input": {
+              "android_source_job_spool": "missing"
+            },
+            "expected": {
+              "automatic_provider_recapture_same_uuid": false,
+              "recovery": "explicit_new_job_uuid_required",
+              "coverage_complete_claim": false
+            },
+            "source_basis": "/durable_lifecycle/reconciliation; /workflows/5",
+            "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+          }
+        ],
+        "source_locator_ids": [
+          "raw_receiver.rs:238-330",
+          "file_receiver.rs:553-642",
+          "v2_receiver.rs:267-344"
+        ],
+        "inventory_pointers": [
+          "/durable_state",
+          "/journals",
+          "/durable_lifecycle"
+        ],
+        "complete_retained_fixtures": [
+          "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json"
+        ],
+        "shared_interface_obligations": [
+          "stage1_rule",
+          "pure_owned_reader",
+          "effect_owned_bracket",
+          "authority_and_lazy_values",
+          "commit_boundary",
+          "privacy"
+        ],
+        "consumer_versions": "iOS protocol1 / Android protocol2; journal versions independent; native pinned engine dispatch retained; donor40 tools are separate from Health14ordinary(+HTTP feature)/21full13readonlyMCP"
+      },
+      "acceptance": [
+        "Independent full Stage1 interface/raw record corpus accepted before code; source-derived complete expected wire/default/unknown/duplicate/version/numeric/time and all eight literal minima; no candidate-generated expectations.",
+        "Execute all frozen cases and meaningful foreign/proxy/context/closure/cancel/replay/current-reentry tests appropriate to this one boundary. Fake source drivers use only stimulus/action inputs, never case ID or expected output.",
+        "Preserve full record/corpus/product/source/peer/destination/frontier and retention accounting; no reader decode implies safe rewrite, provider recapture or admission of unknown engine/format/profile.",
+        "Owned factory and exact returned value/current original lifetime/per-lazy callback expiry/protected cleanup ACK obligations as scoped; pure decisions cause zero state/network effects. Fakes cannot establish native lock/path/crypto/grants/durability.",
+        "Only four exact files; no package/index/export/guard/cohort/lock/native/public changes. Complete actual successor input/output cohort independently approved before downstream CLI/MCP integration; no admission from standalone portable test counts."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "availability_evidence": "packages/healthmd-core-ts/scripts/check.mjs at assigned Git pin; no new script required",
+          "precondition": "ROOT Stage1 exact fixture/interface acceptance, all dependency interfaces admitted and frozen complete current/successor input-output map, exclusive builder and exact pinned Node24.21/npm11.19/tool provenance window. No commands in this planning task.",
+          "expected": "Actual all immutable literal tests, output/source hashes and one Effect/boundary checks; no promised numerical pass count."
+        }
+      ],
+      "consumers": "Shared common operation modules; later thin CLI/MCP adapters and separately admitted native Apple/Android/Unix/Windows hosts. Website/external Obsidian generated exports retain current contracts. Wake notification-only never receives job/data payload.",
+      "rollback": "Candidate removable without rewriting retained journals; original Rust/native engine and exact retained public versions remain readable. No loss of already committed outputs or suppression frontier.",
+      "deletion_gate": "No Rust/old engine/state/source retirement, no drain-only downgrade without independently qualified unavailable route.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/JOB-RESUME-RECONCILIATION.json",
+      "reviewer_role": "independent durable-job/core/CLI reviewer",
+      "status": "not_started",
+      "claim": null,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "priority": 102,
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "child_id": "JOB-RESUME-RECONCILIATION",
+        "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+        "packet_sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "accepted_review_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049"
+      },
+      "coordinator_card_admission": "Reviewed planning proposal normalized to unqualified not_started; full independent Stage1, source-profile, native storage/durability/grants/old-engine/consumer and retirement gates retained."
     }
   ]
 }

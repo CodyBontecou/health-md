@@ -1,0 +1,1704 @@
+{
+  "schema_version": 1,
+  "task_id": "SPLIT-JOBS",
+  "result": "passed",
+  "proof_class": "planning",
+  "source_sha": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+  "patch_digest": "ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+  "patch_digest_method": "SHA256 sole nonreceipt relative path + NUL + rawUTF8bytes includingnewline + NUL; receipt excluded",
+  "changed_paths": [
+    "docs/migration/effect-refactor/expansions/split-jobs.json",
+    "docs/migration/effect-refactor/receipts/SPLIT-JOBS.json"
+  ],
+  "target": {
+    "platform": "source_only",
+    "channel": "development",
+    "profile": "candidate only"
+  },
+  "inputs": {
+    "contract_and_fixture_digests": {
+      "packet": {
+        "path": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "sha256": "7bcde35a49b25342f542b2632af0e4296efdf805c554e77d052886bea3add9c1",
+        "bytes": 269034
+      },
+      "source_pins": [
+        {
+          "path": "AGENTS.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "bytes": 6129,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "GLOSSARY.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+          "bytes": 3868,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-ts/AGENTS.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "bytes": 860,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-ts/README.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "e8c4f43bbd82db28f995d342589c66de8a3d1f5443d173d81ee3b40df5d1e606",
+          "bytes": 2988,
+          "current_equal_assigned_Git": false,
+          "current_sha256": "2185850836e6660f5ed41876d72737aad80e00997c71b91984c982615b409cc1",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-ts/package.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "822034747afb2524a9133adc8869b453bac601a981141144f71a3ce5f24462f2",
+          "bytes": 1410,
+          "current_equal_assigned_Git": false,
+          "current_sha256": "0a3d08770c6147b15dc0d56f3ff29888d7ce3822d0ba0879f0a1f494e9378bc0",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-ts/package-lock.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "bytes": 27929,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "61746468956308b8a7811cc02fb41c6ac239d5830121ceffeab43324b639c36e",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-ts/scripts/check.mjs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+          "bytes": 2766,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "e61622b1190322a61021055b342636e5edfd7f4cfba7ef7e240e375a7a6c3eae",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-research.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "bytes": 13361,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "bytes": 284562,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/architecture/cross-platform-unification-policy.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "bytes": 9482,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "49a35d47c37bd721c9d2a83607a3a4bdc7c82a26a7ceae160f5208bd577b95fc",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/core-cli.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "bytes": 5578,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/personal-data.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+          "bytes": 5582,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "0f532bf08cbbf2e704bb39c85269874c0299dd9bfcf54ee5e21ba726dde98ea0",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/templates.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "bytes": 10054,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "bytes": 347600,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "bytes": 78215,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "bytes": 12304,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/BASE-HOST.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "bytes": 10062,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "f2104634a018a5e94d834f71a040c5872d1540996fef2ed545b4964c77b24a94",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "bytes": 27886,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/tests/shared-slice-parity-vectors.ts",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "449fe744c8d9a6f68e4648c44fd59eaa0440161aae8136c5234ea3b9b0cb6001",
+          "bytes": 16306,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "449fe744c8d9a6f68e4648c44fd59eaa0440161aae8136c5234ea3b9b0cb6001",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c",
+          "bytes": 68436,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "856276a9a184d466ead3c7e9c6c865e782ec830562cbf31e68a3d2d3dfd9775c",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df",
+          "bytes": 34193,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "1b63355846d9a5637ee723f8199b0bf7774a601479e0092ed52ca9b8fdf606df",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-query.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+          "bytes": 201152,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "docs/migration/effect-refactor/expansions/split-datastore.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
+          "bytes": 244805,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "bytes": 22371,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+          "bytes": 17094,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "bytes": 29638,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "bytes": 95399,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "bytes": 97051,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "bytes": 112261,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "bytes": 166692,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+          "bytes": 8958,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-cli/src/mcp/direct_backend.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "67032c11ecd366467a114f14293c1e47413f5ba76227706d9a7403dbf007452b",
+          "bytes": 51543,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "67032c11ecd366467a114f14293c1e47413f5ba76227706d9a7403dbf007452b",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-operations/src/model.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+          "bytes": 1129,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "a60a1163ab5861ce062d010045e2e6bad8f1c6fccbea2094ead3f0c0980850ad",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/cli/crates/healthmd-operations/src/service.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+          "bytes": 6172,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "0104127cfdf159d43eff42296d693a12bdaf2265dfe6039eeeddd2af8444191c",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/lib.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "bytes": 1573,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "fc54cc7b8fa2265435a1adeb11f815ef32c50775617d780634d39711f0b52453",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/models.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "acd94309374f02be7171c0e0e108593221eb6bde1075198fe59875e89c78f030",
+          "bytes": 14662,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "acd94309374f02be7171c0e0e108593221eb6bde1075198fe59875e89c78f030",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/v2.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "56a3dda65cf84061a5c8634bf41d48247b962b9ba117d52eb6d74a65a5807f0d",
+          "bytes": 19719,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "56a3dda65cf84061a5c8634bf41d48247b962b9ba117d52eb6d74a65a5807f0d",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/src/time.rs",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "fd30fe75b64784931c63b5d032adedbd87d4be4660a1682fd24ee4b493fe7e84",
+          "bytes": 1530,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "fd30fe75b64784931c63b5d032adedbd87d4be4660a1682fd24ee4b493fe7e84",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/contracts/health-corpus/v1/contract.md",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "b4f7d3d08d22d4207727474d02b7b986ce2247de8fe123ce1d8cab2f6c6f8be4",
+          "bytes": 4866,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "b4f7d3d08d22d4207727474d02b7b986ce2247de8fe123ce1d8cab2f6c6f8be4",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/contracts/render-input/v1/artifact-plan.schema.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "bytes": 1722,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "6e28ac34c8a971a468fa008c4bfcad977bafd5f107589265763d7d86e129fbfb",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/contracts/render-input/v1/stream-artifact-plan-item.schema.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "bytes": 805,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "d5dbb50d515bfb47a8d099c7fa6a9f7fae36d1c54f8d85f854b5cc217ecf3f4d",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "bytes": 13109,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "apps/apple/HealthMdTests/Models/IPhoneDirectFileJournalTests.swift",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "ad8a94dbdbe07b14a4a3fb9a3c80adb2dcc0c19eea06b4bfee256f4475d53619",
+          "bytes": 35920,
+          "current_equal_assigned_Git": true,
+          "current_sha256": "ad8a94dbdbe07b14a4a3fb9a3c80adb2dcc0c19eea06b4bfee256f4475d53619",
+          "difference_policy": "Assigned Git bytes remain authority; any current drift is not adopted by this packet."
+        },
+        {
+          "path": "packages/contracts/direct-protocol/pairing-v3/fixtures/shared-pairing-v3.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/profile-policy-swift-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+          "bytes": 1623,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/interop.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v2/fixtures/profile-policy-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "bytes": 2620,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/contracts/direct-protocol/v3/fixtures/swift-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+          "bytes": 3197,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/kotlin-direct-v2.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a35b85e63f16d8f4beb46e02590ab52aac556e121c35f2219fac239f6e0ecf9b",
+          "bytes": 2775,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "faafe10e085e2684888ba8d85e25f173f98bdaf9a30f58d432d9eb1c8d19b809",
+          "bytes": 2620,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/profile-policy-swift-reference.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a6fe193c8737215a0688fb6fe4c4590cc068af7a62372740fc37e736cbb82bab",
+          "bytes": 1623,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/shared-pairing-v3.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "a286d55cd42ed0cb823e1e014eaf8a50e0775b5e3d9be52b51efa4eaf1bab01b",
+          "bytes": 1252,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v1.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "372655a8a415b5256b86ef628f551515bc66440eae8412d28be0dd7dfbe0f4a1",
+          "bytes": 2164,
+          "current_equal_assigned_Git": true
+        },
+        {
+          "path": "packages/healthmd-core-rust/crates/healthmd-protocol/tests/fixtures/swift-direct-v3.json",
+          "source_revision": "f8da95288b9f6f80d8f4794b7631282110d75e70",
+          "sha256": "25b7a6ddeb22f67d713c577682c359f5ae4b9f97b87acc743c64b01860bdc5b2",
+          "bytes": 3197,
+          "current_equal_assigned_Git": true
+        }
+      ],
+      "source_range_locators": [
+        {
+          "id": "job.rs:30-62",
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "start_line": 30,
+          "end_line": 62,
+          "range_raw_sha256": "585f1c573bf028cca55f00151951c686ac7e1031b6b5b9876b9f3f1ea32bfdd7",
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf"
+        },
+        {
+          "id": "job.rs:65-197",
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "start_line": 65,
+          "end_line": 197,
+          "range_raw_sha256": "4a7e961468991cc13d681bb34f760d7dd9358bab62db92b1e1f5d337d5c462aa",
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf"
+        },
+        {
+          "id": "job.rs:200-201",
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "start_line": 200,
+          "end_line": 201,
+          "range_raw_sha256": "187e55f3dd0ce11a2181e27e7ad585f882378d3dd9f959e5a17809140abcf919",
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf"
+        },
+        {
+          "id": "job.rs:230-272",
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "start_line": 230,
+          "end_line": 272,
+          "range_raw_sha256": "df49a7db0bc1f9975a09a77864af1d2520d797264a6070dbbba848cdeb4d1a44",
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf"
+        },
+        {
+          "id": "v2_job.rs:28-156",
+          "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+          "start_line": 28,
+          "end_line": 156,
+          "range_raw_sha256": "83aebbb9f9cb7ee428cde788e4ca63db6008b2e266f86ae27714cfdc7770189f",
+          "source_sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff"
+        },
+        {
+          "id": "v2_job.rs:179-218",
+          "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+          "start_line": 179,
+          "end_line": 218,
+          "range_raw_sha256": "a4cd46e1bbd3b788c2e43627821827f617e90d16e63346edd9cba6de34dc5d1e",
+          "source_sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff"
+        },
+        {
+          "id": "limits.rs:12-22",
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "start_line": 12,
+          "end_line": 22,
+          "range_raw_sha256": "eaea5978e9b9e32f2f3b84040b8f0463411eea4aabbd0bfd21a3e5b29b288528",
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c"
+        },
+        {
+          "id": "limits.rs:77-95",
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "start_line": 77,
+          "end_line": 95,
+          "range_raw_sha256": "6871da92abe6003e0ef9cd838512ae2e81b163c41c94d4511e17272df4b427bc",
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c"
+        },
+        {
+          "id": "limits.rs:390-443",
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "start_line": 390,
+          "end_line": 443,
+          "range_raw_sha256": "84fb23ca987e6d944fa7d14451d54583a3e4a2e866b2f1778fa4cad330b77590",
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c"
+        },
+        {
+          "id": "raw_receiver.rs:40-59",
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "start_line": 40,
+          "end_line": 59,
+          "range_raw_sha256": "a25a02bbe3acd05ef1068b4af9d4d7fd9e7105f8859c3019a8d8d3a10e195a8e",
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269"
+        },
+        {
+          "id": "raw_receiver.rs:238-330",
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "start_line": 238,
+          "end_line": 330,
+          "range_raw_sha256": "c6fc5994071b776b7c1efcf27ea8dca332dc43672ca157fa39954d24d5d1479e",
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269"
+        },
+        {
+          "id": "raw_receiver.rs:451-570",
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "start_line": 451,
+          "end_line": 570,
+          "range_raw_sha256": "72a6e540806926bc8432c7cf58fdf3ef707ce21e6f722f17b9f3df227bd10362",
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269"
+        },
+        {
+          "id": "raw_receiver.rs:1813-1819",
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "start_line": 1813,
+          "end_line": 1819,
+          "range_raw_sha256": "fe1c97b3f2d7ec4fe3655b9002fad3952221f1bc0dc8a019be4503d10deeafee",
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269"
+        },
+        {
+          "id": "file_receiver.rs:48-97",
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "start_line": 48,
+          "end_line": 97,
+          "range_raw_sha256": "837ec8bb578e9a74d092878849a4cb165423127c8c09f543802d6397df232725",
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb"
+        },
+        {
+          "id": "file_receiver.rs:553-642",
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "start_line": 553,
+          "end_line": 642,
+          "range_raw_sha256": "61d347fd5dc02e17c96792059154dc7bd1670f7b4e5ffdaf0c9580409521b1c6",
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb"
+        },
+        {
+          "id": "file_receiver.rs:759-890",
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "start_line": 759,
+          "end_line": 890,
+          "range_raw_sha256": "bbf2a39b1dc43d4479c05d48fe79043605be5adbd9d3f9b1ce58972cdd050594",
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb"
+        },
+        {
+          "id": "file_receiver.rs:1873-1879",
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "start_line": 1873,
+          "end_line": 1879,
+          "range_raw_sha256": "517d0ad6fdf400807a3ff19a23380201db0bd81e9fe4710fab93e967f8a95e96",
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb"
+        },
+        {
+          "id": "v2_receiver.rs:43-67",
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "start_line": 43,
+          "end_line": 67,
+          "range_raw_sha256": "25d5628e973a5e0ad3c59a1d353d423c704c69a11856a6bee000655fcfb6ec9d",
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d"
+        },
+        {
+          "id": "v2_receiver.rs:267-344",
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "start_line": 267,
+          "end_line": 344,
+          "range_raw_sha256": "5a4ba4ac6fd41657ba205b65bae43dda14f8cfa69d2075d89b72e051a9a6fc9b",
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d"
+        },
+        {
+          "id": "v2_receiver.rs:412-595",
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "start_line": 412,
+          "end_line": 595,
+          "range_raw_sha256": "277d866caa7b9cadd4bc12a4d6ddf5f26cf04d0325fbcbd1e1219732493897dd",
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d"
+        },
+        {
+          "id": "v2_receiver.rs:2130-2136",
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "start_line": 2130,
+          "end_line": 2136,
+          "range_raw_sha256": "40e17c01fddb85a5c607d6e720220990588f4230cc266d78cd2ada881b73d85a",
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d"
+        },
+        {
+          "id": "direct.rs:1441-1523",
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "start_line": 1441,
+          "end_line": 1523,
+          "range_raw_sha256": "4f9b35cd498647e05d273da7bfe4f938466a74e31aa7bd529f9e940fdde843df",
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544"
+        },
+        {
+          "id": "direct.rs:1555-1576",
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "start_line": 1555,
+          "end_line": 1576,
+          "range_raw_sha256": "46ba02c8e49f598d2eef6f130eb3bbd79b340f11a67d6c3a7886859a870a455a",
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544"
+        },
+        {
+          "id": "direct.rs:1636-1668",
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "start_line": 1636,
+          "end_line": 1668,
+          "range_raw_sha256": "91ca17648f0719534b89224a38c18ddecd3804640fd5a745aee60dd13bcd4f12",
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544"
+        },
+        {
+          "id": "native-file-journal:114-155",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 114,
+          "end_line": 155,
+          "range_raw_sha256": "fe5c8642767dc7d3bdf1dcabf77f12c562705bc9fb12be513f1ff7510abfb505",
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746"
+        },
+        {
+          "id": "native-file-journal:180-192",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 180,
+          "end_line": 192,
+          "range_raw_sha256": "3946aa3e9cad2f450b8f210f65b3dca00a6fc0d033a8a7f9001607a1fdbee4b3",
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746"
+        },
+        {
+          "id": "native-file-journal:215-231",
+          "path": "apps/apple/HealthMd/Shared/Models/IPhoneDirectFileJournal.swift",
+          "start_line": 215,
+          "end_line": 231,
+          "range_raw_sha256": "a400bf47d31370b531271bde9b60a2491dbd3ae123cceec9be83c4921c7021f6",
+          "source_sha256": "b29566a8e1c3288a04f2e01129c206f6bbb36804e39a4e33d21df2f35bf48746"
+        }
+      ],
+      "inventory_pointer_pins": [
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/workflows/3",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "8f94dc4b79b5704587e872c52d45f15a42788aca95d6039b44ff31f479352762",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/workflows/4",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "36a018f2f63419c85d2cd5a60958230a6e88654f8ae82ff762edff9619e89982",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/workflows/5",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "26831b8fcf6fdbe037c20e0624dfaf5b99a0fa78b16058a8628ffd9f5cb3b2b0",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/durable_state",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "8eb88c903e36533404fcf040852e23c0b4de85941a83d21192c1d2bbb068369f",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/bounds",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "7d73d6781e1ee4b8c9d66758502a2b75b4df8112c3874eb9fcde959a41f24943",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/schemas/raw_export_receipt",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "2f2a46b8e5a0dbf934a72f71bd4f296a66f01dee67c172fc62b0e28d6a266f04",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/schemas/raw_artifact_chunk",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "00923db0b6a19a92eab8fa15dddd01f2d8991dc5eb5298d22af0ca83fcc377f3",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/schemas/android_raw",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "2276612a6dbc4b366873617c86301594f3d06e0dfbdfecdece79b8719f5c0223",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/schemas/generated_files",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "fc971b17f0f559a2ab30934cc45ce7c33dbbf8abc1de00f05e75cd60cb148f0b",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/fixtures",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "ccc6c4924604f153e56b7482a6d71bbcae003a335db1d94433b231b0f72033da",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/test_cases",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "ff7cf5ef63e8a0c1b2a133aba0e22daee8197e72e464d8708894814e2e28230e",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/cli.json",
+          "pointer": "/consumers",
+          "source_sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3",
+          "canonical_value_sha256": "e8d3ece633de5c5f3a55a2d5668b7be2f6c18a3081f45480c47895a4112899f7",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/host_state",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "cc9e071ff5023c974253d5bac111d10ec8f423f4e3cf25b00d29a12e793536bc",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/destination_capability",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "3e68358ede35258926a5f8868f06115938446ad30f3c494c81b474e25a6ac6f8",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/journals",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "48fe2da6d2187f9d6bbc61a57243e7aa31e32d94decdb7786a4a158421169904",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/durable_lifecycle",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "1f85307cb4caf8440b8308188bf673d05b0bec720977e97bf62939bffc95bac6",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/fixture_inventory",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "dca2ae259294065a7c78df0d4b26d321266ccb359e81b7e755c0d7228a62470c",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/test_inventory",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "45ff8e73aac8402081d3b6dd4059ce231cce35a65316b6c6e49b15a98cb5d5c4",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/qualification_remaining",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "2e4c33eb50b559932a39901120e64049c2a7579616b83724ca3fa9b3f95d7bb0",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/inventories/hosts.json",
+          "pointer": "/consumers",
+          "source_sha256": "d1b3248adc0b60fa6a4498ddeae0e9e00ff5129189825a837fbd51bd5e3f597c",
+          "canonical_value_sha256": "60c1b5a0c70635c8bab748ff1a87c049d2097b099b38d82e97742014f610831b",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "pointer": "/review",
+          "source_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "canonical_value_sha256": "eaceace53b4de2305704cb145ddc0b441b4068f94d9348b1db0f23453e201bfc",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+          "pointer": "/limitations",
+          "source_sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4",
+          "canonical_value_sha256": "aadb3b6b8198691ca9d534dec0a092e001b474bad2c58dbd49a3fa94f3a14188",
+          "canonicalization": "sorted keys/compact separators/UTF8 ensure_ascii false"
+        }
+      ],
+      "existing_literal_test_locators": [
+        {
+          "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+          "case_id": "identity_is_stable_across_loads",
+          "line": 248,
+          "source_sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+          "literal": "    fn identity_is_stable_across_loads() {",
+          "literal_sha256": "64365522c69de3b549723e903c196ae91638292c92a1ce3c3d8d15d1d2866432",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+          "case_id": "concurrent_creation_converges_on_one_identity",
+          "line": 262,
+          "source_sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+          "literal": "    fn concurrent_creation_converges_on_one_identity() {",
+          "literal_sha256": "3e516c53fc5277652d8090864a0c5101ab9c5298966598462b3db62558a03a10",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/storage.rs",
+          "case_id": "corrupt_identity_fails_closed",
+          "line": 288,
+          "source_sha256": "49769af6d0246a41efdb3a21535df4435e435997bb045651d985826adfccd293",
+          "literal": "    fn corrupt_identity_fails_closed() {",
+          "literal_sha256": "80f1914a823415013e3599118b6b8837480bf8d5a7d7744a23b9c7786458f289",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "aggregate_job_limit_and_bounded_read_fail_closed",
+          "line": 655,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn aggregate_job_limit_and_bounded_read_fail_closed() {",
+          "literal_sha256": "b2429c56cd353ce5d981a170121ae27241f171da74c7bb97b8ddd8e347608190",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "retained_storage_reservations_are_bounded_and_removed_on_drop",
+          "line": 666,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn retained_storage_reservations_are_bounded_and_removed_on_drop() {",
+          "literal_sha256": "7edae8ddf6e6fd9e63ecb2b0f3583996d3bffae9f46b845bff3147f3d9b63e88",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "lifecycle_accounting_reserves_four_bounded_copies_per_input_job",
+          "line": 679,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn lifecycle_accounting_reserves_four_bounded_copies_per_input_job() {",
+          "literal_sha256": "f7c4f4d7b69f48956fbd54871342691351d23b84c8c0a47d37292bd83115145e",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "explicit_output_capacity_is_serialized_across_process_leases",
+          "line": 697,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn explicit_output_capacity_is_serialized_across_process_leases() {",
+          "literal_sha256": "1fa79336b3bf498d3c44bc77486d6c52822bbf7bce17f3d3d6a738f15e04e336",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "crashed_unlocked_reservations_are_reaped_immediately",
+          "line": 724,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn crashed_unlocked_reservations_are_reaped_immediately() {",
+          "literal_sha256": "b4a9e8f46b2e1b5098e7f0b9569a6a044166c91d2f033a67e2c2eccb85a2d40e",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "empty_crash_directories_do_not_consume_job_slots",
+          "line": 742,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn empty_crash_directories_do_not_consume_job_slots() {",
+          "literal_sha256": "88e9a732abb5aeb673cb8d801566079fb058e160e78f1ec088f07a15f2edca62",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/limits.rs",
+          "case_id": "retained_job_count_is_shared_across_protocol_versions",
+          "line": 755,
+          "source_sha256": "d9960807c8ebe75f4f73aa9e50d6b1a7f945bb3a1f0fe737ccc65cb1369cc18c",
+          "literal": "    fn retained_job_count_is_shared_across_protocol_versions() {",
+          "literal_sha256": "77dcf6b9c4336f2e5143a17888d10fe9602caa306dfa846cc3e015ce6457f6d4",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "job_round_trips_and_cancellation_is_durable",
+          "line": 512,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn job_round_trips_and_cancellation_is_durable() {",
+          "literal_sha256": "4212a10418d108638d726d8950d0b9f76c4c0186ed4101a802a9fccbcb98dbf1",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "resume_preflight_is_needed_only_for_source_reachable_states",
+          "line": 537,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn resume_preflight_is_needed_only_for_source_reachable_states() {",
+          "literal_sha256": "15ee06251eb0a6e493dffe93691361ca7efd7c3aff30867907299b761f2ee5cc",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "extreme_job_timestamps_fail_without_panicking",
+          "line": 547,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn extreme_job_timestamps_fail_without_panicking() {",
+          "literal_sha256": "147c4ecea200ceef8cf02b2676a639d0082e068b01ad4ab0027433d0dfb491a6",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "durable_counters_and_messages_are_bounded",
+          "line": 553,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn durable_counters_and_messages_are_bounded() {",
+          "literal_sha256": "8a1559277b947223dfd5d6587c5e8918f0aff8bb4b8a2b8916bb65e1e4cc503e",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "oversized_job_records_fail_before_write_or_decode",
+          "line": 571,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn oversized_job_records_fail_before_write_or_decode() {",
+          "literal_sha256": "b59b1d5a0679e6b037419216c5ff0dc4cafe48975d2212bf3aaf86c28c81b1e1",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "expiration_cleanup_respects_active_execution_lease",
+          "line": 593,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn expiration_cleanup_respects_active_execution_lease() {",
+          "literal_sha256": "93bd462b624366014a5af622d85486ea67aec1a9171fe9091f56a9f04a38e57f",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/job.rs",
+          "case_id": "expired_job_is_removed",
+          "line": 615,
+          "source_sha256": "ffe540ee90f9ac35fc418dbf3bb073f0de6864a0a0e9cfed73b605f006e317cf",
+          "literal": "    fn expired_job_is_removed() {",
+          "literal_sha256": "f5fab934dd83b3a6d3922f9d3aed72be7c9a0a2f29499abb654b3900a7d2ed7d",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+          "case_id": "android_durable_counters_and_messages_are_bounded",
+          "line": 464,
+          "source_sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+          "literal": "    fn android_durable_counters_and_messages_are_bounded() {",
+          "literal_sha256": "b610c0c070b4c0b8231ca8960e44cea4f651d5cab96c7e0884884924f2af164b",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_job.rs",
+          "case_id": "android_job_requires_the_exact_seven_day_lifetime",
+          "line": 478,
+          "source_sha256": "8880dcf6dbb6644fc32d0e5ff4c2a0e885db4fa721885b885228013f67a3c0ff",
+          "literal": "    fn android_job_requires_the_exact_seven_day_lifetime() {",
+          "literal_sha256": "a758cd94b0bb44b1b1357b29c4ea1a3ad53b5f185841522c2e6e89643a767e6a",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "windows_destination_identity_detects_same_path_directory_replacement",
+          "line": 2063,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn windows_destination_identity_detects_same_path_directory_replacement() {",
+          "literal_sha256": "5931b69973187b6e332167ad104298ad5c35f3f5c245721ab600940d618cf31a",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "windows_canonical_destination_round_trips_through_policy",
+          "line": 2077,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn windows_canonical_destination_round_trips_through_policy() {",
+          "literal_sha256": "c5730c2242d701369aec2053a668ddb9b96a35726077ec0b44a69ed89e9dcce9",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "windows_atomic_install_replaces_and_detects_destination_changes",
+          "line": 2094,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn windows_atomic_install_replaces_and_detects_destination_changes() {",
+          "literal_sha256": "f30e3f4a4a5c951c24505e5a1ab701c5ae4e4b726a8645e5e6344e8aca1ca20a",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "windows_destination_policy_rejects_ambiguous_namespaces_and_reparse_points",
+          "line": 2156,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn windows_destination_policy_rejects_ambiguous_namespaces_and_reparse_points() {",
+          "literal_sha256": "5238d49920d7b17652cd9d58c19e20533194b75b01a96debad15fe85983fdfde",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "append_commit_is_digest_bound_and_idempotent",
+          "line": 2196,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn append_commit_is_digest_bound_and_idempotent() {",
+          "literal_sha256": "81397bbd108e2951f2fb104fef32fb150aa930b00682ffa169fe36c6d75973ca",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "source_neutral_destination_adapter_is_idempotent",
+          "line": 2379,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn source_neutral_destination_adapter_is_idempotent() {",
+          "literal_sha256": "62a027cf7d31aa9ef9d52136b39923312ae2f750315674d3af8daefea0e1382f",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/file_receiver.rs",
+          "case_id": "traversal_and_symlink_ancestors_are_rejected",
+          "line": 2464,
+          "source_sha256": "bd3e4c5316c3f210c9ba86ff14fd339244b153f8333ec042719b5f9b939f9eeb",
+          "literal": "    fn traversal_and_symlink_ancestors_are_rejected() {",
+          "literal_sha256": "4802ee0c629fec55bff63ae35d90e0ed4c775663226dc11b8c50838cf239de05",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "bounded_output_and_peer_metadata_fail_closed",
+          "line": 2001,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn bounded_output_and_peer_metadata_fail_closed() {",
+          "literal_sha256": "ab590f89bb5faaaf347d9cae654c027e82f626aca754404b2af608f8d2b6ed64",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "all_empty_corpus_preserves_v1_scalar_and_records_no_evidenced_versions",
+          "line": 2183,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn all_empty_corpus_preserves_v1_scalar_and_records_no_evidenced_versions() {",
+          "literal_sha256": "4af0451c34eb46d96f9d2a1d6d1939ed43f7ac0080af2f319463f37f5bf0dcee",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "empty_day_and_retained_v8_day_report_only_the_evidenced_version",
+          "line": 2208,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn empty_day_and_retained_v8_day_report_only_the_evidenced_version() {",
+          "literal_sha256": "90cfc90c9e34ebbd924166ee826d3599c76d2514667617895ebc2c614946935e",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "homogeneous_v7_and_v8_corpora_report_evidenced_versions_in_json_and_jsonl",
+          "line": 2232,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn homogeneous_v7_and_v8_corpora_report_evidenced_versions_in_json_and_jsonl() {",
+          "literal_sha256": "c797ee416ebe44967f1864b594d22106a119d234e31522ece7ead539abaec47c",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "mixed_v7_v8_corpus_is_rejected_for_json_and_jsonl",
+          "line": 2257,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn mixed_v7_v8_corpus_is_rejected_for_json_and_jsonl() {",
+          "literal_sha256": "fb230558668e8e81955da408f9c43a48f54b2113d28e874ffeb26c0131b9d064",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/raw_receiver.rs",
+          "case_id": "shipped_apple_daily_schema_versions_survive_raw_and_extract_receipts",
+          "line": 2275,
+          "source_sha256": "f9438fd25cfc1bd36e1bab2f780f0c3b0c02996c6d4c9c8d6ba312b401f72269",
+          "literal": "    fn shipped_apple_daily_schema_versions_survive_raw_and_extract_receipts() {",
+          "literal_sha256": "593e148cc58a16df7d395f8a525d4dde6260e68f048ad9b607712bf5bfb70b48",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "android_raw_snapshot_validator_accepts_scientific_number_lexemes",
+          "line": 2297,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn android_raw_snapshot_validator_accepts_scientific_number_lexemes() {",
+          "literal_sha256": "3ee11595944971111a82bfcc3f313781a593b574ce32ac750c0856aba38bad80",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "android_raw_snapshot_transfer_is_durable_and_validated",
+          "line": 2464,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn android_raw_snapshot_transfer_is_durable_and_validated() {",
+          "literal_sha256": "ddf4a62bef1e336a6bd03e39ddbc246f75a68f6ca4db241597215ea447895262",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "android_generated_file_transfer_commits_with_v2_destination_binding",
+          "line": 2684,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn android_generated_file_transfer_commits_with_v2_destination_binding() {",
+          "literal_sha256": "25c2f233620bb432a46dba7d58f2195f68653b0dfc51eac886c75c4bf08c6fa8",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "android_raw_record_validation_preserves_android_number_lexemes",
+          "line": 2829,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn android_raw_record_validation_preserves_android_number_lexemes() {",
+          "literal_sha256": "c034b5dbfa91b966d370f282d7997b8aca285be829a7b620ff7794327807c94f",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "raw_snapshot_validation_rejects_placeholder_records_and_issues",
+          "line": 2848,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn raw_snapshot_validation_rejects_placeholder_records_and_issues() {",
+          "literal_sha256": "48845e6465605b237599616c6f52475d6c602264f5f40c3d9c003e6ba2be414e",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/v2_receiver.rs",
+          "case_id": "generated_relative_paths_reject_aliases_and_traversal",
+          "line": 2855,
+          "source_sha256": "f434bd20e7599acb580c5fc08b8a83ae7aa95788c8ffd75267b40cb28ff59b6d",
+          "literal": "    fn generated_relative_paths_reject_aliases_and_traversal() {",
+          "literal_sha256": "e2fc137f8feb627e489163792476268be4000437869d68f680d458cfba5f1316",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "pairing_protocols_preserve_legacy_platform_binding_and_share_v3",
+          "line": 3970,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn pairing_protocols_preserve_legacy_platform_binding_and_share_v3() {",
+          "literal_sha256": "841a926b048445aff5fd4d6d40cd3de4d875e29a5d31ac41e42fd31ee49d50b4",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "receive_message_answers_heartbeat_before_returning_control_message",
+          "line": 3983,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    async fn receive_message_answers_heartbeat_before_returning_control_message() {",
+          "literal_sha256": "aaef820fb4b69c6816fd408f7355559cdc641f9b5f36a42f8c7e6d62ed4a471c",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "repeated_heartbeats_do_not_extend_receive_deadline",
+          "line": 4027,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    async fn repeated_heartbeats_do_not_extend_receive_deadline() {",
+          "literal_sha256": "3551c4e12625ad97d1bd8f7b31028857de402c4367203e868531ee2f6218e33a",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "durable_job_times_are_exact_and_not_future_dated",
+          "line": 4068,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn durable_job_times_are_exact_and_not_future_dated() {",
+          "literal_sha256": "461b14ed70ecbe660ed2b2f38ae12aa46302142c2ae5f7f7bc1a21401591468a",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "ios_peer_progress_never_redefines_the_local_durable_frontier",
+          "line": 4097,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn ios_peer_progress_never_redefines_the_local_durable_frontier() {",
+          "literal_sha256": "247d847c0d170503d91abe73a5a76e62ff5957b8b9f385823f6f8e04fb91252f",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "query_page_controls_and_complete_response_shapes_are_bounded",
+          "line": 4138,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn query_page_controls_and_complete_response_shapes_are_bounded() {",
+          "literal_sha256": "66ac9fbaeae98b4471250f7709c365fb296e7f6860122f100c08c6104d330a43",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "every_query_item_variant_has_a_strict_nested_shape",
+          "line": 4233,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn every_query_item_variant_has_a_strict_nested_shape() {",
+          "literal_sha256": "a7cb3cf608d1fd375b7ad4df46935fefcd0d01454e571ba847ccb44d6938c4a9",
+          "status": "source locator only; tests not executed"
+        },
+        {
+          "path": "apps/cli/crates/healthmd-client/src/direct.rs",
+          "case_id": "peer_diagnostics_are_bounded_and_machine_shaped",
+          "line": 4292,
+          "source_sha256": "9a29197b692f959e2deb682e45eaa9da48472a6560ae54f611962873636ed544",
+          "literal": "    fn peer_diagnostics_are_bounded_and_machine_shaped() {",
+          "literal_sha256": "1030a20f543a871bccd5cdcceefc4e450dd7837c8ed76963d4e5b11400bf39c9",
+          "status": "source locator only; tests not executed"
+        }
+      ],
+      "design_rows": [
+        {
+          "id": "C03",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 572,
+          "literal": "| C03 | Render input/artifact plan v1 | Ordered paths, exact bytes/media types/lengths/hashes/write modes, extension-token attribution, stream sequences and limits, Unicode path collision checks and managed Markdown merge. |",
+          "literal_utf8_sha256": "e074e135fdbea91a097a3ea8e01e19b79b1d8a52d03f099261e5e24e5fe83123"
+        },
+        {
+          "id": "C09",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 578,
+          "literal": "| C09 | Health corpus v1, raw snapshot/change/archive families | Scope, source/provider selection, completeness, partial acceptance, truthful retention/spool loss, JSON/NDJSON/extraction and bounded artifact resources. |",
+          "literal_utf8_sha256": "c0653a8f9074613197082147bc85b7e256ee378d95a3edd907fd8347a1455823"
+        },
+        {
+          "id": "O04",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 668,
+          "literal": "| O04 | `healthmd_export_files`; CLI generated export | Frozen request/profile/destination, durable state transitions, stream/commit/acknowledgement. |",
+          "literal_utf8_sha256": "9ff3b7348a4f19cacf757fa3dba4c0aa38673d344b40ffe48a0068084fe480b7"
+        },
+        {
+          "id": "O05",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 669,
+          "literal": "| O05 | `healthmd_export_raw`, `healthmd_raw_artifact_read`; CLI raw/full-corpus/export/extract | Raw scope/manifests, selectors, partial policy, bounded completed-job artifact access. |",
+          "literal_utf8_sha256": "187abbebd160f7dca6062518cbcca14c5ef6013202253d86fee944787d939928"
+        },
+        {
+          "id": "O06",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 670,
+          "literal": "| O06 | `healthmd_export_job_status`, `healthmd_export_job_resume`, `healthmd_export_job_cancel`; CLI status/resume/cancel | Durable reconstruction, immutable frontier, wake/retry and explicit acknowledged cancellation. |",
+          "literal_utf8_sha256": "72c668c4bf032e937e21d3f3e1c4029464e4682b922a03336792eb79aa57e5b9"
+        },
+        {
+          "id": "F02",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1042,
+          "literal": "| F02 | Safe destinations and cross-process state | M02 proves descriptor/identity/reparse/atomic commit and lock/quota behavior on real OSes. Implement narrowly scoped non-Rust native capability code where ordinary Node calls are insufficient. |",
+          "literal_utf8_sha256": "755fe3c6d5ea9c20dfe7217cd7339e80b0745d81aec66aed33d07e0986e5a322"
+        },
+        {
+          "id": "F07",
+          "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+          "line": 1047,
+          "literal": "| F07 | Old engine pins, journals, acknowledgements and downgrade | M04–M08 proves every retained state and compatible writer; drain old admissions only under existing bounded policy when a proven compatibility route is unavailable. |",
+          "literal_utf8_sha256": "420117012d58779aca5c2622dfe2966ac205b3f0a917078b268903b25dbebe0e"
+        }
+      ]
+    },
+    "locks_and_runtime": {
+      "source_only": "Assigned Git tracked source/metadata pins; current drift explicit not adopted. No runtime/install/build/oracle/native commands. Future exact pinned component check under separate exclusive ROOT window only."
+    },
+    "artifact_and_native_interface": {
+      "raw_source_only": true,
+      "native_or_generated_output_read": false,
+      "provider_or_live_state": false
+    },
+    "policy_migration_key_versions": {
+      "public_change": false,
+      "engine_version_admission": false,
+      "Q_DONOR_SOURCE": "unresolved; no adoption"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Limit the packet to at most six children for the named scope; each has one observable boundary and exact source/fixture/check/path/resource inputs.",
+      "result": "passed",
+      "evidence": {
+        "packet_pointer": "#/children",
+        "observed": "Six one-boundary readers/accounting/completedread/reconciliation cards, 24disjoint paths, exact Git/range/fixture/pointer evidence and future existing bounded verification. Pure accounting performs zero release calls/ACKs.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+            "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+            "bytes": 3482
+          },
+          {
+            "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+            "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+            "bytes": 4168
+          }
+        ]
+      }
+    },
+    {
+      "criterion": "Declare dependencies among these children and existing tasks/choices; actual host/purpose/admission and retirement proofs remain separate.",
+      "result": "passed",
+      "evidence": {
+        "packet_pointer": "#/dependency_edges",
+        "observed": "Eight acyclic internal edges plus accepted baseline prerequisites. Full typed independent Stage1 fixtures before code; all native host/purpose/admission/cohort/durable/retirement proofs separate.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+            "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+            "bytes": 3482
+          },
+          {
+            "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+            "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+            "bytes": 4168
+          }
+        ]
+      }
+    },
+    {
+      "criterion": "Map every selected outcome to a child, then explicitly list other family scope as remaining with its next packet owner/trigger.",
+      "result": "passed",
+      "evidence": {
+        "packet_pointer": "#/selected_outcome_map",
+        "observed": "All C03/C09/O04/O05/O06/F02/F07 mapped to children and seven named remaining owner/nextpacket/trigger groups. Full retained journals/rawcorpus/oldengine/user recovery/sourcehistory/native privacy and public consumers not closed.",
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+            "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+            "bytes": 3482
+          },
+          {
+            "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+            "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+            "bytes": 4168
+          }
+        ]
+      }
+    },
+    {
+      "criterion": "Coordinator validates and merges the reviewed packet; this planning receipt does not qualify implementation or close the family.",
+      "result": "passed",
+      "evidence": {
+        "packet_pointer": "#/children",
+        "observed": "ROOT merged six unchanged packet children using coordinator scaffolding as unqualified not_started. ROOT reports actual manage.py check passed137tasks/86families/16choices; author inspected current six cards/137task count but did not rerun validator.",
+        "structural_command": {
+          "logical_argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "check"
+          ],
+          "cwd": ".",
+          "physical_cwd": "/Users/codybontecou/dev/health-md",
+          "executor": "/root",
+          "result": "passed",
+          "observed": {
+            "tasks": 137,
+            "families": 86,
+            "choices": 16
+          },
+          "evidence_kind": "Trusted ROOT execution report in task coordination; no separate raw stdout/log provided and none invented."
+        },
+        "reports": [
+          {
+            "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+            "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+            "bytes": 3482
+          },
+          {
+            "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+            "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+            "bytes": 4168
+          }
+        ]
+      }
+    }
+  ],
+  "checks": [],
+  "inspection_summary": {
+    "children": 6,
+    "disjoint_future_paths": 24,
+    "internal_dependency_edges": 8,
+    "literal_minima": 48,
+    "source_pins": 55,
+    "source_ranges": 27,
+    "inventory_pointers": 22,
+    "design_rows": 7,
+    "existing_host_test_locators": 46,
+    "remaining_owner_trigger_packets": 7,
+    "complete_reference_fixture_files": 12
+  },
+  "observations": [
+    {
+      "result": "passed",
+      "case_id": "jobs-source-profile-provenance",
+      "procedure": "Python raw assignedGit/current comparison, range and canonical RFC6901/design locator hashes; static complete fixture digest and existing test declaration locator checks; no tests executed.",
+      "expected": "Retain full actual v1/v2/raw/file journal grammar and protocol versions/source profiles/state/engine/native gaps without userstate.",
+      "observed": {
+        "children": 6,
+        "disjoint_future_paths": 24,
+        "internal_dependency_edges": 8,
+        "literal_minima": 48,
+        "source_pins": 55,
+        "source_ranges": 27,
+        "inventory_pointers": 22,
+        "design_rows": 7,
+        "existing_host_test_locators": 46,
+        "remaining_owner_trigger_packets": 7,
+        "complete_reference_fixture_files": 12
+      },
+      "evidence": "docs/migration/effect-refactor/expansions/split-jobs.json"
+    },
+    {
+      "result": "passed",
+      "case_id": "jobs-six-boundaries-source-literals",
+      "procedure": "Static Python validate six children/24 uniquepaths/topologicaldeps and eight source-derived planning minima perchild, full retained state/test/fixture maps and all selected design outcome remainingowners.",
+      "expected": "Atmost6atomic boundaries and independently frozen complete Stage1 interfaces/rawliterals beforefuturecode; durable/native/provider/surface/oldengine/retirement separate.",
+      "observed": "6cards/24paths/8edges/48literalminima/7remainingownertrigger packets; future checks notrun.",
+      "evidence": "docs/migration/effect-refactor/expansions/split-jobs.json"
+    },
+    {
+      "result": "passed",
+      "case_id": "jobs-pure-accounting-ack-source-correction",
+      "procedure": "Python exact priorraw/report hashes, structural comparison after restoring only amended eighth literal and native remaining scope, packet fingerprint recomputation; no implementation/test/runtime commands.",
+      "expected": "Pure accounting performs zero release calls and ACKs; trusted observation determines release-required. Actual cancellation/release ACK obligation remains native successor. Other47minima/pins/cards/paths/deps/ownertriggers unchanged.",
+      "observed": {
+        "release_required": true,
+        "release_calls": 0,
+        "release_ack": 0,
+        "other_minima_unchanged": 47,
+        "source_and_card_footprints_unchanged": true,
+        "native_owner": "native_storage_destination",
+        "next_packet": "SPLIT-JOB-NATIVE-DESTINATIONS",
+        "independent_re_review": "pending"
+      },
+      "evidence": {
+        "packet": "docs/migration/effect-refactor/expansions/split-jobs.json",
+        "prior_report": "/private/tmp/healthmd-split-jobs-independent-review.json",
+        "prior_archive": "/private/tmp/healthmd-split-jobs-before-pure-accounting-repair"
+      }
+    },
+    {
+      "result": "passed",
+      "case_id": "jobs-independent-review-coordinator-merge",
+      "procedure": "Read/hash both independent reports; inspect current ROOT-normalized six cards and137task count; record ROOT-reported actual structural validation without author execution.",
+      "expected": "Exact repaired source/packet accepted, six unqualified child cards merged and manifest structurallyvalid; no implementation/native/public/family/Rust retirement admission.",
+      "observed": {
+        "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+        "source_review": "accepted bounded planning",
+        "repair_review": "accepted bounded planning",
+        "merged_children": [
+          "JOB-V1-RECORD-READER",
+          "JOB-V2-RECORD-READER",
+          "JOB-TRANSFER-JOURNAL-READER",
+          "JOB-ADMISSION-ACCOUNTING",
+          "JOB-COMPLETED-RAW-ARTIFACT-READ",
+          "JOB-RESUME-RECONCILIATION"
+        ],
+        "child_status": "not_started",
+        "root_actual_manifest_validation": {
+          "logical_argv": [
+            "python3",
+            "docs/migration/effect-refactor/manage.py",
+            "check"
+          ],
+          "cwd": ".",
+          "physical_cwd": "/Users/codybontecou/dev/health-md",
+          "result": "passed",
+          "tasks": 137,
+          "families": 86,
+          "choices": 16
+        },
+        "author_product_checks": 0
+      },
+      "evidence": [
+        {
+          "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+          "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+          "bytes": 3482
+        },
+        {
+          "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+          "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+          "bytes": 4168
+        }
+      ]
+    }
+  ],
+  "limitations": [
+    "Passed bounded source-only planning after independent source/repair reviews and ROOT normalizedmerge/actual structural137 validation. No executed product checks, implementation/native/public/full-family/retirement qualification; six child cards remain unqualified not_started.",
+    "Only assigned Git tracked source/raw fixture bytes read; no current generated/core CLI outputs, live journals/data/device/provider/SDK/native/store/credentials/config/cloud/network/oracle or build actions.",
+    "Pure schema reader does not admit rewrites/unknown engine profiles or grant authenticated host observations. Proposed Effect owned read fake ports cannot prove native locks/fsync/path/hash/OS cancellation/durability/authority.",
+    "Full raw corpus/extraction/partial policy/stream artifacts/complete status-resume-cancel/wake/local destinations/host OS/distribution/multiversion readerwriter upgrade-downgrade/retained user recovery/full current consumer gates/retirement remain explicit successors.",
+    "All frozen public health profiles/native authorities retained; personal GPS/usage aggregates/exact sessions/donor40 tools and full donor migration remain separate and unadopted."
+  ],
+  "remaining_qualification": [
+    {
+      "id": "native_storage_destination",
+      "owner_role": "native filesystem/state host owner",
+      "next_packet": "SPLIT-JOB-NATIVE-DESTINATIONS",
+      "trigger": "Pure schemas/accounting accepted and exact host OS matrix chosen before native reservation/commit adapter",
+      "scope": "Unix descriptor-relative open/rename/fsync/flock and Windows reparse/identity/atomic replacement/crossprocess races/free-space/quota crash recovery/full spool enumeration/lease lock cleanup; all64/128GiB and3copy reservations under actual native concurrent hosts. Actual acknowledged cancellation/reservation release and cleanup-failure handling must be proved here with owned native leases; pure accounting only returns release-required and performs zero release calls/ACKs or reservation-removal observations."
+    },
+    {
+      "id": "transfer_spool_commit_ack",
+      "owner_role": "common durable transfer owner",
+      "next_packet": "SPLIT-JOB-TRANSFER-COMMIT",
+      "trigger": "Journal reader/reconciliation + protocol/render/host capabilities accepted before durable writer",
+      "scope": "Full spool receive/seq/chains/manifests/partition durability/once-only counter update before ACK, all profile finalmaterialization/receipts/acklost retry/ambiguouscommit/cancel/crash points, no rollback after possible commit. Complete generated orderedartifactplans/append digest-bound conflict/idempotency."
+    },
+    {
+      "id": "raw_corpus_extract_partial",
+      "owner_role": "common corpus/export owner",
+      "next_packet": "SPLIT-RAW-CORPUS-EXTRACTION",
+      "trigger": "Completed bounded artifact read and exact source/profile codecs + host streaming proof accepted",
+      "scope": "Complete authorized originals vsprojection/Androidprovider snapshot JSON/NDJSON, manifest/scope/completeness/errors/original lexemes/full selectors and extraction/allow_partial/64MiB line and bounded wholeartifact/historical deep exports/all source versions; missing/unknown not empty complete. Native source authority and consumers retained."
+    },
+    {
+      "id": "status_cancel_wake",
+      "owner_role": "common job lifecycle and isolated Wake owner",
+      "next_packet": "SPLIT-JOB-STATUS-CANCEL-WAKE",
+      "trigger": "Immutable record readers and actual retained host writer accepted before lifecycle/transport coupling",
+      "scope": "Status/read/localcancel/wait and peer acknowledged cancellation/sent reconnect/Wakeexpiry distinct; durable pendingmarker before wait, matching request cancellation only, slow/resumed/blocked jobs; Wake only notification identifiers no health/request contents and own component/credentials."
+    },
+    {
+      "id": "engine_downgrade_recovery",
+      "owner_role": "retained-state migration and release owner",
+      "next_packet": "SPLIT-JOB-RETAINED-ENGINE-RECOVERY",
+      "trigger": "Every retained native/client journal/source/engine/version matrix independently inventoried and supported reader admitted before any writer promotion",
+      "scope": "Apple native generated journal full1..6 (2enginepin,3protocolpin,4filebackedcapture,5originalrange,6terminalderived reconciliation) and pinned exporter/protocol engines exact source fields; Android retained snapshot spool/restart/expiry; all existing user states source/device/app upgrade and downgrade backup/restore reader-writer coexistence, no generic engine field invention, retained route vs proven unavailable boundeddrain, rollback window/native signing/release gates."
+    },
+    {
+      "id": "surface_distribution_consumers",
+      "owner_role": "CLI/MCP/native consumer and distribution owner",
+      "next_packet": "SPLIT-JOB-CONSUMER-ADMISSION",
+      "trigger": "Full common programs and exact whole-source/output successor cohort + native capability receipts accepted",
+      "scope": "One common operation behavior with thin public surfaces/defaults/errors/receipts40donor separate14ordinary/21full13readonlyHealth; actualstdio/client/install/signed fiveCLI OS binaries/mobile 8/4/5 fullgenerated consumers/website/externalObsidian sourceprovenance/sourcepurpose/identitygrants/compat versions and deep consumer tests."
+    },
+    {
+      "id": "personal_cloud_retirement",
+      "owner_role": "personal-data/cloud/release coordinator",
+      "next_packet": "SPLIT-JOB-PERSONAL-CLOUD-RETIREMENT",
+      "trigger": "Separate approved domain/corpus/native purpose/hostkey/privacy/policy and all full consumer/recovery gates before hosted or source-authority promotion",
+      "scope": "GPS history/device aggregates/exact sessions separate; allavailable donor history/shortsessionloss/iOS exactS06 native gates, no credentials/config/services/purchases/sourceAGPL adoption; currentdetail/destination/latest externaldeletion/revocation/backup fence/agent grants. Cloud key/network/store durable outbox/retention/idempotency/recipientcopies independently; Rust/native engine retirement only complete admitted matrix and rollback window."
+    }
+  ],
+  "rollback": "Current production authority retained; candidate code/records can be reverted without changing public launchers, frozen state or user data.",
+  "review": {
+    "status": "accepted",
+    "reviewer": "/root",
+    "fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+    "proof_class": "bounded_source_planning_only",
+    "evidence": [
+      {
+        "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+        "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+        "bytes": 3482
+      },
+      {
+        "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+        "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+        "bytes": 4168
+      }
+    ],
+    "independent_repair_reviewer": "/root/personal_codecs",
+    "implementation_qualification": false
+  },
+  "resolved_authoring_history": [
+    {
+      "finding_id": "JOBS-PURE-ACCOUNTING-ACK",
+      "status": "source_only_corrected_pending_independent_re_review",
+      "independent_report": {
+        "path": "/private/tmp/healthmd-split-jobs-independent-review.json",
+        "sha256": "eeddedb17b635863d2142144730f1f5e617c38dbb54e9de1297abd292ce0c5a6"
+      },
+      "prior_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+dcaff12cc39d53acda0e823faf3d8d64fbf1c52eef77c36714accdc13af1322b",
+      "prior_packet": {
+        "path": "/private/tmp/healthmd-split-jobs-before-pure-accounting-repair/split-jobs-original-packet.json",
+        "sha256": "55994f1afe64b6df1eea9140b2cf15f5bd7016d0b634271874c342962e75d4f7",
+        "bytes": 268520
+      },
+      "prior_receipt": {
+        "path": "/private/tmp/healthmd-split-jobs-before-pure-accounting-repair/SPLIT-JOBS-author-partial-receipt.json",
+        "sha256": "1d4d3f9cd9ca46aa7e0c6ba5f09b12f895f3ccbbf9b6714020f84058a3aae635",
+        "bytes": 86608
+      },
+      "prior_literal": {
+        "case_id": "account-reservation-release",
+        "input": {
+          "lease_registered": true,
+          "cancelled": true
+        },
+        "expected": {
+          "release_ack": 1,
+          "reservation_retained_after_ack": false,
+          "native_lock_proof": false
+        },
+        "source_basis": "StorageReservation Drop vs proposed acknowledged Effect adapter; separate actual host",
+        "case_status": "Independent pre-code source-backed minimum; full typed/raw record and exact expected corpus independently approved at Stage1 before implementation."
+      },
+      "archive_note": "ROOT archive split-jobs.json contained exact prior receipt bytes (1d4d3f9c), not packet. Preserved it unchanged and additionally archived exact original packet as split-jobs-original-packet.json. First static repair script stopped at archive identity assertion before repo writes; no runtime/test attempted.",
+      "correction": "Keep pure accounting; eighth minimum consumes trusted reservation/cancel observation and returns release-required with actualrelease0/ACK0. Native removal/ACK proof explicitly retained under existing remaining owner/packet/trigger. All47other minima/source pins/sixcards24paths8edges/seven ownertrigger groups unchanged. No product execution."
+    },
+    {
+      "status": "planning_review_and_coordinator_merge_accepted",
+      "prior_partial_receipt": {
+        "path": "/private/tmp/healthmd-split-jobs-before-final-planning-receipt.json",
+        "sha256": "d6791c2931602472327c470ac63916e0d11dabe5f5a9fcdd8bc75b6ef5e3b96e",
+        "bytes": 90421
+      },
+      "exact_repaired_fingerprint": "f8da95288b9f6f80d8f4794b7631282110d75e70+ca0c7715dbf665638b6ad296c671b83cfa2d522ba6b7b8678f8a42cf8c49c049",
+      "root_review": {
+        "path": "/private/tmp/healthmd-jobs-root-independent-review.json",
+        "sha256": "d390c072d35ec9ae30956e9ed4de9fa44477455cd81d9fd4e0527f49eab825ad",
+        "bytes": 3482
+      },
+      "independent_repair_review": {
+        "path": "/private/tmp/healthmd-split-jobs-pure-accounting-repair-independent-review.json",
+        "sha256": "bb7a1715ca4eb97494f7d1320360d131de61b2d85f03a7359945d1916c3d2441",
+        "bytes": 4168
+      },
+      "prior_failed_source_review": {
+        "path": "/private/tmp/healthmd-split-jobs-independent-review.json",
+        "sha256": "eeddedb17b635863d2142144730f1f5e617c38dbb54e9de1297abd292ce0c5a6"
+      },
+      "resolution": "Only pure-accounting ACK minimum and existing native followup scope amended; all47other minima/fullsource/fixtures/sixcards24paths8edges/sevenremaining groups retained. ROOT actual structuralcheck137PASS reported; planning only."
+    }
+  ]
+}
