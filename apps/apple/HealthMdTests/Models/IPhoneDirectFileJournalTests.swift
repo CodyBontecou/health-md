@@ -758,7 +758,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         let url = directory.appendingPathComponent("journal.json")
         let bytes = Data("{invalid-private-journal".utf8)
         try bytes.write(to: url)
-        XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url,
+        XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
             isSupported: { (journal: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(journal.version) }))
         XCTAssertEqual(try Data(contentsOf: url), bytes)
     }
@@ -766,11 +766,11 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     func testMissingDirectJournalIsNewWorkOnlyWithoutRetainedSpoolFiles() throws {
         try withDirectJournalDirectory { directory in
             let url = directory.appendingPathComponent("journal.json")
-            XCTAssertNil(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertNil(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
             let spool = directory.appendingPathComponent("retained.bin")
             let bytes = Data([1, 2, 3])
             try bytes.write(to: spool)
-            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
             XCTAssertEqual(try Data(contentsOf: spool), bytes)
             XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
         }
@@ -785,7 +785,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             encoder.outputFormatting = [.sortedKeys]
             let bytes = try encoder.encode(journal)
             try bytes.write(to: url)
-            let restored = try XCTUnwrap(IPhoneDirectJournalRecovery.load(at: url,
+            let restored = try XCTUnwrap(AppleExportJournalRecovery.load(at: url,
                 isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
             XCTAssertEqual(restored.request, journal.request)
             XCTAssertEqual(try Data(contentsOf: url), bytes)
@@ -793,7 +793,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             object["version"] = 999
             let unknown = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
             try unknown.write(to: url)
-            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url,
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
                 isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) })) { error in
                 XCTAssertEqual(error.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
             }
@@ -805,13 +805,13 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         try withDirectJournalDirectory { directory in
             let url = directory.appendingPathComponent("journal.json")
             try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
-            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
             try FileManager.default.removeItem(at: url)
             let target = directory.appendingPathComponent("original.json")
             let bytes = Data("private-synthetic-checkpoint".utf8)
             try bytes.write(to: target)
             try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
-            XCTAssertThrowsError(try IPhoneDirectJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
             XCTAssertEqual(try Data(contentsOf: target), bytes)
             XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: url.path), target.path)
         }

@@ -871,6 +871,81 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
     @MainActor private final class SleepRecoveryQueryCounter { var count = 0 }
     #endif
 
+    func testMissingConnectedJournalCannotReplaceRetainedSpoolAuthority() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let saved = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let spool = directory.appendingPathComponent(try XCTUnwrap(saved.items.first).relativePath)
+        let bytes = try Data(contentsOf: spool)
+        let journal = directory.appendingPathComponent("journal.json")
+        try FileManager.default.removeItem(at: journal)
+        XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+            session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+        XCTAssertEqual(try Data(contentsOf: spool), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: journal.path), "Do not invent replacement authority")
+    }
+
+    func testConnectedJournalSymbolicLinkCannotAdmitOrRewriteItsTarget() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let journal = directory.appendingPathComponent("journal.json")
+        let target = fixture.root.appendingPathComponent("retained-authority.json")
+        let bytes = try Data(contentsOf: journal)
+        try FileManager.default.moveItem(at: journal, to: target)
+        try FileManager.default.createSymbolicLink(at: journal, withDestinationURL: target)
+        XCTAssertThrowsError(try fixture.store.load(jobID: fixture.session.jobID)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: target), bytes)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: journal.path), target.path)
+    }
+
+    func testConnectedJournalRejectsDifferentJobIdentityWithoutChangingEitherJournal() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let original = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let bytes = try Data(contentsOf: original)
+        let otherJob = UUID()
+        let otherDirectory = fixture.root.appendingPathComponent(otherJob.uuidString.lowercased())
+        try FileManager.default.createDirectory(at: otherDirectory, withIntermediateDirectories: true)
+        let conflicting = otherDirectory.appendingPathComponent("journal.json")
+        try bytes.write(to: conflicting)
+        XCTAssertThrowsError(try fixture.store.load(jobID: otherJob)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: conflicting), bytes)
+    }
+
+    func testUnreadableConnectedJournalsRetainBytesWithoutAdmittingReplacement() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let journal = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let original = try Data(contentsOf: journal)
+        var unknownObject = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        unknownObject["version"] = 999
+        let unknown = try JSONSerialization.data(withJSONObject: unknownObject)
+        for bytes in [Data("{private-invalid-journal".utf8), unknown] {
+            try bytes.write(to: journal)
+            XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+                session: fixture.session, manifest: fixture.manifest)) {
+                XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+            }
+            XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+                ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+            XCTAssertEqual(try Data(contentsOf: journal), bytes)
+        }
+        try original.write(to: journal)
+        XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID)?.session, fixture.session)
+        XCTAssertEqual(try Data(contentsOf: journal), original)
+        XCTAssertNil(try fixture.store.load(jobID: UUID()))
+    }
+
     private struct Fixture {
         let root: URL
         let store: ConnectedCorpusOutboundStore

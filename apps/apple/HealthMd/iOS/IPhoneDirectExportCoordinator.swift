@@ -1220,7 +1220,7 @@ final class IPhoneDirectExportCoordinator {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectExportJournal? {
-        try IPhoneDirectJournalRecovery.load(
+        try AppleExportJournalRecovery.load(
             at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
             isSupported: { journal in
                 journal.request.jobID == jobID && (journal.version == IPhoneDirectExportJournal.legacyProtocolVersion || journal.version == IPhoneDirectExportJournal.currentVersion)

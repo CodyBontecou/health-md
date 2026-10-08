@@ -262,18 +262,19 @@ struct IPhoneDirectFileJournal: Codable {
     }
 }
 
-/// Shared disk admission for raw and generated-file direct exports. Nil means
+/// Shared disk admission for direct and connected exports. Nil means
 /// new work; a retained journal must never silently become a new operation.
-enum IPhoneDirectJournalRecovery {
+enum AppleExportJournalRecovery {
     enum RecoveryError: LocalizedError {
         case unreadableJournal
         var errorDescription: String? { "The saved direct export journal is unavailable. Its files were retained." }
     }
 
     static func load<Journal: Decodable>(
-        at url: URL, isSupported: (Journal) -> Bool
+        at url: URL, fileManager manager: FileManager = .default,
+        decoder suppliedDecoder: JSONDecoder? = nil,
+        isSupported: (Journal) -> Bool
     ) throws -> Journal? {
-        let manager = FileManager.default
         let attributes: [FileAttributeKey: Any]
         do {
             attributes = try manager.attributesOfItem(atPath: url.path)
@@ -300,8 +301,8 @@ enum IPhoneDirectJournalRecovery {
         guard attributes[.type] as? FileAttributeType == .typeRegular else {
             throw RecoveryError.unreadableJournal
         }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        let decoder = suppliedDecoder ?? JSONDecoder()
+        if suppliedDecoder == nil { decoder.dateDecodingStrategy = .iso8601 }
         do {
             let journal = try decoder.decode(Journal.self, from: Data(contentsOf: url))
             guard isSupported(journal) else { throw RecoveryError.unreadableJournal }

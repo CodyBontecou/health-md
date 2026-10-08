@@ -279,14 +279,15 @@ final class ConnectedCorpusOutboundStore {
 
     func load(jobID: UUID, allowExpired: Bool = false) throws -> ConnectedCorpusOutboundJournal? {
         let url = journalURL(jobID: jobID)
-        guard fileManager.fileExists(atPath: url.path) else { return nil }
-        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
         var journal: ConnectedCorpusOutboundJournal
         do {
-            journal = try decoder.decode(ConnectedCorpusOutboundJournal.self, from: data)
-            guard (1...ConnectedCorpusOutboundJournal.currentVersion).contains(journal.version) else {
-                throw ConnectedCorpusOutboundStoreError.invalidJournal
-            }
+            guard let saved: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
+                at: url, fileManager: fileManager, decoder: decoder,
+                isSupported: { saved in
+                    saved.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version)
+                }
+            ) else { return nil }
+            journal = saved
             let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
             journal.version = ConnectedCorpusOutboundJournal.currentVersion
             try validate(journal)

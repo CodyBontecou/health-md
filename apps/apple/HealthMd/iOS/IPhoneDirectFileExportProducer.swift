@@ -1585,7 +1585,7 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
-        try IPhoneDirectJournalRecovery.load(
+        try AppleExportJournalRecovery.load(
             at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
             isSupported: { journal in
                 journal.request.jobID == jobID && (IPhoneDirectFileJournal.isSupportedVersion(journal.version))
