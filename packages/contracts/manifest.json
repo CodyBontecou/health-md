@@ -665,6 +665,49 @@
         "apps/website/test/visualization-catalog.test.mjs"
       ],
       "fixtures": []
+    },
+    {
+      "id": "healthmd.sleep_attribution",
+      "version": 1,
+      "status": "deferred",
+      "summary": "Production-gated wake-date successor authority and synthetic semantic/render v2 interoperability; historical profiles remain unchanged.",
+      "specification": "packages/contracts/sleep-attribution/v1/contract.md",
+      "authorities": [
+        "packages/contracts/sleep-attribution/v1/contract.md",
+        "packages/contracts/semantic-input/v2/semantic-input.schema.json",
+        "packages/contracts/semantic-input/v2/semantic-result.schema.json",
+        "packages/contracts/render-input/v2/render-input.schema.json",
+        "packages/contracts/render-input/v2/artifact-plan.schema.json",
+        "packages/contracts/render-input/v2/stream-artifact-plan-item.schema.json",
+        "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json"
+      ],
+      "implementations": [
+        "packages/contracts/validate.py",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/sleep.rs",
+        "packages/healthmd-core-rust/crates/healthmd-core/src/render/sleep_profiles.rs"
+      ],
+      "consumers": [
+        "packages/contracts/test_validate_sleep_attribution.py",
+        "packages/healthmd-core-rust/crates/healthmd-core/tests/sleep_rendering.rs"
+      ],
+      "documentation": [
+        "packages/contracts/render-input/v2/contract.md",
+        "packages/contracts/semantic-input/v2/contract.md"
+      ],
+      "fixtures": [
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
+          "sha256": "19d0ef63a084c6907500b63db189070324bb0d2af65d152bbd0a7e042c3be49b",
+          "provenance": "Emitted by Kotlin semantic/render adapters from synthetic SDK aggregate facts; replayed by real Rust sessions against literal expected reductions. Not a native public-writer or device qualification golden.",
+          "mirrors": []
+        },
+        {
+          "path": "packages/contracts/render-input/v2/fixtures/core-android-v6-artifact-plan.json",
+          "sha256": "949821b96090e866f3a53479bed3ebd063b1d13ca4050a94b2ab1d1f65b11e3b",
+          "provenance": "Emitted by the successor Rust renderer from the native handoff; Kotlin verifies plan identities, content descriptors and defensive copies. Not production readiness evidence.",
+          "mirrors": []
+        }
+      ]
     }
   ]
 }

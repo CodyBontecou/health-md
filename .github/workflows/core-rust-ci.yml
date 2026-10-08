@@ -124,6 +124,7 @@ jobs:
           python3 scripts/generate-registry-adapters.py --check
           python3 scripts/generate-sleep-profile-registry.py --check
           python3 ../contracts/validate.py
+          python3 -m unittest discover -s ../contracts -p test_validate_sleep_attribution.py
           cmp ../../LICENSE LICENSE
           cmp LICENSE crates/healthmd-protocol/LICENSE
           protocol_package_files="$(cargo package --list --locked --allow-dirty -p healthmd-protocol)"
