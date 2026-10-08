@@ -186,6 +186,8 @@ android {
 tasks.withType<Test>().configureEach {
     val hostCoreLibrary = providers.environmentVariable("HEALTHMD_HOST_CORE_LIBRARY")
     inputs.property("healthmdHostCoreLibrary", hostCoreLibrary.orElse(""))
+    inputs.property("healthmdWakeDateConsumerFixtureDirectory",
+        providers.environmentVariable("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR").orElse(""))
     hostCoreLibrary.orNull?.takeIf { it.isNotBlank() }?.let {
         inputs.file(it).withPropertyName("healthmdHostCoreLibraryBytes")
     }

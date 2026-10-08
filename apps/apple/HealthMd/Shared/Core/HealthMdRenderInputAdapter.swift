@@ -378,17 +378,34 @@ enum HealthMdRenderInputAdapter {
             } else {
                 publicUnit = output.unit
             }
+            let label: String
+            if captureContext?.sleepDayAttribution == .morningEnds, outputKey == "sleep_bedtime" {
+                label = "Bedtime"
+            } else if captureContext?.sleepDayAttribution == .morningEnds, outputKey == "sleep_wake" {
+                label = "Wake Time"
+            } else {
+                label = metric.referenceName
+            }
+            let timestamp: Any
+            if captureContext?.sleepDayAttribution == .morningEnds,
+               let data = presentationData,
+               let instant = outputKey == "sleep_bedtime" ? data.sleep.sessionStart
+                    : outputKey == "sleep_wake" ? data.sleep.sessionEnd : nil {
+                timestamp = CanonicalRFC3339UTC.string(from: instant)
+            } else {
+                timestamp = NSNull()
+            }
             return [
                 "output_key": outputKey,
                 "category_id": categoryIdentifier(metric.categoryId),
                 "category_label": metric.categoryId,
-                "label": metric.referenceName,
+                "label": label,
                 "frontmatter_key": frontmatterKey,
                 "json_path": [categoryIdentifier(metric.categoryId), outputKey],
                 "public_value": publicValue,
                 "display_value": display,
                 "unit": publicUnit,
-                "timestamp": NSNull(),
+                "timestamp": timestamp,
                 "ordinal": ordinal,
             ]
         }

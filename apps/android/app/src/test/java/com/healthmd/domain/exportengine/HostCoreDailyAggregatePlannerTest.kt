@@ -192,6 +192,18 @@ class HostCoreDailyAggregatePlannerTest {
             val result = planner.plan(request)
             assertThat(result.plan.artifactPlanVersion).isEqualTo(2u)
             assertThat(result.plan.items).hasSize(formats.size)
+            // Explicit test-only capture of synthetic SDK facts through the real native/core writer.
+            // Consumers use these bytes directly; this does not read a user's health store.
+            if (ExportFormat.JSON in formats) {
+                System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+                    val destination = File(directory, "android-sleep-v6-dst")
+                    for (item in result.plan.items) {
+                        val output = File(destination, item.relativePath)
+                        check(output.parentFile.mkdirs() || output.parentFile.isDirectory)
+                        output.writeBytes(item.content)
+                    }
+                }
+            }
             for (item in result.plan.items) {
                 val text = item.content.decodeToString()
                 assertThat(text).contains("morning_ends")
@@ -207,6 +219,8 @@ class HostCoreDailyAggregatePlannerTest {
                     assertThat(text).contains("sleep_wake: 07:00")
                 }
                 if (item.relativePath.endsWith(".csv")) {
+                    assertThat(text).contains(",Sleep,Bedtime,22:00,time,")
+                    assertThat(text).contains(",Sleep,Wake Time,07:00,time,")
                     assertThat(text).contains(",22:00,time,2026-11-01T02:00:00.123456789Z\n")
                     assertThat(text).contains(",07:00,time,2026-11-01T12:00:00.987654321Z\n")
                 }

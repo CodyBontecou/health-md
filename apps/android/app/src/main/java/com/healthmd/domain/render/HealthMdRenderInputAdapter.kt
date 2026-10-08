@@ -374,7 +374,11 @@ object HealthMdRenderInputAdapter {
                 put("output_key", outputKey)
                 put("category_id", categoryIdentifier(metric.categoryId))
                 put("category_label", metric.categoryId)
-                put("label", metric.referenceName)
+                put("label", if (nativeWakeDateContext != null) when (outputKey) {
+                    "sleep_bedtime" -> "Bedtime"
+                    "sleep_wake" -> "Wake Time"
+                    else -> metric.referenceName
+                } else metric.referenceName)
                 put("frontmatter_key", frontmatterKey)
                 put("json_path", buildJsonArray { add(JsonPrimitive(categoryIdentifier(metric.categoryId))); add(JsonPrimitive(outputKey)) })
                 put("public_value", public)

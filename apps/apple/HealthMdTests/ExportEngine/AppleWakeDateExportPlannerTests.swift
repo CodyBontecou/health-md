@@ -72,6 +72,14 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         XCTAssertEqual(operation.artifacts.count, 4)
         XCTAssertEqual(operation.selectedPlan.artifactPlanVersion, 2)
         XCTAssertEqual(operation.selectedPlan.profile, .appleHealthDataV11)
+        if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+            for planned in operation.artifacts {
+                let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-dst")
+                    .appendingPathComponent(planned.artifact.relativePath)
+                try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try planned.artifact.inlineData.write(to: output)
+            }
+        }
         for planned in operation.artifacts {
             let text = try XCTUnwrap(String(data: planned.artifact.inlineData, encoding: .utf8))
             switch planned.format {
@@ -101,6 +109,10 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
                 let row = try XCTUnwrap(text.components(separatedBy: "\n").first { $0.hasPrefix("2026-11-01,Sleep,Total Sleep,") })
                 XCTAssertEqual(Double(row.components(separatedBy: ",")[3]), 15.50013888888889)
                 XCTAssertTrue(text.contains(",123.875,kcal,\n"))
+                XCTAssertTrue(text.contains(",Sleep,Bedtime,"))
+                XCTAssertTrue(text.contains(",Sleep,Wake Time,"))
+                XCTAssertTrue(text.contains(",time,2026-11-01T02:00:00.250000000Z\n"))
+                XCTAssertTrue(text.contains(",time,2026-11-01T17:30:00.750000000Z\n"))
             }
         }
     }
