@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Native launch/window colors mirror the governing Geist Compose tokens. -->
+    <color name="app_background">#FFFFFFFF</color>
+    <color name="app_text_primary">#FF171717</color>
+    <color name="app_accent">#FF66488F</color>
     <color name="ic_launcher_background">#241946</color>
     <color name="widget_preview_background">#FFFFFFFF</color>
     <color name="widget_preview_surface">#FFFAFAFA</color>

@@ -6,8 +6,6 @@ struct CLIExportLiveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: CLIExportActivityAttributes.self) { context in
             CLIExportLockScreenView(context: context)
-                .activityBackgroundTint(Color(red: 0.055, green: 0.067, blue: 0.09))
-                .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {

@@ -95,6 +95,7 @@ class ProductCapabilityManifestTest {
 
     private companion object {
         val sharedCapabilities = setOf(
+            "ui.system-appearance",
             "export.daily-files",
             "export.sleep-summary",
             "export.activity-basics",

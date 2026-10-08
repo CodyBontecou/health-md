@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="app_background">#FF000000</color>
+    <color name="app_text_primary">#FFEDEDED</color>
+    <color name="app_accent">#FFC5ADD9</color>
     <color name="widget_preview_background">#FF000000</color>
     <color name="widget_preview_surface">#FF1A1A1A</color>
     <color name="widget_preview_primary">#FFEDEDED</color>

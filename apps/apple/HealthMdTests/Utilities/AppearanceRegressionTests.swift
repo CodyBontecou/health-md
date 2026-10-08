@@ -16,15 +16,20 @@ final class AppearanceRegressionTests: XCTestCase {
             .deletingLastPathComponent() // project root
     }()
 
-    func testProductionSwiftUIDoesNotForceDarkAppearance() throws {
-        let productionRoot = Self.projectRoot.appendingPathComponent("HealthMd")
-        let swiftFiles = try Self.swiftFiles(under: productionRoot)
+    func testProductionSwiftUIDoesNotForceAppearance() throws {
+        let productionRoots = ["HealthMd", "HealthMdWidgets", "HealthMdWatch"]
+        let swiftFiles = try productionRoots.flatMap {
+            try Self.swiftFiles(under: Self.projectRoot.appendingPathComponent($0))
+        }
             .filter { !$0.pathComponents.contains("Debug") }
 
         let disallowedPatterns = [
             ".preferredColorScheme(.dark)",
             ".environment(\\.colorScheme, .dark)",
             ".colorScheme(.dark)",
+            ".preferredColorScheme(.light)",
+            ".environment(\\.colorScheme, .light)",
+            ".colorScheme(.light)",
         ]
 
         let violations = try swiftFiles.flatMap { file -> [String] in
@@ -37,8 +42,16 @@ final class AppearanceRegressionTests: XCTestCase {
 
         XCTAssertTrue(
             violations.isEmpty,
-            "Production UI must follow system Light/Dark appearance. Remove or scope dark appearance overrides:\n\(violations.joined(separator: "\n"))"
+            "Production UI must follow system Light/Dark appearance. Remove or scope appearance overrides:\n\(violations.joined(separator: "\n"))"
         )
+    }
+
+    func testLiveActivityUsesSystemBackgroundAndActionColors() throws {
+        let source = try String(contentsOf: Self.projectRoot.appendingPathComponent(
+            "HealthMdWidgets/CLIExportLiveActivityWidget.swift"
+        ), encoding: .utf8)
+        XCTAssertFalse(source.contains(".activityBackgroundTint("))
+        XCTAssertFalse(source.contains(".activitySystemActionForegroundColor("))
     }
 
     func testAppearanceAuditDocumentsDarkOnlyScope() throws {

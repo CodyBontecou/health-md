@@ -84,6 +84,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
     }
 
     private static let sharedCapabilities: Set<String> = [
+        "ui.system-appearance",
         "export.daily-files",
         "export.sleep-summary",
         "export.activity-basics",

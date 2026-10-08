@@ -821,6 +821,29 @@
       "evidence": [
         "docs/architecture/adr-0001-shared-rust-uniffi-core.md"
       ]
+    },
+    {
+      "id": "ui.system-appearance",
+      "name": "System light and dark appearance",
+      "classification": "shared",
+      "summary": "Follow the system appearance automatically for app screens, with readable light and dark palettes and native system surfaces.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Theme/DesignSystem.swift",
+        "apps/apple/HealthMdWidgets/CLIExportLiveActivityWidget.swift",
+        "apps/apple/docs/testing/appearance-audit.md",
+        "apps/android/app/src/main/java/com/healthmd/presentation/theme/Theme.kt",
+        "apps/android/app/src/main/res/values/themes.xml",
+        "apps/android/app/src/main/res/values-night/themes.xml"
+      ]
     }
   ]
 }
