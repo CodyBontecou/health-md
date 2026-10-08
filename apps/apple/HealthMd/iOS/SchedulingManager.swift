@@ -1276,7 +1276,7 @@ class SchedulingManager: ObservableObject {
             if let pending {
                 context = try pending.recoveredSleepCaptureContext()
             } else if let settingsSnapshot {
-                context = try AppleSleepCaptureContext.recovered(settingsSnapshot.sleepCaptureContext)
+                context = try settingsSnapshot.recoveredSleepCaptureContext()
             } else {
                 context = AppleSleepCaptureContext.resolve(attribution: HealthKitManager.shared.sleepDayAttribution)
                 try context.requireShippedProfile()

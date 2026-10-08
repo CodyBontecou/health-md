@@ -33,7 +33,7 @@ enum IPhoneConnectedCorpusProducer {
         let captureContext: AppleSleepCaptureContext
         if let savedSnapshot = IPhoneCorpusExportRecoveryManager.shared.journal(jobID: jobID)?.exportManifest.settingsSnapshot
             ?? frozenSettingsSnapshot {
-            captureContext = try AppleSleepCaptureContext.recovered(savedSnapshot.sleepCaptureContext)
+            captureContext = try savedSnapshot.recoveredSleepCaptureContext()
         } else {
             captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
         }

@@ -919,7 +919,11 @@ final class HealthKitManager: ObservableObject {
     /// preferences. Configuration profiles are not operation snapshots.
     func resolveSleepCaptureContext(settings: AdvancedExportSettings, timeZone: TimeZone? = nil) throws -> AppleSleepCaptureContext {
         if settings.executionSleepCaptureContextIsFrozen {
-            return try AppleSleepCaptureContext.recovered(settings.executionSleepCaptureContext)
+            let context = try AppleSleepCaptureContext.recovered(settings.executionSleepCaptureContext)
+            try context.validatePersistedOperationAuthority(enginePin: settings.executionAppleExportEnginePin,
+                calendarTimeZoneIdentifier: settings.exportTimeZoneOverride?.identifier,
+                engineAuthorityIsFrozen: settings.executionAppleExportEngineAuthorityIsFrozen)
+            return context
         }
         let context = settings.executionSleepCaptureContext ?? AppleSleepCaptureContext.resolve(
             timeZone: timeZone ?? settings.exportTimeZoneOverride,

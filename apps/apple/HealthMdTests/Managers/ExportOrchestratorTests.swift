@@ -324,7 +324,7 @@ final class ExportOrchestratorTests: XCTestCase {
             settings,
             healthSubfolder: "Health",
             appleExportEngineAuthorityIsFrozen: true,
-            calendarTimeZoneIdentifier: TimeZone.current.identifier
+            calendarTimeZoneIdentifier: settings.executionSleepCaptureContext?.calendarTimeZoneIdentifier
         )
 
         let result = await ExportOrchestrator.exportDatesBackground(
@@ -366,7 +366,7 @@ final class ExportOrchestratorTests: XCTestCase {
             settings,
             healthSubfolder: "Health",
             appleExportEngineAuthorityIsFrozen: true,
-            calendarTimeZoneIdentifier: TimeZone.current.identifier
+            calendarTimeZoneIdentifier: settings.executionSleepCaptureContext?.calendarTimeZoneIdentifier
         )
 
         let result = await ExportOrchestrator.exportDatesBackground(

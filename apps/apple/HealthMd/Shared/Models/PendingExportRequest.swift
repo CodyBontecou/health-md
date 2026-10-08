@@ -151,7 +151,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
            sleepCaptureContext != snapshotContext {
             throw AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution
         }
-        return try AppleSleepCaptureContext.recovered(sleepCaptureContext ?? settingsSnapshot?.sleepCaptureContext)
+        if let settingsSnapshot {
+            return try settingsSnapshot.recoveredSleepCaptureContext(captureContext: sleepCaptureContext)
+        }
+        return try AppleSleepCaptureContext.recovered(sleepCaptureContext)
     }
 
     private static func normalizedDates(_ dates: [Date], calendar: Calendar = .current) -> [Date] {

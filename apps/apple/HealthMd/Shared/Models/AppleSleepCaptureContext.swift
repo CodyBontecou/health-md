@@ -33,6 +33,42 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
         return context
     }
 
+    /// Validate immutable operation authority independently of the production rollout.
+    /// A profile marker alone cannot authorize a successor renderer or resume.
+    func validatePersistedOperationAuthority(
+        enginePin: AppleExportEnginePin?, calendarTimeZoneIdentifier: String?,
+        engineAuthorityIsFrozen: Bool
+    ) throws {
+        if sleepDayAttribution == .morningEnds && exportProfileID != "apple-v11" {
+            throw AvailabilityError.unversionedAttribution
+        }
+        if let calendarTimeZoneIdentifier {
+            guard TimeZone(identifier: calendarTimeZoneIdentifier)?.identifier == self.calendarTimeZoneIdentifier else {
+                throw AvailabilityError.incompatibleDurableAuthority
+            }
+        }
+        guard let enginePin else {
+            if sleepDayAttribution == .morningEnds { throw AvailabilityError.incompatibleDurableAuthority }
+            return
+        }
+        guard TimeZone(identifier: enginePin.calendarTimeZoneIdentifier)?.identifier == self.calendarTimeZoneIdentifier else {
+            throw AvailabilityError.incompatibleDurableAuthority
+        }
+        switch sleepDayAttribution {
+        case .nightBegins:
+            guard enginePin.profile == AppleExportEnginePin.profileID,
+                  enginePin.publicSchema == HealthMdExportSchema.identifier,
+                  enginePin.publicSchemaVersion == 8 else {
+                throw AvailabilityError.incompatibleDurableAuthority
+            }
+        case .morningEnds:
+            guard engineAuthorityIsFrozen, calendarTimeZoneIdentifier != nil,
+                  enginePin.hasExplicitWakeDateContracts else {
+                throw AvailabilityError.incompatibleDurableAuthority
+            }
+        }
+    }
+
     func requireShippedProfile() throws {
         if sleepDayAttribution == .morningEnds && exportProfileID != "apple-v11" {
             throw AvailabilityError.unversionedAttribution
@@ -63,6 +99,7 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
         case unapprovedAttribution
         case unversionedAttribution
         case missingDurableAttribution
+        case incompatibleDurableAuthority
 
         var errorDescription: String? {
             switch self {
@@ -70,6 +107,8 @@ nonisolated struct AppleSleepCaptureContext: Codable, Equatable, Sendable {
                 return String(localized: "Morning ends is unavailable for current export profiles. Choose Night begins for a new export.")
             case .unversionedAttribution:
                 return String(localized: "This saved sleep attribution has no supported export profile. It cannot resume; start a new export without changing the saved job.")
+            case .incompatibleDurableAuthority:
+                return String(localized: "This saved export has conflicting sleep, renderer or calendar authority. It cannot resume; start a new export without changing the saved job.")
             case .missingDurableAttribution:
                 return String(localized: "This pending export has no immutable sleep attribution context. It cannot resume; start a new export without changing the saved job.")
             }

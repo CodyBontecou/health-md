@@ -1,5 +1,6 @@
 import Foundation
 import XCTest
+import HealthMdCoreRust
 @testable import HealthMd
 
 @MainActor
@@ -122,6 +123,79 @@ final class AppleSleepCaptureContextTests: XCTestCase {
                 XCTAssertFalse(context.debugDescription.contains(profile))
             }
         }
+    }
+
+    func testPendingRecoveryRejectsSavedRendererClockMismatchWithoutChangingJournal() throws {
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+        let suite = "SleepAuthorityPairTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        var snapshot = ExportSettingsSnapshot.from(settings)
+        snapshot.sleepCaptureContext = context
+        snapshot.calendarTimeZoneIdentifier = zone.identifier
+        snapshot.appleExportEngineAuthorityIsFrozen = true
+        snapshot.appleExportEnginePin = try makeSyntheticAppleExportEnginePin(calendarTimeZoneIdentifier: "Europe/Berlin")
+        let store = PendingExportStore(userDefaults: defaults)
+        let request = PendingExportRequest(dates: [Date(timeIntervalSince1970: 1_793_505_600)],
+            source: .shortcut, settingsSnapshot: snapshot)
+        try store.upsert(request)
+        let saved = try XCTUnwrap(store.loadAll().first)
+        let originalBytes = try XCTUnwrap(defaults.data(forKey: PendingExportStore.storageKey))
+        XCTAssertThrowsError(try saved.recoveredSleepCaptureContext(), "Saved renderer and capture clocks must agree before capture")
+        XCTAssertEqual(try store.loadAll(), [saved], "Validation must retain the saved authority for explicit recovery")
+        XCTAssertEqual(defaults.data(forKey: PendingExportStore.storageKey), originalBytes)
+    }
+
+    func testSavedSuccessorAuthorityRequiresAnExplicitFrozenCompatiblePairAndKeepsProductionGate() throws {
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let suite = "SleepSuccessorAuthorityTests.\(UUID())"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let settings = AdvancedExportSettings(userDefaults: defaults)
+        let service = HealthMdCoreService()
+        let registry = try service.metricRegistry(profile: .appleHealthDataV11,
+            expectedRegistryVersion: HealthMdSleepProfileContract.registryVersion)
+        let pin = try AppleExportEnginePin(engine: .rust, calendarTimeZoneIdentifier: zone.identifier,
+            buildInfo: service.buildInfo(), registrySnapshot: registry)
+        var snapshot = ExportSettingsSnapshot.from(settings, appleExportEnginePin: pin,
+            appleExportEngineAuthorityIsFrozen: true, calendarTimeZoneIdentifier: zone.identifier)
+        snapshot.sleepCaptureContext = context
+        let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        let restored = try JSONDecoder().decode(ExportSettingsSnapshot.self, from: encoder.encode(snapshot))
+        let opposite = AppleSleepCaptureContext(timeZone: TimeZone(identifier: "Europe/Berlin")!, sleepDayAttribution: .nightBegins)
+        try AppleSleepCaptureContext.pinned.withValue(opposite) {
+            XCTAssertEqual(try restored.validatedSleepCaptureContext(), context)
+            XCTAssertThrowsError(try restored.recoveredSleepCaptureContext()) {
+                XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .unapprovedAttribution)
+            }
+        }
+        var missingPin = restored
+        missingPin.appleExportEnginePin = nil
+        var mutableEngine = restored
+        mutableEngine.appleExportEngineAuthorityIsFrozen = false
+        var missingClock = restored
+        missingClock.calendarTimeZoneIdentifier = nil
+        var wrongClock = restored
+        wrongClock.calendarTimeZoneIdentifier = "Europe/Berlin"
+        var historicalPin = restored
+        historicalPin.appleExportEnginePin = try makeSyntheticAppleExportEnginePin(calendarTimeZoneIdentifier: zone.identifier)
+        var historicalContext = restored
+        historicalContext.sleepCaptureContext = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .nightBegins)
+        var downgradedPin = restored
+        var pinObject = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(pin)) as? [String: Any])
+        pinObject["render_input_version"] = 1
+        downgradedPin.appleExportEnginePin = try JSONDecoder().decode(AppleExportEnginePin.self,
+            from: JSONSerialization.data(withJSONObject: pinObject))
+        for invalid in [missingPin, mutableEngine, missingClock, wrongClock, historicalPin, historicalContext, downgradedPin] {
+            XCTAssertThrowsError(try invalid.validatedSleepCaptureContext()) {
+                XCTAssertEqual($0 as? AppleSleepCaptureContext.AvailabilityError, .incompatibleDurableAuthority)
+            }
+        }
+        XCTAssertEqual(restored.sleepCaptureContext, context)
+        XCTAssertEqual(restored.appleExportEnginePin, pin)
+        XCTAssertThrowsError(try restored.validatedSleepCaptureContext(captureContext: opposite))
     }
 
     private func resolveRepeatedly(in context: AppleSleepCaptureContext) async -> [AppleSleepCaptureContext] {

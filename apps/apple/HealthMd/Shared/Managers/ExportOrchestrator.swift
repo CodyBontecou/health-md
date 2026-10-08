@@ -1205,7 +1205,7 @@ struct ExportOrchestrator {
         let context: AppleSleepCaptureContext
         do {
             if let frozenSettingsSnapshot {
-                context = try AppleSleepCaptureContext.recovered(frozenSettingsSnapshot.sleepCaptureContext)
+                context = try frozenSettingsSnapshot.recoveredSleepCaptureContext()
             } else {
                 context = try healthKitManager.resolveSleepCaptureContext(settings: settings)
             }

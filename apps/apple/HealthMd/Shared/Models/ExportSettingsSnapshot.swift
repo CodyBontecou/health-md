@@ -459,6 +459,32 @@ struct ExportSettingsSnapshot: Codable, Equatable {
         return snapshot
     }
 
+    /// Check saved capture and renderer authority as one value without opening a
+    /// production gate or borrowing today's settings. Capture-only pending requests
+    /// may provide their own separately persisted context.
+    func validatedSleepCaptureContext(captureContext: AppleSleepCaptureContext? = nil) throws -> AppleSleepCaptureContext {
+        guard let context = captureContext ?? sleepCaptureContext else {
+            throw AppleSleepCaptureContext.AvailabilityError.missingDurableAttribution
+        }
+        if let captureContext, let sleepCaptureContext, captureContext != sleepCaptureContext {
+            throw AppleSleepCaptureContext.AvailabilityError.incompatibleDurableAuthority
+        }
+        try context.validatePersistedOperationAuthority(enginePin: appleExportEnginePin,
+            calendarTimeZoneIdentifier: calendarTimeZoneIdentifier,
+            engineAuthorityIsFrozen: appleExportEngineAuthorityIsFrozen)
+        return context
+    }
+
+    func recoveredSleepCaptureContext(captureContext: AppleSleepCaptureContext? = nil) throws -> AppleSleepCaptureContext {
+        // Preserve the production-gated error for capture-only historical draft jobs.
+        if (captureContext ?? sleepCaptureContext)?.sleepDayAttribution == .morningEnds, appleExportEnginePin == nil {
+            _ = try AppleSleepCaptureContext.recovered(captureContext ?? sleepCaptureContext)
+        }
+        let context = try validatedSleepCaptureContext(captureContext: captureContext)
+        try context.requireShippedProfile()
+        return context
+    }
+
     /// Freezes the nondeterministic Apple operation inputs only while planning new work. Persisted
     /// snapshots must be copied directly and must never call this factory during resume.
     static func forNewAppleOperation(
