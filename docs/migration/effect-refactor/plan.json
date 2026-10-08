@@ -1181,7 +1181,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-QUERY",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-query.json",
+          "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "C14",
@@ -1685,7 +1694,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-QUERY",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-query.json",
+          "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "K06",
@@ -1901,7 +1919,16 @@
         "fingerprint": null,
         "design_digest": null,
         "scope_complete": false
-      }
+      },
+      "partial_decompositions": [
+        {
+          "task_id": "SPLIT-QUERY",
+          "packet_path": "docs/migration/effect-refactor/expansions/split-query.json",
+          "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+          "scope_complete": false,
+          "remaining_ref": "#/remaining_family_work"
+        }
+      ]
     },
     {
       "id": "O03",
@@ -6192,20 +6219,100 @@
       "receipt_path": "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json",
       "reviewer_role": "independent core/cli reviewer",
       "priority": 100,
-      "status": "not_started",
-      "claim": null,
+      "status": "done",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "docs/migration/effect-refactor/expansions/split-query.json",
+          "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json"
+        ],
+        "reserved_resources": []
+      },
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b",
+        "evidence": {
+          "root_review": {
+            "path": "/private/tmp/healthmd-query-root-merge-review.json",
+            "sha256": "1ac183063de03a6c796e95a12833379ad62303f55ee75f1fcf4311ffd5cdd95d"
+          },
+          "independent_review": {
+            "path": "/private/tmp/healthmd-split-query-independent-review.json",
+            "sha256": "7ef2db86e913f73766e9ae6ab1171f4ae11f381dfa6ffcae984e052db19544bc"
+          },
+          "packet": {
+            "path": "docs/migration/effect-refactor/expansions/split-query.json",
+            "sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+            "bytes": 201152
+          },
+          "actual_ROOT_manifest_validation": {
+            "executed_by": "/root",
+            "cwd": "/Users/codybontecou/dev/health-md",
+            "argv": [
+              "python3",
+              "docs/migration/effect-refactor/manage.py",
+              "check"
+            ],
+            "result": "passed",
+            "atomic_tasks": 125,
+            "families": 86,
+            "choices": 16,
+            "provenance": "ROOT directly reported actual command PASS after merging six normalized cards; author did not execute validator or product checks. Read-only plan confirms125tasks/sixnot_started children."
+          }
+        }
       },
       "qualification": {
         "proof_class": "planning",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SPLIT-QUERY.json"
+        ]
       },
-      "max_children": 6
+      "max_children": 6,
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "canonical_card_sha256": "b1dac4c817919a48cc09169e9e1b3254863ccc066c07015a5ab581ce2ec10dff",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-split-query-preclaim-card.json",
+        "scope": "Atmost6 atomic typed query contracts/cursors/contextfoundation/onequeryfamily children. Docs2exactpaths only, no code/build/outputs/provider/device/currentcohort/API/promotion. Full retainedRust+Apple+Android typedsourceprofile/13queryfamily semantics/sourcepurpose/coverage/fullhistory/knownmissing/overlap obligations preserved childorremainingownertrigger."
+      },
+      "independent_packet_review": {
+        "status": "accepted_bounded_planning_pending_root_merge",
+        "path": "/private/tmp/healthmd-split-query-independent-review.json",
+        "sha256": "7ef2db86e913f73766e9ae6ab1171f4ae11f381dfa6ffcae984e052db19544bc",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_packet_merge": {
+        "status": "six_unqualified_child_cards_merged_structurally_validated",
+        "children": [
+          "QUERY-TYPED-VALUES",
+          "QUERY-COVERAGE-CONTRACT",
+          "QUERY-CURSOR-BINDING",
+          "QUERY-CONTEXT-COVERAGE-LENS",
+          "QUERY-COVERAGE-EVALUATOR",
+          "QUERY-COVERAGE-OPERATION"
+        ],
+        "root_review": {
+          "path": "/private/tmp/healthmd-query-root-merge-review.json",
+          "sha256": "1ac183063de03a6c796e95a12833379ad62303f55ee75f1fcf4311ffd5cdd95d"
+        },
+        "scope_complete": false,
+        "final_root_review": {
+          "path": "/private/tmp/healthmd-split-query-final-normalized-root-review.json",
+          "sha256": "4195359c0e3284208f640d5936266156e96764798544b9fd020f05b5c139d998"
+        },
+        "receipt_schema_reconciliation": {
+          "status": "metadata_only_root_verified",
+          "receipt_sha256": "bf1cbbbb3ab88ddf04f7c204a7bfbd947a755252e9de1475be10a989b7860c26",
+          "prior_receipt_sha256": "bd49ce3708e5f7be6c0954e3f4bffc0f419cb2f216259763902fab6aed28f496",
+          "change": "cwd nowrepository-relative .; originalphysicalcwd andactual125structuralPASS evidence retained; no runtimeclaim/rerun."
+        }
+      }
     },
     {
       "id": "SPLIT-JOBS",
@@ -10462,6 +10569,36 @@
         "source_builder_sha256": "b8dbdb140fdc9cba83ad04ea091a5dc64e1b57fc2d794a1046ff6b0d214e4ad7",
         "finding": "Frozen runBounded accepts deadlineMs<=300000; runtime proposal outer910000 cannot be passed to it. Targetpreflight10s wasvalidandactual. No runtime/install attempted.",
         "requires": "Before future runtime, prepare/review bounded ROOT outer supervision compatiblewith900000 inneroverallbudget, preservinginnerownedcommandgroupcleanup/finalreportgrace andtruthfulnestedgrouplimits. Do not blindlyincreasepinnednativehelperdeadline/changefull14manifest or use300souter thatmaykillrunner beforeinnercleanup. Sourceonlyscratchproposal withindependentreview first."
+      },
+      "future_runtime_supervision_resolution": {
+        "status": "ROOT_outer_host_boundary_checks_passed_device_runtime_still_blocked",
+        "proposal": {
+          "path": "/private/tmp/healthmd-cold-root-outer-supervision-proposal.json",
+          "sha256": "798f9c6dadb8635a581744b80462030407f9c6aa3418330df9b2d80cad4ecf66"
+        },
+        "independent_source_review": {
+          "path": "/private/tmp/healthmd-cold-root-outer-supervision-independent-review.json",
+          "sha256": "70245c3c8e5ba9b67bbf5165abcbc61256b264366cf1ca4a15a4cb4c258c0401"
+        },
+        "helper": {
+          "path": "/private/tmp/healthmd-cold-root-outer-supervisor.mjs",
+          "sha256": "79bf08662ceed19da4d0a5759207f9adcd3f109d2badbbdda023c79ac307a857"
+        },
+        "actual_boundary_check": {
+          "path": "/private/tmp/healthmd-cold-root-outer-boundary-check-results.json",
+          "sha256": "9bb99645c6141aae94b353474423d3ae53f7ab198cc5bf9010bf9d3eaafc330b",
+          "cwd": ".",
+          "argv": [
+            "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+            "/private/tmp/healthmd-cold-root-outer-boundary-check.mjs"
+          ],
+          "harness_sha256": "9758f1732a7b65e6607edc0b6625ea643cf0c80f921298309501ec08ceadba7f",
+          "clearance_sha256": "47063450ad18d22e2b25b2f3ef0422388ff7c8b54c7194b1a12e029e13e64428",
+          "result": "passed",
+          "cases": 2,
+          "scope": "Exact910000 admission with fast ownchild exit/cleanACK,910001 pre-spawn refusal; no ADB/native/candidate/runtime/build/output/device action. No long910s wait executed."
+        },
+        "qualification_limit": "Scratch ROOT clone only one maximum assertion300000->910000; retained native b8dbhelper/81bf runner/14source/6bundles/2APKs unchanged. Existing7host faults retained historical b8 source proof, not rerun. No claim detached nestedADBgroup ACK from outergroupabsence. Any outer abort is partial/unverified nestedcleanup with no retry/kill. Runtime clearance still separately requires fresh43pins/target/ownpackages/APK/install andactualeveryinnercommand/nativeACK; device remains lastactualnotfound."
       }
     },
     {
@@ -24216,7 +24353,7 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
+      "status": "blocked",
       "claim": {
         "agent": "/root/donor_mac_review",
         "base_revision": "5952cb86ad1d212efdebfabe3523a4f42aff1454",
@@ -24583,7 +24720,10 @@
         "reviewer": null,
         "fingerprint": null
       },
-      "blocker": null,
+      "blocker": {
+        "reason": "Reviewed source is frozen; actual CLI check requires complete separately admitted current shared codec successor cohort, which remains not_started pending serializer/API qualification. Historical43/26 guard cannot be silently refreshed/substituted.",
+        "unblock_condition": "CORE-COHORT-EXACT-CODECS accepted current source/output delta and fresh ROOT exclusive cli-candidate-build+qualified-core window/source/test84freeze revalidation; then actual componentcheck."
+      },
       "priority": 71,
       "expansion_input": {
         "task_id": "SPLIT-SURFACES",
@@ -24700,7 +24840,14 @@
         "path": "/private/tmp/healthmd-cli-result-exact-value-source-repair-root-clearance.json",
         "sha256": "9f28e2fb5225d580105703dec57ed533e93189aeff6178d03ba6fab16b4f1cf8",
         "status": "approved_narrow_private_source_test_receipt_repair_no_execution"
-      }
+      },
+      "stage2_exact_value_binding_independent_review": {
+        "status": "accepted_private_source_only_pending_execution",
+        "path": "/private/tmp/healthmd-cli-result-exact-value-stage2-independent-review.json",
+        "sha256": "fcc1950a1cfa5c14e0e07b61e802d3a2efb854cf10479bcd366ca0ca8f6ee098",
+        "fingerprint": "5952cb86ad1d212efdebfabe3523a4f42aff1454+6f5bcbdc215784e74bc1b9bee260292ee0b70a7e63c971d7601443011bfb9235"
+      },
+      "stage2_source_execution_gate": "Exact84source/code repaired/frozen6f5bc and independently acceptedfcc195. No compile/runtime proof; CLI component execution still requires accepted whole codec successorcohort and exclusive cli-candidate-build+qualified-core resource window. Historical43/26 cannot be substituted or silently refreshed."
     },
     {
       "id": "MCP-JSONRPC-ENVELOPE",
@@ -28325,7 +28472,7 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "claim": {
         "agent": "/root/android_release_host",
         "base_revision": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988",
@@ -28337,7 +28484,8 @@
           "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json"
         ],
         "reserved_resources": [
-          "private-canonical-json-interface"
+          "private-canonical-json-interface",
+          "core-component-build"
         ]
       },
       "prerequisites": [
@@ -28372,7 +28520,8 @@
         "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json"
       ],
       "shared_resources": [
-        "private-canonical-json-interface"
+        "private-canonical-json-interface",
+        "core-component-build"
       ],
       "source_input_refs": [
         "#/input_pins",
@@ -28610,14 +28759,17 @@
       "priority": 101,
       "blocker": null,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root",
+        "fingerprint": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988+f00bf8fbc01834f21fc3079ba91694b1ab3fdae6693fa5f4d2519c4ae94750c9",
+        "scope": "Current ROOT source+boundedactualcheck approval; final independent receipt/runtimeproof andcoordinatorintegration review still pending"
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/SERIALIZE-CANONICAL-JSON.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-codecs.json",
@@ -28647,7 +28799,95 @@
         "reviewed_snapshot_path": "/private/tmp/healthmd-canonical-json-preclaim-card.json",
         "scope": "Exact four private paths; Stage1 vector/receipt only before independent review, current authentic parser reader paired with accepted scalar serializer. No source/test/build/cohort/index/package/dependency/profile/native/public admission."
       },
-      "source_reconciliation": "Assigned3b2dffe06 includes accepted private full parser214+hash and numeric98+hash; actual whole core906tests+19guardcases/49inputs/30core modules measured, historical consumer cohort43/26 unchanged/unadopted. No guessing reader deep-import; use parser authenticated captureExactJsonValueReader constructor pair. Freeze full literal corpus before implementation; retain independent raw serde1.0.151 features evidence and all source-profile exclusions."
+      "source_reconciliation": "Assigned3b2dffe06 includes accepted private full parser214+hash and numeric98+hash; actual whole core906tests+19guardcases/49inputs/30core modules measured, historical consumer cohort43/26 unchanged/unadopted. No guessing reader deep-import; use parser authenticated captureExactJsonValueReader constructor pair. Freeze full literal corpus before implementation; retain independent raw serde1.0.151 features evidence and all source-profile exclusions.",
+      "stage1_independent_review": {
+        "status": "accepted_private_full265_before_code",
+        "path": "/private/tmp/healthmd-canonical-json-stage1-independent-donor-review.json",
+        "sha256": "db5d621233812012aec6542ea69fb4031f3cf59d372b418c08662189325c5ffe",
+        "fingerprint": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988+502bf9ceec24ed04c41b50be9d6734d0d5ab9b125070ac32487e300ab4babecf"
+      },
+      "stage1_root_review": {
+        "path": "/private/tmp/healthmd-canonical-json-stage1-root-review.json",
+        "sha256": "4dc9981190da14c50ba8cefb0afa84a8e90081d06d4a43d87070ec9493e6c667",
+        "status": "accepted_private_Stage1_before_code"
+      },
+      "implementation_clearance": {
+        "status": "approved_private_source_test_partialreceipt_only",
+        "reviewer": "/root",
+        "scope": "Only canonical-json.ts/test.ts/ownpartialreceipt source writes, immutable265vector0412eb2a. Full actual stimuli-driven tests, no expected/caseID fakes, preserve parser/numeric/scalar/sourceinputs/policies. No Node/npm/compiler/build/outputs/cohort/index/package/guard/lock/native/device/CLI/public actions. Freeze3nonreceiptpaths for independent source review before exclusive core check."
+      },
+      "implementation_root_source_review": {
+        "path": "/private/tmp/healthmd-canonical-json-implementation-root-review.json",
+        "sha256": "e2e94fc70b3f2b9fac0d93e50d526553d23ac11a149ad2ccb357c0519855c521",
+        "status": "accepted_private_source_before_core_check",
+        "fingerprint": "3b2dffe06c5db2fa479b7b0ac7b264f5f1368988+e0784d57106ebd12899f98b988e2eb0fd8081d1f4763f395b71952dc5ec9f4e8"
+      },
+      "exclusive_core_check_preparation": {
+        "status": "released_after_exact_success_and_final_independent_review",
+        "owner": "/root",
+        "no_other_core_source_writes": "All serializer3andCatalog96vector frozen; source/test catalog absent; Personal readonlySPLITQUERYreview; Android idle/frozenserializer; Donor readonlyharnessreview. No sourcewrites/codeclearance/install/CLI/native/cohort admission.",
+        "inputs": {
+          "path": "/private/tmp/healthmd-canonical-core-check-first-inputs.json",
+          "sha256": "19f17dd3f7aee2a6eaddaf4ce8dffbbc33b8cb4cb6f05049785a7a0d30c31dbb",
+          "count": 53
+        },
+        "harness": {
+          "path": "/private/tmp/healthmd-canonical-core-check-first-harness.mjs",
+          "sha256": "2cb0188962fc8e0a468a646ed64d7994b7533fc16900cc87cf211e5b410e1952"
+        },
+        "independent_review": {
+          "path": "/private/tmp/healthmd-canonical-core-check-preparation-independent-review.json",
+          "sha256": "40d4efb9b4b29ecc5e783c4406503e1ae71a699ebb3449b0fc8179cf8411c8c5",
+          "status": "accepted_source_only_not_test_result"
+        },
+        "retry_inputs": {
+          "path": "/private/tmp/healthmd-canonical-core-check-retry-inputs.json",
+          "sha256": "d80cae4ef0182eb64abb289cf14207f57708e2a8576bbff90c93ed272e5a3b27",
+          "count": 53
+        },
+        "retry_review": {
+          "path": "/private/tmp/healthmd-canonical-core-check-retry-independent-review.json",
+          "sha256": "570920a69e895b8fc54489da61f5836466bfabe1915fe10f7906ad9ba2b8d7bb"
+        }
+      },
+      "actual_first_core_check": {
+        "status": "failed",
+        "report": {
+          "path": "/private/tmp/healthmd-canonical-core-check-root-first.json",
+          "sha256": "344711e2b6f4978d3cc88b2764e272fd2a609eb8694128a7eadd157db389a0a0",
+          "bytes": 154126
+        },
+        "counts": {
+          "tests": 1172,
+          "pass": 1165,
+          "fail": 7,
+          "skipped": 0,
+          "cancelled": 0,
+          "todo": 0
+        },
+        "wall_ms": 1737,
+        "raw_log_sha256": "b9092b1d4f9a21f27592d79b1edc670980777173c953e5ae89c47c589a5d8e66",
+        "source_tool_postflight": "unchanged",
+        "old_compiled_outputs_preserved": 42,
+        "cleanup": "passed_own_freshgroup_ESRCH_parent_reaped_streams_closed_no_OS_fault_or_late_ACK",
+        "failure": "Exact LFpolicy22chars rejected by implementation guard21; all7failedLFcases. Tests/vector unchanged; source-only narrow21to22 correction authorized before newfreeze/review/check. Initial source-review missed wrongguard; execution caught it.",
+        "boundaries": "not_executed_after_failed_tests",
+        "partial_outputs": 46
+      },
+      "final_root_review": {
+        "path": "/private/tmp/healthmd-canonical-json-final-normalized-root-review.json",
+        "sha256": "74f85c28422edc7e8a565bfdc9c41a4c185194255ea310cf001ae8ffbde7cd18"
+      },
+      "independent_final_review": {
+        "path": "/private/tmp/healthmd-canonical-json-final-independent-donor-review.json",
+        "sha256": "0e5a1c3fd763fa816f361580f7a51c4e2014bc71104ec559b024d984ca9b1acd",
+        "status": "accepted_bounded_portable"
+      },
+      "final_receipt_schema_review": {
+        "path": "/private/tmp/healthmd-canonical-command-schema-independent-review.json",
+        "sha256": "0b496eb20a446dac268bd57931be516a48c28566554d018d6f239069b36733ca",
+        "status": "accepted_metadata_only_actual_result_unchanged"
+      }
     },
     {
       "id": "CORE-CANDIDATE-CODEC-API",
@@ -29023,7 +29263,7 @@
       },
       "acceptance": [
         "Stage1 ONLY new cohort+partial receipt: pin complete43/26 historical maps and all accepted new source/module outputs, exact package/lock/runtime/graph/raw receipts and independent reviews. No output discovery as acceptance, no own receipt reverse pin; review BEFORE guard/docs/build/install.",
-        "Expected declared additions are12 input files and8 module outputs (prospective55/34), plus reviewed replacements of package.json and README metadata. Reconcile actual accepted changed paths/output contracts explicitly; never treat projected counts as passed actual maps. Keep all41 other old input bytes/all26 old module output bytes including scalar unchanged unless separately reviewed generated metadata delta.",
+        "Expected codec additions remain12 inputfiles and8moduleoutputs, plus reviewedreplacements package.json/README. One additional approved source-only Catalog96 literalinput is explicitly included (prospective56/34), with zero catalogbehavior/runtime/module/public admission. Reconcile complete actual accepted changedpaths/outputcontracts; never treat projectedcounts as passedmaps or ignore extras. Keep41other oldinputbytes/all26old moduleoutputs inclscalar unchanged unless separatelyreviewed generatedmetadata delta.",
         "Retain all84 exact prior filesystem negatives; add missing/edited/symlink for each new source, missing/stale/symlink/extra JS/d.ts artifact, missing/tampered/unreviewed each accepted codec/API receipt and new cohort. Freeze full exact resulting count/catalog before implementation; no count guessed as coverage.",
         "After independent authority/guard review, exclusive core check, pinned offline CLI npm ci --install-links --engine-strict --no-audit --no-fund, CLI npm run check sequentially with bounded commands/exact actual physical argv. One physical Effect graph, no symlink/deep import/self-refresh/automatic hash admission."
       ],
@@ -29085,7 +29325,20 @@
         "packet_sha256": "b8cfcf41a103761b8914d7fdc2accf52959d8f2507b06ac4d960ae980f183b1b",
         "accepted_review_fingerprint": "19c22c794e18651ed623dddd1cab03c42f346f03+c5a57b0bba8a198efe9cf2e9d7bcefbee29258123c90a6b932d47ee01c476d47"
       },
-      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained."
+      "coordinator_card_admission": "Packet proposal status normalized to unqualified not_started; all implementation/fixture/build/package/cohort/adapter gates retained.",
+      "preclaim_scope_amendment": {
+        "status": "source_only_reviewed_delta_before_claim",
+        "reviewer": "/root",
+        "original_card_snapshot": "/private/tmp/healthmd-exact-codecs-cohort-before-catalog-literal-card-amendment.json",
+        "original_card_sha256": "a6456fbd7fb300d62703f2b8c05fd63d7406594d279d6e241f482bcf98909f5b",
+        "reason": "Complete observedproducer inputs53 include acceptedCatalog96data-onlyfixture. CodecAPI will add3newrawpaths, giving prospective56, while32currentcoremoduleoutputs+2facadeoutputs givesprospective34. Runtime/rawmaps must be actual independentlyreviewed beforeconsumercheck; no hashrefresh/admission bydiscovery.",
+        "extra_data_only_path": "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+        "extra_vector_sha256": "74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591",
+        "Stage1_review_sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b",
+        "partial_receipt_sha256": "4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa",
+        "actual_producer_report_sha256": "cab2fea25544bf4de166c43fa9bd6e10591dbc56e0a3622c45a242953451735e",
+        "qualifies_catalog_behavior": false
+      }
     },
     {
       "id": "CLI-MCP-EXACT-CODEC-BINDING",
@@ -29364,7 +29617,7 @@
       "stream": "personal_data",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
+      "status": "in_progress",
       "prerequisites": [
         "BASE-DOMAINS",
         "PERSONAL-CONTRACT-REVIEW",
@@ -29431,8 +29684,7 @@
         "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
       ],
       "shared_resources": [
-        "private-source-catalog-interface",
-        "core-component-build"
+        "private-source-catalog-interface"
       ],
       "resource_stage_history": [
         {
@@ -29705,7 +29957,20 @@
       "deletion_gate": "No production retirement/native state/customer data deletion or public admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
-      "claim": null,
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/repository/source-catalog.ts",
+          "packages/healthmd-core-ts/tests/source-catalog.test.ts",
+          "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+          "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
+        ],
+        "reserved_resources": [
+          "private-source-catalog-interface"
+        ]
+      },
       "blocker": null,
       "priority": 104,
       "review": {
@@ -29726,7 +29991,35 @@
         "packet_sha256": "b7e3ccb648897337da1fe3012a9a5cb521721d3de77dbc2a5da836f20562f240",
         "accepted_review_fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242"
       },
-      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started. Full exact Stage1 typed closure/literal corpus and independent review precede implementation; actual source/grant/storage/SDK/cohort/public/retirement proof remains separate."
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started. Full exact Stage1 typed closure/literal corpus and independent review precede implementation; actual source/grant/storage/SDK/cohort/public/retirement proof remains separate.",
+      "card_review_before_claim": {
+        "status": "accepted",
+        "reviewer": "/root",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "canonical_card_sha256": "0de6a1d5f81914f21ffbabdbf0fbbb2090e94c34c9c28649e47bd6597fdfc664",
+        "reviewed_snapshot_path": "/private/tmp/healthmd-datastore-source-catalog-preclaim-card.json",
+        "scope": "Exact4privatepaths Stage1 vector/receipt only; metadata source capabilities without records/store acquisition. Full independently source-derived closed metadata grammar/mode/grant/lazy authority/original Scope expiry and all literals before source/test implementation. No Node/npm/build/generated/cohort/index/package/public/native/data/host grants."
+      },
+      "source_reconciliation": "Packet b3f+b7e3/aa6 raw immutable accepted planning baseline. Current a0d2ab323 includes private Values49/30 producer check906+19, historical43/26 consumer remains unadopted. Revalidate39packet current+assignedGit pins and retained81/17baseline/13transfers exact; no donor health/native files or outputs read. Only metadata fake port source identity/catalog/current capabilities, no grants from caller IDs/flags.",
+      "Stage1_independent_review": {
+        "status": "accepted_private96_before_code",
+        "reviewer": "/root/android_release_host",
+        "path": "/private/tmp/healthmd-source-catalog-amended-stage1-independent-review.json",
+        "sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+32cad15fbd56d61f47778ba0fef955f12ce8479d441c65a78d226faca9d708b0",
+        "prior_finding": "512perstring/key ambiguity fixedbeforeimplementation; exact94/all9/81/17/13 unchanged;2key512/513 literals added.",
+        "no_implementation_clearance": "ROOT serializer corecheck uses53frozeninputs; catalog source/test absent and all corewrites remain frozen."
+      },
+      "accepted_Stage1_commit_scope": {
+        "status": "source_literal_contract_only_not_task_done",
+        "vector_sha256": "74f638315c3db96f37306e26ac3a026204f629e3fee3d53bfad3203b03832591",
+        "partial_receipt_sha256": "4f1c832b29e133b5b3671565e80100f738af9125b7d350bc7903d613a3f630aa",
+        "independent_review_sha256": "2340dc1e49bb5d24de7e6b89de2aa8277f4b198e54c23fa7689c57db39dc473b",
+        "scenes": 96,
+        "original94_unchanged": true,
+        "runtime_catalog_tests": 0,
+        "actual_core_inputs": "One approved literaldata input among actual53; onlytypecheck, no source/test implementation or dataauthority."
+      }
     },
     {
       "id": "DATASTORE-SOURCE-COVERAGE",
@@ -31710,6 +32003,2221 @@
         "accepted_review_fingerprint": "b3f6f07d8b3e6e4bb297edffd01f1f287063f650+aa6aefa90c478c55fecdac4c0172d43e231bfb31dd84a6b90651557110140242"
       },
       "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started. Full exact Stage1 typed closure/literal corpus and independent review precede implementation; actual source/grant/storage/SDK/cohort/public/retirement proof remains separate."
+    },
+    {
+      "id": "QUERY-TYPED-VALUES",
+      "title": "Query Typed Values",
+      "outcome": "Pure bounded owned tagged values codec; quantity/duration finite exactbinary64+unit, i64 count, strings/category/boolean/native-profile timestamp/date/arrays/forwardunknown JSON Int64->UInt64->finiteDouble precedence. Preserve source lenient CodingKeys versus strict request; exact native canonical timestamp reproduction separately pinned. Full raw numeric/duplicate-key Foundation profile fixtures before runtime parity.",
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "BASE-CLI",
+        "BASE-CORE",
+        "SLICE-PARITY"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/query/typed-values.ts",
+        "packages/healthmd-core-ts/tests/query-typed-values.test.ts",
+        "packages/healthmd-core-ts/tests/query-typed-values-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json"
+      ],
+      "shared_resources": [
+        "private-typed-values-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Pure bounded owned tagged values codec; quantity/duration finite exactbinary64+unit, i64 count, strings/category/boolean/native-profile timestamp/date/arrays/forwardunknown JSON Int64->UInt64->finiteDouble precedence. Preserve source lenient CodingKeys versus strict request; exact native canonical timestamp reproduction separately pinned. Full raw numeric/duplicate-key Foundation profile fixtures before runtime parity.",
+      "interface_proposal": "Pure bounded owned tagged values codec; quantity/duration finite exactbinary64+unit, i64 count, strings/category/boolean/native-profile timestamp/date/arrays/forwardunknown JSON Int64->UInt64->finiteDouble precedence. Preserve source lenient CodingKeys versus strict request; exact native canonical timestamp reproduction separately pinned. Full raw numeric/duplicate-key Foundation profile fixtures before runtime parity.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-typed-values-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "query-count-beyond-binary64",
+            "input": {
+              "typed_value": {
+                "type": "count",
+                "value_decimal": "9007199254740993"
+              }
+            },
+            "expected": {
+              "class": "i64",
+              "decimal": "9007199254740993",
+              "round_via_Double": false
+            },
+            "source_basis": "typed-tags",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-count-max",
+            "input": {
+              "type": "count",
+              "value_decimal": "9223372036854775807"
+            },
+            "expected": {
+              "decimal": "9223372036854775807",
+              "saturate": false
+            },
+            "source_basis": "typed-tags",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-finite-quantity",
+            "input": {
+              "type": "quantity",
+              "binary64_bits": "4029000000000000",
+              "unit": "km"
+            },
+            "expected": {
+              "value": "12.5",
+              "unit": "km",
+              "count_conversion": false
+            },
+            "source_basis": "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-nonfinite-rejected",
+            "input": {
+              "type": "duration",
+              "binary64_bits": "7ff0000000000000"
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "non_finite_number",
+              "provider_echo": false
+            },
+            "source_basis": "typed-tags",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-unknown-tag",
+            "input": {
+              "type": "future_value",
+              "value": {
+                "z": 1
+              }
+            },
+            "expected": {
+              "tag": "future_value",
+              "payload": {
+                "z": 1
+              },
+              "schema_inference": false
+            },
+            "source_basis": "typed-json",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-unknown-absent-null",
+            "input": {
+              "inputs": [
+                {
+                  "type": "future_value"
+                },
+                {
+                  "type": "future_value",
+                  "value": null
+                }
+              ]
+            },
+            "expected": {
+              "decoded_payload": null,
+              "encoded_value_field": false
+            },
+            "source_basis": "typed-tags decodeIfPresent/encodeIfPresent",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-native-date-source-rounding",
+            "input": {
+              "native_Date_Unix_construction": "1700000000.123456789"
+            },
+            "expected": {
+              "canonical_fraction": "123456717",
+              "not_claimed_exact_nanoseconds": true
+            },
+            "source_basis": "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-timestamp-short-fraction",
+            "input": {
+              "typed_value": {
+                "type": "timestamp",
+                "value": "2023-11-14T22:13:20.123Z"
+              }
+            },
+            "expected": {
+              "accepted": false,
+              "source_profile": "canonical nine-digit UTC plus Foundation Date reproduce-byte check"
+            },
+            "source_basis": "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "query-value-unknown-field-profile",
+            "input": {
+              "type": "count",
+              "value": 3,
+              "extra": "synthetic"
+            },
+            "expected": {
+              "decoded_count": 3,
+              "extra_retained": false,
+              "request_profile_strictness_inherited": false
+            },
+            "source_basis": "typed-tags has no rejectUnknownKeys",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-TYPED-VALUES.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 111,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-TYPED-VALUES",
+        "child_pointer": "#/children/0",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "QUERY-COVERAGE-CONTRACT",
+      "title": "Query Coverage Contract",
+      "outcome": "Pure coverage-only request/response codec. schema1/strict selectors/date/page/source default and exact response empty items/evidence/no packet/no nextCursor/status/truncation/optional metadata grammar. All other operation tags explicitly remain outside this first profile, not public unsupported. No whole QueryContracts.swift rewrite.",
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "QUERY-TYPED-VALUES"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/query/coverage-contract.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-contract.test.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-contract-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-CONTRACT.json"
+      ],
+      "shared_resources": [
+        "private-coverage-contract-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Pure coverage-only request/response codec. schema1/strict selectors/date/page/source default and exact response empty items/evidence/no packet/no nextCursor/status/truncation/optional metadata grammar. All other operation tags explicitly remain outside this first profile, not public unsupported. No whole QueryContracts.swift rewrite.",
+      "interface_proposal": "Pure coverage-only request/response codec. schema1/strict selectors/date/page/source default and exact response empty items/evidence/no packet/no nextCursor/status/truncation/optional metadata grammar. All other operation tags explicitly remain outside this first profile, not public unsupported. No whole QueryContracts.swift rewrite.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-coverage-contract-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "coverage-omitted-sources",
+            "input": {
+              "schema": "healthmd.query_request",
+              "schema_version": 1,
+              "metrics": {
+                "type": "all_available"
+              },
+              "dates": {
+                "type": "all_available"
+              },
+              "operation": {
+                "type": "coverage"
+              },
+              "page": {
+                "max_items": 250,
+                "max_bytes": 262144
+              }
+            },
+            "expected": {
+              "sources": {
+                "type": "all_available"
+              },
+              "operation": "coverage",
+              "profile_version": 1
+            },
+            "source_basis": "coverage-request",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-duplicate-metric-selector",
+            "input": {
+              "metrics": {
+                "type": "explicit",
+                "metric_ids": [
+                  "steps",
+                  "steps"
+                ]
+              }
+            },
+            "expected": {
+              "accepted": false
+            },
+            "source_basis": "metric-selection",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-selector-unknown-field",
+            "input": {
+              "metrics": {
+                "type": "explicit",
+                "metric_ids": [
+                  "steps"
+                ],
+                "profile": "removed"
+              }
+            },
+            "expected": {
+              "accepted": false
+            },
+            "source_basis": "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-request-extra",
+            "input": {
+              "schema": "healthmd.query_request",
+              "schema_version": 1,
+              "metrics": {
+                "type": "all_available"
+              },
+              "dates": {
+                "type": "all_available"
+              },
+              "operation": {
+                "type": "coverage"
+              },
+              "page": {
+                "max_items": 250,
+                "max_bytes": 262144
+              },
+              "extra": true
+            },
+            "expected": {
+              "accepted": false
+            },
+            "source_basis": "coverage-request rejectUnknownKeys",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-page-not-constructor-default",
+            "input": {
+              "request_without_page": {
+                "schema": "healthmd.query_request",
+                "schema_version": 1,
+                "metrics": {
+                  "type": "all_available"
+                },
+                "dates": {
+                  "type": "all_available"
+                },
+                "operation": {
+                  "type": "coverage"
+                }
+              }
+            },
+            "expected": {
+              "decode_accepted": false,
+              "constructor_default_not_decode_default": true
+            },
+            "source_basis": "coverage-request",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-page-controls",
+            "input": {
+              "max_items": [
+                0,
+                1000,
+                1001
+              ],
+              "max_bytes": [
+                0,
+                1048576,
+                1048577
+              ]
+            },
+            "expected": {
+              "item_valid": [
+                false,
+                true,
+                false
+              ],
+              "byte_valid": [
+                false,
+                true,
+                false
+              ]
+            },
+            "source_basis": "QueryEvaluator evaluate guards",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-sources-explicit-canonical",
+            "input": {
+              "sources": {
+                "type": "explicit",
+                "source_ids": [
+                  "healthmd_summary",
+                  "apple_health"
+                ],
+                "provider_ids": []
+              }
+            },
+            "expected": {
+              "source_ids": [
+                "apple_health",
+                "healthmd_summary"
+              ],
+              "provider_ids": [],
+              "grant_from_selector": false
+            },
+            "source_basis": "source-selection",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-response-profile-unknown",
+            "input": {
+              "existing_response_extra": "synthetic"
+            },
+            "expected": {
+              "Codable_unknown_field_rejected": false,
+              "not_request_global_rule": true
+            },
+            "source_basis": "response synthesized Codable",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-version-admission",
+            "input": {
+              "schema": "healthmd.query_request",
+              "schema_version": 2,
+              "metrics": {
+                "type": "all_available"
+              },
+              "dates": {
+                "type": "all_available"
+              },
+              "operation": {
+                "type": "coverage"
+              },
+              "page": {
+                "max_items": 250,
+                "max_bytes": 262144
+              }
+            },
+            "expected": {
+              "evaluate_accepted": false,
+              "safe_code": "unsupported_operation",
+              "whole_future_version_supported": false
+            },
+            "source_basis": "QueryEvaluator evaluate schema guard",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-CONTRACT.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 112,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-COVERAGE-CONTRACT",
+        "child_pointer": "#/children/1",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "QUERY-CURSOR-BINDING",
+      "title": "Query Cursor Binding",
+      "outcome": "Pure owned logical-query/dataset/install binding preimage and cursor structure. Trusted coarse CursorAuthority accepts exact owned payload canonicalbytes and returns bounded sign/verify result; deterministic fake vectors expected exact input+fixed failure before implementation. Preserve native payload/envelope/decode unknown-key and base64 behavior; real HMAC/SHA/key custody/constant-time auth native successor. Candidate caller/source/purpose/frontier binding is trusted host context, not invented native wire fields or JSON flags.",
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "QUERY-COVERAGE-CONTRACT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/query/cursor-binding.ts",
+        "packages/healthmd-core-ts/tests/query-cursor-binding.test.ts",
+        "packages/healthmd-core-ts/tests/query-cursor-binding-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-CURSOR-BINDING.json"
+      ],
+      "shared_resources": [
+        "private-cursor-binding-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Pure owned logical-query/dataset/install binding preimage and cursor structure. Trusted coarse CursorAuthority accepts exact owned payload canonicalbytes and returns bounded sign/verify result; deterministic fake vectors expected exact input+fixed failure before implementation. Preserve native payload/envelope/decode unknown-key and base64 behavior; real HMAC/SHA/key custody/constant-time auth native successor. Candidate caller/source/purpose/frontier binding is trusted host context, not invented native wire fields or JSON flags.",
+      "interface_proposal": "Pure owned logical-query/dataset/install binding preimage and cursor structure. Trusted coarse CursorAuthority accepts exact owned payload canonicalbytes and returns bounded sign/verify result; deterministic fake vectors expected exact input+fixed failure before implementation. Preserve native payload/envelope/decode unknown-key and base64 behavior; real HMAC/SHA/key custody/constant-time auth native successor. Candidate caller/source/purpose/frontier binding is trusted host context, not invented native wire fields or JSON flags.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-cursor-binding-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "cursor-request-UUID-independent",
+            "input": {
+              "same_logical_request": true,
+              "transport_UUIDs": [
+                "a",
+                "b"
+              ],
+              "cursor_changed": true
+            },
+            "expected": {
+              "preimage_fields": [
+                "schema",
+                "schema_version",
+                "metrics",
+                "sources",
+                "dates",
+                "operation",
+                "max_items",
+                "max_bytes"
+              ],
+              "contains_cursor": false,
+              "contains_transport_UUID": false
+            },
+            "source_basis": "cursor-preimage",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-payload-complete",
+            "input": {
+              "offset": 2,
+              "query": "synthetic-q",
+              "dataset": "synthetic-d",
+              "binding": "synthetic-b"
+            },
+            "expected": {
+              "payload_keys": [
+                "binding",
+                "dataset",
+                "offset",
+                "query"
+              ],
+              "MAC_input": "base64url(payload canonical bytes) UTF8",
+              "envelope_keys": [
+                "mac",
+                "payload"
+              ],
+              "real_HMAC_proven": false
+            },
+            "source_basis": "cursor-preimage",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-wrong-query",
+            "input": {
+              "verified_fake_MAC": true,
+              "query": "other",
+              "expected_query": "synthetic-q"
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "cursor_does_not_match_query",
+              "read_snapshot": false
+            },
+            "source_basis": "cursor-preimage",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-wrong-dataset",
+            "input": {
+              "verified_fake_MAC": true,
+              "dataset": "other",
+              "expected_dataset": "synthetic-d"
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "cursor_does_not_match_query"
+            },
+            "source_basis": "cursor-preimage",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-MAC-denied",
+            "input": {
+              "trusted_MAC_result": false
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "invalid_cursor",
+              "recapture": false
+            },
+            "source_basis": "cursor-preimage",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-caller-source-revoked",
+            "input": {
+              "stored_cursor": "synthetic",
+              "current_authority": "denied",
+              "fresh_regrant": false
+            },
+            "expected": {
+              "accepted": false,
+              "observe_source": false,
+              "old_snapshot_or_backup_grants": false
+            },
+            "source_basis": "K05 + trusted operation requirement",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-nonzero-offset",
+            "input": {
+              "authenticated_offset": 1
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "invalid_cursor",
+              "invent_coverage_next_cursor": false
+            },
+            "source_basis": "coverage-dispatch",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "cursor-native-payload-unknown-profile",
+            "input": {
+              "payload_extra": "synthetic",
+              "MAC_verified_by_trusted_port": true
+            },
+            "expected": {
+              "unknown_field_global_reject": false,
+              "native_Codable_policy_retained": true,
+              "private_port_authentication_claim": false
+            },
+            "source_basis": "cursor-preimage synthesized Codable",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-CURSOR-BINDING.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 113,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-CURSOR-BINDING",
+        "child_pointer": "#/children/2",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "QUERY-CONTEXT-COVERAGE-LENS",
+      "title": "Query Context Coverage Lens",
+      "outcome": "Pure samefactory coverage lens over already authorized immutable compact context days; ownerdate/source revision/schema/calendar/native exact timestamps/status/optional arrays and hasAnyValue metadata. No native reads, full HealthData projector, source-dependent arithmetic or broad metric projection. Full original day/source provenance retained; no alias to personal location/usage.",
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "QUERY-TYPED-VALUES",
+        "QUERY-COVERAGE-CONTRACT"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/query/context-coverage-lens.ts",
+        "packages/healthmd-core-ts/tests/query-context-coverage-lens.test.ts",
+        "packages/healthmd-core-ts/tests/query-context-coverage-lens-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-CONTEXT-COVERAGE-LENS.json"
+      ],
+      "shared_resources": [
+        "private-context-coverage-lens-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Pure samefactory coverage lens over already authorized immutable compact context days; ownerdate/source revision/schema/calendar/native exact timestamps/status/optional arrays and hasAnyValue metadata. No native reads, full HealthData projector, source-dependent arithmetic or broad metric projection. Full original day/source provenance retained; no alias to personal location/usage.",
+      "interface_proposal": "Pure samefactory coverage lens over already authorized immutable compact context days; ownerdate/source revision/schema/calendar/native exact timestamps/status/optional arrays and hasAnyValue metadata. No native reads, full HealthData projector, source-dependent arithmetic or broad metric projection. Full original day/source provenance retained; no alias to personal location/usage.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-context-coverage-lens-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "context-legacy-optional-arrays",
+            "input": {
+              "optional_arrays_absent": [
+                "metrics",
+                "workouts",
+                "sleep_sessions",
+                "evidence",
+                "limitations"
+              ]
+            },
+            "expected": {
+              "arrays": {
+                "metrics": [],
+                "workouts": [],
+                "sleep_sessions": [],
+                "evidence": [],
+                "limitations": []
+              },
+              "native_capture": false
+            },
+            "source_basis": "compact-context",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-ownerdate-vs-UTC",
+            "input": {
+              "owner_date": "2026-03-08",
+              "calendar_timezone": "America/Los_Angeles",
+              "interval_start": "2026-03-08T08:00:00.000000000Z",
+              "interval_end": "2026-03-09T07:00:00.000000000Z"
+            },
+            "expected": {
+              "owner_date": "2026-03-08",
+              "duration_seconds": 82800,
+              "force_86400": false
+            },
+            "source_basis": "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout; bounded explicit civil input",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-permutation-order",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-02",
+                  "digest": "b"
+                },
+                {
+                  "owner_date": "2026-02-01",
+                  "digest": "z"
+                },
+                {
+                  "owner_date": "2026-02-01",
+                  "digest": "a"
+                }
+              ]
+            },
+            "expected": {
+              "order": [
+                [
+                  "2026-02-01",
+                  "a"
+                ],
+                [
+                  "2026-02-01",
+                  "z"
+                ],
+                [
+                  "2026-02-02",
+                  "b"
+                ]
+              ],
+              "drop_duplicate_owner_dates": false
+            },
+            "source_basis": "QueryEvaluator init sorting",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-missing-value-not-zero",
+            "input": {
+              "metric_value": null,
+              "metric_status": "not_synchronized"
+            },
+            "expected": {
+              "has_any_value": false,
+              "insert_zero": false
+            },
+            "source_basis": "coverage-presence",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-available-zero",
+            "input": {
+              "metric_value": {
+                "type": "count",
+                "value": 0
+              },
+              "metric_status": "available"
+            },
+            "expected": {
+              "has_any_value": true
+            },
+            "source_basis": "coverage-presence",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-unknown-extra-retained-policy",
+            "input": {
+              "unknown_field": "synthetic"
+            },
+            "expected": {
+              "native_Codable_extra_field_rejected": false,
+              "new_schema_admitted": false
+            },
+            "source_basis": "compact-context",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-provider-only-no-placeholder",
+            "input": {
+              "includes_apple_health": false,
+              "provider_snapshot": true
+            },
+            "expected": {
+              "Apple_placeholder_metrics": 0,
+              "Apple_placeholder_workouts": 0,
+              "Apple_placeholder_sessions": 0,
+              "provider_source_identity_retained": true
+            },
+            "source_basis": "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders; full projector future owner",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "context-health-location-distinct",
+            "input": {
+              "health_distance": "health-source",
+              "GPS_distance": "location-source"
+            },
+            "expected": {
+              "alias_or_sum": false,
+              "query_domain": "health",
+              "personal_multidomain_admission": false
+            },
+            "source_basis": "F05/K05 and retained Personal81 obligations",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-CONTEXT-COVERAGE-LENS.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 114,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-CONTEXT-COVERAGE-LENS",
+        "child_pointer": "#/children/3",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "QUERY-COVERAGE-EVALUATOR",
+      "title": "Query Coverage Evaluator",
+      "outcome": "Pure first coverage family: source-native coverage counts/ranges/missing statuses/normalized sources/limitations and terminal response. Operates owned bounded facts; no fake grant evaluator, no app-specific second reducer. Exact selectedDays count versus unique value ownerdates; hasAnyValue any authorized available metric/workout/sleep, no invented metric-only filtering.",
+      "stream": "core_cli",
+      "phase": "M03",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "QUERY-COVERAGE-CONTRACT",
+        "QUERY-CONTEXT-COVERAGE-LENS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/query/coverage-evaluator.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-evaluator.test.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-evaluator-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-EVALUATOR.json"
+      ],
+      "shared_resources": [
+        "private-coverage-evaluator-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Pure first coverage family: source-native coverage counts/ranges/missing statuses/normalized sources/limitations and terminal response. Operates owned bounded facts; no fake grant evaluator, no app-specific second reducer. Exact selectedDays count versus unique value ownerdates; hasAnyValue any authorized available metric/workout/sleep, no invented metric-only filtering.",
+      "interface_proposal": "Pure first coverage family: source-native coverage counts/ranges/missing statuses/normalized sources/limitations and terminal response. Operates owned bounded facts; no fake grant evaluator, no app-specific second reducer. Exact selectedDays count versus unique value ownerdates; hasAnyValue any authorized available metric/workout/sleep, no invented metric-only filtering.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-coverage-evaluator-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "coverage-no-captured-days",
+            "input": {
+              "days": [],
+              "dates": {
+                "type": "all_available"
+              }
+            },
+            "expected": {
+              "status": "not_synchronized",
+              "days_considered": 0,
+              "days_with_values": 0,
+              "requested_range": null,
+              "available_range": null,
+              "missing": [],
+              "invent_absent_days": false
+            },
+            "source_basis": "coverage-counts",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-complete-empty",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-02",
+                  "status": "complete_empty",
+                  "has_any_value": false
+                }
+              ]
+            },
+            "expected": {
+              "status": "complete_empty",
+              "days_considered": 1,
+              "days_with_values": 0,
+              "missing": [
+                {
+                  "range": {
+                    "start_date": "2026-02-02",
+                    "end_date": "2026-02-02"
+                  },
+                  "status": "complete_empty"
+                }
+              ]
+            },
+            "source_basis": "coverage-counts",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-available-empty",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-02",
+                  "status": "available",
+                  "has_any_value": false
+                }
+              ]
+            },
+            "expected": {
+              "status": "complete_empty",
+              "days_with_values": 0,
+              "missing_status": "complete_empty"
+            },
+            "source_basis": "coverage-counts",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-known-zero",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-02",
+                  "status": "available",
+                  "metrics": [
+                    {
+                      "value": {
+                        "type": "count",
+                        "value": 0
+                      },
+                      "status": "available"
+                    }
+                  ]
+                }
+              ]
+            },
+            "expected": {
+              "status": "available",
+              "days_with_values": 1,
+              "missing": []
+            },
+            "source_basis": "coverage-presence",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-mixed-days",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-01",
+                  "status": "available",
+                  "has_any_value": true
+                },
+                {
+                  "owner_date": "2026-02-02",
+                  "status": "not_synchronized",
+                  "has_any_value": false
+                }
+              ]
+            },
+            "expected": {
+              "status": "partial",
+              "days_considered": 2,
+              "days_with_values": 1,
+              "missing_status": "not_synchronized"
+            },
+            "source_basis": "coverage-counts",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-same-ownerdate-count",
+            "input": {
+              "days": [
+                {
+                  "owner_date": "2026-02-01",
+                  "digest": "a",
+                  "has_any_value": true
+                },
+                {
+                  "owner_date": "2026-02-01",
+                  "digest": "b",
+                  "has_any_value": true
+                }
+              ]
+            },
+            "expected": {
+              "days_considered": 2,
+              "days_with_values": 1,
+              "person_total_or_global_atomic_snapshot": false
+            },
+            "source_basis": "coverage-counts Set(ownerDate) versus selectedDays.count",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-any-authorized-value-not-metric-filter",
+            "input": {
+              "selected_pre_authorized_day_has_value": true,
+              "request_metric_ids": [
+                "steps"
+              ],
+              "day_available_value_metric": "other"
+            },
+            "expected": {
+              "days_with_values": 1,
+              "invent_requested_metric_only_coverage": false,
+              "capture_scope_authorized_before_input": true
+            },
+            "source_basis": "coverage-dispatch uses hasAnyValue independent metric selection",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-100-missing",
+            "input": {
+              "missing_intervals": 100
+            },
+            "expected": {
+              "retained_missing": 64,
+              "missing_interval_count": 100,
+              "missing_truncated": true,
+              "limitation_code": "coverage_intervals_truncated",
+              "full_history_omitted": false
+            },
+            "source_basis": "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-100-sources",
+            "input": {
+              "normalized_source_descriptors": 100
+            },
+            "expected": {
+              "retained_sources": 64,
+              "limitation_code": "source_descriptors_truncated",
+              "source_authority_from_digest": false
+            },
+            "source_basis": "response",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-terminal-shape",
+            "input": {
+              "operation": "coverage",
+              "authenticated_offset": 0
+            },
+            "expected": {
+              "items": [],
+              "packet": null,
+              "evidence": [],
+              "next_cursor": null
+            },
+            "source_basis": "coverage-dispatch",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-invalid-civil-date",
+            "input": {
+              "range": {
+                "start_date": "2026-02-30",
+                "end_date": "2026-02-30"
+              }
+            },
+            "expected": {
+              "accepted": false,
+              "safe_code": "invalid_date_range"
+            },
+            "source_basis": "testInvalidCalendarDatesFailInsteadOfLexicallySelectingData",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-EVALUATOR.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 115,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-COVERAGE-EVALUATOR",
+        "child_pointer": "#/children/4",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+    },
+    {
+      "id": "QUERY-COVERAGE-OPERATION",
+      "title": "Query Coverage Operation",
+      "outcome": "Effect one common coverage operation on captured trusted scoped QuerySource/current/owned codec/cursor ports. One owned frozen snapshot and result publication; no native SDK/current fallback corpus. Each lazy read separately checks source/detail/destination/current independent suppression, source callback reentry then destination again, original Scope and callback after await before materialization/publication. Protected releaseACK and fixed cause sanitation; possible commit disposition only if separate optional result delivery later authorized. CLI/MCP/UI thin adapters consume this operation after consumer gates.",
+      "stream": "core_cli",
+      "phase": "M04",
+      "kind": "implementation",
+      "status": "not_started",
+      "prerequisites": [
+        "QUERY-COVERAGE-EVALUATOR",
+        "QUERY-CURSOR-BINDING",
+        "QUERY-TRAVERSAL"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C13",
+        "K05",
+        "O02"
+      ],
+      "risk_ids": [
+        "F05"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "GLOSSARY.md",
+        "docs/architecture/javascript-unified-layer-research.md",
+        "docs/architecture/javascript-unified-layer-design-reference.md",
+        "docs/architecture/cross-platform-unification-policy.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/inventories/cli.json",
+        "docs/migration/effect-refactor/inventories/core.json",
+        "docs/migration/effect-refactor/inventories/donors.json",
+        "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "docs/migration/effect-refactor/receipts/QUERY-TRAVERSAL.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-IOS-ELIGIBILITY.json",
+        "docs/migration/effect-refactor/receipts/PERSONAL-CONTRACT-REVIEW.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-cases.json",
+        "docs/migration/effect-refactor/decisions/personal-contract-resolution.md",
+        "packages/healthmd-core-ts/package.json",
+        "packages/healthmd-core-ts/package-lock.json",
+        "packages/healthmd-core-ts/.node-version",
+        "packages/healthmd-core-ts/scripts/check.mjs",
+        "packages/healthmd-core-ts/scripts/check-boundaries.mjs",
+        "apps/cli/crates/healthmd-operations/src/registry.rs",
+        "apps/cli/crates/healthmd-operations/src/normalize.rs",
+        "apps/cli/crates/healthmd-operations/src/backend.rs",
+        "apps/cli/crates/healthmd-operations/src/model.rs",
+        "apps/cli/crates/healthmd-operations/src/service.rs",
+        "apps/cli/crates/healthmd-operations/src/limits.rs",
+        "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "apps/cli/Cargo.toml",
+        "apps/cli/Cargo.lock",
+        "packages/healthmd-core-rust/Cargo.toml",
+        "packages/healthmd-core-rust/Cargo.lock",
+        "apps/apple/HealthMd/Shared/Query/QueryContracts.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryTypedValue.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryCanonicalSerializer.swift",
+        "apps/apple/HealthMd/Shared/Query/QueryEvaluator.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdQueryContextProjector.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthMdSleepSessionQuery.swift",
+        "apps/apple/HealthMd/Shared/Export/HealthKitRecordArchiveSerializer.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "apps/apple/HealthMd/macOS/Managers/EncryptedHealthContextQueryExecutor.swift",
+        "apps/apple/HealthMdTests/Query/QueryFoundationTests.swift",
+        "apps/apple/HealthMdTests/Query/HealthMdQueryContextProjectorTests.swift",
+        "apps/apple/HealthMdTests/macOS/EncryptedHealthContextQueryExecutorTests.swift",
+        "apps/android/direct-protocol/src/main/kotlin/com/healthmd/direct/protocol/ProtocolModels.kt",
+        "apps/android/direct-protocol/src/test/kotlin/com/healthmd/direct/protocol/InteroperabilityTest.kt",
+        "packages/contracts/direct-protocol/v1/fixtures/swift-reference.json"
+      ],
+      "allowed_paths": [
+        "packages/healthmd-core-ts/src/operations/query/coverage-operation.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-operation.test.ts",
+        "packages/healthmd-core-ts/tests/query-coverage-operation-vectors.ts",
+        "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-OPERATION.json"
+      ],
+      "shared_resources": [
+        "private-coverage-operation-interface",
+        "core-component-build"
+      ],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-derived health coverage candidate"
+      },
+      "proof_class": "portable_synthetic",
+      "deep_boundary": "Effect one common coverage operation on captured trusted scoped QuerySource/current/owned codec/cursor ports. One owned frozen snapshot and result publication; no native SDK/current fallback corpus. Each lazy read separately checks source/detail/destination/current independent suppression, source callback reentry then destination again, original Scope and callback after await before materialization/publication. Protected releaseACK and fixed cause sanitation; possible commit disposition only if separate optional result delivery later authorized. CLI/MCP/UI thin adapters consume this operation after consumer gates.",
+      "interface_proposal": "Effect one common coverage operation on captured trusted scoped QuerySource/current/owned codec/cursor ports. One owned frozen snapshot and result publication; no native SDK/current fallback corpus. Each lazy read separately checks source/detail/destination/current independent suppression, source callback reentry then destination again, original Scope and callback after await before materialization/publication. Protected releaseACK and fixed cause sanitation; possible commit disposition only if separate optional result delivery later authorized. CLI/MCP/UI thin adapters consume this operation after consumer gates.",
+      "fixture_inputs": "Actual pinned source range/test IDs and accepted BASE-CLI RFC6901 pointers below; literals are pre-code minima only. Freeze full closed typed grammar/expected byte corpus and adapter source-input vectors independently at Stage1 before implementation.",
+      "fixture_details": {
+        "introduced_path": "packages/healthmd-core-ts/tests/query-coverage-operation-vectors.ts",
+        "literal_proposals": [
+          {
+            "case_id": "coverage-op-crosswired-source",
+            "input": {
+              "expected_source": "a",
+              "snapshot_source": "b",
+              "all_global_grants_permitted": true
+            },
+            "expected": {
+              "safe_code": "scope_binding_mismatch",
+              "materializations": 0,
+              "delivery": 0,
+              "owned_release_ACKs": 1
+            },
+            "source_basis": "K05 source/caller binding + accepted owned operation obligation",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-job-only-revocation",
+            "input": {
+              "source_current": "permitted",
+              "destination_current": "denied"
+            },
+            "expected": {
+              "safe_code": "scope_not_authorized",
+              "reads": 0,
+              "release_ACKs": 1,
+              "publish": false
+            },
+            "source_basis": "accepted COMBINED-SYNTHETIC current destination distinction",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-source-callback-reentry-revoke",
+            "input": {
+              "source_current_callback": "revokes destination while returns permitted"
+            },
+            "expected": {
+              "reads": 0,
+              "materializations": 0,
+              "release_ACKs": 1,
+              "safe_code": "scope_not_authorized"
+            },
+            "source_basis": "current recheck after trusted callback before materialization",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-lazy-revoke",
+            "input": {
+              "issued_view": "owned",
+              "Scope_live": true,
+              "revoke_before_view_read": true
+            },
+            "expected": {
+              "safe_code": "scope_not_authorized",
+              "returned_text": null,
+              "publish": false,
+              "release_ACKs": 1
+            },
+            "source_basis": "perexecution current requirement",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-close-during-current",
+            "input": {
+              "current_await": "Deferred",
+              "original_Scope_close": true,
+              "fresh_Scope_reprovide": true
+            },
+            "expected": {
+              "safe_code": "owned_handoff_closed",
+              "materializations": 0,
+              "new_callbacks": 0,
+              "release_ACKs": 1,
+              "revival": false
+            },
+            "source_basis": "original lifetime and postawait membership",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-inner-callback-expiry",
+            "input": {
+              "saved_view": "owned",
+              "source_callback_returned": true,
+              "dispatch_still_live": true
+            },
+            "expected": {
+              "view_read": null,
+              "current_checks": 0,
+              "materializations": 0
+            },
+            "source_basis": "inner callback expiry before postcurrent/ACK",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-pending-allocation-cancel",
+            "input": {
+              "phase": "interruptible resource-free prepare",
+              "external_interrupt": true
+            },
+            "expected": {
+              "completed_resources": 0,
+              "release_ACKs": 0,
+              "terminal": "interrupted",
+              "outstanding_owned_fibers": 0
+            },
+            "source_basis": "scoped preparation contract",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-completed-allocation-cancel",
+            "input": {
+              "phase": "registered completed allocation wait",
+              "external_interrupt": true
+            },
+            "expected": {
+              "completed_resources": 1,
+              "release_ACKs": 1,
+              "terminal_before_ACK": false,
+              "outstanding_owned_fibers": 0
+            },
+            "source_basis": "finite masked completed registration + protected finalizer",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-cleanup-failure",
+            "input": {
+              "release_failed": true
+            },
+            "expected": {
+              "safe_code": "cleanup_unacknowledged",
+              "publish": false,
+              "poisoned": true,
+              "ACK_claim": false
+            },
+            "source_basis": "owned cleanup precedence",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-delivery-ambiguous",
+            "input": {
+              "optional_result_delivery_decision": "ambiguous"
+            },
+            "expected": {
+              "automatic_retry": false,
+              "rollback_claim": false,
+              "runtime_durability_qualified": false
+            },
+            "source_basis": "ambiguous separate delivery boundary only if later enabled; current coverage read has no storage commit",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          },
+          {
+            "case_id": "coverage-op-strict-partial",
+            "input": {
+              "trusted_snapshot_status": "partial",
+              "requested_source_policy": "strict"
+            },
+            "expected": {
+              "full_complete_claim": false,
+              "private_safe_refusal": true,
+              "publish_partial_as_complete": false
+            },
+            "source_basis": "source snapshot admission precondition; not native public query flag",
+            "proof_class": "planning",
+            "execution": "literal_minimum_not_executed; full closed typed Stage1 corpus independently reviewed before code"
+          }
+        ],
+        "source_range_ids": [
+          "typed-json",
+          "typed-tags",
+          "metric-selection",
+          "source-selection",
+          "coverage-request",
+          "availability-coverage",
+          "compact-context",
+          "response",
+          "scope",
+          "coverage-dispatch",
+          "coverage-counts",
+          "coverage-presence",
+          "cursor-preimage",
+          "query-canonical-profile",
+          "native-timestamp",
+          "android-query-compat"
+        ],
+        "independent_native_fixture_ids": [
+          "testCanonicalBytesAreStableAndRejectNonFiniteValues",
+          "testCanonicalDateRoundTripPreservesSubmillisecondBytesAndDigests",
+          "testCanonicalDateDecoderRejectsNoncanonicalTimestamps",
+          "testDirectScopeSelectorsRejectAmbiguousDuplicateAndUnknownFields",
+          "testCoverageAndSourcesRemainBoundedWithExplicitTruncationReceipts",
+          "testCursorCompletenessTamperingAndQueryBinding",
+          "testMissingnessAndCompleteEmptyRemainDistinctFromZero",
+          "testCountComparisonsRemainExactAndRejectOverflow",
+          "testAllMetricsAndFullHistoryAreCompletelyReachableThroughCursorPaging",
+          "testCompleteResponseStaysWithinPageByteBudgetForLongAlternatingCoverage",
+          "testProviderOnlyProjectionEmitsProviderEvidenceWithoutApplePlaceholders",
+          "testPreservesDSTOwnershipAndCreatesResolvableCanonicalEvidenceAndWorkout",
+          "testProjectionIsPermutationInvariantAndRetainsUnknownArchiveMetrics",
+          "testEveryCurrentCatalogMetricIsAccountedForAndDailyExportSchemaRemainsV8",
+          "testCursorTamperingAndMutationFailClosedAndSingleOversizeItemFails",
+          "testAppleAndProviderEvidenceValuesArePagedAndFilterableWithBackwardSourceDefault",
+          "testComparisonPacketAndMissingnessRemainExactAndNeutral"
+        ],
+        "preserve_existing": {
+          "Apple_daily_version": 8,
+          "Android_daily_frozen_version": 4,
+          "Android_analytical_version": 5,
+          "query_request_response_context_version": 1,
+          "native_foundation_query_profile_not_serde_value_profile": true
+        }
+      },
+      "acceptance": [
+        "Stage1 freeze complete bounded private interface/full positive-negative/state/cancel/ownership/source-derived literal expected bytes and closure BEFORE code; no candidate-generated expected fields.",
+        "Preserve actual source-profile unknown/default/duplicates, exact tagged counts/bits/native timestamps/civil ownership and independent source/detail/destination grants; private bounds cannot narrow public supported history.",
+        "Own samefactory tokens before properties; capture original trusted capabilities/Scope once; EACH lazy Effect read checks current and postawait original membership/callback, expires inner callback before postcurrent/ACK; partial acquisition and finite registration contract explicit.",
+        "One boundary only and actual component checks under accepted complete current/successor cohort; real hash/HMAC/SDK/native/context/storage/client auth are separate proof gates, never fake parity.",
+        "No index/exports/packages/locks/guard/cohort/public/native/currentproduction authority changes. Complete remaining family scope/owner/trigger preserved."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "executed_during_planning": false,
+          "precondition": "ROOT grants exclusive builder after complete current committed input tree/fixed successor maps reviewed; pinned Node24.21/npm11.19; ES-only/oneEffect/19guard negatives; no install or CLI check in child without scope.",
+          "expected": "Own emitted source/test/vector hashes, complete core input/output maps, meaningful full frozen vectors and actual counters; no proposed test count invented."
+        }
+      ],
+      "consumers": "Later common UI/CLI/MCP/direct phone/encrypted Mac context consumers of same operation; thin adapters receive no evaluator fallback. Actual producer/profile/cohort/host source admission required separately.",
+      "rollback": "Retain Swift query/context algorithms, Rust transport/catalog/traversal and frozen health/public protocols; private new module can be reverted without user state or wire change.",
+      "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-OPERATION.json",
+      "reviewer_role": "independent query/source-profile/authority reviewer",
+      "claim": null,
+      "blocker": null,
+      "priority": 116,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "expansion_input": {
+        "path": "docs/migration/effect-refactor/expansions/split-query.json",
+        "child_id": "QUERY-COVERAGE-OPERATION",
+        "child_pointer": "#/children/5",
+        "source_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
+        "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
+      },
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
     }
   ]
 }
