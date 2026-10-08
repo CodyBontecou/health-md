@@ -198,6 +198,69 @@ final class WakeDateJSONExporterTests: XCTestCase {
     }
 
     @MainActor
+    func testUnfilteredFileSpoolRestoresWakeOwnershipBeforeDisabledClocksAreFiltered() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let formatter = ExportDateFormatting.utcISO8601Formatter()
+        let owner = try XCTUnwrap(formatter.date(from: "2026-11-01T04:00:00Z"))
+        let start = try XCTUnwrap(formatter.date(from: "2026-11-01T02:00:00Z")).addingTimeInterval(0.25)
+        let end = try XCTUnwrap(formatter.date(from: "2026-11-01T17:30:00Z")).addingTimeInterval(0.75)
+        var record = HealthData(date: owner,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        record.sleep = SleepData(totalDuration: end.timeIntervalSince(start), coreSleep: 3_600,
+            sessionStart: start, sessionEnd: end)
+        var selection = MetricSelectionState()
+        selection.enabledMetrics = ["sleep_total", "sleep_core"]
+        let expected = try record.filtered(by: selection).toJSONDataThrowing(
+            customization: Self.customization, captureContext: context)
+
+        // Match file capture: retain native clocks, decode the durable item,
+        // then apply the saved selection. This is codec preparation coverage,
+        // not negotiated production acceptance of the successor profile.
+        for version in 1...ConnectedCorpusTransferCapabilities.currentProtocolVersion {
+            let item = try await ConnectedCorpusSpoolItem.encodeHealthDay(
+                ConnectedCorpusHealthDayPayload(sourceDate: owner, isRequestedDate: true,
+                    record: record, externalDailyRecords: [], failure: nil),
+                sourceDate: owner, isRequestedDate: true, protocolVersion: version)
+            defer { item.remove() }
+            let decoded: ConnectedCorpusHealthDayPayload
+            if ConnectedCorpusApplicationItemCodec.usesStreamableItems(protocolVersion: version) {
+                decoded = try ConnectedCorpusApplicationItemCodec.decode(
+                    ConnectedCorpusHealthDayPayload.self, from: item.file.url, expectedKind: .macHealthDay)
+            } else {
+                decoded = try JSONDecoder().decode(ConnectedCorpusHealthDayPayload.self,
+                    from: Data(contentsOf: item.file.url))
+            }
+            let restored = try XCTUnwrap(decoded.record)
+            XCTAssertEqual(restored.sleep.sessionStart, start, "protocol v\(version)")
+            XCTAssertEqual(restored.sleep.sessionEnd, end, "protocol v\(version)")
+            XCTAssertNil(restored.sleep.sourceSessionBounds, "Internal bounds are not transport fields")
+            let filtered = restored.filtered(by: selection).filtered(by: selection)
+            XCTAssertNil(filtered.sleep.sessionStart)
+            XCTAssertNil(filtered.sleep.sessionEnd)
+            XCTAssertEqual(filtered.sleep.sourceSessionBounds?.start, start)
+            XCTAssertEqual(filtered.sleep.sourceSessionBounds?.end, end)
+            let actual = try filtered.toJSONDataThrowing(
+                customization: Self.customization, captureContext: context)
+            XCTAssertEqual(actual, expected, "protocol v\(version) must preserve exact owner and values")
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: actual) as? [String: Any])
+            XCTAssertEqual(root["date"] as? String, "2026-11-01")
+            let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+            for key in ["bedtime", "bedtimeISO", "wakeTime", "wakeTimeISO", "sourceSessionBounds"] {
+                XCTAssertNil(sleep[key])
+            }
+            let wrongOwner = HealthData(date: owner.addingTimeInterval(-86_400),
+                timeContext: restored.timeContext, sleep: restored.sleep)
+            let sink = MemoryExportByteSink(mediaType: "application/json")
+            XCTAssertThrowsError(try wrongOwner.filtered(by: selection).writeJSONThrowing(
+                to: sink, customization: Self.customization, captureContext: context)) {
+                XCTAssertEqual($0 as? AppleWakeDateJSONError, .incompatibleSessionOwner)
+            }
+            XCTAssertTrue(sink.data.isEmpty)
+        }
+    }
+
+    @MainActor
     func testWholeNoonSpanningSessionReachesSuccessorJSONWithNativeCoreAndOriginalFoldClocks() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
