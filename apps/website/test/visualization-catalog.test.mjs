@@ -136,7 +136,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "06452a6aadce5cded80b2204a382d11430e64af1");
+  assert.equal(externalSources.obsidian_plugin.revision, "11f805ae98233517d027317775e2033223c109d7");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
@@ -197,4 +197,17 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     assert.equal(day.sleep[unsupportedStage], undefined);
     assert.equal(day.sleep.sleepStages.length, 0);
   }
+  const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/rollup-summary-v11/native-apple-v11.json"), "utf8");
+  const range = api.parseRollup(input);
+  assert.equal(range.schema_profile, "apple-rollup-v11");
+  assert.equal(range.source_schema_profile, "apple-v11");
+  assert.equal(range.timeContext.sleep_day_attribution, "morning_ends");
+  assert.equal(range.timeContext.calendar_timezone, "America/New_York");
+  assert.equal(range.daysExpected, 4);
+  assert.equal(range.daysCounted, 2);
+  assert.equal(range.coveragePercent, 50);
+  assert.equal(range.metrics.sleep_total_hours.primaryValue, 8.25);
+  assert.equal(range.metrics.sleep_core_hours.primaryValue, 4.25);
+  assert.equal(range.metrics.sleep_light_hours, undefined);
 });
