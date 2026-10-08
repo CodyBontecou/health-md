@@ -547,14 +547,7 @@ final class ExportJourneyUITests: XCTestCase {
         app.launch()
 
         let customPreset = app.buttons[UITestLaunchHelper.Export.datePresetCustomButton]
-        scrollUntilHittable(customPreset, in: app, swipingUp: true)
-        // A partially visible SwiftUI button can report isHittable while its center remains below
-        // the bottom tab bar. Move the preset row a bounded distance into the viewport.
-        let scrollView = app.scrollViews.firstMatch
-        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
-            forDuration: 0.05,
-            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-        )
+        scrollDatePresetIntoView(customPreset, in: app)
         XCTAssertTrue(customPreset.exists, "Custom preset should be visible")
         XCTAssertTrue(customPreset.isHittable, "Custom preset should be tappable")
         customPreset.tap()
@@ -637,6 +630,24 @@ final class ExportJourneyUITests: XCTestCase {
         for _ in 0..<6 where !element.isHittable {
             swipingUp ? scrollView.swipeUp() : scrollView.swipeDown()
         }
+    }
+
+    private func scrollDatePresetIntoView(_ preset: XCUIElement, in app: XCUIApplication) {
+        scrollUntilHittable(preset, in: app, swipingUp: true)
+        guard preset.exists else { return }
+        let scrollView = app.scrollViews.firstMatch
+        let tabBar = app.tabBars.firstMatch
+        let visibleBottom = tabBar.exists
+            ? min(scrollView.frame.maxY, tabBar.frame.minY)
+            : scrollView.frame.maxY
+        // A partly visible button may be hittable underneath the tab bar. Only nudge
+        // that lower-edge case; an unconditional extra drag can hide a safe row
+        // underneath the navigation bar after the first swipe has already found it.
+        guard preset.frame.maxY > visibleBottom - 24 else { return }
+        scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)).press(
+            forDuration: 0.05,
+            thenDragTo: scrollView.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        )
     }
 
     private func waitForAccessibilityText(

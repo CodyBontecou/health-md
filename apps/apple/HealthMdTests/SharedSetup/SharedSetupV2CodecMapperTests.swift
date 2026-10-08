@@ -265,6 +265,32 @@ final class SharedSetupV2CodecMapperTests: XCTestCase {
         XCTAssertFalse(text.contains("\"isenabled\""))
     }
 
+    func testFrozenV2RefreshGrammarRejectsZeroAndHourlyRatherThanApproximating() throws {
+        let profile = makeProfile(id: profileID(1), name: "Cadence investigation")
+        let entry = ScheduledExportEntry(
+            profileID: profile.id, todayRefreshEnabled: true,
+            todayRefreshIntervalHours: 3
+        )
+        let document = try map(
+            profiles: [profile], activeProfileID: profile.id, schedules: [entry]
+        )
+        for hours in [0, 1] {
+            var unsupported = document
+            unsupported.profiles[0].platformExtensions.apple?.schedule?.todayRefreshIntervalHours = hours
+            // Bypass the public writer only to generate attacker-controlled reader input.
+            let raw = try JSONEncoder().encode(unsupported)
+            XCTAssertThrowsError(try SharedSetupV2Codec.encode(unsupported))
+            XCTAssertThrowsError(try SharedSetupV2Codec.decode(raw))
+        }
+        // Native entry mutation is not clamped; the mapper must fail closed too.
+        var unsupportedEntry = entry
+        unsupportedEntry.todayRefreshIntervalHours = 1
+        XCTAssertThrowsError(try map(
+            profiles: [profile], activeProfileID: profile.id, schedules: [unsupportedEntry]
+        ))
+        XCTAssertEqual(entry.todayRefreshIntervalHours, 3)
+    }
+
     func testUnsafeOrUnconfiguredAPIStillProducesOnlyInertAPIIntent() throws {
         let endpointID = UUID(uuidString: "DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD")!
         let profile = makeProfile(
