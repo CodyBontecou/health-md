@@ -466,6 +466,20 @@ fn supplied_native_csv_keeps_rows_and_rejects_incomplete_or_conflicting_authorit
     assert!(text.ends_with(
         "2026-07-25,Activity,Steps,1234,count,\n2026-07-25,Body,Body Fat Percentage,20.5,percent,\n"
     ));
+    let mut mixed = batches[0].clone();
+    mixed["days"][0]["native_details"] = json!({"output_keys":["steps"],"csv_rows":[{"date":"2026-07-25","category":"Activity Detail","metric":"Steps sample","value":"1","unit":"steps","timestamp":"2026-07-25T00:00:00Z","ordinal":0}],"markdown_blocks":[],"bases_frontmatter_blocks":[]});
+    let mut mixed_session = RenderSession::from_json(
+        &serde_json::to_vec(&config).unwrap(),
+        &serde_json::to_vec(&semantic).unwrap(),
+    )
+    .unwrap();
+    assert_eq!(
+        mixed_session
+            .process_batch(&serde_json::to_vec(&mixed).unwrap(), || false)
+            .unwrap_err(),
+        RenderError::PresentationMismatch,
+        "Native document rows cannot silently bypass requested detail facts"
+    );
     for index in 0..8 {
         let mut invalid = batches[0].clone();
         invalid["days"][0]["profile_documents"]["csv_rows"][index]["cells"][3] =
@@ -938,6 +952,166 @@ fn apple_wake_date_formats_keep_attribution_when_metadata_is_disabled() {
                     assert!(text.contains(field), "{field}: {text}");
                 }
             }
+        }
+    }
+}
+
+#[test]
+fn successor_native_details_preserve_exact_rows_without_changing_machine_summaries() {
+    for input in [apple_successor_input, android_successor_input] {
+        let (config, semantic, mut batches) = input();
+        let original = render(&config, &semantic, &batches);
+        batches[0]["days"][0]["native_details"] = json!({
+            "output_keys":["steps"],
+            "csv_rows":[{"date":"2026-07-25","category":"Activity Detail","metric":"Steps sample",
+                "value":"1234.125","unit":"steps","timestamp":"2026-07-24T23:45:00.123456789Z","ordinal":0}],
+            "markdown_blocks":[{"heading":"Activity Samples","lines":["1234.125 steps at 2026-07-24T23:45:00.123456789Z"],"ordinal":0}],
+            "bases_frontmatter_blocks":[{"key":"activity_samples","lines":["  - value: 1234.125","    timestamp: 2026-07-24T23:45:00.123456789Z"],"ordinal":0}]
+        });
+        let mut quoted_batches = batches.clone();
+        quoted_batches[0]["days"][0]["native_details"]["bases_frontmatter_blocks"][0]["key"] =
+            json!("activity samples: exact");
+        let quoted = render(&config, &semantic, &quoted_batches);
+        let quoted_bases = quoted
+            .items
+            .iter()
+            .find(|item| item.relative_path.contains("/Bases/"))
+            .unwrap();
+        assert!(
+            String::from_utf8(quoted_bases.content.clone())
+                .unwrap()
+                .contains("\"activity samples: exact\":\n")
+        );
+        let mut custom_config = config.clone();
+        custom_config["markdown"]["custom_template"] =
+            json!("# Personal {{date}}\n{{activity_metrics}}\n");
+        let custom_plan = render(&custom_config, &semantic, &batches);
+        let custom_markdown = custom_plan
+            .items
+            .iter()
+            .find(|item| item.relative_path.contains("/Markdown/"))
+            .unwrap();
+        let custom_text = String::from_utf8(custom_markdown.content.clone()).unwrap();
+        assert!(custom_text.contains("# Personal"));
+        assert_eq!(
+            custom_text.matches("Activity Samples").count(),
+            1,
+            "Custom templates cannot discard or duplicate requested detail blocks"
+        );
+        let plan = render(&config, &semantic, &batches);
+        for item in &plan.items {
+            let text = String::from_utf8(item.content.clone()).unwrap();
+            if has_extension(&item.relative_path, "csv") {
+                assert!(text.contains("2026-07-25,Activity Detail,Steps sample,1234.125,steps,2026-07-24T23:45:00.123456789Z"));
+            } else if item.relative_path.contains("/Bases/")
+                || item.relative_path.ends_with("-bases.md")
+            {
+                assert!(text.contains("activity_samples:\n  - value: 1234.125"));
+            } else if has_extension(&item.relative_path, "md") {
+                assert!(text.contains("Activity Samples"), "{}", item.relative_path);
+                assert!(text.contains("2026-07-24T23:45:00.123456789Z"));
+            } else if has_extension(&item.relative_path, "json") {
+                let before = original
+                    .items
+                    .iter()
+                    .find(|old| old.relative_path == item.relative_path)
+                    .unwrap();
+                assert_eq!(
+                    item.content, before.content,
+                    "Detail presentation must not rewrite the public JSON projection"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn successor_native_details_reject_wrong_owner_unselected_outputs_and_invalid_instants_transactionally()
+ {
+    for input in [apple_successor_input, android_successor_input] {
+        for mutation in [
+            "owner",
+            "selection",
+            "timestamp",
+            "duplicate",
+            "null",
+            "reserved",
+            "limit",
+            "block_limit",
+            "yaml_escape",
+            "yaml_multiline",
+            "native_markdown",
+        ] {
+            let (config, semantic, mut batches) = input();
+            let mut details = json!({"output_keys":["steps"],"csv_rows":[{"date":"2026-07-25","category":"Activity Detail","metric":"Steps sample","value":"1234.125","unit":"steps","timestamp":"2026-07-24T23:45:00.123456789Z","ordinal":0}],"markdown_blocks":[],"bases_frontmatter_blocks":[]});
+            match mutation {
+                "owner" => details["csv_rows"][0]["date"] = json!("2026-07-24"),
+                "selection" => details["output_keys"] = json!(["unselected"]),
+                "timestamp" => {
+                    details["csv_rows"][0]["timestamp"] = json!("2026-07-25T05:30:00+05:45");
+                }
+                "duplicate" => details["output_keys"] = json!(["steps", "steps"]),
+                "null" => details = Value::Null,
+                "reserved" => {
+                    details["bases_frontmatter_blocks"] =
+                        json!([{"key":"units","lines":["  steps: false"],"ordinal":0}]);
+                }
+                "limit" => {
+                    details["csv_rows"] = Value::Array(vec![details["csv_rows"][0].clone(); 4097]);
+                }
+                "native_markdown" => {
+                    let keys = batches[0]["days"][0]["metrics"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|metric| metric["output_key"].clone())
+                        .collect::<Vec<_>>();
+                    batches[0]["days"][0]["profile_documents"] = json!({"semantic_output_keys":keys,"markdown_body":{"lines":["Native body"],"trailing_newline":true},"csv_rows":null,"json_root":null});
+                }
+                "yaml_escape" => {
+                    details["bases_frontmatter_blocks"] =
+                        json!([{"key":"samples","lines":["schema_version: 0"],"ordinal":0}]);
+                }
+                "yaml_multiline" => {
+                    details["bases_frontmatter_blocks"] = json!([{"key":"samples","lines":["  - value: 1\nschema_version: 0"],"ordinal":0}]);
+                }
+                "block_limit" => {
+                    details["markdown_blocks"] = Value::Array(
+                        (0..4097)
+                            .map(
+                                |ordinal| json!({"heading":"Samples","lines":[],"ordinal":ordinal}),
+                            )
+                            .collect(),
+                    );
+                }
+                _ => unreachable!(),
+            }
+            batches[0]["days"][0]["native_details"] = details;
+            let mut session = RenderSession::from_json(
+                &serde_json::to_vec(&config).unwrap(),
+                &serde_json::to_vec(&semantic).unwrap(),
+            )
+            .unwrap();
+            assert!(
+                session
+                    .process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false)
+                    .is_err(),
+                "{mutation}"
+            );
+            batches[0]["days"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("native_details");
+            if mutation == "native_markdown" {
+                batches[0]["days"][0]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("profile_documents");
+            }
+            session
+                .process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false)
+                .expect("Rejected detail batch must not advance the accepted frontier");
+            session.finish(|| false).unwrap();
         }
     }
 }

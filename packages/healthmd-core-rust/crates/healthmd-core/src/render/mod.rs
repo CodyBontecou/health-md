@@ -596,6 +596,26 @@ pub struct RenderProfileDocuments {
     pub json_root: Option<OrderedJsonValue>,
 }
 
+/// Successor-only native detail presentation from the same frozen, selected capture.
+/// Native profile documents continue to own the public JSON detail grammar.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RenderNativeDetails {
+    pub output_keys: Vec<String>,
+    pub csv_rows: Vec<RenderCsvRow>,
+    pub markdown_blocks: Vec<RenderMarkdownBlock>,
+    pub bases_frontmatter_blocks: Vec<RenderFrontmatterBlock>,
+}
+
+fn deserialize_native_details<'de, D>(
+    deserializer: D,
+) -> Result<Option<RenderNativeDetails>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    RenderNativeDetails::deserialize(deserializer).map(Some)
+}
+
 /// Presentation facts for one semantic owner date.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -605,12 +625,42 @@ pub struct RenderDay {
     pub archive_diagnostics: Option<RenderArchiveDiagnostics>,
     pub bases_frontmatter_fields: Vec<RenderFrontmatterField>,
     pub bases_frontmatter_blocks: Vec<RenderFrontmatterBlock>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_native_details"
+    )]
+    pub native_details: Option<RenderNativeDetails>,
     pub metrics: Vec<RenderMetric>,
     pub extensions: Vec<RenderExtensionPayload>,
     pub individual_entries: Vec<RenderIndividualEntry>,
     pub daily_note: Option<RenderDailyNote>,
     #[serde(default)]
     pub profile_documents: RenderProfileDocuments,
+}
+
+impl RenderDay {
+    fn fact_count(&self) -> Option<usize> {
+        let count = self.metrics.len().checked_add(self.extensions.len())?;
+        let Some(details) = &self.native_details else {
+            return Some(count);
+        };
+        let count = count
+            .checked_add(details.csv_rows.len())?
+            .checked_add(details.markdown_blocks.len())?
+            .checked_add(details.bases_frontmatter_blocks.len())?;
+        details
+            .markdown_blocks
+            .iter()
+            .map(|block| block.lines.len())
+            .chain(
+                details
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .map(|block| block.lines.len()),
+            )
+            .try_fold(count, usize::checked_add)
+    }
 }
 
 /// Transactional ordered render batch.
@@ -747,11 +797,7 @@ impl RenderSession {
         let fact_count = batch
             .days
             .iter()
-            .try_fold(0usize, |count, day| {
-                count
-                    .checked_add(day.metrics.len())
-                    .and_then(|value| value.checked_add(day.extensions.len()))
-            })
+            .try_fold(0usize, |count, day| count.checked_add(day.fact_count()?))
             .ok_or(RenderError::LimitExceeded)?;
         if fact_count > MAX_RENDER_FACTS_PER_BATCH {
             return Err(RenderError::LimitExceeded);
@@ -1204,6 +1250,90 @@ fn validate_day(
         }
         (_, None) => {}
         (_, Some(_)) => return Err(RenderError::InvalidBatch),
+    }
+    if let Some(details) = &day.native_details {
+        if day.profile_documents.markdown_body.is_some() || day.profile_documents.csv_rows.is_some()
+        {
+            return Err(RenderError::PresentationMismatch);
+        }
+        if !config.profile.is_wake_date() {
+            return Err(RenderError::InvalidBatch);
+        }
+        let selections = details.output_keys.iter().collect::<HashSet<_>>();
+        if selections.is_empty()
+            || selections.len() != details.output_keys.len()
+            || selections
+                .iter()
+                .any(|key| !accepted.contains_key(key.as_str()))
+        {
+            return Err(RenderError::PresentationMismatch);
+        }
+        let bytes = serde_json::to_vec(details).map_err(|_| RenderError::SerializationFailed)?;
+        if bytes.len() > MAX_EXTENSION_PAYLOAD_BYTES {
+            return Err(RenderError::LimitExceeded);
+        }
+        let mut ordinals = HashSet::new();
+        for row in &details.csv_rows {
+            if row.date != day.owner_date
+                || !ordinals.insert(row.ordinal)
+                || !row.timestamp.ends_with('Z')
+                || chrono::DateTime::parse_from_rfc3339(&row.timestamp).is_err()
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+            for value in [
+                &row.category,
+                &row.metric,
+                &row.value,
+                &row.unit,
+                &row.timestamp,
+            ] {
+                validate_optional_small_text(value)?;
+            }
+        }
+        let mut ordinals = HashSet::new();
+        for block in &details.markdown_blocks {
+            if !ordinals.insert(block.ordinal) {
+                return Err(RenderError::InvalidBatch);
+            }
+            validate_small_text(&block.heading)?;
+            for line in &block.lines {
+                validate_optional_small_text(line)?;
+            }
+        }
+        let mut block_keys = HashSet::new();
+        for block in &details.bases_frontmatter_blocks {
+            validate_small_text(&block.key)?;
+            if !block_keys.insert(&block.key)
+                || accepted.contains_key(&block.key)
+                || day
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .any(|existing| existing.key == block.key)
+                || reserved_frontmatter_keys(config.profile).contains(block.key.as_str())
+                || block.key == config.frontmatter.date_key
+                || block.key == config.frontmatter.type_key
+                || config.custom_frontmatter.contains_key(&block.key)
+                || config.placeholder_frontmatter.contains(&block.key)
+                || day
+                    .metrics
+                    .iter()
+                    .any(|metric| metric.frontmatter_key == block.key)
+                || day
+                    .bases_frontmatter_fields
+                    .iter()
+                    .any(|field| field.key == block.key)
+                || block.lines.is_empty()
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+            for line in &block.lines {
+                validate_optional_small_text(line)?;
+                if !line.starts_with("  ") || line.contains(['\r', '\n']) {
+                    return Err(RenderError::PresentationMismatch);
+                }
+            }
+        }
     }
     let mut keys = HashSet::new();
     let mut ordinals = HashSet::new();
@@ -2192,6 +2322,31 @@ mod tests {
                 let mut session = RenderSession::from_json(&config, &semantic).unwrap();
                 let mut batch = render_batch();
                 batch["days"][0]["metrics"][0]["human_presentation"] = human;
+                assert!(
+                    session
+                        .process_batch(&serde_json::to_vec(&batch).unwrap(), || false)
+                        .is_err()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn historical_profiles_reject_native_details_including_null_and_empty_objects() {
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AndroidFrozenV4,
+            SemanticProfile::AndroidAnalyticalV5,
+        ] {
+            for detail in [
+                Value::Null,
+                json!({}),
+                json!({"output_keys":["steps"],"csv_rows":[],"markdown_blocks":[],"bases_frontmatter_blocks":[]}),
+            ] {
+                let (config, semantic) = input_bytes(profile);
+                let mut session = RenderSession::from_json(&config, &semantic).unwrap();
+                let mut batch = render_batch();
+                batch["days"][0]["native_details"] = detail;
                 assert!(
                     session
                         .process_batch(&serde_json::to_vec(&batch).unwrap(), || false)

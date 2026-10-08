@@ -197,10 +197,25 @@ pub(crate) fn render_frontmatter(
         }
     }
     if surface == FrontmatterSurface::Bases {
-        let mut blocks = day.bases_frontmatter_blocks.iter().collect::<Vec<_>>();
-        blocks.sort_by_key(|block| (block.ordinal, block.key.clone()));
-        for block in blocks {
-            writeln!(output, "{}:", block.key).map_err(|_| RenderError::SerializationFailed)?;
+        let mut blocks = day
+            .bases_frontmatter_blocks
+            .iter()
+            .map(|block| (block, false))
+            .chain(day.native_details.iter().flat_map(|details| {
+                details
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .map(|block| (block, true))
+            }))
+            .collect::<Vec<_>>();
+        blocks.sort_by_key(|(block, _)| (block.ordinal, block.key.clone()));
+        for (block, successor_detail) in blocks {
+            let key = if successor_detail {
+                yaml_key(&block.key)
+            } else {
+                block.key.clone()
+            };
+            writeln!(output, "{key}:").map_err(|_| RenderError::SerializationFailed)?;
             for line in &block.lines {
                 writeln!(output, "{line}").map_err(|_| RenderError::SerializationFailed)?;
             }
@@ -244,6 +259,22 @@ pub(crate) fn render_markdown(
         standard
     };
     frontmatter.push_str(&body);
+    if let Some(details) = &day.native_details {
+        let mut blocks = details.markdown_blocks.iter().collect::<Vec<_>>();
+        blocks.sort_by_key(|block| (block.ordinal, block.heading.clone()));
+        for block in blocks {
+            writeln!(
+                frontmatter,
+                "\n{} {}",
+                "#".repeat(usize::from(config.markdown.section_header_level)),
+                block.heading
+            )
+            .map_err(|_| RenderError::SerializationFailed)?;
+            for line in &block.lines {
+                writeln!(frontmatter, "{line}").map_err(|_| RenderError::SerializationFailed)?;
+            }
+        }
+    }
     Ok(frontmatter.into_bytes())
 }
 
@@ -406,10 +437,7 @@ fn replace_conditional(input: &str, section: &str, include: bool) -> Result<Stri
     let start = format!("{{{{#{section}}}}}");
     let end = format!("{{{{/{section}}}}}");
     let mut result = input.to_owned();
-    loop {
-        let Some(start_index) = result.find(&start) else {
-            break;
-        };
+    while let Some(start_index) = result.find(&start) {
         let content_start = start_index + start.len();
         let Some(relative_end) = result[content_start..].find(&end) else {
             return Err(RenderError::InvalidConfig);
@@ -562,6 +590,11 @@ pub(crate) fn render_csv(
         .extensions
         .iter()
         .flat_map(|extension| extension.csv_rows.iter())
+        .chain(
+            day.native_details
+                .iter()
+                .flat_map(|details| details.csv_rows.iter()),
+        )
         .collect::<Vec<&RenderCsvRow>>();
     rows.sort_by_key(|row| (row.ordinal, row.category.clone(), row.metric.clone()));
     for row in rows {
