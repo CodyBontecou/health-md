@@ -161,7 +161,7 @@
     },
     {
       "id": "F10",
-      "label": "Scope omissions hidden by a broad \u201cshared UI\u201d claim",
+      "label": "Scope omissions hidden by a broad “shared UI” claim",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#open-feasibility-decisions-and-risk-register"
     },
     {
@@ -218,7 +218,7 @@
   "validation_gates": [
     {
       "id": "V01",
-      "label": "V01 \u2014 Portable contract/core/protocol",
+      "label": "V01 — Portable contract/core/protocol",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -233,7 +233,7 @@
     },
     {
       "id": "V02",
-      "label": "V02 \u2014 Shared operations and adapters",
+      "label": "V02 — Shared operations and adapters",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -248,7 +248,7 @@
     },
     {
       "id": "V03",
-      "label": "V03 \u2014 Host capabilities",
+      "label": "V03 — Host capabilities",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -263,7 +263,7 @@
     },
     {
       "id": "V04",
-      "label": "V04 \u2014 Mobile/system lifecycle",
+      "label": "V04 — Mobile/system lifecycle",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -278,7 +278,7 @@
     },
     {
       "id": "V05",
-      "label": "V05 \u2014 UI and extensions",
+      "label": "V05 — UI and extensions",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -293,7 +293,7 @@
     },
     {
       "id": "V06",
-      "label": "V06 \u2014 Upgrade/interoperability",
+      "label": "V06 — Upgrade/interoperability",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -308,7 +308,7 @@
     },
     {
       "id": "V07",
-      "label": "V07 \u2014 Consumers/isolation",
+      "label": "V07 — Consumers/isolation",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -323,7 +323,7 @@
     },
     {
       "id": "V08",
-      "label": "V08 \u2014 Performance and developer experience",
+      "label": "V08 — Performance and developer experience",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -338,7 +338,7 @@
     },
     {
       "id": "V09",
-      "label": "V09 \u2014 Distribution and final retirement",
+      "label": "V09 — Distribution and final retirement",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -353,7 +353,7 @@
     },
     {
       "id": "V10",
-      "label": "V10 \u2014 Location/usage capture, full history, migration and privacy",
+      "label": "V10 — Location/usage capture, full history, migration and privacy",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -368,7 +368,7 @@
     },
     {
       "id": "V11",
-      "label": "V11 \u2014 Hosted ingestion, tenant isolation and data parity",
+      "label": "V11 — Hosted ingestion, tenant isolation and data parity",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -383,7 +383,7 @@
     },
     {
       "id": "V12",
-      "label": "V12 \u2014 Hosted authorization and exact agent products",
+      "label": "V12 — Hosted authorization and exact agent products",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -398,7 +398,7 @@
     },
     {
       "id": "V13",
-      "label": "V13 \u2014 Hosted operations, recovery and lifecycle",
+      "label": "V13 — Hosted operations, recovery and lifecycle",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#required-behavior-gates",
       "status": "not_started",
       "qualification_receipts": [],
@@ -415,7 +415,7 @@
   "phases": [
     {
       "id": "M00",
-      "label": "M00 \u2014 Baseline and successor decision",
+      "label": "M00 — Baseline and successor decision",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "in_progress",
       "qualification_receipts": [],
@@ -430,7 +430,7 @@
     },
     {
       "id": "M01",
-      "label": "M01 \u2014 Portable foundation and first shared operation",
+      "label": "M01 — Portable foundation and first shared operation",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "in_progress",
       "qualification_receipts": [],
@@ -445,7 +445,7 @@
     },
     {
       "id": "M02",
-      "label": "M02 \u2014 High-risk host, acquisition and distribution proofs",
+      "label": "M02 — High-risk host, acquisition and distribution proofs",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "in_progress",
       "qualification_receipts": [],
@@ -460,7 +460,7 @@
     },
     {
       "id": "M03",
-      "label": "M03 \u2014 Complete core, dataset and protocol",
+      "label": "M03 — Complete core, dataset and protocol",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -475,7 +475,7 @@
     },
     {
       "id": "M04",
-      "label": "M04 \u2014 Complete operations and CLI/MCP",
+      "label": "M04 — Complete operations and CLI/MCP",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -490,7 +490,7 @@
     },
     {
       "id": "M05",
-      "label": "M05 \u2014 Native capture, services and background integration",
+      "label": "M05 — Native capture, services and background integration",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -505,7 +505,7 @@
     },
     {
       "id": "M06",
-      "label": "M06 \u2014 Shared primary UI and feature models",
+      "label": "M06 — Shared primary UI and feature models",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -520,7 +520,7 @@
     },
     {
       "id": "M07",
-      "label": "M07 \u2014 Remaining interfaces and generated consumers",
+      "label": "M07 — Remaining interfaces and generated consumers",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -535,7 +535,7 @@
     },
     {
       "id": "M08",
-      "label": "M08 \u2014 Candidate distribution and installed-user qualification",
+      "label": "M08 — Candidate distribution and installed-user qualification",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -550,7 +550,7 @@
     },
     {
       "id": "M09",
-      "label": "M09 \u2014 Authority promotion and rollback window",
+      "label": "M09 — Authority promotion and rollback window",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -565,7 +565,7 @@
     },
     {
       "id": "M10",
-      "label": "M10 \u2014 Retire Rust and certify final state",
+      "label": "M10 — Retire Rust and certify final state",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#implementation-phases-and-dependencies",
       "status": "not_started",
       "qualification_receipts": [],
@@ -1404,7 +1404,7 @@
     },
     {
       "id": "H00",
-      "label": "H00 \u2014 Product, source and policy reconciliation",
+      "label": "H00 — Product, source and policy reconciliation",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1423,7 +1423,7 @@
     },
     {
       "id": "H01",
-      "label": "H01 \u2014 Hosted feasibility",
+      "label": "H01 — Hosted feasibility",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1442,7 +1442,7 @@
     },
     {
       "id": "H02",
-      "label": "H02 \u2014 Cloud contracts and authorization",
+      "label": "H02 — Cloud contracts and authorization",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1461,7 +1461,7 @@
     },
     {
       "id": "H03",
-      "label": "H03 \u2014 Durable ingestion and archive",
+      "label": "H03 — Durable ingestion and archive",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1480,7 +1480,7 @@
     },
     {
       "id": "H04",
-      "label": "H04 \u2014 Retained queries and shared source",
+      "label": "H04 — Retained queries and shared source",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1499,7 +1499,7 @@
     },
     {
       "id": "H05",
-      "label": "H05 \u2014 Account, destination and lifecycle UI",
+      "label": "H05 — Account, destination and lifecycle UI",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1518,7 +1518,7 @@
     },
     {
       "id": "H06",
-      "label": "H06 \u2014 Named agent connections",
+      "label": "H06 — Named agent connections",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1537,7 +1537,7 @@
     },
     {
       "id": "H07",
-      "label": "H07 \u2014 Production qualification",
+      "label": "H07 — Production qualification",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1556,7 +1556,7 @@
     },
     {
       "id": "H08",
-      "label": "H08 \u2014 Pilot/user transition and rollout",
+      "label": "H08 — Pilot/user transition and rollout",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1575,7 +1575,7 @@
     },
     {
       "id": "H09",
-      "label": "H09 \u2014 Final cloud retirement/maintenance",
+      "label": "H09 — Final cloud retirement/maintenance",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#operations-rollout-and-hosted-work-packages",
       "stream": "cloud_release",
       "status": "not_started",
@@ -1735,7 +1735,7 @@
     },
     {
       "id": "L00",
-      "label": "L00 \u2014 Location source inventory",
+      "label": "L00 — Location source inventory",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "in_progress",
@@ -1763,7 +1763,7 @@
     },
     {
       "id": "L01",
-      "label": "L01 \u2014 Mobile location capture and semantics",
+      "label": "L01 — Mobile location capture and semantics",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "in_progress",
@@ -1791,7 +1791,7 @@
     },
     {
       "id": "L02",
-      "label": "L02 \u2014 Location presentation and context",
+      "label": "L02 — Location presentation and context",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -1810,7 +1810,7 @@
     },
     {
       "id": "L03",
-      "label": "L03 \u2014 Wearable and location system surfaces",
+      "label": "L03 — Wearable and location system surfaces",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "in_progress",
@@ -1838,7 +1838,7 @@
     },
     {
       "id": "L04",
-      "label": "L04 \u2014 Location exports and delivery",
+      "label": "L04 — Location exports and delivery",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -1857,7 +1857,7 @@
     },
     {
       "id": "L05",
-      "label": "L05 \u2014 Location transition",
+      "label": "L05 — Location transition",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2187,7 +2187,7 @@
     },
     {
       "id": "P01",
-      "label": "P01 \u2014 Personal dataset and repository",
+      "label": "P01 — Personal dataset and repository",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "in_progress",
@@ -2215,7 +2215,7 @@
     },
     {
       "id": "P02",
-      "label": "P02 \u2014 Unified queries, exports and schedules",
+      "label": "P02 — Unified queries, exports and schedules",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2234,7 +2234,7 @@
     },
     {
       "id": "P03",
-      "label": "P03 \u2014 Donor installed-user migration",
+      "label": "P03 — Donor installed-user migration",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2253,7 +2253,7 @@
     },
     {
       "id": "S00",
-      "label": "S00 \u2014 Usage source inventory",
+      "label": "S00 — Usage source inventory",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2281,7 +2281,7 @@
     },
     {
       "id": "S01",
-      "label": "S01 \u2014 Mobile usage",
+      "label": "S01 — Mobile usage",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2309,7 +2309,7 @@
     },
     {
       "id": "S02",
-      "label": "S02 \u2014 macOS app/device/title collector",
+      "label": "S02 — macOS app/device/title collector",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2337,7 +2337,7 @@
     },
     {
       "id": "S03",
-      "label": "S03 \u2014 Usage models and UI",
+      "label": "S03 — Usage models and UI",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2372,7 +2372,7 @@
     },
     {
       "id": "S04",
-      "label": "S04 \u2014 Usage exports and migration",
+      "label": "S04 — Usage exports and migration",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2391,7 +2391,7 @@
     },
     {
       "id": "S05",
-      "label": "S05 \u2014 Later desktop collectors",
+      "label": "S05 — Later desktop collectors",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2410,7 +2410,7 @@
     },
     {
       "id": "S06",
-      "label": "S06 \u2014 Required exact iOS historical sessions",
+      "label": "S06 — Required exact iOS historical sessions",
       "reference": "docs/architecture/javascript-unified-layer-design-reference.md#donor-migration-and-integration-work-packages",
       "stream": "personal_data",
       "status": "not_started",
@@ -2792,7 +2792,7 @@
       "stream": "core_cli",
       "phase": "M00",
       "kind": "inventory",
-      "outcome": "Produce one source-pinned map of existing C01\u2013C06/K01\u2013K03 authorities, fixtures, versions and consumers.",
+      "outcome": "Produce one source-pinned map of existing C01–C06/K01–K03 authorities, fixtures, versions and consumers.",
       "prerequisites": [],
       "required_decisions": [],
       "coverage": [
@@ -2910,7 +2910,7 @@
       ],
       "shared_resources": [],
       "acceptance": [
-        "Enumerate current full/read-only catalog and every O01\u2013O07 entry, including guessed dispatch policy.",
+        "Enumerate current full/read-only catalog and every O01–O07 entry, including guessed dispatch policy.",
         "Map wire/crypto/cursor/job transitions and exact limits to authoritative paths and independent cases.",
         "Include native Swift query/context/evidence authority where Rust tests are incomplete; classify planned Android paths."
       ],
@@ -3083,7 +3083,7 @@
       ],
       "shared_resources": [],
       "acceptance": [
-        "Map actual Apple producers/targets/entrypoints/state and tests; mark future U17\u2013U18 cloud scope as proposed.",
+        "Map actual Apple producers/targets/entrypoints/state and tests; mark future U17–U18 cloud scope as proposed.",
         "Separate current native source/security/lifecycle from shareable feature logic, including independent watch and local-only reports.",
         "Record commerce/Mac/installed-state/Release/headless and physical qualification gaps; run no app or personal-data capture."
       ],
@@ -3839,7 +3839,7 @@
         "architecture-decision-sequence"
       ],
       "acceptance": [
-        "Reconcile selected D01\u2013D18 with applicable current instructions, exact contracts and coarse host interfaces.",
+        "Reconcile selected D01–D18 with applicable current instructions, exact contracts and coarse host interfaces.",
         "Define first-slice candidate authority/deletion boundaries and scoped prerequisites; leave cloud decisions independent.",
         "Record reviewed Q-LOCAL resolution and exact ADR path; derive later instruction changes when implementation lands."
       ],
@@ -10158,7 +10158,7 @@
                 "code": 0,
                 "signal": null,
                 "reason": null,
-                "output": "\n                        \u2592\u2592\u2593\u2593\u2593\u2593\u2592\u2592\n                     \u2592\u2593\u2593\u2593\u2592\u2592\u2591\u2591\u2592\u2592\u2593\u2593\u2593\u2592\n                  \u2592\u2593\u2593\u2593\u2593\u2591\u2591\u2591\u2592\u2592\u2592\u2592\u2591\u2591\u2591\u2593\u2593\u2593\u2593\u2592\n                 \u2593\u2593\u2592\u2592\u2592\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2592\u2592\u2592\u2593\u2593\n                 \u2593\u2593\u2591\u2591\u2591\u2591\u2591\u2592\u2593\u2593\u2593\u2593\u2593\u2593\u2592\u2591\u2591\u2591\u2591\u2591\u2593\u2593\n                 \u2593\u2593\u2591\u2591\u2593\u2593\u2592\u2591\u2591\u2591\u2592\u2592\u2591\u2591\u2591\u2592\u2593\u2592\u2591\u2591\u2593\u2593\n                 \u2593\u2593\u2591\u2591\u2593\u2593\u2593\u2593\u2593\u2592\u2592\u2592\u2592\u2593\u2593\u2593\u2593\u2592\u2591\u2591\u2593\u2593\n                 \u2593\u2593\u2591\u2591\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2592\u2591\u2591\u2593\u2593\n                 \u2593\u2593\u2592\u2591\u2591\u2592\u2592\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2593\u2592\u2591\u2591\u2591\u2592\u2593\u2593\n                  \u2592\u2593\u2593\u2593\u2592\u2591\u2591\u2591\u2592\u2593\u2593\u2592\u2591\u2591\u2591\u2592\u2593\u2593\u2593\u2592\n                     \u2592\u2593\u2593\u2593\u2592\u2591\u2591\u2591\u2591\u2592\u2593\u2593\u2593\u2592\n                        \u2592\u2592\u2593\u2593\u2593\u2593\u2592\u2592\n\n\n                Welcome to Metro v0.87.1\n              Fast - Scalable - Integrated\n\n\ntransform[stderr]: (node:99590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\ntransform[stderr]: (Use `node --trace-warnings ...` to show where the warning was created)\n WARN  Attempted to import the module \"/Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/node_modules/react-native/src/private/featureflags/ReactNativeFeatureFlags\" which is not listed in the \"exports\" of \"/Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/node_modules/react-native\" under the requested subpath \"./src/private/featureflags/ReactNativeFeatureFlags\". Falling back to file-based resolution. Consider updating the call site or asking the package maintainer(s) to expose this API.\nLOG:Writing bundle output to: /Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/dist/cold-worker/assets/cold-worker.android.bundle.js\nLOG:Done writing bundle output\n",
+                "output": "\n                        ▒▒▓▓▓▓▒▒\n                     ▒▓▓▓▒▒░░▒▒▓▓▓▒\n                  ▒▓▓▓▓░░░▒▒▒▒░░░▓▓▓▓▒\n                 ▓▓▒▒▒▓▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓\n                 ▓▓░░░░░▒▓▓▓▓▓▓▒░░░░░▓▓\n                 ▓▓░░▓▓▒░░░▒▒░░░▒▓▒░░▓▓\n                 ▓▓░░▓▓▓▓▓▒▒▒▒▓▓▓▓▒░░▓▓\n                 ▓▓░░▓▓▓▓▓▓▓▓▓▓▓▓▓▒░░▓▓\n                 ▓▓▒░░▒▒▓▓▓▓▓▓▓▓▒░░░▒▓▓\n                  ▒▓▓▓▒░░░▒▓▓▒░░░▒▓▓▓▒\n                     ▒▓▓▓▒░░░░▒▓▓▓▒\n                        ▒▒▓▓▓▓▒▒\n\n\n                Welcome to Metro v0.87.1\n              Fast - Scalable - Integrated\n\n\ntransform[stderr]: (node:99590) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.\ntransform[stderr]: (Use `node --trace-warnings ...` to show where the warning was created)\n WARN  Attempted to import the module \"/Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/node_modules/react-native/src/private/featureflags/ReactNativeFeatureFlags\" which is not listed in the \"exports\" of \"/Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/node_modules/react-native\" under the requested subpath \"./src/private/featureflags/ReactNativeFeatureFlags\". Falling back to file-based resolution. Consider updating the call site or asking the package maintainer(s) to expose this API.\nLOG:Writing bundle output to: /Users/codybontecou/dev/health-md/apps/android/effect-host-candidate/dist/cold-worker/assets/cold-worker.android.bundle.js\nLOG:Done writing bundle output\n",
                 "observed_output_bytes": 1893,
                 "retained_output_bytes": 1893,
                 "retained_raw_bytes": 1893,
@@ -10559,7 +10559,7 @@
           "result": "accepted_actual_graph_delta_only",
           "report": "/private/tmp/healthmd-cold-compile-visibility-independent-graph-review.json",
           "sha256": "48f7b3c8ec003171c66f25eeac95ec65f8857038ac3af717c12c24536fe6c4b0",
-          "verified": "Exactlyfourcoldcompile/metadata bindings1003\u21921007; inverseexact90d907oldlock; no newcoordinate/version/hash;122artifacts120coords322physicalclosure unchanged; defaultPlay193/XML unchanged; testcompile1.2 retained.",
+          "verified": "Exactlyfourcoldcompile/metadata bindings1003→1007; inverseexact90d907oldlock; no newcoordinate/version/hash;122artifacts120coords322physicalclosure unchanged; defaultPlay193/XML unchanged; testcompile1.2 retained.",
           "historical_license_scope": "Unchanged report artifact_rows=1003 and per-artifact configurations describe pregraph; current1007 rows add only four reviewed bindings. All122 artifacts/120 coordinates/POM/module/licenses remain unchanged, not a fresh configuration report."
         }
       },
@@ -10626,7 +10626,7 @@
           "path": "/private/tmp/healthmd-cold-futures12-independent-proposal-review.json",
           "sha256": "b9b5f031d6e18bb56d21c0ad5d5cd204e6d12f1a212d038ee4e21b6c4dcfdd9e"
         },
-        "requires": "Archiveall14/ownROOTreceipt/currentAPK+mappings+actualfailedABIreport beforewrite. OnlycoldGradle future1.1\u21921.2 andcoldKTX1.2 addition; onlyappendexact26class/36memberfiniteproposedR8roots keepingold4rules unchanged; ownprovenance/receipt sourcefreeze/history. Existing122physicalclosure alreadycontains12/strictXMLunchanged; actualcoldlock/version/config changes onlyafterROOTboundedofflineaudit+write-locks andindependentdelta review. No fixture/Worker/bridge/TS/runner/manifest/bundle/public/core/defaultPlay changes, no acquisition/newcoordinate orblindXML/lock rewrite. Fullnew14patchfreeze/sourceindependentreview beforegraphcommand; graphthencompile/APK100refs and2adapter actualresolution beforedevice.",
+        "requires": "Archiveall14/ownROOTreceipt/currentAPK+mappings+actualfailedABIreport beforewrite. OnlycoldGradle future1.1→1.2 andcoldKTX1.2 addition; onlyappendexact26class/36memberfiniteproposedR8roots keepingold4rules unchanged; ownprovenance/receipt sourcefreeze/history. Existing122physicalclosure alreadycontains12/strictXMLunchanged; actualcoldlock/version/config changes onlyafterROOTboundedofflineaudit+write-locks andindependentdelta review. No fixture/Worker/bridge/TS/runner/manifest/bundle/public/core/defaultPlay changes, no acquisition/newcoordinate orblindXML/lock rewrite. Fullnew14patchfreeze/sourceindependentreview beforegraphcommand; graphthencompile/APK100refs and2adapter actualresolution beforedevice.",
         "source_review": {
           "path": "/private/tmp/healthmd-cold-futures12-finite-ABI-root-source-review.json",
           "sha256": "db2d5fd22afc8d78ffce245e131929791b18b88a00d86cdaac5107fa152b3ba4"
@@ -16434,7 +16434,7 @@
         "Private candidate module imports only; no package exports/index/locks/manifests/public schema/profile/native launchers edited. Each exact write set includes its receipt and at most four files.",
         "Fake Effect Layers expose fixed errors, bounded pages, cancellation and current suppression checks; no OS permissions, donor state, physical capture, native durability or production admission qualified.",
         "Keep absent speed/altitude distinct from native invalid unavailable; preserve source UUID namespace, Date Apple epoch bits and authorized original evidence references. Do not invent original accuracy/precision/calendar/timezone/identity.",
-        "Use source profile, not donor \u2264100m policy as general admission. Invalid coordinates/nonfinite values have no valid canonical point; report quality/coverage, never zero movement. Source-specific native sentinel/raw archive needs separate eligible profile."
+        "Use source profile, not donor ≤100m policy as general admission. Invalid coordinates/nonfinite values have no valid canonical point; report quality/coverage, never zero movement. Source-specific native sentinel/raw archive needs separate eligible profile."
       ],
       "verification": [
         {
@@ -19603,7 +19603,7 @@
         "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
         "Trusted coarse TitleAuthority reconstructs application/source classification and current detail/capture/purpose/fence eligibility before acquiring/observing any title channel. Descriptor contains no title; caller browser flag/app name/bundle heuristic cannot authorize. Browser or unknown classification yields zero title observation calls.",
         "Separately granted nonbrowser window title only; distinguish empty observed title/not_observed/redacted/unavailable. Exclude browser-derived URL/domain/path/visit/tab-title/window-title families and all keystroke/cursor/input telemetry BEFORE field observation and persistence; avoid hashing/logging excluded raw material. A title returned by an independently granted nonbrowser title API remains allowed even when its text contains a filename, path or URL-looking sequence; do not inspect and filter title content after native observation. Title permission grants no browser/history/input API access.",
-        "Acquire one coarse owned title channel under Effect scope after eligibility; bounded UTF8\u226465536/depth32nodes4096 private guards, max one pending detail, explicit failure and acknowledged cleanup. Recheck current authority before commit; revoked grant cannot persist an already observed eligible title. Actual signed AX/helper/sandbox/API/title privacy is unqualified."
+        "Acquire one coarse owned title channel under Effect scope after eligibility; bounded UTF8≤65536/depth32nodes4096 private guards, max one pending detail, explicit failure and acknowledged cleanup. Recheck current authority before commit; revoked grant cannot persist an already observed eligible title. Actual signed AX/helper/sandbox/API/title privacy is unqualified."
       ],
       "verification": [
         {
@@ -19981,7 +19981,7 @@
         "Inject coarse trusted capabilities through Effect; fake Layers qualify only portable synthetic behavior. Host classification/source identity/grants and latest external deletion/revocation frontier are independent authority, never caller flags or app-name heuristics. Admit before personal materialization and recheck before commit/publication.",
         "Own at most one bounded pending page; fixed errors omit IDs/payload/provider causes. Interrupted acquisition must not leak completed allocation; scope finalization acknowledges owned cleanup before completion. Fake storage is not native durability/fsync/SDK/privacy/grant authentication.",
         "No365-day mirror/dashboard limit. Trusted paged repository emits stable original exact start-time/identity ordering beyond mirror; source-specific sessions versus iOS aggregates and overlapping devices remain distinct. Rechunking never changes original record keys; no completeness guarantee from cursor exhaustion.",
-        "Bind cursors to dataset/device/install/source/profile/selection/grant/frontier and checkpoint generation; initial/nonadvancing/crosswired cursor rejects. Per-page eligibility before materialization and before publication, \u22641MiB/4096records/page/64KiBrecord/one pending page are private synthetic guards.",
+        "Bind cursors to dataset/device/install/source/profile/selection/grant/frontier and checkpoint generation; initial/nonadvancing/crosswired cursor rejects. Per-page eligibility before materialization and before publication, ≤1MiB/4096records/page/64KiBrecord/one pending page are private synthetic guards.",
         "Mirror continuation-only positive duration rows can disappear due sessionCount0 filter; not raw-session archive or canonical reducer authority. Preserve exact original precision/categories/comments in authorized record fields; full legacy SQL/settings/queues/source archive/import readers remain separate. Native reader implementations not in this child."
       ],
       "verification": [
@@ -20283,7 +20283,7 @@
         "stage1_patch_sha256": "e05aed05e12ef50ef5caa326edc2aba6416122f9ffc6a830eac95c1640abbaaa",
         "evidence": "Independentread-onlyreview rehashed exact40current/Gitinputs24outputs, retained34/20andLOC37/22, exact6source/4outputunion,10immutablecurrent/Gitauthorities andhistoricalobjects, LOC/Combinedcommittedsource/3patch/review/vectors. Full63frozennegativecatalogretains24oldIDsand coversallnewfiles/cohort/receipts. Guard/docs/package/locksunmodified andno ownreceipt reversepin; ROOT rehashednewcohort/receipt+current40/24. ThisreviewBEFOREguard/docs/buildinstall. Finalpassedreceiptmustnormalizeobservationsarray/result+procedure/expected/observed/evidence andexactacceptance_results,resultfields, failed/unrunhistory separate."
       },
-      "implementation_clearance": "Stage1cohort/63negativefixtureindependentlyaccepted beforeguard/docs code. Existingexact4paths only; newcohortraw1dbeeimmutable. Implementprecise40/24guard/63actualfilesystemnegatives/docs, thenrequiredcorecheck\u2192offlineCLIinstall-links\u2192CLI/MCPcheck sequentially. CurrentcoldfallbackonlyreusespreparedHermes/workspace/SDK anddoesnotreadcommonoutputs; core/CLIownexclusivebuilders. No semantic/native/public/schema/source/exports/deps/locks changes. Freeze finalsource/patch/actualresults/acceptedauthority/evidence/receipt forindependentreview.",
+      "implementation_clearance": "Stage1cohort/63negativefixtureindependentlyaccepted beforeguard/docs code. Existingexact4paths only; newcohortraw1dbeeimmutable. Implementprecise40/24guard/63actualfilesystemnegatives/docs, thenrequiredcorecheck→offlineCLIinstall-links→CLI/MCPcheck sequentially. CurrentcoldfallbackonlyreusespreparedHermes/workspace/SDK anddoesnotreadcommonoutputs; core/CLIownexclusivebuilders. No semantic/native/public/schema/source/exports/deps/locks changes. Freeze finalsource/patch/actualresults/acceptedauthority/evidence/receipt forindependentreview.",
       "declared_verification_history": [
         {
           "cwd": "packages/healthmd-core-ts",
@@ -25647,7 +25647,7 @@
           "fingerprint": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
           "report": "/private/tmp/healthmd-mcp-six-test-type-independent-review.json",
           "report_sha256": "e62bf5863a45c12f9fa1c8997aef6a64cf1d9c97496cb380979f8752b0326211",
-          "scope": "Entiretest reconstructedexact6replacements; production/vector/literals unchanged; exactEffect4lockedpublic API support actualinterruptcompletion\u2192awaitchildExit/failCausesamenominalfailure/narrowownedoutput."
+          "scope": "Entiretest reconstructedexact6replacements; production/vector/literals unchanged; exactEffect4lockedpublic API support actualinterruptcompletion→awaitchildExit/failCausesamenominalfailure/narrowownedoutput."
         }
       ],
       "per_read_authority_repair_clearance": {
@@ -25692,7 +25692,7 @@
         "fingerprint": "ff72e1af486d1ace8106281abbe34b3dd3e21e60+934e8865f5388fe6af240eee74ad2b7ee490477941eef49f950f062abeb1cbdc",
         "report": "/private/tmp/healthmd-mcp-six-test-type-independent-review.json",
         "report_sha256": "e62bf5863a45c12f9fa1c8997aef6a64cf1d9c97496cb380979f8752b0326211",
-        "scope": "Entiretest reconstructedexact6replacements; production/vector/literals unchanged; exactEffect4lockedpublic API support actualinterruptcompletion\u2192awaitchildExit/failCausesamenominalfailure/narrowownedoutput."
+        "scope": "Entiretest reconstructedexact6replacements; production/vector/literals unchanged; exactEffect4lockedpublic API support actualinterruptcompletion→awaitchildExit/failCausesamenominalfailure/narrowownedoutput."
       },
       "execution_clearance": {
         "status": "consumed_passed_final_receipt_independently_accepted",
@@ -26128,8 +26128,21 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/donor_mac_review",
+        "base_revision": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/src/surfaces/stdio-framing.ts",
+          "apps/cli/tests/surfaces/stdio-framing.test.ts",
+          "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+          "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+        ],
+        "reserved_resources": [
+          "private-stdio-framing-interface"
+        ]
+      },
       "prerequisites": [
         "MCP-JSONRPC-ENVELOPE"
       ],
@@ -26177,8 +26190,6 @@
         "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
       ],
       "shared_resources": [
-        "cli-candidate-build",
-        "cli-candidate-qualified-core-inputs",
         "private-stdio-framing-interface"
       ],
       "target": {
@@ -26438,6 +26449,107 @@
           "path": "/private/tmp/healthmd-mcp-stdio-framing-amended-preclaim-independent-review.json",
           "sha256": "9e097be67abd3ada87f9761a7803071ed9f5455b28ed843b01335f0a63e6c4e8"
         }
+      },
+      "Stage1_claim_boundary": {
+        "stage": "complete_independent_literals_and_interface_before_code",
+        "strategy_review": {
+          "path": "/private/tmp/healthmd-mcp-stdio-framing-preclaim-strategy-independent-review.json",
+          "bytes": 5361,
+          "sha256": "45fa155a410535b5023409e67af903006ca19834c86e78369499ae085a8170fd"
+        },
+        "claim_base": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+        "historical_proposal_base": "123b61f86cd62632d57d41edd9ad7b8ed1321858",
+        "current_preclaim_card_canonical_sha256": "42784e8835f38b94776078d9bb916cffbcb3164422990db525891fb88069e344",
+        "archived_preclaim_card": {
+          "path": "/private/tmp/healthmd-mcp-stdio-framing-current-card-before-Stage1-claim.json",
+          "bytes": 15641,
+          "sha256": "e442a662566803fbf1b89f0f744406380ee1c1cf2635462f3307759eb294cf28"
+        },
+        "exact_retained_Rust_source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+        "mandatory_remaining_before_Stage1_acceptance": [
+          "Pin exact retained Rust compiler/library primary sources for String::from_utf8_lossy error-length/subpart rules and char White_Space/str trim tables. Derive valid/split/overlong/surrogate/incomplete/scalar ranges and all Rust whitespace/BOM/NEL controls independently before literals; no ordinary JS trim/regex or fatal-decoder substitution.",
+          "Freeze complete full literal inputs/expected whole lexical bytes/ordered valueLFflush/ACKs/counters/bufferpeaks and realization schema, including five exact task minima. Current illustrative20 groups are strategy, not completed accepted fixture.",
+          "Make captured Io/source/flush gate callback lifetime and exact ticket membership explicit, including saved lazygate aftercallback zeroauthority, source/current reentry close/revoke before any decode/materialization/publication and late allocated ACK. Final type details must match owned aggregate source+sink ACK semantics; no fabricated two physical release acknowledgments.",
+          "Freeze actual source/profile caps and fixed absent-adapter disposition; optional existingRpc smallprofile cannot claim fullnative2MiB handling. Future SPLIT-MCP-FULLSIZE-ENVELOPE remains concrete owner/trigger, not implementation.",
+          "Stage1 onlyvector/receipt+privateinterface lease; no builder/commonqualifiedinput lease or execution until independent fullfixture/source/consumer qualification."
+        ],
+        "no_builder_or_qualified_core_window_reserved": true,
+        "no_implementation_or_execution_authorized_in_Stage1": true,
+        "current_core_context": "Qualified56/34 codec cohort is a historical snapshot; Catalog source-only implementation may add files now. Do not infer any current58/36 or runtime admission. Future consumer execution requires separately reviewed complete successor if those inputs change."
+      },
+      "coordinator_verification_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "Stage1_resource_assignment": {
+        "historical_declared_resources": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs",
+          "private-stdio-framing-interface"
+        ],
+        "source_only_claim_resource": "private-stdio-framing-interface",
+        "actual_verification_requires_separate_coordinator_window": [
+          "cli-candidate-build",
+          "cli-candidate-qualified-core-inputs"
+        ],
+        "reason": "Every declared shared resource must be reserved by a claim. Stage1 has no build/install/check authority; keep its source/interface claim narrow and require ROOT separate exclusive consumer builder/qualified-core window only after full source/fixture/consumer acceptance. This matches independently reviewed source-only strategy, avoids reserving unused mutable builders while Catalog is authored, and preserves all source/execution qualification requirements.",
+        "initial_invalid_claim_attempt": {
+          "archive": "/private/tmp/healthmd-mcp-stdio-framing-invalid-subset-claim-plan.json",
+          "sha256": "29ca4a7f23df2a98b32b1648a6a7a52d4534b23eb6e1f74c018d82518ff05f33",
+          "validation_error": "claim must reserve every declared shared resource: MCP-STDIO-FRAMING",
+          "execution_or_agent_dispatch_before_correction": false
+        },
+        "no_build_scope_added": true
+      },
+      "claim_history": [
+        {
+          "stage": "Stage1 literal interface freeze accepted source-only",
+          "claim": {
+            "agent": "/root/donor_mac_review",
+            "base_revision": "3e3d685b4ba849f032f6df73e6025c2c1421e94e",
+            "worktree": "/Users/codybontecou/dev/health-md",
+            "write_paths": [
+              "apps/cli/src/surfaces/stdio-framing.ts",
+              "apps/cli/tests/surfaces/stdio-framing.test.ts",
+              "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+              "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+            ],
+            "reserved_resources": [
+              "private-stdio-framing-interface"
+            ]
+          },
+          "accepted_source_fingerprint": "3e3d685b4ba849f032f6df73e6025c2c1421e94e+61e29273e1d0e4880f9515606858638da329a0a589b94e4c2e9c2ae8c2cc6a58"
+        }
+      ],
+      "Stage1_applied_independent_review": {
+        "status": "accepted",
+        "reviewer": "/root/android_release_host",
+        "path": "/private/tmp/healthmd-stdio-stage1-applied-amendment-independent-review.json",
+        "bytes": 5765,
+        "sha256": "4c969fab16ca04dfd76fa0655ea03debdf7406e2c92d0e3f2a81e7fde7282efe",
+        "fingerprint": "3e3d685b4ba849f032f6df73e6025c2c1421e94e+61e29273e1d0e4880f9515606858638da329a0a589b94e4c2e9c2ae8c2cc6a58"
+      },
+      "Stage2_source_authorization": {
+        "status": "approved_source_and_tests_only",
+        "author": "/root/donor_mac_review",
+        "paths": [
+          "apps/cli/src/surfaces/stdio-framing.ts",
+          "apps/cli/tests/surfaces/stdio-framing.test.ts",
+          "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+          "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json"
+        ],
+        "accepted_stage1_vector": {
+          "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+          "sha256": "a545e5b737402cb4623a90db1f0d3fc1e074430f577f1854a05e21c81bc3b65d",
+          "bytes": 972934
+        },
+        "before_execution": "Independent full implementation/test freeze plus new qualified core58/36 successor consumer cohort, ROOT exact CLI source/tool/output window. No build/install/Node/compiler/guard/cohort/public/native transport authority in source writing claim.",
+        "limits": [
+          "279 literal corpus immutable; no candidate-generated expected outcomes.",
+          "Closed coarse ports, source-derived Rust1.88 framing/trim/lossy grammar, same-lazy Effect current checks and original lifetime expiration.",
+          "Raw2MiB cap remains independent from existingprivateRPC64KiB integration; no lower public cap.",
+          "Any substantive typed interface/expected literal amendment requires independent evidence before code."
+        ]
       }
     },
     {
@@ -27422,7 +27534,7 @@
         "Compare concrete Node/Effect/PostgreSQL/private objects/regional key and Worker/D1/R2 topology against immutable consent/isolation/streaming/current per-page grant/frontier/recovery/erasure requirements using current primary sources. Correct current US-jurisdiction facts without inferring code/secrets/queues/keys residency from object jurisdiction.",
         "Select a technical candidate architecture with runtime, region, SQL/object/key separation, least-privilege roles, transaction/cancellation boundaries and provider-adapter proof obligations. Actual deployment/load/keys/copies/residency/recovery remain unqualified.",
         "Cost an explicit 1000-cloud-active-user workload separately from 1000 app DAU: storage/history/growth/query/row/crypto/network/backup/log assumptions and growth sensitivity. Reproducible arithmetic, current dated primary prices, ranges and exclusions; no measured capacity claim.",
-        "Record root recommended 500USD monthly planning allowance and 200\u2013300USD controlled-beta range as recommendation only. Owner US-first preference recorded; no accepted spending cap, pricing policy, identity/retention/grants defaults or external spend/deployment.",
+        "Record root recommended 500USD monthly planning allowance and 200–300USD controlled-beta range as recommendation only. Owner US-first preference recorded; no accepted spending cap, pricing policy, identity/retention/grants defaults or external spend/deployment.",
         "Save one cited Markdown research note and a sanitized planning receipt with exact raw source pins, candidate alternatives/tradeoffs/open owners/proof matrix and reproducible path+NUL+bytes+NUL patch digest; independent final review before technical choice acceptance."
       ],
       "verification": [],
@@ -28315,9 +28427,9 @@
           },
           {
             "case_id": "value-supplementary-order",
-            "input": "{\"\ud800\udc00\":1,\"\ue000\":2}",
+            "input": "{\"𐀀\":1,\"\":2}",
             "expected": {
-              "compact": "{\"\ue000\":2,\"\ud800\udc00\":1}"
+              "compact": "{\"\":2,\"𐀀\":1}"
             },
             "source_basis": "UTF8/scalar order differs JS UTF16 sort",
             "status": "proposed_independent_literal_review_required"
@@ -28326,7 +28438,7 @@
             "case_id": "value-surrogate-pair",
             "input": "\"\\ud83d\\ude00\"",
             "expected": {
-              "compact": "\"\ud83d\ude00\""
+              "compact": "\"😀\""
             },
             "source_basis": "read.rs validated surrogate pairing",
             "status": "proposed_independent_literal_review_required"
@@ -30071,7 +30183,7 @@
       "stream": "personal_data",
       "phase": "M02",
       "kind": "implementation",
-      "status": "in_progress",
+      "status": "done",
       "prerequisites": [
         "BASE-DOMAINS",
         "PERSONAL-CONTRACT-REVIEW",
@@ -30138,7 +30250,8 @@
         "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
       ],
       "shared_resources": [
-        "private-source-catalog-interface"
+        "private-source-catalog-interface",
+        "core-component-build"
       ],
       "resource_stage_history": [
         {
@@ -30411,31 +30524,38 @@
       "deletion_gate": "No production retirement/native state/customer data deletion or public admission.",
       "receipt_path": "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
       "reviewer_role": "independent acquisition/contracts/privacy reviewer",
-      "claim": {
-        "agent": "/root/personal_codecs",
-        "base_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
-        "worktree": "/Users/codybontecou/dev/health-md",
-        "write_paths": [
-          "packages/healthmd-core-ts/src/repository/source-catalog.ts",
-          "packages/healthmd-core-ts/tests/source-catalog.test.ts",
-          "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
-          "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
-        ],
-        "reserved_resources": [
-          "private-source-catalog-interface"
-        ]
-      },
+      "claim": null,
       "blocker": null,
       "priority": 104,
       "review": {
-        "status": "pending",
-        "reviewer": null,
-        "fingerprint": null
+        "status": "accepted",
+        "reviewer": "/root/effect_baseline_review",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+cfcd1c55b8b45c91c02cf240d46f9ea3decf5b44f1dcbf4a779f2989208a1729",
+        "evidence": {
+          "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-actual-effect-baseline-review.json",
+          "bytes": 3833,
+          "sha256": "6b8459bfc4ee5abb649cbc4dfc7551f9a8db7ff8ac695f2858c2b360b14d059f"
+        },
+        "source_reviews": [
+          {
+            "path": "/private/tmp/healthmd-source-catalog-repair-v2-independent-review.json",
+            "bytes": 2218,
+            "sha256": "33be9866acfdd521ec4f98941afcb5ff41aea6b23a7dba7c6d9853f130425c10"
+          },
+          {
+            "path": "/private/tmp/healthmd-source-catalog-signal-start-repair-independent-review.json",
+            "bytes": 2119,
+            "sha256": "449fa602012b9e109d770a50e29bd995ffc4b078b30a0567cb3788d7edfa769a"
+          }
+        ],
+        "qualification": "Exact source and actual full emitted core check accepted for private portable synthetic producer only."
       },
       "qualification": {
         "proof_class": "portable_synthetic",
-        "status": "pending",
-        "receipts": []
+        "status": "passed",
+        "receipts": [
+          "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
+        ]
       },
       "expansion_input": {
         "path": "docs/migration/effect-refactor/expansions/split-datastore.json",
@@ -30473,7 +30593,209 @@
         "original94_unchanged": true,
         "runtime_catalog_tests": 0,
         "actual_core_inputs": "One approved literaldata input among actual53; onlytypecheck, no source/test implementation or dataauthority."
-      }
+      },
+      "claim_history": [
+        {
+          "stage": "Source_author_handoff_before_ROOT_exclusive_corecheck",
+          "claim": {
+            "agent": "/root/personal_codecs",
+            "base_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+            "worktree": "/Users/codybontecou/dev/health-md",
+            "write_paths": [
+              "packages/healthmd-core-ts/src/repository/source-catalog.ts",
+              "packages/healthmd-core-ts/tests/source-catalog.test.ts",
+              "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+              "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
+            ],
+            "reserved_resources": [
+              "private-source-catalog-interface"
+            ]
+          },
+          "source_only_review": {
+            "path": "/private/tmp/healthmd-source-catalog-repair-v2-independent-review.json",
+            "sha256": "33be9866acfdd521ec4f98941afcb5ff41aea6b23a7dba7c6d9853f130425c10",
+            "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+7df7a19282f25610841f4311ebaccbcc0937349f0f38f4bfc87c771e891cbee5",
+            "reviewer": "/root/donor_mac_review",
+            "result": "accepted_bounded_source_only_repair_proposal"
+          }
+        }
+      ],
+      "Stage2_source_independent_review": {
+        "path": "/private/tmp/healthmd-source-catalog-repair-v2-independent-review.json",
+        "sha256": "33be9866acfdd521ec4f98941afcb5ff41aea6b23a7dba7c6d9853f130425c10",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+7df7a19282f25610841f4311ebaccbcc0937349f0f38f4bfc87c771e891cbee5",
+        "reviewer": "/root/donor_mac_review",
+        "result": "accepted_bounded_source_only_repair_proposal"
+      },
+      "Stage2_coordinator_execution_window": {
+        "status": "qualified_private_producer_core_builder_released",
+        "agent": "/root",
+        "source_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+cfcd1c55b8b45c91c02cf240d46f9ea3decf5b44f1dcbf4a779f2989208a1729",
+        "preparation_independent_review": {
+          "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-preparation-effect-baseline-review.json",
+          "bytes": 4384,
+          "sha256": "33b6f8ad3de8f37afaa5c6faec01a48ebf7b23285cf71d4fea924d2008246160"
+        },
+        "clearance": {
+          "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-root-clearance.json",
+          "bytes": 1113,
+          "sha256": "12ec49972e0fefc27eb2c5e1068eb5b6634285e9fb35d05af2a4b08900bc3eef"
+        },
+        "limits": [
+          "One corrected full core check only; no install/tests-only/automatic retry/CLI/cohort/native/public admission.",
+          "Actual failed first-run52 output preflight, immutable expected53/1359/106+1253/19 guards; all source and current partialreceipt remain frozen."
+        ],
+        "actual_report": {
+          "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-root-first.json",
+          "sha256": "88315d6a889361c49eb2b4c0b806dd5c2ce524b46733741f8fefb02eef2fcb41",
+          "bytes": 235669
+        },
+        "actual_counts": {
+          "tests": 1359,
+          "suites": 0,
+          "pass": 1359,
+          "fail": 0,
+          "cancelled": 0,
+          "skipped": 0,
+          "todo": 0
+        },
+        "wall_ms": 2872
+      },
+      "execution_history": [
+        {
+          "stage": "Reviewed-v2 first ROOT fullcheck failed; no retry",
+          "report": {
+            "path": "/private/tmp/healthmd-source-catalog-core-check-root-first.json",
+            "bytes": 233903,
+            "sha256": "1acf3e1a8fb646caac5278c840e21bb83d50c5b4edefe2e7cea14573dfc7fa42"
+          },
+          "log": {
+            "path": "/private/tmp/healthmd-source-catalog-core-check-root-first.log",
+            "sha256": "b08774df0a1adfb0d3600819a25ac77fc7ba5fe25ad50a20d8e28f4920d83d1a"
+          },
+          "counts": {
+            "tests": 1359,
+            "suites": 0,
+            "pass": 1357,
+            "fail": 2,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "result": "failed",
+          "cause": "Two new signaltests flush child dispatcher before defaultfork initial task queued onparent starts. Exact source public scheduling analysis pending reviewed test-onlyrepair; existing1253ordered pass.",
+          "guard": "Core scripts/check.mjs stops ontestfail, so no neutral-metafile/boundaryreport yet; expected53/19not waived."
+        }
+      ],
+      "Stage2_signal_start_repair_independent_review": {
+        "path": "/private/tmp/healthmd-source-catalog-signal-start-repair-independent-review.json",
+        "bytes": 2119,
+        "sha256": "449fa602012b9e109d770a50e29bd995ffc4b078b30a0567cb3788d7edfa769a",
+        "fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+cfcd1c55b8b45c91c02cf240d46f9ea3decf5b44f1dcbf4a779f2989208a1729",
+        "reviewer": "/root/donor_mac_review",
+        "result": "accepted_test_only_scheduling_repair"
+      },
+      "actual_full_core_check": {
+        "cwd": "packages/healthmd-core-ts",
+        "argv": [
+          "npm",
+          "run",
+          "check"
+        ],
+        "physical_cwd": "/Users/codybontecou/dev/health-md/packages/healthmd-core-ts",
+        "physical_argv": [
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/bin/node",
+          "/private/tmp/healthmd-effect-node24/node-v24.21.0-darwin-arm64/lib/node_modules/npm/bin/npm-cli.js",
+          "run",
+          "check"
+        ],
+        "result": "passed",
+        "evidence": {
+          "report": {
+            "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-root-first.json",
+            "bytes": 235669,
+            "sha256": "88315d6a889361c49eb2b4c0b806dd5c2ce524b46733741f8fefb02eef2fcb41"
+          },
+          "log": {
+            "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-root-first.log",
+            "bytes": 98511,
+            "sha256": "4d3cc4d03470cb9105013bce3f28bc0b741e745b9f1c3d3b70312285f23ff026"
+          },
+          "execution_review": {
+            "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-actual-effect-baseline-review.json",
+            "bytes": 3833,
+            "sha256": "6b8459bfc4ee5abb649cbc4dfc7551f9a8db7ff8ac695f2858c2b360b14d059f"
+          },
+          "wall_ms": 2872,
+          "deadline_ms": 300000,
+          "output_cap_bytes": 16777216,
+          "counts": {
+            "tests": 1359,
+            "suites": 0,
+            "pass": 1359,
+            "fail": 0,
+            "cancelled": 0,
+            "skipped": 0,
+            "todo": 0
+          },
+          "new_titles_ordered_once": 106,
+          "old_titles_ordered_once": 1253,
+          "source_inputs": 58,
+          "core_modules": 36,
+          "dist_outputs": 53,
+          "test_entries": 15,
+          "portable_source_modules": 18,
+          "effect_installations": 1,
+          "negative_cases": [
+            "node-import",
+            "bare-node-import",
+            "react-import",
+            "native-import",
+            "environment",
+            "computed-global",
+            "aliased-global",
+            "unicode-global",
+            "dom",
+            "dynamic-import",
+            "template-import",
+            "ambient-escape",
+            "constructor-escape"
+          ],
+          "negative_graphs": [
+            "transitive-node-import",
+            "transitive-native-import",
+            "unapproved-effect-host-module",
+            "relative-root-escape",
+            "transitive-global",
+            "computed-dynamic-with-comment"
+          ],
+          "old48_compiled_preserved": true,
+          "raw_lossless": true,
+          "group_cleanup_ACK_and_ESRCH": true
+        }
+      },
+      "completed_claim": {
+        "agent": "/root",
+        "base_revision": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/repository/source-catalog.ts",
+          "packages/healthmd-core-ts/tests/source-catalog.test.ts",
+          "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+          "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json"
+        ],
+        "reserved_resources": [
+          "private-source-catalog-interface",
+          "core-component-build"
+        ]
+      },
+      "final_receipt_metadata_review": {
+        "path": "/private/tmp/healthmd-source-catalog-final-receipt-effect-baseline-review.json",
+        "bytes": 1958,
+        "sha256": "2fc86feac5348e7a9130b08205e00681839376ac8b2ec9ddd02055225a576cc0",
+        "reviewed_receipt_sha256": "40aae1e46eaaa42a5d9220473b13ebe90af3453a5a6f33e2b947ca6f783752c5"
+      },
+      "completed_at": "2026-10-08T04:50:30.496448+00:00"
     },
     {
       "id": "DATASTORE-SOURCE-COVERAGE",
@@ -39356,6 +39678,286 @@
         "accepted_review_fingerprint": "8ed6cc252f3111a3e265b0775c4e7c8adc02b73b+fd0fcf5d163ccb02a734e3a3661981f63dc447b7c2b5a4c2054c26eb62f10d20"
       },
       "coordinator_card_admission": "Packet source-contract/portable-synthetic proposal normalized to unqualified not_started and portable_synthetic schema enum. Full Stage1 source contracts, independently frozen literals, bounded interpreter/tool/artifact/source-host evidence and actual release/recovery/public/retirement gates retained."
+    },
+    {
+      "id": "CORE-COHORT-SOURCE-CATALOG",
+      "title": "Bind complete private source Catalog producer and packed modules to one immutable CLI consumer cohort",
+      "outcome": "One complete immutable successor source/packed-module authority admits only the accepted private Catalog synthetic producer delta; historical qualified snapshots remain independently authenticated.",
+      "stream": "core_cli",
+      "phase": "M02",
+      "kind": "implementation",
+      "status": "not_started",
+      "claim": null,
+      "prerequisites": [
+        "DATASTORE-SOURCE-CATALOG",
+        "CORE-COHORT-EXACT-CODECS"
+      ],
+      "required_decisions": [],
+      "coverage": [
+        "C02",
+        "C03",
+        "K01",
+        "C14",
+        "C16"
+      ],
+      "risk_ids": [
+        "F05",
+        "F15"
+      ],
+      "read_required": [
+        "AGENTS.md",
+        "packages/healthmd-core-ts/AGENTS.md",
+        "packages/healthmd-core-ts/README.md",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/core-cli.md",
+        "docs/migration/effect-refactor/personal-data.md",
+        "docs/migration/effect-refactor/templates.md",
+        "docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json",
+        "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
+        "packages/healthmd-core-ts/src/repository/source-catalog.ts",
+        "packages/healthmd-core-ts/tests/source-catalog.test.ts",
+        "packages/healthmd-core-ts/tests/source-catalog-vectors.ts",
+        "apps/cli/scripts/check-candidate.mjs"
+      ],
+      "allowed_paths": [
+        "docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json",
+        "apps/cli/scripts/check-candidate.mjs",
+        "apps/cli/docs/typescript-candidate.md",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json"
+      ],
+      "shared_resources": [
+        "private-core-cohort-source-catalog-interface"
+      ],
+      "coordinator_verification_resources": [
+        "core-component-build",
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "resource_stage_rules": [
+        "No task/resource claim created by this scratch proposal. ROOT may admit source-only interface resource at claim; no builder acquired by Stage1/guard authorship alone.",
+        "ROOT separately reserves exact core producer source/output lease for any required validation and CLI build+qualified-core-input leases for bounded install then fullcheck. Resource changes need coordinator plan admission; no silent lease inference."
+      ],
+      "source_input_refs": [
+        "#/historical_authorities",
+        "#/proposed_source_delta",
+        "#/stage1_closed_contract"
+      ],
+      "source_symbol_refs": [],
+      "target": {
+        "platform": "portable",
+        "channel": "development",
+        "profile": "private source-catalog cohort successor"
+      },
+      "proof_class": "portable_synthetic",
+      "fixture_inputs": "Existing203 literal filesystem negatives retained as exact objects; independently source-derived complete new mutation catalog and actual accepted full producer source/output maps frozen before guard implementation. No expected-by-discovery generated acceptance.",
+      "fixture_details": {
+        "introduced_path": "docs/migration/effect-refactor/cohorts/core-ts-source-catalog-v1.json",
+        "preserve_existing": true,
+        "literal_proposals": [],
+        "minimum_required_new_mutation_families": [
+          {
+            "targets": [
+              "src/repository/source-catalog.ts",
+              "tests/source-catalog.test.ts"
+            ],
+            "stimuli": [
+              "remove exactfile",
+              "edit one authenticated byte",
+              "replace file with owned symlink"
+            ],
+            "expected": "fixed source-set/rawpin rejection before build/consumer execution"
+          },
+          {
+            "targets": [
+              "core/repository/source-catalog.js",
+              "core/repository/source-catalog.d.ts"
+            ],
+            "stimuli": [
+              "remove exactfile",
+              "replace with stale frozen bytes",
+              "edit authenticated byte",
+              "replace with owned symlink"
+            ],
+            "expected": "fixed complete artifact/pin rejection before consumer execution"
+          },
+          {
+            "targets": [
+              "full source root",
+              "full packed core root"
+            ],
+            "stimuli": [
+              "add one unlisted literal file in owned disposable copy"
+            ],
+            "expected": "closed fullset rejection; no discovery-generated new acceptance"
+          },
+          {
+            "targets": [
+              "accepted DATASTORE-SOURCE-CATALOG receipt"
+            ],
+            "stimuli": [
+              "missing tracked receipt",
+              "tamper raw receipt",
+              "replace with source-only partial receipt",
+              "change task/source/fingerprint",
+              "remove independent accepted review",
+              "assert grant/native/durable/public qualification contrary to bounded profile"
+            ],
+            "expected": "strict passed+accepted exact normal implementation authority failure; no partial/source-only bypass"
+          },
+          {
+            "targets": [
+              "new cohort"
+            ],
+            "stimuli": [
+              "missing",
+              "tampered",
+              "wrong complete source/module maps",
+              "reverse-pin own new receipt"
+            ],
+            "expected": "hardpinned canonical closed successor authority rejection"
+          },
+          {
+            "targets": [
+              "historical CatalogLiteralDataAuthority"
+            ],
+            "stimuli": [
+              "attempt overwrite data-only semantics using new implementation authority",
+              "mutate historical embedded review/partial raw bytes",
+              "infer Stage1 real grant/native/public admission"
+            ],
+            "expected": "historical seven-false flags/full raw proof preserved independently; current private runtime proof does not upgrade historical data-only evidence"
+          }
+        ],
+        "count_policy": "Do not infer total from families. Stage1 must enumerate every full mutation object/ID/target/setup/expected disposition exactly, prove203 previous objects preserved, independently review new complete count before any guard code."
+      },
+      "acceptance": [
+        "Stage1 ONLY new cohort and own partial receipt after DATASTORE-SOURCE-CATALOG full repaired producer check and final passed-and-independently-accepted receipt. Freeze complete actual source/committed-Git/runtime/lock/tool/module maps and closed normal authority grammar; projected58/36/53/1359 are not proof. Independent cohort/interface/literal review before guard/docs changes, install or builds.",
+        "Retain historical56/34 cohort7e20 and complete prior43/26/earlier authority chains immutable. New successor explicitly authenticates all58 source inputs and36 packed core modules only when actual maps prove them; all56 prior inputbytes and34 prior modulebytes retained. Preserve original203 negative objects and the distinct historical Catalog96 literal-data authority/embeddedraw proofs/sevenfalse flags. Add a separate strict normal passed+accepted Catalog implementation receipt with exact bounded profile, never reinterpret its old Stage1partial as runtime authority.",
+        "Guard hardpins independently accepted complete source/module/cohort/receipt raw maps and exact committed source proofs; no ownreceipt reversepin, wildcard/deepimport/newexports/hashselfrefresh/scratch-required consumer files/discovery acceptance. Every required runtime authority is self-contained in tracked exactcohort/receipts; external tool/review/archive paths are audit references only unless exact authenticated raw bytes are embedded.",
+        "Run every old203 and all separately frozen new filesystem mutation drivers on actual owned disposable copies, fixed safe rejections and exact positive fullset. Source/test/module/receipt/cohort/symlink/extra/malformed bounded authority negatives must be actual and action-only; IDs/expected outputs cannot select candidate or guard decisions.",
+        "Credit the already accepted full Catalog producer npm run check only if current full58 source and complete53 output raw maps/exacttools remain unchanged and reported18source/1359tests/106newordered+1253oldordered/19guards/oneEffect/48priorcompiled/no cleanupfaults are independently accepted. Otherwise any producer rerun requires separate finite exclusiveROOT clearance; no routine repeat just to restamp task.",
+        "After source/guard/cohort acceptance, ROOT freezes full CLI source manifest only after both CLI deltas including concurrent reviewed MCP source changes are stable. Separately supervised pinned offline npm ci --install-links --engine-strict --no-audit --no-fund then full npm run check sequentially, exact physicalargv/env/tool/cache/archive proof, one Effect, complete packed36 and core53 preservation. Retain raw lossless full logs and owned group reap/cleanupACK/ESRCH/finitebounds, no tests-only/installscripts/provider/customer/native actions."
+      ],
+      "verification": [
+        {
+          "cwd": "packages/healthmd-core-ts",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "credit_policy": "Actual accepted unchanged Catalog producer report may satisfy this command without repetition; no forecast or failed1acf credit."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "ci",
+            "--offline",
+            "--install-links",
+            "--engine-strict",
+            "--no-audit",
+            "--no-fund"
+          ],
+          "availability": "existing",
+          "required_runtime": "Pinned Node24.21.0/npm11.19.0, existing approvedcache, ignorescripts curatedenv, emptyconfigs/tool+archive proof; bounded root execution after separate clearance."
+        },
+        {
+          "cwd": "apps/cli",
+          "argv": [
+            "npm",
+            "run",
+            "check"
+          ],
+          "availability": "existing",
+          "expected": "Actual frozen complete CLI tests/negativecases/module identity; do not forecast a count while MCP author source may change."
+        }
+      ],
+      "consumers": "Private CLI/MCP portable candidate module source admission only; Catalog private APIs remain unexported, common operation/source/grant/public/runtime/transport bindings separately owned.",
+      "rollback": "Revert successor guard/docs/cohort binding to its historical qualified snapshot only when matching source/packed modules are restored by a separately reviewed task; never silently ignore extraCatalog inputs or overwrite immutable historical authorities.",
+      "deletion_gate": "No actual source grants, payload reads, storage transactions, native/public product qualification, donor acquisition, Rust retirement, release/adoption/lifecycle authority.",
+      "receipt_path": "docs/migration/effect-refactor/receipts/CORE-COHORT-SOURCE-CATALOG.json",
+      "reviewer_role": "Independent full source/cohort/authority/guard/consumer-contract reviewer; ROOT final task admission and acceptance.",
+      "priority": 106,
+      "blocker": null,
+      "review": {
+        "status": "pending",
+        "reviewer": null,
+        "fingerprint": null
+      },
+      "qualification": {
+        "proof_class": "portable_synthetic",
+        "status": "pending",
+        "receipts": []
+      },
+      "stage1_closed_contract": {
+        "complete_maps": "fixed actual source/current+committedGit and core/packed output sets, metadata/time/profile/runtime/locks/archive identities",
+        "normal_receipts": "five existing exact strict passed+accepted codec/API authorities plus separate actual passed+accepted Catalog receipt; bounded current private profile checked",
+        "CatalogLiteralDataAuthority": "existing sevenfalse flags and literal vector74f638/partial4f1/review2340/embeddededa5 remain historical immutable data-only evidence",
+        "fresh_clone": "No required /private/tmp or absolute author cache/reviewfile consumer dependency; source-only audit provenance retained asmetadata"
+      },
+      "proposed_source_delta": {
+        "forecast_only": {
+          "source_inputs": 58,
+          "core_modules": 36,
+          "dist_outputs": 53,
+          "tests": 1359
+        },
+        "raw_new_source_paths": [
+          "src/repository/source-catalog.ts",
+          "tests/source-catalog.test.ts"
+        ],
+        "existing_included_vector": "tests/source-catalog-vectors.ts already in56 baseline; raw74f638unchanged",
+        "new_packed_paths": [
+          "core/repository/source-catalog.js",
+          "core/repository/source-catalog.d.ts"
+        ],
+        "proposed_exports_changes": false,
+        "API_scope_change": false
+      },
+      "historical_authorities": {
+        "cohort": {
+          "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/cohorts/core-ts-exact-codecs-v1.json",
+          "bytes": 256121,
+          "sha256": "7e20aaaac8267225e96eabddea2d6a798e3fd6df501d95a550d6a2c23ac16055"
+        },
+        "prior_cohort": {
+          "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/cohorts/core-ts-ios-eligibility-v1.json",
+          "bytes": 47904,
+          "sha256": "25b48beb5c7cd641d3161b3b362accdabf04bc0a5118042209651e88e18fe761"
+        },
+        "accepted_receipt": {
+          "path": "/Users/codybontecou/dev/health-md/docs/migration/effect-refactor/receipts/CORE-COHORT-EXACT-CODECS.json",
+          "bytes": 105145,
+          "sha256": "4593fec8700e43af6e0dfea5f6919fe660a3bafed2275f6289968f30c4494646"
+        },
+        "negative_existing_objects": 203
+      },
+      "nearest_component_instructions": "CLI has no component AGENTS.md; repository root AGENTS.md applies. Core nearest AGENTS.md remains required.",
+      "coordinator_card_admission": {
+        "status": "not_started_bounded_successor",
+        "author_candidate": {
+          "path": "/private/tmp/healthmd-core-cohort-source-catalog-candidate-card.json",
+          "bytes": 13503,
+          "sha256": "3d5a7fcaeeaf4015055bba7bc120bb38ca35c959b69b8e905332dd307d719816"
+        },
+        "coordinator": "/root",
+        "scope": "Exact four private cohort/guard/docs/own receipt paths. Accepted actual Catalog producer is the prerequisite; complete Stage1 literals and source/output authority still require independent review before guard implementation and execution.",
+        "correction": "Removed nonexistent apps/cli/AGENTS.md from required reads and applied root nearest instructions; no acceptance/scope/toolchain reduction.",
+        "actual_catalog_producer_receipt": {
+          "path": "docs/migration/effect-refactor/receipts/DATASTORE-SOURCE-CATALOG.json",
+          "sha256": "40aae1e46eaaa42a5d9220473b13ebe90af3453a5a6f33e2b947ca6f783752c5"
+        },
+        "actual_producer_report": {
+          "path": "/private/tmp/healthmd-source-catalog-core-check-signal-repair-root-first.json",
+          "sha256": "88315d6a889361c49eb2b4c0b806dd5c2ce524b46733741f8fefb02eef2fcb41",
+          "bytes": 235669
+        },
+        "consumer_admission": false
+      }
     }
   ]
 }
