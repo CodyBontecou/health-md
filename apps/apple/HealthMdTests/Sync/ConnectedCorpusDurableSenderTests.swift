@@ -353,6 +353,46 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertFalse(tracker.keepsScreenAwake)
     }
 
+    func testDormantConnectedCancellationDoesNotFinishUnownedSameIDActivity() async throws {
+        for source in [CLIExportActivityTracker.Source.macApp, .direct] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1,
+                          message: "Independent live request")
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+
+            let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+            XCTAssertTrue(cancelled)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .cancelled)
+            XCTAssertEqual(tracker.snapshot, snapshot, "A dormant journal cannot finish an independent activity")
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            XCTAssertTrue(tracker.keepsScreenAwake)
+        }
+    }
+
+    func testConnectedCancellationFinishesItsBoundActivity() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+        Self.retainedRecoveryManagers.append(manager)
+        let transferring = try fixture.store.updateState(jobID: fixture.session.jobID, state: .transferring, message: "Owned connected transfer")
+        tracker.updateConnected(try XCTUnwrap(transferring.cliUIProgressSnapshot))
+        let admissionID = tracker.admissionID
+
+        let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+        XCTAssertTrue(cancelled)
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
+        XCTAssertEqual(tracker.admissionID, admissionID)
+        XCTAssertFalse(tracker.keepsScreenAwake)
+    }
+
     func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
         let fixture = try makeFixture(dayCount: 1)
         _ = try fixture.store.updateState(

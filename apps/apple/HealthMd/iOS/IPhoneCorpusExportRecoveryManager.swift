@@ -50,6 +50,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
     private var resumeWhenActiveTaskFinishes = false
     private var publishedCLIJobID: UUID?
+    private var publishedCLIAdmissionID: UUID?
     /// Scheduled jobs must still belong to a live pending request and enabled period.
     /// Interactive/CLI jobs retain their independent recovery authority.
     var isScheduledRecoveryAuthorized: @MainActor (UUID) -> Bool = {
@@ -334,7 +335,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             queryExecutionControllers.removeValue(forKey: jobID)
         }
         try? store.cancel(jobID: jobID)
-        if journal.cliUIProgressSnapshot != nil {
+        if journal.cliUIProgressSnapshot != nil,
+           managerOwnedCLIJobIDInTracker() == jobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .cancelled,
@@ -621,7 +623,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             return
         }
 
-        let ownedJobID = publishedCLIJobID ?? managerOwnedCLIJobIDInTracker()
+        let ownedJobID = managerOwnedCLIJobIDInTracker()
         guard let ownedJobID else { return }
         if let current = cliActivityTracker.snapshot,
            current.jobID == ownedJobID,
@@ -630,14 +632,19 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
             cliActivityTracker.clear(jobID: ownedJobID)
         }
         publishedCLIJobID = nil
+        publishedCLIAdmissionID = nil
     }
 
     private func publishCLIActivity(_ snapshot: ConnectedCorpusProgressSnapshot) {
-        if let publishedCLIJobID, publishedCLIJobID != snapshot.jobID {
-            cliActivityTracker.clear(jobID: publishedCLIJobID)
+        if publishedCLIJobID == snapshot.jobID,
+           publishedCLIAdmissionID != cliActivityTracker.admissionID { return }
+        if let ownedJobID = managerOwnedCLIJobIDInTracker(), ownedJobID != snapshot.jobID {
+            cliActivityTracker.clear(jobID: ownedJobID)
         }
-        publishedCLIJobID = snapshot.jobID
         cliActivityTracker.updateConnected(snapshot)
+        guard cliActivityTracker.ownsConnectedActivity(snapshot) else { return }
+        publishedCLIJobID = snapshot.jobID
+        publishedCLIAdmissionID = cliActivityTracker.admissionID
     }
 
     private func managerOwnedCLIJobIDInTracker() -> UUID? {
@@ -646,7 +653,10 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
               let journal = try? store.load(jobID: snapshot.jobID, allowExpired: true),
               journal.origin == .macInitiated,
               journal.macRequest?.requestedBy == .cli,
-              journal.macRequest?.responseMode != .contextStore else { return nil }
+              journal.macRequest?.responseMode != .contextStore,
+              cliActivityTracker.ownsConnectedActivity(journal.progressSnapshot),
+              publishedCLIJobID != snapshot.jobID
+                || publishedCLIAdmissionID == cliActivityTracker.admissionID else { return nil }
         return snapshot.jobID
     }
 
