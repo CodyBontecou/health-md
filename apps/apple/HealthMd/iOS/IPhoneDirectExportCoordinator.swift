@@ -108,7 +108,8 @@ private struct IPhoneDirectExportJournal: Codable {
 
 nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable {
     let jobID: UUID
-    private let lock = NSLock()
+    private let lock = NSRecursiveLock()
+    private var active = true
     private var cancelled = false
     private var checkpoint: AppleExportJournalCheckpoint?
 
@@ -116,8 +117,65 @@ nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable 
     var isCancelled: Bool { lock.withLock { cancelled } }
     var ownership: AppleExportJournalCheckpoint? { lock.withLock { checkpoint } }
     func cancel() { lock.withLock { cancelled = true } }
+    func finish() { lock.withLock { active = false } }
     func bind(_ ownership: AppleExportJournalCheckpoint) {
         lock.withLock { checkpoint = ownership }
+    }
+    func acquireAcknowledgementLease() throws -> any DirectPacketSendLease {
+        lock.lock()
+        guard active, cancelled else {
+            lock.unlock()
+            throw DirectChannelError.authenticationFailed("The cancelled preparation is no longer active.")
+        }
+        return IPhoneDirectCancellationEnqueueLease(lock: lock)
+    }
+}
+
+nonisolated private final class IPhoneDirectCancellationEnqueueLease: DirectPacketSendLease {
+    private var lock: NSRecursiveLock?
+    init(lock: NSRecursiveLock) { self.lock = lock }
+    func close() {
+        let held = lock
+        lock = nil
+        held?.unlock()
+    }
+    deinit { close() }
+}
+
+nonisolated struct IPhoneDirectCancellationReceipt: Sendable {
+    let jobID: UUID
+    private let owner: Owner
+    private enum Owner: Sendable {
+        case preparation(IPhoneDirectCancellationInvocation)
+        case durable(AppleExportJournalCheckpoint)
+    }
+    init(invocation: IPhoneDirectCancellationInvocation) {
+        jobID = invocation.jobID
+        owner = .preparation(invocation)
+    }
+    init(jobID: UUID, ownership: AppleExportJournalCheckpoint) {
+        self.jobID = jobID
+        owner = .durable(ownership)
+    }
+    private var acknowledgementAuthorization: DirectPacketSendAuthorization {
+        switch owner {
+        case .preparation(let invocation):
+            return DirectPacketSendAuthorization { try invocation.acquireAcknowledgementLease() }
+        case .durable(let checkpoint):
+            return DirectPacketSendAuthorization {
+                let lease = try checkpoint.acquireEnqueueLease()
+                do {
+                    try checkpoint.withCheckpointOwnership {}
+                    return lease
+                } catch {
+                    lease.close()
+                    throw error
+                }
+            }
+        }
+    }
+    func sendAcknowledgement(on channel: DirectSecureChannel) async throws {
+        try await channel.send(.cancelAcknowledged(jobID: jobID), authorization: acknowledgementAuthorization)
     }
 }
 
@@ -170,6 +228,7 @@ final class IPhoneDirectExportCoordinator {
         activeJobID = request.jobID
         activeCancellation = invocation
         defer {
+            invocation.finish()
             if activeCancellation === invocation { activeCancellation = nil }
             if activeJobID == request.jobID { activeJobID = nil }
         }
@@ -410,6 +469,10 @@ final class IPhoneDirectExportCoordinator {
 
     @discardableResult
     func cancel(jobID: UUID) -> Bool {
+        cancelWithReceipt(jobID: jobID) != nil
+    }
+
+    func cancelWithReceipt(jobID: UUID) -> IPhoneDirectCancellationReceipt? {
         let invocation = activeCancellation?.jobID == jobID ? activeCancellation : nil
         let expected = invocation?.ownership
         do {
@@ -428,7 +491,7 @@ final class IPhoneDirectExportCoordinator {
             let fileOwnership = try IPhoneDirectFileExportProducer.shared.cancel(
                 jobID: jobID, expectedOwnership: expected)
             let committed = rawOwnership ?? fileOwnership
-            guard committed != nil || (invocation != nil && expected == nil) else { return false }
+            guard committed != nil || (invocation != nil && expected == nil) else { return nil }
             let signal = {
                 invocation?.cancel()
                 self.queryExecutionControllers.removeValue(forKey: jobID)
@@ -440,9 +503,12 @@ final class IPhoneDirectExportCoordinator {
             } else {
                 signal()
             }
-            return true
+            if let committed {
+                return IPhoneDirectCancellationReceipt(jobID: jobID, ownership: committed)
+            }
+            return invocation.map(IPhoneDirectCancellationReceipt.init(invocation:))
         } catch {
-            return false
+            return nil
         }
     }
 

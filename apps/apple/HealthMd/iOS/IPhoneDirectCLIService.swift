@@ -300,7 +300,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         IPhoneDirectExportConnection,
         AppleDirectProtocolAuthority
     ) async -> Void)?
-    var cancelHandler: ((UUID) -> Bool)?
+    var cancelHandler: ((UUID) -> IPhoneDirectCancellationReceipt?)?
     var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
 
     private let defaults: UserDefaults
@@ -1202,10 +1202,21 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )))
                 break
             }
-            if cancelHandler?(jobID) == true {
-                try await channel.send(.cancelAcknowledged(jobID: jobID))
-                if exportTask != nil, await statusProvider?().activeJobID == jobID {
-                    await exportConnection.deliver(message)
+            if let receipt = cancelHandler?(jobID) {
+                guard receipt.jobID == jobID else {
+                    throw DirectChannelError.authenticationFailed("The cancellation receipt does not match this job.")
+                }
+                let operationID = activeExportOperationID
+                try await receipt.sendAcknowledgement(on: channel)
+                guard activeSessionID == sessionID, self.channel === channel,
+                      activeExportOperationID == operationID else { break }
+                if exportTask != nil {
+                    let status = await statusProvider?()
+                    guard activeSessionID == sessionID, self.channel === channel,
+                          activeExportOperationID == operationID else { break }
+                    if status?.activeJobID == jobID {
+                        await exportConnection.deliver(message)
+                    }
                 }
             } else {
                 try await channel.send(.exportRejected(DirectExportFailure(

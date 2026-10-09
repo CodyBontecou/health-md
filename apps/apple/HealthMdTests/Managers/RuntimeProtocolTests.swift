@@ -989,6 +989,75 @@ final class ProductionAdapterTests: XCTestCase {
 #if os(iOS)
 final class DirectCoordinatorAdmissionTests: XCTestCase {
     @MainActor
+    func testCancellationAcknowledgementRejectsFinishedPreparationAndReplacedJournalWithoutSequenceGap() async throws {
+        let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+        let transport = CancellationAcknowledgementTransport()
+        let sender = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let original = IPhoneDirectCancellationInvocation(jobID: UUID())
+        original.cancel()
+        let preparationReceipt = IPhoneDirectCancellationReceipt(invocation: original)
+        try await preparationReceipt.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let firstID)) = try await receiver.receive() else {
+            return XCTFail("Current preparation must publish its acknowledgement")
+        }
+        XCTAssertEqual(firstID, original.jobID)
+        original.finish()
+        do {
+            try await preparationReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Finished preparation must reject its acknowledgement before enqueue")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic cancelled authority".utf8)
+        var old = AppleExportJournalCheckpoint()
+        try old.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let durableReceipt = IPhoneDirectCancellationReceipt(jobID: UUID(), ownership: old)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        do {
+            try await durableReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Replacement must reject the old durable acknowledgement before enqueue")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+        let currentID = UUID()
+        let current = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try await current.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let receivedID)) = try await receiver.receive() else {
+            return XCTFail("Current owner must send without a secure sequence gap")
+        }
+        XCTAssertEqual(receivedID, currentID)
+        XCTAssertEqual(transport.packetCount, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let acceptedReceipt = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try replacement.publish(Data("same-generation changed checkpoint".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        do {
+            try await acceptedReceipt.sendAcknowledgement(on: sender)
+            XCTFail("Changed cancellation checkpoint must reject before packet creation")
+        } catch {}
+        XCTAssertEqual(transport.packetCount, 0)
+        let refreshedReceipt = IPhoneDirectCancellationReceipt(jobID: currentID, ownership: replacement)
+        try await refreshedReceipt.sendAcknowledgement(on: sender)
+        guard case .message(.cancelAcknowledged(let refreshedID)) = try await receiver.receive() else {
+            return XCTFail("Current checkpoint must preserve secure sequence after rejected acknowledgement")
+        }
+        XCTAssertEqual(refreshedID, currentID)
+        XCTAssertEqual(transport.packetCount, 0)
+    }
+
+    @MainActor
     func testCancelledPreparationDoesNotPoisonNextActualSameIDInvocation() async throws {
         let suite = "synthetic-cancellation-invocation-" + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
@@ -1299,5 +1368,28 @@ private actor DirectAdmissionSendGate {
         continuation = nil
         pending?.resume()
     }
+}
+#endif
+
+#if os(iOS)
+nonisolated private final class CancellationAcknowledgementTransport: DirectPacketTransport, @unchecked Sendable {
+    private let lock = NSLock()
+    private var packets: [ManualIPSyncPacket] = []
+    var packetCount: Int { lock.withLock { packets.count } }
+    private func enqueue(_ packet: ManualIPSyncPacket) { lock.withLock { packets.append(packet) } }
+    func send(_ packet: ManualIPSyncPacket) async throws { enqueue(packet) }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        let lease = try authorization.acquireLease()
+        defer { lease.close() }
+        enqueue(try packet())
+    }
+    func receive() async throws -> ManualIPSyncPacket {
+        try lock.withLock {
+            guard !packets.isEmpty else { throw DirectChannelError.connectionClosed }
+            return packets.removeFirst()
+        }
+    }
+    func cancel() {}
 }
 #endif
