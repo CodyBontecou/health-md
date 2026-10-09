@@ -136,7 +136,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "11f805ae98233517d027317775e2033223c109d7");
+  assert.equal(externalSources.obsidian_plugin.revision, "2b61810f98c2e469bc7b8fa334544b19c96526da");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
@@ -197,6 +197,14 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     assert.equal(day.sleep[unsupportedStage], undefined);
     assert.equal(day.sleep.sleepStages.length, 0);
   }
+  const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+    "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
+  const parentDay = api.parseHealthDay(parentInput);
+  assert.equal(parentDay.sleep.sleepStages.length, 1);
+  assert.equal(parentDay.sleep.sleepSessions.length, 2);
+  assert.equal(parentDay.sleep.sleepStages[0].startDate, "2026-11-01T02:00:00.123456789Z");
+  assert.equal(parentDay.sleep.sleepSessions[0].exactEndTime.offset, "-05:00");
+  assert.equal(parentDay.sleep.sleepSessions[0].identity.clientRecordId, "synthetic-parent-overnight");
   const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/rollup-summary-v11/native-apple-v11.json"), "utf8");
   const range = api.parseRollup(input);
