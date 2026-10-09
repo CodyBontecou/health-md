@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 import HealthMdConnectionCore
 import HealthMdCoreRust
 @testable import HealthMd
@@ -131,6 +132,79 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
             "A stale bootstrap cannot replace the admitted replacement engine")
     }
 
+    func testRetainedOperationAuthorityCannotBeChangedByBootstrapOrTeardown() throws {
+        let core = FakeAppleDirectProtocolRustCore()
+        core.fingerprint = String(repeating: "a", count: 64)
+        core.canonicalMessage = Data("retained-operation".utf8)
+        core.frame = Data("retained-frame".utf8)
+        let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        let pin = try XCTUnwrap(session.pinForNewOperation())
+        try session.beginOperation(pin: pin)
+        let operation = session.frozenForCurrentOperation()
+        session.beginBootstrap()
+        XCTAssertFalse(operation === session)
+        XCTAssertEqual(try operation.requestFingerprint(fixtureRequest()).sha256, core.fingerprint)
+        XCTAssertEqual(try operation.canonicalizeDirectMessage(Data("native".utf8)), core.canonicalMessage)
+        XCTAssertEqual(try operation.encodeTransferChunk(fixtureChunk()), core.frame)
+        operation.beginBootstrap()
+        operation.endOperation()
+        XCTAssertEqual(try operation.requestFingerprint(fixtureRequest()).sha256, core.fingerprint)
+        XCTAssertThrowsError(try operation.beginOperation(pin: nil),
+            "A retained nonlegacy operation cannot be replaced by historical legacy authority")
+        session.endOperation()
+        session.beginBootstrap()
+        let legacy = session.frozenForCurrentOperation()
+        try session.beginOperation(pin: pin)
+        XCTAssertEqual(try legacy.requestFingerprint(fixtureRequest()),
+            try DirectRequestFingerprint.make(for: fixtureRequest()))
+        XCTAssertEqual(try legacy.canonicalizeDirectMessage(Data("native".utf8)), Data("native".utf8))
+    }
+
+#if os(iOS)
+    @MainActor
+    func testNativeExportConnectionRetainsOperationEngineAndSharesSessionInbox() async throws {
+        let core = FakeAppleDirectProtocolRustCore()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        core.canonicalMessage = try encoder.encode(DirectMessage.ping)
+        let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        try session.beginOperation(pin: session.pinForNewOperation())
+        let transport = OperationProtocolPacketTransport()
+        let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+        let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+        let original = IPhoneDirectExportConnection(channel: channel)
+        let retained = original.retainingProtocolAuthority(session)
+        XCTAssertTrue(retained.channel === original.channel)
+        session.beginBootstrap()
+        core.failCanonicalization = true
+        do {
+            try await retained.send(.ping)
+            XCTFail("Session bootstrap must not bypass the retained Rust operation authority")
+        } catch {
+            XCTAssertEqual(error as? AppleDirectProtocolAuthorityError,
+                AppleDirectProtocolAuthorityError(stage: .directMessage))
+        }
+        XCTAssertEqual(transport.packetCount, 0)
+        core.failCanonicalization = false
+        session.endOperation()
+        session.beginBootstrap()
+        try await retained.send(.ping)
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let received = try await receiver.receive()
+        XCTAssertEqual(received, .message(.ping), "Failed canonicalization must consume no secure sequence")
+        await original.deliver(.pong)
+        let delivered = try await retained.receive()
+        XCTAssertEqual(delivered, .pong)
+        await original.finish()
+        do {
+            _ = try await retained.receive()
+            XCTFail("Session teardown must finish the retained wrapper's shared inbox")
+        } catch { XCTAssertEqual(error as? DirectChannelError, .connectionClosed) }
+    }
+#endif
+
     func testTransferNegotiationMatchesNative() throws {
         let core = FakeAppleDirectProtocolRustCore()
         let authority = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
@@ -232,3 +306,19 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
 
     private enum FakeError: Error { case failed }
 }
+
+#if os(iOS)
+nonisolated private final class OperationProtocolPacketTransport: DirectPacketTransport, @unchecked Sendable {
+    private let lock = NSLock()
+    private var packets: [ManualIPSyncPacket] = []
+    var packetCount: Int { lock.withLock { packets.count } }
+    func send(_ packet: ManualIPSyncPacket) async throws { lock.withLock { packets.append(packet) } }
+    func receive() async throws -> ManualIPSyncPacket {
+        try lock.withLock {
+            guard !packets.isEmpty else { throw DirectChannelError.connectionClosed }
+            return packets.removeFirst()
+        }
+    }
+    func cancel() {}
+}
+#endif

@@ -547,6 +547,7 @@ final class IPhoneDirectExportCoordinator {
         }
 
         activeJobID = request.jobID
+        let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectExportJournal
         if let persisted = try loadJournal(jobID: request.jobID) {
             guard persisted.version == IPhoneDirectExportJournal.legacyProtocolVersion
@@ -558,7 +559,8 @@ final class IPhoneDirectExportCoordinator {
                 pin: persisted.version >= IPhoneDirectExportJournal.currentVersion
                     ? persisted.appleDirectProtocolPin : nil
             )
-            guard persisted.session.requestFingerprint == (try protocolAuthority.requestFingerprint(request)),
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)),
                   persisted.accepted.peerBinding == peerBinding,
                   persisted.session.partitionTargetBytes == negotiation.partitionTargetBytes else {
                 throw IPhoneDirectExportError.requestChanged
@@ -568,12 +570,13 @@ final class IPhoneDirectExportCoordinator {
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
             var prepared = try await prepareNewJournal(
                 request,
                 peerBinding: peerBinding,
                 negotiation: negotiation,
                 protocolPin: protocolPin,
-                protocolAuthority: protocolAuthority,
+                protocolAuthority: operationAuthority,
                 healthKitManager: healthKitManager
             )
             try checkCancellation(jobID: request.jobID)
@@ -585,6 +588,7 @@ final class IPhoneDirectExportCoordinator {
             journal = prepared
         }
 
+        let channel = channel.retainingProtocolAuthority(operationAuthority)
         let queryController = try didAcquireOwnership(journal.checkpoint)
         return try await HealthKitQueryExecutionController.withController(queryController) {
 
@@ -622,7 +626,7 @@ final class IPhoneDirectExportCoordinator {
             try await transferPartitions(
                 &current,
                 channel: channel,
-                protocolAuthority: protocolAuthority
+                protocolAuthority: operationAuthority
             )
             let finalize = try DirectTransferFinalize(
                 sessionID: current.session.sessionID,

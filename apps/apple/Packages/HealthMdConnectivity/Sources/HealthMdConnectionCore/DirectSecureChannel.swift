@@ -277,6 +277,13 @@ public final class DirectSecureChannel: @unchecked Sendable {
     }
 
     public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization?) async throws {
+        try await send(message, authorization: authorization, messageCanonicalizer: messageCanonicalizer)
+    }
+
+    /// An admitted operation may retain its immutable deterministic authority
+    /// while sharing the channel's original sequence gates and session key.
+    public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization?,
+                     messageCanonicalizer: any DirectMessageCanonicalizing) async throws {
         try await sendEncrypted(authorization: authorization) { [self] in
             let nativeBytes = try encoder.encode(message)
             return try messageCanonicalizer.canonicalizeDirectMessage(nativeBytes)

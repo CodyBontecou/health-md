@@ -127,6 +127,7 @@ final class IPhoneDirectFileExportProducer {
         externalIntegrations?.beginExportAction()
         var externalExportSucceeded = false
         defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
+        let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectFileJournal
         if let persisted = try loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
@@ -141,20 +142,22 @@ final class IPhoneDirectFileExportProducer {
                 pin: persisted.version >= IPhoneDirectFileJournal.directProtocolPinVersion
                     ? persisted.appleDirectProtocolPin : nil
             )
-            guard persisted.session.requestFingerprint == (try protocolAuthority.requestFingerprint(request)) else {
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)) else {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
             journal = persisted
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
+            operationAuthority = protocolAuthority.frozenForCurrentOperation()
             var prepared = try await measureDirectFilePhase("prepare") {
                 try await prepare(
                     request,
                     peerBinding: peerBinding,
                     negotiation: negotiation,
                     protocolPin: protocolPin,
-                    protocolAuthority: protocolAuthority,
+                    protocolAuthority: operationAuthority,
                     healthKitManager: healthKitManager,
                     connectedProviderCount: externalIntegrations?.connectedProviderCount ?? 0
                 )
@@ -164,6 +167,7 @@ final class IPhoneDirectFileExportProducer {
             journal = prepared
         }
 
+        let channel = channel.retainingProtocolAuthority(operationAuthority)
         let queryController = try didAcquireOwnership(journal.checkpoint)
         return try await HealthKitQueryExecutionController.withController(queryController) {
             try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
@@ -209,7 +213,7 @@ final class IPhoneDirectFileExportProducer {
                 try await transferPartitions(
                     &current,
                     channel: channel,
-                    protocolAuthority: protocolAuthority,
+                    protocolAuthority: operationAuthority,
                     maximumInFlightChunks: negotiation.maximumInFlightChunks
                 )
             }

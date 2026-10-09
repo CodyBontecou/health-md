@@ -5,14 +5,33 @@ import UIKit
 
 final class IPhoneDirectExportConnection: @unchecked Sendable {
     let channel: DirectSecureChannel
-    private let inbox = IPhoneDirectExportMessageInbox()
+    private let inbox: IPhoneDirectExportMessageInbox
+    private let operationProtocolAuthority: AppleDirectProtocolAuthority?
 
     init(channel: DirectSecureChannel) {
         self.channel = channel
+        inbox = IPhoneDirectExportMessageInbox()
+        operationProtocolAuthority = nil
+    }
+
+    private init(channel: DirectSecureChannel, inbox: IPhoneDirectExportMessageInbox,
+                 protocolAuthority: AppleDirectProtocolAuthority) {
+        self.channel = channel
+        self.inbox = inbox
+        operationProtocolAuthority = protocolAuthority.frozenForCurrentOperation()
+    }
+
+    func retainingProtocolAuthority(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectExportConnection {
+        IPhoneDirectExportConnection(channel: channel, inbox: inbox, protocolAuthority: authority)
     }
 
     func send(_ message: DirectMessage, ownership: AppleExportJournalCheckpoint? = nil) async throws {
-        try await channel.send(message, authorization: ownership?.sendAuthorization)
+        if let operationProtocolAuthority {
+            try await channel.send(message, authorization: ownership?.sendAuthorization,
+                messageCanonicalizer: operationProtocolAuthority)
+        } else {
+            try await channel.send(message, authorization: ownership?.sendAuthorization)
+        }
     }
 
     func sendBinaryTransferFrame(_ frame: Data, ownership: AppleExportJournalCheckpoint? = nil) async throws {
