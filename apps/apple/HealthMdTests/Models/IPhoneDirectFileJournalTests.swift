@@ -1,5 +1,6 @@
 import HealthMdConnectionCore
 import XCTest
+import Darwin
 @testable import HealthMd
 
 final class IPhoneDirectFileJournalTests: XCTestCase {
@@ -839,6 +840,95 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
                 isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
             XCTAssertEqual(restored.request, journal.request)
             XCTAssertEqual(try Data(contentsOf: url), bytes)
+        }
+    }
+
+    func testDirectExpiryRemovalHoldsPublicationLockForRawAndGeneratedJobs() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            let lock = parent.appendingPathComponent(".jobs.lock")
+            let expired = [UUID(), UUID()]
+            let current = UUID()
+            let now = Date(timeIntervalSince1970: 1_800_000_000)
+            for (index, id) in (expired + [current]).enumerated() {
+                let directory = root.appendingPathComponent(id.uuidString.lowercased())
+                let location = index == 1 ? directory.appendingPathComponent("files") : directory
+                try FileManager.default.createDirectory(at: location, withIntermediateDirectories: true)
+                let date = index == 2 ? now : now.addingTimeInterval(-101)
+                let bytes = try JSONSerialization.data(withJSONObject: ["request": ["createdAt": ISO8601DateFormatter().string(from: date)]])
+                try bytes.write(to: location.appendingPathComponent("journal.json"))
+                try Data("synthetic retained artifact".utf8).write(to: location.appendingPathComponent("spool.bin"))
+            }
+            let manager = ExpiryLockFileManager(lockURL: lock)
+            let removed = try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, fileManager: manager)
+            XCTAssertEqual(Set(removed), Set(expired))
+            XCTAssertEqual(manager.removalLockObservations, [true, true])
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent(current.uuidString.lowercased()).path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    func testDirectExpirySyncFailureRetainsUnacknowledgedRemovalAndRecoversOnNextScan() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            let job = root.appendingPathComponent(UUID().uuidString.lowercased())
+            let lock = parent.appendingPathComponent(".jobs.lock")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
+            let bytes = Data("{\"request\":{\"createdAt\":\"2020-01-01T00:00:00Z\"}}".utf8)
+            try bytes.write(to: job.appendingPathComponent("journal.json"))
+            var failBeforeRemoval = true
+            var failAfterRemoval = true
+            let sync: (URL) throws -> Void = { directory in
+                if failBeforeRemoval || (failAfterRemoval && !FileManager.default.fileExists(atPath: job.path)) { throw POSIXError(.EIO) }
+                try AtomicFileWriter.synchronizeDirectory(directory)
+            }
+            let now = Date(timeIntervalSince1970: 1_800_000_000)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync))
+            XCTAssertEqual(try Data(contentsOf: job.appendingPathComponent("journal.json")), bytes)
+            failBeforeRemoval = false
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+            failAfterRemoval = false
+            XCTAssertEqual(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync), [])
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    func testDirectExpiryRejectsLockInsideRemovableJobTreeBeforeChangingFiles() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            let job = root.appendingPathComponent(UUID().uuidString.lowercased())
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
+            let journal = job.appendingPathComponent("journal.json")
+            let bytes = Data("{\"request\":{\"createdAt\":\"2020-01-01T00:00:00Z\"}}".utf8)
+            try bytes.write(to: journal)
+            let lock = job.appendingPathComponent(".jobs.lock")
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: Date(), lifetime: 100)) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EINVAL)
+            }
+            XCTAssertEqual(try Data(contentsOf: journal), bytes)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    private final class ExpiryLockFileManager: FileManager, @unchecked Sendable {
+        let lockURL: URL
+        var removalLockObservations: [Bool] = []
+        init(lockURL: URL) { self.lockURL = lockURL; super.init() }
+        override func removeItem(at URL: URL) throws {
+            let descriptor = Darwin.open(lockURL.path, O_RDWR)
+            guard descriptor >= 0 else { throw POSIXError(.EIO) }
+            defer { Darwin.close(descriptor) }
+            let result = flock(descriptor, LOCK_EX | LOCK_NB)
+            removalLockObservations.append(result != 0 && errno == EWOULDBLOCK)
+            if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            try super.removeItem(at: URL)
         }
     }
 

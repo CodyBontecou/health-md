@@ -301,6 +301,60 @@ nonisolated struct AppleExportJournalCheckpoint {
 }
 
 enum AppleExportJournalRecovery {
+    private struct DirectExpiryProbe: Decodable {
+        struct Request: Decodable { let createdAt: Date }
+        let request: Request
+    }
+
+    /// Raw and generated-file jobs share this root and its persistent publication inode.
+    static func cleanupExpiredDirectJobs(
+        at root: URL, lockURL: URL, durabilityRoot: URL,
+        now: Date, lifetime: TimeInterval,
+        fileManager: FileManager = .default,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
+    ) throws -> [UUID] {
+        let rootPath = root.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        let lockPath = lockURL.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        let durabilityPath = durabilityRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        guard root.isFileURL, lockURL.isFileURL, durabilityRoot.isFileURL,
+              rootPath.starts(with: durabilityPath), lockPath.starts(with: durabilityPath),
+              !lockPath.starts(with: rootPath), lifetime.isFinite, lifetime >= 0 else {
+            throw POSIXError(.EINVAL)
+        }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
+        // Re-establish any preceding ambiguous removal before inspecting retained authority.
+        try AtomicFileWriter.synchronizeDirectories(from: root,
+            durability: .required(upTo: durabilityRoot), directorySync: directorySync)
+        let directories = try fileManager.contentsOfDirectory(at: root,
+            includingPropertiesForKeys: [.creationDateKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles])
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var removed: [UUID] = []
+        for directory in directories {
+            guard let jobID = UUID(uuidString: directory.lastPathComponent),
+                  try fileManager.attributesOfItem(atPath: directory.path)[.type] as? FileAttributeType == .typeDirectory else { continue }
+            let candidates = [directory.appendingPathComponent("journal.json"),
+                directory.appendingPathComponent("files/journal.json")]
+            let journalURL = candidates.first { fileManager.fileExists(atPath: $0.path) }
+            let probe = journalURL.flatMap { try? Data(contentsOf: $0) }
+                .flatMap { try? decoder.decode(DirectExpiryProbe.self, from: $0) }
+            let createdAt: Date?
+            if let probe { createdAt = probe.request.createdAt }
+            else {
+                let values = try directory.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+                createdAt = values.creationDate ?? values.contentModificationDate
+            }
+            guard createdAt.map({ $0.addingTimeInterval(lifetime) <= now }) ?? false else { continue }
+            try fileManager.removeItem(at: directory)
+            try AtomicFileWriter.synchronizeDirectories(from: root,
+                durability: .required(upTo: durabilityRoot), directorySync: directorySync)
+            removed.append(jobID)
+        }
+        return removed
+    }
+
     enum RecoveryError: LocalizedError {
         case unreadableJournal
         var errorDescription: String? { "The saved direct export journal is unavailable. Its files were retained." }

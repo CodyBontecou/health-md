@@ -79,11 +79,6 @@ private enum IPhoneDirectJobState: String, Codable {
     case cancelled
 }
 
-private struct IPhoneDirectExpiryProbe: Decodable {
-    struct Request: Decodable { let createdAt: Date }
-    let request: Request
-}
-
 private struct IPhoneDirectExportJournal: Codable {
     static let legacyProtocolVersion = 2
     static let currentVersion = 3
@@ -1146,37 +1141,12 @@ final class IPhoneDirectExportCoordinator {
 
     func cleanupExpiredJobs(now: Date = Date()) {
         guard let root = try? jobsRootDirectory(),
-              let directories = try? fileManager.contentsOfDirectory(
-                at: root,
-                includingPropertiesForKeys: [.isDirectoryKey, .creationDateKey, .contentModificationDateKey],
-                options: [.skipsHiddenFiles]
-              ) else { return }
-        let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
-        for directory in directories {
-            let candidates = [
-                directory.appendingPathComponent("journal.json"),
-                directory.appendingPathComponent("files/journal.json")
-            ]
-            let journalURL = candidates.first(where: { fileManager.fileExists(atPath: $0.path) })
-            let probe = journalURL
-                .flatMap { try? Data(contentsOf: $0) }
-                .flatMap { try? decoder.decode(IPhoneDirectExpiryProbe.self, from: $0) }
-            let shouldRemove: Bool
-            if let probe {
-                shouldRemove = probe.request.createdAt
-                    .addingTimeInterval(HealthMdDirectProtocol.jobLifetime) <= now
-            } else {
-                let values = try? directory.resourceValues(
-                    forKeys: [.creationDateKey, .contentModificationDateKey]
-                )
-                let oldestSafeReference = values?.creationDate ?? values?.contentModificationDate
-                shouldRemove = oldestSafeReference.map {
-                    $0.addingTimeInterval(HealthMdDirectProtocol.jobLifetime) <= now
-                } ?? false
-            }
-            if shouldRemove { try? fileManager.removeItem(at: directory) }
-        }
+              let support = try? fileManager.url(for: .applicationSupportDirectory,
+                in: .userDomainMask, appropriateFor: nil, create: true) else { return }
+        _ = try? AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+            lockURL: root.deletingLastPathComponent().appendingPathComponent(".v1.journal.lock"),
+            durabilityRoot: support, now: now, lifetime: HealthMdDirectProtocol.jobLifetime,
+            fileManager: fileManager)
     }
 
     private func jobsRootDirectory() throws -> URL {
