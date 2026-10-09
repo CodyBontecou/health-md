@@ -989,6 +989,128 @@ final class ProductionAdapterTests: XCTestCase {
 #if os(iOS)
 final class DirectCoordinatorAdmissionTests: XCTestCase {
     @MainActor
+    func testCancelledPreparationDoesNotPoisonNextActualSameIDInvocation() async throws {
+        let suite = "synthetic-cancellation-invocation-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let healthStore = FakeHealthStore()
+        let healthKit = HealthKitManager(store: healthStore, userDefaults: defaults)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let authority = AppleDirectProtocolAuthority(defaultMode: .legacy)
+        let jobID = UUID()
+        let support = try FileManager.default.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let ownedJob = support.appendingPathComponent("Health.md/DirectCLIOutbound/v1/" + jobID.uuidString.lowercased())
+        guard !FileManager.default.fileExists(atPath: ownedJob.path) else {
+            XCTFail("Synthetic job must start without retained files")
+            return
+        }
+        defer {
+            try? FileManager.default.removeItem(at: ownedJob)
+            CLIExportActivityTracker.shared.clear(jobID: jobID)
+        }
+        let request = DirectExportRequest(protocolVersion: -1, jobID: jobID, createdAt: Date(),
+            dateSelection: .exact(start: "2026-10-08", end: "2026-10-08"),
+            responseMode: .rawJSON, rawProfile: .canonicalSourceRecordsV1)
+        let binding = DirectPeerBinding(sourceInstallationID: UUID(), destinationInstallationID: UUID())
+        let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        func invoke(_ transport: DirectAdmissionPacketTransport) async {
+            let connection = IPhoneDirectExportConnection(channel: DirectSecureChannel(packetConnection: transport,
+                sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+                peerInstallationID: binding.destinationInstallationID, peerDisplayName: "synthetic"))
+            await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+                channel: connection, protocolAuthority: authority, healthKitManager: healthKit)
+        }
+        let firstTransport = DirectAdmissionPacketTransport(blockSend: true)
+        let first = Task { await invoke(firstTransport) }
+        defer { first.cancel(); Task { await firstTransport.gate.release() } }
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while !(await firstTransport.gate.isBlocked), ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard await firstTransport.gate.isBlocked else {
+            await firstTransport.gate.release()
+            await first.value
+            XCTFail("Synthetic invocation must reach held rejection before cancellation")
+            return
+        }
+        let capturedOriginal = await firstTransport.gate.invocation
+        let original = try XCTUnwrap(capturedOriginal)
+        XCTAssertTrue(coordinator.cancel(jobID: jobID))
+        XCTAssertTrue(original.isCancelled)
+        await firstTransport.gate.release()
+        await first.value
+        XCTAssertNil(coordinator.currentJobID)
+        let nextTransport = DirectAdmissionPacketTransport(blockSend: false)
+        await invoke(nextTransport)
+        let capturedNext = await nextTransport.gate.invocation
+        let next = try XCTUnwrap(capturedNext)
+        XCTAssertFalse(original === next)
+        XCTAssertFalse(next.isCancelled)
+        XCTAssertTrue(original.isCancelled)
+        XCTAssertFalse(healthStore.authRequested)
+        XCTAssertTrue(healthStore.requestedReadTypes.isEmpty)
+    }
+
+    @MainActor
+    func testCancellationScopeIsInheritedButDoesNotPoisonSameIDReplacement() async {
+        let jobID = UUID()
+        let original = IPhoneDirectCancellationInvocation(jobID: jobID)
+        original.cancel()
+        await IPhoneDirectCancellationScope.$current.withValue(original) {
+            XCTAssertTrue(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+            let inherited = await Task { IPhoneDirectCancellationScope.isCancelled(jobID: jobID) }.value
+            XCTAssertTrue(inherited)
+            XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: UUID()))
+        }
+        let replacement = IPhoneDirectCancellationInvocation(jobID: jobID)
+        await IPhoneDirectCancellationScope.$current.withValue(replacement) {
+            XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+            let inherited = await Task { IPhoneDirectCancellationScope.isCancelled(jobID: jobID) }.value
+            XCTAssertFalse(inherited)
+        }
+        XCTAssertFalse(IPhoneDirectCancellationScope.isCancelled(jobID: jobID))
+        XCTAssertTrue(original.isCancelled)
+    }
+
+    @MainActor
+    func testCancellationCommitDoesNotSignalOnPersistenceFailureOrReplacement() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var signals = 0
+        XCTAssertThrowsError(try checkpoint.commitCancellation(operation: {
+            throw POSIXError(.EIO)
+        }, onCommitted: { signals += 1 }))
+        XCTAssertEqual(signals, 0)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let admitted = checkpoint
+        try admitted.commitCancellation(operation: {
+            try checkpoint.publish(Data("cancelled".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }, onCommitted: { signals += 1 })
+        XCTAssertEqual(signals, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), Data("cancelled".utf8))
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var writes = 0
+        XCTAssertThrowsError(try admitted.commitCancellation(operation: { writes += 1 },
+            onCommitted: { signals += 1 }))
+        XCTAssertEqual(writes, 0)
+        XCTAssertEqual(signals, 1)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    @MainActor
     func testAcceptedGenerationRetainsQueryBudgetButReplacementGetsFreshController() async throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -1154,6 +1276,7 @@ nonisolated private final class DirectAdmissionPacketTransport: DirectPacketTran
     private let blockSend: Bool
     init(blockSend: Bool) { self.blockSend = blockSend }
     func send(_ packet: ManualIPSyncPacket) async throws {
+        await gate.capture(IPhoneDirectCancellationScope.current)
         if blockSend { await gate.block() }
     }
     func receive() async throws -> ManualIPSyncPacket { throw DirectChannelError.connectionClosed }
@@ -1161,6 +1284,8 @@ nonisolated private final class DirectAdmissionPacketTransport: DirectPacketTran
 }
 
 private actor DirectAdmissionSendGate {
+    private(set) var invocation: IPhoneDirectCancellationInvocation?
+    func capture(_ invocation: IPhoneDirectCancellationInvocation?) { self.invocation = invocation }
     private var continuation: CheckedContinuation<Void, Never>?
     private var released = false
     var isBlocked: Bool { continuation != nil }

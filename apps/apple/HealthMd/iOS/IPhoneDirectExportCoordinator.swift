@@ -106,6 +106,28 @@ private struct IPhoneDirectExportJournal: Codable {
     var updatedAt: Date
 }
 
+nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable {
+    let jobID: UUID
+    private let lock = NSLock()
+    private var cancelled = false
+    private var checkpoint: AppleExportJournalCheckpoint?
+
+    init(jobID: UUID) { self.jobID = jobID }
+    var isCancelled: Bool { lock.withLock { cancelled } }
+    var ownership: AppleExportJournalCheckpoint? { lock.withLock { checkpoint } }
+    func cancel() { lock.withLock { cancelled = true } }
+    func bind(_ ownership: AppleExportJournalCheckpoint) {
+        lock.withLock { checkpoint = ownership }
+    }
+}
+
+nonisolated enum IPhoneDirectCancellationScope {
+    @TaskLocal static var current: IPhoneDirectCancellationInvocation?
+    static func isCancelled(jobID: UUID) -> Bool {
+        current?.jobID == jobID && current?.isCancelled == true
+    }
+}
+
 /// iOS-side producer for strict raw and canonical projection requests. Every
 /// captured day is protected-file spooled before transfer; resumability is at a
 /// validated physical-partition checkpoint while logical days may exceed 64 MiB.
@@ -114,7 +136,7 @@ final class IPhoneDirectExportCoordinator {
     static let shared = IPhoneDirectExportCoordinator()
 
     private var activeJobID: UUID?
-    private var cancelledJobIDs: Set<UUID> = []
+    private var activeCancellation: IPhoneDirectCancellationInvocation?
     private struct AcceptedQueryController {
         let ownership: AppleExportJournalCheckpoint
         let controller: HealthKitQueryExecutionController
@@ -144,6 +166,29 @@ final class IPhoneDirectExportCoordinator {
             }
             return
         }
+        let invocation = IPhoneDirectCancellationInvocation(jobID: request.jobID)
+        activeJobID = request.jobID
+        activeCancellation = invocation
+        defer {
+            if activeCancellation === invocation { activeCancellation = nil }
+            if activeJobID == request.jobID { activeJobID = nil }
+        }
+        await IPhoneDirectCancellationScope.$current.withValue(invocation) {
+            await handleAdmitted(request, peerBinding: peerBinding, negotiation: negotiation,
+                channel: channel, protocolAuthority: protocolAuthority,
+                healthKitManager: healthKitManager, externalIntegrations: externalIntegrations)
+        }
+    }
+
+    private func handleAdmitted(
+        _ request: DirectExportRequest,
+        peerBinding: DirectPeerBinding,
+        negotiation: DirectTransferNegotiation,
+        channel: IPhoneDirectExportConnection,
+        protocolAuthority: AppleDirectProtocolAuthority,
+        healthKitManager: HealthKitManager,
+        externalIntegrations: ExternalIntegrationDailyRecordProviding?
+    ) async {
         cleanupExpiredJobs()
         #if DEBUG
         let rawPerformanceSpan = request.responseMode == .writeFiles
@@ -159,7 +204,6 @@ final class IPhoneDirectExportCoordinator {
         var executionController: HealthKitQueryExecutionController?
         var executionOwnership: AppleExportJournalCheckpoint?
         do {
-            activeJobID = request.jobID
             // Preparation has no durable generation yet. Retained controller
             // state is selected only after the producer acquires its journal.
             let queryController = HealthKitQueryExecutionController()
@@ -184,6 +228,7 @@ final class IPhoneDirectExportCoordinator {
                             externalIntegrations: externalIntegrations,
                             didAcquireOwnership: { ownership in
                                 executionOwnership = ownership
+                                IPhoneDirectCancellationScope.current?.bind(ownership)
                                 let acceptedController = try queryControllerForAcceptedGeneration(
                                     jobID: request.jobID, ownership: ownership, fallback: queryController)
                                 executionController = acceptedController
@@ -200,6 +245,7 @@ final class IPhoneDirectExportCoordinator {
                         healthKitManager: healthKitManager,
                         didAcquireOwnership: { ownership in
                             executionOwnership = ownership
+                            IPhoneDirectCancellationScope.current?.bind(ownership)
                             let acceptedController = try queryControllerForAcceptedGeneration(
                                 jobID: request.jobID, ownership: ownership, fallback: queryController)
                             executionController = acceptedController
@@ -294,7 +340,6 @@ final class IPhoneDirectExportCoordinator {
                 }
             }
         }
-        if activeJobID == request.jobID { activeJobID = nil }
     }
 
     private func activityTargetLabel(for request: DirectExportRequest) -> String {
@@ -365,25 +410,45 @@ final class IPhoneDirectExportCoordinator {
 
     @discardableResult
     func cancel(jobID: UUID) -> Bool {
-        let rawJournal = try? loadJournal(jobID: jobID)
-        let rawIsCancellable = rawJournal.map { $0.state != .completed } ?? false
-        let isKnown = activeJobID == jobID
-            || rawIsCancellable
-            || IPhoneDirectFileExportProducer.shared.canCancel(jobID: jobID)
-        guard isKnown else { return false }
-        cancelledJobIDs.insert(jobID)
-        queryExecutionControllers.removeValue(forKey: jobID)
-        CLIExportActivityTracker.shared.setMessage(
-            jobID: jobID,
-            message: "Cancelling the direct CLI export…"
-        )
-        IPhoneDirectFileExportProducer.shared.cancel(jobID: jobID)
-        if var journal = rawJournal {
-            journal.state = .cancelled
-            journal.updatedAt = Date()
-            try? saveJournal(&journal)
+        let invocation = activeCancellation?.jobID == jobID ? activeCancellation : nil
+        let expected = invocation?.ownership
+        do {
+            try expected?.validateGeneration()
+            var rawOwnership: AppleExportJournalCheckpoint?
+            if var journal = try loadJournal(jobID: jobID), journal.state != .completed,
+               expected == nil || sameOwnership(expected, journal.checkpoint) {
+                let owner = journal.checkpoint
+                try owner.commitCancellation(operation: {
+                    journal.state = .cancelled
+                    journal.updatedAt = Date()
+                    try saveJournal(&journal)
+                }, onCommitted: {})
+                rawOwnership = journal.checkpoint
+            }
+            let fileOwnership = try IPhoneDirectFileExportProducer.shared.cancel(
+                jobID: jobID, expectedOwnership: expected)
+            let committed = rawOwnership ?? fileOwnership
+            guard committed != nil || (invocation != nil && expected == nil) else { return false }
+            let signal = {
+                invocation?.cancel()
+                self.queryExecutionControllers.removeValue(forKey: jobID)
+                CLIExportActivityTracker.shared.setMessage(
+                    jobID: jobID, message: "Cancelling the direct CLI export…")
+            }
+            if let committed {
+                try committed.withGenerationOwnership { signal() }
+            } else {
+                signal()
+            }
+            return true
+        } catch {
+            return false
         }
-        return true
+    }
+
+    private func sameOwnership(_ left: AppleExportJournalCheckpoint?, _ right: AppleExportJournalCheckpoint) -> Bool {
+        left?.generation == right.generation && left?.completionIdentity == right.completionIdentity
+            && left?.journalURL == right.journalURL && left?.publicationLockURL == right.publicationLockURL
     }
 
     private func run(
@@ -411,7 +476,7 @@ final class IPhoneDirectExportCoordinator {
               request.rawProfile != .canonicalSourceRecordsV1 || request.canonicalSelection == nil else {
             throw IPhoneDirectExportError.invalidRequest("The direct canonical selection is invalid.")
         }
-        if cancelledJobIDs.contains(request.jobID) {
+        if IPhoneDirectCancellationScope.isCancelled(jobID: request.jobID) {
             throw IPhoneDirectExportError.cancelled
         }
 
@@ -1285,7 +1350,7 @@ final class IPhoneDirectExportCoordinator {
     }
 
     private func checkCancellation(jobID: UUID) throws {
-        if Task.isCancelled || cancelledJobIDs.contains(jobID) {
+        if Task.isCancelled || IPhoneDirectCancellationScope.isCancelled(jobID: jobID) {
             throw IPhoneDirectExportError.cancelled
         }
     }

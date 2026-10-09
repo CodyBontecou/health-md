@@ -50,20 +50,27 @@ final class IPhoneDirectFileExportProducer {
     )
 
     private let fileManager = FileManager.default
-    private var cancelledJobIDs: Set<UUID> = []
 
     func canCancel(jobID: UUID) -> Bool {
         guard let journal = try? loadJournal(jobID: jobID) else { return false }
         return journal.state != "completed"
     }
 
-    func cancel(jobID: UUID) {
-        cancelledJobIDs.insert(jobID)
-        if var journal = try? loadJournal(jobID: jobID) {
+    func cancel(jobID: UUID, expectedOwnership: AppleExportJournalCheckpoint? = nil) throws -> AppleExportJournalCheckpoint? {
+        guard var journal = try loadJournal(jobID: jobID), journal.state != "completed" else { return nil }
+        if let expectedOwnership {
+            guard expectedOwnership.generation == journal.checkpoint.generation,
+                  expectedOwnership.completionIdentity == journal.checkpoint.completionIdentity,
+                  expectedOwnership.journalURL == journal.checkpoint.journalURL,
+                  expectedOwnership.publicationLockURL == journal.checkpoint.publicationLockURL else { return nil }
+        }
+        let owner = journal.checkpoint
+        try owner.commitCancellation(operation: {
             journal.state = "cancelled"
             journal.updatedAt = Date()
-            try? saveJournal(&journal)
-        }
+            try saveJournal(&journal)
+        }, onCommitted: {})
+        return journal.checkpoint
     }
 
     func pause(jobID: UUID, ownership: AppleExportJournalCheckpoint) -> Bool {
@@ -94,7 +101,7 @@ final class IPhoneDirectFileExportProducer {
         )
         var jobPerformanceOutcome = ExportPerformanceSpanOutcome.failure
         defer {
-            if Task.isCancelled || cancelledJobIDs.contains(request.jobID) {
+            if Task.isCancelled || IPhoneDirectCancellationScope.isCancelled(jobID: request.jobID) {
                 jobPerformanceOutcome = .cancelled
             }
             jobPerformanceSpan.finish(outcome: jobPerformanceOutcome)
@@ -111,7 +118,7 @@ final class IPhoneDirectFileExportProducer {
                 "Direct file exports require an explicit validated desktop destination."
             )
         }
-        if cancelledJobIDs.contains(request.jobID) {
+        if IPhoneDirectCancellationScope.isCancelled(jobID: request.jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
         try enforceBlockedProfileGate(for: request)
@@ -994,8 +1001,8 @@ final class IPhoneDirectFileExportProducer {
                     .appendingPathComponent("archive-work", isDirectory: true),
                 unavailableRollupDates: unavailable,
                 writeDataDictionary: !wroteDictionary,
-                cancellationCheck: { [weak self] in
-                    self?.cancelledJobIDs.contains(journal.request.jobID) == true
+                cancellationCheck: { [invocation = IPhoneDirectCancellationScope.current] in
+                    invocation?.isCancelled == true
                 }
             )
         }
@@ -1622,7 +1629,7 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func checkCancellation(_ jobID: UUID) throws {
-        if Task.isCancelled || cancelledJobIDs.contains(jobID) {
+        if Task.isCancelled || IPhoneDirectCancellationScope.isCancelled(jobID: jobID) {
             throw IPhoneDirectFileProducerError.cancelled
         }
     }

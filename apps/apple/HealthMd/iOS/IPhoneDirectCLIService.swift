@@ -1211,7 +1211,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                 try await channel.send(.exportRejected(DirectExportFailure(
                     jobID: jobID,
                     reason: .invalidRequest,
-                    message: "The iPhone has no matching direct export job."
+                    message: "The iPhone could not cancel this direct export."
                 )))
             }
         case .ping:

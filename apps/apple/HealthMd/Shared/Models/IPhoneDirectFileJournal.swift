@@ -318,6 +318,13 @@ nonisolated struct AppleExportJournalCheckpoint: Sendable {
         }
     }
 
+    func commitCancellation(operation: () throws -> Void, onCommitted: () -> Void) throws {
+        try withGenerationOwnership {
+            try operation()
+            onCommitted()
+        }
+    }
+
     var sendAuthorization: DirectPacketSendAuthorization {
         DirectPacketSendAuthorization { try acquireEnqueueLease() }
     }
