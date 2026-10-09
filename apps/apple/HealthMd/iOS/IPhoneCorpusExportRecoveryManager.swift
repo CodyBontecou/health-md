@@ -37,6 +37,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
 
     private let store: ConnectedCorpusOutboundStore
     private let cliActivityTracker: CLIExportActivityTracker
+    private let completionRecorder: @MainActor (ConnectedCorpusOutboundJournal, MacExportResultPayload) -> Void
     private let transportProvider: @MainActor (SyncService) -> ConnectedCorpusSender.Transport
     private let connectedPeerProvider: @MainActor (SyncService) -> SyncPeerCapabilities?
     private weak var syncService: SyncService?
@@ -72,10 +73,13 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         },
         connectedPeerProvider: @escaping @MainActor (SyncService) -> SyncPeerCapabilities? = {
             $0.connectionState == .connected ? $0.remoteCapabilities : nil
-        }
+        },
+        completionRecorder: @escaping @MainActor (ConnectedCorpusOutboundJournal, MacExportResultPayload) -> Void =
+            IPhoneCorpusExportRecoveryManager.recordCompletionEffects
     ) {
         self.store = store
         self.cliActivityTracker = cliActivityTracker
+        self.completionRecorder = completionRecorder
         self.transportProvider = transportProvider
         self.connectedPeerProvider = connectedPeerProvider
         self.activeSnapshot = nil
@@ -389,19 +393,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         guard let journal = try? store.load(jobID: payload.jobID, allowExpired: true),
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: payload.jobID)) == true else { return false }
-        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
-        ExportOrchestrator.recordResult(
-            result,
-            source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
-            dateRangeStart: journal.exportManifest.dateRangeStart,
-            dateRangeEnd: journal.exportManifest.dateRangeEnd,
-            targetLabel: payload.destinationDisplayName ?? "Mac",
-            fileCount: payload.hasAuthoritativeFileCount
-                ? payload.totalFilesWritten : nil,
-            appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
-        )
-        if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
-        if journal.macRequest?.requestedBy == .cli {
+        completionRecorder(journal, payload)
+        if journal.macRequest?.requestedBy == .cli,
+           managerOwnedCLIJobIDInTracker() == payload.jobID {
             let phase: CLIExportActivityTracker.Phase
             switch payload.status {
             case .success: phase = .completed
@@ -421,6 +415,24 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
         refreshPublishedSnapshot()
         return true
+    }
+
+    private static func recordCompletionEffects(
+        journal: ConnectedCorpusOutboundJournal,
+        payload: MacExportResultPayload
+    ) {
+        let result = ExportOrchestrator.ExportResult(macExportPayload: payload)
+        ExportOrchestrator.recordResult(
+            result,
+            source: journal.origin == .scheduledIPhone ? .scheduled : .macAgent,
+            dateRangeStart: journal.exportManifest.dateRangeStart,
+            dateRangeEnd: journal.exportManifest.dateRangeEnd,
+            targetLabel: payload.destinationDisplayName ?? "Mac",
+            fileCount: payload.hasAuthoritativeFileCount
+                ? payload.totalFilesWritten : nil,
+            appleExportEnginePin: journal.exportManifest.effectiveAppleExportEnginePin
+        )
+        if payload.successCount > 0 { PurchaseManager.shared.recordExportUse() }
     }
 
     @discardableResult

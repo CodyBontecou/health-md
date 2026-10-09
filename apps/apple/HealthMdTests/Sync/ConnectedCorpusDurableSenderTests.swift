@@ -458,6 +458,84 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
+    func testActualConnectedSenderAndResultPreserveReplacementActivityAdmission() async throws {
+        let replacements: [CLIExportActivityTracker.Source?] = [nil, .macApp, .direct]
+        for replacementSource in replacements {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let harness = Harness()
+            var recorded: [UUID] = []
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, cliActivityTracker: tracker,
+                transportProvider: { _ in harness.transport() },
+                completionRecorder: { journal, payload in
+                    XCTAssertEqual(journal.jobID, payload.jobID)
+                    recorded.append(payload.jobID)
+                }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let initial = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: .init(protocolVersion: fixture.session.protocolVersion,
+                                partitionTargetBytes: fixture.session.partitionTargetBytes),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            var replacement: CLIExportActivityTracker.Snapshot?
+            var replacementAdmission: UUID?
+            var prepared = false
+            _ = try await manager.send(
+                origin: .macInitiated, jobID: fixture.session.jobID,
+                manifest: fixture.manifest, macRequest: initial.macRequest,
+                durableNegotiation: negotiation, syncService: SyncService(),
+                onCheckpoint: { journal in
+                    guard journal.state == .preparing, !prepared else { return }
+                    prepared = true
+                    guard let source = replacementSource, let previous = tracker.snapshot else { return }
+                    let oldAdmission = tracker.admissionID
+                    tracker.begin(jobID: previous.jobID, source: source, totalDays: previous.totalDays,
+                                  targetLabel: previous.targetLabel, message: previous.message)
+                    tracker.update(jobID: previous.jobID, source: source, targetLabel: previous.targetLabel,
+                                   phase: previous.phase, processedDays: previous.processedDays,
+                                   totalDays: previous.totalDays, currentDate: previous.currentDate,
+                                   committedPartitions: previous.committedPartitions,
+                                   committedBytes: previous.committedBytes, message: previous.message)
+                    replacement = tracker.snapshot
+                    replacementAdmission = tracker.admissionID
+                    XCTAssertNotEqual(replacementAdmission, oldAdmission)
+                    if source == .macApp { XCTAssertEqual(replacement, previous) }
+                },
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            XCTAssertTrue(prepared)
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "Sender callbacks cannot borrow replacement admission")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+            let payload = MacExportResultPayload(
+                jobID: fixture.session.jobID, status: .success, successCount: 1, totalCount: 1,
+                formatsPerDate: 1, totalFilesWritten: 1, isTotalFilesWrittenAuthoritative: true,
+                failedDateDetails: [], completedDates: fixture.dates,
+                destinationDisplayName: "Synthetic Mac", destinationPathForDisplay: nil,
+                completedAt: fixture.manifest.createdAt
+            )
+            XCTAssertTrue(manager.recordRecoveredMacRequestCompletion(payload))
+            XCTAssertFalse(manager.recordRecoveredMacRequestCompletion(payload), "Completion effects remain once-only")
+            XCTAssertEqual(recorded, [fixture.session.jobID])
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "A completed journal cannot finish an unowned activity")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot?.phase, .completed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
     func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
         let fixture = try makeFixture(dayCount: 1)
         _ = try fixture.store.updateState(
