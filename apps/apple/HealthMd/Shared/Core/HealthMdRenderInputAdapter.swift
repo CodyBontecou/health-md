@@ -462,16 +462,20 @@ enum HealthMdRenderInputAdapter {
             ),
         ]
         if let data = presentationData, let captureContext,
-           captureContext.sleepDayAttribution == .morningEnds, !data.sleep.stages.isEmpty {
+           captureContext.sleepDayAttribution == .morningEnds {
             let bytes = try data.toJSONDataThrowing(customization: presentationCustomization, captureContext: captureContext)
             guard let root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
-                  let sleep = root["sleep"] as? [String: Any],
-                  let stages = sleep["sleepStages"] as? [[String: Any]] else {
+                  !hasUnqualifiedDetailArrays(root, path: []) else {
                 throw AdapterError.invalidPresentation
             }
-            guard !hasUnqualifiedDetailArrays(root, path: []) else { throw AdapterError.invalidPresentation }
-            renderedDay["native_details"] = try sleepStageDetails(stages, ownerDate: ownerDate,
-                selectedOutputKeys: selectedOutputKeys)
+            if !data.sleep.stages.isEmpty {
+                guard let sleep = root["sleep"] as? [String: Any],
+                      let stages = sleep["sleepStages"] as? [[String: Any]] else {
+                    throw AdapterError.invalidPresentation
+                }
+                renderedDay["native_details"] = try sleepStageDetails(stages, ownerDate: ownerDate,
+                    selectedOutputKeys: selectedOutputKeys)
+            }
         }
         return renderedDay
     }

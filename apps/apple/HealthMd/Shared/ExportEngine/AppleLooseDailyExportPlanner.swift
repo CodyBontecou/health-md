@@ -750,6 +750,12 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
         settingsSnapshot: ExportSettingsSnapshot,
         surface: AppleExportOperationSurface
     ) -> Bool {
+        let supportsWakeDateDetails = settingsSnapshot.detailPolicy == .detailedTimeSeries
+            && settingsSnapshot.sleepCaptureContext?.sleepDayAttribution == .morningEnds
+            && settingsSnapshot.sleepCaptureContext?.exportProfileID == "apple-v11"
+            && settingsSnapshot.appleExportEnginePin?.isWakeDate == true
+            && settingsSnapshot.appleExportEnginePin?.engine == .rust
+            && (surface == .localVaultWithoutSideEffects || surface == .localVaultRangeWithoutSideEffects || surface == .preview)
         let hasConfiguredRollups = settingsSnapshot.generateRangeSummary
         let isRangeSurface = surface == .localVaultRangeWithoutSideEffects
             || surface == .directGeneratedFilesWithoutSideEffects
@@ -774,7 +780,7 @@ final class AppleLooseDailyExportPlanner: AppleLooseDailyRangeExportPlanning {
               (!settingsSnapshot.summaryOnlyExport
                 || (isSummaryOnly && isRangeSurface)
                 || (!hasConfiguredRollups && isRangeSurface)),
-              !settingsSnapshot.detailPolicy.hasAnyDetail,
+              (!settingsSnapshot.detailPolicy.hasAnyDetail || supportsWakeDateDetails),
               (!hasConfiguredRollups || isRangeSurface),
               !settingsSnapshot.dailyNoteInjection.enabled,
               !settingsSnapshot.individualTracking.globalEnabled else {
