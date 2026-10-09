@@ -134,6 +134,8 @@ final class IPhoneDirectFileExportProducer {
         defer { externalIntegrations?.endExportAction(succeeded: externalExportSucceeded) }
         let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectFileJournal
+        var incomingProtocolLease: IPhoneDirectIncomingProtocolLease?
+        defer { incomingProtocolLease?.close() }
         if let persisted = try loadJournal(jobID: request.jobID) {
             guard IPhoneDirectFileJournal.isSupportedVersion(persisted.version),
                   persisted.request == request,
@@ -148,6 +150,7 @@ final class IPhoneDirectFileExportProducer {
                     ? persisted.appleDirectProtocolPin : nil
             )
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
             IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)) else {
                 throw IPhoneDirectFileProducerError.requestChanged
@@ -157,6 +160,7 @@ final class IPhoneDirectFileExportProducer {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
             IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             var prepared = try await measureDirectFilePhase("prepare") {
                 try await prepare(

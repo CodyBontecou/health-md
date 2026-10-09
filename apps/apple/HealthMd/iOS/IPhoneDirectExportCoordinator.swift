@@ -599,6 +599,8 @@ final class IPhoneDirectExportCoordinator {
         activeJobID = request.jobID
         let operationAuthority: AppleDirectProtocolAuthority
         let journal: IPhoneDirectExportJournal
+        var incomingProtocolLease: IPhoneDirectIncomingProtocolLease?
+        defer { incomingProtocolLease?.close() }
         if let persisted = try loadJournal(jobID: request.jobID) {
             guard persisted.version == IPhoneDirectExportJournal.legacyProtocolVersion
                     || persisted.version == IPhoneDirectExportJournal.currentVersion,
@@ -610,6 +612,7 @@ final class IPhoneDirectExportCoordinator {
                     ? persisted.appleDirectProtocolPin : nil
             )
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
             IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)),
                   persisted.accepted.peerBinding == peerBinding,
@@ -622,6 +625,7 @@ final class IPhoneDirectExportCoordinator {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            incomingProtocolLease = channel.retainIncomingProtocolAuthority(operationAuthority)
             IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             var prepared = try await prepareNewJournal(
                 request,

@@ -302,6 +302,12 @@ public final class DirectSecureChannel: @unchecked Sendable {
     }
 
     public func receive() async throws -> DirectSecurePayload {
+        try await receive(messageCanonicalizer: { [messageCanonicalizer] in messageCanonicalizer })
+    }
+
+    /// Select the retained operation context when plaintext arrives, not before
+    /// waiting for the peer. Admission may select a pin while receive is pending.
+    public func receive(messageCanonicalizer: @escaping @Sendable () -> any DirectMessageCanonicalizing) async throws -> DirectSecurePayload {
         try await receiveGate.perform { [self] in
             guard case .encrypted(let frame) = try await packetConnection.receive() else {
                 throw DirectChannelError.expectedEncryptedPacket
@@ -312,7 +318,7 @@ public final class DirectSecureChannel: @unchecked Sendable {
                 return .binaryTransferFrame(plaintext)
             }
             do {
-                let canonical = try messageCanonicalizer.canonicalizeDirectMessage(plaintext)
+                let canonical = try messageCanonicalizer().canonicalizeDirectMessage(plaintext)
                 return .message(try decoder.decode(DirectMessage.self, from: canonical))
             } catch {
                 throw DirectChannelError.decodeFailed

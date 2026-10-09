@@ -162,6 +162,69 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testIncomingProtocolSelectionIsRetainedAfterPendingReceiveAndOwnedCleanup() async throws {
+        let core = FakeAppleDirectProtocolRustCore()
+        let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        session.beginBootstrap()
+        let transport = PendingIncomingProtocolTransport()
+        let key = SymmetricKey(data: Data(repeating: 0x43, count: 32))
+        let sender = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+        let connection = IPhoneDirectExportConnection(channel: receiver)
+        let pending = Task {
+            try await receiver.receive(messageCanonicalizer: {
+                connection.incomingMessageCanonicalizer(fallback: session)
+            })
+        }
+        await transport.waitForReceiver()
+        try session.beginOperation(pin: session.pinForNewOperation())
+        let first = connection.retainIncomingProtocolAuthority(session)
+        defer { first.close() }
+        session.beginBootstrap()
+        core.failCanonicalization = true
+        try await sender.send(.ping)
+        do {
+            _ = try await pending.value
+            XCTFail("Incoming bytes must use the pin selected while receive was pending, despite later bootstrap")
+        } catch {
+            XCTAssertEqual(error as? DirectChannelError, .decodeFailed)
+        }
+        core.failCanonicalization = false
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        core.canonicalMessage = try encoder.encode(DirectMessage.ping)
+        try await sender.send(.ping)
+        let valid = try await receiver.receive(messageCanonicalizer: {
+            connection.incomingMessageCanonicalizer(fallback: session)
+        })
+        XCTAssertEqual(valid, .message(.ping))
+
+        // A replacement's historical authority must survive old close/deinit.
+        let replacement = connection.retainIncomingProtocolAuthority(session)
+        defer { replacement.close() }
+        first.close()
+        try session.beginOperation(pin: session.pinForNewOperation())
+        core.failCanonicalization = true
+        try await sender.send(.ping)
+        let historical = try await receiver.receive(messageCanonicalizer: {
+            connection.incomingMessageCanonicalizer(fallback: session)
+        })
+        XCTAssertEqual(historical, .message(.ping))
+        replacement.close()
+        try await sender.send(.ping)
+        do {
+            _ = try await receiver.receive(messageCanonicalizer: {
+                connection.incomingMessageCanonicalizer(fallback: session)
+            })
+            XCTFail("Closing the current selection must restore the connection authority")
+        } catch {
+            XCTAssertEqual(error as? DirectChannelError, .decodeFailed)
+        }
+    }
+
+    @MainActor
     func testInactiveRawAndFileCancellationRestoreStoredProtocolSelection() async throws {
         for (files, version, legacy) in [(false, 2, true), (false, 3, false), (true, 2, true), (true, 6, false)] {
             let jobID = UUID()
@@ -485,6 +548,39 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
 }
 
 #if os(iOS)
+private actor PendingIncomingProtocolTransport: DirectPacketTransport {
+    private var packets: [ManualIPSyncPacket] = []
+    private var waiter: CheckedContinuation<ManualIPSyncPacket, Error>?
+    private var waitingObservers: [CheckedContinuation<Void, Never>] = []
+
+    func send(_ packet: ManualIPSyncPacket) async throws {
+        if let waiter {
+            self.waiter = nil
+            waiter.resume(returning: packet)
+        } else {
+            packets.append(packet)
+        }
+    }
+
+    func receive() async throws -> ManualIPSyncPacket {
+        if !packets.isEmpty { return packets.removeFirst() }
+        guard waiter == nil else { throw DirectChannelError.malformedPacket }
+        return try await withCheckedThrowingContinuation {
+            waiter = $0
+            let observers = waitingObservers
+            waitingObservers.removeAll()
+            observers.forEach { $0.resume() }
+        }
+    }
+
+    func waitForReceiver() async {
+        if waiter != nil { return }
+        await withCheckedContinuation { waitingObservers.append($0) }
+    }
+
+    nonisolated func cancel() {}
+}
+
 nonisolated private final class OperationProtocolPacketTransport: DirectPacketTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var packets: [ManualIPSyncPacket] = []

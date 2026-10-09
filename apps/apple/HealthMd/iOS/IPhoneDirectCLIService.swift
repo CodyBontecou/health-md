@@ -7,22 +7,35 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
     let channel: DirectSecureChannel
     private let inbox: IPhoneDirectExportMessageInbox
     private let operationProtocolAuthority: AppleDirectProtocolAuthority?
+    private let incomingProtocolSelection: IPhoneDirectIncomingProtocolSelection
 
     init(channel: DirectSecureChannel) {
         self.channel = channel
         inbox = IPhoneDirectExportMessageInbox()
         operationProtocolAuthority = nil
+        incomingProtocolSelection = IPhoneDirectIncomingProtocolSelection()
     }
 
     private init(channel: DirectSecureChannel, inbox: IPhoneDirectExportMessageInbox,
-                 protocolAuthority: AppleDirectProtocolAuthority) {
+                 protocolAuthority: AppleDirectProtocolAuthority,
+                 incomingProtocolSelection: IPhoneDirectIncomingProtocolSelection) {
         self.channel = channel
         self.inbox = inbox
         operationProtocolAuthority = protocolAuthority.frozenForCurrentOperation()
+        self.incomingProtocolSelection = incomingProtocolSelection
     }
 
     func retainingProtocolAuthority(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectExportConnection {
-        IPhoneDirectExportConnection(channel: channel, inbox: inbox, protocolAuthority: authority)
+        IPhoneDirectExportConnection(channel: channel, inbox: inbox, protocolAuthority: authority,
+            incomingProtocolSelection: incomingProtocolSelection)
+    }
+
+    func retainIncomingProtocolAuthority(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectIncomingProtocolLease {
+        incomingProtocolSelection.retain(authority)
+    }
+
+    nonisolated func incomingMessageCanonicalizer(fallback: AppleDirectProtocolAuthority) -> any DirectMessageCanonicalizing {
+        incomingProtocolSelection.selected(fallback: fallback)
     }
 
     func send(_ message: DirectMessage, ownership: AppleExportJournalCheckpoint? = nil) async throws {
@@ -48,6 +61,33 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
 
     func finish() async {
         await inbox.finish()
+    }
+}
+
+nonisolated final class IPhoneDirectIncomingProtocolLease: @unchecked Sendable {
+    private let finish: @Sendable () -> Void
+    fileprivate init(finish: @escaping @Sendable () -> Void) { self.finish = finish }
+    func close() { finish() }
+    deinit { finish() }
+}
+
+nonisolated private final class IPhoneDirectIncomingProtocolSelection: @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: (id: UUID, authority: AppleDirectProtocolAuthority)?
+
+    func retain(_ authority: AppleDirectProtocolAuthority) -> IPhoneDirectIncomingProtocolLease {
+        let id = UUID()
+        let frozen = authority.frozenForCurrentOperation()
+        lock.withLock { current = (id, frozen) }
+        return IPhoneDirectIncomingProtocolLease { [self] in
+            lock.withLock {
+                if current?.id == id { current = nil }
+            }
+        }
+    }
+
+    func selected(fallback: AppleDirectProtocolAuthority) -> any DirectMessageCanonicalizing {
+        lock.withLock { current?.authority ?? fallback }
     }
 }
 
@@ -1000,7 +1040,9 @@ final class IPhoneDirectCLIService: ObservableObject {
             guard let self else { return }
             do {
                 while !Task.isCancelled {
-                    let payload = try await connected.receive()
+                    let payload = try await connected.receive(messageCanonicalizer: {
+                        exportConnection.incomingMessageCanonicalizer(fallback: protocolAuthority)
+                    })
                     guard !Task.isCancelled,
                           self.activeSessionID == sessionID,
                           self.channel === connected else {
