@@ -64,7 +64,7 @@ class DirectCliJobStore @Inject constructor(
         expiresAt: String,
         enginePin: ExportEnginePin? = null,
         protocolPin: AndroidDirectProtocolPin? = null,
-    ): Unit = withStoreLock {
+    ): DirectPreparationLease = withStoreLock {
         requireValidOptionalPin(enginePin)
         requireValidOptionalProtocolPin(protocolPin)
         val directory = jobDirectory(jobId).apply {
@@ -98,6 +98,9 @@ class DirectCliJobStore @Inject constructor(
                 ),
             ).toByteArray(),
         )
+        val token = UUID.randomUUID().toString()
+        atomicWrite(File(directory, OWNER_NAME), token.toByteArray(Charsets.US_ASCII))
+        DirectPreparationLease(jobId, token)
     }
 
     fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean = withStoreLock {
@@ -110,6 +113,21 @@ class DirectCliJobStore @Inject constructor(
             "The pending Direct CLI request changed."
         }
         true
+    }
+
+    fun savePrepared(journal: DirectJobJournal, lease: DirectPreparationLease): Unit = withStoreLock {
+        check(journal.transfer.accepted.jobId == lease.jobId) { "Direct CLI preparation identity changed." }
+        val directory = requirePreparationOwner(lease)
+        check(File(directory, PENDING_NAME).isFile && !File(directory, JOURNAL_NAME).exists()) {
+            "The Direct CLI preparation is no longer pending."
+        }
+        save(journal)
+    }
+
+    fun cancelPreparation(lease: DirectPreparationLease): Boolean = withStoreLock {
+        val directory = jobDirectory(lease.jobId)
+        if (!hasPreparationOwner(directory, lease)) return@withStoreLock false
+        directory.deleteRecursively()
     }
 
     fun save(journal: DirectJobJournal): Unit = withStoreLock {
@@ -190,17 +208,31 @@ class DirectCliJobStore @Inject constructor(
         }
     }
 
-    fun directory(jobId: String): File = withStoreLock {
-        jobDirectory(jobId).apply {
-            check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+    fun directory(lease: DirectPreparationLease): File = withStoreLock {
+        val directory = requirePreparationOwner(lease)
+        check(File(directory, PENDING_NAME).isFile) { "The Direct CLI preparation is no longer pending." }
+        File(directory, "capture-${lease.token}").apply {
+            check(mkdirs() || isDirectory) { "Unable to create Direct CLI capture storage." }
         }
     }
+
+    private fun requirePreparationOwner(lease: DirectPreparationLease): File {
+        val directory = jobDirectory(lease.jobId)
+        check(hasPreparationOwner(directory, lease)) { "The Direct CLI preparation ownership changed." }
+        return directory
+    }
+
+    private fun hasPreparationOwner(directory: File, lease: DirectPreparationLease): Boolean =
+        File(directory, OWNER_NAME).let { owner ->
+            owner.isFile && owner.length() == lease.token.length.toLong() &&
+                owner.readText(Charsets.US_ASCII) == lease.token
+        }
 
     /// Keep the lock outside jobs so purgeAll cannot replace its inode.
     /// Nested operations on the same root reuse the lock on their owning thread.
     private fun <T> withStoreLock(block: () -> T): T = transactionLock.withLock {
         val lockFile = File(root.parentFile, ".jobs.journal.lock").canonicalFile
-        val active = activeLockPaths.get()
+        val active = checkNotNull(activeLockPaths.get())
         if (!active.add(lockFile.path)) return@withLock block()
         try {
             RandomAccessFile(lockFile, "rw").use { file ->
@@ -265,6 +297,7 @@ class DirectCliJobStore @Inject constructor(
         private val activeLockPaths = ThreadLocal.withInitial { mutableSetOf<String>() }
         private const val JOURNAL_NAME = "job.json"
         private const val PENDING_NAME = "pending.json"
+        private const val OWNER_NAME = "preparation-owner"
         private const val MAXIMUM_RETENTION_SECONDS = 7L * 24L * 60L * 60L
     }
 
@@ -285,6 +318,12 @@ class DirectCliJobStore @Inject constructor(
         val protocolPin: AndroidDirectProtocolPin? = null,
     )
 }
+
+/** Opaque live-capture authority; its token never enters the direct protocol. */
+class DirectPreparationLease internal constructor(
+    internal val jobId: String,
+    internal val token: String,
+)
 
 @Serializable(with = DirectJobJournal.Serializer::class)
 data class DirectJobJournal(

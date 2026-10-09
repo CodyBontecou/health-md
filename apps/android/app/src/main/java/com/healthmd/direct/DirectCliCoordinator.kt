@@ -379,6 +379,7 @@ class DirectCliCoordinator @Inject constructor(
     ) {
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         var phase = ExportPhase.PREPARING
+        var preparationLease: DirectPreparationLease? = null
         try {
             validateRequest(request)
             val fingerprint = protocolAuthority.requestFingerprint(request)
@@ -512,6 +513,7 @@ class DirectCliCoordinator @Inject constructor(
                     fingerprint,
                     transferNegotiation.partitionTargetBytes,
                     protocolPin,
+                    onPreparationAdmitted = { preparationLease = it },
                 )
             }
             phase = ExportPhase.TRANSFERRING
@@ -581,12 +583,16 @@ class DirectCliCoordinator @Inject constructor(
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
         } catch (_: DirectExportCancelledException) {
-            jobStore.cancel(request.jobId)
+            val admitted = preparationLease
+            if (admitted != null) jobStore.cancelPreparation(admitted)
+            else if (phase == ExportPhase.TRANSFERRING) jobStore.cancel(request.jobId)
             _state.value = DirectCliConnectionState.Completed(
                 DirectCliCompletion.ExportCancelled,
             )
         } catch (_: DirectGeneratedArtifactLimitException) {
-            jobStore.cancel(request.jobId)
+            val admitted = preparationLease
+            if (admitted != null) jobStore.cancelPreparation(admitted)
+            else if (phase == ExportPhase.TRANSFERRING) jobStore.cancel(request.jobId)
             reject(
                 channel,
                 request.jobId,
@@ -628,6 +634,7 @@ class DirectCliCoordinator @Inject constructor(
         fingerprint: String,
         partitionTargetBytes: Long,
         protocolPin: AndroidDirectProtocolPin?,
+        onPreparationAdmitted: (DirectPreparationLease) -> Unit,
     ): DirectJobJournal {
         val dates = resolveDates(request.dateSelection, productId(request.product))
         val productId = productId(request.product)
@@ -652,13 +659,14 @@ class DirectCliCoordinator @Inject constructor(
             ProductId.ANDROID_DAILY_RECORDS_V1 -> enginePinPlanner.forApiV1(zoneId)
         }
         // Persist renderer authority before either producer can read non-transactional provider data.
-        jobStore.beginPreparation(
+        val preparationLease = jobStore.beginPreparation(
             request.jobId,
             fingerprint,
             request.expiresAt,
             enginePin,
             protocolPin,
         )
+        onPreparationAdmitted(preparationLease)
         val settingsHash = if (productId == ProductId.GENERATED_FILES_V1) {
             DirectJson.sha256Hex(protocolJson.encodeToString(settings).toByteArray())
         } else {
@@ -706,7 +714,7 @@ class DirectCliCoordinator @Inject constructor(
                             com.healthmd.direct.protocol.JobPayload.serializer(),
                         )
                         require(payload.jobId == request.jobId)
-                        jobStore.cancel(request.jobId)
+                        jobStore.cancelPreparation(preparationLease)
                         channel.sendV2(
                             "cancel_acknowledged",
                             com.healthmd.direct.protocol.JobPayload.serializer(),
@@ -727,7 +735,7 @@ class DirectCliCoordinator @Inject constructor(
                 }
             }
         }
-        val jobDirectory = jobStore.directory(request.jobId)
+        val jobDirectory = jobStore.directory(preparationLease)
         val transfer = try {
             val (manifests, files) = when (productId) {
             ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1 -> {
@@ -814,7 +822,7 @@ class DirectCliCoordinator @Inject constructor(
             enginePin = enginePin,
             protocolPin = protocolPin,
         )
-        jobStore.save(journal)
+        jobStore.savePrepared(journal, preparationLease)
         return journal
     }
 

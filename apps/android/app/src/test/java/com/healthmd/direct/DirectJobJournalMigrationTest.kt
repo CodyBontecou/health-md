@@ -264,6 +264,60 @@ class DirectJobJournalMigrationTest {
         }
     }
 
+    @Test
+    fun cancelledOrPurgedCaptureCannotPublishItsPreparedJournal() = withStore { store, root ->
+        val initial = durableJournal()
+        val jobId = initial.transfer.accepted.jobId
+        for (purge in listOf(false, true)) {
+            val lease = store.beginPreparation(jobId, initial.requestFingerprint, initial.expiresAt)
+            if (purge) store.purgeAll() else store.cancel(jobId)
+            assertThrows(IllegalStateException::class.java) { store.savePrepared(initial, lease) }
+            assertThat(File(root, "direct-cli/jobs/$jobId/job.json").exists()).isFalse()
+        }
+    }
+
+    @Test
+    fun replacementPreparationHasIsolatedArtifactsAndRejectsOldPublicationAndCleanup() = withStore { store, root ->
+        val initial = durableJournal().copy(
+            enginePin = syntheticExportEnginePin(mode = ExportEngineMode.rust),
+            protocolPin = protocolPin(AndroidDirectProtocolEngineMode.rust),
+        )
+        val jobId = initial.transfer.accepted.jobId
+        fun admit() = store.beginPreparation(
+            jobId, initial.requestFingerprint, initial.expiresAt, initial.enginePin, initial.protocolPin,
+        )
+        val stale = admit()
+        val staleDirectory = store.directory(stale)
+        assertThat(store.cancelPreparation(stale)).isTrue()
+        val replacement = admit()
+        val replacementDirectory = store.directory(replacement)
+        assertThat(replacementDirectory).isNotEqualTo(staleDirectory)
+        val artifact = File(replacementDirectory, "synthetic-artifact")
+        artifact.writeText("synthetic replacement bytes")
+        // An already running old producer may recreate its old staging leaf.
+        // That namespace must not address the replacement's captured bytes.
+        staleDirectory.mkdirs()
+        File(staleDirectory, artifact.name).writeText("synthetic stale bytes")
+        assertThrows(IllegalStateException::class.java) { store.directory(stale) }
+        assertThrows(IllegalStateException::class.java) { store.savePrepared(initial, stale) }
+        assertThat(store.cancelPreparation(stale)).isFalse()
+        assertThat(artifact.readText()).isEqualTo("synthetic replacement bytes")
+        val completed = initial.copy(transfer = initial.transfer.copy(
+            artifactPaths = mapOf("synthetic-artifact" to artifact.absolutePath),
+        ))
+        store.savePrepared(completed, replacement)
+        val directory = File(root, "direct-cli/jobs/$jobId")
+        assertThat(File(directory, "pending.json").exists()).isFalse()
+        val acceptedBytes = File(directory, "job.json").readBytes()
+        assertThat(store.cancelPreparation(stale)).isFalse()
+        assertThrows(IllegalStateException::class.java) { store.savePrepared(initial, stale) }
+        assertThat(File(directory, "job.json").readBytes()).isEqualTo(acceptedBytes)
+        assertThat(store.load(jobId, initial.requestFingerprint)).isEqualTo(completed)
+        assertThat(artifact.readText()).isEqualTo("synthetic replacement bytes")
+        assertThat(store.cancelPreparation(replacement)).isTrue()
+        assertThat(directory.exists()).isFalse()
+    }
+
     private fun durableJournal() = DirectJobJournal(
         requestFingerprint = "request-fingerprint",
         expiresAt = Instant.now().plusSeconds(3600).toString(),
