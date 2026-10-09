@@ -101,7 +101,6 @@ class DailyAggregateExportPlannerTest {
             settings.copy(executionSleepCaptureContext = null),
             settings.copy(executionSleepCaptureContext = context.copy(exportProfileID = null)),
             settings.copy(executionSleepCaptureContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)),
-            settings.copy(includeGranularData = true),
             settings.copy(formatCustomization = settings.formatCustomization.copy(includeLegacyAndroidAliases = true)),
         )
         for (candidate in incompatible) {

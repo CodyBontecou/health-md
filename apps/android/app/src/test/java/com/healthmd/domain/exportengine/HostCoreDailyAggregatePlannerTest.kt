@@ -122,6 +122,109 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun concreteWakeDatePlannerRetainsCapturedSleepingStagesAndParents() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T02:00:00.123456789Z")
+        val end = Instant.parse("2026-11-01T12:00:00.987654321Z")
+        val client = mockk<HealthConnectClient>()
+        coEvery { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) } returns ReadRecordsResponse(listOf(
+            SleepSessionRecord(startTime = start, startZoneOffset = ZoneOffset.of("-04:00"),
+                endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
+                metadata = Metadata.manualEntry(clientRecordId = "synthetic-sleeping-parent"),
+                stages = listOf(SleepSessionRecord.Stage(start, end, SleepSessionRecord.STAGE_TYPE_SLEEPING))),
+        ), null)
+        val captured = HealthConnectManager(mockk<Context>(relaxed = true), client).fetchHealthDataRange(
+            listOf(date), DataTypeSelection().deselectAll().copy(sleep = true), true, context.zoneId,
+            sleepDayAttribution = SleepDayAttribution.MORNING_ENDS).single()
+        val selection = MetricSelectionState(enabledMetrics = setOf("sleep_total", "sleep_light", "sleep_in_bed"))
+        val data = captured.filtered(selection, context)
+        val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(
+            exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true,
+        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("concrete-sleep-detail", "concrete-sleep-detail-session"))
+        val totalOnly = MetricSelectionState(enabledMetrics = setOf("sleep_total"))
+        val lightOnly = MetricSelectionState(enabledMetrics = setOf("sleep_light"))
+        assertThat(captured.filtered(totalOnly, context).sleep.stages).hasSize(1)
+        assertThat(captured.filtered(lightOnly, context).sleep.stages).isEmpty()
+        assertThat(captured.filtered(totalOnly).sleep.stages).isEmpty()
+        assertThat(captured.filtered(lightOnly).sleep.stages).hasSize(1)
+        val historicalContext = AndroidCaptureContext(context.zoneId, SleepDayAttribution.NIGHT_BEGINS)
+        assertThat(captured.filtered(lightOnly, historicalContext)).isEqualTo(captured.filtered(lightOnly))
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            captured.filtered(totalOnly, context.copy(exportProfileID = null))
+        }
+        val totalData = captured.filtered(totalOnly, context).filtered(totalOnly, context)
+        assertThat(totalData.sleep.stages.single().exactStartTime).isEqualTo(captured.sleep.stages.single().exactStartTime)
+        val planner = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("ambient timezone is forbidden") })
+        val plan = planner.plan(request).plan
+        assertThat(plan.items).hasSize(4)
+        val mutableStages = data.sleep.stages.toMutableList()
+        val mutableMetadata = data.sleep.sessions.single().metadata.toMutableMap()
+        val mutableSessions = mutableListOf(data.sleep.sessions.single().copy(metadata = mutableMetadata))
+        val mutableData = data.copy(sleep = data.sleep.copy(stages = mutableStages, sessions = mutableSessions))
+        val frozen = FrozenDailyAggregateExportRequest.capture(mutableData, ExportSettings(
+            exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust, request.ids)
+        mutableStages.clear()
+        mutableSessions.clear()
+        mutableMetadata["client_record_id"] = "changed-after-capture"
+        assertThat(frozen.data.sleep.stages).hasSize(1)
+        assertThat(frozen.data.sleep.sessions).hasSize(1)
+        assertThat(frozen.data.sleep.sessions.single().metadata).isEqualTo(data.sleep.sessions.single().metadata)
+        val frozenPlan = planner.plan(frozen).plan
+        for (item in plan.items) {
+            assertThat(frozenPlan.items.single { it.relativePath == item.relativePath }.content).isEqualTo(item.content)
+        }
+        val texts = plan.items.map { it.content.decodeToString() }
+        assertThat(texts.single { it.contains(",Sleep Detail,Sleep Stage,") }).contains("sleeping")
+        assertThat(texts.single { it.contains("sleep_stage_details") }).contains("synthetic-sleeping-parent")
+        assertThat(texts.single { it.contains("Sleep Session Details") }).contains(start.toString())
+        val totalRequest = FrozenDailyAggregateExportRequest.capture(totalData, ExportSettings(
+            exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = totalOnly, executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true,
+        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("concrete-total-detail", "concrete-total-detail-session"))
+        val totalPlan = planner.plan(totalRequest).plan
+        assertThat(totalPlan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString())
+            .contains(",Sleep Detail,Sleep Stage,")
+        assertThat(totalPlan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()).contains("sleeping")
+        val totalNative = com.healthmd.data.export.JsonExporter().export(totalData, totalRequest.customization,
+            true, captureContext = context)
+        assertThat(Json.parseToJsonElement(totalPlan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
+            .isEqualTo(Json.parseToJsonElement(totalNative))
+        System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+            for (item in totalPlan.items) {
+                val output = File(File(directory, "android-sleep-v6-concrete-sleeping"), item.relativePath)
+                val parent = requireNotNull(output.parentFile)
+                check(parent.mkdirs() || parent.isDirectory)
+                output.writeBytes(item.content)
+            }
+        }
+        val nonSleep = data.copy(activity = ActivityData(steps = 1,
+            stepSamples = listOf(com.healthmd.domain.model.TimestampedSample(data.sleep.stages.single().startTime, 1.0,
+                exactTime = data.sleep.stages.single().exactStartTime))))
+        val unqualified = FrozenDailyAggregateExportRequest.capture(nonSleep, ExportSettings(
+            exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true,
+        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("concrete-non-sleep-detail", "concrete-non-sleep-detail-session"))
+        try {
+            planner.plan(unqualified)
+            error("non-sleep detail must reject")
+        } catch (error: com.healthmd.domain.render.HealthMdRenderInputAdapter.AdapterException) {
+            assertThat(error.message).contains("non-sleep")
+        }
+        val native = com.healthmd.data.export.JsonExporter().export(data, request.customization, true, captureContext = context)
+        assertThat(Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
+            .isEqualTo(Json.parseToJsonElement(native))
+    }
+
+    @Test
     fun capturedWakeDateParentsAndStagesKeepSeparateSourceRecordsAcrossEveryFormat() = runTest {
         val core = HealthMdCoreService()
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)

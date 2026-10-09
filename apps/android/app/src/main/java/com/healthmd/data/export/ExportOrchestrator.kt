@@ -236,7 +236,7 @@ class ExportOrchestrator(
 
                 onProgress?.invoke(processedDays + index + 1, totalDays, date.toString())
                 val healthData = healthDataByDate[date] ?: HealthData(date)
-                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection, captureContext)
 
                 // A second provider-native read cannot add evidence to the same
                 // selected range contract. Treat an empty result as empty rather
@@ -314,7 +314,7 @@ class ExportOrchestrator(
                         zoneId = captureContext.zoneId,
                         sleepDayAttributionOverride = captureContext.explicitSleepDayAttributionOverride,
                     ).firstOrNull() ?: HealthData(date)
-                    val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection)
+                    val filteredData = healthData.filtered(effectiveSelection).filtered(settings.metricSelection, captureContext)
 
                     if (!filteredData.hasAnyData) {
                         ExportPreviewDay(date = date, failureReason = ExportFailureReason.NO_HEALTH_DATA)

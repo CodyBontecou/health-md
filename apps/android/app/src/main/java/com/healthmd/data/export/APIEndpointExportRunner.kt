@@ -126,7 +126,7 @@ private class HealthRepositoryAPIExportCaptureSource(
             sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
         ).firstOrNull() ?: HealthData(date))
             .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
+            .filtered(settings.metricSelection, context)
     }
 }
 

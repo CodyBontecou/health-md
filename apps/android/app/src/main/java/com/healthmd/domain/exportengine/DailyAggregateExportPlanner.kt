@@ -97,9 +97,9 @@ class FrozenDailyAggregateExportRequest private constructor(
                 require(mode == ExportEngineMode.rust) { "wake-date export requires the Rust engine" }
                 require(context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                     context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
-                // Source clocks are validated before successor presentation; historical
-                // native bodies and detailed exports remain independently gated.
-                require(!settings.includeGranularData && !settings.formatCustomization.includeLegacyAndroidAliases &&
+                // The render adapter admits selected sleep stages/parents and rejects
+                // other detail arrays before a destination can accept the plan.
+                require(!settings.formatCustomization.includeLegacyAndroidAliases &&
                     data.compatibilityProvenance == null && data.workouts.isEmpty() &&
                     data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
                     "wake-date native presentation is not qualified"
@@ -116,7 +116,14 @@ class FrozenDailyAggregateExportRequest private constructor(
             }
             val customization = settings.formatCustomization.frozenCopy()
             return FrozenDailyAggregateExportRequest(
-                data = data,
+                data = if (profile == AndroidExportProfile.android_sleep_v6) data.copy(
+                    sleep = data.sleep.copy(
+                        stages = Collections.unmodifiableList(data.sleep.stages.toList()),
+                        sessions = Collections.unmodifiableList(data.sleep.sessions.map { session ->
+                            session.copy(metadata = Collections.unmodifiableMap(session.metadata.toMap()))
+                        }),
+                    ),
+                ) else data,
                 profile = profile,
                 mode = mode,
                 ids = ids.copy(),
