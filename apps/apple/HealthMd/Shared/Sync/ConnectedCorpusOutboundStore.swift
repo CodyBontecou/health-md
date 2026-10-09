@@ -188,6 +188,10 @@ final class ConnectedCorpusOutboundStore {
     private let now: () -> Date
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private var checkpointBytes: [UUID: Data] = [:]
+    private var publicationLockURL: URL {
+        rootURL.deletingLastPathComponent().appendingPathComponent(".\(rootURL.lastPathComponent).journal.lock")
+    }
 
     init(
         rootURL: URL? = nil,
@@ -287,6 +291,7 @@ final class ConnectedCorpusOutboundStore {
             guard let saved: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
                 at: url, fileManager: fileManager, decoder: decoder,
                 directoryDurability: .required(upTo: durabilityRootURL),
+                didLoadBytes: { checkpointBytes[jobID] = $0 },
                 isSupported: { saved in
                     saved.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version)
                 }
@@ -600,6 +605,7 @@ final class ConnectedCorpusOutboundStore {
         if fileManager.fileExists(atPath: directory.path) {
             try fileManager.removeItem(at: directory)
         }
+        checkpointBytes[jobID] = nil
     }
 
     @discardableResult
@@ -630,9 +636,14 @@ final class ConnectedCorpusOutboundStore {
             journal.statusMessage = "Durable connected export expired before completion."
             journal.items = []
             journal.pendingPartition = nil
-            try? persist(&journal)
-            try? removeInternalFiles(jobID: jobID, preservingJournal: true)
-            expired.append(jobID)
+            do {
+                try persist(&journal)
+                try removeInternalFiles(jobID: jobID, preservingJournal: true)
+                expired.append(jobID)
+            } catch {
+                // A competing checkpoint retains both its journal and spool authority.
+                continue
+            }
         }
         return expired
     }
@@ -767,11 +778,18 @@ final class ConnectedCorpusOutboundStore {
         do {
             try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
                 attributes: protectedAttributes(permissions: 0o600),
-                commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting,
+                commitPolicy: freshAdmission ? .requireAbsent : .replaceIfUnchanged(try expectedCheckpointBytes(jobID: journal.jobID)),
+                transactionLockURL: publicationLockURL,
                 directoryDurability: .required(upTo: durabilityRootURL))
-        } catch let error as POSIXError where freshAdmission && error.code == .EEXIST {
+            checkpointBytes[journal.jobID] = data
+        } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
             throw ConnectedCorpusOutboundStoreError.requestChanged
         }
+    }
+
+    private func expectedCheckpointBytes(jobID: UUID) throws -> Data {
+        guard let bytes = checkpointBytes[jobID] else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        return bytes
     }
 
     private func prepareDirectories(jobID: UUID) throws {

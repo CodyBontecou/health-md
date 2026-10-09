@@ -843,6 +843,40 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), winner)
     }
 
+    func testCheckpointCannotOverwriteJournalChangedAfterRead() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let destination = fixture.root
+            .appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused, message: "synthetic stale checkpoint"))
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID)?.origin, .scheduledIPhone)
+    }
+
+    func testExpiryCheckpointConflictRetainsWinningJournalAndSpool() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let destination = directory.appendingPathComponent("journal.json")
+        let prepared = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let spool = directory.appendingPathComponent(try XCTUnwrap(prepared.items.first).relativePath)
+        let retained = try Data(contentsOf: spool)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+        object["expiresAt"] = ISO8601DateFormatter().string(from: cleanupTime.addingTimeInterval(86400))
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try Data(contentsOf: spool), retained)
+    }
+
     /// Installs another writer's valid journal after initial absence was observed.
     private final class CompetingAdmissionFileManager: FileManager, @unchecked Sendable {
         let destination: URL

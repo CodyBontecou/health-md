@@ -275,6 +275,7 @@ enum AppleExportJournalRecovery {
         decoder suppliedDecoder: JSONDecoder? = nil,
         directoryDurability: AtomicFileWriter.DirectoryDurability = .bestEffort,
         directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory,
+        didLoadBytes: (Data) -> Void = { _ in },
         isSupported: (Journal) -> Bool
     ) throws -> Journal? {
         let attributes: [FileAttributeKey: Any]
@@ -306,10 +307,12 @@ enum AppleExportJournalRecovery {
         let decoder = suppliedDecoder ?? JSONDecoder()
         if suppliedDecoder == nil { decoder.dateDecodingStrategy = .iso8601 }
         do {
-            let journal = try decoder.decode(Journal.self, from: Data(contentsOf: url))
+            let bytes = try Data(contentsOf: url)
+            let journal = try decoder.decode(Journal.self, from: bytes)
             guard isSupported(journal) else { throw RecoveryError.unreadableJournal }
             try AtomicFileWriter.synchronizeDirectories(
                 from: url.deletingLastPathComponent(), durability: directoryDurability, directorySync: directorySync)
+            didLoadBytes(bytes)
             return journal
         } catch {
             // Never expose a path or decoder context containing saved values.

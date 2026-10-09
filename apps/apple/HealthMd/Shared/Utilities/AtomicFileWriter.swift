@@ -14,7 +14,7 @@ import Glibc
 #endif
 
 nonisolated enum AtomicFileWriter {
-    enum CommitPolicy { case replaceExisting, requireAbsent }
+    enum CommitPolicy { case replaceExisting, requireAbsent, replaceIfUnchanged(Data) }
     enum DirectoryDurability { case bestEffort, required(upTo: URL) }
     static func writeString(_ string: String, to destinationURL: URL, fileManager: FileManager = .default) throws {
         guard let data = string.data(using: .utf8) else {
@@ -29,6 +29,7 @@ nonisolated enum AtomicFileWriter {
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil,
         commitPolicy: CommitPolicy = .replaceExisting,
+        transactionLockURL: URL? = nil,
         directoryDurability: DirectoryDurability = .bestEffort,
         directorySync: (URL) throws -> Void = synchronizeDirectory
     ) throws {
@@ -37,6 +38,7 @@ nonisolated enum AtomicFileWriter {
             fileManager: fileManager,
             attributes: attributes,
             commitPolicy: commitPolicy,
+            transactionLockURL: transactionLockURL,
             directoryDurability: directoryDurability,
             directorySync: directorySync
         ) { temporaryURL in
@@ -60,42 +62,69 @@ nonisolated enum AtomicFileWriter {
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil,
         commitPolicy: CommitPolicy = .replaceExisting,
+        transactionLockURL: URL? = nil,
         directoryDurability: DirectoryDurability = .bestEffort,
         directorySync: (URL) throws -> Void = synchronizeDirectory,
         beforeCommit: () throws -> Void = {},
         producer: (URL) throws -> Result
     ) throws -> Result {
-        let directoryURL = destinationURL.deletingLastPathComponent()
-        _ = try requiredDirectories(for: directoryDurability, from: directoryURL)
-        let temporaryURL = temporaryFileURL(for: destinationURL)
-        var temporaryFileCreated = false
+        return try withPublicationLock(at: transactionLockURL) {
+            let directoryURL = destinationURL.deletingLastPathComponent()
+            _ = try requiredDirectories(for: directoryDurability, from: directoryURL)
+            let temporaryURL = temporaryFileURL(for: destinationURL)
+            var temporaryFileCreated = false
 
-        do {
-            guard fileManager.createFile(
-                atPath: temporaryURL.path,
-                contents: nil,
-                attributes: attributes
-            ) else {
-                throw CocoaError(.fileWriteUnknown)
+            do {
+                guard fileManager.createFile(
+                    atPath: temporaryURL.path,
+                    contents: nil,
+                    attributes: attributes
+                ) else {
+                    throw CocoaError(.fileWriteUnknown)
+                }
+                temporaryFileCreated = true
+                let result = try producer(temporaryURL)
+                try beforeCommit()
+                switch commitPolicy {
+                case .replaceExisting:
+                    try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
+                case .replaceIfUnchanged(let expected):
+                    guard let transactionLockURL, transactionLockURL.isFileURL else { throw POSIXError(.EINVAL) }
+                    guard try fileManager.attributesOfItem(atPath: destinationURL.path)[.type] as? FileAttributeType == .typeRegular,
+                          try Data(contentsOf: destinationURL) == expected else { throw POSIXError(.EAGAIN) }
+                    try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
+                case .requireAbsent:
+                    try linkNewItem(at: temporaryURL, to: destinationURL)
+                    try? fileManager.removeItem(at: temporaryURL)
+                }
+                temporaryFileCreated = false
+                try synchronizeDirectories(from: directoryURL, durability: directoryDurability, directorySync: directorySync)
+                return result
+            } catch {
+                if temporaryFileCreated {
+                    try? fileManager.removeItem(at: temporaryURL)
+                }
+                throw error
             }
-            temporaryFileCreated = true
-            let result = try producer(temporaryURL)
-            try beforeCommit()
-            switch commitPolicy {
-            case .replaceExisting:
-                try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
-            case .requireAbsent:
-                try linkNewItem(at: temporaryURL, to: destinationURL)
-                try? fileManager.removeItem(at: temporaryURL)
+        }
+    }
+
+    private static let publicationMutex = NSLock()
+
+    /// The lock inode lives outside job cleanup and is never removed by this writer.
+    private static func withPublicationLock<Result>(at url: URL?, operation: () throws -> Result) throws -> Result {
+        guard let url else { return try operation() }
+        guard url.isFileURL else { throw POSIXError(.EINVAL) }
+        return try publicationMutex.withLock {
+            let descriptor = url.withUnsafeFileSystemRepresentation { path -> Int32 in
+                guard let path else { return -1 }
+                return open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0o600)
             }
-            temporaryFileCreated = false
-            try synchronizeDirectories(from: directoryURL, durability: directoryDurability, directorySync: directorySync)
-            return result
-        } catch {
-            if temporaryFileCreated {
-                try? fileManager.removeItem(at: temporaryURL)
-            }
-            throw error
+            guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            defer { _ = close(descriptor) }
+            guard flock(descriptor, LOCK_EX) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            defer { _ = flock(descriptor, LOCK_UN) }
+            return try operation()
         }
     }
 
