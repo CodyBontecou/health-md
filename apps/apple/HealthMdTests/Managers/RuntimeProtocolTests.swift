@@ -1343,8 +1343,27 @@ final class DirectCoordinatorAdmissionTests: XCTestCase {
 nonisolated private final class DirectAdmissionPacketTransport: DirectPacketTransport, @unchecked Sendable {
     let gate = DirectAdmissionSendGate()
     private let blockSend: Bool
+    private let enqueueLock = NSLock()
+    private var submittedPackets: [ManualIPSyncPacket] = []
     init(blockSend: Bool) { self.blockSend = blockSend }
     func send(_ packet: ManualIPSyncPacket) async throws {
+        enqueueLock.withLock { submittedPackets.append(packet) }
+        await completeSend()
+    }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        let lease = try authorization.acquireLease()
+        do {
+            let generated = try packet()
+            enqueueLock.withLock { submittedPackets.append(generated) }
+            lease.close()
+        } catch {
+            lease.close()
+            throw error
+        }
+        await completeSend()
+    }
+    private func completeSend() async {
         await gate.capture(IPhoneDirectCancellationScope.current)
         if blockSend { await gate.block() }
     }

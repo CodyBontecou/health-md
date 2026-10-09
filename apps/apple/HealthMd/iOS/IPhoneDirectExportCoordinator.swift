@@ -131,17 +131,28 @@ nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable 
     func bind(_ ownership: AppleExportJournalCheckpoint) {
         lock.withLock { checkpoint = ownership }
     }
+    var preparationResponseAuthorization: DirectPacketSendAuthorization {
+        DirectPacketSendAuthorization { try self.acquirePreparationResponseLease() }
+    }
+    private func acquirePreparationResponseLease() throws -> any DirectPacketSendLease {
+        lock.lock()
+        guard active else {
+            lock.unlock()
+            throw DirectChannelError.authenticationFailed("The direct preparation is no longer active.")
+        }
+        return IPhoneDirectInvocationEnqueueLease(lock: lock)
+    }
     func acquireAcknowledgementLease() throws -> any DirectPacketSendLease {
         lock.lock()
         guard active, cancelled else {
             lock.unlock()
             throw DirectChannelError.authenticationFailed("The cancelled preparation is no longer active.")
         }
-        return IPhoneDirectCancellationEnqueueLease(lock: lock)
+        return IPhoneDirectInvocationEnqueueLease(lock: lock)
     }
 }
 
-nonisolated private final class IPhoneDirectCancellationEnqueueLease: DirectPacketSendLease {
+nonisolated private final class IPhoneDirectInvocationEnqueueLease: DirectPacketSendLease {
     private var lock: NSRecursiveLock?
     init(lock: NSRecursiveLock) { self.lock = lock }
     func close() {
@@ -421,8 +432,9 @@ final class IPhoneDirectExportCoordinator {
                     try? await executionOwnership.continueWhileOwned {
                         try await rejectionChannel.send(.exportRejected(failure), ownership: executionOwnership)
                     }
-                } else {
-                    try? await rejectionChannel.send(.exportRejected(failure))
+                } else if let invocation = IPhoneDirectCancellationScope.current {
+                    try? await rejectionChannel.send(.exportRejected(failure),
+                        authorization: invocation.preparationResponseAuthorization)
                 }
             }
         }

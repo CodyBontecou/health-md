@@ -162,6 +162,61 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testPreparationRejectionRejectsFinishedInvocationBeforeCanonicalization() async throws {
+        let jobID = UUID()
+        let core = FakeAppleDirectProtocolRustCore()
+        let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        try session.beginOperation(pin: session.pinForNewOperation())
+        let selected = session.frozenForCurrentOperation()
+        let old = IPhoneDirectCancellationInvocation(jobID: jobID, protocolAuthority: selected)
+        old.finish()
+        let current = IPhoneDirectCancellationInvocation(jobID: jobID, protocolAuthority: selected)
+        defer { current.finish() }
+        let transport = OperationProtocolPacketTransport()
+        let key = SymmetricKey(data: Data(repeating: 0x45, count: 32))
+        let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+        let connection = IPhoneDirectExportConnection(channel: channel).retainingProtocolAuthority(selected)
+        let message = DirectMessage.exportRejected(DirectExportFailure(jobID: jobID,
+            reason: .invalidRequest, message: "synthetic terminal response"))
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        session.beginBootstrap()
+        core.failCanonicalization = true
+        do {
+            try await connection.send(message, authorization: old.preparationResponseAuthorization)
+            XCTFail("A finished invocation cannot authorize a preparation response")
+        } catch {
+            XCTAssertEqual(error as? DirectChannelError,
+                .authenticationFailed("The direct preparation is no longer active."))
+        }
+        XCTAssertEqual(core.canonicalMessageCalls, 0)
+        XCTAssertEqual(transport.packetCount, 0)
+        core.failCanonicalization = false
+        core.returnNativeCanonicalMessage = true
+        current.cancel()
+        try await connection.send(message, authorization: current.preparationResponseAuthorization)
+        let first = try await receiver.receive()
+        XCTAssertEqual(first, .message(message), "An active cancelled invocation can report its terminal rejection")
+        XCTAssertEqual(core.canonicalMessageCalls, 1)
+        core.failCanonicalization = true
+        do {
+            try await connection.send(message, authorization: old.preparationResponseAuthorization)
+            XCTFail("An old same-ID invocation cannot inherit the new invocation's authority")
+        } catch {
+            XCTAssertEqual(error as? DirectChannelError,
+                .authenticationFailed("The direct preparation is no longer active."))
+        }
+        XCTAssertEqual(core.canonicalMessageCalls, 1)
+        XCTAssertEqual(transport.packetCount, 0)
+        core.failCanonicalization = false
+        try await connection.send(message, authorization: current.preparationResponseAuthorization)
+        let second = try await receiver.receive()
+        XCTAssertEqual(second, .message(message), "Rejected old authority must consume no secure sequence")
+        XCTAssertEqual(core.canonicalMessageCalls, 2)
+    }
+
+    @MainActor
     func testActualRawAndFileRejectionRetainsProtocolSelectedBeforeFingerprintFailure() async throws {
         for files in [false, true] {
             let jobID = UUID()
@@ -209,6 +264,8 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
                 negotiation: negotiation, channel: connection, protocolAuthority: session,
                 healthKitManager: healthKit)
             XCTAssertEqual(core.fingerprintCalls, 2)
+            XCTAssertEqual(transport.authorizedSendCount, 2,
+                "Both actual pre-acceptance rejections must use invocation-owned packet creation")
             let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
                 peerInstallationID: UUID(), peerDisplayName: "synthetic")
             guard case .message(.exportRejected(let failure)) = try await receiver.receive() else {
@@ -552,6 +609,7 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore, @unchecked Sendable {
     var failEveryCall = false
     var failCanonicalization = false
+    var canonicalMessageCalls = 0
     var fingerprint = String(repeating: "0", count: 64)
     var onFingerprint: (@Sendable () -> Void)?
     var fingerprintCalls = 0
@@ -595,6 +653,7 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
     }
 
     func canonicalAppleV1Message(_ bytes: Data) throws -> Data {
+        canonicalMessageCalls += 1
         try checkFailure()
         if failCanonicalization { throw FakeError.failed }
         return returnNativeCanonicalMessage ? bytes : canonicalMessage
@@ -662,10 +721,13 @@ private actor PendingIncomingProtocolTransport: DirectPacketTransport {
 nonisolated private final class OperationProtocolPacketTransport: DirectPacketTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var packets: [ManualIPSyncPacket] = []
+    private var authorizedSends = 0
+    var authorizedSendCount: Int { lock.withLock { authorizedSends } }
     var packetCount: Int { lock.withLock { packets.count } }
     func send(_ packet: ManualIPSyncPacket) async throws { lock.withLock { packets.append(packet) } }
     func send(authorizedBy authorization: DirectPacketSendAuthorization,
               packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        lock.withLock { authorizedSends += 1 }
         let lease = try authorization.acquireLease()
         defer { lease.close() }
         let generated = try packet()

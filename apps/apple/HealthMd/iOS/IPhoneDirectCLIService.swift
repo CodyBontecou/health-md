@@ -47,6 +47,15 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
         }
     }
 
+    func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization) async throws {
+        if let operationProtocolAuthority {
+            try await channel.send(message, authorization: authorization,
+                messageCanonicalizer: operationProtocolAuthority)
+        } else {
+            try await channel.send(message, authorization: authorization)
+        }
+    }
+
     func sendBinaryTransferFrame(_ frame: Data, ownership: AppleExportJournalCheckpoint? = nil) async throws {
         try await channel.sendBinaryTransferFrame(frame, authorization: ownership?.sendAuthorization)
     }
