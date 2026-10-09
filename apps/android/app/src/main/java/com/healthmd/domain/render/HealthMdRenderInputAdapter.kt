@@ -29,6 +29,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
@@ -590,9 +591,12 @@ object HealthMdRenderInputAdapter {
                     if (count < 0) incompatible()
                 } else {
                     val endLabel = sample["endTimeISO"]?.jsonPrimitive?.contentOrNull ?: incompatible()
+                    val duration = sample["duration"]?.jsonPrimitive?.doubleOrNull ?: incompatible()
+                    val elapsed = java.time.Duration.between(start, end)
+                    val exactSeconds = elapsed.seconds.toDouble() + elapsed.nano / 1_000_000_000.0
                     if (!endLabel.endsWith("Z") || runCatching { java.time.Instant.parse(endLabel) }.getOrNull() != end ||
                         sample["intensity"]?.jsonPrimitive?.contentOrNull.isNullOrBlank() ||
-                        (sample["duration"]?.jsonPrimitive?.longOrNull ?: incompatible()) < 0) incompatible()
+                        !duration.isFinite() || duration <= 0 || duration != exactSeconds) incompatible()
                 }
                 val record = buildJsonObject { put("metric", metric); put("unit", unit); put("sample", sample) }.toString()
                 records += record

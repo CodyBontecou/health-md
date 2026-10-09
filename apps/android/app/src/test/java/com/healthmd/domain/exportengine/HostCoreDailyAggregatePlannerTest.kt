@@ -57,6 +57,82 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun capturedActivityIntervalsKeepExactElapsedTimeAcrossDstFold() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val steps = androidx.health.connect.client.records.StepsRecord(startTime = start,
+            startZoneOffset = ZoneOffset.of("-04:00"), endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
+            count = 123, metadata = Metadata.manualEntry(clientRecordId = "captured-steps"))
+        val intensity = androidx.health.connect.client.records.ActivityIntensityRecord(startTime = start,
+            startZoneOffset = ZoneOffset.of("-04:00"), endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
+            activityIntensityType = androidx.health.connect.client.records.ActivityIntensityRecord.ACTIVITY_INTENSITY_TYPE_MODERATE,
+            metadata = Metadata.manualEntry(clientRecordId = "captured-intensity"))
+        for (available in listOf(true, false)) {
+            val client = mockk<HealthConnectClient>()
+            val features = mockk<androidx.health.connect.client.HealthConnectFeatures>()
+            io.mockk.every { client.features } returns features
+            io.mockk.every { features.getFeatureStatus(any()) } answers {
+                if (available && firstArg<Int>() == androidx.health.connect.client.HealthConnectFeatures.FEATURE_ACTIVITY_INTENSITY)
+                    androidx.health.connect.client.HealthConnectFeatures.FEATURE_STATUS_AVAILABLE
+                else androidx.health.connect.client.HealthConnectFeatures.FEATURE_STATUS_UNAVAILABLE
+            }
+            val aggregate = mockk<androidx.health.connect.client.aggregate.AggregationResult>()
+            io.mockk.every { aggregate[androidx.health.connect.client.records.StepsRecord.COUNT_TOTAL] } returns null
+            coEvery { client.aggregate(any<androidx.health.connect.client.request.AggregateRequest>()) } returns aggregate
+            coEvery { client.readRecords(any<ReadRecordsRequest<androidx.health.connect.client.records.Record>>()) } answers {
+                val request = firstArg<ReadRecordsRequest<*>>()
+                val records: List<androidx.health.connect.client.records.Record> = when (request.recordType) {
+                    androidx.health.connect.client.records.StepsRecord::class -> listOf(steps)
+                    androidx.health.connect.client.records.ActivityIntensityRecord::class -> listOf(intensity)
+                    else -> emptyList()
+                }
+                ReadRecordsResponse(records, null)
+            }
+            val captured = HealthConnectManager(mockk<Context>(relaxed = true), client).fetchHealthDataRange(
+                listOf(date), DataTypeSelection().deselectAll().copy(activity = true), true, context.zoneId,
+                pinnedCalendarDays = true, sleepDayAttribution = SleepDayAttribution.MORNING_ENDS).single()
+            assertThat(captured.activity.steps).isNull()
+            assertThat(captured.activity.stepSamples.single().exactTime?.instant()).isEqualTo(start)
+            assertThat(captured.activity.stepSamples.single().exactEndTime?.instant()).isEqualTo(end)
+            assertThat(captured.activity.activityIntensityEntries.size).isEqualTo(if (available) 1 else 0)
+            val selection = MetricSelectionState(enabledMetrics = setOf("steps", "activity_intensity_minutes"))
+            val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+                metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+            val request = FrozenDailyAggregateExportRequest.capture(captured.filtered(selection, context), settings,
+                AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("sdk-activity-$available", "sdk-activity-session-$available"))
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("ambient clock is forbidden") }).plan(request).plan
+            val native = Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+            val activity = native.getValue("activity").jsonObject
+            if (available) {
+                val record = activity.getValue("activityIntensity").jsonArray.single().jsonObject
+                assertThat(record.getValue("duration").jsonPrimitive.content).isEqualTo("3600.864197532")
+            } else assertThat(activity["activityIntensity"]).isNull()
+            for (artifact in plan.items) {
+                val text = artifact.content.decodeToString()
+                assertThat(text).contains(start.toString())
+                assertThat(text).contains(end.atOffset(ZoneOffset.of("-05:00")).toString())
+                assertThat(text).contains("captured-steps")
+                assertThat(text.contains("captured-intensity")).isEqualTo(available)
+            }
+            io.mockk.coVerify(exactly = if (available) 1 else 0) {
+                client.readRecords(match<ReadRecordsRequest<androidx.health.connect.client.records.Record>> {
+                    it.recordType == androidx.health.connect.client.records.ActivityIntensityRecord::class
+                })
+            }
+            System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+                plan.items.forEach { artifact ->
+                    val output = File(directory, "android-v6-activity-captured-$available/${artifact.relativePath}")
+                    requireNotNull(output.parentFile).mkdirs()
+                    output.writeBytes(artifact.content)
+                }
+            }
+        }
+    }
+
+    @Test
     fun nativeActivityIntervalsReachConcretePlannerWithoutInventedSummaries() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
         val start = Instant.parse("2026-11-01T05:30:00.123456789Z")

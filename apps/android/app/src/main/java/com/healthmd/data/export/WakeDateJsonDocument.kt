@@ -156,6 +156,7 @@ internal class WakeDateJsonDocument(private val context: AndroidCaptureContext) 
         // Only writer-derived interval durations; native workout/split aggregates stay native.
         private val DERIVED_DURATION_FIELDS = mapOf(
             "sleepStages" to "durationSeconds", "segments" to "durationSeconds", "laps" to "duration",
+            "activityIntensity" to "duration",
         )
         private val TIMESTAMP_FIELDS = mapOf(
             "timestamp" to "exactTime",
