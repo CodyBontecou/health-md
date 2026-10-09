@@ -614,7 +614,10 @@ final class HealthMdConnectionCoreTests: XCTestCase {
             guard case DirectChannelError.authenticationFailed = error else { return XCTFail("Unexpected error: \(error)") }
         }
         XCTAssertEqual(state.attempts, 0)
-        try await channel.send(.ping)
+        let legacySend: (DirectMessage) async throws -> Void = channel.send
+        let legacyBinarySend: (Data) async throws -> Void = channel.sendBinaryTransferFrame
+        _ = legacyBinarySend
+        try await legacySend(.ping)
         guard case .message(.ping) = try await channel.receive() else { return XCTFail("Expected sequence zero") }
     }
 

@@ -272,12 +272,20 @@ public final class DirectSecureChannel: @unchecked Sendable {
         self.messageCanonicalizer = messageCanonicalizer
     }
 
-    public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization? = nil) async throws {
+    public func send(_ message: DirectMessage) async throws {
+        try await send(message, authorization: nil)
+    }
+
+    public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization?) async throws {
         let nativeBytes = try encoder.encode(message)
         try await sendEncrypted(messageCanonicalizer.canonicalizeDirectMessage(nativeBytes), authorization: authorization)
     }
 
-    public func sendBinaryTransferFrame(_ frame: Data, authorization: DirectPacketSendAuthorization? = nil) async throws {
+    public func sendBinaryTransferFrame(_ frame: Data) async throws {
+        try await sendBinaryTransferFrame(frame, authorization: nil)
+    }
+
+    public func sendBinaryTransferFrame(_ frame: Data, authorization: DirectPacketSendAuthorization?) async throws {
         guard DirectTransferBinaryFrame.isBinaryFrame(frame) else {
             throw DirectChannelError.malformedPacket
         }
