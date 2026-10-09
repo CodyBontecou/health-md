@@ -1115,3 +1115,40 @@ fn successor_native_details_reject_wrong_owner_unselected_outputs_and_invalid_in
         }
     }
 }
+
+#[test]
+fn successor_detail_blocks_cannot_shadow_archive_diagnostics() {
+    for input in [apple_successor_input, android_successor_input] {
+        for key in [
+            "raw_record_count",
+            "raw_query_failure_count",
+            "raw_integrity_warning_count",
+            "raw_record_schema",
+            "raw_record_schema_version",
+        ] {
+            let (config, semantic, mut batches) = input();
+            batches[0]["days"][0]["native_details"] = json!({
+                "output_keys":["steps"], "csv_rows":[], "markdown_blocks":[],
+                "bases_frontmatter_blocks":[{"key":key,"lines":["  forged: true"],"ordinal":0}]
+            });
+            let mut session = RenderSession::from_json(
+                &serde_json::to_vec(&config).unwrap(),
+                &serde_json::to_vec(&semantic).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(
+                session.process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false),
+                Err(RenderError::PresentationMismatch),
+                "detail key {key} must not shadow generated archive metadata"
+            );
+            batches[0]["days"][0]
+                .as_object_mut()
+                .unwrap()
+                .remove("native_details");
+            session
+                .process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false)
+                .expect("metadata collision must not advance the accepted frontier");
+            session.finish(|| false).unwrap();
+        }
+    }
+}

@@ -252,7 +252,7 @@ struct PendingExportStore: PendingExportStoring {
                 case .successor:
                     let journal = try decoder.decode(SuccessorJournal.self, from: data)
                     guard journal.schema == SuccessorJournal.schemaID, journal.version == 1,
-                          journal.requests.allSatisfy(Self.requiresProfileIsolation) else {
+                          journal.requests.allSatisfy({ Self.requiresProfileIsolation($0) }) else {
                         throw PendingExportStoreError.unreadableJournal
                     }
                     queues[queue] = journal.requests

@@ -1311,6 +1311,17 @@ fn validate_day(
                     .iter()
                     .any(|existing| existing.key == block.key)
                 || reserved_frontmatter_keys(config.profile).contains(block.key.as_str())
+                // Reserve the entire generated diagnostic namespace even when
+                // this capture omits an archive or uses another source profile.
+                // Keep this successor detail guard separate from frozen v1 admission.
+                || matches!(
+                    block.key.as_str(),
+                    "raw_record_count"
+                        | "raw_query_failure_count"
+                        | "raw_integrity_warning_count"
+                        | "raw_record_schema"
+                        | "raw_record_schema_version"
+                )
                 || block.key == config.frontmatter.date_key
                 || block.key == config.frontmatter.type_key
                 || config.custom_frontmatter.contains_key(&block.key)
