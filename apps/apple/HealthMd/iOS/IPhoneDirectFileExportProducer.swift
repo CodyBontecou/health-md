@@ -1272,11 +1272,17 @@ final class IPhoneDirectFileExportProducer {
         jobID: UUID,
         checkpoint: AppleExportJournalCheckpoint
     ) async throws -> DirectMessage {
-        try checkCancellation(jobID)
         let message: DirectMessage
-        do { message = try await checkpoint.receiveWhileOwned { try await channel.receive() } }
-        catch AppleExportJournalCheckpoint.ContinuationError.superseded { throw IPhoneDirectFileProducerError.requestChanged }
-        try checkCancellation(jobID)
+        do {
+            message = try await checkpoint.receiveWhileOwned {
+                try checkCancellation(jobID)
+                let response = try await channel.receive()
+                try checkCancellation(jobID)
+                return response
+            }
+        } catch AppleExportJournalCheckpoint.ContinuationError.superseded {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
         if case .cancel(let cancelledID) = message, cancelledID == jobID {
             throw IPhoneDirectFileProducerError.cancelled
         }
@@ -1553,8 +1559,8 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func checkCancellation(_ journal: IPhoneDirectFileJournal) throws {
-        try checkCancellation(journal.request.jobID)
         try validateGeneration(journal.checkpoint)
+        try checkCancellation(journal.request.jobID)
     }
 
     private func checkCancellation(_ jobID: UUID) throws {

@@ -299,7 +299,13 @@ nonisolated struct AppleExportJournalCheckpoint {
     @MainActor
     func receiveWhileOwned<Result>(operation: @MainActor () async throws -> Result) async throws -> Result {
         do { try validateGeneration() } catch { throw ContinuationError.superseded }
-        let result = try await operation()
+        let result: Result
+        do { result = try await operation() }
+        catch {
+            let operationError = error
+            do { try validateGeneration() } catch { throw ContinuationError.superseded }
+            throw operationError
+        }
         do { try validateGeneration() } catch { throw ContinuationError.superseded }
         return result
     }

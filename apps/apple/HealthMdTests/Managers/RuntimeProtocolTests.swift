@@ -550,6 +550,44 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), bytes)
     }
 
+    private enum SimulatedReceiveError: Error, Equatable { case disconnected }
+
+    @MainActor
+    func testReceiveFailureRevalidatesOwnershipAndPreservesOwnedTransportErrors() async throws {
+        for replaceDuringReceive in [false, true] {
+            let root = try makeTemporaryDirectory()
+            let job = root.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let destination = job.appendingPathComponent("journal.json")
+            let lock = root.appendingPathComponent(".publication.lock")
+            let bytes = Data("synthetic accepted authority".utf8)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+                lockURL: lock, durabilityRoot: root)
+            do {
+                let _: Int = try await checkpoint.receiveWhileOwned {
+                    await Task.yield()
+                    if replaceDuringReceive {
+                        try FileManager.default.removeItem(at: job)
+                        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                        var replacement = AppleExportJournalCheckpoint()
+                        try replacement.publish(bytes, to: destination, freshAdmission: true,
+                            lockURL: lock, durabilityRoot: root)
+                    }
+                    throw SimulatedReceiveError.disconnected
+                }
+                XCTFail("The receive failed")
+            } catch {
+                if replaceDuringReceive {
+                    XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+                } else {
+                    XCTAssertEqual(error as? SimulatedReceiveError, .disconnected)
+                }
+            }
+            XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        }
+    }
+
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
         let destination = URL(fileURLWithPath: "/tmp/Health.md Export.md")
         let uuid = UUID(uuidString: "12345678-1234-1234-1234-1234567890AB")!
