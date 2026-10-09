@@ -393,6 +393,71 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertFalse(tracker.keepsScreenAwake)
     }
 
+    func testRecoveredCompletionRejectionFinishesOnlyBoundActivity() async throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            let harness = Harness()
+            _ = try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                store: fixture.store, transport: harness.transport(),
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            // The first Mac and Direct cases are independently admitted; the last
+            // Mac case below explicitly retains the connected session authority.
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            if bound { tracker.updateConnected(try XCTUnwrap(completed.cliUIProgressSnapshot)) }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            let rejected = manager.rejectRecoveredMacRequestCompletion(jobID: fixture.session.jobID,
+                                                                       message: "Invalid terminal accounting")
+            XCTAssertTrue(rejected)
+            XCTAssertTrue(try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID)).completionRecorded)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
+    func testConnectedExpiryFinishesOnlyBoundActivity() throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            var now = Date(timeIntervalSince1970: 1_800_000_000)
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true, now: { now })
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            if bound {
+                let journal = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+                tracker.updateConnected(try XCTUnwrap(journal.cliUIProgressSnapshot))
+            } else {
+                tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            now = now.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .expired)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
     func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
         let fixture = try makeFixture(dayCount: 1)
         _ = try fixture.store.updateState(

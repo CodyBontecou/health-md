@@ -429,7 +429,8 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
               journal.origin == .macInitiated,
               journal.state == .completed,
               (try? store.markCompletionRecorded(jobID: jobID)) == true else { return false }
-        if journal.macRequest?.requestedBy == .cli {
+        if journal.macRequest?.requestedBy == .cli,
+           managerOwnedCLIJobIDInTracker() == jobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .failed,
@@ -661,7 +662,10 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     }
 
     private func cleanupExpiredJournals() {
-        for jobID in store.cleanupExpired() {
+        // Cleanup can remove a terminal journal, so retain the bound activity
+        // before crossing that durable boundary. A matching job ID is insufficient.
+        let ownedActivityJobID = managerOwnedCLIJobIDInTracker()
+        for jobID in store.cleanupExpired() where jobID == ownedActivityJobID {
             cliActivityTracker.finish(
                 jobID: jobID,
                 phase: .failed,
