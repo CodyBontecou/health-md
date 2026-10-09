@@ -974,15 +974,15 @@ final class IPhoneDirectCLIService: ObservableObject {
             do {
                 while !Task.isCancelled {
                     let payload = try await connected.receive()
-                    lastInboundActivityAt = heartbeatClock.now
-                    heartbeatPingSentAt = nil
-                    guard case .message(let message) = payload else {
-                        continue
-                    }
                     guard !Task.isCancelled,
                           self.activeSessionID == sessionID,
                           self.channel === connected else {
                         break
+                    }
+                    lastInboundActivityAt = heartbeatClock.now
+                    heartbeatPingSentAt = nil
+                    guard case .message(let message) = payload else {
+                        continue
                     }
                     try await self.handle(
                         message,
@@ -999,8 +999,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             }
             await exportConnection.finish()
+            guard self.activeSessionID == sessionID,
+                  self.channel === connected else { return }
             self.protocolAuthority.endOperation()
-            guard self.activeSessionID == sessionID else { return }
             let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
             let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
                 for: sessionID
