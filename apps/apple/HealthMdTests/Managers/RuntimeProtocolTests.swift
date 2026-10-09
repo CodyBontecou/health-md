@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import CryptoKit
 import Darwin
 import HealthMdConnectionCore
 @testable import HealthMd
@@ -983,3 +984,94 @@ final class ProductionAdapterTests: XCTestCase {
         // Compile-time conformance check
     }
 }
+
+
+#if os(iOS)
+final class DirectCoordinatorAdmissionTests: XCTestCase {
+    @MainActor
+    func testRejectedSameIDRequestDoesNotReleaseTheAdmittedOperation() async throws {
+        let suite = "synthetic-direct-admission-" + UUID().uuidString
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let healthStore = FakeHealthStore()
+        let healthKit = HealthKitManager(store: healthStore, userDefaults: defaults)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let authority = AppleDirectProtocolAuthority(defaultMode: .shadow)
+        let jobID = UUID()
+        defer { CLIExportActivityTracker.shared.clear(jobID: jobID) }
+        let request = DirectExportRequest(protocolVersion: -1, jobID: jobID, createdAt: Date(),
+            dateSelection: .exact(start: "2026-10-08", end: "2026-10-08"),
+            responseMode: .rawJSON, rawProfile: .canonicalSourceRecordsV1)
+        let binding = DirectPeerBinding(sourceInstallationID: UUID(), destinationInstallationID: UUID())
+        let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+        let firstTransport = DirectAdmissionPacketTransport(blockSend: true)
+        let secondTransport = DirectAdmissionPacketTransport(blockSend: false)
+        func connection(_ transport: DirectAdmissionPacketTransport) -> IPhoneDirectExportConnection {
+            IPhoneDirectExportConnection(channel: DirectSecureChannel(packetConnection: transport,
+                sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+                peerInstallationID: binding.destinationInstallationID, peerDisplayName: "synthetic"))
+        }
+        let firstConnection = connection(firstTransport)
+        let first = Task {
+            await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+                channel: firstConnection, protocolAuthority: authority, healthKitManager: healthKit)
+        }
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(5))
+        while !(await firstTransport.gate.isBlocked), clock.now < deadline {
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        guard await firstTransport.gate.isBlocked else {
+            first.cancel()
+            await firstTransport.gate.release()
+            await first.value
+            XCTFail("The first request must reach its rejection send without any health query")
+            return
+        }
+        XCTAssertEqual(coordinator.currentJobID, jobID)
+        let activity = CLIExportActivityTracker.shared.snapshot
+        XCTAssertNotNil(activity)
+        authority.beginBootstrap()
+        await coordinator.handle(request, peerBinding: binding, negotiation: negotiation,
+            channel: connection(secondTransport), protocolAuthority: authority, healthKitManager: healthKit)
+        XCTAssertEqual(coordinator.currentJobID, jobID, "Rejected admission cannot release an active same-ID job")
+        XCTAssertEqual(CLIExportActivityTracker.shared.snapshot, activity,
+            "Rejected admission cannot finish or replace the admitted activity")
+        _ = try authority.canonicalizeDirectMessage(Data("synthetic-native-protocol".utf8))
+        XCTAssertNil(authority.comparisonSnapshot().comparisons[.directMessage],
+            "Rejected admission cannot clear the active legacy bootstrap mode")
+        XCTAssertFalse(healthStore.authRequested)
+        XCTAssertTrue(healthStore.requestedReadTypes.isEmpty)
+        await firstTransport.gate.release()
+        await first.value
+        XCTAssertNil(coordinator.currentJobID)
+    }
+}
+
+nonisolated private final class DirectAdmissionPacketTransport: DirectPacketTransport, @unchecked Sendable {
+    let gate = DirectAdmissionSendGate()
+    private let blockSend: Bool
+    init(blockSend: Bool) { self.blockSend = blockSend }
+    func send(_ packet: ManualIPSyncPacket) async throws {
+        if blockSend { await gate.block() }
+    }
+    func receive() async throws -> ManualIPSyncPacket { throw DirectChannelError.connectionClosed }
+    func cancel() { Task { await gate.release() } }
+}
+
+private actor DirectAdmissionSendGate {
+    private var continuation: CheckedContinuation<Void, Never>?
+    private var released = false
+    var isBlocked: Bool { continuation != nil }
+    func block() async {
+        guard !released else { return }
+        await withCheckedContinuation { continuation = $0 }
+    }
+    func release() {
+        released = true
+        let pending = continuation
+        continuation = nil
+        pending?.resume()
+    }
+}
+#endif

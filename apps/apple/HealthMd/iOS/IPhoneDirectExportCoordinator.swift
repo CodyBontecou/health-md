@@ -130,6 +130,16 @@ final class IPhoneDirectExportCoordinator {
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding? = nil
     ) async {
+        guard activeJobID == nil else {
+            if !Task.isCancelled {
+                try? await channel.send(.exportRejected(DirectExportFailure(
+                    jobID: request.jobID,
+                    reason: .requestInProgress,
+                    message: IPhoneDirectExportError.requestInProgress.localizedDescription
+                )))
+            }
+            return
+        }
         cleanupExpiredJobs()
         #if DEBUG
         let rawPerformanceSpan = request.responseMode == .writeFiles
@@ -145,9 +155,6 @@ final class IPhoneDirectExportCoordinator {
         var ownsQueryController = false
         var executionOwnership: AppleExportJournalCheckpoint?
         do {
-            guard activeJobID == nil else {
-                throw IPhoneDirectExportError.requestInProgress
-            }
             activeJobID = request.jobID
             let queryController = queryExecutionControllers[request.jobID]
                 ?? HealthKitQueryExecutionController()
