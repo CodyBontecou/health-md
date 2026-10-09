@@ -382,6 +382,34 @@ class DirectCliCoordinator @Inject constructor(
         var phase = ExportPhase.PREPARING
         var preparationLease: DirectPreparationLease? = null
         var acceptedLease: DirectAcceptedLease? = null
+        fun rejectExecution(
+            code: ErrorCode,
+            rejectedPhase: ExportPhase,
+            message: String,
+            failure: DirectCliFailure,
+            discardArtifacts: Boolean = false,
+        ) {
+            val accepted = acceptedLease
+            val preparing = preparationLease
+            val discardOwned = discardArtifacts && (accepted != null || preparing != null)
+            val onRevoked = { _state.value = DirectCliConnectionState.Failed(failure) }
+            val authorization = when {
+                accepted != null && discardOwned -> jobStore.cancelAcceptedPacketSendAuthorization(accepted, onRevoked)
+                accepted != null -> jobStore.packetSendAuthorization(accepted)
+                preparing != null -> jobStore.preparationPacketSendAuthorization(
+                    preparing, cancelBeforeEnqueue = discardOwned, onRevoked = onRevoked,
+                )
+                else -> null
+            }
+            reject(channel, request.jobId, code, rejectedPhase, message, failure, authorization) { update ->
+                when {
+                    discardOwned -> Unit // The revocation transaction owns this terminal update.
+                    accepted != null -> jobStore.withAcceptedOwnership(accepted, update)
+                    preparing != null -> jobStore.withPreparationOwnership(preparing, update)
+                    else -> update()
+                }
+            }
+        }
         try {
             validateRequest(request)
             val fingerprint = protocolAuthority.requestFingerprint(request)
@@ -402,9 +430,7 @@ class DirectCliCoordinator @Inject constructor(
             val unlocked = isUnlocked()
             if (existing == null) {
                 if (!FreemiumPolicy.canExport(unlocked, settingsRepository.getFreeExportsUsed())) {
-                    reject(
-                        channel,
-                        request.jobId,
+                    rejectExecution(
                         ErrorCode.QUOTA_EXHAUSTED,
                         phase,
                         "The free export limit has been reached.",
@@ -417,9 +443,7 @@ class DirectCliCoordinator @Inject constructor(
                     val providerId = request.product.getValue("provider_id").jsonPrimitive.content
                     val rawRepository = rawRepositories.repositoryFor(providerId)
                     if (rawRepository == null) {
-                        reject(
-                            channel,
-                            request.jobId,
+                        rejectExecution(
                             ErrorCode.SOURCE_UNAVAILABLE,
                             phase,
                             "The requested raw provider is unavailable in this distribution.",
@@ -428,9 +452,7 @@ class DirectCliCoordinator @Inject constructor(
                         return
                     }
                     directRawRequestPolicy.validationError(providerId, request.dateSelection)?.let { error ->
-                        reject(
-                            channel,
-                            request.jobId,
+                        rejectExecution(
                             ErrorCode.INVALID_REQUEST,
                             phase,
                             error,
@@ -444,9 +466,7 @@ class DirectCliCoordinator @Inject constructor(
                 }
                 val sourceAvailable = rawCapabilities?.available ?: healthRepository.isAvailable()
                 if (!sourceAvailable) {
-                    reject(
-                        channel,
-                        request.jobId,
+                    rejectExecution(
                         ErrorCode.SOURCE_UNAVAILABLE,
                         phase,
                         "The requested health provider is unavailable on this device.",
@@ -460,9 +480,7 @@ class DirectCliCoordinator @Inject constructor(
                     it.providerId != "health_connect" || it.grantedPermissions.isNotEmpty()
                 } ?: healthRepository.hasPermissions()
                 if (!permissionsGranted) {
-                    reject(
-                        channel,
-                        request.jobId,
+                    rejectExecution(
                         ErrorCode.PERMISSION_REQUIRED,
                         phase,
                         "Health access is required on the Android device.",
@@ -471,9 +489,7 @@ class DirectCliCoordinator @Inject constructor(
                     return
                 }
                 if (usesHealthConnect && healthRepository.isBeforeFirstUnlock()) {
-                    reject(
-                        channel,
-                        request.jobId,
+                    rejectExecution(
                         ErrorCode.DEVICE_LOCKED,
                         phase,
                         "Unlock the Android device before exporting health data.",
@@ -490,9 +506,7 @@ class DirectCliCoordinator @Inject constructor(
                 val historicalAccessGranted = rawCapabilities?.historicalReadGranted
                     ?: healthRepository.hasHistoricalReadPermission()
                 if (needsHistory && usesHealthConnect && !historicalAccessGranted) {
-                    reject(
-                        channel,
-                        request.jobId,
+                    rejectExecution(
                         ErrorCode.PERMISSION_REQUIRED,
                         phase,
                         "Historical health access is required for the requested dates.",
@@ -522,7 +536,10 @@ class DirectCliCoordinator @Inject constructor(
                 channel.sendV2("export_accepted", ExportAccepted.serializer(),
                     existing.transfer.accepted, sendAuthorization)
             }
-            val transfer = ArtifactTransferClient(channel, sendAuthorization)
+            val cancellationSendAuthorization = jobStore.cancelAcceptedPacketSendAuthorization(senderLease) {
+                _state.value = DirectCliConnectionState.Completed(DirectCliCompletion.ExportCancelled)
+            }
+            val transfer = ArtifactTransferClient(channel, sendAuthorization, cancellationSendAuthorization)
             transfer.transfer(
                 plan = journal.transfer,
                 sendAccepted = false,
@@ -564,27 +581,21 @@ class DirectCliCoordinator @Inject constructor(
         } catch (error: CancellationException) {
             throw error
         } catch (_: DirectProfileNotFoundException) {
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.INVALID_REQUEST,
                 phase,
                 "Export profile not found: the referenced profile does not exist on this device.",
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
         } catch (_: DirectProfileSnapshotException) {
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.INVALID_REQUEST,
                 phase,
                 "The export profile's saved settings are invalid; re-save the profile on the device.",
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
         } catch (_: DirectProfileRebindRequiredException) {
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.INVALID_REQUEST,
                 phase,
                 "profile_rebind_required",
@@ -593,39 +604,25 @@ class DirectCliCoordinator @Inject constructor(
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
         } catch (_: DirectExportCancelledException) {
-            val accepted = acceptedLease
-            val admitted = preparationLease
-            if (accepted != null) jobStore.cancelAccepted(accepted)
-            else if (admitted != null) jobStore.cancelPreparation(admitted)
-            _state.value = DirectCliConnectionState.Completed(
-                DirectCliCompletion.ExportCancelled,
-            )
+            // Durable generation revocation and local cancelled state already occurred
+            // inside the acknowledgement's enqueue authorization.
         } catch (_: DirectGeneratedArtifactLimitException) {
-            val accepted = acceptedLease
-            val admitted = preparationLease
-            if (accepted != null) jobStore.cancelAccepted(accepted)
-            else if (admitted != null) jobStore.cancelPreparation(admitted)
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.STAGING_FAILED,
                 phase,
                 "Generated export exceeds 4,096 files; use fewer dates or disable individual tracking.",
                 DirectCliFailure.GENERATED_FILE_LIMIT,
+                discardArtifacts = true,
             )
         } catch (_: MissingSpoolException) {
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.SPOOL_MISSING_RESTART_REQUIRED,
                 phase,
                 "The retained export is missing and must be restarted.",
                 DirectCliFailure.SPOOL_MISSING,
             )
         } catch (_: Throwable) {
-            reject(
-                channel,
-                request.jobId,
+            rejectExecution(
                 ErrorCode.INTERNAL_FAILURE,
                 phase,
                 "The Android export could not be completed safely.",
@@ -735,10 +732,9 @@ class DirectCliCoordinator @Inject constructor(
                             "cancel_acknowledged",
                             com.healthmd.direct.protocol.JobPayload.serializer(),
                             payload,
-                            jobStore.preparationPacketSendAuthorization(preparationLease, cancelBeforeEnqueue = true),
-                        )
-                        _state.value = DirectCliConnectionState.Completed(
-                            DirectCliCompletion.ExportCancelled,
+                            jobStore.preparationPacketSendAuthorization(preparationLease, cancelBeforeEnqueue = true) {
+                                _state.value = DirectCliConnectionState.Completed(DirectCliCompletion.ExportCancelled)
+                            },
                         )
                         parentJob.cancel(CancellationException("Direct export cancelled by CLI."))
                         return@launch
@@ -1089,6 +1085,8 @@ class DirectCliCoordinator @Inject constructor(
         phase: ExportPhase,
         message: String,
         failure: DirectCliFailure,
+        authorization: com.healthmd.direct.protocol.DirectPacketSendAuthorization? = null,
+        updateState: ((() -> Unit) -> Unit) = { it() },
     ) {
         runCatching {
             channel.sendV2(
@@ -1101,9 +1099,10 @@ class DirectCliCoordinator @Inject constructor(
                     retryable = false,
                     publicMessage = message,
                 ),
+                authorization,
             )
         }
-        _state.value = DirectCliConnectionState.Failed(failure)
+        runCatching { updateState { _state.value = DirectCliConnectionState.Failed(failure) } }
     }
 
     private fun ArtifactFormat.mediaType(): String = when (this) {

@@ -329,6 +329,63 @@ class DirectJobJournalMigrationTest {
     }
 
     @Test
+    fun acceptedCancellationRevokesBeforeAckAndRejectsStaleTerminalCallbacks() = withStore { store, root ->
+        val journal = durableJournal()
+        val jobId = journal.transfer.accepted.jobId
+        store.save(journal)
+        val lease = store.acquireAcceptedLease(journal)
+        val events = mutableListOf<String>()
+        val authorization = store.cancelAcceptedPacketSendAuthorization(lease) { events += "revoked" }
+        authorization.authorizeEnqueue {
+            assertThat(File(root, "direct-cli/jobs/$jobId").exists()).isFalse()
+            assertThat(events).containsExactly("revoked")
+            val lockFile = File(root, "direct-cli/.jobs.journal.lock")
+            java.io.RandomAccessFile(lockFile, "rw").use { file ->
+                assertThrows(java.nio.channels.OverlappingFileLockException::class.java) {
+                    file.channel.tryLock()
+                }
+            }
+            events += "enqueue"
+        }
+        store.save(journal)
+        store.acquireAcceptedLease(journal)
+        val replacement = File(root, "direct-cli/jobs/$jobId/job.json")
+        val bytes = replacement.readBytes()
+        assertThrows(IllegalStateException::class.java) {
+            authorization.authorizeEnqueue { events += "stale ack" }
+        }
+        assertThrows(IllegalStateException::class.java) {
+            store.withAcceptedOwnership(lease) { events += "stale failed state" }
+        }
+        assertThat(events).containsExactly("revoked", "enqueue").inOrder()
+        assertThat(replacement.readBytes()).isEqualTo(bytes)
+    }
+
+    @Test
+    fun cancellationDurabilityFailureRunsNoTerminalOrAckCallback() {
+        var fail = false
+        withStore(directorySync = { !fail }) { store, root ->
+            val journal = durableJournal()
+            store.save(journal)
+            val lease = store.acquireAcceptedLease(journal)
+            val file = File(root, "direct-cli/jobs/${lease.owner.jobId}/job.json")
+            val bytes = file.readBytes()
+            var callbacks = 0
+            val authorization = store.cancelAcceptedPacketSendAuthorization(lease) { callbacks += 1 }
+            fail = true
+            assertThrows(IllegalStateException::class.java) {
+                authorization.authorizeEnqueue { callbacks += 1 }
+            }
+            assertThat(callbacks).isEqualTo(0)
+            assertThat(file.readBytes()).isEqualTo(bytes)
+            fail = false
+            authorization.authorizeEnqueue { callbacks += 1 }
+            assertThat(callbacks).isEqualTo(2)
+            assertThat(file.exists()).isFalse()
+        }
+    }
+
+    @Test
     fun preparationPacketsRejectChangedPendingAuthorityBeforeCallbacks() = withStore { store, root ->
         val journal = durableJournal()
         val lease = store.beginPreparation(journal.transfer.accepted.jobId,

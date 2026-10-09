@@ -206,14 +206,35 @@ class DirectCliJobStore private constructor(
         action()
     }
 
+    fun <T> withPreparationOwnership(lease: DirectPreparationLease, action: () -> T): T = withStoreLock {
+        requirePendingPreparation(lease)
+        action()
+    }
+
+    fun cancelAcceptedPacketSendAuthorization(
+        lease: DirectAcceptedLease,
+        onRevoked: () -> Unit = {},
+    ) = com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+        withStoreLock {
+            requiredOwnedJournal(lease)
+            check(deleteOwnedDirectory(jobDirectory(lease.owner.jobId))) {
+                "Unable to cancel the Direct CLI operation."
+            }
+            onRevoked()
+            enqueue()
+        }
+    }
+
     fun preparationPacketSendAuthorization(
         lease: DirectPreparationLease,
         cancelBeforeEnqueue: Boolean = false,
+        onRevoked: () -> Unit = {},
     ) = com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
         withStoreLock {
             val directory = requirePendingPreparation(lease)
             if (cancelBeforeEnqueue) {
                 check(deleteOwnedDirectory(directory)) { "Unable to cancel the Direct CLI preparation." }
+                onRevoked()
             }
             enqueue()
         }

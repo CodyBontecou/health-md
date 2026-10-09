@@ -116,6 +116,7 @@ object TransferPlanBuilder {
 class ArtifactTransferClient(
     private val channel: DirectSecureChannel,
     private val sendAuthorization: DirectPacketSendAuthorization? = null,
+    private val cancellationSendAuthorization: DirectPacketSendAuthorization? = sendAuthorization,
 ) {
     fun transfer(
         plan: PreparedTransfer,
@@ -265,10 +266,11 @@ class ArtifactTransferClient(
                 "cancel" -> {
                     val cancellation = V2Codec.decodePayload(envelope, JobPayload.serializer())
                     if (cancellation.jobId == jobId) {
-                        sendV2(
+                        channel.sendV2(
                             "cancel_acknowledged",
                             JobPayload.serializer(),
                             cancellation,
+                            cancellationSendAuthorization,
                         )
                         throw DirectExportCancelledException()
                     }

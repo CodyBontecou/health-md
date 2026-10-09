@@ -103,6 +103,83 @@ class PacketPublicationTest {
     }
 
     @Test
+    fun artifactTransferRoutesCancellationThroughRevocationAuthorization() {
+        val artifact = java.io.File.createTempFile("synthetic-cancel-transfer", ".json")
+        artifact.writeText("{}")
+        try {
+            val jobId = "10000000-0000-4000-8000-000000000001"
+            val artifactId = "20000000-0000-4000-8000-000000000002"
+            val accepted = ExportAccepted(jobId, "2026-10-09T00:00:00Z", PeerBinding(
+                "30000000-0000-4000-8000-000000000003", "40000000-0000-4000-8000-000000000004"),
+                ProductId.ANDROID_PROVIDER_NATIVE_SNAPSHOT_V1, ResolvedRange("2026-10-08", "2026-10-08", "UTC"),
+                providerId = "health_connect", requestFingerprint = "synthetic-fingerprint")
+            val manifest = ArtifactManifest(jobId, artifactId, ArtifactKind.RAW_SNAPSHOT,
+                ArtifactSchema("healthmd.raw-snapshot", 1), "application/json", artifact.length(),
+                DirectJson.sha256Hex(artifact.readBytes()))
+            val plan = TransferPlanBuilder.build(accepted, listOf(manifest), mapOf(artifactId to artifact),
+                createdAt = "2026-10-09T00:00:00Z")
+            ServerSocket(0).use { server ->
+                val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)
+                server.accept().use { peer ->
+                    peer.soTimeout = 5_000
+                    val key = ByteArray(32) { it.toByte() }
+                    val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
+                    val ordinary = java.util.concurrent.atomic.AtomicInteger(0)
+                    val cancellation = java.util.concurrent.atomic.AtomicInteger(0)
+                    val executor = Executors.newSingleThreadExecutor()
+                    try {
+                        val receiver = executor.submit {
+                            val input = DataInputStream(peer.getInputStream())
+                            var expectedSequence = 0L
+                            fun receiveType(): String {
+                                val bytes = ByteArray(input.readLong().toInt()).also(input::readFully)
+                                val envelope = DirectCrypto.open(LegacyCodec.encryptedFrame(bytes), key)
+                                assertThat(ByteBuffer.wrap(envelope, 8, 8).long).isEqualTo(expectedSequence++)
+                                return V2Codec.decode(envelope.copyOfRange(16, envelope.size)).type
+                            }
+                            assertThat(receiveType()).isEqualTo("export_accepted")
+                            assertThat(receiveType()).isEqualTo("transfer_session")
+                            assertThat(receiveType()).isEqualTo("artifact_manifest")
+                            assertThat(receiveType()).isEqualTo("transfer_open")
+                            val plaintext = V2Codec.encode("cancel", JobPayload.serializer(), JobPayload(jobId))
+                            val envelope = ByteBuffer.allocate(16 + plaintext.size)
+                                .put("HMDSC001".toByteArray()).putLong(0).put(plaintext).array()
+                            val bytes = LegacyCodec.encrypted(DirectCrypto.seal(envelope, key))
+                            java.io.DataOutputStream(peer.getOutputStream()).apply {
+                                writeLong(bytes.size.toLong()); write(bytes); flush()
+                            }
+                            assertThat(receiveType()).isEqualTo("cancel_acknowledged")
+                            assertThat(revoked.get()).isTrue()
+                        }
+                        DirectSecureChannel(packet, key, "listener", "Listener").use { channel ->
+                            val ordinaryAuthorization = DirectPacketSendAuthorization { enqueue ->
+                                check(!revoked.get())
+                                ordinary.incrementAndGet()
+                                enqueue()
+                            }
+                            val cancelAuthorization = DirectPacketSendAuthorization { enqueue ->
+                                check(revoked.compareAndSet(false, true))
+                                cancellation.incrementAndGet()
+                                enqueue()
+                            }
+                            assertThrows(DirectExportCancelledException::class.java) {
+                                ArtifactTransferClient(channel, ordinaryAuthorization, cancelAuthorization)
+                                    .transfer(plan, checkCancellation = { check(!revoked.get()) })
+                            }
+                            assertThat(ordinary.get()).isEqualTo(4)
+                            assertThat(cancellation.get()).isEqualTo(1)
+                        }
+                        receiver.get(5, TimeUnit.SECONDS)
+                    } finally {
+                        packet.close()
+                        executor.shutdownNow()
+                    }
+                }
+            }
+        } finally { artifact.delete() }
+    }
+
+    @Test
     fun revokedAuthorizationDoesNotConsumeSecureSequence() {
         ServerSocket(0).use { server ->
             val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)
