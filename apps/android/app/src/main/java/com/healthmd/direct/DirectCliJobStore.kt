@@ -170,17 +170,65 @@ class DirectCliJobStore @Inject constructor(
         pendingFile.delete()
     }
 
-    fun markAccounted(jobId: String): Unit = withStoreLock {
-        val journal = requireNotNull(loadUnvalidated(jobId))
-        if (!journal.accounted) save(journal.copy(accounted = true))
+    fun acquireAcceptedLease(expected: DirectJobJournal): DirectAcceptedLease = withStoreLock {
+        val jobId = expected.transfer.accepted.jobId
+        val current = requireNotNull(load(jobId, expected.requestFingerprint))
+        check(sameAuthority(current, expected)) { "The accepted Direct CLI authority changed." }
+        val owner = File(jobDirectory(jobId), OWNER_NAME)
+        val token = if (owner.exists()) {
+            check(owner.isFile && owner.length() == 36L) { "Invalid Direct CLI ownership." }
+            owner.readText(Charsets.US_ASCII).also {
+                check(runCatching { UUID.fromString(it).toString() == it }.getOrDefault(false)) {
+                    "Invalid Direct CLI ownership."
+                }
+            }
+        } else {
+            UUID.randomUUID().toString().also { atomicWrite(owner, it.toByteArray(Charsets.US_ASCII)) }
+        }
+        DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
     }
 
-    fun markCompleted(jobId: String): Unit = withStoreLock {
-        val journal = requireNotNull(loadUnvalidated(jobId))
-        // Keep exact artifacts through the bounded job lifetime so a lost completion confirmation
-        // can replay idempotently without rereading a non-transactional provider.
-        save(journal.copy(completed = true))
+    /** A small owner read per frame; complete authority is checked at state transitions. */
+    fun validateAcceptedLease(lease: DirectAcceptedLease): Unit = withStoreLock {
+        val directory = requirePreparationOwner(lease.owner)
+        check(File(directory, JOURNAL_NAME).isFile && lease.expiresAt.isAfter(Instant.now())) {
+            "The accepted Direct CLI operation is no longer available."
+        }
     }
+
+    fun markAccounted(lease: DirectAcceptedLease, account: () -> Unit = {}): Boolean = withStoreLock {
+        val journal = requiredOwnedJournal(lease)
+        if (journal.accounted) return@withStoreLock false
+        account()
+        save(journal.copy(accounted = true))
+        true
+    }
+
+    fun markCompleted(lease: DirectAcceptedLease): Boolean = withStoreLock {
+        val journal = requiredOwnedJournal(lease)
+        if (journal.completed) return@withStoreLock false
+        // Keep artifacts for replay after a lost completion confirmation.
+        save(journal.copy(completed = true))
+        true
+    }
+
+    fun cancelAccepted(lease: DirectAcceptedLease): Boolean = withStoreLock {
+        val directory = jobDirectory(lease.owner.jobId)
+        if (!hasPreparationOwner(directory, lease.owner)) return@withStoreLock false
+        val current = loadUnvalidated(lease.owner.jobId) ?: return@withStoreLock false
+        if (!sameAuthority(current, lease.authority)) return@withStoreLock false
+        directory.deleteRecursively()
+    }
+
+    private fun requiredOwnedJournal(lease: DirectAcceptedLease): DirectJobJournal {
+        validateAcceptedLease(lease)
+        val journal = requireNotNull(loadUnvalidated(lease.owner.jobId))
+        check(sameAuthority(journal, lease.authority)) { "The accepted Direct CLI authority changed." }
+        return journal
+    }
+
+    private fun sameAuthority(left: DirectJobJournal, right: DirectJobJournal): Boolean =
+        left.copy(accounted = false, completed = false) == right.copy(accounted = false, completed = false)
 
     fun cancel(jobId: String): Unit = withStoreLock {
         jobDirectory(jobId).deleteRecursively()
@@ -324,6 +372,14 @@ class DirectPreparationLease internal constructor(
     internal val jobId: String,
     internal val token: String,
 )
+
+/** An accepted operation's live ownership and frozen authority, never serialized on the wire. */
+class DirectAcceptedLease internal constructor(
+    internal val owner: DirectPreparationLease,
+    internal val authority: DirectJobJournal,
+) {
+    internal val expiresAt: Instant = Instant.parse(authority.expiresAt)
+}
 
 @Serializable(with = DirectJobJournal.Serializer::class)
 data class DirectJobJournal(

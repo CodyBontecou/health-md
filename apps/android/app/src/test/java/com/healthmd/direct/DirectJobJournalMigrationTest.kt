@@ -153,8 +153,11 @@ class DirectJobJournalMigrationTest {
         val initial = durableJournal()
         val jobId = initial.transfer.accepted.jobId
         store.save(initial)
-        store.markAccounted(jobId)
-        store.markCompleted(jobId)
+        val lease = store.acquireAcceptedLease(initial)
+        assertThat(store.markAccounted(lease)).isTrue()
+        assertThat(store.markCompleted(lease)).isTrue()
+        assertThat(store.markAccounted(lease)).isFalse()
+        assertThat(store.markCompleted(lease)).isFalse()
         val file = File(root, "direct-cli/jobs/$jobId/job.json")
         val completedBytes = file.readBytes()
         assertThrows(IllegalArgumentException::class.java) { store.save(initial) }
@@ -316,6 +319,82 @@ class DirectJobJournalMigrationTest {
         assertThat(artifact.readText()).isEqualTo("synthetic replacement bytes")
         assertThat(store.cancelPreparation(replacement)).isTrue()
         assertThat(directory.exists()).isFalse()
+    }
+
+    @Test
+    fun staleSenderCannotAccountOrCompleteAReplacementWithTheSameJobId() = withStore { store, root ->
+        val original = durableJournal()
+        val jobId = original.transfer.accepted.jobId
+        store.save(original)
+        val stale = store.acquireAcceptedLease(original)
+        store.cancel(jobId)
+        val replacement = original.copy(transfer = original.transfer.copy(session = original.transfer.session.copy(
+            sessionId = "60000000-0000-4000-8000-000000000006",
+        )))
+        store.save(replacement)
+        val file = File(root, "direct-cli/jobs/$jobId/job.json")
+        val bytes = file.readBytes()
+        assertThrows(IllegalStateException::class.java) { store.markAccounted(stale) }
+        assertThrows(IllegalStateException::class.java) { store.markCompleted(stale) }
+        assertThrows(IllegalStateException::class.java) { store.validateAcceptedLease(stale) }
+        assertThat(store.cancelAccepted(stale)).isFalse()
+        assertThat(file.readBytes()).isEqualTo(bytes)
+        assertThat(store.load(jobId, replacement.requestFingerprint)).isEqualTo(replacement)
+    }
+
+    @Test
+    fun legacyResumeRetainsJournalBytesAndAccountsAndCompletesOnlyOnceAcrossLeases() = withStore { store, root ->
+        val original = durableJournal().copy(version = DirectJobJournal.LEGACY_VERSION)
+        val jobId = original.transfer.accepted.jobId
+        store.save(original)
+        val file = File(root, "direct-cli/jobs/$jobId/job.json")
+        val before = file.readBytes()
+        val first = store.acquireAcceptedLease(original)
+        val second = store.acquireAcceptedLease(original)
+        assertThat(file.readBytes()).isEqualTo(before)
+        var charges = 0
+        assertThrows(IllegalStateException::class.java) {
+            store.markAccounted(first) { throw IllegalStateException("synthetic accounting failure") }
+        }
+        assertThat(file.readBytes()).isEqualTo(before)
+        assertThat(store.markAccounted(second) { charges += 1 }).isTrue()
+        assertThat(store.markAccounted(first) { charges += 1 }).isFalse()
+        assertThat(charges).isEqualTo(1)
+        assertThat(store.markCompleted(first)).isTrue()
+        val completedBytes = file.readBytes()
+        assertThat(store.markCompleted(second)).isFalse()
+        assertThat(file.readBytes()).isEqualTo(completedBytes)
+        assertThat(store.load(jobId, original.requestFingerprint))
+            .isEqualTo(original.copy(accounted = true, completed = true))
+    }
+
+    @Test
+    fun identicalReplacementAndCorruptOwnerCannotReuseAnOldSenderLease() = withStore { store, root ->
+        val original = durableJournal()
+        val jobId = original.transfer.accepted.jobId
+        store.save(original)
+        val stale = store.acquireAcceptedLease(original)
+        store.purgeAll()
+        store.save(original)
+        val current = store.acquireAcceptedLease(original)
+        val file = File(root, "direct-cli/jobs/$jobId/job.json")
+        val bytes = file.readBytes()
+        var charges = 0
+        assertThrows(IllegalStateException::class.java) { store.markAccounted(stale) { charges += 1 } }
+        assertThrows(IllegalStateException::class.java) { store.markCompleted(stale) }
+        assertThat(store.cancelAccepted(stale)).isFalse()
+        assertThat(charges).isEqualTo(0)
+        assertThat(file.readBytes()).isEqualTo(bytes)
+        val owner = File(file.parentFile, "preparation-owner")
+        val corrupt = "x".repeat(36)
+        owner.writeText(corrupt)
+        assertThrows(IllegalStateException::class.java) { store.acquireAcceptedLease(original) }
+        assertThrows(IllegalStateException::class.java) { store.markAccounted(current) { charges += 1 } }
+        assertThrows(IllegalStateException::class.java) { store.markCompleted(current) }
+        assertThat(store.cancelAccepted(current)).isFalse()
+        assertThat(owner.readText()).isEqualTo(corrupt)
+        assertThat(file.readBytes()).isEqualTo(bytes)
+        assertThat(charges).isEqualTo(0)
     }
 
     private fun durableJournal() = DirectJobJournal(

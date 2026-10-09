@@ -380,6 +380,7 @@ class DirectCliCoordinator @Inject constructor(
         val awakeActivityId = ExportAwakeCoordinator.shared.beginActivity()
         var phase = ExportPhase.PREPARING
         var preparationLease: DirectPreparationLease? = null
+        var acceptedLease: DirectAcceptedLease? = null
         try {
             validateRequest(request)
             val fingerprint = protocolAuthority.requestFingerprint(request)
@@ -516,6 +517,8 @@ class DirectCliCoordinator @Inject constructor(
                     onPreparationAdmitted = { preparationLease = it },
                 )
             }
+            val senderLease = jobStore.acquireAcceptedLease(journal)
+            acceptedLease = senderLease
             phase = ExportPhase.TRANSFERRING
             val exportContext = currentCoroutineContext()
             val transfer = ArtifactTransferClient(channel)
@@ -529,23 +532,24 @@ class DirectCliCoordinator @Inject constructor(
                     // The CLI has committed at this point. Local accounting must never turn that
                     // success into an export rejection or charge this durable job twice.
                     runCatching {
-                        val current = requireNotNull(jobStore.load(request.jobId, fingerprint))
-                        if (!current.accounted) {
+                        jobStore.markAccounted(senderLease) {
                             if (!unlocked) {
                                 kotlinx.coroutines.runBlocking {
                                     settingsRepository.recordFreeExportUseOnce(request.jobId)
                                 }
                             }
-                            jobStore.markAccounted(request.jobId)
                         }
                     }
                 },
-                checkCancellation = { exportContext.ensureActive() },
+                checkCancellation = {
+                    exportContext.ensureActive()
+                    jobStore.validateAcceptedLease(senderLease)
+                },
             )
-            val completionPersisted = runCatching {
-                jobStore.markCompleted(request.jobId)
-            }.isSuccess
-            if (!journal.completed && completionPersisted) {
+            val completionAdvanced = runCatching {
+                jobStore.markCompleted(senderLease)
+            }.getOrDefault(false)
+            if (completionAdvanced) {
                 runCatching { settingsRepository.incrementSuccessfulExportCount() }
             }
             _state.value = DirectCliConnectionState.Completed(
@@ -583,16 +587,18 @@ class DirectCliCoordinator @Inject constructor(
                 DirectCliFailure.PROFILE_NOT_FOUND,
             )
         } catch (_: DirectExportCancelledException) {
+            val accepted = acceptedLease
             val admitted = preparationLease
-            if (admitted != null) jobStore.cancelPreparation(admitted)
-            else if (phase == ExportPhase.TRANSFERRING) jobStore.cancel(request.jobId)
+            if (accepted != null) jobStore.cancelAccepted(accepted)
+            else if (admitted != null) jobStore.cancelPreparation(admitted)
             _state.value = DirectCliConnectionState.Completed(
                 DirectCliCompletion.ExportCancelled,
             )
         } catch (_: DirectGeneratedArtifactLimitException) {
+            val accepted = acceptedLease
             val admitted = preparationLease
-            if (admitted != null) jobStore.cancelPreparation(admitted)
-            else if (phase == ExportPhase.TRANSFERRING) jobStore.cancel(request.jobId)
+            if (accepted != null) jobStore.cancelAccepted(accepted)
+            else if (admitted != null) jobStore.cancelPreparation(admitted)
             reject(
                 channel,
                 request.jobId,
