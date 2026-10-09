@@ -220,7 +220,7 @@ final class IPhoneDirectFileExportProducer {
         )
         let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
             try await channel.send(.transferFinalize(finalize))
-            return try await receiveMessage(channel, jobID: request.jobID)
+            return try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
         }
         guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
         acknowledgement.accepted,
@@ -545,7 +545,7 @@ final class IPhoneDirectFileExportProducer {
         sourceCalendar.timeZone = sourceTimeZone
         let requestedSet = Set(journal.requestedDates.map { sourceCalendar.startOfDay(for: $0) })
         for index in journal.capturedDays.count..<journal.transferDates.count {
-            try checkCancellation(journal.request.jobID)
+            try checkCancellation(journal)
             let date = journal.transferDates[index]
             let identifier = Self.sourceDateFormatter(timeZone: sourceTimeZone).string(from: date)
             let preparedRequestedDays = journal.capturedDays.filter(\.isRequestedDate).count
@@ -604,7 +604,7 @@ final class IPhoneDirectFileExportProducer {
             )
             // Cancellation may arrive while HealthKit is awaiting its query.
             // Re-check before this task can overwrite the durable cancelled tombstone.
-            try checkCancellation(journal.request.jobID)
+            try checkCancellation(journal)
             let payload = ConnectedCorpusHealthDayPayload(
                 sourceDate: date,
                 isRequestedDate: isRequested,
@@ -837,7 +837,7 @@ final class IPhoneDirectFileExportProducer {
             )
             hasAnyRequestedData = rangeInput.hasAnyData
             if !rangeInput.records.isEmpty && rangeInput.hasAnyData {
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 let calendarTimeZoneIdentifier = originalCalendarTimeZoneIdentifier
                 let requestedRange = try effectiveSettingsSnapshot.generateRangeSummary
                     ? HealthRollupRangeRequest(
@@ -866,7 +866,7 @@ final class IPhoneDirectFileExportProducer {
                 ) != nil else {
                     throw AppleLooseDailyExportPlannerError.rustPlanningFailed
                 }
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
             }
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
                 try await sendGeneratedProgress(
@@ -879,7 +879,7 @@ final class IPhoneDirectFileExportProducer {
         } else {
             var wroteDictionary = false
             for (index, day) in journal.capturedDays.enumerated() where day.isRequestedDate {
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 let payload = try measureDirectFileSynchronousPhase("spool-decode-day") {
                     try decodeCapturedPayload(from: payloadURLs[index])
                 }
@@ -941,12 +941,12 @@ final class IPhoneDirectFileExportProducer {
                 } catch ExportError.noHealthData {
                     // A successfully captured empty day is not a failed HealthKit day.
                 }
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 _ = try await vault.exportExternalDailyRecords(
                     payload.externalDailyRecords,
                     healthSubfolder: journal.healthSubfolder
                 )
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 try await sendGeneratedProgress(
                     journal: journal,
                     day: day,
@@ -987,7 +987,7 @@ final class IPhoneDirectFileExportProducer {
         } else {
             journal.terminalNoDataDateIdentifiers = []
         }
-        try checkCancellation(journal.request.jobID)
+        try checkCancellation(journal)
         let dailyNotePaths = Set(journal.requestedDates.map {
             ExportPathPlanner.dailyNoteRelativePath(
                 settings: settings.dailyNoteInjection,
@@ -1049,7 +1049,7 @@ final class IPhoneDirectFileExportProducer {
         index _: Int,
         channel: IPhoneDirectExportConnection
     ) async throws {
-        try checkCancellation(journal.request.jobID)
+        try checkCancellation(journal)
         // Generation is a second preparation stage over the already captured spool. Keep the
         // public requested-day frontier at the durable captured count instead of restarting it
         // from one and making progress regress from total/total to 1/total.
@@ -1113,14 +1113,15 @@ final class IPhoneDirectFileExportProducer {
         maximumInFlightChunks: Int
     ) async throws {
         for descriptor in journal.partitions {
-            try checkCancellation(journal.request.jobID)
+            try checkCancellation(journal)
             try await channel.send(.transferOpen(try DirectTransferOpen(
                 session: journal.session,
                 partition: descriptor
             )))
             guard case .transferDisposition(let disposition) = try await receiveMessage(
                 channel,
-                jobID: journal.request.jobID
+                jobID: journal.request.jobID,
+                checkpoint: journal.checkpoint
             ),
             disposition.sessionID == journal.session.sessionID,
             disposition.jobID == journal.request.jobID,
@@ -1147,7 +1148,8 @@ final class IPhoneDirectFileExportProducer {
                 try await channel.send(.transferPartitionComplete(complete))
                 guard case .transferPartitionAcknowledgement(let acknowledgement) = try await receiveMessage(
                     channel,
-                    jobID: journal.request.jobID
+                    jobID: journal.request.jobID,
+                    checkpoint: journal.checkpoint
                 ), acknowledgement.accepted,
                 acknowledgement.partitionIndex == descriptor.index,
                 acknowledgement.transferID == descriptor.transferID,
@@ -1191,6 +1193,7 @@ final class IPhoneDirectFileExportProducer {
               let segment = descriptor.itemSegment else {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
+        try checkCancellation(journal)
         let staging = try stagingDirectory(journal.request.jobID)
         let url = try generatedFileURL(relativePath: file.relativePath, under: staging)
         let handle = try FileHandle(forReadingFrom: url)
@@ -1205,7 +1208,7 @@ final class IPhoneDirectFileExportProducer {
         while remaining > 0 || !inFlight.isEmpty {
             while remaining > 0,
                   inFlight.count < window {
-                try checkCancellation(journal.request.jobID)
+                try checkCancellation(journal)
                 let count = Int(min(Int64(DirectTransferLimits.chunkBytes), remaining))
                 guard let data = try handle.read(upToCount: count), data.count == count else {
                     throw IPhoneDirectFileProducerError.invalidSpool
@@ -1227,7 +1230,8 @@ final class IPhoneDirectFileExportProducer {
             let expected = inFlight.removeFirst()
             guard case .transferChunkAcknowledgement(let acknowledgement) = try await receiveMessage(
                 channel,
-                jobID: journal.request.jobID
+                jobID: journal.request.jobID,
+                checkpoint: journal.checkpoint
             ), acknowledgement.accepted,
             acknowledgement.transferID == descriptor.transferID,
             acknowledgement.sequence == expected.sequence,
@@ -1265,10 +1269,14 @@ final class IPhoneDirectFileExportProducer {
 
     private func receiveMessage(
         _ channel: IPhoneDirectExportConnection,
-        jobID: UUID
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint
     ) async throws -> DirectMessage {
         try checkCancellation(jobID)
-        let message = try await channel.receive()
+        let message: DirectMessage
+        do { message = try await checkpoint.receiveWhileOwned { try await channel.receive() } }
+        catch AppleExportJournalCheckpoint.ContinuationError.superseded { throw IPhoneDirectFileProducerError.requestChanged }
+        try checkCancellation(jobID)
         if case .cancel(let cancelledID) = message, cancelledID == jobID {
             throw IPhoneDirectFileProducerError.cancelled
         }
@@ -1537,6 +1545,16 @@ final class IPhoneDirectFileExportProducer {
             throw IPhoneDirectFileProducerError.invalidSpool
         }
         return candidate
+    }
+
+    private func validateGeneration(_ checkpoint: AppleExportJournalCheckpoint) throws {
+        do { try checkpoint.validateGeneration(fileManager: fileManager) }
+        catch { throw IPhoneDirectFileProducerError.requestChanged }
+    }
+
+    private func checkCancellation(_ journal: IPhoneDirectFileJournal) throws {
+        try checkCancellation(journal.request.jobID)
+        try validateGeneration(journal.checkpoint)
     }
 
     private func checkCancellation(_ jobID: UUID) throws {

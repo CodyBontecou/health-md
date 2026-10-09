@@ -478,6 +478,78 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: destination), bytes)
     }
 
+    func testContinuationOwnershipSurvivesProgressButRejectsReplacement() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        var original = AppleExportJournalCheckpoint()
+        try original.publish(Data("initial checkpoint".utf8), to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var progress = original
+        let bytes = Data("advanced checkpoint".utf8)
+        try progress.publish(bytes, to: destination, freshAdmission: false,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertNoThrow(try original.validateGeneration())
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertThrowsError(try original.validateGeneration()) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertNoThrow(try replacement.validateGeneration())
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    func testContinuationCannotRecreateMissingJobOrUseUnboundReceipt() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(Data("owned checkpoint".utf8), to: destination,
+            freshAdmission: true, lockURL: root.appendingPathComponent(".publication.lock"), durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        XCTAssertThrowsError(try checkpoint.validateGeneration())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+        let unbound = AppleExportJournalCheckpoint(bytes: checkpoint.bytes, generation: checkpoint.generation)
+        XCTAssertThrowsError(try unbound.validateGeneration())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+    }
+
+    @MainActor
+    func testSuspendedReceiveRejectsReplacementBeforeReturningReply() async throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        var consumedReply: Int?
+        do {
+            consumedReply = try await checkpoint.receiveWhileOwned {
+                await Task.yield()
+                try FileManager.default.removeItem(at: job)
+                try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                var replacement = AppleExportJournalCheckpoint()
+                try replacement.publish(bytes, to: destination, freshAdmission: true,
+                    lockURL: lock, durabilityRoot: root)
+                return 42
+            }
+            XCTFail("A superseded sender must not consume the pending reply")
+        } catch {
+            XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+        }
+        XCTAssertNil(consumedReply)
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
         let destination = URL(fileURLWithPath: "/tmp/Health.md Export.md")
         let uuid = UUID(uuidString: "12345678-1234-1234-1234-1234567890AB")!

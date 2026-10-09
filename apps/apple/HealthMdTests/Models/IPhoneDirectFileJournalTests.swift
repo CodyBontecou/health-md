@@ -971,6 +971,11 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
             try checkpoint.publish(bytes, to: url, freshAdmission: true,
                 lockURL: lock, durabilityRoot: parent)
             let originalOwner = try Data(contentsOf: owner)
+            try Data(repeating: 0x58, count: 4096).write(to: owner)
+            XCTAssertThrowsError(try checkpoint.validateGeneration()) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+            }
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
             let corrupt = Data("invalid synthetic ownership".utf8)
             for symbolic in [false, true] {
                 if symbolic {
@@ -1033,6 +1038,8 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         var restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: original)
         XCTAssertNil(restored.checkpoint.bytes)
         XCTAssertNil(restored.checkpoint.generation)
+        XCTAssertNil(restored.checkpoint.journalURL)
+        XCTAssertNil(restored.checkpoint.publicationLockURL)
         // Existing set-valued settings may reorder during decode. Compare receipt changes
         // on the same decoded value rather than requiring unrelated set ordering stability.
         let decodedBytes = try encoder.encode(restored)

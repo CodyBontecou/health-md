@@ -404,7 +404,7 @@ final class IPhoneDirectExportCoordinator {
             finalPartitionSHA256: current.partitions.last?.sha256
         )
         try await channel.send(.transferFinalize(finalize))
-        let finalResponse = try await receiveMessage(channel, jobID: request.jobID)
+        let finalResponse = try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
         guard case .transferFinalAcknowledgement(let acknowledgement) = finalResponse,
               acknowledgement.accepted,
               acknowledgement.sessionID == current.session.sessionID,
@@ -601,7 +601,7 @@ final class IPhoneDirectExportCoordinator {
             throw IPhoneDirectExportError.invalidSpool
         }
         for index in journal.days.count..<dates.count {
-            try checkCancellation(jobID: journal.request.jobID)
+            try checkCancellation(journal: journal)
             let date = dates[index]
             let identifier = journal.accepted.resolvedDateIdentifiers[index]
             try await sendProgress(
@@ -642,7 +642,7 @@ final class IPhoneDirectExportCoordinator {
             )
             // Cancellation may arrive while HealthKit is awaiting its query.
             // Re-check before this task can overwrite the durable cancelled tombstone.
-            try checkCancellation(jobID: journal.request.jobID)
+            try checkCancellation(journal: journal)
             let result: CanonicalRawDayResult
             // Informational omissions (a WorkoutKit plan this device cannot
             // decode) count toward the wire manifest's day-warning totals but
@@ -798,10 +798,10 @@ final class IPhoneDirectExportCoordinator {
         protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         for descriptor in journal.partitions {
-            try checkCancellation(jobID: journal.request.jobID)
+            try checkCancellation(journal: journal)
             let open = try DirectTransferOpen(session: journal.session, partition: descriptor)
             try await channel.send(.transferOpen(open))
-            let response = try await receiveMessage(channel, jobID: journal.request.jobID)
+            let response = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
             guard case .transferDisposition(let disposition) = response,
                   disposition.sessionID == journal.session.sessionID,
                   disposition.jobID == journal.request.jobID,
@@ -825,7 +825,7 @@ final class IPhoneDirectExportCoordinator {
                     partitionSHA256: descriptor.sha256
                 )
                 try await channel.send(.transferPartitionComplete(complete))
-                let completionResponse = try await receiveMessage(channel, jobID: journal.request.jobID)
+                let completionResponse = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
                 guard case .transferPartitionAcknowledgement(let acknowledgement) = completionResponse,
                       acknowledgement.accepted,
                       acknowledgement.sessionID == journal.session.sessionID,
@@ -872,6 +872,7 @@ final class IPhoneDirectExportCoordinator {
               let relativePath = day.relativePath else {
             throw IPhoneDirectExportError.invalidSpool
         }
+        try checkCancellation(journal: journal)
         let url = try jobDirectory(journal.request.jobID).appendingPathComponent(relativePath)
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
@@ -879,7 +880,7 @@ final class IPhoneDirectExportCoordinator {
         var remaining = descriptor.byteCount
         var sequence = 1
         while remaining > 0 {
-            try checkCancellation(jobID: journal.request.jobID)
+            try checkCancellation(journal: journal)
             let count = Int(min(Int64(DirectTransferLimits.chunkBytes), remaining))
             guard let data = try handle.read(upToCount: count), data.count == count else {
                 throw IPhoneDirectExportError.invalidSpool
@@ -893,7 +894,7 @@ final class IPhoneDirectExportCoordinator {
             try await channel.sendBinaryTransferFrame(
                 try protocolAuthority.encodeTransferChunk(chunk)
             )
-            let response = try await receiveMessage(channel, jobID: journal.request.jobID)
+            let response = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
             guard case .transferChunkAcknowledgement(let acknowledgement) = response,
                   acknowledgement.accepted,
                   acknowledgement.transferID == chunk.transferID,
@@ -927,10 +928,14 @@ final class IPhoneDirectExportCoordinator {
 
     private func receiveMessage(
         _ channel: IPhoneDirectExportConnection,
-        jobID: UUID
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint
     ) async throws -> DirectMessage {
         try checkCancellation(jobID: jobID)
-        let message = try await channel.receive()
+        let message: DirectMessage
+        do { message = try await checkpoint.receiveWhileOwned { try await channel.receive() } }
+        catch AppleExportJournalCheckpoint.ContinuationError.superseded { throw IPhoneDirectExportError.requestChanged }
+        try checkCancellation(jobID: jobID)
         if case .cancel(let cancelledID) = message, cancelledID == jobID {
             throw IPhoneDirectExportError.cancelled
         }
@@ -1110,6 +1115,16 @@ final class IPhoneDirectExportCoordinator {
                 $0 + $1.resolvedDegradingFailureCount
             }
         )
+    }
+
+    private func validateGeneration(_ checkpoint: AppleExportJournalCheckpoint) throws {
+        do { try checkpoint.validateGeneration(fileManager: fileManager) }
+        catch { throw IPhoneDirectExportError.requestChanged }
+    }
+
+    private func checkCancellation(journal: IPhoneDirectExportJournal) throws {
+        try checkCancellation(jobID: journal.request.jobID)
+        try validateGeneration(journal.checkpoint)
     }
 
     private func checkCancellation(jobID: UUID) throws {

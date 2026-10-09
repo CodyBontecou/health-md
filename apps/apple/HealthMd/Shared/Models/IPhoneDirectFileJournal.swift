@@ -277,6 +277,32 @@ struct IPhoneDirectFileJournal: Codable {
 nonisolated struct AppleExportJournalCheckpoint {
     var bytes: Data?
     var generation: UUID?
+    var journalURL: URL?
+    var publicationLockURL: URL?
+
+    /// A bounded continuation check: checkpoint progress may advance within this generation.
+    /// Never creates a missing job directory or refreshes this value's ownership.
+    func validateGeneration(fileManager: FileManager = .default) throws {
+        guard bytes != nil, let generation, let journalURL, let publicationLockURL else {
+            throw POSIXError(.EAGAIN)
+        }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: publicationLockURL)
+        defer { transaction.close() }
+        guard (try? fileManager.attributesOfItem(atPath: journalURL.path)[.type] as? FileAttributeType) == .typeRegular,
+              try Self.readGeneration(for: journalURL, fileManager: fileManager) == generation else {
+            throw POSIXError(.EAGAIN)
+        }
+    }
+
+    enum ContinuationError: Error, Equatable { case superseded }
+
+    @MainActor
+    func receiveWhileOwned<Result>(operation: @MainActor () async throws -> Result) async throws -> Result {
+        do { try validateGeneration() } catch { throw ContinuationError.superseded }
+        let result = try await operation()
+        do { try validateGeneration() } catch { throw ContinuationError.superseded }
+        return result
+    }
 
     fileprivate static func generationURL(for destination: URL) -> URL {
         destination.deletingLastPathComponent().appendingPathComponent(".journal-generation")
@@ -292,8 +318,15 @@ nonisolated struct AppleExportJournalCheckpoint {
             throw POSIXError(.EAGAIN)
         }
         guard attributes[.type] as? FileAttributeType == .typeRegular,
-              let data = try? Data(contentsOf: url), data.count == 36,
-              let text = String(data: data, encoding: .utf8),
+              (attributes[.size] as? NSNumber)?.uint64Value == 36 else { throw POSIXError(.EAGAIN) }
+        let data: Data
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            guard let read = try handle.read(upToCount: 37) else { throw POSIXError(.EAGAIN) }
+            data = read
+        } catch { throw POSIXError(.EAGAIN) }
+        guard data.count == 36, let text = String(data: data, encoding: .utf8),
               let generation = UUID(uuidString: text), generation.uuidString.lowercased() == text else {
             throw POSIXError(.EAGAIN)
         }
@@ -353,6 +386,8 @@ nonisolated struct AppleExportJournalCheckpoint {
             directoryDurability: .required(upTo: durabilityRoot), directorySync: directorySync)
         bytes = data
         generation = acceptedGeneration
+        journalURL = destination
+        publicationLockURL = lockURL
     }
 }
 
@@ -379,7 +414,8 @@ enum AppleExportJournalRecovery {
                 ?? AppleExportJournalCheckpoint.createGeneration(for: url, lockURL: lockURL,
                     durabilityRoot: durabilityRoot, fileManager: fileManager,
                     attributes: attributes, directorySync: directorySync)
-            return (journal, AppleExportJournalCheckpoint(bytes: bytes, generation: generation))
+            return (journal, AppleExportJournalCheckpoint(bytes: bytes, generation: generation,
+                journalURL: url, publicationLockURL: lockURL))
         } catch {
             throw RecoveryError.unreadableJournal
         }
