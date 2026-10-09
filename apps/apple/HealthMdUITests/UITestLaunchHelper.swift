@@ -14,25 +14,42 @@ enum UITestLaunchHelper {
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
-        let tab = app.tabBars.buttons["Settings"]
+        _ = openTab("Settings", in: app, file: file, line: line)
+    }
+
+    static func openScheduleTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        openTab("Schedule", in: app, file: file, line: line)
+    }
+
+    private static func openTab(
+        _ name: String,
+        in app: XCUIApplication,
+        file: StaticString,
+        line: UInt
+    ) -> Bool {
+        let tab = app.tabBars.buttons[name]
         let hittable = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "exists == true AND isHittable == true"),
             object: tab
         )
         guard XCTWaiter().wait(for: [hittable], timeout: 10) == .completed else {
-            XCTFail("Settings tab must be hittable before navigation", file: file, line: line)
-            return
+            XCTFail("\(name) tab must be hittable before navigation", file: file, line: line)
+            return false
         }
         if !tab.isSelected { tab.tap() }
         let selected = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "isSelected == true"),
             object: tab
         )
-        XCTAssertEqual(
-            XCTWaiter().wait(for: [selected], timeout: 10), .completed,
-            "Settings tab must become selected before inspecting Settings content",
-            file: file, line: line
-        )
+        guard XCTWaiter().wait(for: [selected], timeout: 10) == .completed else {
+            XCTFail("\(name) tab must become selected before inspecting its content", file: file, line: line)
+            return false
+        }
+        return true
     }
 
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)

@@ -252,9 +252,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
 
         let card = app.staticTexts["Profile Schedules"]
         XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")
