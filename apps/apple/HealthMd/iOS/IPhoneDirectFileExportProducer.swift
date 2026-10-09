@@ -85,7 +85,7 @@ final class IPhoneDirectFileExportProducer {
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
         externalIntegrations: ExternalIntegrationDailyRecordProviding?,
-        didAcquireOwnership: (AppleExportJournalCheckpoint) -> Void
+        didAcquireOwnership: (AppleExportJournalCheckpoint) throws -> HealthKitQueryExecutionController
     ) async throws -> Bool {
         #if DEBUG
         let jobPerformanceSpan = ExportPerformanceInstrumentation.beginSpan(
@@ -157,159 +157,161 @@ final class IPhoneDirectFileExportProducer {
             journal = prepared
         }
 
-        didAcquireOwnership(journal.checkpoint)
-        try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
-        var current = journal
-        current.state = "preparing"
-        if current.capturedDays.count < current.transferDates.count {
-            current = try await measureDirectFilePhase("capture") {
-                try await captureRemaining(
-                    current,
-                    channel: channel,
-                    healthKitManager: healthKitManager,
-                    externalIntegrations: externalIntegrations
-                )
-            }
-        }
-        if current.capturedDays.contains(where: { !$0.historyFactsRecorded }) {
-            current = try measureDirectFileSynchronousPhase("history-backfill") {
-                try backfillCapturedDayHistoryFacts(current)
-            }
-        }
-        if !current.generationCompleted {
-            current = try await measureDirectFilePhase("render") {
-                try await generateFiles(current, channel: channel)
-            }
-        }
-        if current.partitions.isEmpty,
-           current.generatedFiles.contains(where: { $0.manifest.byteCount > 0 }) {
-            current.partitions = try measureDirectFileSynchronousPhase("partition-build") {
-                try buildPartitions(current)
-            }
-            current.updatedAt = Date()
-            try saveJournal(&current)
-        }
-        current.state = "transferring"
-        current.updatedAt = Date()
-        try saveJournal(&current)
-
-        try await sendMessage(.transferSession(current.session), journal: current, channel: channel)
-        for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
-            try await sendMessage(.fileManifest(file.manifest), journal: current, channel: channel)
-        }
-        try await measureDirectFilePhase("transfer") {
-            try await transferPartitions(
-                &current,
-                channel: channel,
-                protocolAuthority: protocolAuthority,
-                maximumInFlightChunks: negotiation.maximumInFlightChunks
-            )
-        }
-        let reconciliation = try Self.terminalReconciliation(for: current)
-        let failedDates = reconciliation.retryableFailedDateIdentifiers
-        let successCount = reconciliation.successCount
-        let outcome = try DirectExportOutcome(
-            status: reconciliation.isFullSuccess ? "success" : "partial_success",
-            successCount: successCount,
-            totalCount: current.requestedDates.count,
-            failedDateIdentifiers: failedDates
-        )
-        let finalize = try DirectTransferFinalize(
-            sessionID: current.session.sessionID,
-            jobID: request.jobID,
-            requestFingerprint: current.session.requestFingerprint,
-            totalPartitions: current.partitions.count,
-            totalBytes: current.partitions.reduce(0) { $0 + $1.byteCount },
-            finalPartitionSHA256: current.partitions.last?.sha256,
-            outcome: outcome
-        )
-        let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
-            try await sendMessage(.transferFinalize(finalize), journal: current, channel: channel)
-            return try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
-        }
-        guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
-        acknowledgement.accepted,
-        acknowledgement.sessionID == current.session.sessionID,
-        acknowledgement.jobID == request.jobID,
-        acknowledgement.totalPartitions == finalize.totalPartitions,
-        acknowledgement.totalBytes == finalize.totalBytes,
-        acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256 else {
-            throw IPhoneDirectFileProducerError.unexpectedResponse
-        }
-
-        let completionOwnership = current.checkpoint
-        guard let completionIdentity = completionOwnership.completionIdentity else {
-            throw IPhoneDirectFileProducerError.requestChanged
-        }
-        do {
-            try completionOwnership.withCheckpointOwnership {
-                current.state = "completed"
-                current.updatedAt = Date()
-                let shouldRecordCompletion = !current.completionRecorded
-                if shouldRecordCompletion {
-                    if successCount > 0 {
-                        try PurchaseManager.shared.recordExportUse(jobID: completionIdentity)
-                    }
-                    let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                        guard day.isRequestedDate, !day.succeeded else { return nil }
-                        return FailedDateDetail(
-                            date: day.sourceDate,
-                            reason: day.failureReason ?? .healthKitError
-                        )
-                    }
-                    let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
-                    let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                        guard day.isRequestedDate,
-                              terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
-                        return FailedDateDetail(
-                            date: day.sourceDate,
-                            reason: .noHealthData,
-                            errorDetails: "No roll-up summary data was available for the selected period."
-                        )
-                    }
-                    // Day-level informational notes ride alongside range-level derived
-                    // warnings so Export History shows them as export notes while the
-                    // status stays a full success (they never degrade it).
-                    var recordedPartialFailures = current.derivedOutputPartialFailures
-                    for day in current.capturedDays where day.isRequestedDate {
-                        for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
-                            recordedPartialFailures.append(note)
-                        }
-                    }
-                    let result = ExportOrchestrator.ExportResult(
-                        successCount: successCount,
-                        totalCount: current.requestedDates.count,
-                        failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
-                        partialFailures: recordedPartialFailures,
-                        formatsPerDate: reconciliation.effectiveFormatsPerDate,
-                        completedDates: terminalNoDataDetails.map(\.date)
+        let queryController = try didAcquireOwnership(journal.checkpoint)
+        return try await HealthKitQueryExecutionController.withController(queryController) {
+            try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
+            var current = journal
+            current.state = "preparing"
+            if current.capturedDays.count < current.transferDates.count {
+                current = try await measureDirectFilePhase("capture") {
+                    try await captureRemaining(
+                        current,
+                        channel: channel,
+                        healthKitManager: healthKitManager,
+                        externalIntegrations: externalIntegrations
                     )
-                    ExportOrchestrator.recordResult(
-                        result,
-                        source: .macAgent,
-                        dateRangeStart: current.requestedDates.first ?? request.createdAt,
-                        dateRangeEnd: current.requestedDates.last ?? request.createdAt,
-                        targetLabel: destination.rootPath,
-                        fileCount: current.generatedFiles.count,
-                        idempotencyKey: completionIdentity,
-                        appleExportEnginePin: current.appleExportEnginePin,
-                        operationDetails: historyOperationDetails(for: current)
-                    )
-                    current.completionRecorded = true
                 }
-                // Both side effects use the retained completion identity, so a crash before this journal
-                // save retries them without double charging or duplicating history.
+            }
+            if current.capturedDays.contains(where: { !$0.historyFactsRecorded }) {
+                current = try measureDirectFileSynchronousPhase("history-backfill") {
+                    try backfillCapturedDayHistoryFacts(current)
+                }
+            }
+            if !current.generationCompleted {
+                current = try await measureDirectFilePhase("render") {
+                    try await generateFiles(current, channel: channel)
+                }
+            }
+            if current.partitions.isEmpty,
+               current.generatedFiles.contains(where: { $0.manifest.byteCount > 0 }) {
+                current.partitions = try measureDirectFileSynchronousPhase("partition-build") {
+                    try buildPartitions(current)
+                }
+                current.updatedAt = Date()
                 try saveJournal(&current)
             }
-        } catch let error as POSIXError where error.code == .EAGAIN {
-            throw IPhoneDirectFileProducerError.requestChanged
+            current.state = "transferring"
+            current.updatedAt = Date()
+            try saveJournal(&current)
+
+            try await sendMessage(.transferSession(current.session), journal: current, channel: channel)
+            for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
+                try await sendMessage(.fileManifest(file.manifest), journal: current, channel: channel)
+            }
+            try await measureDirectFilePhase("transfer") {
+                try await transferPartitions(
+                    &current,
+                    channel: channel,
+                    protocolAuthority: protocolAuthority,
+                    maximumInFlightChunks: negotiation.maximumInFlightChunks
+                )
+            }
+            let reconciliation = try Self.terminalReconciliation(for: current)
+            let failedDates = reconciliation.retryableFailedDateIdentifiers
+            let successCount = reconciliation.successCount
+            let outcome = try DirectExportOutcome(
+                status: reconciliation.isFullSuccess ? "success" : "partial_success",
+                successCount: successCount,
+                totalCount: current.requestedDates.count,
+                failedDateIdentifiers: failedDates
+            )
+            let finalize = try DirectTransferFinalize(
+                sessionID: current.session.sessionID,
+                jobID: request.jobID,
+                requestFingerprint: current.session.requestFingerprint,
+                totalPartitions: current.partitions.count,
+                totalBytes: current.partitions.reduce(0) { $0 + $1.byteCount },
+                finalPartitionSHA256: current.partitions.last?.sha256,
+                outcome: outcome
+            )
+            let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
+                try await sendMessage(.transferFinalize(finalize), journal: current, channel: channel)
+                return try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
+            }
+            guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
+            acknowledgement.accepted,
+            acknowledgement.sessionID == current.session.sessionID,
+            acknowledgement.jobID == request.jobID,
+            acknowledgement.totalPartitions == finalize.totalPartitions,
+            acknowledgement.totalBytes == finalize.totalBytes,
+            acknowledgement.finalPartitionSHA256 == finalize.finalPartitionSHA256 else {
+                throw IPhoneDirectFileProducerError.unexpectedResponse
+            }
+
+            let completionOwnership = current.checkpoint
+            guard let completionIdentity = completionOwnership.completionIdentity else {
+                throw IPhoneDirectFileProducerError.requestChanged
+            }
+            do {
+                try completionOwnership.withCheckpointOwnership {
+                    current.state = "completed"
+                    current.updatedAt = Date()
+                    let shouldRecordCompletion = !current.completionRecorded
+                    if shouldRecordCompletion {
+                        if successCount > 0 {
+                            try PurchaseManager.shared.recordExportUse(jobID: completionIdentity)
+                        }
+                        let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                            guard day.isRequestedDate, !day.succeeded else { return nil }
+                            return FailedDateDetail(
+                                date: day.sourceDate,
+                                reason: day.failureReason ?? .healthKitError
+                            )
+                        }
+                        let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
+                        let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                            guard day.isRequestedDate,
+                                  terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
+                            return FailedDateDetail(
+                                date: day.sourceDate,
+                                reason: .noHealthData,
+                                errorDetails: "No roll-up summary data was available for the selected period."
+                            )
+                        }
+                        // Day-level informational notes ride alongside range-level derived
+                        // warnings so Export History shows them as export notes while the
+                        // status stays a full success (they never degrade it).
+                        var recordedPartialFailures = current.derivedOutputPartialFailures
+                        for day in current.capturedDays where day.isRequestedDate {
+                            for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                                recordedPartialFailures.append(note)
+                            }
+                        }
+                        let result = ExportOrchestrator.ExportResult(
+                            successCount: successCount,
+                            totalCount: current.requestedDates.count,
+                            failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
+                            partialFailures: recordedPartialFailures,
+                            formatsPerDate: reconciliation.effectiveFormatsPerDate,
+                            completedDates: terminalNoDataDetails.map(\.date)
+                        )
+                        ExportOrchestrator.recordResult(
+                            result,
+                            source: .macAgent,
+                            dateRangeStart: current.requestedDates.first ?? request.createdAt,
+                            dateRangeEnd: current.requestedDates.last ?? request.createdAt,
+                            targetLabel: destination.rootPath,
+                            fileCount: current.generatedFiles.count,
+                            idempotencyKey: completionIdentity,
+                            appleExportEnginePin: current.appleExportEnginePin,
+                            operationDetails: historyOperationDetails(for: current)
+                        )
+                        current.completionRecorded = true
+                    }
+                    // Both side effects use the retained completion identity, so a crash before this journal
+                    // save retries them without double charging or duplicating history.
+                    try saveJournal(&current)
+                }
+            } catch let error as POSIXError where error.code == .EAGAIN {
+                throw IPhoneDirectFileProducerError.requestChanged
+            }
+            try await sendMessage(.completionConfirmed(jobID: request.jobID), journal: current, channel: channel)
+            externalExportSucceeded = true
+            #if DEBUG
+            jobPerformanceOutcome = .success
+            #endif
+            return reconciliation.isFullSuccess
         }
-        try await sendMessage(.completionConfirmed(jobID: request.jobID), journal: current, channel: channel)
-        externalExportSucceeded = true
-        #if DEBUG
-        jobPerformanceOutcome = .success
-        #endif
-        return reconciliation.isFullSuccess
     }
 
     private func prepare(

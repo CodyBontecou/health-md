@@ -989,6 +989,70 @@ final class ProductionAdapterTests: XCTestCase {
 #if os(iOS)
 final class DirectCoordinatorAdmissionTests: XCTestCase {
     @MainActor
+    func testAcceptedGenerationRetainsQueryBudgetButReplacementGetsFreshController() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var accepted = AppleExportJournalCheckpoint()
+        try accepted.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let original = accepted
+        let coordinator = IPhoneDirectExportCoordinator()
+        let jobID = UUID()
+        let configuration = HealthKitQueryExecutionConfiguration(deadline: .milliseconds(20),
+            slowQueryThreshold: .milliseconds(10), maximumOutstandingQueries: 1)
+        let controller = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: accepted, fallback: HealthKitQueryExecutionController(configuration: configuration))
+        let heldWorker = DirectAdmissionSendGate()
+        defer { Task { await heldWorker.release() } }
+        do {
+            _ = try await HealthKitQueryExecutionController.withController(controller) {
+                try await executeHealthKitQuery(operation: "synthetic-generation-query", typeIdentifier: "synthetic") {
+                    await heldWorker.block()
+                    return 1
+                }
+            }
+            XCTFail("Expected the physically held query to time out")
+        } catch {
+            XCTAssertEqual((error as NSError).code, HealthKitQueryExecutionError.Code.timedOut.rawValue)
+        }
+        try accepted.publish(Data("same-generation progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        let resumed = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: accepted, fallback: HealthKitQueryExecutionController())
+        XCTAssertTrue(resumed === controller)
+        XCTAssertEqual(resumed.snapshot().unresolvedQueries, 1)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let fresh = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: replacement, fallback: HealthKitQueryExecutionController())
+        XCTAssertFalse(fresh === controller)
+        XCTAssertEqual(fresh.snapshot().unresolvedQueries, 0)
+        do {
+            let result = try await HealthKitQueryExecutionController.withController(fresh) {
+                try await executeHealthKitQuery(operation: "synthetic-generation-query", typeIdentifier: "synthetic") { 7 }
+            }
+            XCTAssertEqual(result, 7)
+        } catch {
+            XCTFail("A replacement must not inherit the old query circuit: \(error)")
+        }
+        coordinator.releaseQueryController(jobID: jobID, controller: controller)
+        let retained = try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: replacement, fallback: HealthKitQueryExecutionController())
+        XCTAssertTrue(retained === fresh, "Old cleanup cannot remove the replacement controller")
+        XCTAssertThrowsError(try coordinator.queryControllerForAcceptedGeneration(jobID: jobID,
+            ownership: original, fallback: HealthKitQueryExecutionController()))
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        await heldWorker.release()
+    }
+
+    @MainActor
     func testReplacedGenerationCannotPublishTerminalActivityButCurrentProgressCanFinish() throws {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
