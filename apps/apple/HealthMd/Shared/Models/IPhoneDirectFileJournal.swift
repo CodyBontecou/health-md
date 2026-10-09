@@ -272,11 +272,47 @@ struct IPhoneDirectFileJournal: Codable {
     }
 }
 
-/// Shared disk admission for direct and connected exports. Nil means
-/// new work; a retained journal must never silently become a new operation.
-/// A value-owned read image. It is deliberately excluded from journal Codable keys.
+/// A value-owned read image and private direct-job generation. Neither enters journal JSON.
+/// A retained journal cannot silently become a fresh operation or a replacement generation.
 nonisolated struct AppleExportJournalCheckpoint {
     var bytes: Data?
+    var generation: UUID?
+
+    fileprivate static func generationURL(for destination: URL) -> URL {
+        destination.deletingLastPathComponent().appendingPathComponent(".journal-generation")
+    }
+
+    fileprivate static func readGeneration(for destination: URL, fileManager: FileManager) throws -> UUID? {
+        let url = generationURL(for: destination)
+        let attributes: [FileAttributeKey: Any]
+        do { attributes = try fileManager.attributesOfItem(atPath: url.path) }
+        catch {
+            let failure = error as NSError
+            if failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError { return nil }
+            throw POSIXError(.EAGAIN)
+        }
+        guard attributes[.type] as? FileAttributeType == .typeRegular,
+              let data = try? Data(contentsOf: url), data.count == 36,
+              let text = String(data: data, encoding: .utf8),
+              let generation = UUID(uuidString: text), generation.uuidString.lowercased() == text else {
+            throw POSIXError(.EAGAIN)
+        }
+        return generation
+    }
+
+    fileprivate static func createGeneration(
+        for destination: URL, lockURL: URL, durabilityRoot: URL,
+        fileManager: FileManager, attributes: [FileAttributeKey: Any]?,
+        directorySync: (URL) throws -> Void
+    ) throws -> UUID {
+        let generation = UUID()
+        try AtomicFileWriter.writeData(Data(generation.uuidString.lowercased().utf8),
+            to: generationURL(for: destination), fileManager: fileManager,
+            attributes: attributes ?? [.posixPermissions: 0o600], commitPolicy: .requireAbsent,
+            transactionLockURL: lockURL, directoryDurability: .required(upTo: durabilityRoot),
+            directorySync: directorySync)
+        return generation
+    }
 
     mutating func publish(
         _ data: Data, to destination: URL,
@@ -284,23 +320,71 @@ nonisolated struct AppleExportJournalCheckpoint {
         lockURL: URL,
         durabilityRoot: URL,
         fileManager: FileManager = .default,
-        attributes: [FileAttributeKey: Any]? = nil
+        attributes: [FileAttributeKey: Any]? = nil,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
     ) throws {
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
         let policy: AtomicFileWriter.CommitPolicy
+        let acceptedGeneration: UUID
         if freshAdmission {
+            do {
+                _ = try fileManager.attributesOfItem(atPath: destination.path)
+                throw POSIXError(.EEXIST)
+            } catch {
+                let failure = error as NSError
+                guard failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError else { throw error }
+            }
+            // A partial admission retains its sidecar; it cannot silently become fresh work.
+            acceptedGeneration = try Self.createGeneration(for: destination, lockURL: lockURL,
+                durabilityRoot: durabilityRoot, fileManager: fileManager,
+                attributes: attributes, directorySync: directorySync)
             policy = .requireAbsent
         } else {
-            guard let bytes else { throw POSIXError(.EAGAIN) }
+            guard let bytes, let generation,
+                  try Self.readGeneration(for: destination, fileManager: fileManager) == generation else {
+                throw POSIXError(.EAGAIN)
+            }
+            acceptedGeneration = generation
             policy = .replaceIfUnchanged(bytes)
         }
         try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
             attributes: attributes, commitPolicy: policy, transactionLockURL: lockURL,
-            directoryDurability: .required(upTo: durabilityRoot))
+            directoryDurability: .required(upTo: durabilityRoot), directorySync: directorySync)
         bytes = data
+        generation = acceptedGeneration
     }
 }
 
 enum AppleExportJournalRecovery {
+    /// Bind decoded bytes and auxiliary ownership while holding one publication transaction.
+    /// Legacy journals receive a sidecar without rewriting their JSON.
+    static func loadOwned<Journal: Decodable>(
+        at url: URL, lockURL: URL, durabilityRoot: URL,
+        fileManager: FileManager = .default,
+        decoder: JSONDecoder? = nil,
+        attributes: [FileAttributeKey: Any]? = nil,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory,
+        isSupported: (Journal) -> Bool
+    ) throws -> (journal: Journal, checkpoint: AppleExportJournalCheckpoint)? {
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
+        var bytes: Data?
+        guard let journal: Journal = try load(at: url, fileManager: fileManager,
+            decoder: decoder, directoryDurability: .required(upTo: durabilityRoot),
+            directorySync: directorySync, didLoadBytes: { bytes = $0 }, isSupported: isSupported),
+              let bytes else { return nil }
+        do {
+            let generation = try AppleExportJournalCheckpoint.readGeneration(for: url, fileManager: fileManager)
+                ?? AppleExportJournalCheckpoint.createGeneration(for: url, lockURL: lockURL,
+                    durabilityRoot: durabilityRoot, fileManager: fileManager,
+                    attributes: attributes, directorySync: directorySync)
+            return (journal, AppleExportJournalCheckpoint(bytes: bytes, generation: generation))
+        } catch {
+            throw RecoveryError.unreadableJournal
+        }
+    }
+
     private struct DirectExpiryProbe: Decodable {
         struct Request: Decodable { let createdAt: Date }
         let request: Request

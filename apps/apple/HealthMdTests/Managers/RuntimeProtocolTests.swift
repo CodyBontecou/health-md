@@ -454,6 +454,30 @@ final class FileSystemAccessingTests: XCTestCase {
 
 final class AtomicFileWriterTests: XCTestCase {
 
+    func testDirectCheckpointRejectsByteIdenticalReplacementGeneration() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var stale = AppleExportJournalCheckpoint()
+        try stale.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertNotNil(stale.generation)
+        XCTAssertNotEqual(stale.generation, replacement.generation)
+        XCTAssertThrowsError(try stale.publish(Data("stale paused checkpoint".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
         let destination = URL(fileURLWithPath: "/tmp/Health.md Export.md")
         let uuid = UUID(uuidString: "12345678-1234-1234-1234-1234567890AB")!
@@ -598,7 +622,7 @@ final class AtomicFileWriterTests: XCTestCase {
         }
         XCTAssertEqual(try Data(contentsOf: destination), paused)
         XCTAssertEqual(stale.bytes, original)
-        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination))
+        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination), generation: independent.generation)
         let completed = Data("resumed-completion".utf8)
         try resumed.publish(completed, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
         XCTAssertEqual(resumed.bytes, completed)

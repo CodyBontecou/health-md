@@ -932,15 +932,107 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         }
     }
 
+    func testOwnedLegacyRecoveryPreservesJournalBytesAndReusesPrivateGeneration() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            try bytes.write(to: url)
+            let first = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            let second = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertNotNil(first.checkpoint.generation)
+            XCTAssertEqual(first.checkpoint.generation, second.checkpoint.generation)
+            XCTAssertEqual(first.checkpoint.bytes, bytes)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            let owner = job.appendingPathComponent(".journal-generation")
+            XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: owner.path)[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        }
+    }
+
+    func testCorruptOrSymbolicOwnershipCannotRefreshReceiptOrReplaceJournal() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let owner = job.appendingPathComponent(".journal-generation")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent)
+            let originalOwner = try Data(contentsOf: owner)
+            let corrupt = Data("invalid synthetic ownership".utf8)
+            for symbolic in [false, true] {
+                if symbolic {
+                    try FileManager.default.removeItem(at: owner)
+                    let target = parent.appendingPathComponent("owner-target")
+                    try originalOwner.write(to: target)
+                    try FileManager.default.createSymbolicLink(at: owner, withDestinationURL: target)
+                } else { try corrupt.write(to: owner) }
+                XCTAssertThrowsError(try AppleExportJournalRecovery.loadOwned(at: url,
+                    lockURL: lock, durabilityRoot: parent,
+                    isSupported: { (_: IPhoneDirectFileJournal) in true })) {
+                    XCTAssertEqual($0.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+                }
+                XCTAssertThrowsError(try checkpoint.publish(Data("stale update".utf8), to: url,
+                    freshAdmission: false, lockURL: lock, durabilityRoot: parent)) {
+                    XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+                }
+                XCTAssertEqual(try Data(contentsOf: url), bytes)
+                XCTAssertEqual(try Data(contentsOf: owner), symbolic ? originalOwner : corrupt)
+            }
+        }
+    }
+
+    func testInterruptedGenerationAdmissionRetainsMarkerAndCannotBecomeFreshCapture() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            var checkpoint = AppleExportJournalCheckpoint()
+            XCTAssertThrowsError(try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent, directorySync: { _ in throw POSIXError(.EIO) }))
+            XCTAssertNil(checkpoint.bytes)
+            XCTAssertNil(checkpoint.generation)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+            let owner = job.appendingPathComponent(".journal-generation")
+            let retained = try Data(contentsOf: owner)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertThrowsError(try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent)) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+            }
+            XCTAssertEqual(try Data(contentsOf: owner), retained)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
     func testGeneratedJournalReadReceiptNeverChangesSerializedBytesOrRestoresFromJSON() throws {
         var journal = try makeJournal()
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
         let original = try encoder.encode(journal)
-        journal.checkpoint = AppleExportJournalCheckpoint(bytes: Data("private-read-image".utf8))
+        journal.checkpoint = AppleExportJournalCheckpoint(bytes: Data("private-read-image".utf8), generation: UUID())
         XCTAssertEqual(try encoder.encode(journal), original)
         var restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: original)
         XCTAssertNil(restored.checkpoint.bytes)
+        XCTAssertNil(restored.checkpoint.generation)
         // Existing set-valued settings may reorder during decode. Compare receipt changes
         // on the same decoded value rather than requiring unrelated set ordering stability.
         let decodedBytes = try encoder.encode(restored)

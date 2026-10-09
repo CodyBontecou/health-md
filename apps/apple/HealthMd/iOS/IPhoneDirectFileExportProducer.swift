@@ -1595,18 +1595,19 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
-        var bytes: Data?
-        var journal: IPhoneDirectFileJournal? = try AppleExportJournalRecovery.load(
-            at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
-            directoryDurability: .required(upTo: try fileManager.url(
-                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)),
-            didLoadBytes: { bytes = $0 },
-            isSupported: { journal in
-                journal.request.jobID == jobID && (IPhoneDirectFileJournal.isSupportedVersion(journal.version))
-            }
-        )
-        journal?.checkpoint = AppleExportJournalCheckpoint(bytes: bytes)
-        return journal
+        let support = try fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let saved: (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? =
+            try AppleExportJournalRecovery.loadOwned(
+                at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+                lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
+                durabilityRoot: support, fileManager: fileManager,
+                attributes: [.posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                isSupported: { journal in journal.request.jobID == jobID && IPhoneDirectFileJournal.isSupportedVersion(journal.version) })
+        guard var saved else { return nil }
+        saved.journal.checkpoint = saved.checkpoint
+        return saved.journal
     }
 
     private func decodeCapturedPayload(
