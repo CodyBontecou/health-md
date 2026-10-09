@@ -427,62 +427,69 @@ final class IPhoneDirectExportCoordinator {
             throw IPhoneDirectExportError.unexpectedResponse
         }
 
-        current.state = .completed
-        current.updatedAt = Date()
-        let successCount = current.days.filter {
-            !["failed", "cancelled", "missing"].contains($0.manifest.status)
-        }.count
-        let shouldRecordCompletion = !current.completionRecorded
-        if shouldRecordCompletion {
-            if successCount > 0 {
-                try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
-            }
-            let dates = sourceDates(
-                current.accepted.resolvedDateIdentifiers,
-                timeZoneIdentifier: current.accepted.sourceTimeZoneIdentifier
-            )
-            let failedStatuses = Set(["failed", "cancelled", "missing"])
-            let failedDateDetails = current.days.compactMap { day -> FailedDateDetail? in
-                guard failedStatuses.contains(day.manifest.status),
-                      let date = sourceDates(
-                        [day.manifest.date],
+        let completionOwnership = current.checkpoint
+        do {
+            try completionOwnership.withCheckpointOwnership {
+                current.state = .completed
+                current.updatedAt = Date()
+                let successCount = current.days.filter {
+                    !["failed", "cancelled", "missing"].contains($0.manifest.status)
+                }.count
+                let shouldRecordCompletion = !current.completionRecorded
+                if shouldRecordCompletion {
+                    if successCount > 0 {
+                        try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+                    }
+                    let dates = sourceDates(
+                        current.accepted.resolvedDateIdentifiers,
                         timeZoneIdentifier: current.accepted.sourceTimeZoneIdentifier
-                      ).first else { return nil }
-                let reason = day.manifest.failureCode
-                    .flatMap(ExportFailureReason.init(rawValue:)) ?? .healthKitError
-                return FailedDateDetail(date: date, reason: reason)
-            }
-            // Day-level informational notes ride in the recorded result so
-            // Export History shows them as export notes while the status stays
-            // a full success (they never degrade it).
-            var recordedPartialFailures: [ExportPartialFailure] = []
-            for day in current.days {
-                for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
-                    recordedPartialFailures.append(note)
+                    )
+                    let failedStatuses = Set(["failed", "cancelled", "missing"])
+                    let failedDateDetails = current.days.compactMap { day -> FailedDateDetail? in
+                        guard failedStatuses.contains(day.manifest.status),
+                              let date = sourceDates(
+                                [day.manifest.date],
+                                timeZoneIdentifier: current.accepted.sourceTimeZoneIdentifier
+                              ).first else { return nil }
+                        let reason = day.manifest.failureCode
+                            .flatMap(ExportFailureReason.init(rawValue:)) ?? .healthKitError
+                        return FailedDateDetail(date: date, reason: reason)
+                    }
+                    // Day-level informational notes ride in the recorded result so
+                    // Export History shows them as export notes while the status stays
+                    // a full success (they never degrade it).
+                    var recordedPartialFailures: [ExportPartialFailure] = []
+                    for day in current.days {
+                        for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                            recordedPartialFailures.append(note)
+                        }
+                    }
+                    let result = ExportOrchestrator.ExportResult(
+                        successCount: successCount,
+                        totalCount: current.days.count,
+                        failedDateDetails: failedDateDetails,
+                        partialFailures: recordedPartialFailures,
+                        formatsPerDate: 0
+                    )
+                    ExportOrchestrator.recordResult(
+                        result,
+                        source: .macAgent,
+                        dateRangeStart: dates.first ?? request.createdAt,
+                        dateRangeEnd: dates.last ?? request.createdAt,
+                        targetLabel: "Health.md CLI",
+                        fileCount: 0,
+                        idempotencyKey: request.jobID,
+                        operationDetails: historyOperationDetails(for: current)
+                    )
+                    current.completionRecorded = true
                 }
+                // Both side effects are keyed by job ID, so a crash before this journal
+                // save retries them without double charging or duplicating history.
+                try saveJournal(&current)
             }
-            let result = ExportOrchestrator.ExportResult(
-                successCount: successCount,
-                totalCount: current.days.count,
-                failedDateDetails: failedDateDetails,
-                partialFailures: recordedPartialFailures,
-                formatsPerDate: 0
-            )
-            ExportOrchestrator.recordResult(
-                result,
-                source: .macAgent,
-                dateRangeStart: dates.first ?? request.createdAt,
-                dateRangeEnd: dates.last ?? request.createdAt,
-                targetLabel: "Health.md CLI",
-                fileCount: 0,
-                idempotencyKey: request.jobID,
-                operationDetails: historyOperationDetails(for: current)
-            )
-            current.completionRecorded = true
+        } catch let error as POSIXError where error.code == .EAGAIN {
+            throw IPhoneDirectExportError.requestChanged
         }
-        // Both side effects are keyed by job ID, so a crash before this journal
-        // save retries them without double charging or duplicating history.
-        try saveJournal(&current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         // Informational day notes (for example a WorkoutKit plan this device
         // cannot decode) surface as wire day statuses the CLI must keep seeing,

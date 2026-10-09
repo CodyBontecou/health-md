@@ -304,6 +304,23 @@ nonisolated struct AppleExportJournalCheckpoint {
         return try operation()
     }
 
+    /// Completion side effects require the exact last accepted checkpoint as well
+    /// as generation ownership, so a same-generation cancellation wins before accounting.
+    func withCheckpointOwnership<Result>(operation: () throws -> Result) throws -> Result {
+        try withGenerationOwnership {
+            guard let bytes, let journalURL, bytes.count < Int.max,
+                  (try FileManager.default.attributesOfItem(atPath: journalURL.path)[.size] as? NSNumber)?.uint64Value == UInt64(bytes.count) else {
+                throw POSIXError(.EAGAIN)
+            }
+            let handle = try FileHandle(forReadingFrom: journalURL)
+            defer { try? handle.close() }
+            guard try handle.read(upToCount: bytes.count + 1) == bytes else {
+                throw POSIXError(.EAGAIN)
+            }
+            return try operation()
+        }
+    }
+
     enum ContinuationError: Error, Equatable { case superseded }
 
     @MainActor

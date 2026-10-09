@@ -237,63 +237,70 @@ final class IPhoneDirectFileExportProducer {
             throw IPhoneDirectFileProducerError.unexpectedResponse
         }
 
-        current.state = "completed"
-        current.updatedAt = Date()
-        let shouldRecordCompletion = !current.completionRecorded
-        if shouldRecordCompletion {
-            if successCount > 0 {
-                try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
-            }
-            let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                guard day.isRequestedDate, !day.succeeded else { return nil }
-                return FailedDateDetail(
-                    date: day.sourceDate,
-                    reason: day.failureReason ?? .healthKitError
-                )
-            }
-            let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
-            let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
-                guard day.isRequestedDate,
-                      terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
-                return FailedDateDetail(
-                    date: day.sourceDate,
-                    reason: .noHealthData,
-                    errorDetails: "No roll-up summary data was available for the selected period."
-                )
-            }
-            // Day-level informational notes ride alongside range-level derived
-            // warnings so Export History shows them as export notes while the
-            // status stays a full success (they never degrade it).
-            var recordedPartialFailures = current.derivedOutputPartialFailures
-            for day in current.capturedDays where day.isRequestedDate {
-                for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
-                    recordedPartialFailures.append(note)
+        let completionOwnership = current.checkpoint
+        do {
+            try completionOwnership.withCheckpointOwnership {
+                current.state = "completed"
+                current.updatedAt = Date()
+                let shouldRecordCompletion = !current.completionRecorded
+                if shouldRecordCompletion {
+                    if successCount > 0 {
+                        try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+                    }
+                    let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                        guard day.isRequestedDate, !day.succeeded else { return nil }
+                        return FailedDateDetail(
+                            date: day.sourceDate,
+                            reason: day.failureReason ?? .healthKitError
+                        )
+                    }
+                    let terminalNoDataSet = Set(current.terminalNoDataDateIdentifiers)
+                    let terminalNoDataDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
+                        guard day.isRequestedDate,
+                              terminalNoDataSet.contains(day.sourceDateIdentifier) else { return nil }
+                        return FailedDateDetail(
+                            date: day.sourceDate,
+                            reason: .noHealthData,
+                            errorDetails: "No roll-up summary data was available for the selected period."
+                        )
+                    }
+                    // Day-level informational notes ride alongside range-level derived
+                    // warnings so Export History shows them as export notes while the
+                    // status stays a full success (they never degrade it).
+                    var recordedPartialFailures = current.derivedOutputPartialFailures
+                    for day in current.capturedDays where day.isRequestedDate {
+                        for note in day.informationalFailures ?? [] where !recordedPartialFailures.contains(note) {
+                            recordedPartialFailures.append(note)
+                        }
+                    }
+                    let result = ExportOrchestrator.ExportResult(
+                        successCount: successCount,
+                        totalCount: current.requestedDates.count,
+                        failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
+                        partialFailures: recordedPartialFailures,
+                        formatsPerDate: reconciliation.effectiveFormatsPerDate,
+                        completedDates: terminalNoDataDetails.map(\.date)
+                    )
+                    ExportOrchestrator.recordResult(
+                        result,
+                        source: .macAgent,
+                        dateRangeStart: current.requestedDates.first ?? request.createdAt,
+                        dateRangeEnd: current.requestedDates.last ?? request.createdAt,
+                        targetLabel: destination.rootPath,
+                        fileCount: current.generatedFiles.count,
+                        idempotencyKey: request.jobID,
+                        appleExportEnginePin: current.appleExportEnginePin,
+                        operationDetails: historyOperationDetails(for: current)
+                    )
+                    current.completionRecorded = true
                 }
+                // Both side effects are keyed by job ID, so a crash before this journal
+                // save retries them without double charging or duplicating history.
+                try saveJournal(&current)
             }
-            let result = ExportOrchestrator.ExportResult(
-                successCount: successCount,
-                totalCount: current.requestedDates.count,
-                failedDateDetails: retryableFailedDateDetails + terminalNoDataDetails,
-                partialFailures: recordedPartialFailures,
-                formatsPerDate: reconciliation.effectiveFormatsPerDate,
-                completedDates: terminalNoDataDetails.map(\.date)
-            )
-            ExportOrchestrator.recordResult(
-                result,
-                source: .macAgent,
-                dateRangeStart: current.requestedDates.first ?? request.createdAt,
-                dateRangeEnd: current.requestedDates.last ?? request.createdAt,
-                targetLabel: destination.rootPath,
-                fileCount: current.generatedFiles.count,
-                idempotencyKey: request.jobID,
-                appleExportEnginePin: current.appleExportEnginePin,
-                operationDetails: historyOperationDetails(for: current)
-            )
-            current.completionRecorded = true
+        } catch let error as POSIXError where error.code == .EAGAIN {
+            throw IPhoneDirectFileProducerError.requestChanged
         }
-        // Both side effects are keyed by job ID, so a crash before this journal
-        // save retries them without double charging or duplicating history.
-        try saveJournal(&current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         externalExportSucceeded = true
         #if DEBUG
