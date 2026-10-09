@@ -222,6 +222,11 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     assert.deepEqual(JSON.parse(JSON.stringify(day.vitals.bloodPressureSamples)), JSON.parse(input).vitals.bloodPressureSamples);
     assert.equal(day.canonicalMetrics?.blood_pressure_systolic, undefined);
     assert.equal(day.canonicalMetrics?.blood_pressure_diastolic, undefined);
+    if (variant.startsWith("android")) {
+      const invalid = JSON.parse(input);
+      invalid.vitals.bloodPressureSamples[0].exactTime.iso8601 = "2026-11-01T01:30:00.123456788Z";
+      assert.equal(api.parseHealthDay(JSON.stringify(invalid)), null);
+    }
   }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
