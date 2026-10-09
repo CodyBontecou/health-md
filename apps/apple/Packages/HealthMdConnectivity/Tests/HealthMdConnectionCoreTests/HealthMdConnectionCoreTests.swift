@@ -2,6 +2,7 @@ import CryptoKit
 import Foundation
 @testable import HealthMdConnectionCore
 import Network
+import MultipeerConnectivity
 import XCTest
 
 final class HealthMdConnectionCoreTests: XCTestCase {
@@ -527,6 +528,51 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         await fulfillment(of: [serverReceivedPacket], timeout: 1)
     }
 
+    func testMultipeerAuthorizedEnqueueHoldsLeaseThroughSDKSubmissionAndClosesOnError() async throws {
+        let state = EnqueueAuthorizationState()
+        let peer = MCPeerID(displayName: "synthetic-remote")
+        let session = EnqueueProbeMCSession(remotePeer: peer, state: state)
+        let connection: any DirectPacketTransport = DirectMultipeerPacketConnection(session: session, remotePeer: peer)
+        defer { connection.cancel() }
+        let authorization = DirectPacketSendAuthorization { try state.acquire() }
+        let packet = ManualIPSyncPacket.pairingRejected(ManualIPPairingRejected(reason: "synthetic"))
+        state.revoke()
+        do {
+            try await connection.send(authorizedBy: authorization) {
+                XCTFail("Revocation must reject before the packet factory")
+                return packet
+            }
+            XCTFail("Expected revocation")
+        } catch { XCTAssertEqual(error as? EnqueueAuthorizationState.Failure, .revoked) }
+        XCTAssertEqual(session.submissionCount, 0)
+        state.restore()
+        try await connection.send(authorizedBy: authorization) {
+            XCTAssertTrue(state.held)
+            return packet
+        }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(session.submissionCount, 1)
+        XCTAssertTrue(session.ownerHeldAtSubmission)
+        let data = try XCTUnwrap(session.lastData)
+        XCTAssertEqual(try JSONDecoder().decode(ManualIPSyncPacket.self, from: data), packet)
+        session.failNextSubmission()
+        do {
+            try await connection.send(authorizedBy: authorization) { packet }
+            XCTFail("SDK failure must propagate")
+        } catch {
+            guard case .connectionFailed = error as? DirectChannelError else {
+                return XCTFail("Expected the bounded SDK send error, got \(error)")
+            }
+        }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(session.submissionCount, 2)
+        XCTAssertTrue(session.ownerHeldAtSubmission)
+        // Pairing's existing ordinary path uses the same encoder/submission.
+        try await connection.send(packet)
+        XCTAssertEqual(session.submissionCount, 3)
+        XCTAssertFalse(session.ownerHeldAtSubmission)
+    }
+
     func testNativePacketEnqueueAcquiresAndClosesAuthorizationLease() async throws {
         let ready = expectation(description: "owned listener ready")
         let received = expectation(description: "owned packet received")
@@ -1011,4 +1057,39 @@ private final class OwnedQueuePacketTransport: DirectPacketTransport, @unchecked
         }
     }
     func cancel() {}
+}
+
+private final class EnqueueProbeMCSession: MCSession, @unchecked Sendable {
+    private let remotePeer: MCPeerID
+    private let state: EnqueueAuthorizationState
+    private let probeLock = NSLock()
+    private var submissions = 0
+    private var heldAtSubmission = false
+    private var data: Data?
+    private var failNext = false
+    var submissionCount: Int { probeLock.withLock { submissions } }
+    var ownerHeldAtSubmission: Bool { probeLock.withLock { heldAtSubmission } }
+    var lastData: Data? { probeLock.withLock { data } }
+    init(remotePeer: MCPeerID, state: EnqueueAuthorizationState) {
+        self.remotePeer = remotePeer
+        self.state = state
+        super.init(peer: MCPeerID(displayName: "synthetic-local"), securityIdentity: nil,
+            encryptionPreference: .required)
+    }
+    override var connectedPeers: [MCPeerID] { [remotePeer] }
+    func failNextSubmission() { probeLock.withLock { failNext = true } }
+    override func send(_ data: Data, toPeers peerIDs: [MCPeerID], with mode: MCSessionSendDataMode) throws {
+        XCTAssertEqual(peerIDs, [remotePeer])
+        XCTAssertEqual(mode, .reliable)
+        try probeLock.withLock {
+            submissions += 1
+            heldAtSubmission = state.held
+            self.data = data
+            if failNext {
+                failNext = false
+                throw ProbeFailure.sdkSend
+            }
+        }
+    }
+    private enum ProbeFailure: Error { case sdkSend }
 }

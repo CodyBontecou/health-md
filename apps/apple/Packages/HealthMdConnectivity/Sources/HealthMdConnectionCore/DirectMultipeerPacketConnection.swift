@@ -20,6 +20,7 @@ public final class DirectMultipeerPacketConnection: NSObject, DirectPacketTransp
         return decoder
     }()
     private let inbox = DirectMultipeerInbox()
+    private let sendLock = NSLock()
 
     public init(
         session: MCSession,
@@ -47,15 +48,31 @@ public final class DirectMultipeerPacketConnection: NSObject, DirectPacketTransp
     }
 
     public func send(_ packet: ManualIPSyncPacket) async throws {
-        let data = try encoder.encode(packet)
-        guard data.count <= HealthMdDirectProtocol.maximumPacketBytes,
-              session.connectedPeers.contains(remotePeer) else {
-            throw DirectChannelError.connectionClosed
-        }
-        do {
-            try session.send(data, toPeers: [remotePeer], with: .reliable)
-        } catch {
-            throw DirectChannelError.connectionFailed(error.localizedDescription)
+        try enqueue(authorization: nil) { packet }
+    }
+
+    public func send(authorizedBy authorization: DirectPacketSendAuthorization,
+                     packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        try enqueue(authorization: authorization, packet: packet)
+    }
+
+    /// MCSession accepts a message through its synchronous send API. Keep the
+    /// owner through packet creation and SDK submission, without an async wait.
+    private func enqueue(authorization: DirectPacketSendAuthorization?,
+                         packet: () throws -> ManualIPSyncPacket) throws {
+        try sendLock.withLock {
+            let lease = try authorization?.acquireLease()
+            defer { lease?.close() }
+            let data = try encoder.encode(packet())
+            guard data.count <= HealthMdDirectProtocol.maximumPacketBytes,
+                  session.connectedPeers.contains(remotePeer) else {
+                throw DirectChannelError.connectionClosed
+            }
+            do {
+                try session.send(data, toPeers: [remotePeer], with: .reliable)
+            } catch {
+                throw DirectChannelError.connectionFailed(error.localizedDescription)
+            }
         }
     }
 
