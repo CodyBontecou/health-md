@@ -502,9 +502,28 @@ final class IPhoneDirectExportCoordinator {
         let expected = invocation?.ownership
         let configuration = invocation?.cancellationProtocolAuthority ?? protocolAuthority
         do {
+            let directory = try jobDirectory(jobID)
+            let support = try fileManager.url(for: .applicationSupportDirectory,
+                in: .userDomainMask, appropriateFor: nil, create: true)
+            let transaction = try AtomicFileWriter.beginPublicationTransaction(
+                at: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"))
+            defer { transaction.close() }
             try expected?.validateGeneration()
+            // File jobs own a child namespace. Only that exact layout may bypass
+            // raw recovery; any raw journal, ownership marker or spool still fails
+            // closed through the raw loader. Keep inspection and cancellation in
+            // one publication transaction so a cooperating writer cannot race it.
+            let entries = try fileManager.contentsOfDirectory(atPath: directory.path)
+            let fileOnly: Bool
+            if entries == ["files"] {
+                fileOnly = try fileManager.attributesOfItem(atPath:
+                    directory.appendingPathComponent("files").path)[.type] as? FileAttributeType == .typeDirectory
+            } else {
+                fileOnly = false
+            }
+            let rawJournal = fileOnly ? nil : try loadJournal(jobID: jobID)
             var rawReceipt: IPhoneDirectCancellationReceipt?
-            if var journal = try loadJournal(jobID: jobID), journal.state != .completed,
+            if var journal = rawJournal, journal.state != .completed,
                expected == nil || sameOwnership(expected, journal.checkpoint) {
                 let cancellationAuthority = configuration.makeSessionAuthority()
                 try cancellationAuthority.beginOperation(pin: journal.version >= IPhoneDirectExportJournal.currentVersion

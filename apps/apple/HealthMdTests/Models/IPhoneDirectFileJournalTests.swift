@@ -1128,7 +1128,10 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
 
     private func makeJournal() throws -> IPhoneDirectFileJournal {
-        let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        try Self.makeJournal(jobID: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!)
+    }
+
+    static func makeJournal(jobID: UUID) throws -> IPhoneDirectFileJournal {
         let peerBinding = DirectPeerBinding(
             sourceInstallationID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
             destinationInstallationID: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!

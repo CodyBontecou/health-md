@@ -162,6 +162,130 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testInactiveRawAndFileCancellationRestoreStoredProtocolSelection() async throws {
+        for (files, version, legacy) in [(false, 2, true), (false, 3, false), (true, 2, true), (true, 6, false)] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: files, version: version)
+            defer { try? FileManager.default.removeItem(at: published.directory) }
+            let core = FakeAppleDirectProtocolRustCore()
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+            let receipt = try XCTUnwrap(IPhoneDirectExportCoordinator.shared.cancelWithReceipt(
+                jobID: jobID, protocolAuthority: session))
+            let saved = try XCTUnwrap(JSONSerialization.jsonObject(with:
+                Data(contentsOf: published.journal)) as? [String: Any])
+            XCTAssertEqual(saved["state"] as? String, "cancelled")
+            XCTAssertFalse(receipt.durableOwnership?.generation == nil)
+            let transport = OperationProtocolPacketTransport()
+            let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+            session.beginBootstrap()
+            let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+            let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: UUID(), peerDisplayName: "synthetic")
+            core.failCanonicalization = true
+            if legacy {
+                try await receipt.sendAcknowledgement(on: channel)
+            } else {
+                do {
+                    try await receipt.sendAcknowledgement(on: channel)
+                    XCTFail("An inactive current journal must restore its stored Rust pin")
+                } catch {
+                    XCTAssertEqual(error as? AppleDirectProtocolAuthorityError,
+                        AppleDirectProtocolAuthorityError(stage: .directMessage))
+                }
+                XCTAssertEqual(transport.packetCount, 0)
+                core.failCanonicalization = false
+                let encoder = JSONEncoder()
+                encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+                core.canonicalMessage = try encoder.encode(DirectMessage.cancelAcknowledged(jobID: jobID))
+                try await receipt.sendAcknowledgement(on: channel)
+            }
+            let received = try await receiver.receive()
+            XCTAssertEqual(received, .message(.cancelAcknowledged(jobID: jobID)))
+        }
+    }
+
+    @MainActor
+    func testInactiveCancellationRejectsIncompatiblePinsWithoutJournalMutation() throws {
+        for files in [false, true] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: files,
+                version: files ? 6 : 3, incompatible: true)
+            defer { try? FileManager.default.removeItem(at: published.directory) }
+            let bytes = try Data(contentsOf: published.journal)
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: FakeAppleDirectProtocolRustCore())
+            XCTAssertNil(IPhoneDirectExportCoordinator.shared.cancelWithReceipt(
+                jobID: jobID, protocolAuthority: session), "Incompatible pins cannot produce a cancellation receipt")
+            XCTAssertEqual(try Data(contentsOf: published.journal), bytes)
+            try published.ownership.validateGeneration()
+        }
+    }
+
+    @MainActor
+    func testInactiveFileCancellationDoesNotBypassRawArtifacts() throws {
+        for artifact in ["journal.json", ".journal-generation", "partition.bin"] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: true, version: 6)
+            defer { try? FileManager.default.removeItem(at: published.directory) }
+            let rawArtifact = published.directory.appendingPathComponent(artifact)
+            let retainedBytes = Data("synthetic unreadable raw ownership".utf8)
+            try retainedBytes.write(to: rawArtifact)
+            let fileBytes = try Data(contentsOf: published.journal)
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: FakeAppleDirectProtocolRustCore())
+            XCTAssertNil(IPhoneDirectExportCoordinator.shared.cancelWithReceipt(
+                jobID: jobID, protocolAuthority: session))
+            XCTAssertEqual(try Data(contentsOf: rawArtifact), retainedBytes)
+            XCTAssertEqual(try Data(contentsOf: published.journal), fileBytes)
+            try published.ownership.validateGeneration()
+        }
+    }
+
+    @MainActor
+    private func publishInactiveCancellationFixture(jobID: UUID, files: Bool, version: Int,
+                                                   incompatible: Bool = false) throws
+        -> (directory: URL, journal: URL, ownership: AppleExportJournalCheckpoint) {
+        let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: jobID)
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode(model)) as? [String: Any])
+        object["version"] = version
+        object["state"] = "paused"
+        if !files {
+            let request = DirectExportRequest(jobID: jobID, createdAt: model.request.createdAt,
+                dateSelection: model.request.dateSelection, responseMode: .rawJSON,
+                rawProfile: .healthDataProjection,
+                canonicalSelection: DirectCanonicalSelection(metricIDs: ["sleep_total"]))
+            let session = try DirectTransferSession(sessionID: model.session.sessionID, jobID: jobID,
+                requestFingerprint: DirectRequestFingerprint.make(for: request), peerBinding: model.session.peerBinding,
+                partitionTargetBytes: model.session.partitionTargetBytes, createdAt: model.session.createdAt)
+            let commonKeys: Set<String> = ["version", "settingsSnapshot", "accepted", "appleDirectProtocolPin",
+                "updatedAt", "state", "partitions", "committedPartitionCount", "committedBytes", "completionRecorded"]
+            object = object.filter { commonKeys.contains($0.key) }
+            object["request"] = try JSONSerialization.jsonObject(with: encoder.encode(request))
+            object["session"] = try JSONSerialization.jsonObject(with: encoder.encode(session))
+            object["days"] = []
+        }
+        if incompatible {
+            var pin = try XCTUnwrap(object["appleDirectProtocolPin"] as? [String: Any])
+            pin["coreAPIVersion"] = 999
+            object["appleDirectProtocolPin"] = pin
+        }
+        let support = try FileManager.default.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let directory = support.appendingPathComponent("Health.md/DirectCLIOutbound/v1/" + jobID.uuidString.lowercased())
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        let journal = (files ? directory.appendingPathComponent("files") : directory).appendingPathComponent("journal.json")
+        try FileManager.default.createDirectory(at: journal.deletingLastPathComponent(), withIntermediateDirectories: true)
+        var ownership = AppleExportJournalCheckpoint()
+        try ownership.publish(JSONSerialization.data(withJSONObject: object, options: [.sortedKeys]), to: journal,
+            freshAdmission: true, lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
+            durabilityRoot: support)
+        return (directory, journal, ownership)
+    }
+
+    @MainActor
     func testCancellationReceiptRetainsSelectedProtocolAcrossSessionBootstrap() async throws {
         let core = FakeAppleDirectProtocolRustCore()
         let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
