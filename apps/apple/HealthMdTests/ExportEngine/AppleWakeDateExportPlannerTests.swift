@@ -75,6 +75,40 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testSelectedStageWithoutSummaryRetainsSourceIntervalAcrossEveryFormat() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let start = owner.addingTimeInterval(3600.25)
+        let end = owner.addingTimeInterval(7200.75)
+        let day = HealthData(date: owner,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            sleep: SleepData(sessionStart: start, sessionEnd: end,
+                stages: [SleepStageSample(stage: "core", startDate: start, endDate: end,
+                    metadata: ["synthetic": "detail-without-summary"])]))
+        XCTAssertFalse(day.sleep.hasData)
+        var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: ["sleep_core"])
+        snapshot.detailPolicy = .detailedTimeSeries
+        let result = try await AppleLooseDailyExportPlanner().plan(healthData: day,
+            settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+        guard case .planned(let operation) = result else { return XCTFail("Selected source detail must not require a fabricated summary") }
+        XCTAssertEqual(operation.artifacts.count, 4)
+        let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+        let sleep = try XCTUnwrap(root["sleep"] as? [String: Any])
+        XCTAssertNil(sleep["coreSleep"])
+        XCTAssertNil(sleep["totalDuration"])
+        XCTAssertNil(sleep["bedtimeISO"])
+        XCTAssertNil(sleep["wakeTimeISO"])
+        XCTAssertEqual((sleep["sleepStages"] as? [[String: Any]])?.count, 1)
+        for artifact in operation.artifacts where artifact.format != .json {
+            let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+            XCTAssertFalse(text.contains("sleep_core_hours:"))
+            XCTAssertFalse(text.contains(",Core Sleep,"))
+            XCTAssertTrue(text.contains(artifact.format == .markdown ? "| core |" : "detail-without-summary"))
+        }
+    }
+
     func testWakeDateDetailsRejectArchivesRemoteSurfacesAndNonSleepArrays() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

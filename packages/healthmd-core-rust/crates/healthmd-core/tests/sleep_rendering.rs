@@ -222,7 +222,15 @@ fn native_android_v6_handoffs_replay_without_legacy_aliases_or_clock_reinterpret
         );
     }
     let actual: Value = serde_json::from_slice(&result.unwrap()).unwrap();
-    assert_eq!(actual, fixture["expected_semantic_result"]);
+    let mut expected = fixture["expected_semantic_result"].clone();
+    expected["selected_output_keys"] = json!([
+        "sleep_bedtime",
+        "sleep_light_hours",
+        "sleep_total_hours",
+        "sleep_wake",
+        "steps"
+    ]);
+    assert_eq!(actual, expected);
     let plan = render(
         &fixture["render_configuration"],
         &actual,
@@ -1150,5 +1158,77 @@ fn successor_detail_blocks_cannot_shadow_archive_diagnostics() {
                 .expect("metadata collision must not advance the accepted frontier");
             session.finish(|| false).unwrap();
         }
+    }
+}
+
+#[test]
+fn selected_details_survive_unavailable_summaries_without_fabricating_values() {
+    let fixture: Value = serde_json::from_slice(include_bytes!(
+        "../../../../contracts/render-input/v2/fixtures/native-android-v6-handoff.json"
+    ))
+    .unwrap();
+    for input in [apple_successor_input, android_successor_input] {
+        let (mut config, _, mut batches) = input();
+        let mut semantic_config = fixture["semantic_configuration"].clone();
+        semantic_config["profile"] = config["profile"].clone();
+        semantic_config["session_id"] = config["session_id"].clone();
+        semantic_config["selected_selection_ids"] = json!(["sleep_total"]);
+        let mut source = fixture["semantic_batches"][0].clone();
+        source["session_id"] = config["session_id"].clone();
+        source["records"] = json!([]);
+        let mut session =
+            SemanticSession::from_json(&serde_json::to_vec(&semantic_config).unwrap()).unwrap();
+        let result = session
+            .process_batch(&serde_json::to_vec(&source).unwrap(), || false)
+            .unwrap();
+        let semantic: Value = serde_json::from_slice(&result).unwrap();
+        assert!(semantic["days"][0]["values"].as_array().unwrap().is_empty());
+        assert!(
+            semantic["selected_output_keys"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("sleep_total_hours"))
+        );
+        batches[0]["days"][0]["metrics"] = json!([]);
+        batches[0]["days"][0]["profile_documents"] = json!({"semantic_output_keys":[],"markdown_body":null,"csv_rows":null,"json_root":null});
+        batches[0]["days"][0]["native_details"] = json!({"output_keys":["sleep_total_hours"],"csv_rows":[{"date":"2026-07-25","category":"Sleep Detail","metric":"Sleep Stage","value":"synthetic-source-interval","unit":"seconds","timestamp":"2026-07-25T01:00:00Z","ordinal":0}],"markdown_blocks":[],"bases_frontmatter_blocks":[]});
+        config["formats"] = json!(["csv"]);
+        let plan = render(&config, &semantic, &batches);
+        let text = std::str::from_utf8(&plan.items[0].content).unwrap();
+        assert!(text.contains("synthetic-source-interval"));
+        assert!(!text.contains(",Total Sleep,"));
+        for selection in [
+            json!([]),
+            json!(["unknown_output"]),
+            json!(["sleep_total_hours", "sleep_total_hours"]),
+        ] {
+            let mut rejected = semantic.clone();
+            rejected["selected_output_keys"] = selection;
+            match RenderSession::from_json(
+                &serde_json::to_vec(&config).unwrap(),
+                &serde_json::to_vec(&rejected).unwrap(),
+            ) {
+                Ok(mut renderer) => assert_eq!(
+                    renderer.process_batch(&serde_json::to_vec(&batches[0]).unwrap(), || false),
+                    Err(RenderError::PresentationMismatch)
+                ),
+                Err(error) => assert_eq!(error, RenderError::PresentationMismatch),
+            }
+        }
+        semantic_config["disabled_output_keys"] = json!(["sleep_total_hours"]);
+        let mut disabled =
+            SemanticSession::from_json(&serde_json::to_vec(&semantic_config).unwrap()).unwrap();
+        let result: Value = serde_json::from_slice(
+            &disabled
+                .process_batch(&serde_json::to_vec(&source).unwrap(), || false)
+                .unwrap(),
+        )
+        .unwrap();
+        assert!(
+            !result["selected_output_keys"]
+                .as_array()
+                .unwrap()
+                .contains(&json!("sleep_total_hours"))
+        );
     }
 }

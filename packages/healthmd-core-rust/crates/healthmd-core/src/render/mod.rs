@@ -736,6 +736,22 @@ impl RenderSession {
             })
             .collect();
         let presentation_categories = profile_presentation_categories(config.profile)?;
+        if let Some(keys) = &semantic.selected_output_keys {
+            let selected = keys.iter().collect::<HashSet<_>>();
+            if !config.profile.is_wake_date()
+                || selected.len() != keys.len()
+                || keys
+                    .iter()
+                    .any(|key| !presentation_categories.contains_key(key))
+                || semantic
+                    .days
+                    .iter()
+                    .flat_map(|day| &day.values)
+                    .any(|value| !selected.contains(&value.output_key))
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+        }
         let retained_extensions = semantic
             .retained_extensions
             .iter()
@@ -824,6 +840,7 @@ impl RenderSession {
                 day,
                 &self.config,
                 &self.semantic_outputs,
+                self.semantic.selected_output_keys.as_deref(),
                 &self.presentation_categories,
                 &self.retained_extensions,
                 &mut staged_tokens,
@@ -1219,6 +1236,7 @@ fn validate_day(
     day: &RenderDay,
     config: &RenderSessionConfig,
     semantic_outputs: &HashMap<String, HashMap<String, crate::semantic::SemanticDailyValue>>,
+    selected_output_keys: Option<&[String]>,
     presentation_categories: &HashMap<String, BTreeSet<String>>,
     retained: &HashMap<String, (String, BTreeSet<String>)>,
     consumed: &mut HashSet<String>,
@@ -1262,9 +1280,10 @@ fn validate_day(
         let selections = details.output_keys.iter().collect::<HashSet<_>>();
         if selections.is_empty()
             || selections.len() != details.output_keys.len()
-            || selections
-                .iter()
-                .any(|key| !accepted.contains_key(key.as_str()))
+            || selections.iter().any(|key| {
+                !accepted.contains_key(key.as_str())
+                    && !selected_output_keys.is_some_and(|selected| selected.contains(key))
+            })
         {
             return Err(RenderError::PresentationMismatch);
         }

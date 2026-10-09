@@ -205,6 +205,28 @@ class HostCoreDailyAggregatePlannerTest {
                 output.writeBytes(item.content)
             }
         }
+        val unavailableSummary = totalData.copy(sleep = totalData.sleep.copy(totalDuration = kotlin.time.Duration.ZERO,
+            deepSleep = kotlin.time.Duration.ZERO, remSleep = kotlin.time.Duration.ZERO,
+            lightSleep = kotlin.time.Duration.ZERO, awakeTime = kotlin.time.Duration.ZERO, inBedTime = kotlin.time.Duration.ZERO))
+        val detailOnly = FrozenDailyAggregateExportRequest.capture(unavailableSummary, ExportSettings(
+            exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = totalOnly, executionSleepCaptureContext = context,
+            executionSleepCaptureAuthorityIsFrozen = true,
+        ), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("concrete-detail-without-summary", "concrete-detail-without-summary-session"))
+        val detailOnlyPlan = planner.plan(detailOnly).plan
+        assertThat(detailOnlyPlan.items).hasSize(4)
+        val detailOnlyJson = Json.parseToJsonElement(detailOnlyPlan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()).jsonObject
+        val detailOnlySleep = detailOnlyJson.getValue("sleep").jsonObject
+        assertThat(detailOnlySleep.containsKey("totalDuration")).isFalse()
+        assertThat(detailOnlySleep.getValue("sleepStages").jsonArray).hasSize(1)
+        assertThat(detailOnlySleep.getValue("sleepSessions").jsonArray).hasSize(1)
+        for (item in detailOnlyPlan.items.filterNot { it.relativePath.endsWith(".json") }) {
+            val text = item.content.decodeToString()
+            assertThat(text).doesNotContain("sleep_total_hours:")
+            assertThat(text).doesNotContain(",Total Sleep,")
+            assertThat(text).contains(if (item.relativePath.endsWith(".csv")) ",Sleep Detail,Sleep Stage," else "sleep")
+        }
         val nonSleep = data.copy(activity = ActivityData(steps = 1,
             stepSamples = listOf(com.healthmd.domain.model.TimestampedSample(data.sleep.stages.single().startTime, 1.0,
                 exactTime = data.sleep.stages.single().exactStartTime))))

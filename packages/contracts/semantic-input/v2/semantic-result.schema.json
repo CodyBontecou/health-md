@@ -438,6 +438,16 @@
           "const": "none"
         }
       }
+    },
+    "selected_output_keys": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 512,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+      }
     }
   },
   "allOf": [

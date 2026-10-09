@@ -195,6 +195,7 @@ object HealthMdRenderInputAdapter {
                 individualEntriesByOwnerDate[ownerDate].orEmpty(),
                 dailyNotesByOwnerDate[ownerDate],
                 nativeWakeDateContext,
+                root["selected_output_keys"]?.jsonArray?.map { it.jsonPrimitive.content },
             )
         }
         return EncodedInput(configuration, boundedBatches(renderDays, sessionId, handoffVersion))
@@ -346,6 +347,7 @@ object HealthMdRenderInputAdapter {
         individualEntries: List<JsonObject>,
         dailyNote: JsonObject?,
         nativeWakeDateContext: AndroidCaptureContext?,
+        frozenSelectedOutputKeys: List<String>?,
     ): JsonObject {
         val ownerDate = day.getValue("owner_date").jsonPrimitive.content
         val outputs = registry.outputs.associateBy { it.key }
@@ -455,7 +457,7 @@ object HealthMdRenderInputAdapter {
                 if (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size) {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
-                put("native_details", sleepDetails(stages, sessions, ownerDate, selectedOutputKeys))
+                put("native_details", sleepDetails(stages, sessions, ownerDate, frozenSelectedOutputKeys ?: selectedOutputKeys))
             }
             put("extensions", JsonArray(extensionPayloads))
             put("individual_entries", JsonArray(individualEntries))

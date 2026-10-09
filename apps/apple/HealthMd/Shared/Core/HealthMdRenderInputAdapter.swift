@@ -197,7 +197,8 @@ enum HealthMdRenderInputAdapter {
                 extensionPayloads: extensionPayloadsByOwnerDate[day["owner_date"] as? String ?? ""] ?? [],
                 individualEntries: individualEntriesByOwnerDate[day["owner_date"] as? String ?? ""] ?? [],
                 dailyNote: dailyNotesByOwnerDate[day["owner_date"] as? String ?? ""],
-                captureContext: captureContext
+                captureContext: captureContext,
+                frozenSelectedOutputKeys: root["selected_output_keys"] as? [String]
             )
         }
         let batches = try boundedBatches(renderDays, sessionID: sessionID, version: wakeDate ? 2 : 1)
@@ -339,7 +340,8 @@ enum HealthMdRenderInputAdapter {
         extensionPayloads: [[String: Any]],
         individualEntries: [[String: Any]],
         dailyNote: [String: Any]?,
-        captureContext: AppleSleepCaptureContext?
+        captureContext: AppleSleepCaptureContext?,
+        frozenSelectedOutputKeys: [String]?
     ) throws -> [String: Any] {
         guard let ownerDate = day["owner_date"] as? String,
               let values = day["values"] as? [[String: Any]]
@@ -474,7 +476,7 @@ enum HealthMdRenderInputAdapter {
                     throw AdapterError.invalidPresentation
                 }
                 renderedDay["native_details"] = try sleepStageDetails(stages, ownerDate: ownerDate,
-                    selectedOutputKeys: selectedOutputKeys)
+                    selectedOutputKeys: frozenSelectedOutputKeys ?? selectedOutputKeys)
             }
         }
         return renderedDay

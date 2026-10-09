@@ -402,6 +402,9 @@ pub struct SemanticResult {
     /// Absent from historical results; mandatory for successor owner-date authority.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub sleep_capture_context: Option<SemanticSleepCaptureContext>,
+    /// Frozen successor selection, independently of whether a reduced value is available.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected_output_keys: Option<Vec<String>>,
     pub days: Vec<SemanticDayResult>,
     pub rollups: Vec<SemanticRollupResult>,
     pub retained_extensions: Vec<RetainedSemanticExtension>,
@@ -1128,6 +1131,25 @@ impl SemanticSession {
                 self.config.profile,
                 &self.config.calendar_time_zone,
             ),
+            selected_output_keys: self.config.profile.is_wake_date().then(|| {
+                let selected = self
+                    .config
+                    .selected_selection_ids
+                    .iter()
+                    .cloned()
+                    .collect::<BTreeSet<_>>();
+                self.profile
+                    .outputs
+                    .iter()
+                    .filter(|(key, output)| {
+                        !self.config.disabled_output_keys.contains(key)
+                            && !output.selection_ids.is_disjoint(&selected)
+                    })
+                    .map(|(key, _)| key.clone())
+                    .collect::<BTreeSet<_>>()
+                    .into_iter()
+                    .collect()
+            }),
             days,
             rollups,
             retained_extensions,

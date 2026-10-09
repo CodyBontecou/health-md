@@ -447,7 +447,7 @@ extension HealthData {
         }
 
         // Sleep
-        if snapshot.sleep.hasData {
+        if snapshot.sleep.hasData || (wakeDateContext != nil && !snapshot.sleep.stages.isEmpty) {
             var sleepDict: [String: Any] = [:]
             if snapshot.sleep.totalDurationSeconds > 0 {
                 sleepDict["totalDuration"] = snapshot.sleep.totalDurationSeconds
