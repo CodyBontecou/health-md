@@ -277,8 +277,10 @@ public final class DirectSecureChannel: @unchecked Sendable {
     }
 
     public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization?) async throws {
-        let nativeBytes = try encoder.encode(message)
-        try await sendEncrypted(messageCanonicalizer.canonicalizeDirectMessage(nativeBytes), authorization: authorization)
+        try await sendEncrypted(authorization: authorization) { [self] in
+            let nativeBytes = try encoder.encode(message)
+            return try messageCanonicalizer.canonicalizeDirectMessage(nativeBytes)
+        }
     }
 
     public func sendBinaryTransferFrame(_ frame: Data) async throws {
@@ -289,7 +291,7 @@ public final class DirectSecureChannel: @unchecked Sendable {
         guard DirectTransferBinaryFrame.isBinaryFrame(frame) else {
             throw DirectChannelError.malformedPacket
         }
-        try await sendEncrypted(frame, authorization: authorization)
+        try await sendEncrypted(authorization: authorization) { frame }
     }
 
     public func receive() async throws -> DirectSecurePayload {
@@ -317,14 +319,18 @@ public final class DirectSecureChannel: @unchecked Sendable {
         packetConnection.cancel()
     }
 
-    private func sendEncrypted(_ plaintext: Data, authorization: DirectPacketSendAuthorization?) async throws {
+    private func sendEncrypted(authorization: DirectPacketSendAuthorization?,
+                               plaintext: @escaping @Sendable () throws -> Data) async throws {
         try await sendGate.perform { [self] in
             let packet: @Sendable () throws -> ManualIPSyncPacket = { [self] in
+                // Encoding and canonicalization share the send gate and, for owned
+                // sends, the transport lease. Failure consumes no sequence number.
+                let bytes = try plaintext()
                 let sequence = try allocateSendSequence()
                 var envelope = Self.envelopeMagic
                 var bigEndianSequence = sequence.bigEndian
                 withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
-                envelope.append(plaintext)
+                envelope.append(bytes)
                 return .encrypted(try ManualIPSyncSecurity.seal(envelope, using: sessionKey))
             }
             if let authorization {

@@ -614,9 +614,11 @@ final class HealthMdConnectionCoreTests: XCTestCase {
     func testQueuedOwnedSendRejectsRevocationBeforeSequenceAllocation() async throws {
         let state = EnqueueAuthorizationState()
         let transport = OwnedQueuePacketTransport(state: state)
+        let canonicalizer = OwnedMessageCanonicalizer(state: state)
         let channel = DirectSecureChannel(packetConnection: transport,
             sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
-            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+            peerInstallationID: UUID(), peerDisplayName: "synthetic",
+            messageCanonicalizer: canonicalizer)
         let first = Task { try await channel.send(.ping) }
         await transport.blocker.waitUntilBlocked()
         let authorization = DirectPacketSendAuthorization { try state.acquire() }
@@ -627,6 +629,8 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         let pending = await channel.pendingSendCount()
         XCTAssertEqual(pending, 1)
         XCTAssertEqual(state.attempts, 0)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false],
+            "Queued messages must not encode/canonicalize before acquiring their send gate and owner")
         state.revoke()
         await transport.blocker.release()
         try await first.value
@@ -635,8 +639,19 @@ final class HealthMdConnectionCoreTests: XCTestCase {
             XCTFail("A queued send must acquire current ownership before its packet factory runs")
         } catch { XCTAssertEqual(error as? EnqueueAuthorizationState.Failure, .revoked) }
         XCTAssertEqual(transport.packetCount, 1)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false],
+            "Revoked ownership must reject before message canonicalization")
         state.restore()
+        canonicalizer.failNextCall()
+        do {
+            try await channel.send(.ping, authorization: authorization)
+            XCTFail("Canonicalization failure must propagate before sequence allocation")
+        } catch { XCTAssertEqual(error as? OwnedMessageCanonicalizer.Failure, .canonicalization) }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(transport.packetCount, 1)
         try await channel.send(.ping, authorization: authorization)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false, true, true],
+            "Message canonicalization must retain the accepted owner")
         XCTAssertEqual(transport.leaseObservations, [true])
         XCTAssertFalse(state.held)
         // Rejection consumed no sequence: the next packet is authenticated as sequence one.
@@ -1092,4 +1107,25 @@ private final class EnqueueProbeMCSession: MCSession, @unchecked Sendable {
         }
     }
     private enum ProbeFailure: Error { case sdkSend }
+}
+
+private final class OwnedMessageCanonicalizer: DirectMessageCanonicalizing, @unchecked Sendable {
+    private let state: EnqueueAuthorizationState
+    private let lock = NSLock()
+    enum Failure: Error, Equatable { case canonicalization }
+    private var observations: [Bool] = []
+    private var failNext = false
+    init(state: EnqueueAuthorizationState) { self.state = state }
+    var leaseObservations: [Bool] { lock.withLock { observations } }
+    func failNextCall() { lock.withLock { failNext = true } }
+    func canonicalizeDirectMessage(_ nativeBytes: Data) throws -> Data {
+        try lock.withLock {
+            observations.append(state.held)
+            if failNext {
+                failNext = false
+                throw Failure.canonicalization
+            }
+        }
+        return nativeBytes
+    }
 }
