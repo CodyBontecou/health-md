@@ -237,6 +237,9 @@ class SleepJournalSummaryTest {
         assertThat(sleep.totalDuration.inWholeMinutes).isEqualTo(150)
         assertThat(sleep.deepSleep.inWholeMinutes).isEqualTo(60)
         assertThat(sleep.remSleep.inWholeMinutes).isEqualTo(90)
+        val originalDeepStage = sleep.stages.single { it.stage == "deep" }
+        assertThat(originalDeepStage.startTime).isEqualTo(local(journalDay, 10, 0))
+        assertThat(originalDeepStage.endTime).isEqualTo(local(journalDay, 13, 0))
         assertThat(sleep.sessions.first { it.identity?.nativeId == "across-noon" }.startTime)
             .isEqualTo(local(journalDay, 10, 0))
     }

@@ -88,7 +88,7 @@
       "id": "export.sleep-summary",
       "name": "Sleep summaries and stages",
       "classification": "shared",
-      "summary": "Export sleep duration and the stages that both platform APIs expose using the shipped night_begins noon-to-noon summary window. Wake-date ownership is unavailable in these immutable profiles pending settings.sleep-attribution successor-profile approval.",
+      "summary": "Export sleep duration and the stages that both platform APIs expose using the shipped night_begins noon-to-noon summary window. Wake-date ownership is unavailable in these immutable profiles pending settings.sleep-attribution successor-profile approval. Historical Apple v8 granular stages are window-clipped; Android v4/v5 detailed stages and parent records retain source intervals. This profile-specific detail difference does not imply equivalent raw projections or change summary ownership.",
       "profiles": [
         "apple-v8",
         "android-frozen-v4",
@@ -103,7 +103,10 @@
         }
       },
       "evidence": [
-        "apps/android/docs/export-contract/platform-native-export-boundaries.md"
+        "apps/android/docs/export-contract/platform-native-export-boundaries.md",
+        "packages/contracts/sleep-attribution/v1/contract.md",
+        "apps/apple/HealthMdTests/Managers/HealthKitManagerTests.swift",
+        "apps/android/app/src/test/java/com/healthmd/data/health/SleepJournalSummaryTest.kt"
       ]
     },
     {

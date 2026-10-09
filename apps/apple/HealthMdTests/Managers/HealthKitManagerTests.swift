@@ -1235,6 +1235,30 @@ final class HealthKitManagerAggregationTests: XCTestCase {
     }
 
     @MainActor
+    func test_sleep_nightBegins_openingNoonClipsSummaryAndDetailedStages() async throws {
+        let zone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        let day = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 1, day: 10)))
+        let start = day.addingTimeInterval(10 * 3600)
+        let end = day.addingTimeInterval(13 * 3600)
+        let store = FakeHealthStore()
+        store.categorySampleResults[HKCategoryTypeIdentifier.sleepAnalysis.rawValue] = [
+            CategorySampleValue(value: HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+                startDate: start, endDate: end, metadata: ["synthetic": "historical-noon-boundary"]),
+        ]
+        let sleep = try await makeSUT(store: store).fetchSleepProjection(for: day,
+            attribution: .nightBegins, timeZone: zone, includeDetailedTimeSeries: true)
+        XCTAssertEqual(sleep.totalDuration, 3600, accuracy: 0.001)
+        XCTAssertEqual(sleep.deepSleep, 3600, accuracy: 0.001)
+        XCTAssertEqual(sleep.stages.count, 1)
+        let stage = try XCTUnwrap(sleep.stages.first)
+        XCTAssertEqual(stage.startDate, day.addingTimeInterval(12 * 3600))
+        XCTAssertEqual(stage.endDate, end)
+        XCTAssertEqual(stage.metadata["synthetic"], "historical-noon-boundary")
+    }
+
+    @MainActor
     func test_sleep_morningEnds_lateNightSessionOwnedByWakeDay_wholeSession() async throws {
         let store = FakeHealthStore()
         let calendar = Calendar.current

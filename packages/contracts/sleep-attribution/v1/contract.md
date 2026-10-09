@@ -24,7 +24,9 @@ The 2026-10-08 allocation audit reserves Apple daily v11 for sleep ownership bec
 
 ### Night begins — historical profiles
 
-The owner date labels its half-open local noon-to-following-noon window. Summary intervals and stages are clipped to that window under the platform's existing reducer. A session ending at opening noon is not owned by the new window; a session starting there is. Previously shipped additive/deduplication and stage handling remain unchanged.
+The owner date labels its half-open local noon-to-following-noon window. Summary intervals and stage-duration calculations are clipped to that window under the platform's existing reducer. A session ending at opening noon is not owned by the new window; a session starting there is. Previously shipped additive/deduplication and stage handling remain unchanged.
+
+Historical detailed payloads have independently versioned platform behavior. Apple v8 granular `sleepStages` intervals are clipped to the journal window and retain the sample metadata. Android v4/v5 detailed stages and native parent records retain original source intervals even when the summary counts only their overlap with the window. A 10:00–13:00 source interval contributes one hour to the note whose window opens at 12:00: Apple's granular projection starts at 12:00, while Android's source detail still starts at 10:00. Neither historical profile promises whole-session summary ownership. Canonical source archives keep their separate fidelity contract; consumers must not infer source intervals from a historical summary or equate these granular projections.
 
 ### Morning ends — successor profiles
 
