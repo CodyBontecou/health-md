@@ -457,7 +457,7 @@ object HealthMdRenderInputAdapter {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
-                val quantities = quantityDetails(native, ownerDate, selected)
+                val quantities = mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected))
                 val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
                     mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
                 } else quantities
@@ -488,7 +488,7 @@ object HealthMdRenderInputAdapter {
 
     private val qualifiedDetailPaths = setOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
         listOf("heart", "heartRateSamples"), listOf("heart", "hrvSamples"),
-        listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"))
+        listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"))
 
     private fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
         put("output_keys", JsonArray((first.getValue("output_keys").jsonArray + second.getValue("output_keys").jsonArray)
@@ -545,6 +545,42 @@ object HealthMdRenderInputAdapter {
             put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive))); put("csv_rows", JsonArray(rows)); put("markdown_blocks", JsonArray(blocks))
             put("bases_frontmatter_blocks", buildJsonArray {
                 if (yaml.isNotEmpty()) add(buildJsonObject { put("key", "native_quantity_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
+            })
+        }
+    }
+
+    private fun bloodPressureDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val samples = root["vitals"]?.jsonObject?.get("bloodPressureSamples")?.jsonArray ?: JsonArray(emptyList())
+        val keys = listOf("blood_pressure_systolic", "blood_pressure_diastolic")
+        val rows = mutableListOf<JsonObject>()
+        val yaml = mutableListOf<String>()
+        val lines = mutableListOf("| Timestamp (UTC) | End (UTC) | Systolic | Diastolic | Unit |", "|---|---|---|---|---|")
+        for (element in samples) {
+            val sample = element.jsonObject
+            val timestamp = sample.getValue("timestamp").jsonPrimitive.content
+            val systolic = sample.getValue("systolic").jsonPrimitive.content
+            val diastolic = sample.getValue("diastolic").jsonPrimitive.content
+            if (!selected.containsAll(keys) || !timestamp.endsWith("Z") ||
+                runCatching { java.time.Instant.parse(timestamp) }.isFailure ||
+                systolic.toDoubleOrNull()?.isFinite() != true || diastolic.toDoubleOrNull()?.isFinite() != true) {
+                throw AdapterException("wake-date native blood pressure pairing is incompatible")
+            }
+            val record = buildJsonObject { put("metric", "blood_pressure"); put("unit", "mmHg"); put("sample", sample) }.toString()
+            rows += buildJsonObject {
+                put("date", ownerDate); put("category", "Native Detail"); put("metric", "Blood Pressure Correlation")
+                put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
+            }
+            yaml += "  - $record"
+            lines += "| $timestamp | | $systolic | $diastolic | mmHg |"
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray((if (samples.isEmpty()) emptyList() else keys.sorted()).map(::JsonPrimitive)))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", buildJsonArray {
+                if (samples.isNotEmpty()) add(buildJsonObject { put("heading", "Blood Pressure Correlation Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0) })
+            })
+            put("bases_frontmatter_blocks", buildJsonArray {
+                if (samples.isNotEmpty()) add(buildJsonObject { put("key", "native_correlation_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
             })
         }
     }

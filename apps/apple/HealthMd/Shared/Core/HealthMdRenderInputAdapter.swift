@@ -471,7 +471,8 @@ enum HealthMdRenderInputAdapter {
                 throw AdapterError.invalidPresentation
             }
             let selected = frozenSelectedOutputKeys ?? selectedOutputKeys
-            var details = try quantityDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected)
+            var details = mergeDetails(try quantityDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected),
+                try bloodPressureDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected))
             if !data.sleep.stages.isEmpty {
                 guard let sleep = root["sleep"] as? [String: Any],
                       let stages = sleep["sleepStages"] as? [[String: Any]] else {
@@ -497,7 +498,7 @@ enum HealthMdRenderInputAdapter {
 
     private static let qualifiedDetailPaths: [[String]] = [
         ["sleep", "sleepStages"], ["heart", "heartRateSamples"], ["heart", "hrvSamples"],
-        ["vitals", "bloodOxygenSamples"], ["vitals", "bloodGlucoseSamples"], ["vitals", "respiratoryRateSamples"],
+        ["vitals", "bloodOxygenSamples"], ["vitals", "bloodGlucoseSamples"], ["vitals", "respiratoryRateSamples"], ["vitals", "bloodPressureSamples"],
     ]
 
     private static func mergeDetails(_ first: [String: Any], _ second: [String: Any]) -> [String: Any] {
@@ -551,6 +552,38 @@ enum HealthMdRenderInputAdapter {
         }
         return ["output_keys": keys.sorted(), "csv_rows": rows, "markdown_blocks": blocks,
             "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_quantity_details", "lines": yaml, "ordinal": 0]]]
+    }
+
+    private static func bloodPressureDetails(_ root: [String: Any], ownerDate: String,
+                                             selectedOutputKeys: [String]) throws -> [String: Any] {
+        let samples = (root["vitals"] as? [String: Any])?["bloodPressureSamples"] as? [[String: Any]] ?? []
+        var rows: [[String: Any]] = []
+        var yaml: [String] = []
+        var lines = ["| Timestamp (UTC) | End (UTC) | Systolic | Diastolic | Unit |", "|---|---|---|---|---|"]
+        let keys = ["blood_pressure_systolic", "blood_pressure_diastolic"]
+        let clock = ISO8601DateFormatter()
+        clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for sample in samples {
+            guard keys.allSatisfy(selectedOutputKeys.contains),
+                  let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
+                  let start = clock.date(from: timestamp),
+                  let endDate = sample["endDate"] as? String, endDate.hasSuffix("Z"),
+                  let end = clock.date(from: endDate), end >= start,
+                  sample["unit"] as? String == "mmHg",
+                  let systolic = sample["systolic"] as? NSNumber, systolic.doubleValue.isFinite,
+                  let diastolic = sample["diastolic"] as? NSNumber, diastolic.doubleValue.isFinite else {
+                throw AdapterError.invalidPresentation
+            }
+            let record: [String: Any] = ["metric": "blood_pressure", "unit": "mmHg", "sample": sample]
+            let encoded = String(decoding: try canonicalJSON(record), as: UTF8.self)
+            rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Blood Pressure Correlation",
+                "value": encoded, "unit": "json", "timestamp": timestamp, "ordinal": rows.count])
+            yaml.append("  - \(encoded)")
+            lines.append("| \(timestamp) | \(endDate) | \(systolic.stringValue) | \(diastolic.stringValue) | mmHg |")
+        }
+        return ["output_keys": samples.isEmpty ? [] : keys.sorted(), "csv_rows": rows,
+            "markdown_blocks": samples.isEmpty ? [] : [["heading": "Blood Pressure Correlation Details", "lines": lines, "ordinal": 0]],
+            "bases_frontmatter_blocks": samples.isEmpty ? [] : [["key": "native_correlation_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func sleepStageDetails(_ stages: [[String: Any]], ownerDate: String,

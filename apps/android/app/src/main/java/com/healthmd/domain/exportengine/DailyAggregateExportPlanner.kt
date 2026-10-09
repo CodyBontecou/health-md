@@ -117,6 +117,18 @@ class FrozenDailyAggregateExportRequest private constructor(
             val customization = settings.formatCustomization.frozenCopy()
             return FrozenDailyAggregateExportRequest(
                 data = if (profile == AndroidExportProfile.android_sleep_v6) data.copy(
+                    heart = data.heart.copy(
+                        samples = freezeQuantitySamples(data.heart.samples),
+                        hrvSamples = freezeQuantitySamples(data.heart.hrvSamples),
+                    ),
+                    vitals = data.vitals.copy(
+                        bloodOxygenSamples = freezeQuantitySamples(data.vitals.bloodOxygenSamples),
+                        bloodGlucoseSamples = freezeQuantitySamples(data.vitals.bloodGlucoseSamples),
+                        respiratoryRateSamples = freezeQuantitySamples(data.vitals.respiratoryRateSamples),
+                        bloodPressureSamples = Collections.unmodifiableList(data.vitals.bloodPressureSamples.map { sample ->
+                            sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
+                        }),
+                    ),
                     sleep = data.sleep.copy(
                         stages = Collections.unmodifiableList(data.sleep.stages.toList()),
                         sessions = Collections.unmodifiableList(data.sleep.sessions.map { session ->
@@ -630,3 +642,8 @@ private fun Throwable.toShadowFailureCode(): ShadowRustFailureCode = when (this)
 private fun rethrowCancellationOrFatal(error: Throwable) {
     if (error is CancellationException || error.isFatalExportEngineFailure()) throw error
 }
+
+private fun freezeQuantitySamples(samples: List<com.healthmd.domain.model.TimestampedSample>) =
+    Collections.unmodifiableList(samples.map { sample ->
+        sample.copy(metadata = Collections.unmodifiableMap(sample.metadata.toMap()))
+    })

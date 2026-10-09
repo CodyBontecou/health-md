@@ -122,6 +122,50 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testSelectedBloodPressurePairWithoutSummariesReachesEveryFormat() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let start = owner.addingTimeInterval(3600.125)
+        let end = start.addingTimeInterval(0.75)
+        let sample = BloodPressureSample(correlationUUID: UUID(uuidString: "00000000-0000-4000-8000-000000000104"),
+            systolic: 120.125, diastolic: 80.875, startDate: start, endDate: end,
+            sourceRevision: HealthKitSourceRevision(name: "Synthetic, \"source\"", bundleIdentifier: "example.synthetic.bp"),
+            device: HealthKitDeviceProvenance(model: "Synthetic cuff"), metadata: ["synthetic": "paired-pressure"])
+        let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
+            activity: ActivityData(steps: 0), vitals: VitalsData(bloodPressureSamples: [sample]))
+        for selection: Set<String> in [["blood_pressure_systolic", "blood_pressure_diastolic"], ["blood_pressure_systolic", "steps"]] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selection)
+            snapshot.detailPolicy = .detailedTimeSeries
+            let result = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = result else { return XCTFail("Paired selected correlations must reach native/core formats") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+            let vitals = root["vitals"] as? [String: Any]
+            XCTAssertNil(vitals?["bloodPressureSystolicAvg"])
+            XCTAssertNil(vitals?["bloodPressureDiastolicAvg"])
+            XCTAssertEqual((vitals?["bloodPressureSamples"] as? [[String: Any]])?.count ?? 0, selection.contains("blood_pressure_diastolic") ? 1 : 0)
+            for artifact in operation.artifacts where artifact.format != .json {
+                let text = String(decoding: artifact.artifact.inlineData, as: UTF8.self)
+                XCTAssertEqual(text.contains("120.125"), selection.contains("blood_pressure_diastolic"))
+                XCTAssertEqual(text.contains("80.875"), selection.contains("blood_pressure_diastolic"))
+                XCTAssertFalse(text.contains("blood_pressure_systolic:"))
+                if selection.contains("blood_pressure_diastolic") && artifact.format != .markdown {
+                    XCTAssertTrue(text.contains("example.synthetic.bp"))
+                    XCTAssertTrue(text.contains("00000000-0000-4000-8000-000000000104"))
+                }
+            }
+            if selection.contains("blood_pressure_diastolic"), let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                for artifact in operation.artifacts {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent("apple-v11-blood-pressure").appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try artifact.artifact.inlineData.write(to: output)
+                }
+            }
+        }
+    }
+
     func testSelectedStageWithoutSummaryRetainsSourceIntervalAcrossEveryFormat() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
@@ -156,7 +200,7 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    func testWakeDateDetailsRejectArchivesRemoteSurfacesAndUnqualifiedArrays() async throws {
+    func testWakeDateDetailsRejectArchivesRemoteSurfacesAndInvalidPairs() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
@@ -180,12 +224,12 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
             sleep: SleepData(totalDuration: 3600, sessionStart: owner.addingTimeInterval(3600),
                 sessionEnd: owner.addingTimeInterval(7200)), vitals: VitalsData(bloodPressureSamples: [
-                BloodPressureSample(systolic: 120, diastolic: 80, startDate: owner, endDate: owner)]))
+                BloodPressureSample(systolic: 120, diastolic: 80, startDate: owner.addingTimeInterval(1), endDate: owner)]))
         XCTAssertTrue(day.sleep.stages.isEmpty)
         do {
             _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
                 surface: .localVaultWithoutSideEffects)
-            XCTFail("Unqualified correlation detail arrays must reject even without sleep stages")
+            XCTFail("Invalid correlation bounds must reject even without sleep stages")
         } catch {
             XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
         }

@@ -57,6 +57,49 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun pairedBloodPressureWithoutSummariesReachesConcretePlannerAcrossEveryFormat() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val instant = Instant.parse("2026-11-01T01:30:00.123456789Z")
+        val sourceMetadata = mutableMapOf("synthetic" to "paired-pressure")
+        val sample = com.healthmd.domain.model.BloodPressureSample(java.time.LocalDateTime.ofInstant(instant, context.zoneId),
+            120.125, 80.875, measurementLocation = "left-arm", bodyPosition = "sitting", source = "example.synthetic.bp",
+            metadata = sourceMetadata,
+            exactTime = com.healthmd.domain.model.ExactSourceTimestamp(instant.epochSecond, instant.nano, "Z"),
+            identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-bp-correlation"))
+        val samples = mutableListOf(sample)
+        val captured = HealthData(LocalDate.of(2026, 11, 1), activity = ActivityData(steps = 0), vitals = VitalsData(bloodPressureSamples = samples))
+        for (enabled in listOf(setOf("bp_systolic", "bp_diastolic"), setOf("bp_systolic", "steps"))) {
+            val selection = MetricSelectionState(enabledMetrics = enabled)
+            val data = captured.filtered(selection, context)
+            val request = FrozenDailyAggregateExportRequest.capture(data, ExportSettings(exportFormats = ExportFormat.entries.toSet(),
+                includeGranularData = true, metricSelection = selection, executionSleepCaptureContext = context,
+                executionSleepCaptureAuthorityIsFrozen = true), AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+                DailyAggregateExportIds("concrete-bp-${enabled.size}", "concrete-bp-session-${enabled.size}"))
+            if ("bp_diastolic" in enabled) { samples.clear(); sourceMetadata["synthetic"] = "mutated-after-capture" }
+            val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("ambient timezone is forbidden") }).plan(request).plan
+            assertThat(plan.items).hasSize(4)
+            for (artifact in plan.items) {
+                val text = artifact.content.decodeToString()
+                assertThat(text.contains("120.125")).isEqualTo("bp_diastolic" in enabled)
+                assertThat(text.contains("80.875")).isEqualTo("bp_diastolic" in enabled)
+                assertThat(text).doesNotContain("blood_pressure_systolic:")
+                assertThat(text).doesNotContain("mutated-after-capture")
+                if ("bp_diastolic" in enabled && !text.contains("| Timestamp (UTC) | End (UTC) | Systolic |")) {
+                    assertThat(text).contains("synthetic-bp-correlation")
+                    assertThat(text).contains("example.synthetic.bp")
+                }
+            }
+            if ("bp_diastolic" in enabled) System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+                plan.items.forEach { artifact ->
+                    val output = File(directory, "android-v6-blood-pressure/${artifact.relativePath}")
+                    requireNotNull(output.parentFile).mkdirs()
+                    output.writeBytes(artifact.content)
+                }
+            }
+        }
+    }
+
+    @Test
     fun quantityOnlyNativeRecordsReachConcretePlannerAcrossEveryFormat() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val instant = Instant.parse("2026-11-01T01:30:00.123456789Z")
