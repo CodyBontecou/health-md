@@ -195,6 +195,24 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
     assert.equal(day.sleep[unsupportedStage], undefined);
     assert.equal(day.sleep.sleepStages.length, 0);
   }
+  for (const [variant, date, identity] of [["apple-v11-quantities", "2026-03-15", "hrv_sdnn"], ["android-v6-quantities", "2026-11-01", "hrv_rmssd"]]) {
+    const quantities = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-quantity-details", variant, `${date}.json`), "utf8");
+    const day = api.parseHealthDay(quantities);
+    assert.equal(day.nativeQuantityDetails.length, 5);
+    assert.equal(day.heart.averageHeartRate, undefined);
+    assert.equal(day.heart.heartRateSamples[0].value, 72.125);
+    assert.ok(day.nativeQuantityDetails.some(record => record.metric === identity && record.unit === "ms"));
+    const oxygen = day.nativeQuantityDetails.find(record => record.metric === "blood_oxygen");
+    assert.equal(oxygen.unit, "ratio_0_1");
+    assert.equal(oxygen.sample.value, 0.97125);
+    assert.equal(day.vitals.bloodOxygenSamples[0].value, 97.125);
+    assert.ok(oxygen.sample.metadata.synthetic.includes("quantity"));
+    if (variant.startsWith("android")) {
+      assert.equal(day.heart.heartRateSamples[0].exactTime.nano, 123456789);
+      assert.equal(day.heart.heartRateSamples[0].identity.nativeId, "synthetic-quantity");
+    }
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
