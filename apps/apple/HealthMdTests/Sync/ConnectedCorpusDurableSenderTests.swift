@@ -1,4 +1,5 @@
 import XCTest
+import Darwin
 @testable import HealthMd
 
 @MainActor
@@ -350,6 +351,189 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         )
         XCTAssertNil(tracker.snapshot)
         XCTAssertFalse(tracker.keepsScreenAwake)
+    }
+
+    func testDormantConnectedCancellationDoesNotFinishUnownedSameIDActivity() async throws {
+        for source in [CLIExportActivityTracker.Source.macApp, .direct] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1,
+                          message: "Independent live request")
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+
+            let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+            XCTAssertTrue(cancelled)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .cancelled)
+            XCTAssertEqual(tracker.snapshot, snapshot, "A dormant journal cannot finish an independent activity")
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            XCTAssertTrue(tracker.keepsScreenAwake)
+        }
+    }
+
+    func testConnectedCancellationFinishesItsBoundActivity() async throws {
+        let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+        let tracker = CLIExportActivityTracker()
+        defer { tracker.clear() }
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+        Self.retainedRecoveryManagers.append(manager)
+        let transferring = try fixture.store.updateState(jobID: fixture.session.jobID, state: .transferring, message: "Owned connected transfer")
+        tracker.updateConnected(try XCTUnwrap(transferring.cliUIProgressSnapshot))
+        let admissionID = tracker.admissionID
+
+        let cancelled = await manager.cancel(jobID: fixture.session.jobID, notifyPeer: false)
+
+        XCTAssertTrue(cancelled)
+        XCTAssertEqual(tracker.snapshot?.phase, .cancelled)
+        XCTAssertEqual(tracker.admissionID, admissionID)
+        XCTAssertFalse(tracker.keepsScreenAwake)
+    }
+
+    func testRecoveredCompletionRejectionFinishesOnlyBoundActivity() async throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            let harness = Harness()
+            _ = try await ConnectedCorpusDurableSender.send(
+                configuration: .init(jobID: fixture.session.jobID, retryDelayNanoseconds: 0),
+                store: fixture.store, transport: harness.transport(),
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            // The first Mac and Direct cases are independently admitted; the last
+            // Mac case below explicitly retains the connected session authority.
+            tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            if bound { tracker.updateConnected(try XCTUnwrap(completed.cliUIProgressSnapshot)) }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            let rejected = manager.rejectRecoveredMacRequestCompletion(jobID: fixture.session.jobID,
+                                                                       message: "Invalid terminal accounting")
+            XCTAssertTrue(rejected)
+            XCTAssertTrue(try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID)).completionRecorded)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
+    func testConnectedExpiryFinishesOnlyBoundActivity() throws {
+        for (source, bound) in [(CLIExportActivityTracker.Source.macApp, false), (.direct, false), (.macApp, true)] {
+            var now = Date(timeIntervalSince1970: 1_800_000_000)
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true, now: { now })
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            if bound {
+                let journal = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+                tracker.updateConnected(try XCTUnwrap(journal.cliUIProgressSnapshot))
+            } else {
+                tracker.begin(jobID: fixture.session.jobID, source: source, totalDays: 1, message: "Independent request")
+            }
+            let snapshot = tracker.snapshot
+            let admissionID = tracker.admissionID
+            now = now.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store, cliActivityTracker: tracker)
+            Self.retainedRecoveryManagers.append(manager)
+            XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID, allowExpired: true)?.state, .expired)
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            if bound {
+                XCTAssertEqual(tracker.snapshot?.phase, .failed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot, snapshot)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+        }
+    }
+
+    func testActualConnectedSenderAndResultPreserveReplacementActivityAdmission() async throws {
+        let replacements: [CLIExportActivityTracker.Source?] = [nil, .macApp, .direct]
+        for replacementSource in replacements {
+            let fixture = try makeFixture(dayCount: 1, origin: .macInitiated, includeCLIRequest: true)
+            let tracker = CLIExportActivityTracker()
+            defer { tracker.clear() }
+            let harness = Harness()
+            var recorded: [UUID] = []
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, cliActivityTracker: tracker,
+                transportProvider: { _ in harness.transport() },
+                completionRecorder: { journal, payload in
+                    XCTAssertEqual(journal.jobID, payload.jobID)
+                    recorded.append(payload.jobID)
+                }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let initial = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: .init(protocolVersion: fixture.session.protocolVersion,
+                                partitionTargetBytes: fixture.session.partitionTargetBytes),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            var replacement: CLIExportActivityTracker.Snapshot?
+            var replacementAdmission: UUID?
+            var prepared = false
+            _ = try await manager.send(
+                origin: .macInitiated, jobID: fixture.session.jobID,
+                manifest: fixture.manifest, macRequest: initial.macRequest,
+                durableNegotiation: negotiation, syncService: SyncService(),
+                onCheckpoint: { journal in
+                    guard journal.state == .preparing, !prepared else { return }
+                    prepared = true
+                    guard let source = replacementSource, let previous = tracker.snapshot else { return }
+                    let oldAdmission = tracker.admissionID
+                    tracker.begin(jobID: previous.jobID, source: source, totalDays: previous.totalDays,
+                                  targetLabel: previous.targetLabel, message: previous.message)
+                    tracker.update(jobID: previous.jobID, source: source, targetLabel: previous.targetLabel,
+                                   phase: previous.phase, processedDays: previous.processedDays,
+                                   totalDays: previous.totalDays, currentDate: previous.currentDate,
+                                   committedPartitions: previous.committedPartitions,
+                                   committedBytes: previous.committedBytes, message: previous.message)
+                    replacement = tracker.snapshot
+                    replacementAdmission = tracker.admissionID
+                    XCTAssertNotEqual(replacementAdmission, oldAdmission)
+                    if source == .macApp { XCTAssertEqual(replacement, previous) }
+                },
+                produceItem: { _, date in try self.makeSmallItem(date: date) }
+            )
+            XCTAssertTrue(prepared)
+            let completed = try XCTUnwrap(fixture.store.load(jobID: fixture.session.jobID))
+            XCTAssertEqual(completed.state, .completed)
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "Sender callbacks cannot borrow replacement admission")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            }
+            let payload = MacExportResultPayload(
+                jobID: fixture.session.jobID, status: .success, successCount: 1, totalCount: 1,
+                formatsPerDate: 1, totalFilesWritten: 1, isTotalFilesWrittenAuthoritative: true,
+                failedDateDetails: [], completedDates: fixture.dates,
+                destinationDisplayName: "Synthetic Mac", destinationPathForDisplay: nil,
+                completedAt: fixture.manifest.createdAt
+            )
+            XCTAssertTrue(manager.recordRecoveredMacRequestCompletion(payload))
+            XCTAssertFalse(manager.recordRecoveredMacRequestCompletion(payload), "Completion effects remain once-only")
+            XCTAssertEqual(recorded, [fixture.session.jobID])
+            if replacementSource != nil {
+                XCTAssertEqual(tracker.snapshot, replacement, "A completed journal cannot finish an unowned activity")
+                XCTAssertEqual(tracker.admissionID, replacementAdmission)
+                XCTAssertTrue(tracker.keepsScreenAwake)
+            } else {
+                XCTAssertEqual(tracker.snapshot?.phase, .completed)
+                XCTAssertFalse(tracker.keepsScreenAwake)
+            }
+        }
     }
 
     func testRecoveryManagerRejectsSecondJobBeforeCreatingCheckpoint() async throws {
@@ -823,9 +1007,283 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
+    func testCompetingFreshAdmissionRetainsWinningJournalBytes() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let jobDirectoryName = fixture.session.jobID.uuidString.lowercased()
+        let originalURL = fixture.root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: originalURL)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("competing-admission-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: root, fileManager: manager)
+        XCTAssertThrowsError(try store.createOrRestore(origin: .interactiveIPhone, session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .requestChanged)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID, allowExpired: true)?.origin, .scheduledIPhone)
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+    }
+
+    func testCheckpointCannotOverwriteJournalChangedAfterRead() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let destination = fixture.root
+            .appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertThrowsError(try store.updateState(jobID: fixture.session.jobID, state: .paused, message: "synthetic stale checkpoint"))
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID)?.origin, .scheduledIPhone)
+    }
+
+    func testExpiryCheckpointConflictRetainsWinningJournalAndSpool() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let destination = directory.appendingPathComponent("journal.json")
+        let prepared = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let spool = directory.appendingPathComponent(try XCTUnwrap(prepared.items.first).relativePath)
+        let retained = try Data(contentsOf: spool)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: destination)) as? [String: Any])
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(ConnectedCorpusOutboundStore.retentionInterval + 1)
+        object["expiresAt"] = ISO8601DateFormatter().string(from: cleanupTime.addingTimeInterval(86400))
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try Data(contentsOf: spool), retained)
+    }
+
+    func testConnectedCleanupAndRevocationHoldThePublicationLock() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let orphan = directory.appendingPathComponent("items/orphan.bin")
+        try Data("synthetic orphan".utf8).write(to: orphan)
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: Set([
+            orphan.path, directory.appendingPathComponent("items").path,
+            directory.appendingPathComponent("partitions").path, directory.path,
+        ]))
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertNotNil(try store.load(jobID: fixture.session.jobID))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
+        try store.cancel(jobID: fixture.session.jobID)
+        try store.remove(jobID: fixture.session.jobID)
+        XCTAssertEqual(manager.removalLockObservations, [true, true, true, true])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testFailedRemovalSyncReportsUncertaintyAndAllowsLockedRetry() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        var rejectRemovalSync = true
+        var rejected = 0
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, directorySync: { url in
+            if rejectRemovalSync, url.pathComponents == fixture.root.pathComponents,
+               !FileManager.default.fileExists(atPath: directory.path) {
+                rejected += 1
+                throw POSIXError(.EIO)
+            }
+            try AtomicFileWriter.synchronizeDirectory(url)
+        })
+        XCTAssertThrowsError(try store.remove(jobID: fixture.session.jobID)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EIO)
+        }
+        XCTAssertEqual(rejected, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        rejectRemovalSync = false
+        XCTAssertNoThrow(try store.remove(jobID: fixture.session.jobID))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testTerminalExpiryDoesNotReportFailedRemovalAndRetriesRetainedJob() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        try fixture.store.cancel(jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: [directory.path])
+        manager.removalFailurePath = directory.resolvingSymlinksInPath().path
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 1)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path))
+        manager.removalFailurePath = nil
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [fixture.session.jobID])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(manager.removalLockObservations, [true, true])
+    }
+
+    private final class CleanupLockFileManager: FileManager, @unchecked Sendable {
+        let lockURL: URL
+        let watchedPaths: Set<String>
+        var removalLockObservations: [Bool] = []
+        var removalFailurePath: String?
+        init(lockURL: URL, watchedPaths: Set<String>) {
+            self.lockURL = lockURL
+            self.watchedPaths = Set(watchedPaths.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path })
+            super.init()
+        }
+        override func removeItem(at URL: URL) throws {
+            if watchedPaths.contains(URL.resolvingSymlinksInPath().path) {
+                let descriptor = Darwin.open(lockURL.path, O_RDWR)
+                guard descriptor >= 0 else { throw POSIXError(.EIO) }
+                defer { Darwin.close(descriptor) }
+                let result = flock(descriptor, LOCK_EX | LOCK_NB)
+                removalLockObservations.append(result != 0 && errno == EWOULDBLOCK)
+                if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            }
+            if URL.resolvingSymlinksInPath().path == removalFailurePath { throw POSIXError(.EIO) }
+            try super.removeItem(at: URL)
+        }
+    }
+
+    /// Installs another writer's valid journal after initial absence was observed.
+    private final class CompetingAdmissionFileManager: FileManager, @unchecked Sendable {
+        let destination: URL
+        let winner: Data
+        init(destination: URL, winner: Data) { self.destination = destination; self.winner = winner; super.init() }
+        override func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey: Any]? = nil) -> Bool {
+            let created = super.createFile(atPath: path, contents: data, attributes: attr)
+            if created && (URL(fileURLWithPath: path).lastPathComponent.hasPrefix("journal-") || URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".journal.json.")) {
+                do { try winner.write(to: destination, options: .atomic) } catch { return false }
+            }
+            return created
+        }
+    }
+
     private enum TestError: Error {
         case simulatedCrash
         case unexpectedProduction
+    }
+
+    #if os(iOS)
+    func testRecoveredProducerUsesPersistedSleepContextInBothMutationDirectionsAndRetainsMissingJournal() async throws {
+        let changes: [(SleepDayAttribution?, SleepDayAttribution)] = [(.nightBegins, .morningEnds), (.morningEnds, .nightBegins), (nil, .nightBegins)]
+        for (saved, current) in changes {
+            let fixture = try makeFixture(dayCount: 1, sleepAttribution: saved)
+            let relaunchedStore = ConnectedCorpusOutboundStore(rootURL: fixture.root)
+            let journal = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            XCTAssertEqual(journal.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            let healthStore = FakeHealthStore()
+            let counter = SleepRecoveryQueryCounter()
+            healthStore.beforeQueryCategorySamples = { _ in await MainActor.run { counter.count += 1 } }
+            let healthManager = HealthKitManager(store: healthStore,
+                userDefaults: UserDefaults(suiteName: "SleepRecovery.\(UUID())")!)
+            healthManager.setSleepDayAttribution(current)
+            let manager = IPhoneCorpusExportRecoveryManager(store: relaunchedStore)
+            Self.retainedRecoveryManagers.append(manager)
+            let service = SyncService()
+            manager.configure(syncService: service, healthKitManager: healthManager, externalIntegrations: nil)
+            let producer = manager.makeRecoveredProducer(for: journal)
+            if saved == .nightBegins {
+                let item = try await producer(0, fixture.dates[0])
+                item.file.remove()
+                XCTAssertGreaterThan(counter.count, 0, "A recovered night operation must not read the changed morning preference")
+            } else {
+                do {
+                    _ = try await producer(0, fixture.dates[0])
+                    XCTFail("Missing or unapproved saved attribution must remain unavailable")
+                } catch {
+                    XCTAssertEqual(error as? AppleSleepCaptureContext.AvailabilityError,
+                        saved == nil ? .missingDurableAttribution : .unapprovedAttribution)
+                }
+                XCTAssertEqual(counter.count, 0)
+            }
+            let retained = try XCTUnwrap(relaunchedStore.load(jobID: fixture.session.jobID, allowExpired: true))
+            XCTAssertEqual(retained.exportManifest.settingsSnapshot.sleepCaptureContext?.sleepDayAttribution, saved)
+            XCTAssertEqual(retained.session.requestFingerprint, journal.session.requestFingerprint)
+            XCTAssertEqual(healthManager.sleepDayAttribution, current)
+        }
+    }
+
+    @MainActor private final class SleepRecoveryQueryCounter { var count = 0 }
+    #endif
+
+    func testMissingConnectedJournalCannotReplaceRetainedSpoolAuthority() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let saved = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+            expectedIndex: 0, jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let spool = directory.appendingPathComponent(try XCTUnwrap(saved.items.first).relativePath)
+        let bytes = try Data(contentsOf: spool)
+        let journal = directory.appendingPathComponent("journal.json")
+        try FileManager.default.removeItem(at: journal)
+        XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+            session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+        XCTAssertEqual(try Data(contentsOf: spool), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: journal.path), "Do not invent replacement authority")
+    }
+
+    func testConnectedJournalSymbolicLinkCannotAdmitOrRewriteItsTarget() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let journal = directory.appendingPathComponent("journal.json")
+        let target = fixture.root.appendingPathComponent("retained-authority.json")
+        let bytes = try Data(contentsOf: journal)
+        try FileManager.default.moveItem(at: journal, to: target)
+        try FileManager.default.createSymbolicLink(at: journal, withDestinationURL: target)
+        XCTAssertThrowsError(try fixture.store.load(jobID: fixture.session.jobID)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: target), bytes)
+        XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: journal.path), target.path)
+    }
+
+    func testConnectedJournalRejectsDifferentJobIdentityWithoutChangingEitherJournal() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let original = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let bytes = try Data(contentsOf: original)
+        let otherJob = UUID()
+        let otherDirectory = fixture.root.appendingPathComponent(otherJob.uuidString.lowercased())
+        try FileManager.default.createDirectory(at: otherDirectory, withIntermediateDirectories: true)
+        let conflicting = otherDirectory.appendingPathComponent("journal.json")
+        try bytes.write(to: conflicting)
+        XCTAssertThrowsError(try fixture.store.load(jobID: otherJob)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+        }
+        XCTAssertEqual(try Data(contentsOf: original), bytes)
+        XCTAssertEqual(try Data(contentsOf: conflicting), bytes)
+    }
+
+    func testUnreadableConnectedJournalsRetainBytesWithoutAdmittingReplacement() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let journal = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+            .appendingPathComponent("journal.json")
+        let original = try Data(contentsOf: journal)
+        var unknownObject = try XCTUnwrap(JSONSerialization.jsonObject(with: original) as? [String: Any])
+        unknownObject["version"] = 999
+        let unknown = try JSONSerialization.data(withJSONObject: unknownObject)
+        for bytes in [Data("{private-invalid-journal".utf8), unknown] {
+            try bytes.write(to: journal)
+            XCTAssertThrowsError(try fixture.store.createOrRestore(origin: .interactiveIPhone,
+                session: fixture.session, manifest: fixture.manifest)) {
+                XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .invalidJournal)
+            }
+            XCTAssertEqual(fixture.store.cleanupExpired(now: fixture.manifest.createdAt.addingTimeInterval(
+                ConnectedCorpusOutboundStore.retentionInterval + 100)), [])
+            XCTAssertEqual(try Data(contentsOf: journal), bytes)
+        }
+        try original.write(to: journal)
+        XCTAssertEqual(try fixture.store.load(jobID: fixture.session.jobID)?.session, fixture.session)
+        XCTAssertEqual(try Data(contentsOf: journal), original)
+        XCTAssertNil(try fixture.store.load(jobID: UUID()))
     }
 
     private struct Fixture {
@@ -842,6 +1300,7 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         origin: ConnectedCorpusOutboundOrigin = .interactiveIPhone,
         protocolVersion: Int = 2,
         includeCLIRequest: Bool = false,
+        sleepAttribution: SleepDayAttribution? = .nightBegins,
         sourceInstallationID: UUID? = nil,
         destinationInstallationID: UUID? = nil,
         now: @escaping () -> Date = { Date(timeIntervalSince1970: 1_800_000_000) }
@@ -855,6 +1314,9 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         let settings = AdvancedExportSettings(userDefaults: defaults)
         Self.retainedSettings.append(settings)
         settings.exportFormats = [.json]
+        settings.executionSleepCaptureContext = sleepAttribution.map {
+            AppleSleepCaptureContext(timeZone: .current, sleepDayAttribution: $0)
+        }
         let start = Calendar.current.startOfDay(for: Date(timeIntervalSince1970: 1_800_000_000))
         let dates = (0..<dayCount).compactMap {
             Calendar.current.date(byAdding: .day, value: $0, to: start)

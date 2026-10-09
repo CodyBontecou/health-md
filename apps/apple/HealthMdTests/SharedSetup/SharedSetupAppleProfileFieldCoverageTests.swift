@@ -259,7 +259,7 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let enginePin = try makeSyntheticAppleExportEnginePin(
             calendarTimeZoneIdentifier: "America/Los_Angeles"
         )
-        let snapshot = ExportSettingsSnapshot(
+        var snapshot = ExportSettingsSnapshot(
             exportFormats: [.markdown, .obsidianBases, .json, .csv],
             includeMetadata: false,
             groupByCategory: false,
@@ -282,6 +282,9 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
             appleExportEnginePin: enginePin,
             appleExportEngineAuthorityIsFrozen: true,
             calendarTimeZoneIdentifier: "America/Los_Angeles"
+        )
+        snapshot.sleepCaptureContext = AppleSleepCaptureContext(
+            timeZone: TimeZone(identifier: "America/Los_Angeles")!, sleepDayAttribution: .nightBegins
         )
         let profile = ExportProfile(
             id: profileID,
@@ -359,7 +362,14 @@ final class SharedSetupAppleProfileFieldCoverageTests: XCTestCase {
         let storedFields = Set(
             Mirror(reflecting: value).children.compactMap(\.label)
         )
-        let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(value))
+        let encoder = JSONEncoder()
+        if value is ExportSettingsSnapshot {
+            // Inventory includes internal durable fields. Their ledger rows are
+            // prohibited, and ordinary profile/wire omission is checked by the
+            // dedicated sleep-authority serialization controls.
+            encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
+        }
+        let object = try JSONSerialization.jsonObject(with: encoder.encode(value))
         let encoded = try XCTUnwrap(
             object as? [String: Any],
             "Synthetic \(sourceType) must encode as a keyed object."

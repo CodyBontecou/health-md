@@ -58,6 +58,7 @@ object ExportEnginePinCodec {
     fun isStructurallyValid(pin: ExportEnginePin): Boolean =
         pin.publicSchema == ExportEnginePin.PUBLIC_SCHEMA &&
             pin.publicSchemaVersion == pin.profile.publicSchemaVersion &&
+            pin.hasExplicitSuccessorContracts() &&
             pin.coreApiVersion > 0u &&
             pin.semanticInputVersion > 0u &&
             pin.canonicalModelVersion > 0u &&
@@ -71,6 +72,18 @@ object ExportEnginePinCodec {
             pin.coreSourceRevision.length <= MAX_SOURCE_REVISION_CHARACTERS &&
             pin.ianaTimeZone.length <= MAX_TIME_ZONE_CHARACTERS &&
             pin.ianaTimeZone in ZoneId.getAvailableZoneIds()
+
+    private fun ExportEnginePin.hasExplicitSuccessorContracts(): Boolean {
+        if (profile != AndroidExportProfile.android_sleep_v6) return true
+        val contracts = profile.contractVersions
+        return engine == ExportEngineMode.rust &&
+            coreApiVersion == HealthMdCoreService.EXPECTED_CORE_API_VERSION &&
+            semanticInputVersion == contracts.semanticInput &&
+            canonicalModelVersion == contracts.canonicalModel &&
+            renderInputVersion == contracts.renderInput &&
+            artifactPlanVersion == contracts.artifactPlan &&
+            registryVersion == contracts.registry
+    }
 
     private fun canonicalize(element: JsonElement): JsonElement = when (element) {
         is JsonObject -> JsonObject(
@@ -145,7 +158,10 @@ class ExportEnginePinPlanner @Inject constructor() {
             val canonicalZone = ZoneId.of(zoneId.id).id
             val readiness = coreService.checkReadiness()
             if (!readiness.isReady) return null
-            val registry = coreService.getMetricRegistry(policy.profile.coreProfile)
+            val registry = coreService.getMetricRegistry(
+                policy.profile.coreProfile,
+                policy.profile.contractVersions.registry,
+            )
             ExportEnginePin.create(
                 engine = policy.mode,
                 profile = policy.profile,

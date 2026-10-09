@@ -30,6 +30,8 @@ import com.healthmd.domain.exportengine.ExportArtifactPlanValidationException
 import com.healthmd.domain.exportengine.isFatalExportEngineFailure
 import com.healthmd.domain.exportengine.validateAPIPlan
 import com.healthmd.domain.model.APIExportEndpoint
+import com.healthmd.domain.model.AndroidCaptureContext
+import com.healthmd.domain.model.SleepAttributionUnavailableException
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportFormat
 import com.healthmd.domain.model.ExportPreview
@@ -68,38 +70,63 @@ interface APIExportCaptureSource {
     suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData
 }
 
+/** Production capture source contract for one immutable Android operation context. */
+private interface OperationScopedAPIExportCaptureSource : APIExportCaptureSource {
+    suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext
+    suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    )
+    suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData
+}
+
 private class HealthRepositoryAPIExportCaptureSource(
     private val healthRepository: HealthRepository,
-) : APIExportCaptureSource {
+) : OperationScopedAPIExportCaptureSource {
     override fun isBeforeFirstUnlock(): Boolean = healthRepository.isBeforeFirstUnlock()
 
-    override suspend fun authorizeExerciseRouteConsent(dates: List<LocalDate>, settings: ExportSettings) {
+    override suspend fun authorizeExerciseRouteConsent(
+        dates: List<LocalDate>,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ) {
         val effectiveSelection = settings.effectiveDataTypeSelection()
         if (effectiveSelection.workouts) {
             healthRepository.authorizeExerciseRouteConsent(
                 dates = dates,
                 dataTypes = effectiveSelection,
                 includeGranularData = settings.shouldFetchGranularData(),
-                zoneId = settings.executionEnginePin?.ianaTimeZone?.let(ZoneId::of) ?: ZoneId.systemDefault(),
+                zoneId = context.zoneId,
             )
         }
     }
 
-    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData {
+    override suspend fun resolveCaptureContext(zoneId: ZoneId): AndroidCaptureContext =
+        healthRepository.resolveCaptureContext(zoneId)
+
+    override suspend fun capture(date: LocalDate, settings: ExportSettings): HealthData =
+        error("Production API capture requires an operation-scoped context")
+
+    override suspend fun capture(
+        date: LocalDate,
+        settings: ExportSettings,
+        context: AndroidCaptureContext,
+    ): HealthData {
         val effectiveSelection = settings.effectiveDataTypeSelection()
-        val captured = healthRepository.fetchHealthDataRange(
+        return (healthRepository.fetchHealthDataRange(
             dates = listOf(date),
             dataTypes = effectiveSelection,
             includeGranularData = settings.shouldFetchGranularData(),
-        ).firstOrNull() ?: HealthData(date)
-        val filtered = captured
+            zoneId = context.zoneId,
+            sleepDayAttributionOverride = context.explicitSleepDayAttributionOverride,
+        ).firstOrNull() ?: HealthData(date))
             .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
-        if (filtered.hasAnyData) return filtered
-
-        return healthRepository.fetchHealthData(date)
-            .filtered(effectiveSelection)
-            .filtered(settings.metricSelection)
+            .filtered(settings.metricSelection, context)
     }
 }
 
@@ -274,22 +301,39 @@ class APIEndpointExportRunner private constructor(
         val snapshot = OperationSnapshot(
             mode = resolvedMode,
             settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
+            calendarTimeZone = operationCalendarZone(frozenSettings),
             exportedAt = clock(),
             ids = idSource.next(),
         )
+        val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
+        val captureContext = try {
+            resolveOperationCaptureContext(snapshot.settings, ZoneId.of(snapshot.calendarTimeZone))
+        } catch (error: SleepAttributionUnavailableException) {
+            return ExportResult(successCount = 0, totalCount = normalizedDates.size,
+                failedDateDetails = normalizedDates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) })
+        }
         if (coroutineContext.allowsInteractiveRouteConsent() && !captureSource.isBeforeFirstUnlock()) {
             try {
                 // Authorization sees the complete scope before owner dates are captured in their
                 // canonical ascending order. Noninteractive capture sources intentionally no-op.
-                captureSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+                if (operationSource != null && captureContext != null) {
+                    operationSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings, captureContext)
+                } else {
+                    captureSource.authorizeExerciseRouteConsent(normalizedDates, snapshot.settings)
+                }
             } catch (_: CancellationException) {
                 return cancelledResult(normalizedDates, emptyList())
             } catch (_: Exception) {
                 // Consent is optional; preserve the established capture and failure behavior.
             }
         }
-        val capture = captureDates(normalizedDates, snapshot.settings, onProgress)
+        val capture = captureDates(
+            normalizedDates,
+            snapshot.settings,
+            ZoneId.of(snapshot.calendarTimeZone),
+            onProgress,
+            captureContext = captureContext,
+        )
         if (capture.wasCancelled) {
             return cancelledResult(normalizedDates, capture.failedDateDetails)
         }
@@ -392,13 +436,14 @@ class APIEndpointExportRunner private constructor(
         val snapshot = OperationSnapshot(
             mode = mode,
             settings = frozenSettings,
-            calendarTimeZone = frozenSettings.executionEnginePin?.ianaTimeZone ?: zoneIdProvider().id,
+            calendarTimeZone = operationCalendarZone(frozenSettings),
             exportedAt = clock(),
             ids = idSource.next(),
         )
         val capture = captureDates(
             dates = previewCandidates,
             settings = snapshot.settings,
+            zoneId = ZoneId.of(snapshot.calendarTimeZone),
             onProgress = onProgress,
             stopAfterRecordCount = maxPreviewDays.coerceAtLeast(1),
         )
@@ -501,12 +546,33 @@ class APIEndpointExportRunner private constructor(
         return policy.mode
     }
 
+    private fun operationCalendarZone(settings: ExportSettings): String =
+        settings.executionSleepCaptureContext?.zoneId?.id
+            ?: settings.executionEnginePin?.ianaTimeZone
+            ?: zoneIdProvider().id
+
+    private suspend fun resolveOperationCaptureContext(settings: ExportSettings, zoneId: ZoneId): AndroidCaptureContext? =
+        if (settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            AndroidCaptureContext.recovered(settings.executionSleepCaptureContext)
+        } else {
+            (captureSource as? OperationScopedAPIExportCaptureSource)?.resolveCaptureContext(zoneId)
+                ?.also { it.requireShippedProfile() }
+        }
+
     private suspend fun captureDates(
         dates: List<LocalDate>,
         settings: ExportSettings,
+        zoneId: ZoneId,
         onProgress: ((current: Int, total: Int, dateString: String) -> Unit)?,
         stopAfterRecordCount: Int? = null,
+        captureContext: AndroidCaptureContext? = null,
     ): CaptureResult {
+        val operationSource = captureSource as? OperationScopedAPIExportCaptureSource
+        val resolvedCaptureContext = try {
+            (captureContext ?: resolveOperationCaptureContext(settings, zoneId))?.also { it.requireShippedProfile() }
+        } catch (error: SleepAttributionUnavailableException) {
+            return CaptureResult(emptyList(), dates.map { FailedDateDetail(it, ExportFailureReason.UNKNOWN, error.message) }, dates, wasCancelled = false)
+        }
         val records = mutableListOf<HealthData>()
         val failures = mutableListOf<FailedDateDetail>()
         val attempted = mutableListOf<LocalDate>()
@@ -524,7 +590,11 @@ class APIEndpointExportRunner private constructor(
                 continue
             }
             try {
-                val record = captureSource.capture(date, settings)
+                val record = if (operationSource != null && resolvedCaptureContext != null) {
+                    operationSource.capture(date, settings, resolvedCaptureContext)
+                } else {
+                    captureSource.capture(date, settings)
+                }
                 if (record.date != date) {
                     failures += FailedDateDetail(date, ExportFailureReason.UNKNOWN)
                 } else if (record.hasAnyData) {

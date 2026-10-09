@@ -544,6 +544,12 @@
     <string name="feedback_no_app_available">No hay ninguna aplicación disponible para abrir este enlace.</string>
     <string name="granular_data_title">Incluir series de tiempo detalladas</string>
     <string name="granular_data_description">Añade muestras con marca de tiempo, como la frecuencia cardíaca y las fases del sueño, a las exportaciones de compatibilidad. Para obtener una copia completa de la API, usa una instantánea bruta de la API.</string>
+    <string name="sleep_attribution_title">Atribución del día de sueño</string>
+    <string name="sleep_attribution_night_begins">Comienza de noche</string>
+    <string name="sleep_attribution_morning_ends">Termina de mañana</string>
+    <string name="sleep_attribution_night_begins_description">El sueño usa el intervalo de mediodía a mediodía de la nota diaria. Es la opción predeterminada y coincide con exportaciones anteriores.</string>
+    <string name="sleep_attribution_morning_ends_description">Termina de mañana no está disponible para los perfiles de exportación actuales. Elige Comienza de noche para una nueva exportación.</string>
+
     <string name="metric_category_cycling">Ciclismo</string>
     <string name="metric_category_medications">Medicamentos</string>
     <string name="metric_category_other">Otro</string>

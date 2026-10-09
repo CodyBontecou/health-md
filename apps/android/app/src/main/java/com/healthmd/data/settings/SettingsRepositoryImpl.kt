@@ -15,6 +15,7 @@ import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import com.healthmd.domain.model.CompatibilitySchemaProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FormatCustomization
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.repository.SettingsRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -38,12 +39,14 @@ class SettingsRepositoryImpl(
         val EXPORT_SETTINGS = stringPreferencesKey("export_settings")
 
         val PREVENT_ACCIDENTAL_CHANGES = booleanPreferencesKey("prevent_accidental_changes")
+        val SLEEP_DAY_ATTRIBUTION = stringPreferencesKey("sleep_day_attribution")
         val EXPORT_FOLDER_URI = stringPreferencesKey("export_folder_uri")
         val FREE_EXPORTS_USED = intPreferencesKey("free_exports_used")
         val LEGACY_FREE_EXPORTS_REMAINING = intPreferencesKey("free_exports_remaining")
         val DIRECT_ACCOUNTED_JOB_IDS = stringSetPreferencesKey("direct_accounted_job_ids")
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val DIRECT_SUCCESSFUL_OPERATION_IDS = stringSetPreferencesKey("direct_successful_operation_ids")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val LAST_REVIEW_ATTEMPT_EPOCH_MILLIS = longPreferencesKey("last_review_attempt_epoch_millis")
         val LEGACY_HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
@@ -96,6 +99,19 @@ class SettingsRepositoryImpl(
     override suspend fun setPreventAccidentalChanges(enabled: Boolean) {
         dataStore.edit { prefs ->
             prefs[Keys.PREVENT_ACCIDENTAL_CHANGES] = enabled
+        }
+    }
+
+    override val sleepDayAttribution: Flow<SleepDayAttribution> = dataStore.data.map { prefs ->
+        SleepDayAttribution.fromWireValue(prefs[Keys.SLEEP_DAY_ATTRIBUTION])
+    }
+
+    override suspend fun getSleepDayAttribution(): SleepDayAttribution =
+        sleepDayAttribution.first()
+
+    override suspend fun setSleepDayAttribution(mode: SleepDayAttribution) {
+        dataStore.edit { prefs ->
+            prefs[Keys.SLEEP_DAY_ATTRIBUTION] = mode.wireValue
         }
     }
     override val exportFolderUri: Flow<String?> = dataStore.data.map { prefs ->
@@ -219,6 +235,23 @@ class SettingsRepositoryImpl(
             val current = prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0
             prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = current + 1
         }
+    }
+
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        require(runCatching { java.util.UUID.fromString(operationId).toString() == operationId }.getOrDefault(false)) {
+            "Invalid successful-export operation identity."
+        }
+        var recorded = false
+        dataStore.edit { prefs ->
+            val operations = prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS].orEmpty()
+            if (operationId !in operations) {
+                val count = (prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0).coerceAtLeast(0)
+                prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = if (count == Int.MAX_VALUE) count else count + 1
+                prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS] = operations + operationId
+                recorded = true
+            }
+        }
+        return recorded
     }
 
     override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? {

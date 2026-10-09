@@ -12,6 +12,7 @@ use thiserror::Error;
 pub mod registry;
 pub mod render;
 pub mod semantic;
+pub mod sleep;
 
 /// Version of the coarse Rust/UniFFI API contract.
 pub const CORE_API_VERSION: u32 = 4;
@@ -21,11 +22,20 @@ pub const SEMANTIC_RESULT_CORE_API_VERSION: u32 = 3;
 pub const SEMANTIC_INPUT_VERSION: u32 = 1;
 /// Version of the internal normalized canonical result model.
 pub const CANONICAL_MODEL_VERSION: u32 = 1;
+/// Successor result grammar with mandatory frozen sleep authority; v1 remains immutable.
+pub const SLEEP_CANONICAL_MODEL_VERSION: u32 = 2;
+/// Explicit successor semantic handoff; historical profiles retain input v1.
+pub const SLEEP_SEMANTIC_INPUT_VERSION: u32 = 2;
 /// Version of the core registry contract.
 pub const REGISTRY_VERSION: u32 = 1;
 /// SHA-256 of the exact embedded registry inventory for this build.
 pub const REGISTRY_SHA256: &str =
     "56def644baa3d81e0c6c2eda3733bfdd7ceee6554ca9ec609da80356c6578c99";
+/// Explicit successor inventory; the legacy default/build-info registry remains v1.
+pub const SLEEP_REGISTRY_VERSION: u32 = 2;
+/// SHA-256 of the separately embedded successor inventory, never a v1 repin.
+pub const SLEEP_REGISTRY_SHA256: &str =
+    "709df0ae9f583e82627bc5439c4385905a5d85000e4322a0384cfe96b35a8f78";
 /// Source revision supplied by reproducible native packaging scripts.
 pub const CORE_SOURCE_REVISION: &str = match option_env!("HEALTHMD_CORE_SOURCE_REVISION") {
     Some(revision) => revision,
@@ -219,6 +229,7 @@ pub fn build_info() -> BuildInfo {
 pub fn self_test() -> Result<SelfTestReport, CoreError> {
     let fixture = validate_fixture(SELF_TEST_FIXTURE, SELF_TEST_FIXTURE_SHA256)?;
     registry::validate_embedded_registry()?;
+    registry::validate_sleep_registry()?;
     Ok(SelfTestReport {
         passed: true,
         build_info: build_info(),

@@ -544,6 +544,12 @@
     <string name="feedback_no_app_available">Aucune application disponible pour ouvrir ce lien</string>
     <string name="granular_data_title">Inclure des séries chronologiques détaillées</string>
     <string name="granular_data_description">Ajoutez aux exportations de compatibilité des échantillons horodatés, comme la fréquence cardiaque et les phases de sommeil. Pour obtenir une copie complète de l’API, utilisez un instantané brut de l’API.</string>
+    <string name="sleep_attribution_title">Attribution du jour de sommeil</string>
+    <string name="sleep_attribution_night_begins">Début de nuit</string>
+    <string name="sleep_attribution_morning_ends">Fin au matin</string>
+    <string name="sleep_attribution_night_begins_description">Le sommeil utilise la période de midi à midi de la note quotidienne. Il s\'agit du réglage par défaut, identique aux exportations précédentes.</string>
+    <string name="sleep_attribution_morning_ends_description">Fin au matin est indisponible pour les profils d\'exportation actuels. Choisissez Début de nuit pour une nouvelle exportation.</string>
+
     <string name="metric_category_cycling">Vélo</string>
     <string name="metric_category_medications">Médicaments</string>
     <string name="metric_category_other">Autre</string>

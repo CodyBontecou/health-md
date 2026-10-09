@@ -260,6 +260,12 @@
     </plurals>
     <string name="granular_data_title">包括详细的时间序列</string>
     <string name="granular_data_description">将带有时间戳的样本（例如心率和睡眠阶段）添加到兼容性导出中。对于 API 完整副本，请使用 Raw API Snapshot。</string>
+    <string name="sleep_attribution_title">睡眠归属日</string>
+    <string name="sleep_attribution_night_begins">以入睡当晚为准</string>
+    <string name="sleep_attribution_morning_ends">以醒来早晨为准</string>
+    <string name="sleep_attribution_night_begins_description">睡眠使用每日日记中从正午到次日正午的时间窗口。这是默认设置，与之前的导出一致。</string>
+    <string name="sleep_attribution_morning_ends_description">当前导出配置不支持“以醒来早晨为准”。如需开始新的导出，请选择“以入睡当晚为准”。</string>
+
     <string name="metric_selection_title">健康指标</string>
     <string name="search_metrics_hint">搜索指标…</string>
     <string name="select_all">全选</string>

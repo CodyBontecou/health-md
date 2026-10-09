@@ -45,7 +45,7 @@ class ExportProfileCoordinatorTest {
     private val profilesState = MutableStateFlow<List<ExportProfile>>(emptyList())
     private val activeIdState = MutableStateFlow<String?>(null)
 
-    private val factory = ScheduledProfileSnapshotFactory(
+    private val factory by lazy { ScheduledProfileSnapshotFactory(
         mockk<ExportEnginePinPlanner> {
             // Deterministic pin matching the snapshot's structural rules: profile follows the
             // target/schema mapping and the zone mirrors the capture zone.
@@ -64,9 +64,11 @@ class ExportProfileCoordinatorTest {
                 )
             }
         },
-    )
+        settingsRepository,
+    ) }
 
     private val settingsRepository = mockk<SettingsRepository> {
+        coEvery { getSleepDayAttribution() } returns com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS
         every { exportSettings } returns settingsState
         coEvery { getExportSettings() } answers { settingsState.value }
         coEvery { updateExportSettings(any()) } answers { settingsState.value = firstArg() }
@@ -155,7 +157,19 @@ class ExportProfileCoordinatorTest {
         }
     }
 
-    private fun profile(
+    @Test
+    fun activationIsANewEditableProjectionButScheduledRunKeepsAcceptedCaptureAuthority() = runTest {
+        val accepted = profile("accepted")
+        val editable = requireNotNull(factory.applyForActivation(accepted, ExportSettings()))
+        assertThat(editable.executionSleepCaptureContext).isNull()
+        assertThat(editable.executionSleepCaptureAuthorityIsFrozen).isFalse()
+        val run = requireNotNull(factory.restoreForRun(accepted, ExportSettings(), 3))
+        assertThat(run.executionSleepCaptureContext!!.sleepDayAttribution)
+            .isEqualTo(com.healthmd.domain.model.SleepDayAttribution.NIGHT_BEGINS)
+        assertThat(run.executionSleepCaptureAuthorityIsFrozen).isTrue()
+    }
+
+    private suspend fun profile(
         id: String,
         name: String = id,
         settings: ExportSettings = ExportSettings(),

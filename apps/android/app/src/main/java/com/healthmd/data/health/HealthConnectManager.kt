@@ -328,6 +328,7 @@ class HealthConnectManager(
         includeGranularData: Boolean,
         zoneId: ZoneId = ZoneId.systemDefault(),
         pinnedCalendarDays: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
 
@@ -366,7 +367,7 @@ class HealthConnectManager(
             applyMobilityAggregates(dataByDate, chunkDates, localRange, selection)
 
             if (selection.sleep) {
-                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData)
+                applySleepRange(dataByDate, chunkDates, zoneId, includeGranularData, sleepDayAttribution = sleepDayAttribution)
             }
             if (selection.activity || selection.workouts || selection.heart || selection.mobility) {
                 applyExerciseRange(dataByDate, chunkDates, instantRange, selection, includeGranularData, zoneId)
@@ -423,6 +424,7 @@ class HealthConnectManager(
         dates: List<LocalDate>,
         selection: HealthConnectWidgetReadSelection,
         zoneId: ZoneId = ZoneId.systemDefault(),
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): List<HealthData> {
         if (dates.isEmpty()) return emptyList()
         require(selection.hasAny) { "At least one widget health record family is required." }
@@ -452,6 +454,7 @@ class HealthConnectManager(
                     zone,
                     includeGranularData = false,
                     strictReads = true,
+                    sleepDayAttribution = sleepDayAttribution,
                 )
             }
             if (selection.heartRate) {
@@ -929,12 +932,14 @@ class HealthConnectManager(
         zone: ZoneId,
         includeGranularData: Boolean,
         strictReads: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ) {
         for ((date, sleep) in readSleepData(
             requestedDates = requestedDates,
             zone = zone,
             includeGranularData = includeGranularData,
             strictReads = strictReads,
+            sleepDayAttribution = sleepDayAttribution,
         )) {
             if (!sleep.hasData) continue
             dataByDate.update(date) { current -> current.copy(sleep = sleep) }
@@ -946,6 +951,7 @@ class HealthConnectManager(
         zone: ZoneId,
         includeGranularData: Boolean,
         strictReads: Boolean = false,
+        sleepDayAttribution: SleepDayAttribution = SleepDayAttribution.DEFAULT,
     ): Map<LocalDate, SleepData> {
         val queryInterval = SleepJournalSummary.queryInterval(requestedDates, zone)
         val timeRange = TimeRangeFilter.between(queryInterval.start, queryInterval.endExclusive)
@@ -959,6 +965,7 @@ class HealthConnectManager(
             requestedDates = requestedDates,
             zone = zone,
             includeGranularData = includeGranularData,
+            attribution = sleepDayAttribution,
         )
     }
 

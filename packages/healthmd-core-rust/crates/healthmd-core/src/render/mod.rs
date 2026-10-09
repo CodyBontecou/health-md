@@ -11,12 +11,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use thiserror::Error;
 
-use crate::{
-    CANONICAL_MODEL_VERSION, REGISTRY_SHA256, REGISTRY_VERSION,
-    semantic::{
-        ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
-        SemanticValue,
-    },
+use crate::semantic::{
+    ExactNumber, RollupPeriod, SemanticProfile, SemanticResult, SemanticResultState,
+    SemanticSleepCaptureContext, SemanticValue,
 };
 
 mod android_analytical_v5;
@@ -27,6 +24,7 @@ mod apple_v8;
 pub mod artifact_plan;
 mod format;
 mod markdown_merge;
+mod sleep_profiles;
 pub mod stream;
 
 pub use artifact_plan::{ArtifactPlan, ArtifactPlanItem, validate_relative_path};
@@ -41,6 +39,10 @@ pub use stream::{
 pub const RENDER_INPUT_VERSION: u32 = 1;
 /// Version of the destination-neutral artifact plan.
 pub const ARTIFACT_PLAN_VERSION: u32 = 1;
+/// Successor render handoff; historical render input v1 remains closed and immutable.
+pub const SLEEP_RENDER_INPUT_VERSION: u32 = 2;
+/// Successor plan profile set; old plans and artifact identities remain independently v1.
+pub const SLEEP_ARTIFACT_PLAN_VERSION: u32 = 2;
 /// Revision of all three profile renderers, including managed-Markdown merge behavior.
 pub const RENDER_PROFILE_REVISION: u32 = 2;
 /// Maximum render configuration bytes.
@@ -453,8 +455,45 @@ pub struct RenderMetric {
     pub public_value: Value,
     pub display_value: String,
     pub unit: String,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_human_presentation"
+    )]
+    pub human_presentation: Option<RenderHumanPresentation>,
     pub timestamp: Option<String>,
     pub ordinal: u32,
+}
+
+/// Successor-only human prose; never used as CSV, frontmatter or JSON authority.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RenderHumanPresentation {
+    pub display_value: String,
+    pub unit: String,
+}
+
+fn deserialize_human_presentation<'de, D>(
+    deserializer: D,
+) -> Result<Option<RenderHumanPresentation>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    RenderHumanPresentation::deserialize(deserializer).map(Some)
+}
+
+impl RenderMetric {
+    pub(crate) fn human_display_value(&self) -> &str {
+        self.human_presentation
+            .as_ref()
+            .map_or(&self.display_value, |human| &human.display_value)
+    }
+
+    pub(crate) fn human_unit(&self) -> &str {
+        self.human_presentation
+            .as_ref()
+            .map_or(&self.unit, |human| &human.unit)
+    }
 }
 
 /// One planned individual Markdown entry.
@@ -557,6 +596,26 @@ pub struct RenderProfileDocuments {
     pub json_root: Option<OrderedJsonValue>,
 }
 
+/// Successor-only native detail presentation from the same frozen, selected capture.
+/// Native profile documents continue to own the public JSON detail grammar.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct RenderNativeDetails {
+    pub output_keys: Vec<String>,
+    pub csv_rows: Vec<RenderCsvRow>,
+    pub markdown_blocks: Vec<RenderMarkdownBlock>,
+    pub bases_frontmatter_blocks: Vec<RenderFrontmatterBlock>,
+}
+
+fn deserialize_native_details<'de, D>(
+    deserializer: D,
+) -> Result<Option<RenderNativeDetails>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    RenderNativeDetails::deserialize(deserializer).map(Some)
+}
+
 /// Presentation facts for one semantic owner date.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
@@ -566,12 +625,42 @@ pub struct RenderDay {
     pub archive_diagnostics: Option<RenderArchiveDiagnostics>,
     pub bases_frontmatter_fields: Vec<RenderFrontmatterField>,
     pub bases_frontmatter_blocks: Vec<RenderFrontmatterBlock>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_native_details"
+    )]
+    pub native_details: Option<RenderNativeDetails>,
     pub metrics: Vec<RenderMetric>,
     pub extensions: Vec<RenderExtensionPayload>,
     pub individual_entries: Vec<RenderIndividualEntry>,
     pub daily_note: Option<RenderDailyNote>,
     #[serde(default)]
     pub profile_documents: RenderProfileDocuments,
+}
+
+impl RenderDay {
+    fn fact_count(&self) -> Option<usize> {
+        let count = self.metrics.len().checked_add(self.extensions.len())?;
+        let Some(details) = &self.native_details else {
+            return Some(count);
+        };
+        let count = count
+            .checked_add(details.csv_rows.len())?
+            .checked_add(details.markdown_blocks.len())?
+            .checked_add(details.bases_frontmatter_blocks.len())?;
+        details
+            .markdown_blocks
+            .iter()
+            .map(|block| block.lines.len())
+            .chain(
+                details
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .map(|block| block.lines.len()),
+            )
+            .try_fold(count, usize::checked_add)
+    }
 }
 
 /// Transactional ordered render batch.
@@ -647,6 +736,22 @@ impl RenderSession {
             })
             .collect();
         let presentation_categories = profile_presentation_categories(config.profile)?;
+        if let Some(keys) = &semantic.selected_output_keys {
+            let selected = keys.iter().collect::<HashSet<_>>();
+            if !config.profile.is_wake_date()
+                || selected.len() != keys.len()
+                || keys
+                    .iter()
+                    .any(|key| !presentation_categories.contains_key(key))
+                || semantic
+                    .days
+                    .iter()
+                    .flat_map(|day| &day.values)
+                    .any(|value| !selected.contains(&value.output_key))
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+        }
         let retained_extensions = semantic
             .retained_extensions
             .iter()
@@ -694,10 +799,10 @@ impl RenderSession {
         if batch_bytes.len() > MAX_RENDER_BATCH_BYTES {
             return Err(RenderError::BatchTooLarge);
         }
-        let batch: RenderBatch =
+        let mut batch: RenderBatch =
             serde_json::from_slice(batch_bytes).map_err(|_| RenderError::InvalidBatch)?;
         if batch.schema != "healthmd.render_input"
-            || batch.render_input_version != RENDER_INPUT_VERSION
+            || batch.render_input_version != self.config.render_input_version
             || batch.session_id != self.config.session_id
             || batch.batch_index != self.next_batch_index
             || self.final_batch_seen
@@ -708,14 +813,13 @@ impl RenderSession {
         let fact_count = batch
             .days
             .iter()
-            .try_fold(0usize, |count, day| {
-                count
-                    .checked_add(day.metrics.len())
-                    .and_then(|value| value.checked_add(day.extensions.len()))
-            })
+            .try_fold(0usize, |count, day| count.checked_add(day.fact_count()?))
             .ok_or(RenderError::LimitExceeded)?;
         if fact_count > MAX_RENDER_FACTS_PER_BATCH {
             return Err(RenderError::LimitExceeded);
+        }
+        if self.config.render_input_version == SLEEP_RENDER_INPUT_VERSION {
+            sleep_profiles::public_numbers::parse_exact_public_numbers(batch_bytes, &mut batch)?;
         }
         let next_bytes = self
             .bytes_accepted
@@ -736,6 +840,7 @@ impl RenderSession {
                 day,
                 &self.config,
                 &self.semantic_outputs,
+                self.semantic.selected_output_keys.as_deref(),
                 &self.presentation_categories,
                 &self.retained_extensions,
                 &mut staged_tokens,
@@ -811,9 +916,14 @@ fn profile_presentation_categories(
         SemanticProfile::AndroidAnalyticalV5 => {
             crate::registry::MetricRegistryProfile::AndroidAnalyticalV5
         }
+        SemanticProfile::AppleHealthDataV11 => {
+            crate::registry::MetricRegistryProfile::AppleHealthDataV11
+        }
+        SemanticProfile::AndroidSleepV6 => crate::registry::MetricRegistryProfile::AndroidSleepV6,
     };
-    let snapshot = crate::registry::metric_registry_snapshot(registry_profile, REGISTRY_VERSION)
-        .map_err(|_| RenderError::InvalidConfig)?;
+    let snapshot =
+        crate::registry::metric_registry_snapshot(registry_profile, profile.registry_version())
+            .map_err(|_| RenderError::InvalidConfig)?;
     let categories_by_selection = snapshot
         .metrics
         .into_iter()
@@ -870,10 +980,20 @@ fn validate_config(
     config: &RenderSessionConfig,
     semantic: &SemanticResult,
 ) -> Result<(), RenderError> {
-    if config.render_input_version != RENDER_INPUT_VERSION {
+    let render_version = if config.profile.is_wake_date() {
+        SLEEP_RENDER_INPUT_VERSION
+    } else {
+        RENDER_INPUT_VERSION
+    };
+    let plan_version = if config.profile.is_wake_date() {
+        SLEEP_ARTIFACT_PLAN_VERSION
+    } else {
+        ARTIFACT_PLAN_VERSION
+    };
+    if config.render_input_version != render_version {
         return Err(RenderError::UnsupportedRenderInputVersion);
     }
-    if config.artifact_plan_version != ARTIFACT_PLAN_VERSION {
+    if config.artifact_plan_version != plan_version {
         return Err(RenderError::UnsupportedArtifactPlanVersion);
     }
     if config.render_profile_revision != RENDER_PROFILE_REVISION
@@ -882,16 +1002,19 @@ fn validate_config(
         return Err(RenderError::UnsupportedProfileRevision);
     }
     if config.schema != "healthmd.render_session_config"
-        || config.canonical_model_version != CANONICAL_MODEL_VERSION
-        || config.registry_version != REGISTRY_VERSION
-        || config.registry_sha256 != REGISTRY_SHA256
+        || config.canonical_model_version != config.profile.canonical_model_version()
+        || config.registry_version != config.profile.registry_version()
+        || config.registry_sha256 != config.profile.registry_sha256()
         || semantic.schema != "healthmd.semantic_result"
-        || semantic.canonical_model_version != CANONICAL_MODEL_VERSION
-        || semantic.registry_sha256 != REGISTRY_SHA256
+        || semantic.canonical_model_version != config.canonical_model_version
+        || semantic.semantic_input_version != config.profile.semantic_input_version()
+        || semantic.registry_sha256 != config.registry_sha256
         || semantic.profile_revision != config.profile_revision
         || semantic.session_id != config.session_id
         || semantic.profile != config.profile
         || semantic.state != SemanticResultState::Completed
+        || semantic.sleep_capture_context
+            != SemanticSleepCaptureContext::for_profile(config.profile, &config.calendar_time_zone)
         || config.locale != "en-US"
         || validate_identifier(&config.request_id).is_err()
         || validate_identifier(&config.session_id).is_err()
@@ -924,9 +1047,7 @@ fn validate_config(
         .rollups
         .iter()
         .any(|rollup| rollup.period == RollupPeriod::Range);
-    if (contains_range
-        && (semantic.profile_revision != 2
-            || semantic.profile != SemanticProfile::AppleHealthDataV8))
+    if (contains_range && (semantic.profile_revision != 2 || !semantic.profile.is_apple()))
         || (semantic.profile_revision == 2
             && semantic
                 .rollups
@@ -935,8 +1056,14 @@ fn validate_config(
     {
         return Err(RenderError::InvalidSemanticResult);
     }
-    if config.profile != SemanticProfile::AppleHealthDataV8
-        && (!semantic.rollups.is_empty() || config.rollups.is_some())
+    if !config.profile.is_apple() && (!semantic.rollups.is_empty() || config.rollups.is_some()) {
+        return Err(RenderError::UnsupportedOperation);
+    }
+    if config.profile == SemanticProfile::AppleHealthDataV11
+        && semantic
+            .rollups
+            .iter()
+            .any(|rollup| rollup.period != RollupPeriod::Range)
     {
         return Err(RenderError::UnsupportedOperation);
     }
@@ -1026,12 +1153,14 @@ fn validate_config(
             validate_public_value(&external.value, 0)?;
         }
         if config.profile == SemanticProfile::AndroidAnalyticalV5
-            || (config.profile == SemanticProfile::AndroidFrozenV4
-                && (!api.external_records.is_empty()
-                    || api.external_record_schema.is_some()
-                    || api.envelope_version != 1
-                    || api.source != "android"))
-            || (config.profile == SemanticProfile::AppleHealthDataV8
+            || (matches!(
+                config.profile,
+                SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidSleepV6
+            ) && (!api.external_records.is_empty()
+                || api.external_record_schema.is_some()
+                || api.envelope_version != 1
+                || api.source != "android"))
+            || (config.profile.is_apple()
                 && ((api.envelope_version == 1
                     && (!api.external_records.is_empty() || api.external_record_schema.is_some()))
                     || (api.envelope_version == 2 && api.external_record_schema.is_none())
@@ -1044,7 +1173,17 @@ fn validate_config(
     if formats.len() != config.formats.len() {
         return Err(RenderError::InvalidConfig);
     }
-    let reserved_frontmatter = reserved_frontmatter_keys();
+    let reserved_frontmatter = reserved_frontmatter_keys(config.profile);
+    if config.profile.is_wake_date()
+        && [&config.frontmatter.date_key, &config.frontmatter.type_key]
+            .iter()
+            .any(|key| {
+                reserved_frontmatter.contains(key.as_str())
+                    && !matches!(key.as_str(), "date" | "type")
+            })
+    {
+        return Err(RenderError::InvalidConfig);
+    }
     let mut configured_frontmatter = HashSet::new();
     for text in config
         .custom_frontmatter
@@ -1097,6 +1236,7 @@ fn validate_day(
     day: &RenderDay,
     config: &RenderSessionConfig,
     semantic_outputs: &HashMap<String, HashMap<String, crate::semantic::SemanticDailyValue>>,
+    selected_output_keys: Option<&[String]>,
     presentation_categories: &HashMap<String, BTreeSet<String>>,
     retained: &HashMap<String, (String, BTreeSet<String>)>,
     consumed: &mut HashSet<String>,
@@ -1110,7 +1250,10 @@ fn validate_day(
         return Err(RenderError::LimitExceeded);
     }
     match (config.profile, &day.archive_diagnostics) {
-        (SemanticProfile::AppleHealthDataV8, Some(diagnostics)) => {
+        (
+            SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11,
+            Some(diagnostics),
+        ) => {
             if !matches!(
                 diagnostics.capture_status.as_str(),
                 "complete" | "partial" | "not_requested" | "legacy_unavailable"
@@ -1126,12 +1269,108 @@ fn validate_day(
         (_, None) => {}
         (_, Some(_)) => return Err(RenderError::InvalidBatch),
     }
+    if let Some(details) = &day.native_details {
+        if day.profile_documents.markdown_body.is_some() || day.profile_documents.csv_rows.is_some()
+        {
+            return Err(RenderError::PresentationMismatch);
+        }
+        if !config.profile.is_wake_date() {
+            return Err(RenderError::InvalidBatch);
+        }
+        let selections = details.output_keys.iter().collect::<HashSet<_>>();
+        if selections.is_empty()
+            || selections.len() != details.output_keys.len()
+            || selections.iter().any(|key| {
+                !accepted.contains_key(key.as_str())
+                    && !selected_output_keys.is_some_and(|selected| selected.contains(key))
+            })
+        {
+            return Err(RenderError::PresentationMismatch);
+        }
+        let bytes = serde_json::to_vec(details).map_err(|_| RenderError::SerializationFailed)?;
+        if bytes.len() > MAX_EXTENSION_PAYLOAD_BYTES {
+            return Err(RenderError::LimitExceeded);
+        }
+        let mut ordinals = HashSet::new();
+        for row in &details.csv_rows {
+            if row.date != day.owner_date
+                || !ordinals.insert(row.ordinal)
+                || !row.timestamp.ends_with('Z')
+                || chrono::DateTime::parse_from_rfc3339(&row.timestamp).is_err()
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+            for value in [
+                &row.category,
+                &row.metric,
+                &row.value,
+                &row.unit,
+                &row.timestamp,
+            ] {
+                validate_optional_small_text(value)?;
+            }
+        }
+        let mut ordinals = HashSet::new();
+        for block in &details.markdown_blocks {
+            if !ordinals.insert(block.ordinal) {
+                return Err(RenderError::InvalidBatch);
+            }
+            validate_small_text(&block.heading)?;
+            for line in &block.lines {
+                validate_optional_small_text(line)?;
+            }
+        }
+        let mut block_keys = HashSet::new();
+        for block in &details.bases_frontmatter_blocks {
+            validate_small_text(&block.key)?;
+            if !block_keys.insert(&block.key)
+                || accepted.contains_key(&block.key)
+                || day
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .any(|existing| existing.key == block.key)
+                || reserved_frontmatter_keys(config.profile).contains(block.key.as_str())
+                // Reserve the entire generated diagnostic namespace even when
+                // this capture omits an archive or uses another source profile.
+                // Keep this successor detail guard separate from frozen v1 admission.
+                || matches!(
+                    block.key.as_str(),
+                    "raw_record_count"
+                        | "raw_query_failure_count"
+                        | "raw_integrity_warning_count"
+                        | "raw_record_schema"
+                        | "raw_record_schema_version"
+                )
+                || block.key == config.frontmatter.date_key
+                || block.key == config.frontmatter.type_key
+                || config.custom_frontmatter.contains_key(&block.key)
+                || config.placeholder_frontmatter.contains(&block.key)
+                || day
+                    .metrics
+                    .iter()
+                    .any(|metric| metric.frontmatter_key == block.key)
+                || day
+                    .bases_frontmatter_fields
+                    .iter()
+                    .any(|field| field.key == block.key)
+                || block.lines.is_empty()
+            {
+                return Err(RenderError::PresentationMismatch);
+            }
+            for line in &block.lines {
+                validate_optional_small_text(line)?;
+                if !line.starts_with("  ") || line.contains(['\r', '\n']) {
+                    return Err(RenderError::PresentationMismatch);
+                }
+            }
+        }
+    }
     let mut keys = HashSet::new();
     let mut ordinals = HashSet::new();
     let mut frontmatter_keys = HashSet::new();
     let mut json_top_level = HashSet::new();
-    let reserved_frontmatter = reserved_frontmatter_keys();
-    let reserved_json = reserved_json_keys();
+    let reserved_frontmatter = reserved_frontmatter_keys(config.profile);
+    let reserved_json = reserved_json_keys(config.profile);
     for metric in &day.metrics {
         let semantic_value = accepted
             .get(&metric.output_key)
@@ -1161,6 +1400,13 @@ fn validate_day(
             validate_small_text(text)?;
         }
         validate_optional_small_text(&metric.unit)?;
+        if let Some(human) = &metric.human_presentation {
+            if !config.profile.is_wake_date() || !metric.public_value.is_number() {
+                return Err(RenderError::PresentationMismatch);
+            }
+            validate_small_text(&human.display_value)?;
+            validate_optional_small_text(&human.unit)?;
+        }
         for path in &metric.json_path {
             validate_small_text(path)?;
         }
@@ -1329,8 +1575,16 @@ fn validate_day(
             }
         }
     }
+    if config.profile.is_wake_date() {
+        if let Some(rows) = &day.profile_documents.csv_rows {
+            sleep_profiles::validate_native_csv(config, rows)?;
+        }
+    }
     if let Some(root) = &day.profile_documents.json_root {
         validate_ordered_json(root, 0)?;
+        if config.profile.is_wake_date() {
+            sleep_profiles::validate_native_json(config, root)?;
+        }
     }
     if let Some(note) = &day.daily_note {
         validate_relative_path(&note.relative_path)?;
@@ -1502,8 +1756,8 @@ fn validate_optional_small_text(value: &str) -> Result<(), RenderError> {
     }
 }
 
-fn reserved_frontmatter_keys() -> BTreeSet<&'static str> {
-    [
+fn reserved_frontmatter_keys(profile: SemanticProfile) -> BTreeSet<&'static str> {
+    let mut keys: BTreeSet<_> = [
         "schema",
         "schema_version",
         "healthmd_schema_profile",
@@ -1515,11 +1769,15 @@ fn reserved_frontmatter_keys() -> BTreeSet<&'static str> {
         "units",
     ]
     .into_iter()
-    .collect()
+    .collect();
+    if profile.is_wake_date() {
+        keys.extend(successor_authority_keys());
+    }
+    keys
 }
 
-fn reserved_json_keys() -> BTreeSet<&'static str> {
-    [
+fn reserved_json_keys(profile: SemanticProfile) -> BTreeSet<&'static str> {
+    let mut keys: BTreeSet<_> = [
         "schema",
         "schema_version",
         "schemaProfile",
@@ -1532,7 +1790,20 @@ fn reserved_json_keys() -> BTreeSet<&'static str> {
         "raw_capture_status",
     ]
     .into_iter()
-    .collect()
+    .collect();
+    if profile.is_wake_date() {
+        keys.extend(successor_authority_keys());
+    }
+    keys
+}
+
+fn successor_authority_keys() -> [&'static str; 4] {
+    [
+        "schema_profile",
+        "sleep_day_attribution",
+        "sleep_owner_day_rule",
+        "sleep_interval_clipping",
+    ]
 }
 
 fn validate_date_template(value: &str, allow_path: bool) -> Result<(), RenderError> {
@@ -1591,7 +1862,10 @@ fn render_plan(
             )?;
         }
         if config.api.as_ref().is_some_and(|api| api.enabled) {
-            daily_json.push((day.owner_date.clone(), render_api_record(config, day)?));
+            daily_json.push((
+                day.owner_date.clone(),
+                render_api_record(config, day, semantic)?,
+            ));
         }
         add_entries_and_note(&mut builder, config, day)?;
         for extension in &day.extensions {
@@ -1615,6 +1889,9 @@ fn render_plan(
     if config.profile == SemanticProfile::AppleHealthDataV8 {
         apple_v8::add_rollups(&mut builder, config, semantic)?;
     }
+    if config.profile == SemanticProfile::AppleHealthDataV11 {
+        apple_range_rollup_v9::add_rollups(&mut builder, config, semantic)?;
+    }
     if let Some(api) = &config.api {
         if api.enabled {
             add_api_batches(&mut builder, config, api, &daily_json)?;
@@ -1634,20 +1911,26 @@ fn render_day(
         SemanticProfile::AndroidAnalyticalV5 => {
             android_analytical_v5::render_day(config, day, format)
         }
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_day(config, day, format)
+        }
     }
 }
 
 fn ordered_formats(profile: SemanticProfile, requested: &[RenderFormat]) -> Vec<RenderFormat> {
     let mut formats = requested.to_vec();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => formats.sort_by_key(|format| format.id()),
-        SemanticProfile::AndroidFrozenV4 | SemanticProfile::AndroidAnalyticalV5 => formats
-            .sort_by_key(|format| match format {
-                RenderFormat::Markdown => 0,
-                RenderFormat::ObsidianBases => 1,
-                RenderFormat::Json => 2,
-                RenderFormat::Csv => 3,
-            }),
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
+            formats.sort_by_key(|format| format.id());
+        }
+        SemanticProfile::AndroidFrozenV4
+        | SemanticProfile::AndroidAnalyticalV5
+        | SemanticProfile::AndroidSleepV6 => formats.sort_by_key(|format| match format {
+            RenderFormat::Markdown => 0,
+            RenderFormat::ObsidianBases => 1,
+            RenderFormat::Json => 2,
+            RenderFormat::Csv => 3,
+        }),
     }
     formats
 }
@@ -1907,11 +2190,15 @@ fn scoped_api_batch(
 fn render_api_record(
     config: &RenderSessionConfig,
     day: &RenderDay,
+    semantic: &SemanticResult,
 ) -> Result<Vec<u8>, RenderError> {
     match config.profile {
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_record(config, day),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_record(config, day),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_api_record(config, day, semantic)
+        }
     }
 }
 
@@ -1924,6 +2211,9 @@ fn render_api_envelope(
         SemanticProfile::AppleHealthDataV8 => apple_v8::render_api_envelope(api, records),
         SemanticProfile::AndroidFrozenV4 => android_frozen_v4::render_api_envelope(api, records),
         SemanticProfile::AndroidAnalyticalV5 => Err(RenderError::UnsupportedOperation),
+        SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
+            sleep_profiles::render_api_envelope(config, api, records)
+        }
     }
 }
 
@@ -1932,11 +2222,14 @@ pub(crate) const fn profile_id(profile: SemanticProfile) -> &'static str {
         SemanticProfile::AppleHealthDataV8 => "apple_health_data_v8",
         SemanticProfile::AndroidFrozenV4 => "android_frozen_v4",
         SemanticProfile::AndroidAnalyticalV5 => "android_analytical_v5",
+        SemanticProfile::AppleHealthDataV11 => "apple_health_data_v11",
+        SemanticProfile::AndroidSleepV6 => "android_sleep_v6",
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::REGISTRY_SHA256;
     use serde_json::json;
 
     use super::*;
@@ -2040,6 +2333,55 @@ mod tests {
                     assert!(text.contains("\"schemaProfile\": \"android-analytical-v5\""));
                     assert!(text.contains("\"schemaVersion\": 5"));
                 }
+                SemanticProfile::AppleHealthDataV11 | SemanticProfile::AndroidSleepV6 => {
+                    unreachable!("successors have separate contract cases")
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn historical_profiles_reject_successor_human_presentation_including_null() {
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AndroidFrozenV4,
+            SemanticProfile::AndroidAnalyticalV5,
+        ] {
+            for human in [json!({"display_value":"159.0", "unit":"lbs"}), Value::Null] {
+                let (config, semantic) = input_bytes(profile);
+                let mut session = RenderSession::from_json(&config, &semantic).unwrap();
+                let mut batch = render_batch();
+                batch["days"][0]["metrics"][0]["human_presentation"] = human;
+                assert!(
+                    session
+                        .process_batch(&serde_json::to_vec(&batch).unwrap(), || false)
+                        .is_err()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn historical_profiles_reject_native_details_including_null_and_empty_objects() {
+        for profile in [
+            SemanticProfile::AppleHealthDataV8,
+            SemanticProfile::AndroidFrozenV4,
+            SemanticProfile::AndroidAnalyticalV5,
+        ] {
+            for detail in [
+                Value::Null,
+                json!({}),
+                json!({"output_keys":["steps"],"csv_rows":[],"markdown_blocks":[],"bases_frontmatter_blocks":[]}),
+            ] {
+                let (config, semantic) = input_bytes(profile);
+                let mut session = RenderSession::from_json(&config, &semantic).unwrap();
+                let mut batch = render_batch();
+                batch["days"][0]["native_details"] = detail;
+                assert!(
+                    session
+                        .process_batch(&serde_json::to_vec(&batch).unwrap(), || false)
+                        .is_err()
+                );
             }
         }
     }

@@ -29,6 +29,7 @@ Run the package checks from the repository root:
 
 ```bash
 python3 packages/contracts/validate.py
+python3 -m unittest discover -s packages/contracts -p test_validate_sleep_attribution.py
 # or
 make test-contracts
 
@@ -81,3 +82,5 @@ Canonical fixtures contain synthetic protocol values only; never add health reco
 Do not regenerate a fixture merely to make a failing consumer pass.
 
 The independently published Rust crates keep protocol, semantic, and render differential fixture mirrors inside their Cargo packages so release archives remain self-contained. `validate.py` requires those mirrors to be byte-identical to the canonical assets. Android's in-repository Gradle module consumes the canonical v2 fixture directly.
+
+The deferred [sleep-attribution successor](sleep-attribution/v1/contract.md) inventories two synthetic Android-to-core v2 interoperability fixtures with reviewed hashes. Validation checks the schemas and cross-stage authority, batch sequencing, artifact identity and content integrity. This bounded evidence does not enable Morning ends, qualify all successor grammars, or change historical profile inventories/signatures.

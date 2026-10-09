@@ -1,7 +1,8 @@
 import CryptoKit
 import Foundation
-import HealthMdConnectionCore
+@testable import HealthMdConnectionCore
 import Network
+import MultipeerConnectivity
 import XCTest
 
 final class HealthMdConnectionCoreTests: XCTestCase {
@@ -527,6 +528,160 @@ final class HealthMdConnectionCoreTests: XCTestCase {
         await fulfillment(of: [serverReceivedPacket], timeout: 1)
     }
 
+    func testMultipeerAuthorizedEnqueueHoldsLeaseThroughSDKSubmissionAndClosesOnError() async throws {
+        let state = EnqueueAuthorizationState()
+        let peer = MCPeerID(displayName: "synthetic-remote")
+        let session = EnqueueProbeMCSession(remotePeer: peer, state: state)
+        let connection: any DirectPacketTransport = DirectMultipeerPacketConnection(session: session, remotePeer: peer)
+        defer { connection.cancel() }
+        let authorization = DirectPacketSendAuthorization { try state.acquire() }
+        let packet = ManualIPSyncPacket.pairingRejected(ManualIPPairingRejected(reason: "synthetic"))
+        state.revoke()
+        do {
+            try await connection.send(authorizedBy: authorization) {
+                XCTFail("Revocation must reject before the packet factory")
+                return packet
+            }
+            XCTFail("Expected revocation")
+        } catch { XCTAssertEqual(error as? EnqueueAuthorizationState.Failure, .revoked) }
+        XCTAssertEqual(session.submissionCount, 0)
+        state.restore()
+        try await connection.send(authorizedBy: authorization) {
+            XCTAssertTrue(state.held)
+            return packet
+        }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(session.submissionCount, 1)
+        XCTAssertTrue(session.ownerHeldAtSubmission)
+        let data = try XCTUnwrap(session.lastData)
+        XCTAssertEqual(try JSONDecoder().decode(ManualIPSyncPacket.self, from: data), packet)
+        session.failNextSubmission()
+        do {
+            try await connection.send(authorizedBy: authorization) { packet }
+            XCTFail("SDK failure must propagate")
+        } catch {
+            guard case .connectionFailed = error as? DirectChannelError else {
+                return XCTFail("Expected the bounded SDK send error, got \(error)")
+            }
+        }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(session.submissionCount, 2)
+        XCTAssertTrue(session.ownerHeldAtSubmission)
+        // Pairing's existing ordinary path uses the same encoder/submission.
+        try await connection.send(packet)
+        XCTAssertEqual(session.submissionCount, 3)
+        XCTAssertFalse(session.ownerHeldAtSubmission)
+    }
+
+    func testNativePacketEnqueueAcquiresAndClosesAuthorizationLease() async throws {
+        let ready = expectation(description: "owned listener ready")
+        let received = expectation(description: "owned packet received")
+        let queue = DispatchQueue(label: "healthmd.owned-enqueue-test")
+        let listener = try NWListener(using: .tcp)
+        listener.stateUpdateHandler = { if case .ready = $0 { ready.fulfill() } }
+        listener.newConnectionHandler = { connection in
+            connection.start(queue: queue)
+            connection.receive(minimumIncompleteLength: 1, maximumLength: 64 * 1_024) { data, _, _, _ in
+                if data?.isEmpty == false { received.fulfill() }
+            }
+        }
+        listener.start(queue: queue)
+        defer { listener.cancel() }
+        await fulfillment(of: [ready], timeout: 2)
+        let connection = DirectPacketConnection(connection: NWConnection(
+            host: NWEndpoint.Host("127.0.0.1"), port: try XCTUnwrap(listener.port), using: .tcp), queue: queue)
+        defer { connection.cancel() }
+        try await connection.start()
+        let state = EnqueueAuthorizationState()
+        let authorization = DirectPacketSendAuthorization { try state.acquire() }
+        state.revoke()
+        do {
+            try await connection.send(authorizedBy: authorization) {
+                XCTFail("Revoked ownership must reject before producing packet bytes")
+                return .pairingRejected(ManualIPPairingRejected(reason: "synthetic"))
+            }
+            XCTFail("Expected revocation")
+        } catch { XCTAssertEqual(error as? EnqueueAuthorizationState.Failure, .revoked) }
+        state.restore()
+        try await connection.send(authorizedBy: authorization) {
+            XCTAssertTrue(state.held)
+            return .pairingRejected(ManualIPPairingRejected(reason: "synthetic authorized enqueue"))
+        }
+        XCTAssertFalse(state.held)
+        await fulfillment(of: [received], timeout: 2)
+    }
+
+    func testQueuedOwnedSendRejectsRevocationBeforeSequenceAllocation() async throws {
+        let state = EnqueueAuthorizationState()
+        let transport = OwnedQueuePacketTransport(state: state)
+        let canonicalizer = OwnedMessageCanonicalizer(state: state)
+        let channel = DirectSecureChannel(packetConnection: transport,
+            sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+            peerInstallationID: UUID(), peerDisplayName: "synthetic",
+            messageCanonicalizer: canonicalizer)
+        let first = Task { try await channel.send(.ping) }
+        await transport.blocker.waitUntilBlocked()
+        let authorization = DirectPacketSendAuthorization { try state.acquire() }
+        let queued = Task { try await channel.send(.ping, authorization: authorization) }
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(2))
+        while await channel.pendingSendCount() == 0, clock.now < deadline { await Task.yield() }
+        let pending = await channel.pendingSendCount()
+        XCTAssertEqual(pending, 1)
+        XCTAssertEqual(state.attempts, 0)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false],
+            "Queued messages must not encode/canonicalize before acquiring their send gate and owner")
+        state.revoke()
+        await transport.blocker.release()
+        try await first.value
+        do {
+            try await queued.value
+            XCTFail("A queued send must acquire current ownership before its packet factory runs")
+        } catch { XCTAssertEqual(error as? EnqueueAuthorizationState.Failure, .revoked) }
+        XCTAssertEqual(transport.packetCount, 1)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false],
+            "Revoked ownership must reject before message canonicalization")
+        state.restore()
+        canonicalizer.failNextCall()
+        do {
+            try await channel.send(.ping, authorization: authorization)
+            XCTFail("Canonicalization failure must propagate before sequence allocation")
+        } catch { XCTAssertEqual(error as? OwnedMessageCanonicalizer.Failure, .canonicalization) }
+        XCTAssertFalse(state.held)
+        XCTAssertEqual(transport.packetCount, 1)
+        try await channel.send(.ping, authorization: authorization)
+        XCTAssertEqual(canonicalizer.leaseObservations, [false, true, true],
+            "Message canonicalization must retain the accepted owner")
+        XCTAssertEqual(transport.leaseObservations, [true])
+        XCTAssertFalse(state.held)
+        // Rejection consumed no sequence: the next packet is authenticated as sequence one.
+        for _ in 0..<2 {
+            guard case .message(.ping) = try await channel.receive() else {
+                return XCTFail("Expected consecutive authenticated ping packets")
+            }
+        }
+    }
+
+    func testUnadaptedTransportRejectsAuthorizationWithoutConsumingSequence() async throws {
+        let transport = ReplayPacketTransport()
+        let state = EnqueueAuthorizationState()
+        let channel = DirectSecureChannel(packetConnection: transport,
+            sessionKey: SymmetricKey(data: Data(repeating: 0x42, count: 32)),
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        do {
+            try await channel.send(.ping, authorization: DirectPacketSendAuthorization { try state.acquire() })
+            XCTFail("Ordinary asynchronous transport cannot bypass enqueue authorization")
+        } catch {
+            guard case DirectChannelError.authenticationFailed = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        XCTAssertEqual(state.attempts, 0)
+        let legacySend: (DirectMessage) async throws -> Void = channel.send
+        let legacyBinarySend: (Data) async throws -> Void = channel.sendBinaryTransferFrame
+        _ = legacyBinarySend
+        try await legacySend(.ping)
+        guard case .message(.ping) = try await channel.receive() else { return XCTFail("Expected sequence zero") }
+    }
+
     func testDirectSecureChannelRejectsReplayedPacket() async throws {
         let transport = ReplayPacketTransport()
         let channel = DirectSecureChannel(
@@ -840,5 +995,137 @@ private final class ReplayPacketTransport: DirectPacketTransport, @unchecked Sen
         lock.lock()
         if let packet = packets.last { packets.append(packet) }
         lock.unlock()
+    }
+}
+
+private final class EnqueueAuthorizationState: @unchecked Sendable {
+    enum Failure: Error, Equatable { case revoked }
+    private let lock = NSLock()
+    private var permitted = true
+    private var active = false
+    private var count = 0
+    var attempts: Int { lock.withLock { count } }
+    var held: Bool { lock.withLock { active } }
+    func revoke() { lock.withLock { permitted = false } }
+    func restore() { lock.withLock { permitted = true } }
+    func acquire() throws -> any DirectPacketSendLease {
+        try lock.withLock {
+            count += 1
+            guard permitted else { throw Failure.revoked }
+            active = true
+            return Lease(state: self)
+        }
+    }
+    private func release() { lock.withLock { active = false } }
+    private final class Lease: DirectPacketSendLease {
+        let state: EnqueueAuthorizationState
+        init(state: EnqueueAuthorizationState) { self.state = state }
+        func close() { state.release() }
+    }
+}
+
+private actor FirstPacketBlocker {
+    private var didBlock = false
+    private var observers: [CheckedContinuation<Void, Never>] = []
+    private var completion: CheckedContinuation<Void, Never>?
+    func blockFirst() async {
+        guard !didBlock else { return }
+        didBlock = true
+        observers.forEach { $0.resume() }
+        observers.removeAll()
+        await withCheckedContinuation { completion = $0 }
+    }
+    func waitUntilBlocked() async {
+        if didBlock { return }
+        await withCheckedContinuation { observers.append($0) }
+    }
+    func release() { completion?.resume(); completion = nil }
+}
+
+private final class OwnedQueuePacketTransport: DirectPacketTransport, @unchecked Sendable {
+    let blocker = FirstPacketBlocker()
+    let state: EnqueueAuthorizationState
+    private let lock = NSLock()
+    private var packets: [ManualIPSyncPacket] = []
+    private var observations: [Bool] = []
+    init(state: EnqueueAuthorizationState) { self.state = state }
+    var packetCount: Int { lock.withLock { packets.count } }
+    var leaseObservations: [Bool] { lock.withLock { observations } }
+    func send(_ packet: ManualIPSyncPacket) async throws {
+        lock.withLock { packets.append(packet) }
+        await blocker.blockFirst()
+    }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        do {
+            let lease = try authorization.acquireLease()
+            defer { lease.close() }
+            let generated = try packet()
+            lock.withLock { observations.append(state.held); packets.append(generated) }
+        }
+        await blocker.blockFirst()
+    }
+    func receive() async throws -> ManualIPSyncPacket {
+        try lock.withLock {
+            guard !packets.isEmpty else { throw DirectChannelError.connectionClosed }
+            return packets.removeFirst()
+        }
+    }
+    func cancel() {}
+}
+
+private final class EnqueueProbeMCSession: MCSession, @unchecked Sendable {
+    private let remotePeer: MCPeerID
+    private let state: EnqueueAuthorizationState
+    private let probeLock = NSLock()
+    private var submissions = 0
+    private var heldAtSubmission = false
+    private var data: Data?
+    private var failNext = false
+    var submissionCount: Int { probeLock.withLock { submissions } }
+    var ownerHeldAtSubmission: Bool { probeLock.withLock { heldAtSubmission } }
+    var lastData: Data? { probeLock.withLock { data } }
+    init(remotePeer: MCPeerID, state: EnqueueAuthorizationState) {
+        self.remotePeer = remotePeer
+        self.state = state
+        super.init(peer: MCPeerID(displayName: "synthetic-local"), securityIdentity: nil,
+            encryptionPreference: .required)
+    }
+    override var connectedPeers: [MCPeerID] { [remotePeer] }
+    func failNextSubmission() { probeLock.withLock { failNext = true } }
+    override func send(_ data: Data, toPeers peerIDs: [MCPeerID], with mode: MCSessionSendDataMode) throws {
+        XCTAssertEqual(peerIDs, [remotePeer])
+        XCTAssertEqual(mode, .reliable)
+        try probeLock.withLock {
+            submissions += 1
+            heldAtSubmission = state.held
+            self.data = data
+            if failNext {
+                failNext = false
+                throw ProbeFailure.sdkSend
+            }
+        }
+    }
+    private enum ProbeFailure: Error { case sdkSend }
+}
+
+private final class OwnedMessageCanonicalizer: DirectMessageCanonicalizing, @unchecked Sendable {
+    private let state: EnqueueAuthorizationState
+    private let lock = NSLock()
+    enum Failure: Error, Equatable { case canonicalization }
+    private var observations: [Bool] = []
+    private var failNext = false
+    init(state: EnqueueAuthorizationState) { self.state = state }
+    var leaseObservations: [Bool] { lock.withLock { observations } }
+    func failNextCall() { lock.withLock { failNext = true } }
+    func canonicalizeDirectMessage(_ nativeBytes: Data) throws -> Data {
+        try lock.withLock {
+            observations.append(state.held)
+            if failNext {
+                failNext = false
+                throw Failure.canonicalization
+            }
+        }
+        return nativeBytes
     }
 }

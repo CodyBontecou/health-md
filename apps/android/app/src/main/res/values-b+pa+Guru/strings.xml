@@ -280,6 +280,12 @@
     </plurals>
     <string name="granular_data_title">ਵਿਸਤ੍ਰਿਤ ਸਮਾਂ-ਸੀਰੀਜ਼ ਸ਼ਾਮਲ ਕਰੋ</string>
     <string name="granular_data_description">ਅਨੁਕੂਲਤਾ ਨਿਰਯਾਤ ਲਈ ਟਾਈਮਸਟੈਂਪ ਕੀਤੇ ਨਮੂਨੇ ਸ਼ਾਮਲ ਕਰੋ ਜਿਵੇਂ ਕਿ ਦਿਲ ਦੀ ਗਤੀ ਅਤੇ ਨੀਂਦ ਦੇ ਪੜਾਅ। ਇੱਕ API-ਪੂਰੀ ਕਾਪੀ ਲਈ, Raw API Snapshot ਦੀ ਵਰਤੋਂ ਕਰੋ।</string>
+    <string name="sleep_attribution_title">ਸੌਣ ਦਿਨ ਦੀ ਨਿਰਧਾਰਤਾ</string>
+    <string name="sleep_attribution_night_begins">ਰਾਤ ਸ਼ੁਰੂ</string>
+    <string name="sleep_attribution_morning_ends">ਸਵੇਰ ਸਮਾਪਤ</string>
+    <string name="sleep_attribution_night_begins_description">ਨੀਂਦ ਰੋਜ਼ਾਨਾ ਨੋਟ ਦੀ ਦੁਪਹਿਰ ਤੋਂ ਅਗਲੇ ਦਿਨ ਦੀ ਦੁਪਹਿਰ ਤੱਕ ਦੀ ਮਿਆਦ ਵਰਤਦੀ ਹੈ। ਇਹ ਡਿਫ਼ਾਲਟ ਹੈ ਅਤੇ ਪਿਛਲੇ ਐਕਸਪੋਰਟਾਂ ਨਾਲ ਮੇਲ ਖਾਂਦਾ ਹੈ।</string>
+    <string name="sleep_attribution_morning_ends_description">ਮੌਜੂਦਾ ਐਕਸਪੋਰਟ ਪ੍ਰੋਫ਼ਾਈਲਾਂ ਲਈ ਸਵੇਰ ਸਮਾਪਤ ਉਪਲਬਧ ਨਹੀਂ ਹੈ। ਨਵੇਂ ਐਕਸਪੋਰਟ ਲਈ ਰਾਤ ਸ਼ੁਰੂ ਚੁਣੋ।</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">ਸਿਹਤ ਮੈਟ੍ਰਿਕਸ</string>
     <string name="search_metrics_hint">ਮੈਟ੍ਰਿਕਸ ਖੋਜੋ…</string>

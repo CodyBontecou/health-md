@@ -21,6 +21,10 @@ enum class ExportEnginePolicyTarget(
         AndroidExportProfile.android_frozen_v4,
         "export_engine.api_v1_frozen_v4",
     ),
+    ANDROID_SLEEP_V6(
+        AndroidExportProfile.android_sleep_v6,
+        "export_engine.android_sleep_v6",
+    ),
 }
 
 data class ExportEngineBuildDefaults(
@@ -32,6 +36,7 @@ data class ExportEngineBuildDefaults(
         ExportEnginePolicyTarget.ANDROID_FROZEN_V4 -> androidFrozenV4
         ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5 -> androidAnalyticalV5
         ExportEnginePolicyTarget.API_V1_FROZEN_V4 -> apiV1FrozenV4
+        ExportEnginePolicyTarget.ANDROID_SLEEP_V6 -> "unqualified"
     }
 
     companion object {
@@ -57,27 +62,18 @@ class HealthMdCoreEngineCompatibility(
         mode: ExportEngineMode,
         profile: AndroidExportProfile,
     ): Boolean {
+        if (profile == AndroidExportProfile.android_sleep_v6 && mode != ExportEngineMode.rust) return false
         if (mode == ExportEngineMode.legacy) return true
         return try {
             val readiness = service.checkReadiness()
             if (!readiness.isReady) return false
-            val registry = service.getMetricRegistry(profile.coreProfile)
-            val pin = ExportEnginePin(
+            val registry = service.getMetricRegistry(profile.coreProfile, profile.contractVersions.registry)
+            val pin = ExportEnginePin.create(
                 engine = mode,
                 profile = profile,
-                publicSchema = registry.publicSchema,
-                publicSchemaVersion = registry.publicSchemaVersion,
-                coreApiVersion = readiness.buildInfo.coreApiVersion,
-                semanticInputVersion = readiness.buildInfo.semanticInputVersion,
-                canonicalModelVersion = readiness.buildInfo.canonicalModelVersion,
-                renderInputVersion = readiness.buildInfo.renderInputVersion,
-                artifactPlanVersion = readiness.buildInfo.artifactPlanVersion,
-                registryVersion = registry.registryVersion,
-                registrySha256 = registry.registrySha256,
-                semanticProfileRevision = registry.profileRevision,
-                renderProfileRevision = readiness.buildInfo.renderProfileRevision,
-                coreSourceRevision = readiness.buildInfo.coreSourceRevision,
                 ianaTimeZone = "UTC",
+                readiness = readiness,
+                registry = registry,
             )
             validator.validate(pin, readiness, registry).isCompatible
         } catch (error: Throwable) {
@@ -97,7 +93,8 @@ data class ResolvedExportEnginePolicy(
  * Resolves a profile mode without mutable production controls.
  *
  * SharedPreferences is dependency-injected only for debug/unit-test builds. Release builds never
- * read it. Missing, malformed, unknown, or incompatible settings resolve to legacy.
+ * read it. Historical missing/malformed/incompatible settings resolve to legacy. Wake-date has
+ * no historical fallback and remains unavailable to fresh production policy until native qualification.
  */
 class ExportEnginePolicyResolver(
     private val defaults: ExportEngineBuildDefaults = ExportEngineBuildDefaults.fromBuildConfig(),
@@ -106,6 +103,9 @@ class ExportEnginePolicyResolver(
     private val compatibility: ExportEngineCompatibility = HealthMdCoreEngineCompatibility(),
 ) {
     fun resolve(target: ExportEnginePolicyTarget): ResolvedExportEnginePolicy {
+        check(target != ExportEnginePolicyTarget.ANDROID_SLEEP_V6) {
+            "wake-date production policy is not qualified"
+        }
         val configured = configuredValue(target)
         val parsed = ExportEngineMode.fromWireValue(configured)
         val resolved = if (
@@ -128,6 +128,8 @@ class ExportEnginePolicyResolver(
                 ExportEnginePolicyTarget.ANDROID_FROZEN_V4
             AndroidExportProfile.android_analytical_v5 ->
                 ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5
+            AndroidExportProfile.android_sleep_v6 ->
+                ExportEnginePolicyTarget.ANDROID_SLEEP_V6
         },
     )
 

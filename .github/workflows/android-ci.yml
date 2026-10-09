@@ -207,6 +207,14 @@ jobs:
           path: |
             apps/android/app/build/reports/tests/
             apps/android/app/build/test-results/
+            apps/android/direct-protocol/build/reports/tests/
+            apps/android/direct-protocol/build/test-results/
+            apps/android/healthmd-core/build/reports/tests/
+            apps/android/healthmd-core/build/test-results/
+            apps/android/wearable-contract/build/reports/tests/
+            apps/android/wearable-contract/build/test-results/
+            apps/android/wear/build/reports/tests/
+            apps/android/wear/build/test-results/
           retention-days: 7
           if-no-files-found: warn
 
@@ -296,6 +304,8 @@ jobs:
           profile: pixel_7
           disable-animations: true
           script: |
+            adb -s emulator-5554 shell input keyevent KEYCODE_WAKEUP
+            adb -s emulator-5554 shell wm dismiss-keyguard
             # The short-window editor matrix exercises the real software keyboard. Hosted
             # API 35 headless AVDs can leave that IME suppressed, so make the software-IME
             # contract explicit and prove a default method is ready before instrumentation.

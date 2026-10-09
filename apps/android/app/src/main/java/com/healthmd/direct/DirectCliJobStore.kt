@@ -5,8 +5,11 @@ import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import java.io.File
+import java.io.RandomAccessFile
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.KSerializer
@@ -23,16 +26,25 @@ import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 
 @Singleton
-class DirectCliJobStore @Inject constructor(
+class DirectCliJobStore private constructor(
     trustStore: DirectCliTrustStore,
+    private val directorySync: (File) -> Boolean,
 ) {
+    @Inject
+    constructor(trustStore: DirectCliTrustStore) : this(trustStore, ::syncDirectoryOnAndroid)
+
+    internal constructor(
+        trustStore: DirectCliTrustStore,
+        @Suppress("UNUSED_PARAMETER") testOnly: Unit,
+        directorySync: (File) -> Boolean,
+    ) : this(trustStore, directorySync)
+
     private val root = File(trustStore.rootDirectory(), "jobs").apply {
         check(mkdirs() || isDirectory) { "Unable to create Direct CLI job storage." }
     }
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
 
-    @Synchronized
-    fun load(jobId: String, requestFingerprint: String): DirectJobJournal? {
+    fun load(jobId: String, requestFingerprint: String): DirectJobJournal? = withStoreLock {
         sweepExpired()
         val directory = jobDirectory(jobId)
         val file = File(directory, JOURNAL_NAME)
@@ -40,7 +52,7 @@ class DirectCliJobStore @Inject constructor(
             require(directory.listFiles().isNullOrEmpty()) {
                 "The durable Direct CLI spool is incomplete."
             }
-            return null
+            return@withStoreLock null
         }
         val journal = runCatching { json.decodeFromString<DirectJobJournal>(file.readText()) }
             .getOrElse { throw IllegalArgumentException("The durable Direct CLI journal is corrupt.", it) }
@@ -53,21 +65,23 @@ class DirectCliJobStore @Inject constructor(
         require(journal.transfer.artifactPaths.values.all { File(it).isFile }) {
             "A resumable Direct CLI artifact is missing."
         }
-        return journal
+        journal
     }
 
-    @Synchronized
     fun beginPreparation(
         jobId: String,
         requestFingerprint: String,
         expiresAt: String,
         enginePin: ExportEnginePin? = null,
         protocolPin: AndroidDirectProtocolPin? = null,
-    ) {
+    ): DirectPreparationLease = withStoreLock {
         requireValidOptionalPin(enginePin)
         requireValidOptionalProtocolPin(protocolPin)
         val directory = jobDirectory(jobId).apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+        }
+        check(!File(directory, JOURNAL_NAME).exists()) {
+            "An accepted Direct CLI job cannot start another preparation."
         }
         val pending = File(directory, PENDING_NAME)
         if (pending.isFile) {
@@ -82,38 +96,65 @@ class DirectCliJobStore @Inject constructor(
             requireDirectProtocolPinContinuity(saved.protocolPin, protocolPin)
             throw IllegalStateException("A prior Direct CLI preparation did not finish.")
         }
-        atomicWrite(
-            pending,
-            encodePendingJob(
-                PendingJob(
-                    version = DirectJobJournal.CURRENT_VERSION,
-                    requestFingerprint = requestFingerprint,
-                    expiresAt = expiresAt,
-                    enginePin = enginePin,
-                    protocolPin = protocolPin,
-                ),
-            ).toByteArray(),
+        val pendingImage = encodePendingJob(
+            PendingJob(
+                version = DirectJobJournal.CURRENT_VERSION,
+                requestFingerprint = requestFingerprint,
+                expiresAt = expiresAt,
+                enginePin = enginePin,
+                protocolPin = protocolPin,
+            ),
         )
+        atomicWrite(pending, pendingImage.toByteArray())
+        val token = UUID.randomUUID().toString()
+        atomicWrite(File(directory, OWNER_NAME), token.toByteArray(Charsets.US_ASCII))
+        DirectPreparationLease(jobId, token, pendingImage)
     }
 
-    @Synchronized
-    fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean {
+    fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean = withStoreLock {
         sweepExpired()
         val pending = File(jobDirectory(jobId), PENDING_NAME)
-        if (!pending.isFile) return false
+        if (!pending.isFile) return@withStoreLock false
         val saved = runCatching { decodePendingJob(pending.readText()) }
-            .getOrElse { return true }
+            .getOrElse { return@withStoreLock true }
         require(saved.requestFingerprint == requestFingerprint) {
             "The pending Direct CLI request changed."
         }
-        return true
+        true
     }
 
-    @Synchronized
-    fun save(journal: DirectJobJournal) {
+    fun savePrepared(journal: DirectJobJournal, lease: DirectPreparationLease): Unit = withStoreLock {
+        check(journal.transfer.accepted.jobId == lease.jobId) { "Direct CLI preparation identity changed." }
+        requirePendingPreparation(lease)
+        save(journal)
+    }
+
+    fun cancelPreparation(lease: DirectPreparationLease): Boolean = withStoreLock {
+        val directory = jobDirectory(lease.jobId)
+        if (!hasPreparationOwner(directory, lease)) return@withStoreLock false
+        deleteOwnedDirectory(directory)
+    }
+
+    fun save(journal: DirectJobJournal): Unit = withStoreLock {
         require(UUID.fromString(journal.transfer.accepted.jobId).toString() == journal.transfer.accepted.jobId)
         val directory = jobDirectory(journal.transfer.accepted.jobId).apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+        }
+        loadUnvalidated(journal.transfer.accepted.jobId)?.let { existing ->
+            require(existing.version == journal.version &&
+                existing.requestFingerprint == journal.requestFingerprint &&
+                existing.expiresAt == journal.expiresAt &&
+                existing.transfer == journal.transfer) {
+                "The accepted Direct CLI authority changed."
+            }
+            requireDirectPinContinuity(existing.enginePin, journal.enginePin)
+            requireDirectProtocolPinContinuity(existing.protocolPin, journal.protocolPin)
+            require(!existing.accounted || journal.accounted) {
+                "Direct CLI accounting cannot be rolled back."
+            }
+            require(!existing.completed || journal.completed) {
+                "Direct CLI completion cannot be rolled back."
+            }
         }
         val pendingFile = File(directory, PENDING_NAME)
         if (pendingFile.isFile) {
@@ -131,36 +172,135 @@ class DirectCliJobStore @Inject constructor(
             requireDirectProtocolPinContinuity(pending.protocolPin, journal.protocolPin)
         }
         atomicWrite(File(directory, JOURNAL_NAME), json.encodeToString(journal).toByteArray())
-        pendingFile.delete()
+        check(!pendingFile.exists() || pendingFile.delete()) { "Unable to remove Direct CLI preparation marker." }
+        syncAuthorityDirectories(directory)
     }
 
-    @Synchronized
-    fun markAccounted(jobId: String) {
-        val journal = requireNotNull(loadUnvalidated(jobId))
-        if (!journal.accounted) save(journal.copy(accounted = true))
+    fun acquireAcceptedLease(expected: DirectJobJournal): DirectAcceptedLease = withStoreLock {
+        val jobId = expected.transfer.accepted.jobId
+        val current = requireNotNull(load(jobId, expected.requestFingerprint))
+        check(sameAuthority(current, expected)) { "The accepted Direct CLI authority changed." }
+        val directory = jobDirectory(jobId)
+        val owner = File(directory, OWNER_NAME)
+        val token = if (owner.exists()) {
+            check(owner.isFile && owner.length() == 36L) { "Invalid Direct CLI ownership." }
+            owner.readText(Charsets.US_ASCII).also {
+                check(runCatching { UUID.fromString(it).toString() == it }.getOrDefault(false)) {
+                    "Invalid Direct CLI ownership."
+                }
+            }
+        } else {
+            UUID.randomUUID().toString().also { atomicWrite(owner, it.toByteArray(Charsets.US_ASCII)) }
+        }
+        // Re-establish durability even after a previous rename succeeded but its sync failed.
+        syncAuthorityDirectories(directory)
+        DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
     }
 
-    @Synchronized
-    fun markCompleted(jobId: String) {
-        val journal = requireNotNull(loadUnvalidated(jobId))
-        // Keep exact artifacts through the bounded job lifetime so a lost completion confirmation
-        // can replay idempotently without rereading a non-transactional provider.
+    fun validatePreparationLease(lease: DirectPreparationLease): Unit = withStoreLock {
+        requirePendingPreparation(lease)
+    }
+
+    fun <T> withAcceptedOwnership(lease: DirectAcceptedLease, action: () -> T): T = withStoreLock {
+        validateAcceptedLease(lease)
+        action()
+    }
+
+    fun <T> withPreparationOwnership(lease: DirectPreparationLease, action: () -> T): T = withStoreLock {
+        requirePendingPreparation(lease)
+        action()
+    }
+
+    fun cancelAcceptedPacketSendAuthorization(
+        lease: DirectAcceptedLease,
+        onRevoked: () -> Unit = {},
+    ) = com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+        withStoreLock {
+            requiredOwnedJournal(lease)
+            check(deleteOwnedDirectory(jobDirectory(lease.owner.jobId))) {
+                "Unable to cancel the Direct CLI operation."
+            }
+            onRevoked()
+            enqueue()
+        }
+    }
+
+    fun preparationPacketSendAuthorization(
+        lease: DirectPreparationLease,
+        cancelBeforeEnqueue: Boolean = false,
+        onRevoked: () -> Unit = {},
+    ) = com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+        withStoreLock {
+            val directory = requirePendingPreparation(lease)
+            if (cancelBeforeEnqueue) {
+                check(deleteOwnedDirectory(directory)) { "Unable to cancel the Direct CLI preparation." }
+                onRevoked()
+            }
+            enqueue()
+        }
+    }
+
+    fun packetSendAuthorization(lease: DirectAcceptedLease) =
+        com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+            withAcceptedOwnership(lease, enqueue)
+        }
+
+    /** A small owner read per frame; complete authority is checked at state transitions. */
+    fun validateAcceptedLease(lease: DirectAcceptedLease): Unit = withStoreLock {
+        val directory = requirePreparationOwner(lease.owner)
+        check(File(directory, JOURNAL_NAME).isFile && lease.expiresAt.isAfter(Instant.now())) {
+            "The accepted Direct CLI operation is no longer available."
+        }
+    }
+
+    fun markAccounted(lease: DirectAcceptedLease, account: () -> Unit = {}): Boolean = withStoreLock {
+        val journal = requiredOwnedJournal(lease)
+        if (journal.accounted) return@withStoreLock false
+        account()
+        save(journal.copy(accounted = true))
+        true
+    }
+
+    fun markCompleted(lease: DirectAcceptedLease, complete: () -> Unit = {}): Boolean = withStoreLock {
+        val journal = requiredOwnedJournal(lease)
+        if (journal.completed) return@withStoreLock false
+        // The callback must persist an idempotent receipt before this checkpoint.
+        complete()
+        // Keep artifacts for replay after a lost completion confirmation.
         save(journal.copy(completed = true))
+        true
     }
 
-    @Synchronized
-    fun cancel(jobId: String) {
-        jobDirectory(jobId).deleteRecursively()
+    fun cancelAccepted(lease: DirectAcceptedLease): Boolean = withStoreLock {
+        val directory = jobDirectory(lease.owner.jobId)
+        if (!hasPreparationOwner(directory, lease.owner)) return@withStoreLock false
+        val current = loadUnvalidated(lease.owner.jobId) ?: return@withStoreLock false
+        if (!sameAuthority(current, lease.authority)) return@withStoreLock false
+        deleteOwnedDirectory(directory)
     }
 
-    @Synchronized
-    fun purgeAll() {
-        root.deleteRecursively()
+    private fun requiredOwnedJournal(lease: DirectAcceptedLease): DirectJobJournal {
+        validateAcceptedLease(lease)
+        val journal = requireNotNull(loadUnvalidated(lease.owner.jobId))
+        check(sameAuthority(journal, lease.authority)) { "The accepted Direct CLI authority changed." }
+        syncAuthorityDirectories(jobDirectory(lease.owner.jobId))
+        return journal
+    }
+
+    private fun sameAuthority(left: DirectJobJournal, right: DirectJobJournal): Boolean =
+        left.copy(accounted = false, completed = false) == right.copy(accounted = false, completed = false)
+
+    fun cancel(jobId: String): Unit = withStoreLock {
+        check(deleteOwnedDirectory(jobDirectory(jobId))) { "Unable to cancel the Direct CLI job." }
+    }
+
+    fun purgeAll(): Unit = withStoreLock {
+        check(root.deleteRecursively()) { "Unable to purge Direct CLI job storage." }
         check(root.mkdirs() || root.isDirectory) { "Unable to recreate the Direct CLI job store." }
+        syncAuthorityDirectories(root)
     }
 
-    @Synchronized
-    fun sweepExpired(now: Instant = Instant.now()) {
+    fun sweepExpired(now: Instant = Instant.now()): Unit = withStoreLock {
         root.listFiles()?.filter(File::isDirectory)?.forEach { directory ->
             val journal = runCatching {
                 json.decodeFromString<DirectJobJournal>(File(directory, JOURNAL_NAME).readText())
@@ -173,12 +313,62 @@ class DirectCliJobStore @Inject constructor(
             val corruptRetentionElapsed = expired == null &&
                 directory.lastModified() > 0L &&
                 directory.lastModified() <= now.minusSeconds(MAXIMUM_RETENTION_SECONDS).toEpochMilli()
-            if (expired == true || corruptRetentionElapsed) directory.deleteRecursively()
+            if (expired == true || corruptRetentionElapsed) {
+                check(deleteOwnedDirectory(directory)) { "Unable to remove expired Direct CLI storage." }
+            }
         }
     }
 
-    fun directory(jobId: String): File = jobDirectory(jobId).apply {
-        check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+    fun directory(lease: DirectPreparationLease): File = withStoreLock {
+        val directory = requirePendingPreparation(lease)
+        File(directory, "capture-${lease.token}").apply {
+            check(mkdirs() || isDirectory) { "Unable to create Direct CLI capture storage." }
+            syncAuthorityDirectories(this)
+        }
+    }
+
+    private fun requirePendingPreparation(lease: DirectPreparationLease): File {
+        val directory = requirePreparationOwner(lease)
+        val pending = File(directory, PENDING_NAME)
+        check(pending.isFile && !File(directory, JOURNAL_NAME).exists()) {
+            "The Direct CLI preparation is no longer pending."
+        }
+        val image = checkNotNull(lease.pendingImage) { "The Direct CLI pending authority is missing." }
+        check(pending.length() == image.toByteArray().size.toLong() && pending.readText() == image) {
+            "The Direct CLI pending authority changed."
+        }
+        check(Instant.parse(decodePendingJob(image).expiresAt).isAfter(Instant.now())) {
+            "The Direct CLI preparation expired."
+        }
+        return directory
+    }
+
+    private fun requirePreparationOwner(lease: DirectPreparationLease): File {
+        val directory = jobDirectory(lease.jobId)
+        check(hasPreparationOwner(directory, lease)) { "The Direct CLI preparation ownership changed." }
+        return directory
+    }
+
+    private fun hasPreparationOwner(directory: File, lease: DirectPreparationLease): Boolean =
+        File(directory, OWNER_NAME).let { owner ->
+            owner.isFile && owner.length() == lease.token.length.toLong() &&
+                owner.readText(Charsets.US_ASCII) == lease.token
+        }
+
+    /// Keep the lock outside jobs so purgeAll cannot replace its inode.
+    /// Nested operations on the same root reuse the lock on their owning thread.
+    private fun <T> withStoreLock(block: () -> T): T = transactionLock.withLock {
+        val lockFile = File(root.parentFile, ".jobs.journal.lock").canonicalFile
+        val active = checkNotNull(activeLockPaths.get())
+        if (!active.add(lockFile.path)) return@withLock block()
+        try {
+            RandomAccessFile(lockFile, "rw").use { file ->
+                file.channel.lock().use { block() }
+            }
+        } finally {
+            active.remove(lockFile.path)
+            if (active.isEmpty()) activeLockPaths.remove()
+        }
     }
 
     private fun loadUnvalidated(jobId: String): DirectJobJournal? {
@@ -219,19 +409,57 @@ class DirectCliJobStore @Inject constructor(
     private fun jobDirectory(jobId: String): File =
         File(root, UUID.fromString(jobId).toString())
 
-    private fun atomicWrite(file: File, bytes: ByteArray) {
-        val temporary = File(file.parentFile, ".${file.name}.${UUID.randomUUID()}.tmp")
-        temporary.outputStream().use { output ->
-            output.write(bytes)
-            output.flush()
-            output.fd.sync()
+    /** Synchronize each changed entry through the app-private authority tree, child first. */
+    private fun syncAuthorityDirectories(directory: File) {
+        val boundary = requireNotNull(requireNotNull(root.parentFile).parentFile)
+        var current = directory
+        while (true) {
+            check(directorySync(current)) { "Unable to synchronize Direct CLI storage." }
+            if (current == boundary) return
+            current = requireNotNull(current.parentFile)
         }
-        check(temporary.renameTo(file)) { "Unable to persist Direct CLI job atomically." }
+    }
+
+    private fun deleteOwnedDirectory(directory: File): Boolean {
+        if (directory.exists() && !directory.deleteRecursively()) return false
+        syncAuthorityDirectories(root)
+        return true
+    }
+
+    private fun atomicWrite(file: File, bytes: ByteArray) {
+        val directory = requireNotNull(file.parentFile)
+        val temporary = File(directory, ".${file.name}.${UUID.randomUUID()}.tmp")
+        try {
+            temporary.outputStream().use { output ->
+                output.write(bytes)
+                output.flush()
+                output.fd.sync()
+            }
+            check(temporary.renameTo(file)) { "Unable to persist Direct CLI job atomically." }
+            syncAuthorityDirectories(directory)
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
     }
 
     companion object {
+        private fun syncDirectoryOnAndroid(directory: File): Boolean = try {
+            val descriptor = android.system.Os.open(directory.absolutePath, android.system.OsConstants.O_RDONLY, 0)
+            try {
+                android.system.Os.fsync(descriptor)
+            } finally {
+                android.system.Os.close(descriptor)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+
+        private val transactionLock = ReentrantLock()
+        private val activeLockPaths = ThreadLocal.withInitial { mutableSetOf<String>() }
         private const val JOURNAL_NAME = "job.json"
         private const val PENDING_NAME = "pending.json"
+        private const val OWNER_NAME = "preparation-owner"
         private const val MAXIMUM_RETENTION_SECONDS = 7L * 24L * 60L * 60L
     }
 
@@ -251,6 +479,21 @@ class DirectCliJobStore @Inject constructor(
         val enginePin: JsonElement? = null,
         val protocolPin: AndroidDirectProtocolPin? = null,
     )
+}
+
+/** Opaque live-capture authority; its token never enters the direct protocol. */
+class DirectPreparationLease internal constructor(
+    internal val jobId: String,
+    internal val token: String,
+    internal val pendingImage: String? = null,
+)
+
+/** An accepted operation's live ownership and frozen authority, never serialized on the wire. */
+class DirectAcceptedLease internal constructor(
+    internal val owner: DirectPreparationLease,
+    internal val authority: DirectJobJournal,
+) {
+    internal val expiresAt: Instant = Instant.parse(authority.expiresAt)
 }
 
 @Serializable(with = DirectJobJournal.Serializer::class)

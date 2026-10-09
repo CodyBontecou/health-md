@@ -154,6 +154,42 @@ final class ConnectedCorpusPartitionFileTests: XCTestCase {
         XCTAssertEqual(try encoder.encode(decoded), try encoder.encode(payload))
     }
 
+    func testConnectedHealthDayCodableFixtureAdditivelyDecodesOptionalSleepAttribution() throws {
+        let date = Date(timeIntervalSince1970: 1_700_000_000)
+        let payload = ConnectedCorpusHealthDayPayload(
+            sourceDate: date,
+            isRequestedDate: true,
+            record: HealthData(
+                date: date,
+                timeContext: ExportTimeContext(
+                    calendarTimeZoneIdentifier: "America/New_York",
+                    sleepDayAttribution: .morningEnds
+                )
+            ),
+            externalDailyRecords: [],
+            failure: nil
+        )
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        let connectedFixture = try encoder.encode(payload)
+        let current = try JSONDecoder().decode(ConnectedCorpusHealthDayPayload.self, from: connectedFixture)
+        XCTAssertEqual(current.record?.timeContext.sleepDayAttribution, .morningEnds)
+
+        var legacyObject = try XCTUnwrap(
+            JSONSerialization.jsonObject(with: connectedFixture) as? [String: Any]
+        )
+        var record = try XCTUnwrap(legacyObject["record"] as? [String: Any])
+        var timeContext = try XCTUnwrap(record["timeContext"] as? [String: Any])
+        XCTAssertEqual(timeContext.removeValue(forKey: "sleepDayAttribution") as? String, "morning_ends")
+        record["timeContext"] = timeContext
+        legacyObject["record"] = record
+        let legacyFixture = try JSONSerialization.data(withJSONObject: legacyObject, options: [.sortedKeys])
+        let legacy = try JSONDecoder().decode(ConnectedCorpusHealthDayPayload.self, from: legacyFixture)
+
+        XCTAssertNil(legacy.record?.timeContext.sleepDayAttribution)
+        XCTAssertEqual(legacy.record?.timeContext.calendarTimeZoneIdentifier, "America/New_York")
+    }
+
     func testStreamableApplicationItemKeepsLargeMetadataDataFileBacked() throws {
         let date = Date(timeIntervalSince1970: 1_700_000_000)
         let bytes = Data((0..<(2 * 1_024 * 1_024 + 1)).map { UInt8(truncatingIfNeeded: $0) })

@@ -294,6 +294,13 @@
     <string name="granular_data_title">Include Detailed Time-Series</string>
     <string name="granular_data_description">Add timestamped samples such as heart rate and sleep stages to compatibility exports. For an API-complete copy, use Raw API Snapshot.</string>
 
+    <!-- Sleep day attribution (issue #104) -->
+    <string name="sleep_attribution_title">Sleep Day Attribution</string>
+    <string name="sleep_attribution_night_begins">Night begins</string>
+    <string name="sleep_attribution_morning_ends">Morning ends</string>
+    <string name="sleep_attribution_night_begins_description">Sleep uses the daily note’s noon-to-noon window. This is the default and matches previous exports.</string>
+    <string name="sleep_attribution_morning_ends_description">Morning ends is unavailable for current export profiles. Choose Night begins for a new export.</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">Health Metrics</string>
     <string name="search_metrics_hint">Search metrics…</string>

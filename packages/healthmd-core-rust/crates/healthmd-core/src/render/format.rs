@@ -38,12 +38,26 @@ pub(crate) fn render_frontmatter(
         .iter()
         .collect::<BTreeSet<_>>();
     let mut output = String::from("---\n");
-    let apple = config.profile == SemanticProfile::AppleHealthDataV8;
-    if apple {
-        output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
+    let apple = config.profile.is_apple();
+    let wake_date = config.profile.is_wake_date();
+    if apple || wake_date {
+        if wake_date {
+            writeln!(
+                output,
+                "schema: healthmd.health_data\nschema_version: {}\nschema_profile: {}",
+                config.profile.public_schema_version(),
+                config.profile.public_profile_id()
+            )
+            .map_err(|_| RenderError::SerializationFailed)?;
+        } else {
+            output.push_str("schema: healthmd.health_data\nschema_version: 8\n");
+        }
         output.push_str("time_context:\n  calendar_timezone: ");
         output.push_str(&config.calendar_time_zone);
         output.push_str("\n  timestamp_timezone: UTC\n");
+        if wake_date {
+            output.push_str("  sleep_day_attribution: morning_ends\n  sleep_owner_day_rule: session_end_date\n  sleep_interval_clipping: none\n");
+        }
     } else if config.profile == SemanticProfile::AndroidAnalyticalV5 {
         output.push_str("healthmd_schema_profile: android-analytical-v5\n");
     }
@@ -183,10 +197,25 @@ pub(crate) fn render_frontmatter(
         }
     }
     if surface == FrontmatterSurface::Bases {
-        let mut blocks = day.bases_frontmatter_blocks.iter().collect::<Vec<_>>();
-        blocks.sort_by_key(|block| (block.ordinal, block.key.clone()));
-        for block in blocks {
-            writeln!(output, "{}:", block.key).map_err(|_| RenderError::SerializationFailed)?;
+        let mut blocks = day
+            .bases_frontmatter_blocks
+            .iter()
+            .map(|block| (block, false))
+            .chain(day.native_details.iter().flat_map(|details| {
+                details
+                    .bases_frontmatter_blocks
+                    .iter()
+                    .map(|block| (block, true))
+            }))
+            .collect::<Vec<_>>();
+        blocks.sort_by_key(|(block, _)| (block.ordinal, block.key.clone()));
+        for (block, successor_detail) in blocks {
+            let key = if successor_detail {
+                yaml_key(&block.key)
+            } else {
+                block.key.clone()
+            };
+            writeln!(output, "{key}:").map_err(|_| RenderError::SerializationFailed)?;
             for line in &block.lines {
                 writeln!(output, "{line}").map_err(|_| RenderError::SerializationFailed)?;
             }
@@ -210,6 +239,12 @@ pub(crate) fn render_markdown(
             FrontmatterSurface::Markdown,
         )?)
         .map_err(|_| RenderError::SerializationFailed)?
+    } else if config.profile.is_wake_date() {
+        format!(
+            "> Health.md sleep attribution: `morning_ends` (Morning ends); whole sessions by wake-up date.\n> Profile: `{}`; calendar timezone: `{}`; timestamp timezone: `UTC`; owner rule: `session_end_date`; clipping: `none`.\n\n",
+            config.profile.public_profile_id(),
+            config.calendar_time_zone
+        )
     } else {
         String::new()
     };
@@ -224,6 +259,22 @@ pub(crate) fn render_markdown(
         standard
     };
     frontmatter.push_str(&body);
+    if let Some(details) = &day.native_details {
+        let mut blocks = details.markdown_blocks.iter().collect::<Vec<_>>();
+        blocks.sort_by_key(|block| (block.ordinal, block.heading.clone()));
+        for block in blocks {
+            writeln!(
+                frontmatter,
+                "\n{} {}",
+                "#".repeat(usize::from(config.markdown.section_header_level)),
+                block.heading
+            )
+            .map_err(|_| RenderError::SerializationFailed)?;
+            for line in &block.lines {
+                writeln!(frontmatter, "{line}").map_err(|_| RenderError::SerializationFailed)?;
+            }
+        }
+    }
     Ok(frontmatter.into_bytes())
 }
 
@@ -310,11 +361,13 @@ fn append_metric_line(
     write!(
         output,
         "{} **{}:** {}",
-        config.markdown.bullet, metric.label, metric.display_value
+        config.markdown.bullet,
+        metric.label,
+        metric.human_display_value()
     )
     .map_err(|_| RenderError::SerializationFailed)?;
-    if !metric.unit.is_empty() {
-        write!(output, " {}", metric.unit).map_err(|_| RenderError::SerializationFailed)?;
+    if !metric.human_unit().is_empty() {
+        write!(output, " {}", metric.human_unit()).map_err(|_| RenderError::SerializationFailed)?;
     }
     output.push('\n');
     Ok(())
@@ -366,7 +419,9 @@ fn render_custom_template(
             .map(|metric| {
                 format!(
                     "- **{}:** {} {}",
-                    metric.label, metric.display_value, metric.unit
+                    metric.label,
+                    metric.human_display_value(),
+                    metric.human_unit()
                 )
                 .trim_end()
                 .to_owned()
@@ -382,10 +437,7 @@ fn replace_conditional(input: &str, section: &str, include: bool) -> Result<Stri
     let start = format!("{{{{#{section}}}}}");
     let end = format!("{{{{/{section}}}}}");
     let mut result = input.to_owned();
-    loop {
-        let Some(start_index) = result.find(&start) else {
-            break;
-        };
+    while let Some(start_index) = result.find(&start) {
         let content_start = start_index + start.len();
         let Some(relative_end) = result[content_start..].find(&end) else {
             return Err(RenderError::InvalidConfig);
@@ -421,7 +473,41 @@ pub(crate) fn render_csv(
         }
         return output.into_bytes();
     }
-    if profile == SemanticProfile::AppleHealthDataV8 {
+    if profile.is_wake_date() {
+        let version = profile.public_schema_version().to_string();
+        for (key, value) in [
+            ("schema", "healthmd.health_data"),
+            ("schema_version", version.as_str()),
+            ("schema_profile", profile.public_profile_id()),
+            ("unit_system", "metric"),
+            (
+                "time_context.calendar_timezone",
+                config.calendar_time_zone.as_str(),
+            ),
+            ("time_context.timestamp_timezone", "UTC"),
+            ("time_context.sleep_day_attribution", "morning_ends"),
+            ("time_context.sleep_owner_day_rule", "session_end_date"),
+            ("time_context.sleep_interval_clipping", "none"),
+        ] {
+            append_csv_row(
+                &mut output,
+                &[&day.owner_date, "Metadata", key, value, "", ""],
+            );
+        }
+        if profile.is_apple() {
+            append_csv_row(
+                &mut output,
+                &[
+                    &day.owner_date,
+                    "Raw HealthKit",
+                    "Raw Capture Status",
+                    &config.raw_capture_status,
+                    "status",
+                    "",
+                ],
+            );
+        }
+    } else if profile == SemanticProfile::AppleHealthDataV8 {
         for row in [
             [
                 day.owner_date.as_str(),
@@ -504,6 +590,11 @@ pub(crate) fn render_csv(
         .extensions
         .iter()
         .flat_map(|extension| extension.csv_rows.iter())
+        .chain(
+            day.native_details
+                .iter()
+                .flat_map(|details| details.csv_rows.iter()),
+        )
         .collect::<Vec<&RenderCsvRow>>();
     rows.sort_by_key(|row| (row.ordinal, row.category.clone(), row.metric.clone()));
     for row in rows {
@@ -550,6 +641,8 @@ fn csv_field(value: &str) -> String {
     }
 }
 
+// Keep the closed profile header projections together so missing authority is reviewable.
+#[allow(clippy::too_many_lines)]
 pub(crate) fn public_json_entries(
     config: &RenderSessionConfig,
     day: &RenderDay,
@@ -585,15 +678,31 @@ pub(crate) fn public_json_entries(
     public_fields.sort_by(|left, right| left.0.cmp(&right.0).then(left.1.cmp(&right.1)));
     let mut entries = Vec::new();
     match profile {
-        SemanticProfile::AppleHealthDataV8 => {
+        SemanticProfile::AppleHealthDataV8 | SemanticProfile::AppleHealthDataV11 => {
+            let wake_date = profile == SemanticProfile::AppleHealthDataV11;
             entries.push((
                 "schema".to_owned(),
                 Value::String("healthmd.health_data".to_owned()),
             ));
-            entries.push(("schema_version".to_owned(), Value::from(8)));
+            entries.push((
+                "schema_version".to_owned(),
+                Value::from(if wake_date { 11 } else { 8 }),
+            ));
+            if wake_date {
+                entries.push((
+                    "schema_profile".to_owned(),
+                    Value::String("apple-v11".to_owned()),
+                ));
+            }
             entries.push(("date".to_owned(), Value::String(day.owner_date.clone())));
             entries.push(("type".to_owned(), Value::String("health-data".to_owned())));
-            entries.push(("time_context".to_owned(), serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC"})));
+            let context = if wake_date {
+                serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC",
+                    "sleep_day_attribution":"morning_ends","sleep_owner_day_rule":"session_end_date","sleep_interval_clipping":"none"})
+            } else {
+                serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC"})
+            };
+            entries.push(("time_context".to_owned(), context));
             entries.push(("unit_system".to_owned(), Value::String("metric".to_owned())));
             let units = sorted_metrics(day)
                 .into_iter()
@@ -631,6 +740,21 @@ pub(crate) fn public_json_entries(
                 Value::String("android-analytical-v5".to_owned()),
             ));
             entries.push(("schemaVersion".to_owned(), Value::from(5)));
+        }
+        SemanticProfile::AndroidSleepV6 => {
+            entries.extend([
+                ("date".to_owned(), Value::String(day.owner_date.clone())),
+                ("type".to_owned(), Value::String("health-data".to_owned())),
+                ("units".to_owned(), Value::String(config.unit_system.id().to_owned())),
+                ("schemaProfile".to_owned(), Value::String("android-sleep-v6".to_owned())),
+                ("schemaVersion".to_owned(), Value::from(6)),
+                ("schema".to_owned(), Value::String("healthmd.health_data".to_owned())),
+                ("schema_version".to_owned(), Value::from(6)),
+                ("schema_profile".to_owned(), Value::String("android-sleep-v6".to_owned())),
+                ("unit_system".to_owned(), Value::String(config.unit_system.id().to_owned())),
+                ("time_context".to_owned(), serde_json::json!({"calendar_timezone":config.calendar_time_zone,"timestamp_timezone":"UTC",
+                    "sleep_day_attribution":"morning_ends","sleep_owner_day_rule":"session_end_date","sleep_interval_clipping":"none"})),
+            ]);
         }
     }
     for (_, key, value) in public_fields {

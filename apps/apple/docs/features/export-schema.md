@@ -134,6 +134,10 @@ Canonical source records use one strict rule: a record belongs to the captured c
 
 This differs from the established sleep compatibility summary. Daily sleep summaries retain their noon-to-noon journaling behavior so an evening sleep session remains attached to the night users expect. Consumers reconstructing raw events must use archive ownership, not infer ownership from the summary window.
 
+**Sleep Day Attribution** (`settings.sleep-attribution`, issue #104) is **planned**, not an approved mode switch for shipped profiles. **Night begins** retains the shipped noon-to-noon window and boundary clipping; it does not promise that every arbitrarily long source session remains whole. **Morning ends** would change owner-day and clipping semantics and is unavailable for Apple v8 and Android v4/v5 writers. Existing morning-ends preferences and pending contexts are retained, not coerced or relabeled. Selecting Night begins applies only to separately requested new work.
+
+Apple resolves one timezone/attribution context before an operation's first suspension, and daily fetches respect that pin across days and concurrent operations. Internal durable stores persist the context without adopting new portable/wire metadata or changing canonical fingerprints. A pending job without an immutable attribution authority cannot perform new capture; its journal and captured bytes remain intact. See [Sleep attribution profile gate](./sleep-attribution-profile-gate.md) for the exact successor-profile target, recovery policy, consumer gates, and unapproved candidate versions. Canonical source-record ownership remains unchanged.
+
 Repeated query views are merged only by the same original UUID. UUID-free public values are merged only by the same documented external identity. Similar values, timestamps, or payloads are never enough to deduplicate distinct records.
 
 ## Public coverage

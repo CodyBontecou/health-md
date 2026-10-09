@@ -284,6 +284,8 @@ class ExportRepositoryEngineSeamTest {
                         ExportEnginePolicyTarget.ANDROID_FROZEN_V4
                     AndroidExportProfile.android_analytical_v5 ->
                         ExportEnginePolicyTarget.ANDROID_ANALYTICAL_V5
+                    AndroidExportProfile.android_sleep_v6 ->
+                        error("No qualified successor production policy")
                 },
             )
         }

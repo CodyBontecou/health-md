@@ -1,13 +1,16 @@
 package com.healthmd.presentation.accessibility
 
-import android.app.KeyguardManager
+import android.accessibilityservice.AccessibilityServiceInfo
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.graphics.Rect
+import android.view.WindowManager
+import android.view.accessibility.AccessibilityWindowInfo
+import android.app.KeyguardManager
 import android.os.Build
 import android.os.Looper
 import android.os.PowerManager
-import android.view.WindowManager
 import android.view.inspector.WindowInspector
 import android.view.inputmethod.InputMethodManager
 import androidx.activity.ComponentActivity
@@ -124,6 +127,31 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
                 }
             }
         }
+        // Compose can be idle before the native activity owns input focus.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.activity.window.decorView.hasWindowFocus()
+        }
+        val automation = InstrumentationRegistry.getInstrumentation().uiAutomation
+        val service = automation.serviceInfo
+        service.flags = service.flags or AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS
+        automation.serviceInfo = service
+    }
+
+    protected fun waitForNativeKeyboardHidden() {
+        // A dialog has a separate native owner; the activity's insets are not an
+        // authoritative IME probe. Inspect only public window types/bounds, never
+        // keyboard text or suggestions, and retain a bounded wait before Back.
+        compose.waitUntil(timeoutMillis = 10_000) {
+            InstrumentationRegistry.getInstrumentation().uiAutomation.windows.none { window ->
+                if (window.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD) false
+                else {
+                    val bounds = Rect()
+                    window.getBoundsInScreen(bounds)
+                    !bounds.isEmpty
+                }
+            }
+        }
+        compose.waitForIdle()
     }
 
     protected fun configuration(base: Configuration) = Configuration(base).apply {

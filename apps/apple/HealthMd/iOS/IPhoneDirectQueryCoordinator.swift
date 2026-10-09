@@ -188,10 +188,13 @@ final class IPhoneDirectQueryCoordinator {
     func handle(
         _ request: DirectQueryRequest,
         channel: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager
     ) async {
+        let selectedProtocol = protocolAuthority.frozenForCurrentOperation()
         guard activeRequestID == nil else {
-            try? await reject(request, error: .requestInProgress, channel: channel)
+            try? await reject(request, error: .requestInProgress, channel: channel,
+                              protocolAuthority: selectedProtocol)
             return
         }
         activeRequestID = request.requestID
@@ -207,7 +210,8 @@ final class IPhoneDirectQueryCoordinator {
                 )
             }
             guard !Task.isCancelled else { throw IPhoneDirectQueryError.cancelled }
-            try await channel.send(.queryResponse(response))
+            try await channel.send(.queryResponse(response), authorization: nil,
+                                   messageCanonicalizer: selectedProtocol)
         } catch {
             let safeError: IPhoneDirectQueryError
             if Task.isCancelled {
@@ -219,7 +223,8 @@ final class IPhoneDirectQueryCoordinator {
             } else {
                 safeError = error as? IPhoneDirectQueryError ?? .queryUnavailable
             }
-            try? await reject(request, error: safeError, channel: channel)
+            try? await reject(request, error: safeError, channel: channel,
+                              protocolAuthority: selectedProtocol)
         }
     }
 
@@ -297,6 +302,7 @@ final class IPhoneDirectQueryCoordinator {
         if let continuationDays {
             days = continuationDays
         } else {
+            let captureContext = try healthKitManager.resolveSleepCaptureContext(settings: settings)
             let dates = try await resolveDates(
                 query.dates,
                 metricIDs: metricIDs,
@@ -323,7 +329,8 @@ final class IPhoneDirectQueryCoordinator {
                             for: date,
                             detailPolicy: detailPolicy,
                             metricSelection: metricSelection,
-                            timeZone: timeZone
+                            timeZone: timeZone,
+                            captureContext: captureContext
                         )
                     },
                     fetchExternalDailyRecords: nil
@@ -388,14 +395,15 @@ final class IPhoneDirectQueryCoordinator {
     private func reject(
         _ request: DirectQueryRequest,
         error: IPhoneDirectQueryError,
-        channel: DirectSecureChannel
+        channel: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         try await channel.send(.queryRejected(DirectQueryFailure(
             requestID: request.requestID,
             code: error.code,
             message: error.publicMessage,
             retryable: error.retryable
-        )))
+        )), authorization: nil, messageCanonicalizer: protocolAuthority)
     }
 
     private func resolveMetricIDs(_ selection: HealthMdMetricSelection) throws -> Set<String> {

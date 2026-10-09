@@ -7,6 +7,51 @@ import XCTest
 /// with the main target's `AccessibilityIdentifiers.swift`.
 enum UITestLaunchHelper {
 
+    /// Establish navigation before asserting content in the destination. A
+    /// missed tab tap must report as navigation failure, not missing profiles.
+    static func openSettingsTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        _ = openTab("Settings", in: app, file: file, line: line)
+    }
+
+    static func openScheduleTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> Bool {
+        openTab("Schedule", in: app, file: file, line: line)
+    }
+
+    private static func openTab(
+        _ name: String,
+        in app: XCUIApplication,
+        file: StaticString,
+        line: UInt
+    ) -> Bool {
+        let tab = app.tabBars.buttons[name]
+        let hittable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND isHittable == true"),
+            object: tab
+        )
+        guard XCTWaiter().wait(for: [hittable], timeout: 10) == .completed else {
+            XCTFail("\(name) tab must be hittable before navigation", file: file, line: line)
+            return false
+        }
+        if !tab.isSelected { tab.tap() }
+        let selected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isSelected == true"),
+            object: tab
+        )
+        guard XCTWaiter().wait(for: [selected], timeout: 10) == .completed else {
+            XCTFail("\(name) tab must become selected before inspecting its content", file: file, line: line)
+            return false
+        }
+        return true
+    }
+
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)
 
     enum Tab {
@@ -35,6 +80,7 @@ enum UITestLaunchHelper {
         static let activityBanner = "export.activityBanner"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
+        static let sleepDayAttributionPicker = "export.sleepDayAttribution.picker"
     }
 
     enum Notification {

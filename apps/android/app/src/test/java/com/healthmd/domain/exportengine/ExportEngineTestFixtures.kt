@@ -48,11 +48,13 @@ internal fun testRegistry(
     publicProfileId = when (profile) {
         AndroidExportProfile.android_frozen_v4 -> "android-frozen-v4"
         AndroidExportProfile.android_analytical_v5 -> "android-analytical-v5"
+        AndroidExportProfile.android_sleep_v6 -> "android-sleep-v6"
     },
     publicSchema = ExportEnginePin.PUBLIC_SCHEMA,
     publicSchemaVersion = when (profile) {
         AndroidExportProfile.android_frozen_v4 -> 4u
         AndroidExportProfile.android_analytical_v5 -> 5u
+        AndroidExportProfile.android_sleep_v6 -> 6u
     },
     profileRevision = 1u,
     categories = emptyList(),

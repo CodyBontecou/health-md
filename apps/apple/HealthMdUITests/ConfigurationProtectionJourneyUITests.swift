@@ -61,9 +61,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
     }
 
     private func openProfilesManagementSheet(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 5))
-        settingsTab.tap()
+        UITestLaunchHelper.openSettingsTab(in: app)
 
         let profilesRow = app.buttons["export.profiles.entry"]
         XCTAssertTrue(profilesRow.waitForExistence(timeout: 5), "Export Profiles row should exist in Settings")
@@ -254,9 +252,7 @@ final class ConfigurationProtectionJourneyUITests: XCTestCase {
         )
         app.launch()
 
-        let scheduleTab = app.tabBars.buttons["Schedule"]
-        XCTAssertTrue(scheduleTab.waitForExistence(timeout: 5))
-        scheduleTab.tap()
+        guard UITestLaunchHelper.openScheduleTab(in: app) else { return }
 
         let card = app.staticTexts["Profile Schedules"]
         XCTAssertTrue(card.waitForExistence(timeout: 5), "Profile Schedules card should exist")

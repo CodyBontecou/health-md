@@ -183,20 +183,29 @@ final class ConnectedCorpusOutboundStore {
     nonisolated static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
 
     private let rootURL: URL
+    private let durabilityRootURL: URL
     private let fileManager: FileManager
     private let now: () -> Date
+    private let directorySync: (URL) throws -> Void
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
+    private var checkpointBytes: [UUID: Data] = [:]
+    private var publicationLockURL: URL {
+        rootURL.deletingLastPathComponent().appendingPathComponent(".\(rootURL.lastPathComponent).journal.lock")
+    }
 
     init(
         rootURL: URL? = nil,
         fileManager: FileManager = .default,
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        directorySync: @escaping (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
     ) {
         self.fileManager = fileManager
         self.now = now
+        self.directorySync = directorySync
         if let rootURL {
             self.rootURL = rootURL
+            self.durabilityRootURL = rootURL.deletingLastPathComponent()
         } else {
             let support = (try? fileManager.url(
                 for: .applicationSupportDirectory,
@@ -204,11 +213,13 @@ final class ConnectedCorpusOutboundStore {
                 appropriateFor: nil,
                 create: true
             )) ?? fileManager.temporaryDirectory
+            self.durabilityRootURL = support
             self.rootURL = support
                 .appendingPathComponent("Health.md", isDirectory: true)
                 .appendingPathComponent("ConnectedCorpusOutbound", isDirectory: true)
         }
         let encoder = JSONEncoder()
+        encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         self.encoder = encoder
         self.decoder = JSONDecoder()
@@ -228,6 +239,9 @@ final class ConnectedCorpusOutboundStore {
         macRequest: IPhoneExportRequest? = nil,
         expiresAt: Date? = nil
     ) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         try manifest.validate()
         guard macRequest.map({ $0.jobID == session.jobID }) ?? true,
               session.protocolVersion >= 2,
@@ -272,20 +286,27 @@ final class ConnectedCorpusOutboundStore {
             updatedAt: timestamp
         )
         try validate(journal)
-        try persist(&journal)
+        try persist(&journal, freshAdmission: true)
         return journal
     }
 
     func load(jobID: UUID, allowExpired: Bool = false) throws -> ConnectedCorpusOutboundJournal? {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         let url = journalURL(jobID: jobID)
-        guard fileManager.fileExists(atPath: url.path) else { return nil }
-        let data = try Data(contentsOf: url, options: [.mappedIfSafe])
         var journal: ConnectedCorpusOutboundJournal
         do {
-            journal = try decoder.decode(ConnectedCorpusOutboundJournal.self, from: data)
-            guard (1...ConnectedCorpusOutboundJournal.currentVersion).contains(journal.version) else {
-                throw ConnectedCorpusOutboundStoreError.invalidJournal
-            }
+            guard let saved: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
+                at: url, fileManager: fileManager, decoder: decoder,
+                directoryDurability: .required(upTo: durabilityRootURL),
+                directorySync: directorySync,
+                didLoadBytes: { checkpointBytes[jobID] = $0 },
+                isSupported: { saved in
+                    saved.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version)
+                }
+            ) else { return nil }
+            journal = saved
             let requiresMigration = journal.version < ConnectedCorpusOutboundJournal.currentVersion
             journal.version = ConnectedCorpusOutboundJournal.currentVersion
             try validate(journal)
@@ -299,11 +320,14 @@ final class ConnectedCorpusOutboundStore {
         if !allowExpired, journal.expiresAt <= now(), !journal.state.isTerminal {
             throw ConnectedCorpusOutboundStoreError.expired
         }
-        cleanupOrphanFiles(for: journal)
+        try cleanupOrphanFiles(for: journal)
         return journal
     }
 
     func resumableJournals() -> [ConnectedCorpusOutboundJournal] {
+        guard let transaction = try? beginStoreTransaction() else { return [] }
+        defer { transaction.close() }
+
         guard let directories = try? fileManager.contentsOfDirectory(
             at: rootURL,
             includingPropertiesForKeys: nil,
@@ -322,6 +346,9 @@ final class ConnectedCorpusOutboundStore {
         expectedIndex: Int,
         jobID: UUID
     ) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard journal.pendingPartition == nil,
               expectedIndex == journal.nextItemIndex,
@@ -380,7 +407,10 @@ final class ConnectedCorpusOutboundStore {
     }
 
     func spoolItems(for journal: ConnectedCorpusOutboundJournal) throws -> [ConnectedCorpusDurablePartitionBuilder.Source] {
-        try journal.items.map { metadata in
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
+        return try journal.items.map { metadata in
             let url = try containedURL(relativePath: metadata.relativePath, jobID: journal.jobID)
             let inspected = try ConnectedTransferFile.inspect(url)
             guard inspected.totalBytes == metadata.totalBytes,
@@ -404,6 +434,9 @@ final class ConnectedCorpusOutboundStore {
         _ partition: ConnectedCorpusPreparedPartition,
         jobID: UUID
     ) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard journal.pendingPartition == nil,
               partition.descriptor.sessionID == journal.sessionID,
@@ -449,6 +482,9 @@ final class ConnectedCorpusOutboundStore {
     func preparedPendingPartition(
         for journal: ConnectedCorpusOutboundJournal
     ) throws -> ConnectedCorpusPreparedPartition? {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         guard let pending = journal.pendingPartition else { return nil }
         let url = try containedURL(relativePath: pending.relativePath, jobID: journal.jobID)
         let inspected = try ConnectedTransferFile.inspect(url)
@@ -468,6 +504,9 @@ final class ConnectedCorpusOutboundStore {
     /// durably accepted the pending partition. Journal replacement precedes
     /// removal of obsolete bytes, making every crash boundary replay-safe.
     func commitPendingPartition(jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard let pending = journal.pendingPartition,
               pending.descriptor.index == journal.committedPartitionCount,
@@ -517,7 +556,9 @@ final class ConnectedCorpusOutboundStore {
 
         for path in completedPaths + [partitionPath] {
             if let url = try? containedURL(relativePath: path, jobID: jobID) {
-                try? fileManager.removeItem(at: url)
+                if (try? fileManager.removeItem(at: url)) != nil {
+                    try synchronizeStorageDirectory(url.deletingLastPathComponent())
+                }
             }
         }
         return journal
@@ -529,6 +570,9 @@ final class ConnectedCorpusOutboundStore {
         message: String?,
         currentDate: Date? = nil
     ) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard !journal.state.isTerminal || journal.state == state else {
             throw ConnectedCorpusOutboundStoreError.invalidJournal
@@ -544,6 +588,9 @@ final class ConnectedCorpusOutboundStore {
         jobID: UUID,
         acknowledgement: ConnectedCorpusTransferFinalAck
     ) throws -> ConnectedCorpusOutboundJournal {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard journal.items.isEmpty,
               journal.pendingPartition == nil,
@@ -565,6 +612,9 @@ final class ConnectedCorpusOutboundStore {
 
     @discardableResult
     func markCompletionRecorded(jobID: UUID) throws -> Bool {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         var journal = try requiredJournal(jobID: jobID)
         guard !journal.completionRecorded else { return false }
         journal.completionRecorded = true
@@ -573,6 +623,9 @@ final class ConnectedCorpusOutboundStore {
     }
 
     func cancel(jobID: UUID, expired: Bool = false) throws {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         guard var journal = try load(jobID: jobID, allowExpired: true) else {
             throw ConnectedCorpusOutboundStoreError.jobNotFound
         }
@@ -587,6 +640,9 @@ final class ConnectedCorpusOutboundStore {
     }
 
     func remove(jobID: UUID) throws {
+        let transaction = try beginStoreTransaction()
+        defer { transaction.close() }
+
         let directory = jobDirectoryURL(jobID: jobID)
         guard contained(directory, by: rootURL) else {
             throw ConnectedCorpusOutboundStoreError.invalidJournal
@@ -594,10 +650,15 @@ final class ConnectedCorpusOutboundStore {
         if fileManager.fileExists(atPath: directory.path) {
             try fileManager.removeItem(at: directory)
         }
+        if fileManager.fileExists(atPath: rootURL.path) { try synchronizeStorageDirectory(rootURL) }
+        checkpointBytes[jobID] = nil
     }
 
     @discardableResult
     func cleanupExpired(now timestamp: Date? = nil) -> [UUID] {
+        guard let transaction = try? beginStoreTransaction() else { return [] }
+        defer { transaction.close() }
+
         let timestamp = timestamp ?? now()
         guard let directories = try? fileManager.contentsOfDirectory(
             at: rootURL,
@@ -616,22 +677,34 @@ final class ConnectedCorpusOutboundStore {
                 continue
             }
             if journal.state.isTerminal {
-                try? remove(jobID: jobID)
-                expired.append(jobID)
+                do {
+                    try remove(jobID: jobID)
+                    expired.append(jobID)
+                } catch {
+                    // Failed deletion or synchronization is not acknowledged as cleanup.
+                }
                 continue
             }
             journal.state = .expired
             journal.statusMessage = "Durable connected export expired before completion."
             journal.items = []
             journal.pendingPartition = nil
-            try? persist(&journal)
-            try? removeInternalFiles(jobID: jobID, preservingJournal: true)
-            expired.append(jobID)
+            do {
+                try persist(&journal)
+                try removeInternalFiles(jobID: jobID, preservingJournal: true)
+                expired.append(jobID)
+            } catch {
+                // A competing checkpoint retains both its journal and spool authority.
+                continue
+            }
         }
         return expired
     }
 
     func totalInternalSpoolBytes(jobID: UUID) -> Int64 {
+        guard let transaction = try? beginStoreTransaction() else { return 0 }
+        defer { transaction.close() }
+
         guard let enumerator = fileManager.enumerator(
             at: jobDirectoryURL(jobID: jobID),
             includingPropertiesForKeys: [.fileSizeKey],
@@ -644,6 +717,12 @@ final class ConnectedCorpusOutboundStore {
             }
         }
         return total
+    }
+
+    private func beginStoreTransaction() throws -> AtomicFileWriter.PublicationLease {
+        try fileManager.createDirectory(at: publicationLockURL.deletingLastPathComponent(),
+            withIntermediateDirectories: true, attributes: protectedAttributes(permissions: 0o700))
+        return try AtomicFileWriter.beginPublicationTransaction(at: publicationLockURL)
     }
 
     private func requiredJournal(jobID: UUID) throws -> ConnectedCorpusOutboundJournal {
@@ -752,37 +831,28 @@ final class ConnectedCorpusOutboundStore {
         return try handle.read(upToCount: 8) == Data("HMDCITEM".utf8)
     }
 
-    private func persist(_ journal: inout ConnectedCorpusOutboundJournal) throws {
+    private func persist(_ journal: inout ConnectedCorpusOutboundJournal, freshAdmission: Bool = false) throws {
         journal.updatedAt = now()
         try validate(journal)
         try prepareDirectories(jobID: journal.jobID)
         let data = try encoder.encode(journal)
         let destination = journalURL(jobID: journal.jobID)
-        let temporary = jobDirectoryURL(jobID: journal.jobID)
-            .appendingPathComponent("journal-\(UUID().uuidString).tmp")
-        guard fileManager.createFile(
-            atPath: temporary.path,
-            contents: nil,
-            attributes: protectedAttributes(permissions: 0o600)
-        ) else { throw CocoaError(.fileWriteUnknown) }
         do {
-            let handle = try FileHandle(forWritingTo: temporary)
-            try handle.write(contentsOf: data)
-            try handle.synchronize()
-            try handle.close()
-            if fileManager.fileExists(atPath: destination.path) {
-                _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
-            } else {
-                try fileManager.moveItem(at: temporary, to: destination)
-            }
-            try? fileManager.setAttributes(
-                protectedAttributes(permissions: 0o600),
-                ofItemAtPath: destination.path
-            )
-        } catch {
-            try? fileManager.removeItem(at: temporary)
-            throw error
+            try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
+                attributes: protectedAttributes(permissions: 0o600),
+                commitPolicy: freshAdmission ? .requireAbsent : .replaceIfUnchanged(try expectedCheckpointBytes(jobID: journal.jobID)),
+                transactionLockURL: publicationLockURL,
+                directoryDurability: .required(upTo: durabilityRootURL),
+                directorySync: directorySync)
+            checkpointBytes[journal.jobID] = data
+        } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
+            throw ConnectedCorpusOutboundStoreError.requestChanged
         }
+    }
+
+    private func expectedCheckpointBytes(jobID: UUID) throws -> Data {
+        guard let bytes = checkpointBytes[jobID] else { throw ConnectedCorpusOutboundStoreError.invalidJournal }
+        return bytes
     }
 
     private func prepareDirectories(jobID: UUID) throws {
@@ -835,7 +905,12 @@ final class ConnectedCorpusOutboundStore {
         return attributes
     }
 
-    private func cleanupOrphanFiles(for journal: ConnectedCorpusOutboundJournal) {
+    private func synchronizeStorageDirectory(_ directory: URL) throws {
+        try AtomicFileWriter.synchronizeDirectories(from: directory,
+            durability: .required(upTo: durabilityRootURL), directorySync: directorySync)
+    }
+
+    private func cleanupOrphanFiles(for journal: ConnectedCorpusOutboundJournal) throws {
         let referenced = Set(
             journal.items.map(\.relativePath)
                 + [journal.pendingPartition?.relativePath].compactMap { $0 }
@@ -851,7 +926,10 @@ final class ConnectedCorpusOutboundStore {
                 continue
             }
             let relative = relativePath(url, jobID: journal.jobID)
-            if !referenced.contains(relative) { try? fileManager.removeItem(at: url) }
+            if !referenced.contains(relative) {
+                try fileManager.removeItem(at: url)
+                try synchronizeStorageDirectory(url.deletingLastPathComponent())
+            }
         }
     }
 
@@ -863,6 +941,7 @@ final class ConnectedCorpusOutboundStore {
         for child in [itemDirectoryURL(jobID: jobID), partitionDirectoryURL(jobID: jobID)] {
             if fileManager.fileExists(atPath: child.path) { try fileManager.removeItem(at: child) }
         }
+        try synchronizeStorageDirectory(directory)
         if !preservingJournal { try remove(jobID: jobID) }
     }
 

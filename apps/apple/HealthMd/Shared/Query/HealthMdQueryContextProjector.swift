@@ -340,13 +340,18 @@ enum HealthMdQueryContextProjector {
         // evidence is pinned to the `sleep_total` authorization rather than the
         // union of every narrower sleep metric.
         let sleepEvidenceIDs = (metricEvidence["sleep_total"] ?? []).sorted()
+        // The capture-time attribution mode (issue #104) decides which capture
+        // window owned these samples; legacy records without the marker use the
+        // shipped night-begins window.
+        let sleepAttribution = healthData.timeContext.sleepDayAttribution ?? .nightBegins
         let sleepSessions = options.includesAppleHealth
             ? try HealthMdSleepSessionQuery.contextSessions(
                 sleep: healthData.sleep,
                 ownerDate: ownerDate,
                 ownerIntervalStart: ownership.intervalStart,
                 calendarTimeZone: ownership.timeZone.identifier,
-                evidenceIDs: sleepEvidenceIDs
+                evidenceIDs: sleepEvidenceIDs,
+                attribution: sleepAttribution
             )
             : []
 

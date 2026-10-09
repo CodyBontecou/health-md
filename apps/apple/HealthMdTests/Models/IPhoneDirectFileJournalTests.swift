@@ -1,5 +1,6 @@
 import HealthMdConnectionCore
 import XCTest
+import Darwin
 @testable import HealthMd
 
 final class IPhoneDirectFileJournalTests: XCTestCase {
@@ -751,8 +752,386 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
     }
     #endif
 
+    func testCorruptDirectJournalCannotBecomeNewWorkAndRetainsBytes() throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("journal.json")
+        let bytes = Data("{invalid-private-journal".utf8)
+        try bytes.write(to: url)
+        XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
+            isSupported: { (journal: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(journal.version) }))
+        XCTAssertEqual(try Data(contentsOf: url), bytes)
+    }
+
+    func testMissingDirectJournalIsNewWorkOnlyWithoutRetainedSpoolFiles() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            XCTAssertNil(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            let spool = directory.appendingPathComponent("retained.bin")
+            let bytes = Data([1, 2, 3])
+            try bytes.write(to: spool)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertEqual(try Data(contentsOf: spool), bytes)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    func testDirectJournalRoundTripAndUnknownVersionRetainExactBytes() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            let journal = try makeJournal()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            encoder.outputFormatting = [.sortedKeys]
+            let bytes = try encoder.encode(journal)
+            try bytes.write(to: url)
+            let restored = try XCTUnwrap(AppleExportJournalRecovery.load(at: url,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertEqual(restored.request, journal.request)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            var object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            object["version"] = 999
+            let unknown = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+            try unknown.write(to: url)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) })) { error in
+                XCTAssertEqual(error.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+            }
+            XCTAssertEqual(try Data(contentsOf: url), unknown)
+        }
+    }
+
+    func testDirectJournalRejectsNonFileAndSymbolicLinkWithoutChangingTarget() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            try FileManager.default.removeItem(at: url)
+            let target = directory.appendingPathComponent("original.json")
+            let bytes = Data("private-synthetic-checkpoint".utf8)
+            try bytes.write(to: target)
+            try FileManager.default.createSymbolicLink(at: url, withDestinationURL: target)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url, isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertEqual(try Data(contentsOf: target), bytes)
+            XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: url.path), target.path)
+        }
+    }
+
+    func testDirectJournalRecoveryReestablishesDirectoryDurabilityWithoutChangingBytes() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            let journal = try makeJournal()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(journal)
+            try bytes.write(to: url)
+            var synchronized: [URL] = []
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
+                directoryDurability: .required(upTo: directory),
+                directorySync: { synchronized.append($0); throw POSIXError(.EIO) },
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) })) {
+                XCTAssertEqual($0.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+            }
+            XCTAssertEqual(synchronized.map(\.path), [directory.path])
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            let restored = try XCTUnwrap(AppleExportJournalRecovery.load(at: url,
+                directoryDurability: .required(upTo: directory),
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertEqual(restored.request, journal.request)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+        }
+    }
+
+    func testDirectExpiryRemovalHoldsPublicationLockForRawAndGeneratedJobs() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            let lock = parent.appendingPathComponent(".jobs.lock")
+            let expired = [UUID(), UUID()]
+            let current = UUID()
+            let now = Date(timeIntervalSince1970: 1_800_000_000)
+            for (index, id) in (expired + [current]).enumerated() {
+                let directory = root.appendingPathComponent(id.uuidString.lowercased())
+                let location = index == 1 ? directory.appendingPathComponent("files") : directory
+                try FileManager.default.createDirectory(at: location, withIntermediateDirectories: true)
+                let date = index == 2 ? now : now.addingTimeInterval(-101)
+                let bytes = try JSONSerialization.data(withJSONObject: ["request": ["createdAt": ISO8601DateFormatter().string(from: date)]])
+                try bytes.write(to: location.appendingPathComponent("journal.json"))
+                try Data("synthetic retained artifact".utf8).write(to: location.appendingPathComponent("spool.bin"))
+            }
+            let manager = ExpiryLockFileManager(lockURL: lock)
+            let removed = try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, fileManager: manager)
+            XCTAssertEqual(Set(removed), Set(expired))
+            XCTAssertEqual(manager.removalLockObservations, [true, true])
+            XCTAssertTrue(FileManager.default.fileExists(atPath: root.appendingPathComponent(current.uuidString.lowercased()).path))
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    func testDirectExpirySyncFailureRetainsUnacknowledgedRemovalAndRecoversOnNextScan() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            let job = root.appendingPathComponent(UUID().uuidString.lowercased())
+            let lock = parent.appendingPathComponent(".jobs.lock")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
+            let bytes = Data("{\"request\":{\"createdAt\":\"2020-01-01T00:00:00Z\"}}".utf8)
+            try bytes.write(to: job.appendingPathComponent("journal.json"))
+            var failBeforeRemoval = true
+            var failAfterRemoval = true
+            let sync: (URL) throws -> Void = { directory in
+                if failBeforeRemoval || (failAfterRemoval && !FileManager.default.fileExists(atPath: job.path)) { throw POSIXError(.EIO) }
+                try AtomicFileWriter.synchronizeDirectory(directory)
+            }
+            let now = Date(timeIntervalSince1970: 1_800_000_000)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync))
+            XCTAssertEqual(try Data(contentsOf: job.appendingPathComponent("journal.json")), bytes)
+            failBeforeRemoval = false
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: job.path))
+            failAfterRemoval = false
+            XCTAssertEqual(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: now, lifetime: 100, directorySync: sync), [])
+            XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    func testDirectExpiryRejectsLockInsideRemovableJobTreeBeforeChangingFiles() throws {
+        try withDirectJournalDirectory { parent in
+            let root = parent.appendingPathComponent("jobs")
+            let job = root.appendingPathComponent(UUID().uuidString.lowercased())
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: true)
+            let journal = job.appendingPathComponent("journal.json")
+            let bytes = Data("{\"request\":{\"createdAt\":\"2020-01-01T00:00:00Z\"}}".utf8)
+            try bytes.write(to: journal)
+            let lock = job.appendingPathComponent(".jobs.lock")
+            XCTAssertThrowsError(try AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
+                lockURL: lock, durabilityRoot: parent, now: Date(), lifetime: 100)) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EINVAL)
+            }
+            XCTAssertEqual(try Data(contentsOf: journal), bytes)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: lock.path))
+        }
+    }
+
+    private final class ExpiryLockFileManager: FileManager, @unchecked Sendable {
+        let lockURL: URL
+        var removalLockObservations: [Bool] = []
+        init(lockURL: URL) { self.lockURL = lockURL; super.init() }
+        override func removeItem(at URL: URL) throws {
+            let descriptor = Darwin.open(lockURL.path, O_RDWR)
+            guard descriptor >= 0 else { throw POSIXError(.EIO) }
+            defer { Darwin.close(descriptor) }
+            let result = flock(descriptor, LOCK_EX | LOCK_NB)
+            removalLockObservations.append(result != 0 && errno == EWOULDBLOCK)
+            if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            try super.removeItem(at: URL)
+        }
+    }
+
+    func testOwnedLegacyRecoveryPreservesJournalBytesAndReusesPrivateGeneration() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            try bytes.write(to: url)
+            let first = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                legacyCompletionIdentity: { $0.request.jobID },
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            let second = try XCTUnwrap(AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                legacyCompletionIdentity: { $0.request.jobID },
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertNotNil(first.checkpoint.generation)
+            XCTAssertEqual(first.checkpoint.generation, second.checkpoint.generation)
+            XCTAssertEqual(first.checkpoint.bytes, bytes)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            let owner = job.appendingPathComponent(".journal-generation")
+            XCTAssertEqual((try FileManager.default.attributesOfItem(atPath: owner.path)[.posixPermissions] as? NSNumber)?.intValue, 0o600)
+        }
+    }
+
+    @MainActor
+    func testLegacyOwnerUpgradePreservesCompletionIdentityAcrossInterruptedSync() throws {
+        for failUpgradeSync in [false, true] {
+            try withDirectJournalDirectory { parent in
+                let job = parent.appendingPathComponent("job")
+                try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                let url = job.appendingPathComponent("journal.json")
+                let owner = job.appendingPathComponent(".journal-generation")
+                let lock = parent.appendingPathComponent(".publication.lock")
+                let journal = try makeJournal()
+                let encoder = JSONEncoder()
+                encoder.dateEncodingStrategy = .iso8601
+                let bytes = try encoder.encode(journal)
+                try bytes.write(to: url)
+                let generation = UUID()
+                try Data(generation.uuidString.lowercased().utf8).write(to: owner)
+                @MainActor func load(failSync: Bool) throws -> (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? {
+                    try AppleExportJournalRecovery.loadOwned(at: url,
+                        lockURL: lock, durabilityRoot: parent,
+                        directorySync: { directory in
+                            if failSync, (try Data(contentsOf: owner)).count == 73 {
+                                throw POSIXError(.EIO)
+                            }
+                            try AtomicFileWriter.synchronizeDirectory(directory)
+                        },
+                        legacyCompletionIdentity: { $0.request.jobID },
+                        isSupported: { (_: IPhoneDirectFileJournal) in true })
+                }
+                if failUpgradeSync { XCTAssertThrowsError(try load(failSync: true)) }
+                let recovered = try XCTUnwrap(load(failSync: false))
+                let repeated = try XCTUnwrap(load(failSync: false))
+                XCTAssertEqual(recovered.checkpoint.generation, generation)
+                XCTAssertEqual(recovered.checkpoint.completionIdentity, journal.request.jobID)
+                XCTAssertEqual(repeated.checkpoint.completionIdentity, journal.request.jobID)
+                XCTAssertEqual(recovered.checkpoint.bytes, bytes)
+                XCTAssertEqual(try Data(contentsOf: url), bytes)
+                XCTAssertEqual(try String(contentsOf: owner, encoding: .utf8),
+                    generation.uuidString.lowercased() + "\n" + journal.request.jobID.uuidString.lowercased())
+                XCTAssertNoThrow(try recovered.checkpoint.withCheckpointOwnership {})
+            }
+        }
+    }
+
+    func testMalformedCompletionIdentityDoesNotRefreshOwnedReceipt() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let owner = job.appendingPathComponent(".journal-generation")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let journal = try makeJournal()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(journal)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent)
+            let generation = try XCTUnwrap(checkpoint.generation)
+            try Data((generation.uuidString.lowercased() + "\n" + String(repeating: "x", count: 36)).utf8).write(to: owner)
+            XCTAssertThrowsError(try checkpoint.withCheckpointOwnership {})
+            XCTAssertThrowsError(try AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                legacyCompletionIdentity: { $0.request.jobID },
+                isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+        }
+    }
+
+    func testCorruptOrSymbolicOwnershipCannotRefreshReceiptOrReplaceJournal() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let owner = job.appendingPathComponent(".journal-generation")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent)
+            let originalOwner = try Data(contentsOf: owner)
+            try Data(repeating: 0x58, count: 4096).write(to: owner)
+            XCTAssertThrowsError(try checkpoint.validateGeneration()) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+            }
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            let corrupt = Data("invalid synthetic ownership".utf8)
+            for symbolic in [false, true] {
+                if symbolic {
+                    try FileManager.default.removeItem(at: owner)
+                    let target = parent.appendingPathComponent("owner-target")
+                    try originalOwner.write(to: target)
+                    try FileManager.default.createSymbolicLink(at: owner, withDestinationURL: target)
+                } else { try corrupt.write(to: owner) }
+                XCTAssertThrowsError(try AppleExportJournalRecovery.loadOwned(at: url,
+                    lockURL: lock, durabilityRoot: parent,
+                legacyCompletionIdentity: { $0.request.jobID },
+                    isSupported: { (_: IPhoneDirectFileJournal) in true })) {
+                    XCTAssertEqual($0.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+                }
+                XCTAssertThrowsError(try checkpoint.publish(Data("stale update".utf8), to: url,
+                    freshAdmission: false, lockURL: lock, durabilityRoot: parent)) {
+                    XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+                }
+                XCTAssertEqual(try Data(contentsOf: url), bytes)
+                XCTAssertEqual(try Data(contentsOf: owner), symbolic ? originalOwner : corrupt)
+            }
+        }
+    }
+
+    func testInterruptedGenerationAdmissionRetainsMarkerAndCannotBecomeFreshCapture() throws {
+        try withDirectJournalDirectory { parent in
+            let job = parent.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let url = job.appendingPathComponent("journal.json")
+            let lock = parent.appendingPathComponent(".publication.lock")
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(makeJournal())
+            var checkpoint = AppleExportJournalCheckpoint()
+            XCTAssertThrowsError(try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent, directorySync: { _ in throw POSIXError(.EIO) }))
+            XCTAssertNil(checkpoint.bytes)
+            XCTAssertNil(checkpoint.generation)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+            let owner = job.appendingPathComponent(".journal-generation")
+            let retained = try Data(contentsOf: owner)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.loadOwned(at: url,
+                lockURL: lock, durabilityRoot: parent,
+                legacyCompletionIdentity: { $0.request.jobID },
+                isSupported: { (_: IPhoneDirectFileJournal) in true }))
+            XCTAssertThrowsError(try checkpoint.publish(bytes, to: url, freshAdmission: true,
+                lockURL: lock, durabilityRoot: parent)) {
+                XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+            }
+            XCTAssertEqual(try Data(contentsOf: owner), retained)
+            XCTAssertFalse(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    func testGeneratedJournalReadReceiptNeverChangesSerializedBytesOrRestoresFromJSON() throws {
+        var journal = try makeJournal()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let original = try encoder.encode(journal)
+        journal.checkpoint = AppleExportJournalCheckpoint(bytes: Data("private-read-image".utf8), generation: UUID(), completionIdentity: UUID())
+        XCTAssertEqual(try encoder.encode(journal), original)
+        var restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: original)
+        XCTAssertNil(restored.checkpoint.bytes)
+        XCTAssertNil(restored.checkpoint.generation)
+        XCTAssertNil(restored.checkpoint.completionIdentity)
+        XCTAssertNil(restored.checkpoint.journalURL)
+        XCTAssertNil(restored.checkpoint.publicationLockURL)
+        // Existing set-valued settings may reorder during decode. Compare receipt changes
+        // on the same decoded value rather than requiring unrelated set ordering stability.
+        let decodedBytes = try encoder.encode(restored)
+        restored.checkpoint = AppleExportJournalCheckpoint(bytes: Data("rebound-private-read-image".utf8))
+        XCTAssertEqual(try encoder.encode(restored), decodedBytes)
+    }
+
+    private func withDirectJournalDirectory(_ body: (URL) throws -> Void) throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try body(directory)
+    }
+
     private func makeJournal() throws -> IPhoneDirectFileJournal {
-        let jobID = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
+        try Self.makeJournal(jobID: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!)
+    }
+
+    static func makeJournal(jobID: UUID) throws -> IPhoneDirectFileJournal {
         let peerBinding = DirectPeerBinding(
             sourceInstallationID: UUID(uuidString: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa")!,
             destinationInstallationID: UUID(uuidString: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb")!

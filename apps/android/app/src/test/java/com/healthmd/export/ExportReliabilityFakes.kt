@@ -2,11 +2,14 @@ package com.healthmd.export
 
 import android.app.Activity
 import com.healthmd.domain.billing.FreemiumPolicy
-import com.healthmd.domain.review.ReviewPromptResult
-import com.healthmd.domain.review.ReviewPrompter
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportHistoryEntry
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.HealthData
+import com.healthmd.domain.model.SleepDayAttribution
+import com.healthmd.domain.model.SleepDayAttributionOverride
+import com.healthmd.domain.review.ReviewPromptResult
+import com.healthmd.domain.review.ReviewPrompter
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
@@ -24,6 +27,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.rules.TestWatcher
 import org.junit.runner.Description
 import java.time.LocalDate
+import java.time.ZoneId
 
 class FakeHealthRepository : HealthRepository {
     private val dataByDate = mutableMapOf<LocalDate, HealthData>()
@@ -42,6 +46,15 @@ class FakeHealthRepository : HealthRepository {
     fun putData(data: HealthData) {
         dataByDate[data.date] = data
     }
+
+    override suspend fun resolveCaptureContext(
+        zoneId: ZoneId,
+        sleepDayAttributionOverride: SleepDayAttributionOverride,
+    ) = AndroidCaptureContext(
+        zoneId,
+        (sleepDayAttributionOverride as? SleepDayAttributionOverride.Value)?.attribution
+            ?: SleepDayAttribution.DEFAULT,
+    )
 
     override suspend fun fetchHealthData(date: LocalDate): HealthData {
         fetchedDates.add(date)
@@ -186,6 +199,13 @@ class FakeSettingsRepository(
     }
 
     override suspend fun getSuccessfulExportCount(): Int = successfulExportCount
+
+    private val successfulOperationIds = mutableSetOf<String>()
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        if (!successfulOperationIds.add(operationId)) return false
+        incrementSuccessfulExportCount()
+        return true
+    }
 
     override suspend fun incrementSuccessfulExportCount() {
         successfulExportCount++

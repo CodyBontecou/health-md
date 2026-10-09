@@ -128,6 +128,37 @@ class AndroidWorkflowActionPinPolicyTest(unittest.TestCase):
         self.assertIn("id-token: write", workflow)
         self.assertNotIn("PLAY_CONSOLE_KEY_JSON", workflow)
 
+    def test_ci_sdk_setup_does_not_request_the_retired_tools_package(self) -> None:
+        for filename in ("android-ci.yml",):
+            lines = (ROOT / ".github/workflows" / filename).read_text().splitlines()
+            setups = 0
+            for index, line in enumerate(lines):
+                if "uses: android-actions/setup-android@" not in line:
+                    continue
+                setups += 1
+                block: list[str] = []
+                for following in lines[index + 1:]:
+                    if re.match(r"^\s*-\s+(?:name|uses|run):", following):
+                        break
+                    block.append(following)
+                self.assertIn(
+                    "packages: platform-tools", "\n".join(block),
+                    f"{filename}:{index + 1} inherits the action's retired tools package",
+                )
+            self.assertGreater(setups, 0, f"No SDK setup exercised in {filename}")
+
+    def test_instrumentation_unlocks_the_synthetic_emulator_and_retains_failure_reports(self) -> None:
+        workflow = (ROOT / ".github/workflows/android-ci.yml").read_text()
+        instrumentation = workflow.index(":app:connectedFdroidDebugAndroidTest")
+        for command in ("shell input keyevent KEYCODE_WAKEUP", "shell wm dismiss-keyguard"):
+            self.assertLess(workflow.index(command), instrumentation)
+        diagnostics = workflow.split("- name: Retain instrumentation reports and per-test results", 1)[1].split("\n  fdroid:", 1)[0]
+        for required in (
+            "if: ${{ always() }}", "if-no-files-found: warn", "retention-days: 7",
+            "apps/android/healthmd-core/build/outputs/androidTest-results/",
+            "apps/android/app/build/outputs/androidTest-results/",
+        ):
+            self.assertIn(required, diagnostics)
     def test_ci_sdk_setup_explicitly_installs_supported_packages(self) -> None:
         for name in ("android-ci.yml", "practice-ci.yml"):
             workflow = (ROOT / ".github/workflows" / name).read_text()

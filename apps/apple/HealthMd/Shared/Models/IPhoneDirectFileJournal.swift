@@ -124,6 +124,16 @@ struct IPhoneDirectFileJournal: Codable {
     static let derivedOutputReconciliationVersion = 6
     static let currentVersion = derivedOutputReconciliationVersion
 
+    var checkpoint = AppleExportJournalCheckpoint()
+
+    private enum CodingKeys: String, CodingKey {
+        case version, request, accepted, session, settingsSnapshot
+        case appleExportEnginePin, appleDirectProtocolPin, healthSubfolder, requestedDates, originalRequestedDates
+        case originalCalendarTimeZoneIdentifier, transferDates, capturedDays, generatedFiles, partitions
+        case committedPartitionCount, committedBytes, derivedOutputPartialFailures, terminalNoDataDateIdentifiers, generationCompleted
+        case state, completionRecorded, updatedAt
+    }
+
     let version: Int
     let request: DirectExportRequest
     let accepted: DirectExportAccepted
@@ -259,5 +269,362 @@ struct IPhoneDirectFileJournal: Codable {
         state = try container.decode(String.self, forKey: .state)
         completionRecorded = try container.decodeIfPresent(Bool.self, forKey: .completionRecorded) ?? false
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+}
+
+/// A value-owned read image and private direct-job generation. Neither enters journal JSON.
+/// A retained journal cannot silently become a fresh operation or a replacement generation.
+nonisolated extension AtomicFileWriter.PublicationLease: DirectPacketSendLease {}
+
+nonisolated struct AppleExportJournalCheckpoint: Sendable {
+    var bytes: Data?
+    var generation: UUID?
+    var completionIdentity: UUID?
+    var journalURL: URL?
+    var publicationLockURL: URL?
+
+    /// A bounded continuation check: checkpoint progress may advance within this generation.
+    /// Never creates a missing job directory or refreshes this value's ownership.
+    func validateGeneration(fileManager: FileManager = .default) throws {
+        try withGenerationOwnership(fileManager: fileManager) {}
+    }
+
+    /// Holds the publication transaction through a synchronous owner-bound mutation.
+    /// The original execution receipt may read newer progress, but never a new generation.
+    func withGenerationOwnership<Result>(
+        fileManager: FileManager = .default,
+        operation: () throws -> Result
+    ) throws -> Result {
+        let transaction = try acquireEnqueueLease(fileManager: fileManager)
+        defer { transaction.close() }
+        return try operation()
+    }
+
+    func acquireEnqueueLease(fileManager: FileManager = .default) throws -> AtomicFileWriter.PublicationLease {
+        guard bytes != nil, let generation, let completionIdentity, let journalURL, let publicationLockURL else {
+            throw POSIXError(.EAGAIN)
+        }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: publicationLockURL)
+        do {
+            guard (try? fileManager.attributesOfItem(atPath: journalURL.path)[.type] as? FileAttributeType) == .typeRegular,
+                  let ownership = try Self.readOwnership(for: journalURL, fileManager: fileManager),
+                  ownership.generation == generation, ownership.completionIdentity == completionIdentity else {
+                throw POSIXError(.EAGAIN)
+            }
+            return transaction
+        } catch {
+            transaction.close()
+            throw error
+        }
+    }
+
+    func commitCancellation(operation: () throws -> Void, onCommitted: () -> Void) throws {
+        try withGenerationOwnership {
+            try operation()
+            onCommitted()
+        }
+    }
+
+    var sendAuthorization: DirectPacketSendAuthorization {
+        DirectPacketSendAuthorization { try acquireEnqueueLease() }
+    }
+
+    /// Completion side effects require the exact last accepted checkpoint as well
+    /// as generation ownership, so a same-generation cancellation wins before accounting.
+    func withCheckpointOwnership<Result>(operation: () throws -> Result) throws -> Result {
+        try withGenerationOwnership {
+            guard let bytes, let journalURL, bytes.count < Int.max,
+                  (try FileManager.default.attributesOfItem(atPath: journalURL.path)[.size] as? NSNumber)?.uint64Value == UInt64(bytes.count) else {
+                throw POSIXError(.EAGAIN)
+            }
+            let handle = try FileHandle(forReadingFrom: journalURL)
+            defer { try? handle.close() }
+            guard try handle.read(upToCount: bytes.count + 1) == bytes else {
+                throw POSIXError(.EAGAIN)
+            }
+            return try operation()
+        }
+    }
+
+    enum ContinuationError: Error, Equatable { case superseded }
+
+    /// Fences both sides of a transport suspension, including failed sends/receives.
+    /// No publication transaction remains held across the await.
+    @MainActor
+    func continueWhileOwned<Result>(operation: @MainActor () async throws -> Result) async throws -> Result {
+        do { try validateGeneration() } catch { throw ContinuationError.superseded }
+        let result: Result
+        do { result = try await operation() }
+        catch {
+            let operationError = error
+            do { try validateGeneration() } catch { throw ContinuationError.superseded }
+            throw operationError
+        }
+        do { try validateGeneration() } catch { throw ContinuationError.superseded }
+        return result
+    }
+
+    fileprivate static func generationURL(for destination: URL) -> URL {
+        destination.deletingLastPathComponent().appendingPathComponent(".journal-generation")
+    }
+
+    fileprivate static func readOwnership(
+        for destination: URL, fileManager: FileManager
+    ) throws -> (generation: UUID, completionIdentity: UUID?)? {
+        let url = generationURL(for: destination)
+        let attributes: [FileAttributeKey: Any]
+        do { attributes = try fileManager.attributesOfItem(atPath: url.path) }
+        catch {
+            let failure = error as NSError
+            if failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError { return nil }
+            throw POSIXError(.EAGAIN)
+        }
+        let size = (attributes[.size] as? NSNumber)?.uint64Value
+        guard attributes[.type] as? FileAttributeType == .typeRegular,
+              size == 36 || size == 73 else { throw POSIXError(.EAGAIN) }
+        let data: Data
+        do {
+            let handle = try FileHandle(forReadingFrom: url)
+            defer { try? handle.close() }
+            guard let read = try handle.read(upToCount: 74) else { throw POSIXError(.EAGAIN) }
+            data = read
+        } catch { throw POSIXError(.EAGAIN) }
+        guard UInt64(data.count) == size, let text = String(data: data, encoding: .utf8) else {
+            throw POSIXError(.EAGAIN)
+        }
+        let fields = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+        guard fields.count == (size == 36 ? 1 : 2),
+              let generation = UUID(uuidString: fields[0]),
+              generation.uuidString.lowercased() == fields[0] else { throw POSIXError(.EAGAIN) }
+        if fields.count == 1 { return (generation, nil) }
+        guard let completionIdentity = UUID(uuidString: fields[1]),
+              completionIdentity.uuidString.lowercased() == fields[1] else { throw POSIXError(.EAGAIN) }
+        return (generation, completionIdentity)
+    }
+
+    fileprivate static func ownershipBytes(generation: UUID, completionIdentity: UUID) -> Data {
+        Data("\(generation.uuidString.lowercased())\n\(completionIdentity.uuidString.lowercased())".utf8)
+    }
+
+    fileprivate static func createGeneration(
+        for destination: URL, lockURL: URL, durabilityRoot: URL,
+        fileManager: FileManager, attributes: [FileAttributeKey: Any]?,
+        directorySync: (URL) throws -> Void, completionIdentity: UUID? = nil
+    ) throws -> UUID {
+        let generation = UUID()
+        try AtomicFileWriter.writeData(ownershipBytes(generation: generation, completionIdentity: completionIdentity ?? generation),
+            to: generationURL(for: destination), fileManager: fileManager,
+            attributes: attributes ?? [.posixPermissions: 0o600], commitPolicy: .requireAbsent,
+            transactionLockURL: lockURL, directoryDurability: .required(upTo: durabilityRoot),
+            directorySync: directorySync)
+        return generation
+    }
+
+    mutating func publish(
+        _ data: Data, to destination: URL,
+        freshAdmission: Bool,
+        lockURL: URL,
+        durabilityRoot: URL,
+        fileManager: FileManager = .default,
+        attributes: [FileAttributeKey: Any]? = nil,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
+    ) throws {
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
+        let policy: AtomicFileWriter.CommitPolicy
+        let acceptedGeneration: UUID
+        let acceptedCompletionIdentity: UUID
+        if freshAdmission {
+            do {
+                _ = try fileManager.attributesOfItem(atPath: destination.path)
+                throw POSIXError(.EEXIST)
+            } catch {
+                let failure = error as NSError
+                guard failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError else { throw error }
+            }
+            // A partial admission retains its sidecar; it cannot silently become fresh work.
+            acceptedGeneration = try Self.createGeneration(for: destination, lockURL: lockURL,
+                durabilityRoot: durabilityRoot, fileManager: fileManager,
+                attributes: attributes, directorySync: directorySync)
+            acceptedCompletionIdentity = acceptedGeneration
+            policy = .requireAbsent
+        } else {
+            guard let bytes, let generation, let completionIdentity,
+                  let ownership = try Self.readOwnership(for: destination, fileManager: fileManager),
+                  ownership.generation == generation, ownership.completionIdentity == completionIdentity else {
+                throw POSIXError(.EAGAIN)
+            }
+            acceptedGeneration = generation
+            acceptedCompletionIdentity = completionIdentity
+            policy = .replaceIfUnchanged(bytes)
+        }
+        try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
+            attributes: attributes, commitPolicy: policy, transactionLockURL: lockURL,
+            directoryDurability: .required(upTo: durabilityRoot), directorySync: directorySync)
+        bytes = data
+        generation = acceptedGeneration
+        completionIdentity = acceptedCompletionIdentity
+        journalURL = destination
+        publicationLockURL = lockURL
+    }
+}
+
+enum AppleExportJournalRecovery {
+    /// Bind decoded bytes and auxiliary ownership while holding one publication transaction.
+    /// Legacy journals receive a sidecar without rewriting their JSON.
+    static func loadOwned<Journal: Decodable>(
+        at url: URL, lockURL: URL, durabilityRoot: URL,
+        fileManager: FileManager = .default,
+        decoder: JSONDecoder? = nil,
+        attributes: [FileAttributeKey: Any]? = nil,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory,
+        legacyCompletionIdentity: (Journal) -> UUID,
+        isSupported: (Journal) -> Bool
+    ) throws -> (journal: Journal, checkpoint: AppleExportJournalCheckpoint)? {
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
+        var bytes: Data?
+        guard let journal: Journal = try load(at: url, fileManager: fileManager,
+            decoder: decoder, directoryDurability: .required(upTo: durabilityRoot),
+            directorySync: directorySync, didLoadBytes: { bytes = $0 }, isSupported: isSupported),
+              let bytes else { return nil }
+        do {
+            let generation: UUID
+            let completionIdentity: UUID
+            if let ownership = try AppleExportJournalCheckpoint.readOwnership(for: url, fileManager: fileManager) {
+                generation = ownership.generation
+                if let identity = ownership.completionIdentity {
+                    completionIdentity = identity
+                } else {
+                    completionIdentity = legacyCompletionIdentity(journal)
+                    try AtomicFileWriter.writeData(
+                        AppleExportJournalCheckpoint.ownershipBytes(generation: generation, completionIdentity: completionIdentity),
+                        to: AppleExportJournalCheckpoint.generationURL(for: url), fileManager: fileManager,
+                        attributes: attributes ?? [.posixPermissions: 0o600],
+                        commitPolicy: .replaceIfUnchanged(Data(generation.uuidString.lowercased().utf8)),
+                        transactionLockURL: lockURL, directoryDurability: .required(upTo: durabilityRoot),
+                        directorySync: directorySync)
+                }
+            } else {
+                let legacyIdentity = legacyCompletionIdentity(journal)
+                generation = try AppleExportJournalCheckpoint.createGeneration(for: url, lockURL: lockURL,
+                    durabilityRoot: durabilityRoot, fileManager: fileManager,
+                    attributes: attributes, directorySync: directorySync, completionIdentity: legacyIdentity)
+                completionIdentity = legacyIdentity
+            }
+            return (journal, AppleExportJournalCheckpoint(bytes: bytes, generation: generation,
+                completionIdentity: completionIdentity, journalURL: url, publicationLockURL: lockURL))
+        } catch {
+            throw RecoveryError.unreadableJournal
+        }
+    }
+
+    private struct DirectExpiryProbe: Decodable {
+        struct Request: Decodable { let createdAt: Date }
+        let request: Request
+    }
+
+    /// Raw and generated-file jobs share this root and its persistent publication inode.
+    static func cleanupExpiredDirectJobs(
+        at root: URL, lockURL: URL, durabilityRoot: URL,
+        now: Date, lifetime: TimeInterval,
+        fileManager: FileManager = .default,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory
+    ) throws -> [UUID] {
+        let rootPath = root.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        let lockPath = lockURL.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        let durabilityPath = durabilityRoot.standardizedFileURL.resolvingSymlinksInPath().pathComponents
+        guard root.isFileURL, lockURL.isFileURL, durabilityRoot.isFileURL,
+              rootPath.starts(with: durabilityPath), lockPath.starts(with: durabilityPath),
+              !lockPath.starts(with: rootPath), lifetime.isFinite, lifetime >= 0 else {
+            throw POSIXError(.EINVAL)
+        }
+        let transaction = try AtomicFileWriter.beginPublicationTransaction(at: lockURL)
+        defer { transaction.close() }
+        // Re-establish any preceding ambiguous removal before inspecting retained authority.
+        try AtomicFileWriter.synchronizeDirectories(from: root,
+            durability: .required(upTo: durabilityRoot), directorySync: directorySync)
+        let directories = try fileManager.contentsOfDirectory(at: root,
+            includingPropertiesForKeys: [.creationDateKey, .contentModificationDateKey],
+            options: [.skipsHiddenFiles])
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        var removed: [UUID] = []
+        for directory in directories {
+            guard let jobID = UUID(uuidString: directory.lastPathComponent),
+                  try fileManager.attributesOfItem(atPath: directory.path)[.type] as? FileAttributeType == .typeDirectory else { continue }
+            let candidates = [directory.appendingPathComponent("journal.json"),
+                directory.appendingPathComponent("files/journal.json")]
+            let journalURL = candidates.first { fileManager.fileExists(atPath: $0.path) }
+            let probe = journalURL.flatMap { try? Data(contentsOf: $0) }
+                .flatMap { try? decoder.decode(DirectExpiryProbe.self, from: $0) }
+            let createdAt: Date?
+            if let probe { createdAt = probe.request.createdAt }
+            else {
+                let values = try directory.resourceValues(forKeys: [.creationDateKey, .contentModificationDateKey])
+                createdAt = values.creationDate ?? values.contentModificationDate
+            }
+            guard createdAt.map({ $0.addingTimeInterval(lifetime) <= now }) ?? false else { continue }
+            try fileManager.removeItem(at: directory)
+            try AtomicFileWriter.synchronizeDirectories(from: root,
+                durability: .required(upTo: durabilityRoot), directorySync: directorySync)
+            removed.append(jobID)
+        }
+        return removed
+    }
+
+    enum RecoveryError: LocalizedError {
+        case unreadableJournal
+        var errorDescription: String? { "The saved direct export journal is unavailable. Its files were retained." }
+    }
+
+    static func load<Journal: Decodable>(
+        at url: URL, fileManager manager: FileManager = .default,
+        decoder suppliedDecoder: JSONDecoder? = nil,
+        directoryDurability: AtomicFileWriter.DirectoryDurability = .bestEffort,
+        directorySync: (URL) throws -> Void = AtomicFileWriter.synchronizeDirectory,
+        didLoadBytes: (Data) -> Void = { _ in },
+        isSupported: (Journal) -> Bool
+    ) throws -> Journal? {
+        let attributes: [FileAttributeKey: Any]
+        do {
+            attributes = try manager.attributesOfItem(atPath: url.path)
+        } catch {
+            let failure = error as NSError
+            guard failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError else {
+                throw RecoveryError.unreadableJournal
+            }
+            // A missing journal beside retained spool files is incomplete work,
+            // not permission to capture a replacement using today's settings.
+            do {
+                guard try manager.contentsOfDirectory(atPath: url.deletingLastPathComponent().path).isEmpty else {
+                    throw RecoveryError.unreadableJournal
+                }
+            } catch {
+                let directoryFailure = error as NSError
+                guard directoryFailure.domain == NSCocoaErrorDomain,
+                      directoryFailure.code == NSFileReadNoSuchFileError else {
+                    throw RecoveryError.unreadableJournal
+                }
+            }
+            return nil
+        }
+        guard attributes[.type] as? FileAttributeType == .typeRegular else {
+            throw RecoveryError.unreadableJournal
+        }
+        let decoder = suppliedDecoder ?? JSONDecoder()
+        if suppliedDecoder == nil { decoder.dateDecodingStrategy = .iso8601 }
+        do {
+            let bytes = try Data(contentsOf: url)
+            let journal = try decoder.decode(Journal.self, from: bytes)
+            guard isSupported(journal) else { throw RecoveryError.unreadableJournal }
+            try AtomicFileWriter.synchronizeDirectories(
+                from: url.deletingLastPathComponent(), durability: directoryDurability, directorySync: directorySync)
+            didLoadBytes(bytes)
+            return journal
+        } catch {
+            // Never expose a path or decoder context containing saved values.
+            throw RecoveryError.unreadableJournal
+        }
     }
 }

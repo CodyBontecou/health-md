@@ -512,6 +512,23 @@ object HealthDataFields {
             (includeAndroidNativeFields || field.key !in androidNativeFieldKeys)
     }
 
+    /**
+     * Successor v6 projection: Light is a native value, not the historical opt-in Core alias.
+     * Keep [extract] and its default/legacy ordering frozen for existing public writers.
+     */
+    fun extractForWakeDate(
+        data: HealthData,
+        converter: UnitConverter,
+        timeFormat: TimeFormatPreference = TimeFormatPreference.HOUR_24,
+    ): List<HealthField> = extract(
+        data, converter, timeFormat,
+        includeLegacyAndroidAliases = true,
+        includeAndroidNativeFields = true,
+    ).filter { field ->
+        field.key != "sleep_core_hours" &&
+            (field.key == "sleep_light_hours" || field.key !in legacyAndroidAliasKeys)
+    }
+
     private fun Duration.toHoursRounded(): String? {
         if (this <= Duration.ZERO) return null
         return String.format(Locale.US, "%.2f", this.inWholeMinutes / 60.0)

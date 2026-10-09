@@ -182,6 +182,17 @@ android {
     }
 }
 
+// Changing opt-in native QA must invalidate test receipts, including rebuilt bytes at the same path.
+tasks.withType<Test>().configureEach {
+    val hostCoreLibrary = providers.environmentVariable("HEALTHMD_HOST_CORE_LIBRARY")
+    inputs.property("healthmdHostCoreLibrary", hostCoreLibrary.orElse(""))
+    inputs.property("healthmdWakeDateConsumerFixtureDirectory",
+        providers.environmentVariable("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR").orElse(""))
+    hostCoreLibrary.orNull?.takeIf { it.isNotBlank() }?.let {
+        inputs.file(it).withPropertyName("healthmdHostCoreLibraryBytes")
+    }
+}
+
 dependencies {
     implementation(project(":direct-protocol"))
     implementation(project(":healthmd-core"))
@@ -262,6 +273,8 @@ dependencies {
 
     // Testing
     testImplementation(libs.junit)
+    // Host-only native bootstrap for opt-in real UniFFI/JNA tests; Android keeps the pinned AAR.
+    testRuntimeOnly(libs.jna)
     testImplementation(libs.kotlinx.coroutines.test)
     testImplementation(kotlin("reflect"))
     testImplementation(libs.mockk)

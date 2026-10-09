@@ -1,10 +1,13 @@
 package com.healthmd.data.export
 
+import com.healthmd.domain.exportengine.AndroidExportProfile
+import com.healthmd.domain.model.AndroidCaptureContext
 import com.healthmd.domain.model.ExportFailureReason
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.model.FailedDateDetail
 import com.healthmd.domain.model.HealthData
 import com.healthmd.domain.model.HealthDataFields
+import com.healthmd.domain.model.SleepDayAttribution
 import com.healthmd.domain.model.UnitConverter
 import com.healthmd.domain.model.UnitPreference
 import kotlinx.serialization.json.*
@@ -38,6 +41,10 @@ class APIExportEnvelopeBuilder @Inject constructor(
         exportedAt: Instant = Instant.now(),
         calendarTimeZone: String = ZoneId.systemDefault().id,
     ): String {
+        require(settings.executionSleepCaptureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS &&
+            settings.executionEnginePin?.profile != AndroidExportProfile.android_sleep_v6) {
+            "historical API cannot discard successor capture authority"
+        }
         val calendarZone = ZoneId.of(calendarTimeZone)
         val frozenCustomization = settings.formatCustomization.forFrozenApiV4()
         val recordObjects = records.map { record ->
@@ -82,6 +89,66 @@ class APIExportEnvelopeBuilder @Inject constructor(
         return output.encodeToString(JsonObject.serializer(), envelope)
     }
 
+    /** Explicit successor producer; the historical API-v1 entrypoint remains frozen-v4. */
+    fun buildWakeDate(
+        records: List<HealthData>,
+        failedDateDetails: List<FailedDateDetail>,
+        settings: ExportSettings,
+        dateRangeStart: LocalDate,
+        dateRangeEnd: LocalDate,
+        captureContext: AndroidCaptureContext,
+        exportedAt: Instant,
+    ): String {
+        val authority = WakeDateJsonDocument(captureContext)
+        require(!settings.executionSleepCaptureAuthorityIsFrozen || settings.executionSleepCaptureContext != null) {
+            "immutable capture authority is missing"
+        }
+        require(settings.executionSleepCaptureContext == null || settings.executionSleepCaptureContext == captureContext) {
+            "API capture authority is incompatible"
+        }
+        require(settings.executionEnginePin == null || (
+            settings.executionEnginePin.profile == AndroidExportProfile.android_sleep_v6 &&
+                settings.executionEnginePin.ianaTimeZone == captureContext.zoneId.id
+            )) { "API engine authority is incompatible" }
+        val dates = records.map(HealthData::date) + failedDateDetails.map(FailedDateDetail::date)
+        require(dateRangeStart <= dateRangeEnd && dates.distinct().size == dates.size &&
+            dates.all { it >= dateRangeStart && it <= dateRangeEnd }) { "API export outcomes are invalid" }
+        val recordObjects = records.map { record ->
+            parser.parseToJsonElement(jsonExporter.export(
+                data = record,
+                customization = settings.formatCustomization,
+                includeGranularData = settings.includeGranularData,
+                captureContext = captureContext,
+            )).jsonObject
+        }
+        val envelope = buildJsonObject {
+            put("schema", API_EXPORT_SCHEMA)
+            put("schema_version", WAKE_DATE_API_EXPORT_SCHEMA_VERSION)
+            put("daily_record_schema", HealthMdExportSchema.IDENTIFIER)
+            put("daily_record_schema_version", 6)
+            put("daily_record_schema_profile", "android-sleep-v6")
+            put("daily_record_time_context", authority.timeContext)
+            put("exported_at", exportedAt.toString())
+            put("source", "android")
+            put("date_range", buildJsonObject {
+                put("start", dateRangeStart.toString())
+                put("end", dateRangeEnd.toString())
+            })
+            put("record_count", recordObjects.size)
+            put("records", buildJsonArray { recordObjects.forEach(::add) })
+            put("failed_date_details", buildJsonArray {
+                failedDateDetails.forEach { detail ->
+                    add(buildJsonObject {
+                        put("date", detail.date.atStartOfDay(captureContext.zoneId).toInstant().toString())
+                        put("reason", failureReasonWireValue(detail.reason))
+                        detail.errorDetails?.takeIf { it.isNotBlank() }?.let { put("errorDetails", it) }
+                    })
+                }
+            })
+        }
+        return output.encodeToString(JsonObject.serializer(), envelope)
+    }
+
     /**
      * Partitions exact encoded envelopes by requested owner date. Failure-only days are first-class
      * outcomes, and one indivisible day may exceed the byte target and is retained alone.
@@ -95,6 +162,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
         calendarTimeZone: String,
         maxDaysPerBatch: Int = DEFAULT_MAX_DAYS_PER_BATCH,
         maxEncodedBytes: ULong = DEFAULT_MAX_ENCODED_BYTES,
+        captureContext: AndroidCaptureContext? = null,
     ): List<APIExportEnvelopeBatch> {
         require(requestedDates.isNotEmpty()) { "API export date scope is empty" }
         require(requestedDates == requestedDates.distinct().sorted()) {
@@ -104,6 +172,10 @@ class APIExportEnvelopeBuilder @Inject constructor(
             "API export day bound is invalid"
         }
         require(maxEncodedBytes > 0uL) { "API export byte bound is invalid" }
+        captureContext?.let {
+            WakeDateJsonDocument(it)
+            require(it.zoneId.id == calendarTimeZone) { "API capture clock is incompatible" }
+        }
         ZoneId.of(calendarTimeZone)
 
         val recordsByDate = records.associateBy(HealthData::date)
@@ -126,7 +198,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
             val lastCandidateEnd = minOf(requestedDates.size, start + maxDaysPerBatch)
             for (end in start + 1..lastCandidateEnd) {
                 val scopedDates = requestedDates.subList(start, end)
-                val payload = build(
+                val payload = if (captureContext == null) build(
                     records = scopedDates.mapNotNull(recordsByDate::get),
                     failedDateDetails = scopedDates.mapNotNull(failuresByDate::get),
                     settings = settings,
@@ -134,6 +206,14 @@ class APIExportEnvelopeBuilder @Inject constructor(
                     dateRangeEnd = scopedDates.last(),
                     exportedAt = exportedAt,
                     calendarTimeZone = calendarTimeZone,
+                ) else buildWakeDate(
+                    records = scopedDates.mapNotNull(recordsByDate::get),
+                    failedDateDetails = scopedDates.mapNotNull(failuresByDate::get),
+                    settings = settings,
+                    dateRangeStart = scopedDates.first(),
+                    dateRangeEnd = scopedDates.last(),
+                    captureContext = captureContext,
+                    exportedAt = exportedAt,
                 )
                 val exceedsByteBound = payload.encodeToByteArray().size.toULong() > maxEncodedBytes
                 if (exceedsByteBound && end > start + 1) break
@@ -213,6 +293,7 @@ class APIExportEnvelopeBuilder @Inject constructor(
     companion object {
         const val API_EXPORT_SCHEMA = "healthmd.api_export"
         const val API_EXPORT_SCHEMA_VERSION = 1
+        const val WAKE_DATE_API_EXPORT_SCHEMA_VERSION = 2
         const val DEFAULT_MAX_DAYS_PER_BATCH = 7
         const val DEFAULT_MAX_ENCODED_BYTES: ULong = 8_388_608uL
 

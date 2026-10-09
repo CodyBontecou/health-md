@@ -280,6 +280,12 @@
     </plurals>
     <string name="granular_data_title">विस्तृत समय-श्रृंखला शामिल करें</string>
     <string name="granular_data_description">संगतता निर्यात में हृदय गति और नींद के चरण जैसे टाइमस्टैम्प वाले नमूने जोड़ें। API-पूर्ण प्रतिलिपि के लिए, Raw API Snapshot का उपयोग करें।</string>
+    <string name="sleep_attribution_title">नींद दिन निर्धारण</string>
+    <string name="sleep_attribution_night_begins">रात शुरू</string>
+    <string name="sleep_attribution_morning_ends">सुबह खत्म</string>
+    <string name="sleep_attribution_night_begins_description">नींद दैनिक नोट की दोपहर से अगले दिन की दोपहर तक की अवधि का उपयोग करती है। यह डिफ़ॉल्ट है और पिछले निर्यात से मेल खाता है।</string>
+    <string name="sleep_attribution_morning_ends_description">मौजूदा निर्यात प्रोफ़ाइलों के लिए सुबह खत्म उपलब्ध नहीं है। नए निर्यात के लिए रात शुरू चुनें।</string>
+
     <!-- Metric selection screen -->
     <string name="metric_selection_title">स्वास्थ्य मेट्रिक्स</string>
     <string name="search_metrics_hint">मेट्रिक्स खोजें…</string>

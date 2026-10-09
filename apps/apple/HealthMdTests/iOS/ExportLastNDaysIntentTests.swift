@@ -291,6 +291,7 @@ final class ExportIntentRunnerTests: XCTestCase {
             dates: requestedDates,
             source: .shortcut,
             createdAt: date(2026, 5, 13, hour: 9),
+            sleepCaptureContext: AppleSleepCaptureContext(timeZone: calendar.timeZone, sleepDayAttribution: .nightBegins),
             calendar: calendar
         )
         let pendingStore = SpyPendingExportStore(requests: [request])

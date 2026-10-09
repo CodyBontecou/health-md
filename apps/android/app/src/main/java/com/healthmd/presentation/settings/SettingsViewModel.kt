@@ -37,6 +37,10 @@ class SettingsViewModel @Inject constructor(
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportSettings())
 
+    /** Device-local sleep attribution preference (issue #104); defaults to night-begins. */
+    val sleepDayAttribution: StateFlow<SleepDayAttribution> = settingsRepository.sleepDayAttribution
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), SleepDayAttribution.DEFAULT)
+
     val isPurchased: StateFlow<Boolean> = combine(
         settingsRepository.isPurchased,
         entitlementRepository.isUnlocked,
@@ -174,6 +178,12 @@ class SettingsViewModel @Inject constructor(
     fun updateSubfolder(subfolder: String) = update { it.copy(subfolder = subfolder) }
     fun updateFolderOrganization(org: FolderOrganization) = update { it.copy(folderOrganization = org) }
     fun updateIncludeGranularData(include: Boolean) = update { it.copy(includeGranularData = include) }
+
+    fun updateSleepDayAttribution(mode: SleepDayAttribution) {
+        viewModelScope.launch {
+            settingsRepository.setSleepDayAttribution(mode)
+        }
+    }
 
     fun updateMetricSelection(selection: MetricSelectionState) = update { it.copy(metricSelection = selection) }
     fun updateDailyNoteInjection(settings: DailyNoteInjectionSettings) = update { it.copy(dailyNoteInjection = settings) }

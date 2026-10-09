@@ -3635,6 +3635,73 @@ def validate_rollup_summary_fixture(root: Path, path: Path) -> None:
         fail(f"{context}.categories: must match the production metric category projection")
 
 
+def validate_sleep_rollup_authority(payload: dict[str, Any], context: str) -> None:
+    expected = {
+        "schema": "healthmd.rollup_summary", "schema_version": 11,
+        "schema_profile": "apple-rollup-v11", "source_schema": "healthmd.health_data",
+        "source_schema_version": 11, "source_schema_profile": "apple-v11", "rollup_rules_version": 11,
+        "rollup_period": "range",
+    }
+    if any(payload.get(key) != value for key, value in expected.items()):
+        fail(f"{context}: incompatible successor rollup/source authority")
+    timezone = payload.get("calendar_timezone")
+    try:
+        ZoneInfo(timezone)
+    except (TypeError, ValueError, ZoneInfoNotFoundError):
+        fail(f"{context}: invalid successor rollup calendar timezone")
+    if payload.get("time_context") != {
+        "calendar_timezone": timezone, "timestamp_timezone": "UTC",
+        "sleep_day_attribution": "morning_ends", "sleep_owner_day_rule": "session_end_date",
+        "sleep_interval_clipping": "none",
+    }:
+        fail(f"{context}: incomplete or conflicting successor rollup sleep authority")
+
+
+def validate_sleep_rollup_fixture(root: Path, path: Path) -> None:
+    context = f"sleep rollup fixture {path}"
+    json_path = path.parent / "range-v11.json"
+    payload = load_json(json_path, context)
+    validate_rollup_summary_fixture(root, json_path)
+    validate_sleep_rollup_authority(payload, context)
+    if path.suffix == ".json":
+        return
+    if path.suffix == ".csv":
+        with path.open(newline="") as source:
+            rows = csv.DictReader(source)
+            headers = rows.fieldnames or []
+            if len(headers) != len(set(headers)):
+                fail(f"{context}: duplicate CSV authority columns")
+            expected = {
+                "Schema": payload["schema"], "Schema Version": "11", "Source Schema": payload["source_schema"],
+                "Source Schema Version": "11", "Rollup Rules Version": "11", "Calendar Timezone": payload["calendar_timezone"],
+                "Period": "range", "Period ID": payload["period_id"], "Start Date": payload["start_date"],
+                "End Date": payload["end_date"], "Schema Profile": "apple-rollup-v11",
+                "Source Schema Profile": "apple-v11", "Timestamp Timezone": "UTC", "Sleep Day Attribution": "morning_ends",
+                "Sleep Owner Day Rule": "session_end_date", "Sleep Interval Clipping": "none",
+            }
+            count = 0
+            for row in rows:
+                count += 1
+                if any(row.get(key) != value for key, value in expected.items()):
+                    fail(f"{context}: conflicting CSV source/window/sleep authority")
+            if not count:
+                fail(f"{context}: empty CSV rollup")
+    else:
+        text = path.read_text()
+        block = text.split("---", 2)
+        if len(block) != 3 or block[0]:
+            fail(f"{context}: missing successor rollup frontmatter")
+        required = ["schema: healthmd.rollup_summary", "schema_version: 11", "source_schema_version: 11",
+                    "rollup_rules_version: 11", "schema_profile: apple-rollup-v11", "source_schema_profile: apple-v11",
+                    "time_context:", f"calendar_timezone: {payload['calendar_timezone']}",
+                    f"  calendar_timezone: {payload['calendar_timezone']}", "  timestamp_timezone: UTC",
+                    "  sleep_day_attribution: morning_ends", "  sleep_owner_day_rule: session_end_date",
+                    "  sleep_interval_clipping: none"]
+        lines = block[1].splitlines()
+        if any(lines.count(line) != 1 for line in required):
+            fail(f"{context}: incomplete or duplicate successor rollup frontmatter authority")
+
+
 def validate_rollup_production_fixture(root: Path, path: Path) -> None:
     context = f"rollup production fixture {path}"
     production_names = {
@@ -3667,6 +3734,106 @@ def validate_rollup_production_fixture(root: Path, path: Path) -> None:
             fail(f"{context}: canonical Markdown fixture must include the production body")
         if path.name == "range-v9-bases.md" and "rollup_metrics:" not in content:
             fail(f"{context}: canonical Bases fixture must include all metric projections")
+
+
+def validate_sleep_successor_pair(root: Path, handoff: Any, plan: Any) -> None:
+    """Qualify inventoried synthetic handoff/plan authority, not production readiness."""
+    context = "sleep successor interoperability"
+    handoff = require_exact_keys(
+        handoff,
+        {"schema", "schema_version", "semantic_configuration", "semantic_batches",
+         "expected_semantic_result", "render_configuration", "render_batches"},
+        context,
+    )
+    if handoff["schema"] != "healthmd.native_wake_date_handoff" or type(handoff["schema_version"]) is not int or handoff["schema_version"] != 1:
+        fail(f"{context}: invalid fixture identity")
+
+    def schema_check(value: Any, location: str, label: str) -> None:
+        schema = load_json(root / f"packages/contracts/{location}", label)
+        validate_json_schema_subset(value, schema, f"{context}.{label}")
+
+    semantic = handoff["semantic_configuration"]
+    result = handoff["expected_semantic_result"]
+    render = handoff["render_configuration"]
+    schema_check(semantic, "semantic-input/v2/semantic-input.schema.json", "semantic configuration")
+    schema_check(result, "semantic-input/v2/semantic-result.schema.json", "semantic result")
+    schema_check(render, "render-input/v2/render-input.schema.json", "render configuration")
+    schema_check(plan, "render-input/v2/artifact-plan.schema.json", "artifact plan")
+    registry_hash = hashlib.sha256(
+        (root / "packages/healthmd-core-rust/crates/healthmd-core/registry/metric-registry-v2.json").read_bytes()
+    ).hexdigest()
+    for value in (semantic, result, render):
+        if value["registry_sha256"] != registry_hash:
+            fail(f"{context}: successor registry hash mismatch")
+        for key in ("profile", "session_id", "profile_revision"):
+            if value[key] != semantic[key]:
+                fail(f"{context}: {key} mismatch")
+    if result["state"] != "completed":
+        fail(f"{context}: completed semantic result required")
+    if render["calendar_time_zone"] != semantic["calendar_time_zone"]:
+        fail(f"{context}: captured timezone mismatch")
+    try:
+        ZoneInfo(semantic["calendar_time_zone"])
+    except (ValueError, ZoneInfoNotFoundError):
+        fail(f"{context}: invalid captured timezone")
+    expected_profile = {
+        "apple_health_data_v11": "apple-v11",
+        "android_sleep_v6": "android-sleep-v6",
+    }[semantic["profile"]]
+    if result["sleep_capture_context"] != {
+        "schema_profile": expected_profile,
+        "calendar_timezone": semantic["calendar_time_zone"],
+        "sleep_day_attribution": "morning_ends",
+        "sleep_owner_day_rule": "session_end_date",
+        "sleep_interval_clipping": "none",
+    }:
+        fail(f"{context}: conflicting sleep capture authority")
+    for key, schema_path in (
+        ("semantic_batches", "semantic-input/v2/semantic-input.schema.json"),
+        ("render_batches", "render-input/v2/render-input.schema.json"),
+    ):
+        batches = handoff[key]
+        if not isinstance(batches, list) or not batches:
+            fail(f"{context}.{key}: nonempty batch array required")
+        for index, batch in enumerate(batches):
+            schema_check(batch, schema_path, f"{key}[{index}]")
+            if batch["session_id"] != semantic["session_id"] or batch["batch_index"] != index:
+                fail(f"{context}.{key}: sequence/session mismatch")
+            if batch["final_batch"] is not (index == len(batches) - 1):
+                fail(f"{context}.{key}: final batch mismatch")
+    if result["next_batch_index"] != len(handoff["semantic_batches"]):
+        fail(f"{context}: semantic frontier mismatch")
+    for key in ("profile", "request_id", "session_id"):
+        if plan[key] != render[key]:
+            fail(f"{context}: artifact plan {key} mismatch")
+    paths: set[str] = set()
+    total = 0
+    for index, item in enumerate(plan["items"]):
+        item_context = f"{context}.items[{index}]"
+        logical = PurePosixPath(item["relative_path"])
+        if logical.is_absolute() or not logical.parts or any(part in {".", ".."} for part in logical.parts) or logical.as_posix() != item["relative_path"]:
+            fail(f"{item_context}: unsafe relative path")
+        collision = item["relative_path"].casefold()
+        if collision in paths:
+            fail(f"{item_context}: duplicate/case-colliding path")
+        paths.add(collision)
+        content = decode_base64(item["content_base64"], item_context)
+        content_hash = hashlib.sha256(content).hexdigest()
+        if item["byte_count"] != len(content) or item["sha256"] != content_hash:
+            fail(f"{item_context}: content descriptor mismatch")
+        digest = hashlib.sha256(b"healthmd.artifact_id.v1\0")
+        for value in (plan["request_id"], plan["session_id"], plan["profile"],
+                      item["relative_path"], item["media_type"], item["write_mode"], content_hash):
+            encoded = value.encode("utf-8")
+            digest.update(len(encoded).to_bytes(8, "big"))
+            digest.update(encoded)
+        if item["artifact_id"] != digest.hexdigest():
+            fail(f"{item_context}: artifact identity mismatch")
+        stream_item = {key: value for key, value in item.items() if key != "content_base64"}
+        schema_check(stream_item, "render-input/v2/stream-artifact-plan-item.schema.json", f"stream item {index}")
+        total += len(content)
+    if plan["total_byte_count"] != total:
+        fail(f"{context}: total byte count mismatch")
 
 
 def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
@@ -3736,6 +3903,13 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
         fixtures = contract.get("fixtures")
         if not isinstance(fixtures, list):
             fail(f"{context}.fixtures: must be an array")
+        if identifier == "healthmd.sleep_attribution":
+            expected_paths = {
+                "packages/contracts/render-input/v2/fixtures/native-android-v6-handoff.json",
+                "packages/contracts/render-input/v2/fixtures/core-android-v6-artifact-plan.json",
+            }
+            if len(fixtures) != 2 or any(not isinstance(item, dict) for item in fixtures) or {item.get("path") for item in fixtures} != expected_paths:
+                fail(f"{context}: both successor interoperability fixtures must be inventoried")
         for fixture_index, fixture in enumerate(fixtures):
             fixture_context = f"{context}.fixtures[{fixture_index}]"
             if not isinstance(fixture, dict):
@@ -3802,6 +3976,15 @@ def validate_manifest(root: Path) -> tuple[int, int, int, int, int, int]:
                     validate_semantic_fixture(root, fixture_path)
             elif identifier == "healthmd.render_input":
                 validate_render_fixture(root, fixture_path)
+            elif identifier == "healthmd.sleep_attribution":
+                directory = root / "packages/contracts/render-input/v2/fixtures"
+                validate_sleep_successor_pair(
+                    root,
+                    load_json(directory / "native-android-v6-handoff.json", "native successor handoff"),
+                    load_json(directory / "core-android-v6-artifact-plan.json", "core successor plan"),
+                )
+            elif identifier == "healthmd.rollup_summary.sleep":
+                validate_sleep_rollup_fixture(root, fixture_path)
             elif identifier == "healthmd.provider_sections":
                 validate_provider_sections_fixture(root, fixture_path)
             elif identifier == SHARED_SETUP_SCHEMA:
