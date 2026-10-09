@@ -228,6 +228,25 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
       assert.equal(api.parseHealthDay(JSON.stringify(invalid)), null);
     }
   }
+  for (const available of [true, false]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-activity", `android-v6-activity-captured-${available}`, "2026-11-01.json"), "utf8");
+    const source = JSON.parse(input);
+    const day = api.parseHealthDay(input);
+    assert.equal(day.nativeActivityDetails.length, available ? 2 : 1);
+    assert.deepEqual(JSON.parse(JSON.stringify(day.activity.stepSamples)), source.activity.stepSamples);
+    assert.equal(day.activity.steps, undefined);
+    assert.equal(day.activity.activityIntensityMinutes, undefined);
+    if (available) {
+      assert.deepEqual(JSON.parse(JSON.stringify(day.activity.activityIntensity)), source.activity.activityIntensity);
+      assert.equal(day.activity.activityIntensity[0].duration, 3600.864197532);
+      const rounded = JSON.parse(input);
+      rounded.activity.activityIntensity[0].duration = 3600;
+      assert.equal(api.parseHealthDay(JSON.stringify(rounded)), null);
+    } else {
+      assert.equal(day.activity.activityIntensity, undefined);
+    }
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
