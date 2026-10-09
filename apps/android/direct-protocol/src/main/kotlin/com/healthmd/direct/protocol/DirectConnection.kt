@@ -27,7 +27,7 @@ fun interface DirectPacketSendAuthorization {
     fun authorizeEnqueue(enqueue: () -> Unit)
 }
 
-class DirectPacketConnection private constructor(
+class DirectPacketConnection internal constructor(
     private val socket: Socket,
     private val defaultReadTimeoutMillis: Int,
 ) : Closeable {

@@ -210,45 +210,58 @@ class PacketPublicationTest {
 
     @Test
     fun ownershipIsReleasedBeforeBlockedSocketPublicationCompletes() {
-        ServerSocket().use { server ->
-            server.receiveBufferSize = 16 * 1024
-            server.bind(java.net.InetSocketAddress("127.0.0.1", 0))
-            val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)
-            server.accept().use { peer ->
-                peer.soTimeout = 5_000
-                val ownerLock = ReentrantLock()
-                val enqueued = CountDownLatch(1)
-                val executor = Executors.newSingleThreadExecutor()
-                val payload = ByteArray(MAXIMUM_PACKET_BYTES) { (it % 251).toByte() }
-                try {
-                    val authorization = DirectPacketSendAuthorization { enqueue ->
-                        ownerLock.withLock {
-                            enqueue()
-                            enqueued.countDown()
-                        }
-                    }
-                    val send = executor.submit {
-                        packet.send(authorization) {
-                            check(ownerLock.isHeldByCurrentThread)
-                            payload
-                        }
-                    }
-                    assertThat(enqueued.await(2, TimeUnit.SECONDS)).isTrue()
-                    assertThat(ownerLock.tryLock(2, TimeUnit.SECONDS)).isTrue()
-                    ownerLock.unlock()
-                    // The peer has not drained this full-size packet; ownership must already
-                    // be available to cancellation/cleanup while publication remains pending.
-                    assertThat(send.isDone).isFalse()
-                    val input = DataInputStream(peer.getInputStream())
-                    assertThat(input.readLong()).isEqualTo(payload.size.toLong())
-                    val received = ByteArray(payload.size).also(input::readFully)
-                    assertThat(received).isEqualTo(payload)
-                    send.get(5, TimeUnit.SECONDS)
-                } finally {
-                    packet.close()
-                    executor.shutdownNow()
+        val ownerLock = ReentrantLock()
+        val enqueued = CountDownLatch(1)
+        val writeStarted = CountDownLatch(1)
+        val releaseWrite = CountDownLatch(1)
+        val published = java.io.ByteArrayOutputStream()
+        // A loopback kernel may buffer the entire maximum packet before the peer
+        // reads it. Hold the socket output boundary explicitly so this assertion
+        // measures publication ownership independently of OS buffer sizes.
+        val socket = object : java.net.Socket() {
+            override fun getInputStream() = java.io.ByteArrayInputStream(byteArrayOf())
+            override fun getOutputStream() = object : java.io.OutputStream() {
+                override fun write(value: Int) = write(byteArrayOf(value.toByte()), 0, 1)
+                override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                    writeStarted.countDown()
+                    check(releaseWrite.await(5, TimeUnit.SECONDS)) { "Publication was not released" }
+                    published.write(bytes, offset, length)
                 }
             }
+            override fun close() { releaseWrite.countDown() }
+        }
+        val packet = DirectPacketConnection(socket, 2_000)
+        val executor = Executors.newSingleThreadExecutor()
+        val payload = ByteArray(MAXIMUM_PACKET_BYTES) { (it % 251).toByte() }
+        try {
+            val authorization = DirectPacketSendAuthorization { enqueue ->
+                ownerLock.withLock {
+                    enqueue()
+                    enqueued.countDown()
+                }
+            }
+            val send = executor.submit {
+                packet.send(authorization) {
+                    check(ownerLock.isHeldByCurrentThread)
+                    payload
+                }
+            }
+            assertThat(enqueued.await(2, TimeUnit.SECONDS)).isTrue()
+            assertThat(writeStarted.await(2, TimeUnit.SECONDS)).isTrue()
+            assertThat(ownerLock.tryLock(2, TimeUnit.SECONDS)).isTrue()
+            ownerLock.unlock()
+            assertThat(send.isDone).isFalse()
+            releaseWrite.countDown()
+            send.get(5, TimeUnit.SECONDS)
+            val input = DataInputStream(java.io.ByteArrayInputStream(published.toByteArray()))
+            assertThat(input.readLong()).isEqualTo(payload.size.toLong())
+            val received = ByteArray(payload.size).also(input::readFully)
+            assertThat(received).isEqualTo(payload)
+            assertThat(input.read()).isEqualTo(-1)
+        } finally {
+            releaseWrite.countDown()
+            packet.close()
+            executor.shutdownNow()
         }
     }
 }
