@@ -21,6 +21,23 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         }
     }
 
+    private actor HeldQuery {
+        private var continuation: CheckedContinuation<Int, Never>?
+        private var released = false
+
+        func value() async -> Int {
+            if released { return 1 }
+            return await withCheckedContinuation { continuation = $0 }
+        }
+
+        func release() {
+            released = true
+            let pending = continuation
+            continuation = nil
+            pending?.resume(returning: 1)
+        }
+    }
+
     private func configuration(
         deadlineMilliseconds: Int64 = 30,
         maximumOutstandingQueries: Int = 2
@@ -282,21 +299,28 @@ final class HealthKitQueryExecutionTests: XCTestCase {
                 maximumOutstandingQueries: 1
             )
         )
+        let heldQuery = HeldQuery()
         do {
             _ = try await HealthKitQueryExecutionController.withController(controller) {
                 try await executeHealthKitQuery(
                     operation: "testBudgetHung",
                     typeIdentifier: "test.hung"
                 ) {
-                    await self.delayedValue(1, milliseconds: 120)
+                    await heldQuery.value()
                 }
             }
+            XCTFail("Expected the held worker to time out")
         } catch {
             XCTAssertEqual(
                 (error as NSError).code,
                 HealthKitQueryExecutionError.Code.timedOut.rawValue
             )
         }
+
+        XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
+        // A delayed runner must not let the physical worker finish before the
+        // budget assertion. Keep it held beyond the old 120 ms fixture delay.
+        try? await ContinuousClock().sleep(for: .milliseconds(200))
 
         let invocations = LockedCounter()
         do {
@@ -323,6 +347,24 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             )
         }
         XCTAssertEqual(invocations.value, 0)
+        await heldQuery.release()
+        let workerReleased = await waitUntil { controller.snapshot().unresolvedQueries == 0 }
+        XCTAssertTrue(workerReleased)
+        do {
+            let value = try await HealthKitQueryExecutionController.withController(controller) {
+                try await executeHealthKitQuery(
+                    operation: "testBudgetHealthy",
+                    typeIdentifier: "test.healthy"
+                ) {
+                    invocations.increment()
+                    return 2
+                }
+            }
+            XCTAssertEqual(value, 2)
+        } catch {
+            XCTFail("Releasing the held worker must restore the budget: \(error)")
+        }
+        XCTAssertEqual(invocations.value, 1)
     }
 }
 #endif
