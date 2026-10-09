@@ -75,6 +75,53 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
+    func testSelectedQuantityDetailsWithoutSummariesReachEveryFormat() async throws {
+        let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let owner = ExportFixtures.referenceDate
+        let timestamp = owner.addingTimeInterval(3600.125)
+        let metadata = ["synthetic": "quantity, \"source\""]
+        var day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        day.heart.heartRateSamples = [TimeSample(timestamp: timestamp, value: 72.125, metadata: metadata)]
+        day.heart.hrvSamples = [TimeSample(timestamp: timestamp, value: 31.875, metadata: metadata)]
+        day.vitals.bloodOxygenSamples = [TimeSample(timestamp: timestamp, value: 0.97125, metadata: metadata)]
+        day.vitals.bloodGlucoseSamples = [TimeSample(timestamp: timestamp, value: 101.875, metadata: metadata)]
+        day.vitals.respiratoryRateSamples = [TimeSample(timestamp: timestamp, value: 16.125, metadata: metadata)]
+        XCTAssertFalse(day.hasSummaryData)
+        for selection: Set<String> in [["heart_rate_avg", "hrv", "blood_oxygen", "blood_glucose", "respiratory_rate"], ["heart_rate_avg"]] {
+            var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases), selectionIDs: selection)
+            snapshot.detailPolicy = .detailedTimeSeries
+            let result = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects)
+            guard case .planned(let operation) = result else { return XCTFail("Selected quantities must reach all four native/core formats without summaries") }
+            XCTAssertEqual(operation.artifacts.count, 4)
+            let csv = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .csv }).artifact.inlineData, as: UTF8.self)
+            XCTAssertEqual(csv.components(separatedBy: "\n").filter { $0.contains(",Native Detail,Quantity Sample,") }.count, selection.count)
+            XCTAssertTrue(csv.contains("72.125"))
+            XCTAssertTrue(csv.contains("quantity"))
+            let markdown = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .markdown }).artifact.inlineData, as: UTF8.self)
+            XCTAssertTrue(markdown.contains("Heart Rate Sample Details"))
+            XCTAssertTrue(markdown.contains("| 72.125 | bpm |"))
+            XCTAssertFalse(markdown.contains("average_heart_rate:"))
+            let bases = String(decoding: try XCTUnwrap(operation.artifacts.first { $0.format == .obsidianBases }).artifact.inlineData, as: UTF8.self)
+            XCTAssertTrue(bases.contains("native_quantity_details:"))
+            XCTAssertEqual(bases.contains("hrv_sdnn"), selection.contains("hrv"))
+            XCTAssertFalse(bases.contains("hrv_rmssd"))
+            let json = try XCTUnwrap(operation.artifacts.first { $0.format == .json }).artifact.inlineData
+            let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: json) as? [String: Any])
+            let heart = try XCTUnwrap(root["heart"] as? [String: Any])
+            XCTAssertNil(heart["averageHeartRate"])
+            XCTAssertEqual((heart["heartRateSamples"] as? [[String: Any]])?.first?["timestamp"] as? String, CanonicalRFC3339UTC.string(from: timestamp))
+            if let directory = ProcessInfo.processInfo.environment["HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR"], !directory.isEmpty {
+                for artifact in operation.artifacts {
+                    let output = URL(fileURLWithPath: directory).appendingPathComponent(selection.count == 5 ? "apple-v11-quantities" : "apple-v11-heart-only")
+                        .appendingPathComponent(artifact.artifact.relativePath)
+                    try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+                    try artifact.artifact.inlineData.write(to: output)
+                }
+            }
+        }
+    }
+
     func testSelectedStageWithoutSummaryRetainsSourceIntervalAcrossEveryFormat() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
@@ -109,11 +156,11 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         }
     }
 
-    func testWakeDateDetailsRejectArchivesRemoteSurfacesAndNonSleepArrays() async throws {
+    func testWakeDateDetailsRejectArchivesRemoteSurfacesAndUnqualifiedArrays() async throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "UTC"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
         var snapshot = try acceptedSnapshot(context: context, formats: Set(ExportFormat.allCases),
-            selectionIDs: ["sleep_total", "heart_rate_avg"])
+            selectionIDs: ["sleep_total", "blood_pressure_systolic", "blood_pressure_diastolic"])
         snapshot.detailPolicy = .detailedTimeSeries
         XCTAssertTrue(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .localVaultWithoutSideEffects))
         XCTAssertFalse(AppleLooseDailyExportPlanner.supports(settingsSnapshot: snapshot, surface: .directGeneratedFilesWithoutSideEffects))
@@ -132,12 +179,13 @@ final class AppleWakeDateExportPlannerTests: XCTestCase {
         let owner = ExportFixtures.referenceDate
         let day = HealthData(date: owner, timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds),
             sleep: SleepData(totalDuration: 3600, sessionStart: owner.addingTimeInterval(3600),
-                sessionEnd: owner.addingTimeInterval(7200)), heart: ExportFixtures.fullDayGranular.heart)
+                sessionEnd: owner.addingTimeInterval(7200)), vitals: VitalsData(bloodPressureSamples: [
+                BloodPressureSample(systolic: 120, diastolic: 80, startDate: owner, endDate: owner)]))
         XCTAssertTrue(day.sleep.stages.isEmpty)
         do {
             _ = try await AppleLooseDailyExportPlanner().plan(healthData: day, settingsSnapshot: snapshot,
                 surface: .localVaultWithoutSideEffects)
-            XCTFail("Non-sleep detail arrays must reject even without sleep stages")
+            XCTFail("Unqualified correlation detail arrays must reject even without sleep stages")
         } catch {
             XCTAssertEqual(error as? AppleLooseDailyExportPlannerError, .rustPlanningFailed)
         }

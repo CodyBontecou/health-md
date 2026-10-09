@@ -56,3 +56,12 @@ These facts populate CSV detail rows, Markdown sections and Bases detail blocks.
 ### Selected native detail with unavailable summaries
 
 New draft semantic-v2 results may carry `selected_output_keys`, a sorted unique selection independent of summary availability. A `native_details.output_keys` owner must be an accepted reduced output or belong to that frozen successor selection. The renderer verifies keys against the profile registry, rejects duplicates and rejects semantic values outside the declared selection. Absence of the field preserves aggregate-bound validation for earlier draft results; historical profiles cannot carry it. This does not authorize inventing summary values, units, source clocks or cross-platform parent identities.
+
+
+### Native quantity records
+
+Draft Apple/Android adapters admit selected heart-rate, platform-specific HRV, blood-oxygen, blood-glucose and respiratory-rate sample arrays independently of available summaries. CSV uses `Native Detail` / `Quantity Sample`, a `json` cell unit and a UTC source timestamp. Its value is `{ "metric": <identity>, "unit": <canonical sample unit>, "sample": <complete native object> }`. Bases stores the same objects under `native_quantity_details`; Markdown uses a named `Sample Details` table with `Timestamp (UTC)`, `Value` and `Unit` columns. Native JSON keeps its prepared platform sections and grammar.
+
+Sample identities/units are `heart_rate`/`bpm`, Apple `hrv_sdnn`/`ms`, Android `hrv_rmssd`/`ms`, `blood_oxygen`/`ratio_0_1`, `blood_glucose`/`mg/dL`, and `respiratory_rate`/`breaths/min`. The HRV identities are never aliases. An output owner must belong to the frozen registry selection even when no duration/daily aggregate is available. Native adapters reject unselected owners and invalid/non-UTC timestamps. Complete metadata, exact source clocks and identities remain inside machine objects; Markdown does not fabricate those facts from its display table. Unsupported correlation, activity, workout, archive and provider arrays still reject. Limits and transactional acceptance remain unchanged; this bounded preparation does not qualify large-capture streaming or production routing.
+
+Blood-oxygen sample values come from HealthKit percent quantities and Health Connect percentage fractions in `0…1`, independently of percent-scaled daily summaries. Machine records retain the ratio and its explicit unit; readers convert to percent only for chart quantities. They reject a ratio outside `0…1`, rather than guessing scale from the value.

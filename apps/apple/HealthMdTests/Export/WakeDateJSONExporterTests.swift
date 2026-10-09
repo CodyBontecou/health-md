@@ -23,7 +23,7 @@ final class WakeDateJSONExporterTests: XCTestCase {
         let metadata = ["synthetic": "quantity-precision"]
         day.heart.heartRateSamples = [TimeSample(timestamp: instant, value: 72.125, metadata: metadata)]
         day.heart.hrvSamples = [TimeSample(timestamp: instant, value: 31.875, metadata: metadata)]
-        day.vitals.bloodOxygenSamples = [TimeSample(timestamp: instant, value: 97.125, metadata: metadata)]
+        day.vitals.bloodOxygenSamples = [TimeSample(timestamp: instant, value: 0.97125, metadata: metadata)]
         day.vitals.bloodGlucoseSamples = [TimeSample(timestamp: instant, value: 101.875, metadata: metadata)]
         day.vitals.respiratoryRateSamples = [TimeSample(timestamp: instant, value: 16.125, metadata: metadata)]
         XCTAssertTrue(day.hasAnyData)
@@ -31,7 +31,7 @@ final class WakeDateJSONExporterTests: XCTestCase {
         let bytes = try day.toJSONDataThrowing(customization: Self.imperialCustomization, captureContext: context)
         let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
         for (category, key, value) in [("heart", "heartRateSamples", 72.125),
-            ("heart", "hrvSamples", 31.875), ("vitals", "bloodOxygenSamples", 97.125),
+            ("heart", "hrvSamples", 31.875), ("vitals", "bloodOxygenSamples", 0.97125),
             ("vitals", "bloodGlucoseSamples", 101.875), ("vitals", "respiratoryRateSamples", 16.125)] {
             let section = try XCTUnwrap(root[category] as? [String: Any])
             let sample = try XCTUnwrap((section[key] as? [[String: Any]])?.first)

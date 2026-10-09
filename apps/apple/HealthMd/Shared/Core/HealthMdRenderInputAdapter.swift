@@ -470,26 +470,87 @@ enum HealthMdRenderInputAdapter {
                   !hasUnqualifiedDetailArrays(root, path: []) else {
                 throw AdapterError.invalidPresentation
             }
+            let selected = frozenSelectedOutputKeys ?? selectedOutputKeys
+            var details = try quantityDetails(root, ownerDate: ownerDate, selectedOutputKeys: selected)
             if !data.sleep.stages.isEmpty {
                 guard let sleep = root["sleep"] as? [String: Any],
                       let stages = sleep["sleepStages"] as? [[String: Any]] else {
                     throw AdapterError.invalidPresentation
                 }
-                renderedDay["native_details"] = try sleepStageDetails(stages, ownerDate: ownerDate,
-                    selectedOutputKeys: frozenSelectedOutputKeys ?? selectedOutputKeys)
+                let sleepDetails = try sleepStageDetails(stages, ownerDate: ownerDate, selectedOutputKeys: selected)
+                details = mergeDetails(sleepDetails, details)
             }
+            if !(details["output_keys"] as? [String] ?? []).isEmpty { renderedDay["native_details"] = details }
         }
         return renderedDay
     }
 
     private static func hasUnqualifiedDetailArrays(_ value: Any, path: [String]) -> Bool {
         if let array = value as? [Any] {
-            return !array.isEmpty && path != ["sleep", "sleepStages"]
+            return !array.isEmpty && !qualifiedDetailPaths.contains(path)
         }
         if let object = value as? [String: Any] {
             return object.contains { key, child in hasUnqualifiedDetailArrays(child, path: path + [key]) }
         }
         return false
+    }
+
+    private static let qualifiedDetailPaths: [[String]] = [
+        ["sleep", "sleepStages"], ["heart", "heartRateSamples"], ["heart", "hrvSamples"],
+        ["vitals", "bloodOxygenSamples"], ["vitals", "bloodGlucoseSamples"], ["vitals", "respiratoryRateSamples"],
+    ]
+
+    private static func mergeDetails(_ first: [String: Any], _ second: [String: Any]) -> [String: Any] {
+        var result: [String: Any] = ["output_keys": Array(Set((first["output_keys"] as? [String] ?? [])
+            + (second["output_keys"] as? [String] ?? []))).sorted()]
+        for field in ["csv_rows", "markdown_blocks", "bases_frontmatter_blocks"] {
+            result[field] = ((first[field] as? [[String: Any]] ?? []) + (second[field] as? [[String: Any]] ?? []))
+                .enumerated().map { index, item in
+                    var item = item
+                    item["ordinal"] = index
+                    return item
+                }
+        }
+        return result
+    }
+
+    private static func quantityDetails(_ root: [String: Any], ownerDate: String,
+                                        selectedOutputKeys: [String]) throws -> [String: Any] {
+        let definitions: [(String, String, String, String, [String], String)] = [
+            ("heart", "heartRateSamples", "heart_rate", "bpm", ["average_heart_rate", "heart_rate_min", "heart_rate_max"], "Heart Rate"),
+            ("heart", "hrvSamples", "hrv_sdnn", "ms", ["hrv_ms"], "HRV SDNN"),
+            ("vitals", "bloodOxygenSamples", "blood_oxygen", "ratio_0_1", ["blood_oxygen", "blood_oxygen_avg", "blood_oxygen_min", "blood_oxygen_max"], "Blood Oxygen"),
+            ("vitals", "bloodGlucoseSamples", "blood_glucose", "mg/dL", ["blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max"], "Blood Glucose"),
+            ("vitals", "respiratoryRateSamples", "respiratory_rate", "breaths/min", ["respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max"], "Respiratory Rate"),
+        ]
+        var keys = Set<String>()
+        var rows: [[String: Any]] = []
+        var blocks: [[String: Any]] = []
+        var yaml: [String] = []
+        let clock = ISO8601DateFormatter()
+        clock.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        for (category, field, identity, unit, owners, label) in definitions {
+            let samples = (root[category] as? [String: Any])?[field] as? [[String: Any]] ?? []
+            guard !samples.isEmpty else { continue }
+            guard let owner = owners.first(where: selectedOutputKeys.contains) else { throw AdapterError.invalidPresentation }
+            keys.insert(owner)
+            var lines = ["| Timestamp (UTC) | Value | Unit |", "|---|---|---|"]
+            for sample in samples {
+                guard let timestamp = sample["timestamp"] as? String, timestamp.hasSuffix("Z"),
+                      clock.date(from: timestamp) != nil, let value = sample["value"] as? NSNumber,
+                      value.doubleValue.isFinite,
+                      unit != "ratio_0_1" || (0...1).contains(value.doubleValue) else { throw AdapterError.invalidPresentation }
+                let record: [String: Any] = ["metric": identity, "unit": unit, "sample": sample]
+                let encoded = String(decoding: try canonicalJSON(record), as: UTF8.self)
+                rows.append(["date": ownerDate, "category": "Native Detail", "metric": "Quantity Sample",
+                    "value": encoded, "unit": "json", "timestamp": timestamp, "ordinal": rows.count])
+                lines.append("| \(timestamp) | \(value.stringValue) | \(unit) |")
+                yaml.append("  - \(encoded)")
+            }
+            blocks.append(["heading": "\(label) Sample Details", "lines": lines, "ordinal": blocks.count])
+        }
+        return ["output_keys": keys.sorted(), "csv_rows": rows, "markdown_blocks": blocks,
+            "bases_frontmatter_blocks": yaml.isEmpty ? [] : [["key": "native_quantity_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func sleepStageDetails(_ stages: [[String: Any]], ownerDate: String,

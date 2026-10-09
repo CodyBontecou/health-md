@@ -447,17 +447,21 @@ object HealthMdRenderInputAdapter {
             put("bases_frontmatter_blocks", buildJsonArray {})
             put("metrics", JsonArray(metrics))
             if (nativeWakeDateContext != null && options.includeGranularData &&
-                presentationData != null && (presentationData.sleep.stages.isNotEmpty() || presentationData.sleep.sessions.isNotEmpty())) {
+                presentationData != null) {
                 val native = json.parseToJsonElement(JsonExporter().export(presentationData,
                     presentationCustomization, true, captureContext = nativeWakeDateContext)).jsonObject
-                val sleep = native["sleep"]?.jsonObject
-                    ?: throw AdapterException("wake-date native sleep details are incompatible")
+                val sleep = native["sleep"]?.jsonObject ?: buildJsonObject {}
                 val stages = sleep["sleepStages"]?.jsonArray ?: JsonArray(emptyList())
                 val sessions = sleep["sleepSessions"]?.jsonArray ?: JsonArray(emptyList())
                 if (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size) {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
-                put("native_details", sleepDetails(stages, sessions, ownerDate, frozenSelectedOutputKeys ?: selectedOutputKeys))
+                val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
+                val quantities = quantityDetails(native, ownerDate, selected)
+                val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
+                    mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
+                } else quantities
+                if (details.getValue("output_keys").jsonArray.isNotEmpty()) put("native_details", details)
             }
             put("extensions", JsonArray(extensionPayloads))
             put("individual_entries", JsonArray(individualEntries))
@@ -477,9 +481,72 @@ object HealthMdRenderInputAdapter {
     }
 
     private fun hasUnqualifiedDetailArrays(value: JsonElement, path: List<String>): Boolean = when (value) {
-        is JsonArray -> value.isNotEmpty() && path !in listOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"))
+        is JsonArray -> value.isNotEmpty() && path !in qualifiedDetailPaths
         is JsonObject -> value.any { (key, child) -> hasUnqualifiedDetailArrays(child, path + key) }
         else -> false
+    }
+
+    private val qualifiedDetailPaths = setOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
+        listOf("heart", "heartRateSamples"), listOf("heart", "hrvSamples"),
+        listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"))
+
+    private fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
+        put("output_keys", JsonArray((first.getValue("output_keys").jsonArray + second.getValue("output_keys").jsonArray)
+            .distinct().sortedBy { it.jsonPrimitive.content }))
+        for (field in listOf("csv_rows", "markdown_blocks", "bases_frontmatter_blocks")) {
+            put(field, JsonArray((first.getValue(field).jsonArray + second.getValue(field).jsonArray).mapIndexed { index, item ->
+                JsonObject(item.jsonObject.toMutableMap().apply { put("ordinal", JsonPrimitive(index)) })
+            }))
+        }
+    }
+
+    private data class QuantityDetail(val category: String, val field: String, val identity: String,
+        val unit: String, val owners: List<String>, val label: String)
+
+    private fun quantityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val definitions = listOf(
+            QuantityDetail("heart", "heartRateSamples", "heart_rate", "bpm", listOf("average_heart_rate", "heart_rate_min", "heart_rate_max"), "Heart Rate"),
+            QuantityDetail("heart", "hrvSamples", "hrv_rmssd", "ms", listOf("hrv_ms"), "HRV RMSSD"),
+            QuantityDetail("vitals", "bloodOxygenSamples", "blood_oxygen", "ratio_0_1", listOf("blood_oxygen", "blood_oxygen_avg", "blood_oxygen_min", "blood_oxygen_max"), "Blood Oxygen"),
+            QuantityDetail("vitals", "bloodGlucoseSamples", "blood_glucose", "mg/dL", listOf("blood_glucose", "blood_glucose_avg", "blood_glucose_min", "blood_glucose_max"), "Blood Glucose"),
+            QuantityDetail("vitals", "respiratoryRateSamples", "respiratory_rate", "breaths/min", listOf("respiratory_rate", "respiratory_rate_avg", "respiratory_rate_min", "respiratory_rate_max"), "Respiratory Rate"),
+        )
+        val keys = mutableSetOf<String>()
+        val rows = mutableListOf<JsonObject>()
+        val blocks = mutableListOf<JsonObject>()
+        val yaml = mutableListOf<String>()
+        for (definition in definitions) {
+            val samples = root[definition.category]?.jsonObject?.get(definition.field)?.jsonArray ?: continue
+            if (samples.isEmpty()) continue
+            val owner = definition.owners.firstOrNull { it in selected }
+                ?: throw AdapterException("wake-date native quantity selection is incompatible")
+            keys += owner
+            val lines = mutableListOf("| Timestamp (UTC) | Value | Unit |", "|---|---|---|")
+            for (element in samples) {
+                val sample = element.jsonObject
+                val timestamp = sample.getValue("timestamp").jsonPrimitive.content
+                val value = sample.getValue("value").jsonPrimitive.content
+                if (!timestamp.endsWith("Z") || runCatching { java.time.Instant.parse(timestamp) }.isFailure ||
+                    value.toDoubleOrNull()?.isFinite() != true ||
+                    (definition.unit == "ratio_0_1" && value.toDouble() !in 0.0..1.0)) throw AdapterException("wake-date native quantity is incompatible")
+                val record = buildJsonObject { put("metric", definition.identity); put("unit", definition.unit); put("sample", sample) }.toString()
+                rows += buildJsonObject {
+                    put("date", ownerDate); put("category", "Native Detail"); put("metric", "Quantity Sample")
+                    put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
+                }
+                lines += "| $timestamp | $value | ${definition.unit} |"
+                yaml += "  - $record"
+            }
+            blocks += buildJsonObject {
+                put("heading", "${definition.label} Sample Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", blocks.size)
+            }
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive))); put("csv_rows", JsonArray(rows)); put("markdown_blocks", JsonArray(blocks))
+            put("bases_frontmatter_blocks", buildJsonArray {
+                if (yaml.isNotEmpty()) add(buildJsonObject { put("key", "native_quantity_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
+            })
+        }
     }
 
     private fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
