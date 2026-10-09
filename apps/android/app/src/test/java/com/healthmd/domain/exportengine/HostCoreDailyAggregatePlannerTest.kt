@@ -37,6 +37,7 @@ import kotlin.time.Duration.Companion.minutes
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonPrimitive
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -53,6 +54,71 @@ class HostCoreDailyAggregatePlannerTest {
         assumeTrue("Host-core QA requires an explicit freshly built library", !library.isNullOrBlank())
         require(File(checkNotNull(library)).isFile) { "Host core library is unavailable" }
         System.setProperty("uniffi.component.healthmd_core_uniffi.libraryOverride", library)
+    }
+
+    @Test
+    fun nativeWakeDateStagesReachEveryFormatWithExactSourceClocks() {
+        val core = HealthMdCoreService()
+        val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
+        val registry = core.getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val start = Instant.parse("2026-07-24T23:00:00.123456789Z")
+        val end = Instant.parse("2026-07-25T00:00:00.987654321Z")
+        val stage = com.healthmd.domain.model.SleepStageEntry(
+            java.time.LocalDateTime.ofInstant(start, context.zoneId), java.time.LocalDateTime.ofInstant(end, context.zoneId),
+            "light", com.healthmd.domain.model.ExactSourceTimestamp(start.epochSecond, start.nano, "Z"),
+            com.healthmd.domain.model.ExactSourceTimestamp(end.epochSecond, end.nano, "Z"),
+            com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-stage-source"))
+        val data = HealthData(date = LocalDate.of(2026, 7, 25), sleep = SleepData(
+            totalDuration = 60.minutes, lightSleep = 60.minutes, stages = listOf(stage)))
+        val adapter = com.healthmd.domain.semantic.HealthMdSemanticInputAdapter
+        val config = adapter.sessionConfiguration("android-stage-detail", com.healthmd.domain.semantic.HealthMdSemanticInputAdapter.Profile.SLEEP_V6,
+            MetricSelectionState(enabledMetrics = setOf("sleep_total", "sleep_light")), registry, context.zoneId.id,
+            captureContext = context)
+        val batch = adapter.batch("android-stage-detail", com.healthmd.domain.semantic.HealthMdSemanticInputAdapter.Profile.SLEEP_V6, 0u, true, listOf(data), registry,
+            com.healthmd.domain.model.UnitConverter(UnitPreference.METRIC), context.zoneId.id, captureContext = context)
+        val semantic = core.createSemanticSession(config).use { it.processBatch(batch.bytes) }
+        val customization = FormatCustomization()
+        val encoded = com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic, registry, context.zoneId.id,
+            com.healthmd.domain.render.HealthMdRenderInputAdapter.Options("android-stage-detail",
+                listOf("json", "csv", "markdown", "obsidian_bases"), includeGranularData = true),
+            presentationByOwnerDate = mapOf("2026-07-25" to data), presentationCustomization = customization,
+            captureContext = context)
+        val plan = core.createRenderSession(encoded.configuration, semantic).use { session ->
+            encoded.batches.forEach { session.processBatch(it) }; session.finish()
+        }
+        val texts = plan.items.map { it.content.decodeToString() }
+        val csv = texts.single { it.contains(",Sleep Detail,Sleep Stage,") }
+        assertThat(csv).contains(start.toString())
+        assertThat(csv).contains(end.toString())
+        assertThat(csv).contains("3600.864197532")
+        assertThat(csv).contains("synthetic-stage-source")
+        val markdown = texts.single { it.contains("Sleep Stage Details") }
+        assertThat(markdown).contains("| light |")
+        assertThat(texts.single { it.contains("sleep_stage_details") }).contains(start.toString())
+        val native = com.healthmd.data.export.JsonExporter().export(data, customization, true, captureContext = context)
+        assertThat(Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
+            .isEqualTo(Json.parseToJsonElement(native))
+        for (invalid in listOf(
+            data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(stage = "deep")))),
+            data.copy(sleep = data.sleep.copy(stages = List(1500) { stage })),
+            data.copy(sleep = data.sleep.copy(sessions = listOf(com.healthmd.domain.model.SleepSessionEntry(
+                stage.startTime, stage.endTime, exactStartTime = stage.exactStartTime, exactEndTime = stage.exactEndTime)))),
+        )) {
+            org.junit.Assert.assertThrows(com.healthmd.domain.render.HealthMdRenderInputAdapter.AdapterException::class.java) {
+                com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic, registry, context.zoneId.id,
+                    com.healthmd.domain.render.HealthMdRenderInputAdapter.Options("android-stage-detail",
+                        listOf("json", "csv", "markdown", "obsidian_bases"), includeGranularData = true),
+                    presentationByOwnerDate = mapOf("2026-07-25" to invalid), presentationCustomization = customization,
+                    captureContext = context)
+            }
+        }
+        val sleeping = data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(stage = "sleeping"))))
+        val sleepingInput = com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic, registry, context.zoneId.id,
+            com.healthmd.domain.render.HealthMdRenderInputAdapter.Options("android-stage-detail", listOf("csv"), includeGranularData = true),
+            presentationByOwnerDate = mapOf("2026-07-25" to sleeping), presentationCustomization = customization, captureContext = context)
+        val sleepingDetails = Json.parseToJsonElement(sleepingInput.batches.single().decodeToString()).jsonObject
+            .getValue("days").jsonArray.single().jsonObject.getValue("native_details").jsonObject
+        assertThat(sleepingDetails.getValue("output_keys").toString()).isEqualTo("[\"sleep_total_hours\"]")
     }
 
     @Test

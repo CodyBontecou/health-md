@@ -443,7 +443,7 @@ enum HealthMdRenderInputAdapter {
                 "ordinal": 0,
             ])
         }
-        return [
+        var renderedDay: [String: Any] = [
             "owner_date": ownerDate,
             "title": ownerDate,
             "archive_diagnostics": archiveDiagnostics,
@@ -461,6 +461,57 @@ enum HealthMdRenderInputAdapter {
                 captureContext: captureContext
             ),
         ]
+        if let data = presentationData, let captureContext,
+           captureContext.sleepDayAttribution == .morningEnds, !data.sleep.stages.isEmpty {
+            let bytes = try data.toJSONDataThrowing(customization: presentationCustomization, captureContext: captureContext)
+            guard let root = try JSONSerialization.jsonObject(with: bytes) as? [String: Any],
+                  let sleep = root["sleep"] as? [String: Any],
+                  let stages = sleep["sleepStages"] as? [[String: Any]] else {
+                throw AdapterError.invalidPresentation
+            }
+            guard !hasUnqualifiedDetailArrays(root, path: []) else { throw AdapterError.invalidPresentation }
+            renderedDay["native_details"] = try sleepStageDetails(stages, ownerDate: ownerDate,
+                selectedOutputKeys: selectedOutputKeys)
+        }
+        return renderedDay
+    }
+
+    private static func hasUnqualifiedDetailArrays(_ value: Any, path: [String]) -> Bool {
+        if let array = value as? [Any] {
+            return !array.isEmpty && path != ["sleep", "sleepStages"]
+        }
+        if let object = value as? [String: Any] {
+            return object.contains { key, child in hasUnqualifiedDetailArrays(child, path: path + [key]) }
+        }
+        return false
+    }
+
+    private static func sleepStageDetails(_ stages: [[String: Any]], ownerDate: String,
+                                         selectedOutputKeys: [String]) throws -> [String: Any] {
+        let keysByStage = ["deep": "sleep_deep_hours", "rem": "sleep_rem_hours",
+                           "core": "sleep_core_hours", "awake": "sleep_awake_hours",
+                           "inBed": "sleep_in_bed_hours", "unspecified": "sleep_total_hours"]
+        var keys = Set<String>()
+        var rows: [[String: Any]] = []
+        var lines = ["| Start (UTC) | End (UTC) | Stage |", "|---|---|---|"]
+        var yaml: [String] = []
+        for (ordinal, stage) in stages.enumerated() {
+            guard let name = stage["stage"] as? String, let key = keysByStage[name],
+                  selectedOutputKeys.contains(key),
+                  let start = stage["startDate"] as? String,
+                  let end = stage["endDate"] as? String else { throw AdapterError.invalidPresentation }
+            let value = String(decoding: try canonicalJSON(stage), as: UTF8.self)
+            keys.insert(key)
+            rows.append(["date": ownerDate, "category": "Sleep Detail", "metric": "Sleep Stage",
+                         "value": value, "unit": "seconds", "timestamp": start, "ordinal": ordinal])
+            // Names are the closed native stage identities above; all other source
+            // facts stay in the exact JSON object used by CSV and YAML flow maps.
+            lines.append("| \(start) | \(end) | \(name) |")
+            yaml.append("  - \(value)")
+        }
+        return ["output_keys": keys.sorted(), "csv_rows": rows,
+                "markdown_blocks": [["heading": "Sleep Stage Details", "lines": lines, "ordinal": 0]],
+                "bases_frontmatter_blocks": [["key": "sleep_stage_details", "lines": yaml, "ordinal": 0]]]
     }
 
     private static func profileDocuments(
@@ -695,16 +746,29 @@ enum HealthMdRenderInputAdapter {
         return ""
     }
 
+    private static func factCount(_ day: [String: Any]) -> Int {
+        var count = ((day["metrics"] as? [Any])?.count ?? 0) + ((day["extensions"] as? [Any])?.count ?? 0)
+        if let details = day["native_details"] as? [String: Any] {
+            count += (details["csv_rows"] as? [Any])?.count ?? 0
+            for key in ["markdown_blocks", "bases_frontmatter_blocks"] {
+                for block in details[key] as? [[String: Any]] ?? [] {
+                    count += 1 + ((block["lines"] as? [Any])?.count ?? 0)
+                }
+            }
+        }
+        return count
+    }
+
     private static func boundedBatches(_ days: [[String: Any]], sessionID: String, version: Int) throws -> [Data] {
         var partitions: [[[String: Any]]] = []
         var current: [[String: Any]] = []
         var totalBytes = 0
         for day in days {
-            let facts = (day["metrics"] as? [Any])?.count ?? 0 + ((day["extensions"] as? [Any])?.count ?? 0)
+            let facts = factCount(day)
             guard facts <= maxFactsPerBatch else { throw AdapterError.limitExceeded }
             let candidate = current + [day]
             let placeholder = try batchData(days: candidate, sessionID: sessionID, index: partitions.count, final: false, version: version)
-            if !current.isEmpty && (placeholder.count > maxBatchBytes || candidate.reduce(0, { $0 + (((($1["metrics"] as? [Any])?.count) ?? 0) + ((($1["extensions"] as? [Any])?.count) ?? 0)) }) > maxFactsPerBatch) {
+            if !current.isEmpty && (placeholder.count > maxBatchBytes || candidate.reduce(0, { $0 + factCount($1) }) > maxFactsPerBatch) {
                 partitions.append(current)
                 current = [day]
             } else {

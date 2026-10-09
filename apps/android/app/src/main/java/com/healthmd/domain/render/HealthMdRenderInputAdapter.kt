@@ -134,12 +134,21 @@ object HealthMdRenderInputAdapter {
             throw AdapterException("capture and completed semantic authority are incompatible")
         }
         val nativeWakeDateContext = if (handoffVersion == 2 && presentationByOwnerDate.isNotEmpty()) {
-            if (options.api != null || options.includeGranularData) {
+            if (options.api != null) {
                 throw AdapterException("wake-date native profile documents are not qualified")
             }
             if (captureContext?.sleepDayAttribution != SleepDayAttribution.MORNING_ENDS ||
                 captureContext.exportProfileID != "android-sleep-v6" || captureContext.zoneId.id != calendarTimeZone) {
                 throw AdapterException("wake-date native capture authority is incompatible")
+            }
+            if (options.includeGranularData) {
+                for (data in presentationByOwnerDate.values) {
+                    val payload = json.parseToJsonElement(JsonExporter().export(data,
+                        presentationCustomization, true, captureContext = captureContext))
+                    if (hasUnqualifiedDetailArrays(payload, emptyList())) {
+                        throw AdapterException("wake-date non-stage details are not qualified")
+                    }
+                }
             }
             captureContext
         } else null
@@ -346,7 +355,9 @@ object HealthMdRenderInputAdapter {
         // Machine units come from the pinned profile, independently of rounded
         // display values and the user's requested presentation units.
         val canonicalSummaryUnits = if (nativeWakeDateContext != null) {
-            selectedOutputKeys.associateWith { key ->
+            // Bedtime/wake are source-clock facts, not quantities in the sleep
+            // selection's fallback hours unit. Match the prepared native dictionary.
+            selectedOutputKeys.filterNot { it == "sleep_bedtime" || it == "sleep_wake" }.associateWith { key ->
                 val output = outputs[key] ?: throw AdapterException("registry output is invalid")
                 output.unit.ifEmpty {
                     val units = output.selectionIds.map { selection ->
@@ -433,6 +444,14 @@ object HealthMdRenderInputAdapter {
             put("bases_frontmatter_fields", JsonArray(basesFrontmatterFields))
             put("bases_frontmatter_blocks", buildJsonArray {})
             put("metrics", JsonArray(metrics))
+            if (nativeWakeDateContext != null && options.includeGranularData &&
+                presentationData != null && presentationData.sleep.stages.isNotEmpty()) {
+                val native = json.parseToJsonElement(JsonExporter().export(presentationData,
+                    presentationCustomization, true, captureContext = nativeWakeDateContext)).jsonObject
+                val stages = native["sleep"]?.jsonObject?.get("sleepStages")?.jsonArray
+                    ?: throw AdapterException("wake-date native stages are incompatible")
+                put("native_details", sleepStageDetails(stages, ownerDate, selectedOutputKeys))
+            }
             put("extensions", JsonArray(extensionPayloads))
             put("individual_entries", JsonArray(individualEntries))
             put("daily_note", dailyNote ?: JsonNull)
@@ -447,6 +466,50 @@ object HealthMdRenderInputAdapter {
                     canonicalSummaryUnits,
                 ),
             )
+        }
+    }
+
+    private fun hasUnqualifiedDetailArrays(value: JsonElement, path: List<String>): Boolean = when (value) {
+        is JsonArray -> value.isNotEmpty() && path != listOf("sleep", "sleepStages")
+        is JsonObject -> value.any { (key, child) -> hasUnqualifiedDetailArrays(child, path + key) }
+        else -> false
+    }
+
+    private fun sleepStageDetails(stages: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
+        val keysByStage = mapOf("deep" to "sleep_deep_hours", "rem" to "sleep_rem_hours",
+            "light" to "sleep_light_hours", "awake" to "sleep_awake_hours",
+            "wake" to "sleep_awake_hours", "sleeping" to "sleep_total_hours",
+            "unknown" to "sleep_total_hours")
+        val keys = mutableSetOf<String>()
+        val rows = mutableListOf<JsonObject>()
+        val lines = mutableListOf("| Start (UTC) | End (UTC) | Stage |", "|---|---|---|")
+        val yaml = mutableListOf<String>()
+        stages.forEachIndexed { ordinal, element ->
+            val stage = element.jsonObject
+            val name = stage["stage"]?.jsonPrimitive?.content
+                ?: throw AdapterException("wake-date native stages are incompatible")
+            val key = keysByStage[name] ?: throw AdapterException("wake-date native stage identity is incompatible")
+            if (key !in selectedOutputKeys) throw AdapterException("wake-date native stage selection is incompatible")
+            val start = stage.getValue("startDate").jsonPrimitive.content
+            val end = stage.getValue("endDate").jsonPrimitive.content
+            val value = stage.toString()
+            keys += key
+            rows += buildJsonObject {
+                put("date", ownerDate); put("category", "Sleep Detail"); put("metric", "Sleep Stage")
+                put("value", value); put("unit", "seconds"); put("timestamp", start); put("ordinal", ordinal)
+            }
+            lines += "| $start | $end | $name |"
+            yaml += "  - $value"
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive)))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", buildJsonArray { add(buildJsonObject {
+                put("heading", "Sleep Stage Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
+            }) })
+            put("bases_frontmatter_blocks", buildJsonArray { add(buildJsonObject {
+                put("key", "sleep_stage_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0)
+            }) })
         }
     }
 
@@ -701,14 +764,24 @@ object HealthMdRenderInputAdapter {
         else -> value.toString()
     }
 
+    private fun factCount(day: JsonObject): Int {
+        var count = day.getValue("metrics").jsonArray.size + day.getValue("extensions").jsonArray.size
+        val details = day["native_details"] as? JsonObject ?: return count
+        count += details.getValue("csv_rows").jsonArray.size
+        for (key in listOf("markdown_blocks", "bases_frontmatter_blocks")) {
+            for (block in details.getValue(key).jsonArray) count += 1 + block.jsonObject.getValue("lines").jsonArray.size
+        }
+        return count
+    }
+
     private fun boundedBatches(days: List<JsonObject>, sessionId: String, handoffVersion: Int): List<ByteArray> {
         val partitions = mutableListOf<List<JsonObject>>()
         var current = mutableListOf<JsonObject>()
         for (day in days) {
-            val facts = day.getValue("metrics").jsonArray.size + day.getValue("extensions").jsonArray.size
+            val facts = factCount(day)
             if (facts > MAX_FACTS_PER_BATCH) throw AdapterException("render input exceeds a limit")
             val candidate = current + day
-            val candidateFacts = candidate.sumOf { it.getValue("metrics").jsonArray.size + it.getValue("extensions").jsonArray.size }
+            val candidateFacts = candidate.sumOf(::factCount)
             if (current.isNotEmpty() && (candidateFacts > MAX_FACTS_PER_BATCH || batch(candidate, sessionId, partitions.size, false, handoffVersion).size > MAX_BATCH_BYTES)) {
                 partitions += current.toList()
                 current = mutableListOf(day)

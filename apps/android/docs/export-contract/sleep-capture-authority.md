@@ -91,3 +91,10 @@ Native human formatters now also honor requested distance, absolute temperature,
 ## Shared detail handoff preparation
 
 The draft v2 renderer accepts bounded `native_details` facts with exact CSV source timestamp strings, explicit Markdown sections and escaped/nested Bases blocks, tied to selected completed owner outputs. Competing native Markdown/CSV document bodies reject instead of discarding or duplicating requested details. Native JSON retains its independent public grammar; historical profiles reject the new member. Target: issue #104 native-detail producer adoption on Android and Apple. Both native producers still omit it and retain their detailed/workout/provider gates. Raw detail without a completed aggregate, per-field native selection/units, identities, public JSON/CSV/Markdown/Bases and consumer/device qualification remain enabling work.
+
+
+## Bounded native sleep-stage detail preparation
+
+The render adapter can prepare stage-only granular requests under the explicit captured Android-v6 authority. It reuses canonical native JSON stage objects for exact UTC CSV rows and Bases flow maps, and emits a UTC interval table in Markdown. Light stays Light; unclassified Sleeping binds to Total Sleep, never Light/Core. Source clocks, derived fractional duration and identity retain the native JSON representation. The completed-result unit dictionary omits Bedtime/Wake Time quantity entries, matching the standalone writer; clock facts cannot inherit a sleep-hours fallback unit.
+
+Unselected stage outputs, oversized native fact batches and any other nonempty detail array reject before artifact acceptance. Parent-session, other sample/workout/provider data and detail without an available completed aggregate still need their own implementation. The concrete planner's full granular restriction and shipped-profile gate remain closed. Historical v4/v5 rendering and fixtures are unchanged. This is bounded native preparation within the existing draft profile, not complete detail-route or device qualification.
