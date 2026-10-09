@@ -1587,7 +1587,10 @@ nonisolated struct HealthData: Codable, Sendable {
 
     var hasAnyData: Bool {
         hasSummaryData || healthKitRecordArchive != nil
-            || (timeContext.sleepDayAttribution == .morningEnds && !sleep.stages.isEmpty)
+            || (timeContext.sleepDayAttribution == .morningEnds && (!sleep.stages.isEmpty
+                || !heart.heartRateSamples.isEmpty || !heart.hrvSamples.isEmpty
+                || !vitals.bloodOxygenSamples.isEmpty || !vitals.bloodGlucoseSamples.isEmpty
+                || !vitals.respiratoryRateSamples.isEmpty))
     }
 }
 

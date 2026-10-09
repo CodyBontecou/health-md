@@ -455,9 +455,10 @@ class JsonExporter {
                         putJsonArray("heartRateSamples") {
                             for (sample in h.samples) {
                                 addJsonObject {
-                                    // T0-04: ISO 8601; T0-05: `value` (was `bpm`)
+                                    // Frozen v4/v5 keep their integer projection. The native successor
+                                    // retains the admitted source quantity without display rounding.
                                     put("timestamp", sample.time.toIso8601())
-                                    put("value", sample.value.toInt())
+                                    if (nativeSuccessor) put("value", sample.value) else put("value", sample.value.toInt())
                                     putSampleContext(sample, analyticalV5)
                                 }
                             }

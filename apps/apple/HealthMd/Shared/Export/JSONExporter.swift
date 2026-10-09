@@ -347,7 +347,8 @@ extension HealthData {
 
         func encodedTimeSample(_ sample: TimeSample, isoFormatter: ISO8601DateFormatter) -> [String: Any] {
             var dict: [String: Any] = [
-                "timestamp": isoFormatter.string(from: sample.timestamp),
+                "timestamp": wakeDateContext == nil ? isoFormatter.string(from: sample.timestamp)
+                    : CanonicalRFC3339UTC.string(from: sample.timestamp),
                 "value": sample.value
             ]
             attachMetadata(sample.metadata, to: &dict)
@@ -573,7 +574,8 @@ extension HealthData {
         }
 
         // Heart
-        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart) {
+        if snapshot.heart.hasData || snapshot.hasCategoryData(.heart)
+            || (wakeDateContext != nil && (!snapshot.heart.heartRateSamples.isEmpty || !snapshot.heart.hrvSamples.isEmpty)) {
             var heartDict: [String: Any] = [:]
             if let hr = snapshot.heart.restingHeartRate {
                 heartDict["restingHeartRate"] = hr
@@ -611,7 +613,9 @@ extension HealthData {
         }
 
         // Vitals (daily aggregates)
-        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory) {
+        if snapshot.vitals.hasData || snapshot.hasCategoryData(.vitals) || snapshot.hasCategoryData(.respiratory)
+            || (wakeDateContext != nil && (!snapshot.vitals.bloodOxygenSamples.isEmpty
+                || !snapshot.vitals.bloodGlucoseSamples.isEmpty || !snapshot.vitals.respiratoryRateSamples.isEmpty)) {
             var vitalsDict: [String: Any] = [:]
 
             // Respiratory Rate

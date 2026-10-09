@@ -310,6 +310,31 @@ class WakeDateJsonProducerTest {
         assertThat(segment.getValue("repetitions").jsonPrimitive.content).isEqualTo("4")
     }
 
+    @Test
+    fun quantityOnlyHeartDetailRetainsValueClockAndIdentityWithoutSummary() {
+        val local = LocalDateTime.of(2026, 11, 1, 1, 30, 0, 123456789)
+        val stamp = exact("2026-11-01T05:30:00.123456789Z", "-04:00")
+        val sample = TimestampedSample(local, 72.125,
+            metadata = mapOf("synthetic" to "quantity-precision"), exactTime = stamp,
+            identity = ExactSourceIdentity(nativeId = "synthetic-heart", origin = "com.example.synthetic"))
+        val data = HealthData(LocalDate.of(2026, 11, 1),
+            heart = com.healthmd.domain.model.HeartData(samples = listOf(sample)))
+        val root = Json.parseToJsonElement(JsonExporter().export(data,
+            FormatCustomization(unitPreference = UnitPreference.IMPERIAL),
+            includeGranularData = true, captureContext = context)).jsonObject
+        val heart = root.getValue("heart").jsonObject
+        assertThat(heart.keys).containsExactly("heartRateSamples")
+        val record = heart.getValue("heartRateSamples").jsonArray.single().jsonObject
+        assertThat(record.getValue("value").jsonPrimitive.content.toDouble()).isEqualTo(72.125)
+        assertThat(record.getValue("timestamp").jsonPrimitive.content).isEqualTo("2026-11-01T05:30:00.123456789Z")
+        assertThat(record.getValue("exactTime").jsonObject.getValue("iso8601").jsonPrimitive.content)
+            .isEqualTo("2026-11-01T01:30:00.123456789-04:00")
+        assertThat(record.getValue("identity").jsonObject.getValue("nativeId").jsonPrimitive.content)
+            .isEqualTo("synthetic-heart")
+        assertThat(record.getValue("metadata").jsonObject.getValue("synthetic").jsonPrimitive.content)
+            .isEqualTo("quantity-precision")
+    }
+
     private fun exact(instant: String, offset: String): ExactSourceTimestamp =
         ExactSourceTimestamp.from(Instant.parse(instant), ZoneOffset.of(offset))
 }

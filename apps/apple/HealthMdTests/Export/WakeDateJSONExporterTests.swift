@@ -14,6 +14,43 @@ final class WakeDateJSONExporterTests: XCTestCase {
         return customization
     }()
 
+    func testQuantityOnlyDetailsRetainSourcePrecisionWithoutInventingSummaries() throws {
+        let zone = try XCTUnwrap(TimeZone(secondsFromGMT: 0))
+        let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)
+        let instant = Date(timeIntervalSince1970: 1_793_491_200.125)
+        var day = HealthData(date: instant,
+            timeContext: ExportTimeContext(timeZone: zone, sleepDayAttribution: .morningEnds))
+        let metadata = ["synthetic": "quantity-precision"]
+        day.heart.heartRateSamples = [TimeSample(timestamp: instant, value: 72.125, metadata: metadata)]
+        day.heart.hrvSamples = [TimeSample(timestamp: instant, value: 31.875, metadata: metadata)]
+        day.vitals.bloodOxygenSamples = [TimeSample(timestamp: instant, value: 97.125, metadata: metadata)]
+        day.vitals.bloodGlucoseSamples = [TimeSample(timestamp: instant, value: 101.875, metadata: metadata)]
+        day.vitals.respiratoryRateSamples = [TimeSample(timestamp: instant, value: 16.125, metadata: metadata)]
+        XCTAssertTrue(day.hasAnyData)
+        XCTAssertFalse(day.hasSummaryData)
+        let bytes = try day.toJSONDataThrowing(customization: Self.imperialCustomization, captureContext: context)
+        let root = try XCTUnwrap(try JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+        for (category, key, value) in [("heart", "heartRateSamples", 72.125),
+            ("heart", "hrvSamples", 31.875), ("vitals", "bloodOxygenSamples", 97.125),
+            ("vitals", "bloodGlucoseSamples", 101.875), ("vitals", "respiratoryRateSamples", 16.125)] {
+            let section = try XCTUnwrap(root[category] as? [String: Any])
+            let sample = try XCTUnwrap((section[key] as? [[String: Any]])?.first)
+            XCTAssertEqual(sample["timestamp"] as? String, CanonicalRFC3339UTC.string(from: instant))
+            XCTAssertEqual(sample["value"] as? Double, value)
+            XCTAssertEqual(sample["metadata"] as? [String: String], metadata)
+        }
+        XCTAssertEqual(Set(try XCTUnwrap(root["heart"] as? [String: Any]).keys), ["heartRateSamples", "hrvSamples"])
+        XCTAssertEqual(Set(try XCTUnwrap(root["vitals"] as? [String: Any]).keys),
+            ["bloodOxygenSamples", "bloodGlucoseSamples", "respiratoryRateSamples"])
+        let snapshot = day.exportSnapshot(customization: Self.imperialCustomization)
+        XCTAssertEqual(try day.bufferedJSONDataForParityTesting(snapshot: snapshot,
+            config: Self.imperialCustomization, captureContext: context), bytes)
+        let sink = MemoryExportByteSink(mediaType: "application/json")
+        try day.writeJSONThrowing(to: sink, customization: Self.imperialCustomization, captureContext: context)
+        _ = try sink.finish()
+        XCTAssertEqual(sink.data, bytes)
+    }
+
     func testEmptyDayKeepsOneAuthorityAndNativeGrammarAcrossBufferedAndStreamingEntrypoints() throws {
         let zone = try XCTUnwrap(TimeZone(identifier: "America/New_York"))
         let context = AppleSleepCaptureContext(timeZone: zone, sleepDayAttribution: .morningEnds)

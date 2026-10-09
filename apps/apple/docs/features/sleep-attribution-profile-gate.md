@@ -102,3 +102,7 @@ Apple Morning ends days containing selected source stages count as exportable ev
 ## Historical Night begins clipping audit
 
 Night begins promises the shipped noon-to-noon journal summary, not whole-session ownership by start date. An interval from 10:00 to 13:00 contributes one hour to a window opening at noon. Apple's native granular stage projection is also clipped to 12:00–13:00; Android's granular stage and native parent records keep 10:00–13:00 source clocks while their summary counts the one-hour overlap. Native boundary controls verify these distinct historical behaviors. The capability inventory and sleep contract record the difference; historical writers and golden bytes are unchanged. Morning ends retains its separately versioned whole-session rule and remains production-gated.
+
+## Native quantity JSON precision
+
+Draft Apple-v11 JSON retains heart-rate, SDNN, blood-oxygen, blood-glucose and respiratory-rate samples without aggregate anchors. Its lazy sample encoder uses captured UTC fractional timestamps; numeric values and metadata remain unchanged under imperial presentation. Draft Android-v6 heart-rate detail retains fractional values plus its canonical UTC clock and exact source instant/identity. Historical profiles keep their existing projections. This qualifies standalone native JSON only: the concrete four-format adapters still reject non-sleep detail arrays until their selection, units, render and reader handoffs are implemented. Production gates remain closed.
