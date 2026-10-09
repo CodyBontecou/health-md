@@ -1,4 +1,5 @@
 import XCTest
+import Darwin
 @testable import HealthMd
 
 @MainActor
@@ -875,6 +876,94 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
         XCTAssertEqual(try Data(contentsOf: destination), winner)
         XCTAssertEqual(try Data(contentsOf: spool), retained)
+    }
+
+    func testConnectedCleanupAndRevocationHoldThePublicationLock() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let orphan = directory.appendingPathComponent("items/orphan.bin")
+        try Data("synthetic orphan".utf8).write(to: orphan)
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: Set([
+            orphan.path, directory.appendingPathComponent("items").path,
+            directory.appendingPathComponent("partitions").path, directory.path,
+        ]))
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        XCTAssertNotNil(try store.load(jobID: fixture.session.jobID))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: orphan.path))
+        try store.cancel(jobID: fixture.session.jobID)
+        try store.remove(jobID: fixture.session.jobID)
+        XCTAssertEqual(manager.removalLockObservations, [true, true, true, true])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testFailedRemovalSyncReportsUncertaintyAndAllowsLockedRetry() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        var rejectRemovalSync = true
+        var rejected = 0
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, directorySync: { url in
+            if rejectRemovalSync, url.pathComponents == fixture.root.pathComponents,
+               !FileManager.default.fileExists(atPath: directory.path) {
+                rejected += 1
+                throw POSIXError(.EIO)
+            }
+            try AtomicFileWriter.synchronizeDirectory(url)
+        })
+        XCTAssertThrowsError(try store.remove(jobID: fixture.session.jobID)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EIO)
+        }
+        XCTAssertEqual(rejected, 1)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        rejectRemovalSync = false
+        XCTAssertNoThrow(try store.remove(jobID: fixture.session.jobID))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: lock.path))
+    }
+
+    func testTerminalExpiryDoesNotReportFailedRemovalAndRetriesRetainedJob() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        try fixture.store.cancel(jobID: fixture.session.jobID)
+        let directory = fixture.root.appendingPathComponent(fixture.session.jobID.uuidString.lowercased())
+        let lock = fixture.root.deletingLastPathComponent()
+            .appendingPathComponent(".\(fixture.root.lastPathComponent).journal.lock")
+        let manager = CleanupLockFileManager(lockURL: lock, watchedPaths: [directory.path])
+        manager.removalFailurePath = directory.resolvingSymlinksInPath().path
+        let store = ConnectedCorpusOutboundStore(rootURL: fixture.root, fileManager: manager)
+        let cleanupTime = fixture.manifest.createdAt.addingTimeInterval(
+            ConnectedCorpusOutboundStore.retentionInterval + 1)
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [])
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path))
+        manager.removalFailurePath = nil
+        XCTAssertEqual(store.cleanupExpired(now: cleanupTime), [fixture.session.jobID])
+        XCTAssertFalse(FileManager.default.fileExists(atPath: directory.path))
+        XCTAssertEqual(manager.removalLockObservations, [true, true])
+    }
+
+    private final class CleanupLockFileManager: FileManager, @unchecked Sendable {
+        let lockURL: URL
+        let watchedPaths: Set<String>
+        var removalLockObservations: [Bool] = []
+        var removalFailurePath: String?
+        init(lockURL: URL, watchedPaths: Set<String>) {
+            self.lockURL = lockURL
+            self.watchedPaths = Set(watchedPaths.map { URL(fileURLWithPath: $0).resolvingSymlinksInPath().path })
+            super.init()
+        }
+        override func removeItem(at URL: URL) throws {
+            if watchedPaths.contains(URL.resolvingSymlinksInPath().path) {
+                let descriptor = Darwin.open(lockURL.path, O_RDWR)
+                guard descriptor >= 0 else { throw POSIXError(.EIO) }
+                defer { Darwin.close(descriptor) }
+                let result = flock(descriptor, LOCK_EX | LOCK_NB)
+                removalLockObservations.append(result != 0 && errno == EWOULDBLOCK)
+                if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            }
+            if URL.resolvingSymlinksInPath().path == removalFailurePath { throw POSIXError(.EIO) }
+            try super.removeItem(at: URL)
+        }
     }
 
     /// Installs another writer's valid journal after initial absence was observed.

@@ -109,23 +109,65 @@ nonisolated enum AtomicFileWriter {
         }
     }
 
-    private static let publicationMutex = NSLock()
+    private static let publicationMutex = NSRecursiveLock()
+    private static let publicationPathsKey = "Health.md.AtomicFileWriter.publication-paths"
 
-    /// The lock inode lives outside job cleanup and is never removed by this writer.
-    private static func withPublicationLock<Result>(at url: URL?, operation: () throws -> Result) throws -> Result {
-        guard let url else { return try operation() }
+    nonisolated final class PublicationLease {
+        private var release: (() -> Void)?
+        fileprivate init(release: @escaping () -> Void) { self.release = release }
+        func close() {
+            let action = release
+            release = nil
+            action?()
+        }
+        deinit { release?() }
+    }
+
+    /// Synchronous scopes only: nested operations on the same thread reuse the held inode.
+    static func beginPublicationTransaction(at url: URL) throws -> PublicationLease {
         guard url.isFileURL else { throw POSIXError(.EINVAL) }
-        return try publicationMutex.withLock {
-            let descriptor = url.withUnsafeFileSystemRepresentation { path -> Int32 in
+        publicationMutex.lock()
+        let thread = Thread.current
+        let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+        let owned = thread.threadDictionary[publicationPathsKey] as? Set<String> ?? []
+        if owned.contains(path) {
+            return PublicationLease {
+                precondition(Thread.current == thread, "Publication transaction changed threads.")
+                publicationMutex.unlock()
+            }
+        }
+        var descriptor: Int32 = -1
+        do {
+            descriptor = url.withUnsafeFileSystemRepresentation { path -> Int32 in
                 guard let path else { return -1 }
                 return open(path, O_RDWR | O_CREAT | O_CLOEXEC, 0o600)
             }
             guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-            defer { _ = close(descriptor) }
             guard flock(descriptor, LOCK_EX) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
-            defer { _ = flock(descriptor, LOCK_UN) }
-            return try operation()
+            thread.threadDictionary[publicationPathsKey] = owned.union([path])
+            let heldDescriptor = descriptor
+            return PublicationLease {
+                precondition(Thread.current == thread, "Publication transaction changed threads.")
+                var paths = thread.threadDictionary[publicationPathsKey] as? Set<String> ?? []
+                paths.remove(path)
+                if paths.isEmpty { thread.threadDictionary.removeObject(forKey: publicationPathsKey) }
+                else { thread.threadDictionary[publicationPathsKey] = paths }
+                _ = flock(heldDescriptor, LOCK_UN)
+                _ = close(heldDescriptor)
+                publicationMutex.unlock()
+            }
+        } catch {
+            if descriptor >= 0 { _ = close(descriptor) }
+            publicationMutex.unlock()
+            throw error
         }
+    }
+
+    private static func withPublicationLock<Result>(at url: URL?, operation: () throws -> Result) throws -> Result {
+        guard let url else { return try operation() }
+        let transaction = try beginPublicationTransaction(at: url)
+        defer { transaction.close() }
+        return try operation()
     }
 
     static func temporaryFileURL(for destinationURL: URL, uuid: UUID = UUID()) -> URL {
