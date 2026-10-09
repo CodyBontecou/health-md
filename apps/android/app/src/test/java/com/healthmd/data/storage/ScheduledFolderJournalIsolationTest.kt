@@ -11,12 +11,117 @@ import com.healthmd.domain.exportengine.testRegistry
 import java.io.File
 import java.nio.file.Files
 import java.util.Base64
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
 class ScheduledFolderJournalIsolationTest {
+    @Test
+    fun competingStoreCannotReplaceAuthorityWhileFirstAdmissionIsInFlight() {
+        val root = Files.createTempDirectory("synthetic-competing-journals").toFile()
+        val workers = Executors.newFixedThreadPool(2)
+        val firstAtSync = CountDownLatch(1)
+        val releaseFirst = CountDownLatch(1)
+        val secondStarted = CountDownLatch(1)
+        val secondFinished = CountDownLatch(1)
+        val pauseOnce = AtomicBoolean(true)
+        try {
+            val directory = File(root, "scheduled-folder-export-v1")
+            val initial = journal("competing-operation", AndroidExportProfile.android_sleep_v6)
+            val competing = initial.copy(folderUri = "content://synthetic/documents/tree/competitor")
+            val firstStore = ScheduledFolderExportJournalStore(directory, directorySync = {
+                if (pauseOnce.getAndSet(false)) {
+                    firstAtSync.countDown()
+                    check(releaseFirst.await(10, TimeUnit.SECONDS))
+                }
+                true
+            })
+            val secondStore = ScheduledFolderExportJournalStore(directory)
+            val first = workers.submit<Boolean> { runBlocking { firstStore.save(initial) } }
+            check(firstAtSync.await(10, TimeUnit.SECONDS))
+            val second = workers.submit<Boolean> {
+                secondStarted.countDown()
+                try { runBlocking { secondStore.save(competing) } }
+                finally { secondFinished.countDown() }
+            }
+            check(secondStarted.await(10, TimeUnit.SECONDS))
+            // Without a shared transaction lock, the competing store finishes
+            // while the first writer is paused after observing an absent job.
+            secondFinished.await(2, TimeUnit.SECONDS)
+            releaseFirst.countDown()
+            assertThat(first.get(10, TimeUnit.SECONDS)).isTrue()
+            assertThat(second.get(10, TimeUnit.SECONDS)).isFalse()
+            val bytes = isolatedFile(directory, initial.operationId).readBytes()
+            assertThat(runBlocking { secondStore.load(initial.operationId) })
+                .isEqualTo(ScheduledFolderJournalLoad.Found(initial))
+            assertThat(isolatedFile(directory, initial.operationId).readBytes()).isEqualTo(bytes)
+        } finally {
+            releaseFirst.countDown()
+            workers.shutdownNow()
+            workers.awaitTermination(10, TimeUnit.SECONDS)
+            root.deleteRecursively()
+        }
+    }
+
+    @Test
+    fun journalTransactionHoldsAnOsLockVisibleToAnotherJvmAndReleasesItAfterFailure() = runTest {
+        val root = Files.createTempDirectory("synthetic-journal-os-lock").toFile()
+        try {
+            val directory = File(root, "scheduled-folder-export-v1")
+            val lockFile = File(root, ".${directory.name}.journal.lock")
+            val probe = File(root, "JournalLockProbe.java")
+            probe.writeText("""
+                import java.nio.channels.FileChannel;
+                import java.nio.file.Path;
+                import java.nio.file.StandardOpenOption;
+                class JournalLockProbe {
+                    public static void main(String[] args) throws Exception {
+                        try (var channel = FileChannel.open(Path.of(args[0]),
+                                StandardOpenOption.CREATE, StandardOpenOption.WRITE)) {
+                            try (var lock = channel.tryLock()) {
+                                System.out.println(lock == null ? "locked" : "acquired");
+                            }
+                        }
+                    }
+                }
+            """.trimIndent())
+            fun probeLock(): String {
+                val java = File(System.getProperty("java.home"), "bin/java").absolutePath
+                val process = ProcessBuilder(java, probe.absolutePath, lockFile.absolutePath)
+                    .redirectErrorStream(true).start()
+                try {
+                    check(process.waitFor(15, TimeUnit.SECONDS))
+                    check(process.exitValue() == 0)
+                    return process.inputStream.bufferedReader().readText().trim()
+                } finally { process.destroyForcibly() }
+            }
+            val initial = journal("os-lock-operation", AndroidExportProfile.android_sleep_v6)
+            val store = ScheduledFolderExportJournalStore(directory, directorySync = {
+                assertThat(probeLock()).isEqualTo("locked")
+                true
+            })
+            assertThat(store.save(initial)).isTrue()
+            assertThat(probeLock()).isEqualTo("acquired")
+            val file = isolatedFile(directory, initial.operationId)
+            val original = file.readBytes()
+            val failedStore = ScheduledFolderExportJournalStore(directory, directorySync = {
+                assertThat(probeLock()).isEqualTo("locked")
+                false
+            })
+            assertThat(failedStore.save(initial)).isFalse()
+            assertThat(file.readBytes()).isEqualTo(original)
+            assertThat(probeLock()).isEqualTo("acquired")
+            assertThat(ScheduledFolderExportJournalStore(directory).load(initial.operationId))
+                .isEqualTo(ScheduledFolderJournalLoad.Found(initial))
+        } finally { root.deleteRecursively() }
+    }
+
     @Test
     fun wakeDateJournalSurvivesAnOlderBinaryDeletingItsHistoricalFile() = runTest {
         val root = Files.createTempDirectory("synthetic-sleep-journal").toFile()
