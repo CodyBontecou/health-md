@@ -162,6 +162,73 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testActualRawAndFileRejectionRetainsProtocolSelectedBeforeFingerprintFailure() async throws {
+        for files in [false, true] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: files,
+                version: files ? 6 : 3, requestCreatedAt: Date())
+            defer {
+                try? FileManager.default.removeItem(at: published.directory)
+                CLIExportActivityTracker.shared.clear(jobID: jobID)
+            }
+            let bytes = try Data(contentsOf: published.journal)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let request = try decoder.decode(DirectExportRequest.self,
+                from: JSONSerialization.data(withJSONObject: try XCTUnwrap(object["request"])))
+            let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: jobID)
+            let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+            let core = FakeAppleDirectProtocolRustCore()
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+            core.onFingerprint = { session.beginBootstrap() }
+            defer { core.onFingerprint = nil }
+            core.failCanonicalization = true
+            let transport = OperationProtocolPacketTransport()
+            let key = SymmetricKey(data: Data(repeating: 0x44, count: 32))
+            let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: model.session.peerBinding.destinationInstallationID,
+                peerDisplayName: "synthetic", messageCanonicalizer: session)
+            let connection = IPhoneDirectExportConnection(channel: channel)
+            let suite = "synthetic-rejection-protocol-" + UUID().uuidString
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let store = FakeHealthStore()
+            let healthKit = HealthKitManager(store: store, userDefaults: defaults)
+            let coordinator = IPhoneDirectExportCoordinator()
+            await coordinator.handle(request, peerBinding: model.session.peerBinding,
+                negotiation: negotiation, channel: connection, protocolAuthority: session,
+                healthKitManager: healthKit)
+            XCTAssertEqual(core.fingerprintCalls, 1, "The actual producer must reach its restored protocol selection")
+            XCTAssertEqual(transport.packetCount, 0, "Bootstrap cannot bypass selected Rust rejection canonicalization")
+            XCTAssertEqual(try Data(contentsOf: published.journal), bytes)
+            try published.ownership.validateGeneration()
+            core.failCanonicalization = false
+            core.returnNativeCanonicalMessage = true
+            await coordinator.handle(request, peerBinding: model.session.peerBinding,
+                negotiation: negotiation, channel: connection, protocolAuthority: session,
+                healthKitManager: healthKit)
+            XCTAssertEqual(core.fingerprintCalls, 2)
+            let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: UUID(), peerDisplayName: "synthetic")
+            guard case .message(.exportRejected(let failure)) = try await receiver.receive() else {
+                return XCTFail("The actual coordinator must send the rejection after canonicalization recovers")
+            }
+            XCTAssertEqual(failure.jobID, jobID)
+            XCTAssertEqual(failure.reason, .invalidRequest)
+            XCTAssertEqual(transport.packetCount, 0)
+            XCTAssertEqual(try Data(contentsOf: published.journal), bytes)
+            try published.ownership.validateGeneration()
+            XCTAssertFalse(store.authRequested)
+            XCTAssertTrue(store.requestedReadTypes.isEmpty)
+            XCTAssertTrue(store.queriedSumIdentifiers.isEmpty)
+            XCTAssertTrue(store.queriedCategoryIdentifiers.isEmpty)
+            XCTAssertTrue(store.quantitySampleQueries.isEmpty)
+            XCTAssertTrue(store.completedCanonicalQueryIdentifiers.isEmpty)
+        }
+    }
+
+    @MainActor
     func testIncomingProtocolSelectionIsRetainedAfterPendingReceiveAndOwnedCleanup() async throws {
         let core = FakeAppleDirectProtocolRustCore()
         let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
@@ -305,7 +372,7 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
     @MainActor
     private func publishInactiveCancellationFixture(jobID: UUID, files: Bool, version: Int,
-                                                   incompatible: Bool = false) throws
+                                                   incompatible: Bool = false, requestCreatedAt: Date? = nil) throws
         -> (directory: URL, journal: URL, ownership: AppleExportJournalCheckpoint) {
         let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: jobID)
         let encoder = JSONEncoder()
@@ -329,6 +396,12 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
             object["request"] = try JSONSerialization.jsonObject(with: encoder.encode(request))
             object["session"] = try JSONSerialization.jsonObject(with: encoder.encode(session))
             object["days"] = []
+        }
+        if let requestCreatedAt {
+            var request = try XCTUnwrap(object["request"] as? [String: Any])
+            let dates = try XCTUnwrap(JSONSerialization.jsonObject(with: encoder.encode([requestCreatedAt])) as? [String])
+            request["createdAt"] = try XCTUnwrap(dates.first)
+            object["request"] = request
         }
         if incompatible {
             var pin = try XCTUnwrap(object["appleDirectProtocolPin"] as? [String: Any])
@@ -480,7 +553,10 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
     var failEveryCall = false
     var failCanonicalization = false
     var fingerprint = String(repeating: "0", count: 64)
+    var onFingerprint: (@Sendable () -> Void)?
+    var fingerprintCalls = 0
     var canonicalMessage = Data()
+    var returnNativeCanonicalMessage = false
     var frame = Data()
 
     func buildInfo() throws -> AppleDirectProtocolBuildInfo {
@@ -513,13 +589,15 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
 
     func appleV1RequestFingerprint(_ bytes: Data) throws -> String {
         try checkFailure()
+        fingerprintCalls += 1
+        onFingerprint?()
         return fingerprint
     }
 
     func canonicalAppleV1Message(_ bytes: Data) throws -> Data {
         try checkFailure()
         if failCanonicalization { throw FakeError.failed }
-        return canonicalMessage
+        return returnNativeCanonicalMessage ? bytes : canonicalMessage
     }
 
     func encodeTransferChunk(_ chunk: CoreDirectTransferChunk) throws -> Data {

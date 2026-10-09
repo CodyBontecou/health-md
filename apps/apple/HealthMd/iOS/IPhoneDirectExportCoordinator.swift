@@ -413,13 +413,16 @@ final class IPhoneDirectExportCoordinator {
                     reason: failureReason,
                     message: error.localizedDescription
                 )
+                let rejectionAuthority = IPhoneDirectCancellationScope.current?.cancellationProtocolAuthority
+                    ?? protocolAuthority.frozenForCurrentOperation()
+                let rejectionChannel = channel.retainingProtocolAuthority(rejectionAuthority)
                 if let executionOwnership {
                     // A still-owned cancellation failure may report its terminal outcome.
                     try? await executionOwnership.continueWhileOwned {
-                        try await channel.send(.exportRejected(failure), ownership: executionOwnership)
+                        try await rejectionChannel.send(.exportRejected(failure), ownership: executionOwnership)
                     }
                 } else {
-                    try? await channel.send(.exportRejected(failure))
+                    try? await rejectionChannel.send(.exportRejected(failure))
                 }
             }
         }
