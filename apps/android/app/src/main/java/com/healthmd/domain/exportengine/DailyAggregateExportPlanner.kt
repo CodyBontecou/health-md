@@ -97,8 +97,8 @@ class FrozenDailyAggregateExportRequest private constructor(
                 require(mode == ExportEngineMode.rust) { "wake-date export requires the Rust engine" }
                 require(context?.sleepDayAttribution == SleepDayAttribution.MORNING_ENDS &&
                     context.exportProfileID == profile.publicProfileId) { "wake-date capture authority is incompatible" }
-                // The render adapter admits selected sleep stages/parents and rejects
-                // other detail arrays before a destination can accept the plan.
+                // The render adapter admits qualified selected native records and
+                // rejects remaining arrays before a destination can accept the plan.
                 require(!settings.formatCustomization.includeLegacyAndroidAliases &&
                     data.compatibilityProvenance == null && data.workouts.isEmpty() &&
                     data.plannedWorkouts.isEmpty() && !data.medicalResources.hasData) {
@@ -117,6 +117,12 @@ class FrozenDailyAggregateExportRequest private constructor(
             val customization = settings.formatCustomization.frozenCopy()
             return FrozenDailyAggregateExportRequest(
                 data = if (profile == AndroidExportProfile.android_sleep_v6) data.copy(
+                    activity = data.activity.copy(
+                        stepSamples = freezeQuantitySamples(data.activity.stepSamples),
+                        activityIntensityEntries = Collections.unmodifiableList(data.activity.activityIntensityEntries.map { entry ->
+                            entry.copy(metadata = Collections.unmodifiableMap(entry.metadata.toMap()))
+                        }),
+                    ),
                     heart = data.heart.copy(
                         samples = freezeQuantitySamples(data.heart.samples),
                         hrvSamples = freezeQuantitySamples(data.heart.hrvSamples),

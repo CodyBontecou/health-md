@@ -400,7 +400,18 @@ class JsonExporter {
                                 addJsonObject {
                                     // T0-04: ISO 8601 timestamp
                                     put("timestamp", sample.time.toIso8601())
-                                    put("value", sample.value.toInt())
+                                    if (nativeSuccessor) {
+                                        // The successor must not silently clamp a native interval
+                                        // count to the historical signed-Int representation.
+                                        require(sample.value.isFinite() && sample.value >= 0 &&
+                                            sample.value <= 9_007_199_254_740_991.0 &&
+                                            sample.value == sample.value.toLong().toDouble()) {
+                                            "wake-date native step count is incompatible"
+                                        }
+                                        put("value", sample.value.toLong())
+                                    } else {
+                                        put("value", sample.value.toInt())
+                                    }
                                     putSampleContext(sample, analyticalV5)
                                 }
                             }

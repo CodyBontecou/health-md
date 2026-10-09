@@ -28,6 +28,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
+import kotlinx.serialization.json.longOrNull
 import kotlinx.serialization.json.put
 
 /** Builds strict M5 render batches from one completed M4 result without repeating provider capture. */
@@ -457,7 +459,9 @@ object HealthMdRenderInputAdapter {
                     throw AdapterException("wake-date native sleep details are incompatible")
                 }
                 val selected = frozenSelectedOutputKeys ?: selectedOutputKeys
-                val quantities = mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected))
+                val quantities = mergeDetails(
+                    mergeDetails(quantityDetails(native, ownerDate, selected), bloodPressureDetails(native, ownerDate, selected)),
+                    activityDetails(native, ownerDate, selected))
                 val details = if (stages.isNotEmpty() || sessions.isNotEmpty()) {
                     mergeDetails(sleepDetails(stages, sessions, ownerDate, selected), quantities)
                 } else quantities
@@ -488,7 +492,8 @@ object HealthMdRenderInputAdapter {
 
     private val qualifiedDetailPaths = setOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"),
         listOf("heart", "heartRateSamples"), listOf("heart", "hrvSamples"),
-        listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"))
+        listOf("vitals", "bloodOxygenSamples"), listOf("vitals", "bloodGlucoseSamples"), listOf("vitals", "respiratoryRateSamples"), listOf("vitals", "bloodPressureSamples"),
+        listOf("activity", "stepSamples"), listOf("activity", "activityIntensity"))
 
     private fun mergeDetails(first: JsonObject, second: JsonObject): JsonObject = buildJsonObject {
         put("output_keys", JsonArray((first.getValue("output_keys").jsonArray + second.getValue("output_keys").jsonArray)
@@ -545,6 +550,76 @@ object HealthMdRenderInputAdapter {
             put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive))); put("csv_rows", JsonArray(rows)); put("markdown_blocks", JsonArray(blocks))
             put("bases_frontmatter_blocks", buildJsonArray {
                 if (yaml.isNotEmpty()) add(buildJsonObject { put("key", "native_quantity_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0) })
+            })
+        }
+    }
+
+    /** Existing Android-native interval records; never reinterpret intensity as Apple exercise time. */
+    private fun activityDetails(root: JsonObject, ownerDate: String, selected: List<String>): JsonObject {
+        val activity = root["activity"]?.jsonObject
+        val rows = mutableListOf<JsonObject>()
+        val records = mutableListOf<String>()
+        val keys = mutableSetOf<String>()
+        fun incompatible(): Nothing = throw AdapterException("wake-date native activity interval is incompatible")
+        fun exactInstant(value: JsonElement?): java.time.Instant {
+            val clock = value as? JsonObject ?: incompatible()
+            val seconds = clock["epochSecond"]?.jsonPrimitive?.longOrNull ?: incompatible()
+            val nano = clock["nano"]?.jsonPrimitive?.intOrNull ?: incompatible()
+            if (nano !in 0..999_999_999) incompatible()
+            val instant = runCatching { java.time.Instant.ofEpochSecond(seconds, nano.toLong()) }.getOrElse { incompatible() }
+            val encoded = clock["iso8601"]?.jsonPrimitive?.contentOrNull ?: incompatible()
+            if (runCatching { java.time.Instant.parse(encoded) }.getOrNull() != instant) incompatible()
+            return instant
+        }
+        for ((field, metric, unit, output) in listOf(
+            listOf("stepSamples", "steps_interval", "steps", "steps"),
+            listOf("activityIntensity", "activity_intensity_interval", "seconds", "activity_intensity_minutes"))) {
+            val samples = activity?.get(field)?.jsonArray ?: continue
+            if (samples.isEmpty()) continue
+            if (output !in selected) incompatible()
+            keys += output
+            for (element in samples) {
+                val sample = element as? JsonObject ?: incompatible()
+                val isSteps = field == "stepSamples"
+                val timestamp = sample[if (isSteps) "timestamp" else "startTimeISO"]?.jsonPrimitive?.contentOrNull ?: incompatible()
+                val start = exactInstant(sample[if (isSteps) "exactTime" else "exactStartTime"])
+                val end = exactInstant(sample["exactEndTime"])
+                if (!timestamp.endsWith("Z") || runCatching { java.time.Instant.parse(timestamp) }.getOrNull() != start || end < start) incompatible()
+                if (isSteps) {
+                    val count = sample["value"]?.jsonPrimitive?.longOrNull ?: incompatible()
+                    if (count < 0) incompatible()
+                } else {
+                    val endLabel = sample["endTimeISO"]?.jsonPrimitive?.contentOrNull ?: incompatible()
+                    if (!endLabel.endsWith("Z") || runCatching { java.time.Instant.parse(endLabel) }.getOrNull() != end ||
+                        sample["intensity"]?.jsonPrimitive?.contentOrNull.isNullOrBlank() ||
+                        (sample["duration"]?.jsonPrimitive?.longOrNull ?: incompatible()) < 0) incompatible()
+                }
+                val record = buildJsonObject { put("metric", metric); put("unit", unit); put("sample", sample) }.toString()
+                records += record
+                rows += buildJsonObject {
+                    put("date", ownerDate); put("category", "Native Detail"); put("metric", "Activity Record")
+                    put("value", record); put("unit", "json"); put("timestamp", timestamp); put("ordinal", rows.size)
+                }
+            }
+        }
+        return buildJsonObject {
+            put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive)))
+            put("csv_rows", JsonArray(rows))
+            put("markdown_blocks", buildJsonArray {
+                if (records.isNotEmpty()) add(buildJsonObject {
+                    put("heading", "Activity Record Details")
+                    // Keep source JSON readable and reversible inside a Markdown cell.
+                    val lines = listOf("| Native Record (JSON) |", "|---|") + records.map { record ->
+                        "| " + record.replace("|", "\\u007c").replace("`", "\\u0060")
+                            .replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026") + " |"
+                    }
+                    put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
+                })
+            })
+            put("bases_frontmatter_blocks", buildJsonArray {
+                if (records.isNotEmpty()) add(buildJsonObject {
+                    put("key", "native_activity_details"); put("lines", JsonArray(records.map { JsonPrimitive("  - $it") })); put("ordinal", 0)
+                })
             })
         }
     }

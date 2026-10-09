@@ -57,6 +57,81 @@ class HostCoreDailyAggregatePlannerTest {
     }
 
     @Test
+    fun nativeActivityIntervalsReachConcretePlannerWithoutInventedSummaries() = runTest {
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val start = Instant.parse("2026-11-01T05:30:00.123456789Z")
+        val end = Instant.parse("2026-11-01T06:30:00.987654321Z")
+        val metadata = mutableMapOf("synthetic" to "activity-source|`<br>&nbsp;")
+        val activity = ActivityData(
+            stepSamples = listOf(com.healthmd.domain.model.TimestampedSample(
+                java.time.LocalDateTime.ofInstant(start, context.zoneId), 2_147_483_648.0, source = "example.synthetic.activity",
+                metadata = metadata, exactTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start),
+                exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end),
+                identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-steps"))),
+            activityIntensityEntries = listOf(com.healthmd.domain.model.ActivityIntensityEntry(
+                java.time.LocalDateTime.ofInstant(start, context.zoneId), java.time.LocalDateTime.ofInstant(end, context.zoneId),
+                60.minutes, "moderate", source = "example.synthetic.activity", metadata = metadata,
+                exactStartTime = com.healthmd.domain.model.ExactSourceTimestamp.from(start),
+                exactEndTime = com.healthmd.domain.model.ExactSourceTimestamp.from(end),
+                identity = com.healthmd.domain.model.ExactSourceIdentity(nativeId = "synthetic-intensity"))))
+        val data = HealthData(LocalDate.of(2026, 11, 1), activity = activity)
+        val selection = MetricSelectionState(enabledMetrics = setOf("steps", "activity_intensity_minutes"))
+        val settings = ExportSettings(exportFormats = ExportFormat.entries.toSet(), includeGranularData = true,
+            metricSelection = selection, executionSleepCaptureContext = context, executionSleepCaptureAuthorityIsFrozen = true)
+        val request = FrozenDailyAggregateExportRequest.capture(data.filtered(selection, context), settings,
+            AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("concrete-activity", "concrete-activity-session"))
+        metadata["synthetic"] = "mutated-after-freeze"
+        val plan = HealthMdRustDailyAggregatePlanner(zoneIdProvider = { error("ambient clock is forbidden") }).plan(request).plan
+        assertThat(plan.items).hasSize(4)
+        for (artifact in plan.items) {
+            val text = artifact.content.decodeToString()
+            assertThat(text).contains(start.toString())
+            assertThat(text).contains(end.toString())
+            assertThat(text).contains("synthetic-steps")
+            assertThat(text).contains("synthetic-intensity")
+            assertThat(text).contains("example.synthetic.activity")
+            assertThat(text).doesNotContain("mutated-after-freeze")
+            assertThat(text).doesNotContain("steps:")
+            assertThat(text).doesNotContain("activity_intensity_minutes:")
+            if (artifact.relativePath.endsWith(".json")) {
+                val activityJson = Json.parseToJsonElement(text).jsonObject.getValue("activity").jsonObject
+                assertThat(activityJson.getValue("stepSamples").jsonArray.single().jsonObject.getValue("value").jsonPrimitive.content)
+                    .isEqualTo("2147483648")
+                assertThat(activityJson["steps"]).isNull()
+                assertThat(activityJson["activityIntensityMinutes"]).isNull()
+            }
+        }
+        System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+            plan.items.forEach { artifact ->
+                val output = File(directory, "android-v6-activity/${artifact.relativePath}")
+                requireNotNull(output.parentFile).mkdirs()
+                output.writeBytes(artifact.content)
+            }
+        }
+        for (count in listOf(-1.0, 1.5, Double.NaN, 9_007_199_254_740_992.0)) {
+            val incompatible = data.copy(activity = activity.copy(stepSamples = activity.stepSamples.map { it.copy(value = count) }))
+            try {
+                com.healthmd.data.export.JsonExporter().export(incompatible, request.customization, true, captureContext = context)
+                error("An incompatible source count must reject rather than truncate")
+            } catch (error: IllegalArgumentException) {
+                assertThat(error.message).isEqualTo("wake-date native JSON is incompatible")
+                assertThat(error.cause).isNull()
+            }
+        }
+        val invalid = data.copy(activity = activity.copy(stepSamples = activity.stepSamples.map {
+            it.copy(exactEndTime = null)
+        }))
+        val invalidRequest = FrozenDailyAggregateExportRequest.capture(invalid.filtered(selection, context), settings,
+            AndroidExportProfile.android_sleep_v6, ExportEngineMode.rust,
+            DailyAggregateExportIds("invalid-activity", "invalid-activity-session"))
+        try {
+            HealthMdRustDailyAggregatePlanner().plan(invalidRequest)
+            error("An interval without its exact end must reject")
+        } catch (_: com.healthmd.domain.render.HealthMdRenderInputAdapter.AdapterException) { }
+    }
+
+    @Test
     fun pairedBloodPressureWithoutSummariesReachesConcretePlannerAcrossEveryFormat() = runTest {
         val context = AndroidCaptureContext(ZoneId.of("UTC"), SleepDayAttribution.MORNING_ENDS)
         val instant = Instant.parse("2026-11-01T01:30:00.123456789Z")
@@ -326,9 +401,9 @@ class HostCoreDailyAggregatePlannerTest {
             DailyAggregateExportIds("concrete-non-sleep-detail", "concrete-non-sleep-detail-session"))
         try {
             planner.plan(unqualified)
-            error("non-sleep detail must reject")
+            error("An unselected activity interval must reject")
         } catch (error: com.healthmd.domain.render.HealthMdRenderInputAdapter.AdapterException) {
-            assertThat(error.message).contains("non-sleep")
+            assertThat(error.message).contains("native activity interval")
         }
         val native = com.healthmd.data.export.JsonExporter().export(data, request.customization, true, captureContext = context)
         assertThat(Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
