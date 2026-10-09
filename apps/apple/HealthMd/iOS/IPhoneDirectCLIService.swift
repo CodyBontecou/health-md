@@ -11,12 +11,12 @@ final class IPhoneDirectExportConnection: @unchecked Sendable {
         self.channel = channel
     }
 
-    func send(_ message: DirectMessage) async throws {
-        try await channel.send(message)
+    func send(_ message: DirectMessage, ownership: AppleExportJournalCheckpoint? = nil) async throws {
+        try await channel.send(message, authorization: ownership?.sendAuthorization)
     }
 
-    func sendBinaryTransferFrame(_ frame: Data) async throws {
-        try await channel.sendBinaryTransferFrame(frame)
+    func sendBinaryTransferFrame(_ frame: Data, ownership: AppleExportJournalCheckpoint? = nil) async throws {
+        try await channel.sendBinaryTransferFrame(frame, authorization: ownership?.sendAuthorization)
     }
 
     func receive() async throws -> DirectMessage {

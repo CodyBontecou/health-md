@@ -274,7 +274,9 @@ struct IPhoneDirectFileJournal: Codable {
 
 /// A value-owned read image and private direct-job generation. Neither enters journal JSON.
 /// A retained journal cannot silently become a fresh operation or a replacement generation.
-nonisolated struct AppleExportJournalCheckpoint {
+nonisolated extension AtomicFileWriter.PublicationLease: DirectPacketSendLease {}
+
+nonisolated struct AppleExportJournalCheckpoint: Sendable {
     var bytes: Data?
     var generation: UUID?
     var completionIdentity: UUID?
@@ -293,17 +295,31 @@ nonisolated struct AppleExportJournalCheckpoint {
         fileManager: FileManager = .default,
         operation: () throws -> Result
     ) throws -> Result {
+        let transaction = try acquireEnqueueLease(fileManager: fileManager)
+        defer { transaction.close() }
+        return try operation()
+    }
+
+    func acquireEnqueueLease(fileManager: FileManager = .default) throws -> AtomicFileWriter.PublicationLease {
         guard bytes != nil, let generation, let completionIdentity, let journalURL, let publicationLockURL else {
             throw POSIXError(.EAGAIN)
         }
         let transaction = try AtomicFileWriter.beginPublicationTransaction(at: publicationLockURL)
-        defer { transaction.close() }
-        guard (try? fileManager.attributesOfItem(atPath: journalURL.path)[.type] as? FileAttributeType) == .typeRegular,
-              let ownership = try Self.readOwnership(for: journalURL, fileManager: fileManager),
-              ownership.generation == generation, ownership.completionIdentity == completionIdentity else {
-            throw POSIXError(.EAGAIN)
+        do {
+            guard (try? fileManager.attributesOfItem(atPath: journalURL.path)[.type] as? FileAttributeType) == .typeRegular,
+                  let ownership = try Self.readOwnership(for: journalURL, fileManager: fileManager),
+                  ownership.generation == generation, ownership.completionIdentity == completionIdentity else {
+                throw POSIXError(.EAGAIN)
+            }
+            return transaction
+        } catch {
+            transaction.close()
+            throw error
         }
-        return try operation()
+    }
+
+    var sendAuthorization: DirectPacketSendAuthorization {
+        DirectPacketSendAuthorization { try acquireEnqueueLease() }
     }
 
     /// Completion side effects require the exact last accepted checkpoint as well

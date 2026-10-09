@@ -9,6 +9,7 @@
 
 import XCTest
 import Darwin
+import HealthMdConnectionCore
 @testable import HealthMd
 
 // MARK: - Fake Implementations
@@ -680,6 +681,40 @@ final class AtomicFileWriterTests: XCTestCase {
         }
         XCTAssertFalse(cleanupCalled)
         XCTAssertEqual(try Data(contentsOf: destination), replacementBytes)
+    }
+
+    func testTransportAuthorizationHoldsOSLockAndRejectsReplacement() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var checkpoint = AppleExportJournalCheckpoint()
+        try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        let descriptor = Darwin.open(lock.path, O_RDWR)
+        guard descriptor >= 0 else { throw POSIXError(.EIO) }
+        defer { Darwin.close(descriptor) }
+        let authorization = checkpoint.sendAuthorization
+        let lease = try authorization.acquireLease()
+        let heldProbe = flock(descriptor, LOCK_EX | LOCK_NB)
+        let heldError = errno
+        if heldProbe == 0 { _ = flock(descriptor, LOCK_UN) }
+        XCTAssertEqual(heldProbe, -1)
+        XCTAssertEqual(heldError, EWOULDBLOCK)
+        lease.close()
+        XCTAssertEqual(flock(descriptor, LOCK_EX | LOCK_NB), 0)
+        _ = flock(descriptor, LOCK_UN)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true,
+            lockURL: lock, durabilityRoot: root)
+        XCTAssertThrowsError(try authorization.acquireLease())
+        let current = try replacement.sendAuthorization.acquireLease()
+        current.close()
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
     }
 
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {

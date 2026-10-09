@@ -959,6 +959,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         }
     }
 
+    @MainActor
     func testLegacyOwnerUpgradePreservesCompletionIdentityAcrossInterruptedSync() throws {
         for failUpgradeSync in [false, true] {
             try withDirectJournalDirectory { parent in
@@ -974,7 +975,7 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
                 try bytes.write(to: url)
                 let generation = UUID()
                 try Data(generation.uuidString.lowercased().utf8).write(to: owner)
-                func load(failSync: Bool) throws -> (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? {
+                @MainActor func load(failSync: Bool) throws -> (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? {
                     try AppleExportJournalRecovery.loadOwned(at: url,
                         lockURL: lock, durabilityRoot: parent,
                         directorySync: { directory in

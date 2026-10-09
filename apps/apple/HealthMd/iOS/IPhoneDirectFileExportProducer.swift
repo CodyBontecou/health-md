@@ -1238,7 +1238,7 @@ final class IPhoneDirectFileExportProducer {
                 )
                 try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
                     try await channel.sendBinaryTransferFrame(
-                        try protocolAuthority.encodeTransferChunk(chunk)
+                        try protocolAuthority.encodeTransferChunk(chunk), ownership: journal.checkpoint
                     )
                 }
                 inFlight.append((sequence: chunk.sequence, sha256: chunk.sha256))
@@ -1273,7 +1273,7 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection
     ) async throws {
         try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
-            try await channel.send(message)
+            try await channel.send(message, ownership: journal.checkpoint)
         }
     }
 

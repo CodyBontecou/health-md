@@ -259,7 +259,7 @@ final class IPhoneDirectExportCoordinator {
                 if let executionOwnership {
                     // A still-owned cancellation failure may report its terminal outcome.
                     try? await executionOwnership.continueWhileOwned {
-                        try await channel.send(.exportRejected(failure))
+                        try await channel.send(.exportRejected(failure), ownership: executionOwnership)
                     }
                 } else {
                     try? await channel.send(.exportRejected(failure))
@@ -925,7 +925,7 @@ final class IPhoneDirectExportCoordinator {
             )
             try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
                 try await channel.sendBinaryTransferFrame(
-                    try protocolAuthority.encodeTransferChunk(chunk)
+                    try protocolAuthority.encodeTransferChunk(chunk), ownership: journal.checkpoint
                 )
             }
             let response = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
@@ -947,7 +947,7 @@ final class IPhoneDirectExportCoordinator {
         channel: IPhoneDirectExportConnection
     ) async throws {
         try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
-            try await channel.send(message)
+            try await channel.send(message, ownership: journal.checkpoint)
         }
     }
 

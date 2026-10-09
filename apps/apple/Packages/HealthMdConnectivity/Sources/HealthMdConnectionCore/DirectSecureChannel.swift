@@ -30,10 +30,34 @@ public enum DirectChannelError: LocalizedError, Equatable {
     }
 }
 
+/// Acquired and closed on the enqueue thread; never retained across an await.
+public protocol DirectPacketSendLease: AnyObject {
+    func close()
+}
+
+public struct DirectPacketSendAuthorization: Sendable {
+    public let acquireLease: @Sendable () throws -> any DirectPacketSendLease
+
+    public init(acquireLease: @escaping @Sendable () throws -> any DirectPacketSendLease) {
+        self.acquireLease = acquireLease
+    }
+}
+
 public protocol DirectPacketTransport: AnyObject, Sendable {
     func send(_ packet: ManualIPSyncPacket) async throws
+    /// Evaluate the factory and enqueue synchronously while the authorization lease is held.
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws
     func receive() async throws -> ManualIPSyncPacket
     func cancel()
+}
+
+extension DirectPacketTransport {
+    public func send(authorizedBy authorization: DirectPacketSendAuthorization,
+                     packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        // Falling back to ordinary async send would reopen the ownership race.
+        throw DirectChannelError.authenticationFailed("This transport cannot authorize packet enqueue.")
+    }
 }
 
 public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sendable {
@@ -82,6 +106,24 @@ public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sen
     }
 
     public func send(_ packet: ManualIPSyncPacket) async throws {
+        try await sendBytes(framedPacket(packet))
+    }
+
+    public func send(authorizedBy authorization: DirectPacketSendAuthorization,
+                     packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            do {
+                let lease = try authorization.acquireLease()
+                defer { lease.close() }
+                let bytes = try framedPacket(packet())
+                enqueueBytes(bytes, continuation: continuation)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+
+    private func framedPacket(_ packet: ManualIPSyncPacket) throws -> Data {
         let payload = try encoder.encode(packet)
         guard payload.count <= maximumPacketBytes else {
             throw DirectChannelError.frameTooLarge
@@ -90,7 +132,7 @@ public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sen
         framed.reserveCapacity(8 + payload.count)
         framed.appendManualIPLengthPrefix(payload.count)
         framed.append(payload)
-        try await sendBytes(framed)
+        return framed
     }
 
     public func receive() async throws -> ManualIPSyncPacket {
@@ -110,14 +152,18 @@ public final class DirectPacketConnection: DirectPacketTransport, @unchecked Sen
 
     private func sendBytes(_ data: Data) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            connection.send(content: data, completion: .contentProcessed { error in
-                if let error {
-                    continuation.resume(throwing: DirectChannelError.connectionFailed(error.localizedDescription))
-                } else {
-                    continuation.resume(returning: ())
-                }
-            })
+            enqueueBytes(data, continuation: continuation)
         }
+    }
+
+    private func enqueueBytes(_ data: Data, continuation: CheckedContinuation<Void, Error>) {
+        connection.send(content: data, completion: .contentProcessed { error in
+            if let error {
+                continuation.resume(throwing: DirectChannelError.connectionFailed(error.localizedDescription))
+            } else {
+                continuation.resume(returning: ())
+            }
+        })
     }
 
     private func receiveExactly(_ byteCount: Int) async throws -> Data {
@@ -226,16 +272,16 @@ public final class DirectSecureChannel: @unchecked Sendable {
         self.messageCanonicalizer = messageCanonicalizer
     }
 
-    public func send(_ message: DirectMessage) async throws {
+    public func send(_ message: DirectMessage, authorization: DirectPacketSendAuthorization? = nil) async throws {
         let nativeBytes = try encoder.encode(message)
-        try await sendEncrypted(messageCanonicalizer.canonicalizeDirectMessage(nativeBytes))
+        try await sendEncrypted(messageCanonicalizer.canonicalizeDirectMessage(nativeBytes), authorization: authorization)
     }
 
-    public func sendBinaryTransferFrame(_ frame: Data) async throws {
+    public func sendBinaryTransferFrame(_ frame: Data, authorization: DirectPacketSendAuthorization? = nil) async throws {
         guard DirectTransferBinaryFrame.isBinaryFrame(frame) else {
             throw DirectChannelError.malformedPacket
         }
-        try await sendEncrypted(frame)
+        try await sendEncrypted(frame, authorization: authorization)
     }
 
     public func receive() async throws -> DirectSecurePayload {
@@ -257,20 +303,28 @@ public final class DirectSecureChannel: @unchecked Sendable {
         }
     }
 
+    func pendingSendCount() async -> Int { await sendGate.waiterCount }
+
     public func cancel() {
         packetConnection.cancel()
     }
 
-    private func sendEncrypted(_ plaintext: Data) async throws {
+    private func sendEncrypted(_ plaintext: Data, authorization: DirectPacketSendAuthorization?) async throws {
         try await sendGate.perform { [self] in
-            let sequence = try allocateSendSequence()
-
-            var envelope = Self.envelopeMagic
-            var bigEndianSequence = sequence.bigEndian
-            withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
-            envelope.append(plaintext)
-            let sealed = try ManualIPSyncSecurity.seal(envelope, using: sessionKey)
-            try await packetConnection.send(.encrypted(sealed))
+            let packet: @Sendable () throws -> ManualIPSyncPacket = { [self] in
+                let sequence = try allocateSendSequence()
+                var envelope = Self.envelopeMagic
+                var bigEndianSequence = sequence.bigEndian
+                withUnsafeBytes(of: &bigEndianSequence) { envelope.append(contentsOf: $0) }
+                envelope.append(plaintext)
+                return .encrypted(try ManualIPSyncSecurity.seal(envelope, using: sessionKey))
+            }
+            if let authorization {
+                // The transport acquires ownership after this gate and before sequence allocation.
+                try await packetConnection.send(authorizedBy: authorization, packet: packet)
+            } else {
+                try await packetConnection.send(packet())
+            }
         }
     }
 
@@ -314,6 +368,7 @@ public final class DirectSecureChannel: @unchecked Sendable {
 private actor DirectAsyncGate {
     private var isLocked = false
     private var waiters: [CheckedContinuation<Void, Never>] = []
+    var waiterCount: Int { waiters.count }
 
     func perform<T: Sendable>(
         _ operation: @Sendable () async throws -> T
