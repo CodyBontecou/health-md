@@ -96,21 +96,19 @@ class DirectCliJobStore private constructor(
             requireDirectProtocolPinContinuity(saved.protocolPin, protocolPin)
             throw IllegalStateException("A prior Direct CLI preparation did not finish.")
         }
-        atomicWrite(
-            pending,
-            encodePendingJob(
-                PendingJob(
-                    version = DirectJobJournal.CURRENT_VERSION,
-                    requestFingerprint = requestFingerprint,
-                    expiresAt = expiresAt,
-                    enginePin = enginePin,
-                    protocolPin = protocolPin,
-                ),
-            ).toByteArray(),
+        val pendingImage = encodePendingJob(
+            PendingJob(
+                version = DirectJobJournal.CURRENT_VERSION,
+                requestFingerprint = requestFingerprint,
+                expiresAt = expiresAt,
+                enginePin = enginePin,
+                protocolPin = protocolPin,
+            ),
         )
+        atomicWrite(pending, pendingImage.toByteArray())
         val token = UUID.randomUUID().toString()
         atomicWrite(File(directory, OWNER_NAME), token.toByteArray(Charsets.US_ASCII))
-        DirectPreparationLease(jobId, token)
+        DirectPreparationLease(jobId, token, pendingImage)
     }
 
     fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean = withStoreLock {
@@ -127,10 +125,7 @@ class DirectCliJobStore private constructor(
 
     fun savePrepared(journal: DirectJobJournal, lease: DirectPreparationLease): Unit = withStoreLock {
         check(journal.transfer.accepted.jobId == lease.jobId) { "Direct CLI preparation identity changed." }
-        val directory = requirePreparationOwner(lease)
-        check(File(directory, PENDING_NAME).isFile && !File(directory, JOURNAL_NAME).exists()) {
-            "The Direct CLI preparation is no longer pending."
-        }
+        requirePendingPreparation(lease)
         save(journal)
     }
 
@@ -200,6 +195,19 @@ class DirectCliJobStore private constructor(
         // Re-establish durability even after a previous rename succeeded but its sync failed.
         syncAuthorityDirectories(directory)
         DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
+    }
+
+    fun preparationPacketSendAuthorization(
+        lease: DirectPreparationLease,
+        cancelBeforeEnqueue: Boolean = false,
+    ) = com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+        withStoreLock {
+            val directory = requirePendingPreparation(lease)
+            if (cancelBeforeEnqueue) {
+                check(deleteOwnedDirectory(directory)) { "Unable to cancel the Direct CLI preparation." }
+            }
+            enqueue()
+        }
     }
 
     fun packetSendAuthorization(lease: DirectAcceptedLease) =
@@ -285,12 +293,27 @@ class DirectCliJobStore private constructor(
     }
 
     fun directory(lease: DirectPreparationLease): File = withStoreLock {
-        val directory = requirePreparationOwner(lease)
-        check(File(directory, PENDING_NAME).isFile) { "The Direct CLI preparation is no longer pending." }
+        val directory = requirePendingPreparation(lease)
         File(directory, "capture-${lease.token}").apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI capture storage." }
             syncAuthorityDirectories(this)
         }
+    }
+
+    private fun requirePendingPreparation(lease: DirectPreparationLease): File {
+        val directory = requirePreparationOwner(lease)
+        val pending = File(directory, PENDING_NAME)
+        check(pending.isFile && !File(directory, JOURNAL_NAME).exists()) {
+            "The Direct CLI preparation is no longer pending."
+        }
+        val image = checkNotNull(lease.pendingImage) { "The Direct CLI pending authority is missing." }
+        check(pending.length() == image.toByteArray().size.toLong() && pending.readText() == image) {
+            "The Direct CLI pending authority changed."
+        }
+        check(Instant.parse(decodePendingJob(image).expiresAt).isAfter(Instant.now())) {
+            "The Direct CLI preparation expired."
+        }
+        return directory
     }
 
     private fun requirePreparationOwner(lease: DirectPreparationLease): File {
@@ -435,6 +458,7 @@ class DirectCliJobStore private constructor(
 class DirectPreparationLease internal constructor(
     internal val jobId: String,
     internal val token: String,
+    internal val pendingImage: String? = null,
 )
 
 /** An accepted operation's live ownership and frozen authority, never serialized on the wire. */

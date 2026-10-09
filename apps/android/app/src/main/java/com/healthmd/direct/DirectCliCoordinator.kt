@@ -697,7 +697,8 @@ class DirectCliCoordinator @Inject constructor(
             settingsSnapshotSha256 = settingsHash,
             requestFingerprint = fingerprint,
         )
-        channel.sendV2("export_accepted", ExportAccepted.serializer(), accepted)
+        val preparationSendAuthorization = jobStore.preparationPacketSendAuthorization(preparationLease)
+        channel.sendV2("export_accepted", ExportAccepted.serializer(), accepted, preparationSendAuthorization)
         channel.sendV2(
             "export_progress",
             ExportProgress.serializer(),
@@ -709,6 +710,7 @@ class DirectCliCoordinator @Inject constructor(
                 committedBytes = 0,
                 message = "Preparing Android export artifacts.",
             ),
+            preparationSendAuthorization,
         )
 
         val parentJob = currentCoroutineContext().job
@@ -722,11 +724,11 @@ class DirectCliCoordinator @Inject constructor(
                             com.healthmd.direct.protocol.JobPayload.serializer(),
                         )
                         require(payload.jobId == request.jobId)
-                        jobStore.cancelPreparation(preparationLease)
                         channel.sendV2(
                             "cancel_acknowledged",
                             com.healthmd.direct.protocol.JobPayload.serializer(),
                             payload,
+                            jobStore.preparationPacketSendAuthorization(preparationLease, cancelBeforeEnqueue = true),
                         )
                         _state.value = DirectCliConnectionState.Completed(
                             DirectCliCompletion.ExportCancelled,
@@ -738,6 +740,7 @@ class DirectCliCoordinator @Inject constructor(
                         "pong",
                         EmptyPayload.serializer(),
                         EmptyPayload(),
+                        preparationSendAuthorization,
                     )
                     else -> error("Unexpected message during Android artifact preparation.")
                 }
@@ -794,6 +797,7 @@ class DirectCliCoordinator @Inject constructor(
                             committedBytes = 0,
                             message = "Generating Android export files.",
                         ),
+                        preparationSendAuthorization,
                     )
                 }
                 generated.map { item ->

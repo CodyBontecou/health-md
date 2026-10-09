@@ -329,6 +329,80 @@ class DirectJobJournalMigrationTest {
     }
 
     @Test
+    fun preparationPacketsRejectChangedPendingAuthorityBeforeCallbacks() = withStore { store, root ->
+        val journal = durableJournal()
+        val lease = store.beginPreparation(journal.transfer.accepted.jobId,
+            journal.requestFingerprint, journal.expiresAt, journal.enginePin, journal.protocolPin)
+        val authorization = store.preparationPacketSendAuthorization(lease)
+        val pending = File(root, "direct-cli/jobs/${lease.jobId}/pending.json")
+        val original = pending.readText()
+        val changed = original.replace(journal.requestFingerprint, "changed-fingerprint")
+        pending.writeText(changed)
+        var callbacks = 0
+        assertThrows(IllegalStateException::class.java) {
+            authorization.authorizeEnqueue { callbacks += 1 }
+        }
+        assertThrows(IllegalStateException::class.java) { store.directory(lease) }
+        assertThrows(IllegalStateException::class.java) { store.savePrepared(journal, lease) }
+        assertThat(callbacks).isEqualTo(0)
+        assertThat(pending.readText()).isEqualTo(changed)
+        pending.writeText(original)
+        authorization.authorizeEnqueue { callbacks += 1 }
+        assertThat(callbacks).isEqualTo(1)
+    }
+
+    @Test
+    fun expiredPreparationCannotEnqueuePackets() = withStore { store, _ ->
+        val journal = durableJournal()
+        val lease = store.beginPreparation(journal.transfer.accepted.jobId,
+            journal.requestFingerprint, "2020-01-01T00:00:00Z", journal.enginePin, journal.protocolPin)
+        var callbacks = 0
+        assertThrows(IllegalStateException::class.java) {
+            store.preparationPacketSendAuthorization(lease).authorizeEnqueue { callbacks += 1 }
+        }
+        assertThat(callbacks).isEqualTo(0)
+    }
+
+    @Test
+    fun preparationCancellationAndAckEnqueueExcludeReplacementAdmission() = withStore { store, root ->
+        val journal = durableJournal()
+        fun admit() = store.beginPreparation(journal.transfer.accepted.jobId,
+            journal.requestFingerprint, journal.expiresAt, journal.enginePin, journal.protocolPin)
+        val original = admit()
+        val executor = Executors.newSingleThreadExecutor()
+        var replacement: java.util.concurrent.Future<DirectPreparationLease>? = null
+        try {
+            store.preparationPacketSendAuthorization(original, cancelBeforeEnqueue = true).authorizeEnqueue {
+                assertThat(File(root, "direct-cli/jobs/${original.jobId}").exists()).isFalse()
+                val attempting = CountDownLatch(1)
+                replacement = executor.submit<DirectPreparationLease> {
+                    attempting.countDown()
+                    admit()
+                }
+                assertThat(attempting.await(2, TimeUnit.SECONDS)).isTrue()
+                assertThrows(TimeoutException::class.java) { replacement!!.get(100, TimeUnit.MILLISECONDS) }
+                val lockFile = File(root, "direct-cli/.jobs.journal.lock")
+                java.io.RandomAccessFile(lockFile, "rw").use { file ->
+                    assertThrows(java.nio.channels.OverlappingFileLockException::class.java) {
+                        file.channel.tryLock()
+                    }
+                }
+            }
+            val current = replacement!!.get(2, TimeUnit.SECONDS)
+            assertThat(current.token).isNotEqualTo(original.token)
+            val pending = File(root, "direct-cli/jobs/${current.jobId}/pending.json")
+            val bytes = pending.readBytes()
+            var staleCallbacks = 0
+            assertThrows(IllegalStateException::class.java) {
+                store.preparationPacketSendAuthorization(original, cancelBeforeEnqueue = true)
+                    .authorizeEnqueue { staleCallbacks += 1 }
+            }
+            assertThat(staleCallbacks).isEqualTo(0)
+            assertThat(pending.readBytes()).isEqualTo(bytes)
+        } finally { executor.shutdownNow() }
+    }
+
+    @Test
     fun packetEnqueueHoldsTheFilesystemLockAndRejectsIdenticalReplacement() = withStore { store, root ->
         val original = durableJournal()
         val jobId = original.transfer.accepted.jobId
