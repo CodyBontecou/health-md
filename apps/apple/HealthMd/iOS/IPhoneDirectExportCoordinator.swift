@@ -193,8 +193,9 @@ final class IPhoneDirectExportCoordinator {
                     )
                 }
             queryExecutionControllers.removeValue(forKey: request.jobID)
-            CLIExportActivityTracker.shared.finish(
+            publishActivityOutcome(
                 jobID: request.jobID,
+                ownership: executionOwnership,
                 phase: completedWithoutMissingData ? .completed : .completedWithWarnings,
                 message: completedWithoutMissingData
                     ? "The CLI export completed successfully."
@@ -239,20 +240,23 @@ final class IPhoneDirectExportCoordinator {
                 queryExecutionControllers.removeValue(forKey: request.jobID)
             }
             if failureReason == .cancelled {
-                CLIExportActivityTracker.shared.finish(
+                publishActivityOutcome(
                     jobID: request.jobID,
+                    ownership: executionOwnership,
                     phase: .cancelled,
                     message: "The direct CLI export was cancelled."
                 )
             } else if retainedForResume {
-                CLIExportActivityTracker.shared.setMessage(
+                publishActivityOutcome(
                     jobID: request.jobID,
+                    ownership: executionOwnership,
                     phase: .paused,
                     message: "Direct CLI export paused. Reconnect and resume the same job."
                 )
             } else {
-                CLIExportActivityTracker.shared.finish(
+                publishActivityOutcome(
                     jobID: request.jobID,
+                    ownership: executionOwnership,
                     phase: .failed,
                     message: error.localizedDescription
                 )
@@ -290,6 +294,32 @@ final class IPhoneDirectExportCoordinator {
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let component, !component.isEmpty else { return "Selected folder" }
         return component
+    }
+
+    @discardableResult
+    func publishActivityOutcome(
+        jobID: UUID,
+        ownership: AppleExportJournalCheckpoint?,
+        phase: CLIExportActivityTracker.Phase,
+        message: String
+    ) -> Bool {
+        let publish = {
+            if phase.isTerminal {
+                CLIExportActivityTracker.shared.finish(jobID: jobID, phase: phase, message: message)
+            } else {
+                CLIExportActivityTracker.shared.setMessage(jobID: jobID, phase: phase, message: message)
+            }
+        }
+        if let ownership {
+            do {
+                try ownership.withGenerationOwnership { publish() }
+            } catch {
+                return false
+            }
+        } else {
+            publish()
+        }
+        return true
     }
 
     @discardableResult

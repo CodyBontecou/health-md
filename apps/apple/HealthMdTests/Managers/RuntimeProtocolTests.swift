@@ -989,6 +989,43 @@ final class ProductionAdapterTests: XCTestCase {
 #if os(iOS)
 final class DirectCoordinatorAdmissionTests: XCTestCase {
     @MainActor
+    func testReplacedGenerationCannotPublishTerminalActivityButCurrentProgressCanFinish() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let bytes = Data("synthetic accepted authority".utf8)
+        var old = AppleExportJournalCheckpoint()
+        try old.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        try replacement.publish(bytes, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        let coordinator = IPhoneDirectExportCoordinator()
+        let jobID = UUID()
+        let tracker = CLIExportActivityTracker.shared
+        defer { tracker.clear(jobID: jobID) }
+        tracker.begin(jobID: jobID, source: .direct, totalDays: 2, message: "Replacement capture")
+        let admitted = tracker.snapshot
+        for phase in [CLIExportActivityTracker.Phase.failed, .cancelled, .completed, .paused] {
+            XCTAssertFalse(coordinator.publishActivityOutcome(jobID: jobID, ownership: old,
+                phase: phase, message: "Stale callback"))
+            XCTAssertEqual(tracker.snapshot, admitted)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), bytes)
+        let accepted = replacement
+        try replacement.publish(Data("same-generation progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertTrue(coordinator.publishActivityOutcome(jobID: jobID, ownership: accepted,
+            phase: .completed, message: "Current completion"))
+        XCTAssertEqual(tracker.snapshot?.phase, .completed)
+        XCTAssertEqual(tracker.snapshot?.message, "Current completion")
+    }
+
+    @MainActor
     func testRejectedSameIDRequestDoesNotReleaseTheAdmittedOperation() async throws {
         let suite = "synthetic-direct-admission-" + UUID().uuidString
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
