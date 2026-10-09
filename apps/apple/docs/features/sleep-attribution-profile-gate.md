@@ -147,4 +147,13 @@ Android scheduled-folder journal load, save and discard now share one transactio
 
 A real-filesystem two-store control reproduces both writers accepting incompatible frozen destinations before the lock and permits only the first authority afterward. A separate JVM attempts a nonblocking OS lock during publication, observes the lock held, and acquires it after successful and failed saves. These are synthetic host controls; packaged Android device/process qualification remains required. Historical binaries that do not participate in this coordination are not covered by the lock; the existing successor namespace remains necessary for downgrade isolation.
 
-Android direct-transfer journals, Apple checkpoint CAS, complete writer fencing, power-loss recovery, downgrade/full resume and production/device/vault gates remain unfinished. Both Morning ends production settings remain closed.
+The Android direct-store transaction controls below add accepted-authority protection; Apple checkpoint CAS, complete producer fencing, power-loss recovery, downgrade/full resume and production/device/vault gates remain unfinished. Both Morning ends production settings remain closed.
+
+
+## Android direct journal authority and transactions
+
+Android direct job saves now compare an accepted journal's version, fingerprint, expiration, complete prepared transfer, export-engine pin and protocol pin before replacing bytes. Accepted authority survives removal of the pending preparation marker. Accounting and completion can advance but cannot roll back; an accepted job cannot enter a second preparation, and corrupt journal bytes cannot be replaced by a new save. Historical journal serialization and protocol/profile identities remain unchanged.
+
+Store operations share a reentrant process lock and an OS file lock across cooperating store instances/processes. Nested accounting/completion and expiry operations reuse the same root lock. The persistent empty lock file lives outside the jobs directory, so job cancellation and whole-job-store purging retain its coordination inode. Synthetic host controls reproduce the prior authority/rollback failures, admit only one conflicting two-store writer, and block publication while a separate JVM owns the OS lock. They also verify lock-inode continuity through purge and normal recovery afterward.
+
+This protects store transactions, not an entire asynchronous capture lease. Complete producer fencing after cancellation/purge, successor namespace/downgrade isolation, directory-sync/power-loss recovery and packaged Android device/process qualification remain required. Apple checkpoint CAS, complete end-to-end resume and all production/device/vault/consumer gates remain unfinished; both Morning ends production settings remain closed.

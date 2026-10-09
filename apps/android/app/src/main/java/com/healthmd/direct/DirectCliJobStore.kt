@@ -5,8 +5,11 @@ import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.domain.exportengine.ExportEnginePin
 import com.healthmd.domain.exportengine.ExportEnginePinCodec
 import java.io.File
+import java.io.RandomAccessFile
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.locks.ReentrantLock
+import kotlin.concurrent.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.serialization.KSerializer
@@ -31,8 +34,7 @@ class DirectCliJobStore @Inject constructor(
     }
     private val json = Json { encodeDefaults = true; explicitNulls = true; ignoreUnknownKeys = false }
 
-    @Synchronized
-    fun load(jobId: String, requestFingerprint: String): DirectJobJournal? {
+    fun load(jobId: String, requestFingerprint: String): DirectJobJournal? = withStoreLock {
         sweepExpired()
         val directory = jobDirectory(jobId)
         val file = File(directory, JOURNAL_NAME)
@@ -40,7 +42,7 @@ class DirectCliJobStore @Inject constructor(
             require(directory.listFiles().isNullOrEmpty()) {
                 "The durable Direct CLI spool is incomplete."
             }
-            return null
+            return@withStoreLock null
         }
         val journal = runCatching { json.decodeFromString<DirectJobJournal>(file.readText()) }
             .getOrElse { throw IllegalArgumentException("The durable Direct CLI journal is corrupt.", it) }
@@ -53,21 +55,23 @@ class DirectCliJobStore @Inject constructor(
         require(journal.transfer.artifactPaths.values.all { File(it).isFile }) {
             "A resumable Direct CLI artifact is missing."
         }
-        return journal
+        journal
     }
 
-    @Synchronized
     fun beginPreparation(
         jobId: String,
         requestFingerprint: String,
         expiresAt: String,
         enginePin: ExportEnginePin? = null,
         protocolPin: AndroidDirectProtocolPin? = null,
-    ) {
+    ): Unit = withStoreLock {
         requireValidOptionalPin(enginePin)
         requireValidOptionalProtocolPin(protocolPin)
         val directory = jobDirectory(jobId).apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+        }
+        check(!File(directory, JOURNAL_NAME).exists()) {
+            "An accepted Direct CLI job cannot start another preparation."
         }
         val pending = File(directory, PENDING_NAME)
         if (pending.isFile) {
@@ -96,24 +100,38 @@ class DirectCliJobStore @Inject constructor(
         )
     }
 
-    @Synchronized
-    fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean {
+    fun hasIncompletePreparation(jobId: String, requestFingerprint: String): Boolean = withStoreLock {
         sweepExpired()
         val pending = File(jobDirectory(jobId), PENDING_NAME)
-        if (!pending.isFile) return false
+        if (!pending.isFile) return@withStoreLock false
         val saved = runCatching { decodePendingJob(pending.readText()) }
-            .getOrElse { return true }
+            .getOrElse { return@withStoreLock true }
         require(saved.requestFingerprint == requestFingerprint) {
             "The pending Direct CLI request changed."
         }
-        return true
+        true
     }
 
-    @Synchronized
-    fun save(journal: DirectJobJournal) {
+    fun save(journal: DirectJobJournal): Unit = withStoreLock {
         require(UUID.fromString(journal.transfer.accepted.jobId).toString() == journal.transfer.accepted.jobId)
         val directory = jobDirectory(journal.transfer.accepted.jobId).apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+        }
+        loadUnvalidated(journal.transfer.accepted.jobId)?.let { existing ->
+            require(existing.version == journal.version &&
+                existing.requestFingerprint == journal.requestFingerprint &&
+                existing.expiresAt == journal.expiresAt &&
+                existing.transfer == journal.transfer) {
+                "The accepted Direct CLI authority changed."
+            }
+            requireDirectPinContinuity(existing.enginePin, journal.enginePin)
+            requireDirectProtocolPinContinuity(existing.protocolPin, journal.protocolPin)
+            require(!existing.accounted || journal.accounted) {
+                "Direct CLI accounting cannot be rolled back."
+            }
+            require(!existing.completed || journal.completed) {
+                "Direct CLI completion cannot be rolled back."
+            }
         }
         val pendingFile = File(directory, PENDING_NAME)
         if (pendingFile.isFile) {
@@ -134,33 +152,28 @@ class DirectCliJobStore @Inject constructor(
         pendingFile.delete()
     }
 
-    @Synchronized
-    fun markAccounted(jobId: String) {
+    fun markAccounted(jobId: String): Unit = withStoreLock {
         val journal = requireNotNull(loadUnvalidated(jobId))
         if (!journal.accounted) save(journal.copy(accounted = true))
     }
 
-    @Synchronized
-    fun markCompleted(jobId: String) {
+    fun markCompleted(jobId: String): Unit = withStoreLock {
         val journal = requireNotNull(loadUnvalidated(jobId))
         // Keep exact artifacts through the bounded job lifetime so a lost completion confirmation
         // can replay idempotently without rereading a non-transactional provider.
         save(journal.copy(completed = true))
     }
 
-    @Synchronized
-    fun cancel(jobId: String) {
+    fun cancel(jobId: String): Unit = withStoreLock {
         jobDirectory(jobId).deleteRecursively()
     }
 
-    @Synchronized
-    fun purgeAll() {
+    fun purgeAll(): Unit = withStoreLock {
         root.deleteRecursively()
         check(root.mkdirs() || root.isDirectory) { "Unable to recreate the Direct CLI job store." }
     }
 
-    @Synchronized
-    fun sweepExpired(now: Instant = Instant.now()) {
+    fun sweepExpired(now: Instant = Instant.now()): Unit = withStoreLock {
         root.listFiles()?.filter(File::isDirectory)?.forEach { directory ->
             val journal = runCatching {
                 json.decodeFromString<DirectJobJournal>(File(directory, JOURNAL_NAME).readText())
@@ -177,8 +190,26 @@ class DirectCliJobStore @Inject constructor(
         }
     }
 
-    fun directory(jobId: String): File = jobDirectory(jobId).apply {
-        check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+    fun directory(jobId: String): File = withStoreLock {
+        jobDirectory(jobId).apply {
+            check(mkdirs() || isDirectory) { "Unable to create Direct CLI job directory." }
+        }
+    }
+
+    /// Keep the lock outside jobs so purgeAll cannot replace its inode.
+    /// Nested operations on the same root reuse the lock on their owning thread.
+    private fun <T> withStoreLock(block: () -> T): T = transactionLock.withLock {
+        val lockFile = File(root.parentFile, ".jobs.journal.lock").canonicalFile
+        val active = activeLockPaths.get()
+        if (!active.add(lockFile.path)) return@withLock block()
+        try {
+            RandomAccessFile(lockFile, "rw").use { file ->
+                file.channel.lock().use { block() }
+            }
+        } finally {
+            active.remove(lockFile.path)
+            if (active.isEmpty()) activeLockPaths.remove()
+        }
     }
 
     private fun loadUnvalidated(jobId: String): DirectJobJournal? {
@@ -230,6 +261,8 @@ class DirectCliJobStore @Inject constructor(
     }
 
     companion object {
+        private val transactionLock = ReentrantLock()
+        private val activeLockPaths = ThreadLocal.withInitial { mutableSetOf<String>() }
         private const val JOURNAL_NAME = "job.json"
         private const val PENDING_NAME = "pending.json"
         private const val MAXIMUM_RETENTION_SECONDS = 7L * 24L * 60L * 60L

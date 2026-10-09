@@ -1,5 +1,6 @@
 package com.healthmd.direct
 
+import android.content.Context
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.direct.protocol.ExportAccepted
 import com.healthmd.direct.protocol.PeerBinding
@@ -9,7 +10,16 @@ import com.healthmd.direct.protocol.ResolvedRange
 import com.healthmd.direct.protocol.TransferSession
 import com.healthmd.domain.exportengine.ExportEngineMode
 import com.healthmd.testing.syntheticExportEnginePin
+import java.io.File
+import java.nio.file.Files
+import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
@@ -112,6 +122,160 @@ class DirectJobJournalMigrationTest {
                 enginePin = pendingPin,
             )
         }
+    }
+
+    @Test
+    fun acceptedAuthorityCannotBeReplacedAfterPendingMarkerIsRemoved() = withStore { store, root ->
+        val initial = durableJournal()
+        store.save(initial)
+        val file = File(root, "direct-cli/jobs/${initial.transfer.accepted.jobId}/job.json")
+        val original = file.readBytes()
+        val alternatives = listOf(
+            initial.copy(requestFingerprint = "different-synthetic-request"),
+            initial.copy(expiresAt = Instant.now().plusSeconds(7200).toString()),
+            initial.copy(version = DirectJobJournal.LEGACY_VERSION),
+            initial.copy(enginePin = syntheticExportEnginePin(mode = ExportEngineMode.rust)),
+            initial.copy(protocolPin = protocolPin(AndroidDirectProtocolEngineMode.rust)),
+            initial.copy(transfer = initial.transfer.copy(session = initial.transfer.session.copy(
+                sessionId = "50000000-0000-4000-8000-000000000005",
+            ))),
+            initial.copy(transfer = initial.transfer.copy(artifactPaths = mapOf("synthetic-artifact" to "/synthetic/changed"))),
+        )
+        alternatives.forEach { changed ->
+            assertThrows(IllegalArgumentException::class.java) { store.save(changed) }
+            assertThat(file.readBytes()).isEqualTo(original)
+        }
+        assertThat(store.load(initial.transfer.accepted.jobId, initial.requestFingerprint)).isEqualTo(initial)
+    }
+
+    @Test
+    fun accountingAndCompletionCannotBeRolledBackByAStaleJournal() = withStore { store, root ->
+        val initial = durableJournal()
+        val jobId = initial.transfer.accepted.jobId
+        store.save(initial)
+        store.markAccounted(jobId)
+        store.markCompleted(jobId)
+        val file = File(root, "direct-cli/jobs/$jobId/job.json")
+        val completedBytes = file.readBytes()
+        assertThrows(IllegalArgumentException::class.java) { store.save(initial) }
+        assertThrows(IllegalArgumentException::class.java) { store.save(initial.copy(accounted = true)) }
+        assertThat(file.readBytes()).isEqualTo(completedBytes)
+        val accepted = initial.copy(accounted = true, completed = true)
+        store.save(accepted)
+        assertThat(file.readBytes()).isEqualTo(completedBytes)
+        assertThat(store.load(jobId, initial.requestFingerprint)).isEqualTo(accepted)
+    }
+
+    @Test
+    fun acceptedJournalCannotStartAnotherPreparationOrReplaceCorruptAuthority() = withStore { store, root ->
+        val initial = durableJournal()
+        val jobId = initial.transfer.accepted.jobId
+        store.save(initial)
+        assertThrows(IllegalStateException::class.java) {
+            store.beginPreparation(jobId, initial.requestFingerprint, initial.expiresAt)
+        }
+        val directory = File(root, "direct-cli/jobs/$jobId")
+        assertThat(File(directory, "pending.json").exists()).isFalse()
+        val file = File(directory, "job.json")
+        val corruptBytes = "synthetic corrupt authority".encodeToByteArray()
+        file.writeBytes(corruptBytes)
+        assertThrows(IllegalStateException::class.java) { store.save(initial) }
+        assertThat(file.readBytes()).isEqualTo(corruptBytes)
+    }
+
+    @Test
+    fun competingStoresAdmitOnlyOneFrozenAuthority() = withStore { firstStore, root ->
+        val context = mockk<Context> { every { noBackupFilesDir } returns root }
+        val secondStore = DirectCliJobStore(DirectCliTrustStore(context))
+        val initial = durableJournal()
+        val alternative = initial.copy(requestFingerprint = "competing-synthetic-request")
+        val start = CountDownLatch(1)
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val saves = listOf(firstStore to initial, secondStore to alternative).map { (store, journal) ->
+                workers.submit<Boolean> {
+                    check(start.await(10, TimeUnit.SECONDS))
+                    try { store.save(journal); true } catch (_: IllegalArgumentException) { false }
+                }
+            }
+            start.countDown()
+            val results = saves.map { it.get(10, TimeUnit.SECONDS) }
+            assertThat(results.count { it }).isEqualTo(1)
+            val winner = if (results.first()) initial else alternative
+            assertThat(firstStore.load(winner.transfer.accepted.jobId, winner.requestFingerprint))
+                .isEqualTo(winner)
+        } finally {
+            start.countDown()
+            workers.shutdownNow()
+            workers.awaitTermination(10, TimeUnit.SECONDS)
+        }
+    }
+
+    @Test
+    fun separateJvmLockBlocksPublicationAndPurgeRetainsTheCoordinationInode() = withStore { store, root ->
+        val lockFile = File(root, "direct-cli/.jobs.journal.lock")
+        val source = File(root, "DirectJournalLockHolder.java")
+        source.writeText("""
+            import java.nio.channels.FileChannel;
+            import java.nio.file.Path;
+            import java.nio.file.StandardOpenOption;
+            class DirectJournalLockHolder {
+                public static void main(String[] args) throws Exception {
+                    try (var channel = FileChannel.open(Path.of(args[0]),
+                            StandardOpenOption.CREATE, StandardOpenOption.WRITE);
+                         var lock = channel.lock()) {
+                        System.out.println("locked");
+                        System.out.flush();
+                        System.in.read();
+                    }
+                }
+            }
+        """.trimIndent())
+        val javaExecutable = File(System.getProperty("java.home"), "bin/java").absolutePath
+        val process = ProcessBuilder(javaExecutable, source.absolutePath, lockFile.absolutePath)
+            .redirectErrorStream(true).start()
+        val workers = Executors.newFixedThreadPool(2)
+        try {
+            val ready = workers.submit<String> { process.inputStream.bufferedReader().readLine() }
+            assertThat(ready.get(15, TimeUnit.SECONDS)).isEqualTo("locked")
+            val initial = durableJournal()
+            val started = CountDownLatch(1)
+            val save = workers.submit { started.countDown(); store.save(initial) }
+            check(started.await(10, TimeUnit.SECONDS))
+            assertThrows(TimeoutException::class.java) { save.get(250, TimeUnit.MILLISECONDS) }
+            assertThat(File(root, "direct-cli/jobs/${initial.transfer.accepted.jobId}/job.json").exists()).isFalse()
+            process.outputStream.write(1)
+            process.outputStream.flush()
+            check(process.waitFor(10, TimeUnit.SECONDS))
+            assertThat(process.exitValue()).isEqualTo(0)
+            save.get(10, TimeUnit.SECONDS)
+            assertThat(store.load(initial.transfer.accepted.jobId, initial.requestFingerprint)).isEqualTo(initial)
+            val inode = Files.readAttributes(lockFile.toPath(), java.nio.file.attribute.BasicFileAttributes::class.java).fileKey()
+            assertThat(inode).isNotNull()
+            store.purgeAll()
+            assertThat(Files.readAttributes(lockFile.toPath(), java.nio.file.attribute.BasicFileAttributes::class.java).fileKey())
+                .isEqualTo(inode)
+            store.save(initial)
+            assertThat(store.load(initial.transfer.accepted.jobId, initial.requestFingerprint)).isEqualTo(initial)
+        } finally {
+            process.destroyForcibly()
+            workers.shutdownNow()
+            workers.awaitTermination(10, TimeUnit.SECONDS)
+        }
+    }
+
+    private fun durableJournal() = DirectJobJournal(
+        requestFingerprint = "request-fingerprint",
+        expiresAt = Instant.now().plusSeconds(3600).toString(),
+        transfer = transfer(),
+    )
+
+    private fun withStore(action: (DirectCliJobStore, File) -> Unit) {
+        val root = Files.createTempDirectory("synthetic-direct-journal").toFile()
+        try {
+            val context = mockk<Context> { every { noBackupFilesDir } returns root }
+            action(DirectCliJobStore(DirectCliTrustStore(context)), root)
+        } finally { root.deleteRecursively() }
     }
 
     private fun protocolPin(mode: AndroidDirectProtocolEngineMode) = AndroidDirectProtocolPin(
