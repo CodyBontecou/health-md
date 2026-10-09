@@ -238,6 +238,9 @@ final class IPhoneDirectFileExportProducer {
         }
 
         let completionOwnership = current.checkpoint
+        guard let completionIdentity = completionOwnership.completionIdentity else {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
         do {
             try completionOwnership.withCheckpointOwnership {
                 current.state = "completed"
@@ -245,7 +248,7 @@ final class IPhoneDirectFileExportProducer {
                 let shouldRecordCompletion = !current.completionRecorded
                 if shouldRecordCompletion {
                     if successCount > 0 {
-                        try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+                        try PurchaseManager.shared.recordExportUse(jobID: completionIdentity)
                     }
                     let retryableFailedDateDetails = current.capturedDays.compactMap { day -> FailedDateDetail? in
                         guard day.isRequestedDate, !day.succeeded else { return nil }
@@ -288,13 +291,13 @@ final class IPhoneDirectFileExportProducer {
                         dateRangeEnd: current.requestedDates.last ?? request.createdAt,
                         targetLabel: destination.rootPath,
                         fileCount: current.generatedFiles.count,
-                        idempotencyKey: request.jobID,
+                        idempotencyKey: completionIdentity,
                         appleExportEnginePin: current.appleExportEnginePin,
                         operationDetails: historyOperationDetails(for: current)
                     )
                     current.completionRecorded = true
                 }
-                // Both side effects are keyed by job ID, so a crash before this journal
+                // Both side effects use the retained completion identity, so a crash before this journal
                 // save retries them without double charging or duplicating history.
                 try saveJournal(&current)
             }
@@ -1640,6 +1643,7 @@ final class IPhoneDirectFileExportProducer {
                 durabilityRoot: support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,
                     .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                legacyCompletionIdentity: { $0.request.jobID },
                 isSupported: { journal in journal.request.jobID == jobID && IPhoneDirectFileJournal.isSupportedVersion(journal.version) })
         guard var saved else { return nil }
         saved.journal.checkpoint = saved.checkpoint

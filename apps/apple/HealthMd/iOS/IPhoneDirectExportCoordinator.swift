@@ -428,6 +428,9 @@ final class IPhoneDirectExportCoordinator {
         }
 
         let completionOwnership = current.checkpoint
+        guard let completionIdentity = completionOwnership.completionIdentity else {
+            throw IPhoneDirectExportError.requestChanged
+        }
         do {
             try completionOwnership.withCheckpointOwnership {
                 current.state = .completed
@@ -438,7 +441,7 @@ final class IPhoneDirectExportCoordinator {
                 let shouldRecordCompletion = !current.completionRecorded
                 if shouldRecordCompletion {
                     if successCount > 0 {
-                        try PurchaseManager.shared.recordExportUse(jobID: request.jobID)
+                        try PurchaseManager.shared.recordExportUse(jobID: completionIdentity)
                     }
                     let dates = sourceDates(
                         current.accepted.resolvedDateIdentifiers,
@@ -478,12 +481,12 @@ final class IPhoneDirectExportCoordinator {
                         dateRangeEnd: dates.last ?? request.createdAt,
                         targetLabel: "Health.md CLI",
                         fileCount: 0,
-                        idempotencyKey: request.jobID,
+                        idempotencyKey: completionIdentity,
                         operationDetails: historyOperationDetails(for: current)
                     )
                     current.completionRecorded = true
                 }
-                // Both side effects are keyed by job ID, so a crash before this journal
+                // Both side effects use the retained completion identity, so a crash before this journal
                 // save retries them without double charging or duplicating history.
                 try saveJournal(&current)
             }
@@ -1264,6 +1267,7 @@ final class IPhoneDirectExportCoordinator {
                 durabilityRoot: support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,
                     .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+                legacyCompletionIdentity: { $0.request.jobID },
                 isSupported: { journal in journal.request.jobID == jobID && (journal.version == IPhoneDirectExportJournal.legacyProtocolVersion || journal.version == IPhoneDirectExportJournal.currentVersion) })
         guard var saved else { return nil }
         saved.journal.checkpoint = saved.checkpoint

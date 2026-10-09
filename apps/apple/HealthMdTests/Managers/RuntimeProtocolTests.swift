@@ -778,7 +778,8 @@ final class AtomicFileWriterTests: XCTestCase {
         }
         XCTAssertEqual(try Data(contentsOf: destination), paused)
         XCTAssertEqual(stale.bytes, original)
-        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination), generation: independent.generation)
+        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination),
+            generation: independent.generation, completionIdentity: independent.completionIdentity)
         let completed = Data("resumed-completion".utf8)
         try resumed.publish(completed, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
         XCTAssertEqual(resumed.bytes, completed)
