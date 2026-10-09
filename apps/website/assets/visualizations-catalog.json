@@ -2,7 +2,7 @@
   "schema": "healthmd.visualization_catalog",
   "schemaVersion": 1,
   "sourceRepository": "https://github.com/CodyBontecou/health-md-visualizations",
-  "sourceRevision": "37057d8e3c4814bfe02b327b44e530cb5e04c054",
+  "sourceRevision": "0103e87de013c95a3926723776d23935c7614bca",
   "categories": [
     {
       "id": "whoop",

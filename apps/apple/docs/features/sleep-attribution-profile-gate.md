@@ -111,3 +111,8 @@ Draft Apple-v11 JSON retains heart-rate, SDNN, blood-oxygen, blood-glucose and r
 ## Captured calendar in native sample charts
 
 The companion reader's heart terrain chart places exact UTC quantity samples into the export's declared calendar timezone instead of the viewer's current timezone. The same instant retains its quarter-hour position across UTC, Los Angeles and Tokyo viewers; New York's repeated DST hour shares its clock bucket, and Kathmandu's quarter-hour offset is retained. Exports without declared calendar authority retain the historical viewer-local behavior. An invalid declared calendar is not replaced with the viewer's clock. The formatter is reused for each day's sample series. A flat sample series also produces finite chart colors. These synthetic rendering controls preserve the source objects and do not qualify physical provider capture or enable production Morning ends.
+
+
+## Mixed-format quantity source agreement
+
+Companion-reader daily loading merges complementary native quantity source fields recursively when the same metric, unit, timestamp and value records agree. Full source identities remain distinct even when their clocks and values coincide. Conflicting identities, metadata, quantities or sample multisets omit the ambiguous day with an explicit load-report warning; later duplicate files cannot resurrect it. Display tables contribute missing projections without replacing recorded metadata. Historical profiles retain their existing loading policy. These synthetic vault-loader controls do not qualify complete native source capture, competing production writers, or physical vault/device operation.
