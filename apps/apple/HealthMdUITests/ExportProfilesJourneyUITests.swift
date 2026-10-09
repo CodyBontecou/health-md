@@ -317,6 +317,13 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         field.coordinate(withNormalizedOffset: .zero).withOffset(
             CGVector(dx: pasteFrame.midX - fieldFrame.minX, dy: pasteFrame.midY - fieldFrame.minY)
         ).tap()
+        // Observe the clipboard edit's completion before asserting its exact UUID.
+        // Closing the menu alone does not prove that the field has received the paste.
+        let pastedID = expectation(
+            for: NSPredicate(format: "value == %@", expectedCopiedID),
+            evaluatedWith: field
+        )
+        wait(for: [pastedID], timeout: 10)
         XCTAssertEqual(field.value as? String, expectedCopiedID, "Copy must place this profile's exact UUID on the clipboard")
         snap("13a-copied-id-pasted")
         field.typeText(String(repeating: "\u{8}", count: expectedCopiedID.count) + "Daily Everything")
