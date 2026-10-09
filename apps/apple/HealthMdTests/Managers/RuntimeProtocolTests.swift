@@ -486,6 +486,48 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: destinationDirectory.path))
     }
 
+    func testRequireAbsentPublishesOnceAndRetainsExistingBytes() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let original = Data("accepted-authority".utf8)
+        try AtomicFileWriter.writeData(original, to: destination, attributes: [.posixPermissions: 0o600], commitPolicy: .requireAbsent)
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("replacement-authority".utf8), to: destination, commitPolicy: .requireAbsent)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), original)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+        let permissions = try FileManager.default.attributesOfItem(atPath: destination.path)[.posixPermissions] as? NSNumber
+        XCTAssertEqual(permissions?.intValue, 0o600)
+    }
+
+    func testRequireAbsentRejectsWinnerInstalledImmediatelyBeforePublication() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let winner = Data("competing-accepted-authority".utf8)
+        XCTAssertThrowsError(try AtomicFileWriter.writeFile(to: destination, commitPolicy: .requireAbsent,
+            beforeCommit: { try winner.write(to: destination, options: .atomic) },
+            producer: { try Data("losing-authority".utf8).write(to: $0) })) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testRequireAbsentRetainsSymbolicLinkAndTarget() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let target = directory.appendingPathComponent("retained-source.json")
+        let original = Data("retained-source-authority".utf8)
+        try original.write(to: target)
+        try FileManager.default.createSymbolicLink(at: destination, withDestinationURL: target)
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("replacement".utf8), to: destination, commitPolicy: .requireAbsent)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EEXIST)
+        }
+        XCTAssertEqual(try Data(contentsOf: target), original)
+        XCTAssertEqual(try FileManager.default.attributesOfItem(atPath: destination.path)[.type] as? FileAttributeType, .typeSymbolicLink)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("HealthMdAtomicFileWriterTests-\(UUID().uuidString)", isDirectory: true)

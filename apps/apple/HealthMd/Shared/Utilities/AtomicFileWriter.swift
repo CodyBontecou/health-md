@@ -14,6 +14,7 @@ import Glibc
 #endif
 
 nonisolated enum AtomicFileWriter {
+    enum CommitPolicy { case replaceExisting, requireAbsent }
     static func writeString(_ string: String, to destinationURL: URL, fileManager: FileManager = .default) throws {
         guard let data = string.data(using: .utf8) else {
             throw CocoaError(.fileWriteUnknown)
@@ -25,12 +26,14 @@ nonisolated enum AtomicFileWriter {
         _ data: Data,
         to destinationURL: URL,
         fileManager: FileManager = .default,
-        attributes: [FileAttributeKey: Any]? = nil
+        attributes: [FileAttributeKey: Any]? = nil,
+        commitPolicy: CommitPolicy = .replaceExisting
     ) throws {
         try writeFile(
             to: destinationURL,
             fileManager: fileManager,
-            attributes: attributes
+            attributes: attributes,
+            commitPolicy: commitPolicy
         ) { temporaryURL in
             let handle = try FileHandle(forWritingTo: temporaryURL)
             do {
@@ -51,6 +54,7 @@ nonisolated enum AtomicFileWriter {
         to destinationURL: URL,
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil,
+        commitPolicy: CommitPolicy = .replaceExisting,
         beforeCommit: () throws -> Void = {},
         producer: (URL) throws -> Result
     ) throws -> Result {
@@ -69,7 +73,13 @@ nonisolated enum AtomicFileWriter {
             temporaryFileCreated = true
             let result = try producer(temporaryURL)
             try beforeCommit()
-            try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
+            switch commitPolicy {
+            case .replaceExisting:
+                try renameReplacingItem(at: temporaryURL, withItemAt: destinationURL)
+            case .requireAbsent:
+                try linkNewItem(at: temporaryURL, to: destinationURL)
+                try? fileManager.removeItem(at: temporaryURL)
+            }
             temporaryFileCreated = false
             fsyncDirectoryIfPossible(directoryURL)
             return result
@@ -97,6 +107,17 @@ nonisolated enum AtomicFileWriter {
         if result != 0 {
             throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO)
         }
+    }
+
+    /// link(2) publishes a fully written sibling inode only if the destination
+    /// is absent at the syscall boundary. It cannot replace a competing journal.
+    private static func linkNewItem(at temporaryURL: URL, to destinationURL: URL) throws {
+        let result = temporaryURL.withUnsafeFileSystemRepresentation { temporaryPath in
+            destinationURL.withUnsafeFileSystemRepresentation { destinationPath in
+                link(temporaryPath, destinationPath)
+            }
+        }
+        if result != 0 { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
 
     private static func fsyncDirectoryIfPossible(_ directoryURL: URL) {

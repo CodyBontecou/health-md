@@ -346,7 +346,7 @@ final class IPhoneDirectExportCoordinator {
                 sourceTimeZoneIdentifier: prepared.accepted.sourceTimeZoneIdentifier
             )
             journal = prepared
-            try saveJournal(prepared)
+            try saveJournal(prepared, freshAdmission: true)
         }
 
         // Already-spooled historical jobs may transfer their exact bytes without
@@ -1208,14 +1208,15 @@ final class IPhoneDirectExportCoordinator {
         return directory
     }
 
-    private func saveJournal(_ journal: IPhoneDirectExportJournal) throws {
+    private func saveJournal(_ journal: IPhoneDirectExportJournal, freshAdmission: Bool = false) throws {
         let encoder = JSONEncoder()
         encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         try protectedAtomicWrite(
             encoder.encode(journal),
-            to: try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json")
+            to: try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json"),
+            freshAdmission: freshAdmission
         )
     }
 
@@ -1228,19 +1229,11 @@ final class IPhoneDirectExportCoordinator {
         )
     }
 
-    private func protectedAtomicWrite(_ data: Data, to destination: URL) throws {
-        let temporary = destination.deletingLastPathComponent()
-            .appendingPathComponent(".\(destination.lastPathComponent).\(UUID().uuidString).tmp")
-        try data.write(to: temporary, options: .atomic)
-        try fileManager.setAttributes([
-            .posixPermissions: 0o600,
-            .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-        ], ofItemAtPath: temporary.path)
-        if fileManager.fileExists(atPath: destination.path) {
-            _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
-        } else {
-            try fileManager.moveItem(at: temporary, to: destination)
-        }
+    private func protectedAtomicWrite(_ data: Data, to destination: URL, freshAdmission: Bool = false) throws {
+        try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
+            attributes: [.posixPermissions: 0o600,
+                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
+            commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting)
     }
 
     private func sha256(url: URL, offset: Int64, byteCount: Int64) throws -> String {

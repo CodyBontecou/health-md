@@ -823,6 +823,40 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         }
     }
 
+    func testCompetingFreshAdmissionRetainsWinningJournalBytes() throws {
+        let fixture = try makeFixture(dayCount: 1)
+        let jobDirectoryName = fixture.session.jobID.uuidString.lowercased()
+        let originalURL = fixture.root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: originalURL)) as? [String: Any])
+        object["origin"] = ConnectedCorpusOutboundOrigin.scheduledIPhone.rawValue
+        let winner = try JSONSerialization.data(withJSONObject: object, options: [.sortedKeys])
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("competing-admission-\(UUID().uuidString)")
+        addTeardownBlock { try? FileManager.default.removeItem(at: root) }
+        let destination = root.appendingPathComponent(jobDirectoryName).appendingPathComponent("journal.json")
+        let manager = CompetingAdmissionFileManager(destination: destination, winner: winner)
+        let store = ConnectedCorpusOutboundStore(rootURL: root, fileManager: manager)
+        XCTAssertThrowsError(try store.createOrRestore(origin: .interactiveIPhone, session: fixture.session, manifest: fixture.manifest)) {
+            XCTAssertEqual($0 as? ConnectedCorpusOutboundStoreError, .requestChanged)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+        XCTAssertEqual(try store.load(jobID: fixture.session.jobID, allowExpired: true)?.origin, .scheduledIPhone)
+        XCTAssertEqual(try Data(contentsOf: destination), winner)
+    }
+
+    /// Installs another writer's valid journal after initial absence was observed.
+    private final class CompetingAdmissionFileManager: FileManager, @unchecked Sendable {
+        let destination: URL
+        let winner: Data
+        init(destination: URL, winner: Data) { self.destination = destination; self.winner = winner; super.init() }
+        override func createFile(atPath path: String, contents data: Data?, attributes attr: [FileAttributeKey: Any]? = nil) -> Bool {
+            let created = super.createFile(atPath: path, contents: data, attributes: attr)
+            if created && (URL(fileURLWithPath: path).lastPathComponent.hasPrefix("journal-") || URL(fileURLWithPath: path).lastPathComponent.hasPrefix(".journal.json.")) {
+                do { try winner.write(to: destination, options: .atomic) } catch { return false }
+            }
+            return created
+        }
+    }
+
     private enum TestError: Error {
         case simulatedCrash
         case unexpectedProduction

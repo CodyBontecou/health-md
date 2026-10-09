@@ -273,7 +273,7 @@ final class ConnectedCorpusOutboundStore {
             updatedAt: timestamp
         )
         try validate(journal)
-        try persist(&journal)
+        try persist(&journal, freshAdmission: true)
         return journal
     }
 
@@ -754,36 +754,18 @@ final class ConnectedCorpusOutboundStore {
         return try handle.read(upToCount: 8) == Data("HMDCITEM".utf8)
     }
 
-    private func persist(_ journal: inout ConnectedCorpusOutboundJournal) throws {
+    private func persist(_ journal: inout ConnectedCorpusOutboundJournal, freshAdmission: Bool = false) throws {
         journal.updatedAt = now()
         try validate(journal)
         try prepareDirectories(jobID: journal.jobID)
         let data = try encoder.encode(journal)
         let destination = journalURL(jobID: journal.jobID)
-        let temporary = jobDirectoryURL(jobID: journal.jobID)
-            .appendingPathComponent("journal-\(UUID().uuidString).tmp")
-        guard fileManager.createFile(
-            atPath: temporary.path,
-            contents: nil,
-            attributes: protectedAttributes(permissions: 0o600)
-        ) else { throw CocoaError(.fileWriteUnknown) }
         do {
-            let handle = try FileHandle(forWritingTo: temporary)
-            try handle.write(contentsOf: data)
-            try handle.synchronize()
-            try handle.close()
-            if fileManager.fileExists(atPath: destination.path) {
-                _ = try fileManager.replaceItemAt(destination, withItemAt: temporary)
-            } else {
-                try fileManager.moveItem(at: temporary, to: destination)
-            }
-            try? fileManager.setAttributes(
-                protectedAttributes(permissions: 0o600),
-                ofItemAtPath: destination.path
-            )
-        } catch {
-            try? fileManager.removeItem(at: temporary)
-            throw error
+            try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
+                attributes: protectedAttributes(permissions: 0o600),
+                commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting)
+        } catch let error as POSIXError where freshAdmission && error.code == .EEXIST {
+            throw ConnectedCorpusOutboundStoreError.requestChanged
         }
     }
 
