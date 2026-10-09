@@ -241,6 +241,24 @@ class DirectSecureChannel internal constructor(
         return V2Codec.decode(deterministicCore.canonicalizeV2Envelope(payload.bytes))
     }
 
+    fun receiveV2(checkOwnership: () -> Unit): ReceivedEnvelope =
+        continueWhileOwned(checkOwnership) { receiveV2() }
+
+    fun pollV2(timeoutMillis: Int, checkOwnership: () -> Unit): ReceivedEnvelope? =
+        continueWhileOwned(checkOwnership) { pollV2(timeoutMillis) }
+
+    private fun <T> continueWhileOwned(checkOwnership: () -> Unit, operation: () -> T): T {
+        checkOwnership()
+        val result = try {
+            operation()
+        } catch (error: Throwable) {
+            checkOwnership()
+            throw error
+        }
+        checkOwnership()
+        return result
+    }
+
     fun pollV2(timeoutMillis: Int): ReceivedEnvelope? {
         val frame = packet.receiveOrNull(timeoutMillis) ?: return null
         val payload = receiveEncryptedFrame(frame)

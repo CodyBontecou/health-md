@@ -14,6 +14,95 @@ import org.junit.Test
 
 class PacketPublicationTest {
     @Test
+    fun supersededReceiveRevalidatesBeforePropagatingDisconnect() {
+        receiveAfterDisconnect(revoke = true)
+    }
+
+    @Test
+    fun currentReceivePreservesItsDisconnectError() {
+        receiveAfterDisconnect(revoke = false)
+    }
+
+    private fun receiveAfterDisconnect(revoke: Boolean) {
+        ServerSocket(0).use { server ->
+            val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)
+            server.accept().use { peer ->
+                val started = CountDownLatch(1)
+                val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
+                val executor = Executors.newSingleThreadExecutor()
+                try {
+                    val disconnect = executor.submit {
+                        check(started.await(2, TimeUnit.SECONDS))
+                        revoked.set(revoke)
+                        peer.close()
+                    }
+                    DirectSecureChannel(packet, ByteArray(32), "listener", "Listener").use { channel ->
+                        val checkOwnership = {
+                            check(!revoked.get()) { "superseded" }
+                            started.countDown()
+                        }
+                        if (revoke) {
+                            val error = assertThrows(IllegalStateException::class.java) {
+                                channel.receiveV2(checkOwnership)
+                            }
+                            assertThat(error.message).isEqualTo("superseded")
+                        } else {
+                            assertThrows(java.io.EOFException::class.java) {
+                                channel.receiveV2(checkOwnership)
+                            }
+                        }
+                    }
+                    disconnect.get(2, TimeUnit.SECONDS)
+                } finally {
+                    packet.close()
+                    executor.shutdownNow()
+                }
+            }
+        }
+    }
+
+    @Test
+    fun supersededReceiveDoesNotDeliverAValidReply() {
+        ServerSocket(0).use { server ->
+            val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)
+            server.accept().use { peer ->
+                val started = CountDownLatch(1)
+                val revoked = java.util.concurrent.atomic.AtomicBoolean(false)
+                val executor = Executors.newSingleThreadExecutor()
+                val key = ByteArray(32) { it.toByte() }
+                try {
+                    val reply = executor.submit {
+                        check(started.await(2, TimeUnit.SECONDS))
+                        val plaintext = V2Codec.encode("pong", JobPayload.serializer(), JobPayload("synthetic-job"))
+                        val envelope = ByteBuffer.allocate(16 + plaintext.size)
+                            .put("HMDSC001".toByteArray()).putLong(0).put(plaintext).array()
+                        val encrypted = LegacyCodec.encrypted(DirectCrypto.seal(envelope, key))
+                        revoked.set(true)
+                        java.io.DataOutputStream(peer.getOutputStream()).apply {
+                            writeLong(encrypted.size.toLong())
+                            write(encrypted)
+                            flush()
+                        }
+                    }
+                    DirectSecureChannel(packet, key, "listener", "Listener").use { channel ->
+                        val error = assertThrows(IllegalStateException::class.java) {
+                            channel.receiveV2 {
+                                check(!revoked.get()) { "superseded" }
+                                started.countDown()
+                            }
+                        }
+                        assertThat(error.message).isEqualTo("superseded")
+                    }
+                    reply.get(2, TimeUnit.SECONDS)
+                } finally {
+                    packet.close()
+                    executor.shutdownNow()
+                }
+            }
+        }
+    }
+
+    @Test
     fun revokedAuthorizationDoesNotConsumeSecureSequence() {
         ServerSocket(0).use { server ->
             val packet = DirectPacketConnection.connect("127.0.0.1", server.localPort, 2_000)

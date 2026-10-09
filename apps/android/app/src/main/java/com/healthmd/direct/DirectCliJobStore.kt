@@ -197,6 +197,15 @@ class DirectCliJobStore private constructor(
         DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
     }
 
+    fun validatePreparationLease(lease: DirectPreparationLease): Unit = withStoreLock {
+        requirePendingPreparation(lease)
+    }
+
+    fun <T> withAcceptedOwnership(lease: DirectAcceptedLease, action: () -> T): T = withStoreLock {
+        validateAcceptedLease(lease)
+        action()
+    }
+
     fun preparationPacketSendAuthorization(
         lease: DirectPreparationLease,
         cancelBeforeEnqueue: Boolean = false,
@@ -212,10 +221,7 @@ class DirectCliJobStore private constructor(
 
     fun packetSendAuthorization(lease: DirectAcceptedLease) =
         com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
-            withStoreLock {
-                validateAcceptedLease(lease)
-                enqueue()
-            }
+            withAcceptedOwnership(lease, enqueue)
         }
 
     /** A small owner read per frame; complete authority is checked at state transitions. */

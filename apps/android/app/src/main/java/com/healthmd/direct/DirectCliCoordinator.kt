@@ -527,7 +527,9 @@ class DirectCliCoordinator @Inject constructor(
                 plan = journal.transfer,
                 sendAccepted = false,
                 onProgress = { committed, total ->
-                    _state.value = DirectCliConnectionState.Transferring(committed, total)
+                    jobStore.withAcceptedOwnership(senderLease) {
+                        _state.value = DirectCliConnectionState.Transferring(committed, total)
+                    }
                 },
                 beforeCompletionConfirmed = {
                     // The CLI has committed at this point. Local accounting must never turn that
@@ -543,8 +545,8 @@ class DirectCliCoordinator @Inject constructor(
                     }
                 },
                 checkCancellation = {
-                    exportContext.ensureActive()
                     jobStore.validateAcceptedLease(senderLease)
+                    exportContext.ensureActive()
                 },
             )
             runCatching {
@@ -554,9 +556,11 @@ class DirectCliCoordinator @Inject constructor(
                     }
                 }
             }
-            _state.value = DirectCliConnectionState.Completed(
-                DirectCliCompletion.ExportCompleted,
-            )
+            jobStore.withAcceptedOwnership(senderLease) {
+                _state.value = DirectCliConnectionState.Completed(
+                    DirectCliCompletion.ExportCompleted,
+                )
+            }
         } catch (error: CancellationException) {
             throw error
         } catch (_: DirectProfileNotFoundException) {
@@ -716,7 +720,10 @@ class DirectCliCoordinator @Inject constructor(
         val parentJob = currentCoroutineContext().job
         val cancellationMonitor = CoroutineScope(currentCoroutineContext()).launch(Dispatchers.IO) {
             while (isActive) {
-                val envelope = channel.pollV2(PREPARATION_CANCEL_POLL_MILLIS) ?: continue
+                val envelope = channel.pollV2(PREPARATION_CANCEL_POLL_MILLIS) {
+                    jobStore.validatePreparationLease(preparationLease)
+                    parentJob.ensureActive()
+                } ?: continue
                 when (envelope.type) {
                     "cancel" -> {
                         val payload = V2Codec.decodePayload(

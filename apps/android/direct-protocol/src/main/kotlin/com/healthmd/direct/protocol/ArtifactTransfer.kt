@@ -148,6 +148,7 @@ class ArtifactTransferClient(
                 expectedType = "transfer_disposition",
                 deserializer = TransferDisposition.serializer(),
                 jobId = plan.accepted.jobId,
+                checkCancellation = checkCancellation,
             )
             require(disposition.sessionId == plan.session.sessionId)
             require(disposition.partitionIndex == partition.index)
@@ -175,6 +176,7 @@ class ArtifactTransferClient(
                     expectedType = "transfer_partition_acknowledgement",
                     deserializer = TransferPartitionAcknowledgement.serializer(),
                     jobId = plan.accepted.jobId,
+                    checkCancellation = checkCancellation,
                 )
                 require(acknowledgement.accepted)
                 require(acknowledgement.sessionId == plan.session.sessionId)
@@ -183,6 +185,7 @@ class ArtifactTransferClient(
                 require(acknowledgement.partitionSha256 == partition.sha256)
             }
             committedBytes += partition.byteCount
+            checkCancellation()
             onProgress(committedBytes, totalBytes)
         }
 
@@ -199,6 +202,7 @@ class ArtifactTransferClient(
             expectedType = "transfer_final_acknowledgement",
             deserializer = TransferFinalAcknowledgement.serializer(),
             jobId = plan.accepted.jobId,
+            checkCancellation = checkCancellation,
         )
         require(acknowledgement.accepted)
         require(acknowledgement.sessionId == plan.session.sessionId)
@@ -235,6 +239,7 @@ class ArtifactTransferClient(
                     expectedType = "transfer_chunk_acknowledgement",
                     deserializer = TransferChunkAcknowledgement.serializer(),
                     jobId = plan.accepted.jobId,
+                    checkCancellation = checkCancellation,
                 )
                 require(acknowledgement.accepted)
                 require(acknowledgement.transferId == partition.transferId)
@@ -250,9 +255,10 @@ class ArtifactTransferClient(
         expectedType: String,
         deserializer: kotlinx.serialization.DeserializationStrategy<T>,
         jobId: String,
+        checkCancellation: () -> Unit,
     ): T {
         while (true) {
-            val envelope = channel.receiveV2()
+            val envelope = channel.receiveV2(checkCancellation)
             when (envelope.type) {
                 expectedType -> return V2Codec.decodePayload(envelope, deserializer)
                 "ping" -> sendV2("pong", EmptyPayload.serializer(), EmptyPayload())
