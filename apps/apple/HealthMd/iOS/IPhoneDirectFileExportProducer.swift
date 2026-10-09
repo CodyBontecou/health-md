@@ -1329,6 +1329,8 @@ final class IPhoneDirectFileExportProducer {
         do {
             try journal.checkpoint.withGenerationOwnership {
                 try checkCancellation(progress.jobID)
+                if let admissionID = IPhoneDirectCancellationScope.current?.activityAdmissionID,
+                   CLIExportActivityTracker.shared.admissionID != admissionID { return }
                 CLIExportActivityTracker.shared.update(
                     jobID: progress.jobID,
                     source: .direct,

@@ -71,6 +71,7 @@ final class CLIExportActivityTracker: ObservableObject {
     }
 
     @Published private(set) var snapshot: Snapshot?
+    private(set) var admissionID: UUID?
 
     private var dismissalTask: Task<Void, Never>?
 
@@ -83,9 +84,11 @@ final class CLIExportActivityTracker: ObservableObject {
         source: Source,
         totalDays: Int = 0,
         targetLabel: String? = nil,
-        message: String
+        message: String,
+        admissionID: UUID = UUID()
     ) {
         dismissalTask?.cancel()
+        self.admissionID = admissionID
         publish(Snapshot(
             jobID: jobID,
             source: source,
@@ -117,6 +120,9 @@ final class CLIExportActivityTracker: ObservableObject {
                 || snapshot?.jobID == jobID
                 || snapshot?.phase.isTerminal == true else { return }
         let existingTarget = snapshot?.jobID == jobID ? snapshot?.targetLabel : nil
+        if snapshot == nil || snapshot?.jobID != jobID || snapshot?.source != source {
+            admissionID = UUID()
+        }
         publish(Snapshot(
             jobID: jobID,
             source: source,
@@ -213,12 +219,15 @@ final class CLIExportActivityTracker: ObservableObject {
             message: message
         ))
         dismissalTask?.cancel()
+        let completedAdmissionID = admissionID
         dismissalTask = Task { [weak self] in
             try? await Task.sleep(for: .seconds(5))
             guard !Task.isCancelled,
                   self?.snapshot?.jobID == jobID,
-                  self?.snapshot?.phase == phase else { return }
+                  self?.snapshot?.phase == phase,
+                  self?.admissionID == completedAdmissionID else { return }
             self?.snapshot = nil
+            self?.admissionID = nil
         }
     }
 
@@ -243,6 +252,7 @@ final class CLIExportActivityTracker: ObservableObject {
         dismissalTask?.cancel()
         dismissalTask = nil
         snapshot = nil
+        admissionID = nil
         if let dismissedJobID {
             CLIExportLiveActivityController.shared.dismiss(jobID: dismissedJobID)
         }

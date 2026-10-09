@@ -108,6 +108,7 @@ private struct IPhoneDirectExportJournal: Codable {
 
 nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable {
     let jobID: UUID
+    let activityAdmissionID = UUID()
     private let lock = NSRecursiveLock()
     private var active = true
     private var cancelled = false
@@ -307,7 +308,8 @@ final class IPhoneDirectExportCoordinator {
                 targetLabel: activityTargetLabel(for: request),
                 message: request.responseMode == .writeFiles
                     ? "Preparing files requested by the CLI…"
-                    : "Preparing Apple Health data requested by the CLI…"
+                    : "Preparing Apple Health data requested by the CLI…",
+                admissionID: IPhoneDirectCancellationScope.current?.activityAdmissionID ?? UUID()
             )
             let completedWithoutMissingData = try await HealthKitQueryExecutionController
                 .withController(queryController) {
@@ -487,6 +489,8 @@ final class IPhoneDirectExportCoordinator {
         phase: CLIExportActivityTracker.Phase,
         message: String
     ) -> Bool {
+        if let admissionID = IPhoneDirectCancellationScope.current?.activityAdmissionID,
+           CLIExportActivityTracker.shared.admissionID != admissionID { return false }
         let publish = {
             if phase.isTerminal {
                 CLIExportActivityTracker.shared.finish(jobID: jobID, phase: phase, message: message)
@@ -560,8 +564,10 @@ final class IPhoneDirectExportCoordinator {
             let signal = {
                 invocation?.cancel()
                 self.queryExecutionControllers.removeValue(forKey: jobID)
-                CLIExportActivityTracker.shared.setMessage(
-                    jobID: jobID, message: "Cancelling the direct CLI export…")
+                if invocation == nil || CLIExportActivityTracker.shared.admissionID == invocation?.activityAdmissionID {
+                    CLIExportActivityTracker.shared.setMessage(
+                        jobID: jobID, message: "Cancelling the direct CLI export…")
+                }
             }
             if let committed {
                 try committed.withGenerationOwnership { signal() }
@@ -1265,6 +1271,8 @@ final class IPhoneDirectExportCoordinator {
         do {
             try journal.checkpoint.withGenerationOwnership {
                 try checkCancellation(jobID: progress.jobID)
+                if let admissionID = IPhoneDirectCancellationScope.current?.activityAdmissionID,
+                   CLIExportActivityTracker.shared.admissionID != admissionID { return }
                 CLIExportActivityTracker.shared.update(
                     jobID: progress.jobID,
                     source: .direct,

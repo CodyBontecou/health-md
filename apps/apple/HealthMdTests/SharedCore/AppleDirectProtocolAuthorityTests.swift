@@ -162,6 +162,71 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testActualPreparationFailurePreservesReplacementSameIDActivityAdmission() async throws {
+        for (files, replacementSource) in [(false, CLIExportActivityTracker.Source.macApp),
+            (true, .macApp), (false, .direct), (true, .direct)] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: files,
+                version: files ? 6 : 3, requestCreatedAt: Date())
+            defer {
+                try? FileManager.default.removeItem(at: published.directory)
+                CLIExportActivityTracker.shared.clear(jobID: jobID)
+            }
+            let bytes = try Data(contentsOf: published.journal)
+            let object = try XCTUnwrap(JSONSerialization.jsonObject(with: bytes) as? [String: Any])
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            let request = try decoder.decode(DirectExportRequest.self,
+                from: JSONSerialization.data(withJSONObject: try XCTUnwrap(object["request"])))
+            let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: jobID)
+            let negotiation = try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current))
+            let core = FakeAppleDirectProtocolRustCore()
+            core.returnNativeCanonicalMessage = true
+            let replacement = ActivityAdmissionCapture()
+            core.onFingerprint = {
+                MainActor.assumeIsolated {
+                    let tracker = CLIExportActivityTracker.shared
+                    let original = tracker.snapshot
+                    tracker.begin(jobID: jobID, source: replacementSource,
+                        totalDays: original?.totalDays ?? 0,
+                        targetLabel: replacementSource == .direct ? original?.targetLabel : nil,
+                        message: replacementSource == .direct ? original?.message ?? "Replacement preparation" : "Replacement preparation")
+                    replacement.snapshot = tracker.snapshot
+                }
+            }
+            defer { core.onFingerprint = nil }
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+            let transport = OperationProtocolPacketTransport()
+            let channel = DirectSecureChannel(packetConnection: transport,
+                sessionKey: SymmetricKey(data: Data(repeating: 0x46, count: 32)),
+                peerInstallationID: model.session.peerBinding.destinationInstallationID,
+                peerDisplayName: "synthetic", messageCanonicalizer: session)
+            let suite = "synthetic-preparation-activity-" + UUID().uuidString
+            let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+            defer { defaults.removePersistentDomain(forName: suite) }
+            let store = FakeHealthStore()
+            let healthKit = HealthKitManager(store: store, userDefaults: defaults)
+            let coordinator = IPhoneDirectExportCoordinator()
+            await coordinator.handle(request, peerBinding: model.session.peerBinding,
+                negotiation: negotiation, channel: IPhoneDirectExportConnection(channel: channel),
+                protocolAuthority: session, healthKitManager: healthKit)
+            XCTAssertEqual(core.fingerprintCalls, 1)
+            let tracker = CLIExportActivityTracker.shared
+            XCTAssertNotNil(replacement.snapshot)
+            XCTAssertEqual(tracker.snapshot, replacement.snapshot,
+                "A new admission must survive even when its entire visible snapshot is identical")
+            XCTAssertEqual(tracker.snapshot?.phase, .preparing)
+            XCTAssertTrue(tracker.keepsScreenAwake)
+            XCTAssertEqual(tracker.snapshot?.source, replacementSource)
+            XCTAssertEqual(try Data(contentsOf: published.journal), bytes)
+            try published.ownership.validateGeneration()
+            XCTAssertFalse(store.authRequested)
+            XCTAssertTrue(store.requestedReadTypes.isEmpty)
+            XCTAssertTrue(store.completedCanonicalQueryIdentifiers.isEmpty)
+        }
+    }
+
+    @MainActor
     func testPreparationRejectionRejectsFinishedInvocationBeforeCanonicalization() async throws {
         let jobID = UUID()
         let core = FakeAppleDirectProtocolRustCore()
@@ -685,6 +750,11 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
 }
 
 #if os(iOS)
+@MainActor
+private final class ActivityAdmissionCapture {
+    var snapshot: CLIExportActivityTracker.Snapshot?
+}
+
 private actor PendingIncomingProtocolTransport: DirectPacketTransport {
     private var packets: [ManualIPSyncPacket] = []
     private var waiter: CheckedContinuation<ManualIPSyncPacket, Error>?
