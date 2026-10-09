@@ -510,6 +510,9 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         field.performImeAction()
         compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(12345, locale))
+        // IME dismissal can change the scroll position. Measure the reachable field,
+        // with the same visibility precondition as the initial text-fit assertion.
+        field.performScrollTo().assertFullyVisible().assertMinimumTouchTarget()
         assertTextFits(field, GeistType.label20Mono.fontSize)
 
         val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)
