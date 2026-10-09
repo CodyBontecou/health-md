@@ -1105,8 +1105,14 @@ final class DirectCoordinatorAdmissionTests: XCTestCase {
         }
         let capturedOriginal = await firstTransport.gate.invocation
         let original = try XCTUnwrap(capturedOriginal)
+        let activityAdmission = CLIExportActivityTracker.shared.admissionID
+        XCTAssertEqual(activityAdmission, original.activityAdmissionID)
         XCTAssertTrue(coordinator.cancel(jobID: jobID))
         XCTAssertTrue(original.isCancelled)
+        XCTAssertEqual(CLIExportActivityTracker.shared.admissionID, activityAdmission)
+        XCTAssertEqual(CLIExportActivityTracker.shared.snapshot?.message,
+            "Cancelling the direct CLI export…",
+            "An active invocation must still update its own cancellation activity")
         await firstTransport.gate.release()
         await first.value
         XCTAssertNil(coordinator.currentJobID)

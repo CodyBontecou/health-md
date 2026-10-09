@@ -564,7 +564,10 @@ final class IPhoneDirectExportCoordinator {
             let signal = {
                 invocation?.cancel()
                 self.queryExecutionControllers.removeValue(forKey: jobID)
-                if invocation == nil || CLIExportActivityTracker.shared.admissionID == invocation?.activityAdmissionID {
+                // A persisted journal owns cancellation, not a live activity. Only
+                // the admitted invocation may update its associated banner.
+                if let invocation,
+                   CLIExportActivityTracker.shared.admissionID == invocation.activityAdmissionID {
                     CLIExportActivityTracker.shared.setMessage(
                         jobID: jobID, message: "Cancelling the direct CLI export…")
                 }

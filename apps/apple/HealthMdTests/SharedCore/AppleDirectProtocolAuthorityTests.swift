@@ -414,6 +414,37 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
     }
 
     @MainActor
+    func testInactiveCancellationPreservesUnownedSameIDActivity() throws {
+        for (files, source) in [(false, CLIExportActivityTracker.Source.macApp),
+            (true, .macApp), (false, .direct), (true, .direct)] {
+            let jobID = UUID()
+            let published = try publishInactiveCancellationFixture(jobID: jobID, files: files,
+                version: files ? 6 : 3)
+            let tracker = CLIExportActivityTracker.shared
+            defer {
+                tracker.clear(jobID: jobID)
+                try? FileManager.default.removeItem(at: published.directory)
+            }
+            tracker.begin(jobID: jobID, source: source, message: "Replacement activity")
+            let snapshot = try XCTUnwrap(tracker.snapshot)
+            let admissionID = try XCTUnwrap(tracker.admissionID)
+            let authority = AppleDirectProtocolAuthority(defaultMode: .rust,
+                rustCore: FakeAppleDirectProtocolRustCore())
+            let receipt = try XCTUnwrap(IPhoneDirectExportCoordinator.shared.cancelWithReceipt(
+                jobID: jobID, protocolAuthority: authority))
+            let saved = try XCTUnwrap(JSONSerialization.jsonObject(with:
+                Data(contentsOf: published.journal)) as? [String: Any])
+            XCTAssertEqual(saved["state"] as? String, "cancelled",
+                "The durable cancellation must still complete")
+            try XCTUnwrap(receipt.durableOwnership).validateGeneration()
+            XCTAssertEqual(tracker.snapshot, snapshot,
+                "A durable receipt does not grant ownership of a same-ID activity")
+            XCTAssertEqual(tracker.admissionID, admissionID)
+            XCTAssertTrue(tracker.keepsScreenAwake)
+        }
+    }
+
+    @MainActor
     func testInactiveRawAndFileCancellationRestoreStoredProtocolSelection() async throws {
         for (files, version, legacy) in [(false, 2, true), (false, 3, false), (true, 2, true), (true, 6, false)] {
             let jobID = UUID()
