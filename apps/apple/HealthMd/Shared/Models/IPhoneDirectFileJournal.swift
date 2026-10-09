@@ -325,8 +325,10 @@ nonisolated struct AppleExportJournalCheckpoint {
 
     enum ContinuationError: Error, Equatable { case superseded }
 
+    /// Fences both sides of a transport suspension, including failed sends/receives.
+    /// No publication transaction remains held across the await.
     @MainActor
-    func receiveWhileOwned<Result>(operation: @MainActor () async throws -> Result) async throws -> Result {
+    func continueWhileOwned<Result>(operation: @MainActor () async throws -> Result) async throws -> Result {
         do { try validateGeneration() } catch { throw ContinuationError.superseded }
         let result: Result
         do { result = try await operation() }

@@ -158,7 +158,7 @@ final class IPhoneDirectFileExportProducer {
         }
 
         didAcquireOwnership(journal.checkpoint)
-        try await channel.send(.exportAccepted(journal.accepted))
+        try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
         var current = journal
         current.state = "preparing"
         if current.capturedDays.count < current.transferDates.count {
@@ -193,9 +193,9 @@ final class IPhoneDirectFileExportProducer {
         current.updatedAt = Date()
         try saveJournal(&current)
 
-        try await channel.send(.transferSession(current.session))
+        try await sendMessage(.transferSession(current.session), journal: current, channel: channel)
         for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
-            try await channel.send(.fileManifest(file.manifest))
+            try await sendMessage(.fileManifest(file.manifest), journal: current, channel: channel)
         }
         try await measureDirectFilePhase("transfer") {
             try await transferPartitions(
@@ -224,7 +224,7 @@ final class IPhoneDirectFileExportProducer {
             outcome: outcome
         )
         let finalAcknowledgementMessage = try await measureDirectFilePhase("final-ack") {
-            try await channel.send(.transferFinalize(finalize))
+            try await sendMessage(.transferFinalize(finalize), journal: current, channel: channel)
             return try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
         }
         guard case .transferFinalAcknowledgement(let acknowledgement) = finalAcknowledgementMessage,
@@ -304,7 +304,7 @@ final class IPhoneDirectFileExportProducer {
         } catch let error as POSIXError where error.code == .EAGAIN {
             throw IPhoneDirectFileProducerError.requestChanged
         }
-        try await channel.send(.completionConfirmed(jobID: request.jobID))
+        try await sendMessage(.completionConfirmed(jobID: request.jobID), journal: current, channel: channel)
         externalExportSucceeded = true
         #if DEBUG
         jobPerformanceOutcome = .success
@@ -575,6 +575,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Capturing \(identifier) for CLI file export…"
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
             let isRequested = requestedSet.contains(sourceCalendar.startOfDay(for: date))
@@ -700,6 +701,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Prepared \(updatedPreparedRequestedDays) of \(journal.requestedDates.count) requested days for file generation."
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
         }
@@ -1080,6 +1082,7 @@ final class IPhoneDirectFileExportProducer {
                 message: "Generated export files for \(day.sourceDateIdentifier)."
             ),
             phase: .capturing,
+            journal: journal,
             channel: channel
         )
     }
@@ -1129,10 +1132,8 @@ final class IPhoneDirectFileExportProducer {
     ) async throws {
         for descriptor in journal.partitions {
             try checkCancellation(journal)
-            try await channel.send(.transferOpen(try DirectTransferOpen(
-                session: journal.session,
-                partition: descriptor
-            )))
+            let open = try DirectTransferOpen(session: journal.session, partition: descriptor)
+            try await sendMessage(.transferOpen(open), journal: journal, channel: channel)
             guard case .transferDisposition(let disposition) = try await receiveMessage(
                 channel,
                 jobID: journal.request.jobID,
@@ -1160,7 +1161,7 @@ final class IPhoneDirectFileExportProducer {
                     transferID: descriptor.transferID,
                     partitionSHA256: descriptor.sha256
                 )
-                try await channel.send(.transferPartitionComplete(complete))
+                try await sendMessage(.transferPartitionComplete(complete), journal: journal, channel: channel)
                 guard case .transferPartitionAcknowledgement(let acknowledgement) = try await receiveMessage(
                     channel,
                     jobID: journal.request.jobID,
@@ -1189,6 +1190,7 @@ final class IPhoneDirectFileExportProducer {
                     message: "Sent file part \(descriptor.index + 1) of \(journal.partitions.count) to the CLI."
                 ),
                 phase: .transferring,
+                journal: journal,
                 channel: channel
             )
         }
@@ -1234,9 +1236,11 @@ final class IPhoneDirectFileExportProducer {
                     data: data,
                     sha256: DirectTransferFile.sha256Hex(data)
                 )
-                try await channel.sendBinaryTransferFrame(
-                    try protocolAuthority.encodeTransferChunk(chunk)
-                )
+                try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+                    try await channel.sendBinaryTransferFrame(
+                        try protocolAuthority.encodeTransferChunk(chunk)
+                    )
+                }
                 inFlight.append((sequence: chunk.sequence, sha256: chunk.sha256))
                 remaining -= Int64(data.count)
                 sequence += 1
@@ -1263,23 +1267,60 @@ final class IPhoneDirectFileExportProducer {
         ))
     }
 
+    private func sendMessage(
+        _ message: DirectMessage,
+        journal: IPhoneDirectFileJournal,
+        channel: IPhoneDirectExportConnection
+    ) async throws {
+        try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+            try await channel.send(message)
+        }
+    }
+
+    private func sendWhileOwned(
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint,
+        operation: @MainActor () async throws -> Void
+    ) async throws {
+        do {
+            try await checkpoint.continueWhileOwned {
+                try checkCancellation(jobID)
+                try await operation()
+                try checkCancellation(jobID)
+            }
+        } catch AppleExportJournalCheckpoint.ContinuationError.superseded {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+    }
+
     private func sendProgress(
         _ progress: DirectExportProgress,
         phase: CLIExportActivityTracker.Phase,
+        journal: IPhoneDirectFileJournal,
         channel: IPhoneDirectExportConnection
     ) async throws {
-        CLIExportActivityTracker.shared.update(
-            jobID: progress.jobID,
-            source: .direct,
-            phase: phase,
-            processedDays: progress.processedDays,
-            totalDays: progress.totalDays,
-            currentDate: progress.currentDate,
-            committedPartitions: progress.committedPartitions,
-            committedBytes: progress.committedBytes,
-            message: progress.message
-        )
-        try await channel.send(.exportProgress(progress))
+        guard progress.jobID == journal.request.jobID else {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+        do {
+            try journal.checkpoint.withGenerationOwnership {
+                try checkCancellation(progress.jobID)
+                CLIExportActivityTracker.shared.update(
+                    jobID: progress.jobID,
+                    source: .direct,
+                    phase: phase,
+                    processedDays: progress.processedDays,
+                    totalDays: progress.totalDays,
+                    currentDate: progress.currentDate,
+                    committedPartitions: progress.committedPartitions,
+                    committedBytes: progress.committedBytes,
+                    message: progress.message
+                )
+            }
+        } catch let error as POSIXError where error.code == .EAGAIN {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
+        try await sendMessage(.exportProgress(progress), journal: journal, channel: channel)
     }
 
     private func receiveMessage(
@@ -1289,7 +1330,7 @@ final class IPhoneDirectFileExportProducer {
     ) async throws -> DirectMessage {
         let message: DirectMessage
         do {
-            message = try await checkpoint.receiveWhileOwned {
+            message = try await checkpoint.continueWhileOwned {
                 try checkCancellation(jobID)
                 let response = try await channel.receive()
                 try checkCancellation(jobID)

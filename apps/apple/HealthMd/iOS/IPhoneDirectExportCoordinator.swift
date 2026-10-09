@@ -256,7 +256,14 @@ final class IPhoneDirectExportCoordinator {
                     reason: failureReason,
                     message: error.localizedDescription
                 )
-                try? await channel.send(.exportRejected(failure))
+                if let executionOwnership {
+                    // A still-owned cancellation failure may report its terminal outcome.
+                    try? await executionOwnership.continueWhileOwned {
+                        try await channel.send(.exportRejected(failure))
+                    }
+                } else {
+                    try? await channel.send(.exportRejected(failure))
+                }
             }
         }
         if activeJobID == request.jobID { activeJobID = nil }
@@ -379,7 +386,7 @@ final class IPhoneDirectExportCoordinator {
                 sourceTimeZoneIdentifier: journal.accepted.sourceTimeZoneIdentifier
             )
         }
-        try await channel.send(.exportAccepted(journal.accepted))
+        try await sendMessage(.exportAccepted(journal.accepted), journal: journal, channel: channel)
         var current = journal
         if current.days.count < current.accepted.resolvedDateIdentifiers.count {
             current = try await captureRemainingDays(
@@ -398,9 +405,9 @@ final class IPhoneDirectExportCoordinator {
         current.updatedAt = Date()
         try saveJournal(&current)
 
-        try await channel.send(.transferSession(current.session))
+        try await sendMessage(.transferSession(current.session), journal: current, channel: channel)
         for day in current.days {
-            try await channel.send(.rawDayManifest(day.manifest))
+            try await sendMessage(.rawDayManifest(day.manifest), journal: current, channel: channel)
         }
         try await transferPartitions(
             &current,
@@ -415,7 +422,7 @@ final class IPhoneDirectExportCoordinator {
             totalBytes: current.partitions.reduce(0) { $0 + $1.byteCount },
             finalPartitionSHA256: current.partitions.last?.sha256
         )
-        try await channel.send(.transferFinalize(finalize))
+        try await sendMessage(.transferFinalize(finalize), journal: current, channel: channel)
         let finalResponse = try await receiveMessage(channel, jobID: request.jobID, checkpoint: current.checkpoint)
         guard case .transferFinalAcknowledgement(let acknowledgement) = finalResponse,
               acknowledgement.accepted,
@@ -493,7 +500,7 @@ final class IPhoneDirectExportCoordinator {
         } catch let error as POSIXError where error.code == .EAGAIN {
             throw IPhoneDirectExportError.requestChanged
         }
-        try await channel.send(.completionConfirmed(jobID: request.jobID))
+        try await sendMessage(.completionConfirmed(jobID: request.jobID), journal: current, channel: channel)
         // Informational day notes (for example a WorkoutKit plan this device
         // cannot decode) surface as wire day statuses the CLI must keep seeing,
         // but they do not reduce the job below full success for the activity
@@ -637,6 +644,7 @@ final class IPhoneDirectExportCoordinator {
                     message: "Capturing \(identifier) from HealthKit…"
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
             let detailPolicy = settings.effectiveDetailPolicy
@@ -722,6 +730,7 @@ final class IPhoneDirectExportCoordinator {
                     message: "Prepared \(identifier) for transfer to the CLI."
                 ),
                 phase: .capturing,
+                journal: journal,
                 channel: channel
             )
         }
@@ -822,7 +831,7 @@ final class IPhoneDirectExportCoordinator {
         for descriptor in journal.partitions {
             try checkCancellation(journal: journal)
             let open = try DirectTransferOpen(session: journal.session, partition: descriptor)
-            try await channel.send(.transferOpen(open))
+            try await sendMessage(.transferOpen(open), journal: journal, channel: channel)
             let response = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
             guard case .transferDisposition(let disposition) = response,
                   disposition.sessionID == journal.session.sessionID,
@@ -846,7 +855,7 @@ final class IPhoneDirectExportCoordinator {
                     transferID: descriptor.transferID,
                     partitionSHA256: descriptor.sha256
                 )
-                try await channel.send(.transferPartitionComplete(complete))
+                try await sendMessage(.transferPartitionComplete(complete), journal: journal, channel: channel)
                 let completionResponse = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
                 guard case .transferPartitionAcknowledgement(let acknowledgement) = completionResponse,
                       acknowledgement.accepted,
@@ -878,6 +887,7 @@ final class IPhoneDirectExportCoordinator {
                     message: "Sent transfer part \(descriptor.index + 1) of \(journal.partitions.count) to the CLI."
                 ),
                 phase: .transferring,
+                journal: journal,
                 channel: channel
             )
         }
@@ -913,9 +923,11 @@ final class IPhoneDirectExportCoordinator {
                 data: data,
                 sha256: DirectTransferFile.sha256Hex(data)
             )
-            try await channel.sendBinaryTransferFrame(
-                try protocolAuthority.encodeTransferChunk(chunk)
-            )
+            try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+                try await channel.sendBinaryTransferFrame(
+                    try protocolAuthority.encodeTransferChunk(chunk)
+                )
+            }
             let response = try await receiveMessage(channel, jobID: journal.request.jobID, checkpoint: journal.checkpoint)
             guard case .transferChunkAcknowledgement(let acknowledgement) = response,
                   acknowledgement.accepted,
@@ -929,23 +941,60 @@ final class IPhoneDirectExportCoordinator {
         }
     }
 
+    private func sendMessage(
+        _ message: DirectMessage,
+        journal: IPhoneDirectExportJournal,
+        channel: IPhoneDirectExportConnection
+    ) async throws {
+        try await sendWhileOwned(jobID: journal.request.jobID, checkpoint: journal.checkpoint) {
+            try await channel.send(message)
+        }
+    }
+
+    private func sendWhileOwned(
+        jobID: UUID,
+        checkpoint: AppleExportJournalCheckpoint,
+        operation: @MainActor () async throws -> Void
+    ) async throws {
+        do {
+            try await checkpoint.continueWhileOwned {
+                try checkCancellation(jobID: jobID)
+                try await operation()
+                try checkCancellation(jobID: jobID)
+            }
+        } catch AppleExportJournalCheckpoint.ContinuationError.superseded {
+            throw IPhoneDirectExportError.requestChanged
+        }
+    }
+
     private func sendProgress(
         _ progress: DirectExportProgress,
         phase: CLIExportActivityTracker.Phase,
+        journal: IPhoneDirectExportJournal,
         channel: IPhoneDirectExportConnection
     ) async throws {
-        CLIExportActivityTracker.shared.update(
-            jobID: progress.jobID,
-            source: .direct,
-            phase: phase,
-            processedDays: progress.processedDays,
-            totalDays: progress.totalDays,
-            currentDate: progress.currentDate,
-            committedPartitions: progress.committedPartitions,
-            committedBytes: progress.committedBytes,
-            message: progress.message
-        )
-        try await channel.send(.exportProgress(progress))
+        guard progress.jobID == journal.request.jobID else {
+            throw IPhoneDirectExportError.requestChanged
+        }
+        do {
+            try journal.checkpoint.withGenerationOwnership {
+                try checkCancellation(jobID: progress.jobID)
+                CLIExportActivityTracker.shared.update(
+                    jobID: progress.jobID,
+                    source: .direct,
+                    phase: phase,
+                    processedDays: progress.processedDays,
+                    totalDays: progress.totalDays,
+                    currentDate: progress.currentDate,
+                    committedPartitions: progress.committedPartitions,
+                    committedBytes: progress.committedBytes,
+                    message: progress.message
+                )
+            }
+        } catch let error as POSIXError where error.code == .EAGAIN {
+            throw IPhoneDirectExportError.requestChanged
+        }
+        try await sendMessage(.exportProgress(progress), journal: journal, channel: channel)
     }
 
     private func receiveMessage(
@@ -955,7 +1004,7 @@ final class IPhoneDirectExportCoordinator {
     ) async throws -> DirectMessage {
         let message: DirectMessage
         do {
-            message = try await checkpoint.receiveWhileOwned {
+            message = try await checkpoint.continueWhileOwned {
                 try checkCancellation(jobID: jobID)
                 let response = try await channel.receive()
                 try checkCancellation(jobID: jobID)

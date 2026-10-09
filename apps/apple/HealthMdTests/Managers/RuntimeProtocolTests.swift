@@ -534,7 +534,7 @@ final class AtomicFileWriterTests: XCTestCase {
             lockURL: lock, durabilityRoot: root)
         var consumedReply: Int?
         do {
-            consumedReply = try await checkpoint.receiveWhileOwned {
+            consumedReply = try await checkpoint.continueWhileOwned {
                 await Task.yield()
                 try FileManager.default.removeItem(at: job)
                 try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
@@ -549,6 +549,54 @@ final class AtomicFileWriterTests: XCTestCase {
         }
         XCTAssertNil(consumedReply)
         XCTAssertEqual(try Data(contentsOf: destination), bytes)
+    }
+
+    @MainActor
+    func testOwnedSendSequenceStopsAfterReplacementButAllowsSameGenerationProgress() async throws {
+        for timing in ["before-send", "during-send", "same-generation-progress"] {
+            let root = try makeTemporaryDirectory()
+            let job = root.appendingPathComponent("job")
+            try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+            let destination = job.appendingPathComponent("journal.json")
+            let lock = root.appendingPathComponent(".publication.lock")
+            let bytes = Data("synthetic accepted authority".utf8)
+            var checkpoint = AppleExportJournalCheckpoint()
+            try checkpoint.publish(bytes, to: destination, freshAdmission: true,
+                lockURL: lock, durabilityRoot: root)
+            func replaceJob() throws {
+                try FileManager.default.removeItem(at: job)
+                try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+                var replacement = AppleExportJournalCheckpoint()
+                try replacement.publish(bytes, to: destination, freshAdmission: true,
+                    lockURL: lock, durabilityRoot: root)
+            }
+            if timing == "before-send" { try replaceJob() }
+            var frames: [String] = []
+            do {
+                try await checkpoint.continueWhileOwned {
+                    frames.append("session")
+                    await Task.yield()
+                    if timing == "during-send" { try replaceJob() }
+                    if timing == "same-generation-progress" {
+                        var progress = checkpoint
+                        try progress.publish(Data("advanced progress".utf8), to: destination,
+                            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+                    }
+                }
+                try await checkpoint.continueWhileOwned { frames.append("manifest") }
+                XCTAssertEqual(timing, "same-generation-progress")
+            } catch {
+                XCTAssertNotEqual(timing, "same-generation-progress")
+                XCTAssertEqual(error as? AppleExportJournalCheckpoint.ContinuationError, .superseded)
+            }
+            switch timing {
+            case "before-send": XCTAssertEqual(frames, [])
+            case "during-send": XCTAssertEqual(frames, ["session"])
+            default: XCTAssertEqual(frames, ["session", "manifest"])
+            }
+            XCTAssertEqual(try Data(contentsOf: destination),
+                timing == "same-generation-progress" ? Data("advanced progress".utf8) : bytes)
+        }
     }
 
     private enum SimulatedReceiveError: Error, Equatable { case disconnected }
@@ -566,7 +614,7 @@ final class AtomicFileWriterTests: XCTestCase {
             try checkpoint.publish(bytes, to: destination, freshAdmission: true,
                 lockURL: lock, durabilityRoot: root)
             do {
-                let _: Int = try await checkpoint.receiveWhileOwned {
+                let _: Int = try await checkpoint.continueWhileOwned {
                     await Task.yield()
                     if replaceDuringReceive {
                         try FileManager.default.removeItem(at: job)
