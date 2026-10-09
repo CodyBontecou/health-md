@@ -112,8 +112,18 @@ nonisolated final class IPhoneDirectCancellationInvocation: @unchecked Sendable 
     private var active = true
     private var cancelled = false
     private var checkpoint: AppleExportJournalCheckpoint?
+    private var retainedProtocolAuthority: AppleDirectProtocolAuthority?
 
-    init(jobID: UUID) { self.jobID = jobID }
+    init(jobID: UUID, protocolAuthority: AppleDirectProtocolAuthority? = nil) {
+        self.jobID = jobID
+        retainedProtocolAuthority = protocolAuthority
+    }
+    var cancellationProtocolAuthority: AppleDirectProtocolAuthority? {
+        lock.withLock { retainedProtocolAuthority }
+    }
+    func bindProtocolAuthority(_ retained: AppleDirectProtocolAuthority) {
+        lock.withLock { retainedProtocolAuthority = retained }
+    }
     var isCancelled: Bool { lock.withLock { cancelled } }
     var ownership: AppleExportJournalCheckpoint? { lock.withLock { checkpoint } }
     func cancel() { lock.withLock { cancelled = true } }
@@ -145,6 +155,11 @@ nonisolated private final class IPhoneDirectCancellationEnqueueLease: DirectPack
 nonisolated struct IPhoneDirectCancellationReceipt: Sendable {
     let jobID: UUID
     private let owner: Owner
+    private let retainedProtocolAuthority: AppleDirectProtocolAuthority?
+    var durableOwnership: AppleExportJournalCheckpoint? {
+        if case .durable(let checkpoint) = owner { return checkpoint }
+        return nil
+    }
     private enum Owner: Sendable {
         case preparation(IPhoneDirectCancellationInvocation)
         case durable(AppleExportJournalCheckpoint)
@@ -152,10 +167,13 @@ nonisolated struct IPhoneDirectCancellationReceipt: Sendable {
     init(invocation: IPhoneDirectCancellationInvocation) {
         jobID = invocation.jobID
         owner = .preparation(invocation)
+        retainedProtocolAuthority = invocation.cancellationProtocolAuthority
     }
-    init(jobID: UUID, ownership: AppleExportJournalCheckpoint) {
+    init(jobID: UUID, ownership: AppleExportJournalCheckpoint,
+         protocolAuthority: AppleDirectProtocolAuthority? = nil) {
         self.jobID = jobID
         owner = .durable(ownership)
+        retainedProtocolAuthority = protocolAuthority
     }
     private var acknowledgementAuthorization: DirectPacketSendAuthorization {
         switch owner {
@@ -175,7 +193,12 @@ nonisolated struct IPhoneDirectCancellationReceipt: Sendable {
         }
     }
     func sendAcknowledgement(on channel: DirectSecureChannel) async throws {
-        try await channel.send(.cancelAcknowledged(jobID: jobID), authorization: acknowledgementAuthorization)
+        if let retainedProtocolAuthority {
+            try await channel.send(.cancelAcknowledged(jobID: jobID), authorization: acknowledgementAuthorization,
+                messageCanonicalizer: retainedProtocolAuthority)
+        } else {
+            try await channel.send(.cancelAcknowledged(jobID: jobID), authorization: acknowledgementAuthorization)
+        }
     }
 }
 
@@ -224,7 +247,8 @@ final class IPhoneDirectExportCoordinator {
             }
             return
         }
-        let invocation = IPhoneDirectCancellationInvocation(jobID: request.jobID)
+        let invocation = IPhoneDirectCancellationInvocation(jobID: request.jobID,
+            protocolAuthority: protocolAuthority.frozenForCurrentOperation())
         activeJobID = request.jobID
         activeCancellation = invocation
         defer {
@@ -472,25 +496,32 @@ final class IPhoneDirectExportCoordinator {
         cancelWithReceipt(jobID: jobID) != nil
     }
 
-    func cancelWithReceipt(jobID: UUID) -> IPhoneDirectCancellationReceipt? {
+    func cancelWithReceipt(jobID: UUID,
+                           protocolAuthority: AppleDirectProtocolAuthority = .shared) -> IPhoneDirectCancellationReceipt? {
         let invocation = activeCancellation?.jobID == jobID ? activeCancellation : nil
         let expected = invocation?.ownership
+        let configuration = invocation?.cancellationProtocolAuthority ?? protocolAuthority
         do {
             try expected?.validateGeneration()
-            var rawOwnership: AppleExportJournalCheckpoint?
+            var rawReceipt: IPhoneDirectCancellationReceipt?
             if var journal = try loadJournal(jobID: jobID), journal.state != .completed,
                expected == nil || sameOwnership(expected, journal.checkpoint) {
+                let cancellationAuthority = configuration.makeSessionAuthority()
+                try cancellationAuthority.beginOperation(pin: journal.version >= IPhoneDirectExportJournal.currentVersion
+                    ? journal.appleDirectProtocolPin : nil)
                 let owner = journal.checkpoint
                 try owner.commitCancellation(operation: {
                     journal.state = .cancelled
                     journal.updatedAt = Date()
                     try saveJournal(&journal)
                 }, onCommitted: {})
-                rawOwnership = journal.checkpoint
+                rawReceipt = IPhoneDirectCancellationReceipt(jobID: jobID, ownership: journal.checkpoint,
+                    protocolAuthority: cancellationAuthority.frozenForCurrentOperation())
             }
-            let fileOwnership = try IPhoneDirectFileExportProducer.shared.cancel(
-                jobID: jobID, expectedOwnership: expected)
-            let committed = rawOwnership ?? fileOwnership
+            let fileReceipt = try IPhoneDirectFileExportProducer.shared.cancel(
+                jobID: jobID, expectedOwnership: expected, protocolAuthority: configuration)
+            let receipt = rawReceipt ?? fileReceipt
+            let committed = receipt?.durableOwnership
             guard committed != nil || (invocation != nil && expected == nil) else { return nil }
             let signal = {
                 invocation?.cancel()
@@ -503,8 +534,8 @@ final class IPhoneDirectExportCoordinator {
             } else {
                 signal()
             }
-            if let committed {
-                return IPhoneDirectCancellationReceipt(jobID: jobID, ownership: committed)
+            if committed != nil {
+                return receipt
             }
             return invocation.map(IPhoneDirectCancellationReceipt.init(invocation:))
         } catch {
@@ -560,6 +591,7 @@ final class IPhoneDirectExportCoordinator {
                     ? persisted.appleDirectProtocolPin : nil
             )
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)),
                   persisted.accepted.peerBinding == peerBinding,
                   persisted.session.partitionTargetBytes == negotiation.partitionTargetBytes else {
@@ -571,6 +603,7 @@ final class IPhoneDirectExportCoordinator {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             var prepared = try await prepareNewJournal(
                 request,
                 peerBinding: peerBinding,

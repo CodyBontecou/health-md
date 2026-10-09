@@ -56,7 +56,8 @@ final class IPhoneDirectFileExportProducer {
         return journal.state != "completed"
     }
 
-    func cancel(jobID: UUID, expectedOwnership: AppleExportJournalCheckpoint? = nil) throws -> AppleExportJournalCheckpoint? {
+    func cancel(jobID: UUID, expectedOwnership: AppleExportJournalCheckpoint? = nil,
+                protocolAuthority: AppleDirectProtocolAuthority = .shared) throws -> IPhoneDirectCancellationReceipt? {
         guard var journal = try loadJournal(jobID: jobID), journal.state != "completed" else { return nil }
         if let expectedOwnership {
             guard expectedOwnership.generation == journal.checkpoint.generation,
@@ -64,13 +65,17 @@ final class IPhoneDirectFileExportProducer {
                   expectedOwnership.journalURL == journal.checkpoint.journalURL,
                   expectedOwnership.publicationLockURL == journal.checkpoint.publicationLockURL else { return nil }
         }
+        let cancellationAuthority = protocolAuthority.makeSessionAuthority()
+        try cancellationAuthority.beginOperation(pin: journal.version >= IPhoneDirectFileJournal.directProtocolPinVersion
+            ? journal.appleDirectProtocolPin : nil)
         let owner = journal.checkpoint
         try owner.commitCancellation(operation: {
             journal.state = "cancelled"
             journal.updatedAt = Date()
             try saveJournal(&journal)
         }, onCommitted: {})
-        return journal.checkpoint
+        return IPhoneDirectCancellationReceipt(jobID: jobID, ownership: journal.checkpoint,
+            protocolAuthority: cancellationAuthority.frozenForCurrentOperation())
     }
 
     func pause(jobID: UUID, ownership: AppleExportJournalCheckpoint) -> Bool {
@@ -143,6 +148,7 @@ final class IPhoneDirectFileExportProducer {
                     ? persisted.appleDirectProtocolPin : nil
             )
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             guard persisted.session.requestFingerprint == (try operationAuthority.requestFingerprint(request)) else {
                 throw IPhoneDirectFileProducerError.requestChanged
             }
@@ -151,6 +157,7 @@ final class IPhoneDirectFileExportProducer {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
             operationAuthority = protocolAuthority.frozenForCurrentOperation()
+            IPhoneDirectCancellationScope.current?.bindProtocolAuthority(operationAuthority)
             var prepared = try await measureDirectFilePhase("prepare") {
                 try await prepare(
                     request,

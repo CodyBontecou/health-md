@@ -162,6 +162,59 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testCancellationReceiptRetainsSelectedProtocolAcrossSessionBootstrap() async throws {
+        let core = FakeAppleDirectProtocolRustCore()
+        let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        session.beginBootstrap()
+        let invocation = IPhoneDirectCancellationInvocation(jobID: UUID(),
+            protocolAuthority: session.frozenForCurrentOperation())
+        try session.beginOperation(pin: session.pinForNewOperation())
+        invocation.bindProtocolAuthority(session.frozenForCurrentOperation())
+        invocation.cancel()
+        let receipt = IPhoneDirectCancellationReceipt(invocation: invocation)
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var ownership = AppleExportJournalCheckpoint()
+        try ownership.publish(Data("synthetic cancelled authority".utf8),
+            to: job.appendingPathComponent("journal.json"), freshAdmission: true,
+            lockURL: root.appendingPathComponent(".publication.lock"), durabilityRoot: root)
+        let durable = IPhoneDirectCancellationReceipt(jobID: invocation.jobID, ownership: ownership,
+            protocolAuthority: session.frozenForCurrentOperation())
+        // A later callback cannot replace the protocol context captured by the receipt.
+        session.beginBootstrap()
+        invocation.bindProtocolAuthority(session.frozenForCurrentOperation())
+        let transport = OperationProtocolPacketTransport()
+        let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+        let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        for retainedReceipt in [receipt, durable] {
+            core.failCanonicalization = true
+            do {
+                try await retainedReceipt.sendAcknowledgement(on: channel)
+                XCTFail("Bootstrap must not bypass the receipt's retained Rust protocol authority")
+            } catch {
+                XCTAssertEqual(error as? AppleDirectProtocolAuthorityError,
+                    AppleDirectProtocolAuthorityError(stage: .directMessage))
+            }
+            XCTAssertEqual(transport.packetCount, 0)
+            core.failCanonicalization = false
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+            core.canonicalMessage = try encoder.encode(DirectMessage.cancelAcknowledged(jobID: invocation.jobID))
+            try await retainedReceipt.sendAcknowledgement(on: channel)
+            let received = try await receiver.receive()
+            XCTAssertEqual(received, .message(.cancelAcknowledged(jobID: invocation.jobID)),
+                "The failed retained canonicalization must consume no secure sequence")
+        }
+        invocation.finish()
+    }
+
+    @MainActor
     func testNativeExportConnectionRetainsOperationEngineAndSharesSessionInbox() async throws {
         let core = FakeAppleDirectProtocolRustCore()
         let encoder = JSONEncoder()
@@ -313,6 +366,13 @@ nonisolated private final class OperationProtocolPacketTransport: DirectPacketTr
     private var packets: [ManualIPSyncPacket] = []
     var packetCount: Int { lock.withLock { packets.count } }
     func send(_ packet: ManualIPSyncPacket) async throws { lock.withLock { packets.append(packet) } }
+    func send(authorizedBy authorization: DirectPacketSendAuthorization,
+              packet: @Sendable () throws -> ManualIPSyncPacket) async throws {
+        let lease = try authorization.acquireLease()
+        defer { lease.close() }
+        let generated = try packet()
+        lock.withLock { packets.append(generated) }
+    }
     func receive() async throws -> ManualIPSyncPacket {
         try lock.withLock {
             guard !packets.isEmpty else { throw DirectChannelError.connectionClosed }
