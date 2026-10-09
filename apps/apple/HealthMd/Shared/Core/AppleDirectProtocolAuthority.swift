@@ -182,6 +182,12 @@ final class AppleDirectProtocolAuthority: DirectMessageCanonicalizing, @unchecke
         self.rustCore = rustCore
     }
 
+    /// Connection attempts share the immutable core/configuration, never the
+    /// mutable bootstrap/operation mode or diagnostic counters.
+    func makeSessionAuthority() -> AppleDirectProtocolAuthority {
+        AppleDirectProtocolAuthority(defaultMode: defaultMode, rustCore: rustCore)
+    }
+
     static func configuredMode(
         environment: [String: String] = ProcessInfo.processInfo.environment
     ) -> AppleDirectProtocolEngineMode {

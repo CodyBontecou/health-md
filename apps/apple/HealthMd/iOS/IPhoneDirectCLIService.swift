@@ -314,14 +314,7 @@ final class IPhoneDirectCLIService: ObservableObject {
     private lazy var client = DirectManualIPClient(
         installationID: installationID,
         displayName: UIDevice.current.name,
-        trustStore: trustStore,
-        messageCanonicalizer: protocolAuthority
-    )
-    private lazy var nearbyClient = DirectNearbyClient(
-        installationID: installationID,
-        displayName: UIDevice.current.name,
-        trustStore: trustStore,
-        messageCanonicalizer: protocolAuthority
+        trustStore: trustStore
     )
     private let idleTimerActivityID = UUID()
     private var reconnectTask: Task<Void, Never>?
@@ -797,11 +790,24 @@ final class IPhoneDirectCLIService: ObservableObject {
         var provisionalChannel: DirectSecureChannel?
         var pairingTrustWasWritten = false
         do {
-            try protocolAuthority.assertCompatible()
+            let sessionAuthority = protocolAuthority.makeSessionAuthority()
+            try sessionAuthority.assertCompatible()
+            let sessionClient = DirectManualIPClient(
+                installationID: installationID,
+                displayName: UIDevice.current.name,
+                trustStore: trustStore,
+                messageCanonicalizer: sessionAuthority
+            )
+            let sessionNearbyClient = DirectNearbyClient(
+                installationID: installationID,
+                displayName: UIDevice.current.name,
+                trustStore: trustStore,
+                messageCanonicalizer: sessionAuthority
+            )
             let connected: DirectSecureChannel
             switch transport {
             case .manualIP:
-                connected = try await client.connect(
+                connected = try await sessionClient.connect(
                     host: host,
                     port: port,
                     pairingCode: pairingCode,
@@ -809,12 +815,12 @@ final class IPhoneDirectCLIService: ObservableObject {
                 )
             case .nearby:
                 if let timeout {
-                    connected = try await nearbyClient.connect(
+                    connected = try await sessionNearbyClient.connect(
                         pairingCode: pairingCode,
                         timeout: timeout
                     )
                 } else {
-                    connected = try await nearbyClient.connectWaitingForServer(
+                    connected = try await sessionNearbyClient.connectWaitingForServer(
                         pairingCode: pairingCode
                     )
                 }
@@ -865,6 +871,7 @@ final class IPhoneDirectCLIService: ObservableObject {
             lastError = nil
             beginSession(
                 on: connected,
+                protocolAuthority: sessionAuthority,
                 pairingTrustWasWritten: pairingTrustWasWritten,
                 previousServer: savedServerBeforePairing
             )
@@ -953,6 +960,7 @@ final class IPhoneDirectCLIService: ObservableObject {
 
     private func beginSession(
         on connected: DirectSecureChannel,
+        protocolAuthority: AppleDirectProtocolAuthority,
         pairingTrustWasWritten: Bool,
         previousServer: ManualIPTrustedMac?
     ) {
@@ -988,7 +996,8 @@ final class IPhoneDirectCLIService: ObservableObject {
                         message,
                         on: connected,
                         exportConnection: exportConnection,
-                        sessionID: sessionID
+                        sessionID: sessionID,
+                        protocolAuthority: protocolAuthority
                     )
                 }
             } catch {
@@ -999,9 +1008,9 @@ final class IPhoneDirectCLIService: ObservableObject {
                 }
             }
             await exportConnection.finish()
+            protocolAuthority.endOperation()
             guard self.activeSessionID == sessionID,
                   self.channel === connected else { return }
-            self.protocolAuthority.endOperation()
             let pairingWasIncomplete = self.provisionalPairingTrust?.sessionID == sessionID
             let pairingTrustWasRestored = self.rollbackProvisionalPairingTrustIfNeeded(
                 for: sessionID
@@ -1038,7 +1047,8 @@ final class IPhoneDirectCLIService: ObservableObject {
         _ message: DirectMessage,
         on channel: DirectSecureChannel,
         exportConnection: IPhoneDirectExportConnection,
-        sessionID: UUID
+        sessionID: UUID,
+        protocolAuthority: AppleDirectProtocolAuthority
     ) async throws {
         switch message {
         case .hello(let capabilities):
@@ -1131,7 +1141,7 @@ final class IPhoneDirectCLIService: ObservableObject {
                         binding,
                         negotiation,
                         exportConnection,
-                        self.protocolAuthority
+                        protocolAuthority
                     )
                     self.finishExportOperation(operationID)
                 }
@@ -1308,7 +1318,6 @@ final class IPhoneDirectCLIService: ObservableObject {
         channel?.cancel()
         channel = nil
         remoteCapabilities = nil
-        protocolAuthority.endOperation()
         isConnected = false
         isConnecting = false
         connectedCLIName = nil

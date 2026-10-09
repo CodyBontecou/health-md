@@ -103,6 +103,34 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
         authority.endOperation()
     }
 
+    func testReconnectBootstrapAndOldCleanupKeepIndependentSessionModes() throws {
+        let core = FakeAppleDirectProtocolRustCore()
+        core.fingerprint = String(repeating: "a", count: 64)
+        core.canonicalMessage = Data("rust-session".utf8)
+        let configuration = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        let oldSession = configuration.makeSessionAuthority()
+        let pin = try XCTUnwrap(oldSession.pinForNewOperation())
+        try oldSession.beginOperation(pin: pin)
+        let replacement = configuration.makeSessionAuthority()
+        replacement.beginBootstrap()
+
+        XCTAssertFalse(oldSession === replacement)
+        XCTAssertEqual(try oldSession.requestFingerprint(fixtureRequest()).sha256, core.fingerprint,
+            "Reconnect bootstrap cannot downgrade the old session's pinned engine")
+        XCTAssertEqual(try replacement.requestFingerprint(fixtureRequest()),
+            try DirectRequestFingerprint.make(for: fixtureRequest()))
+        oldSession.endOperation()
+        configuration.endOperation()
+        let native = Data("native-bootstrap".utf8)
+        XCTAssertEqual(try replacement.canonicalizeDirectMessage(native), native,
+            "Old session/configuration teardown cannot end replacement bootstrap")
+        XCTAssertTrue(replacement.comparisonSnapshot().comparisons.isEmpty)
+        try replacement.beginOperation(pin: pin)
+        oldSession.beginBootstrap()
+        XCTAssertEqual(try replacement.canonicalizeDirectMessage(native), core.canonicalMessage,
+            "A stale bootstrap cannot replace the admitted replacement engine")
+    }
+
     func testTransferNegotiationMatchesNative() throws {
         let core = FakeAppleDirectProtocolRustCore()
         let authority = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
