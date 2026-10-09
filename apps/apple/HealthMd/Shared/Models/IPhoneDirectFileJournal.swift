@@ -124,6 +124,16 @@ struct IPhoneDirectFileJournal: Codable {
     static let derivedOutputReconciliationVersion = 6
     static let currentVersion = derivedOutputReconciliationVersion
 
+    var checkpoint = AppleExportJournalCheckpoint()
+
+    private enum CodingKeys: String, CodingKey {
+        case version, request, accepted, session, settingsSnapshot
+        case appleExportEnginePin, appleDirectProtocolPin, healthSubfolder, requestedDates, originalRequestedDates
+        case originalCalendarTimeZoneIdentifier, transferDates, capturedDays, generatedFiles, partitions
+        case committedPartitionCount, committedBytes, derivedOutputPartialFailures, terminalNoDataDateIdentifiers, generationCompleted
+        case state, completionRecorded, updatedAt
+    }
+
     let version: Int
     let request: DirectExportRequest
     let accepted: DirectExportAccepted
@@ -264,6 +274,32 @@ struct IPhoneDirectFileJournal: Codable {
 
 /// Shared disk admission for direct and connected exports. Nil means
 /// new work; a retained journal must never silently become a new operation.
+/// A value-owned read image. It is deliberately excluded from journal Codable keys.
+nonisolated struct AppleExportJournalCheckpoint {
+    var bytes: Data?
+
+    mutating func publish(
+        _ data: Data, to destination: URL,
+        freshAdmission: Bool,
+        lockURL: URL,
+        durabilityRoot: URL,
+        fileManager: FileManager = .default,
+        attributes: [FileAttributeKey: Any]? = nil
+    ) throws {
+        let policy: AtomicFileWriter.CommitPolicy
+        if freshAdmission {
+            policy = .requireAbsent
+        } else {
+            guard let bytes else { throw POSIXError(.EAGAIN) }
+            policy = .replaceIfUnchanged(bytes)
+        }
+        try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
+            attributes: attributes, commitPolicy: policy, transactionLockURL: lockURL,
+            directoryDurability: .required(upTo: durabilityRoot))
+        bytes = data
+    }
+}
+
 enum AppleExportJournalRecovery {
     enum RecoveryError: LocalizedError {
         case unreadableJournal

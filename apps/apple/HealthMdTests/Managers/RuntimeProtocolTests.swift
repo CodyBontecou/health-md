@@ -580,6 +580,50 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertEqual(try temporaryFiles(in: root), [])
     }
 
+    func testValueOwnedCheckpointCopiesCannotRefreshStaleReadAuthority() throws {
+        let root = try makeTemporaryDirectory()
+        let destination = root.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let original = Data("accepted-authority".utf8)
+        var stale = AppleExportJournalCheckpoint()
+        try stale.publish(original, to: destination, freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var independent = stale
+        let paused = Data("independent-paused-checkpoint".utf8)
+        try independent.publish(paused, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertEqual(independent.bytes, paused)
+        XCTAssertEqual(stale.bytes, original)
+        XCTAssertThrowsError(try stale.publish(Data("stale-progress".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), paused)
+        XCTAssertEqual(stale.bytes, original)
+        var resumed = AppleExportJournalCheckpoint(bytes: try Data(contentsOf: destination))
+        let completed = Data("resumed-completion".utf8)
+        try resumed.publish(completed, to: destination, freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        XCTAssertEqual(resumed.bytes, completed)
+        XCTAssertEqual(try Data(contentsOf: destination), completed)
+        XCTAssertEqual(try temporaryFiles(in: root), [])
+    }
+
+    func testCheckpointWithoutReadReceiptCannotCreateOrReplaceAcceptedWork() throws {
+        let root = try makeTemporaryDirectory()
+        let destination = root.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        let authority = Data("retained-authority".utf8)
+        try authority.write(to: destination)
+        var unowned = AppleExportJournalCheckpoint()
+        XCTAssertThrowsError(try unowned.publish(Data("unowned".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root))
+        XCTAssertNil(unowned.bytes)
+        XCTAssertEqual(try Data(contentsOf: destination), authority)
+        try FileManager.default.removeItem(at: destination)
+        XCTAssertThrowsError(try unowned.publish(Data("unowned".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+        XCTAssertEqual(try temporaryFiles(in: root), [])
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("HealthMdAtomicFileWriterTests-\(UUID().uuidString)", isDirectory: true)

@@ -88,6 +88,14 @@ private struct IPhoneDirectExportJournal: Codable {
     static let legacyProtocolVersion = 2
     static let currentVersion = 3
 
+    var checkpoint = AppleExportJournalCheckpoint()
+
+    private enum CodingKeys: String, CodingKey {
+        case version, request, settingsSnapshot, accepted, session
+        case appleDirectProtocolPin, days, partitions, committedPartitionCount, committedBytes
+        case state, completionRecorded, updatedAt
+    }
+
     let version: Int
     let request: DirectExportRequest
     let settingsSnapshot: ExportSettingsSnapshot
@@ -197,15 +205,22 @@ final class IPhoneDirectExportCoordinator {
                 rawPerformanceOutcome = .cancelled
             }
             #endif
+            let checkpointConflict: Bool
+            switch error {
+            case IPhoneDirectExportError.requestChanged, IPhoneDirectFileProducerError.requestChanged:
+                checkpointConflict = true
+            default:
+                checkpointConflict = false
+            }
             var retainedForResume = false
-            if request.responseMode == .writeFiles {
+            if !checkpointConflict, request.responseMode == .writeFiles {
                 IPhoneDirectFileExportProducer.shared.pause(jobID: request.jobID)
                 retainedForResume = IPhoneDirectFileExportProducer.shared.canCancel(jobID: request.jobID)
-            } else if var journal = try? loadJournal(jobID: request.jobID),
+            } else if !checkpointConflict, var journal = try? loadJournal(jobID: request.jobID),
                       journal.state != .cancelled, journal.state != .completed {
                 journal.state = .paused
                 journal.updatedAt = Date()
-                try? saveJournal(journal)
+                try? saveJournal(&journal)
                 retainedForResume = true
             }
             if ownsQueryController,
@@ -277,7 +292,7 @@ final class IPhoneDirectExportCoordinator {
         if var journal = rawJournal {
             journal.state = .cancelled
             journal.updatedAt = Date()
-            try? saveJournal(journal)
+            try? saveJournal(&journal)
         }
         return true
     }
@@ -332,7 +347,7 @@ final class IPhoneDirectExportCoordinator {
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
-            let prepared = try await prepareNewJournal(
+            var prepared = try await prepareNewJournal(
                 request,
                 peerBinding: peerBinding,
                 negotiation: negotiation,
@@ -345,8 +360,8 @@ final class IPhoneDirectExportCoordinator {
                 settingsSnapshot: prepared.settingsSnapshot,
                 sourceTimeZoneIdentifier: prepared.accepted.sourceTimeZoneIdentifier
             )
+            try saveJournal(&prepared, freshAdmission: true)
             journal = prepared
-            try saveJournal(prepared, freshAdmission: true)
         }
 
         // Already-spooled historical jobs may transfer their exact bytes without
@@ -370,11 +385,11 @@ final class IPhoneDirectExportCoordinator {
            current.days.contains(where: { $0.manifest.healthDataByteCount > 0 }) {
             current.partitions = try buildPartitions(for: current)
             current.updatedAt = Date()
-            try saveJournal(current)
+            try saveJournal(&current)
         }
         current.state = .transferring
         current.updatedAt = Date()
-        try saveJournal(current)
+        try saveJournal(&current)
 
         try await channel.send(.transferSession(current.session))
         for day in current.days {
@@ -460,7 +475,7 @@ final class IPhoneDirectExportCoordinator {
         }
         // Both side effects are keyed by job ID, so a crash before this journal
         // save retries them without double charging or duplicating history.
-        try saveJournal(current)
+        try saveJournal(&current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         // Informational day notes (for example a WorkoutKit plan this device
         // cannot decode) surface as wire day statuses the CLI must keep seeing,
@@ -678,7 +693,7 @@ final class IPhoneDirectExportCoordinator {
             )
             journal.days.append(spool)
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             try await sendProgress(
                 DirectExportProgress(
                     jobID: journal.request.jobID,
@@ -834,7 +849,7 @@ final class IPhoneDirectExportCoordinator {
                 .prefix(journal.committedPartitionCount)
                 .reduce(0) { $0 + $1.byteCount }
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             try await sendProgress(
                 DirectExportProgress(
                     jobID: journal.request.jobID,
@@ -1208,34 +1223,47 @@ final class IPhoneDirectExportCoordinator {
         return directory
     }
 
-    private func saveJournal(_ journal: IPhoneDirectExportJournal, freshAdmission: Bool = false) throws {
+    private func saveJournal(_ journal: inout IPhoneDirectExportJournal, freshAdmission: Bool = false) throws {
         let encoder = JSONEncoder()
         encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        try protectedAtomicWrite(
-            encoder.encode(journal),
-            to: try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json"),
-            freshAdmission: freshAdmission
-        )
+        let destination = try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json")
+        let support = try fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let data = try encoder.encode(journal)
+        do {
+            try journal.checkpoint.publish(data, to: destination,
+                freshAdmission: freshAdmission,
+                lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
+                durabilityRoot: support, fileManager: fileManager,
+                attributes: [.posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
+            throw IPhoneDirectExportError.requestChanged
+        }
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectExportJournal? {
-        try AppleExportJournalRecovery.load(
+        var bytes: Data?
+        var journal: IPhoneDirectExportJournal? = try AppleExportJournalRecovery.load(
             at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
             directoryDurability: .required(upTo: try fileManager.url(
                 for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)),
+            didLoadBytes: { bytes = $0 },
             isSupported: { journal in
                 journal.request.jobID == jobID && (journal.version == IPhoneDirectExportJournal.legacyProtocolVersion || journal.version == IPhoneDirectExportJournal.currentVersion)
             }
         )
+        journal?.checkpoint = AppleExportJournalCheckpoint(bytes: bytes)
+        return journal
     }
 
-    private func protectedAtomicWrite(_ data: Data, to destination: URL, freshAdmission: Bool = false) throws {
+    private func protectedAtomicWrite(_ data: Data, to destination: URL) throws {
         try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
             attributes: [.posixPermissions: 0o600,
                 .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting,
+            commitPolicy: .replaceExisting,
             directoryDurability: .required(upTo: try fileManager.url(
                 for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)))
     }

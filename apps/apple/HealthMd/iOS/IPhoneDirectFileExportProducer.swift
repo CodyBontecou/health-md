@@ -62,7 +62,7 @@ final class IPhoneDirectFileExportProducer {
         if var journal = try? loadJournal(jobID: jobID) {
             journal.state = "cancelled"
             journal.updatedAt = Date()
-            try? saveJournal(journal)
+            try? saveJournal(&journal)
         }
     }
 
@@ -71,7 +71,7 @@ final class IPhoneDirectFileExportProducer {
               journal.state != "completed", journal.state != "cancelled" else { return }
         journal.state = "paused"
         journal.updatedAt = Date()
-        try? saveJournal(journal)
+        try? saveJournal(&journal)
     }
 
     func run(
@@ -137,7 +137,7 @@ final class IPhoneDirectFileExportProducer {
         } else {
             let protocolPin = try protocolAuthority.pinForNewOperation()
             try protocolAuthority.beginOperation(pin: protocolPin)
-            let prepared = try await measureDirectFilePhase("prepare") {
+            var prepared = try await measureDirectFilePhase("prepare") {
                 try await prepare(
                     request,
                     peerBinding: peerBinding,
@@ -149,8 +149,8 @@ final class IPhoneDirectFileExportProducer {
                 )
             }
             try checkCancellation(request.jobID)
+            try saveJournal(&prepared, freshAdmission: true)
             journal = prepared
-            try saveJournal(prepared, freshAdmission: true)
         }
 
         try await channel.send(.exportAccepted(journal.accepted))
@@ -182,11 +182,11 @@ final class IPhoneDirectFileExportProducer {
                 try buildPartitions(current)
             }
             current.updatedAt = Date()
-            try saveJournal(current)
+            try saveJournal(&current)
         }
         current.state = "transferring"
         current.updatedAt = Date()
-        try saveJournal(current)
+        try saveJournal(&current)
 
         try await channel.send(.transferSession(current.session))
         for file in current.generatedFiles.sorted(by: { $0.manifest.relativePath < $1.manifest.relativePath }) {
@@ -288,7 +288,7 @@ final class IPhoneDirectFileExportProducer {
         }
         // Both side effects are keyed by job ID, so a crash before this journal
         // save retries them without double charging or duplicating history.
-        try saveJournal(current)
+        try saveJournal(&current)
         try await channel.send(.completionConfirmed(jobID: request.jobID))
         externalExportSucceeded = true
         #if DEBUG
@@ -670,7 +670,7 @@ final class IPhoneDirectFileExportProducer {
                 historyFactsRecorded: true
             ))
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             let updatedPreparedRequestedDays = Self.preparedRequestedDayCount(
                 in: journal.capturedDays
             )
@@ -740,7 +740,7 @@ final class IPhoneDirectFileExportProducer {
             )
         }
         journal.updatedAt = Date()
-        try saveJournal(journal)
+        try saveJournal(&journal)
         return journal
     }
 
@@ -935,7 +935,7 @@ final class IPhoneDirectFileExportProducer {
                             historyFactsRecorded: day.historyFactsRecorded
                         )
                         journal.updatedAt = Date()
-                        try saveJournal(journal)
+                        try saveJournal(&journal)
                     }
                     wroteDictionary = true
                 } catch ExportError.noHealthData {
@@ -1033,7 +1033,7 @@ final class IPhoneDirectFileExportProducer {
         }.sorted { $0.manifest.relativePath < $1.manifest.relativePath }
         journal.generationCompleted = true
         journal.updatedAt = Date()
-        try saveJournal(journal)
+        try saveJournal(&journal)
         return journal
     }
 
@@ -1160,7 +1160,7 @@ final class IPhoneDirectFileExportProducer {
                 .prefix(journal.committedPartitionCount)
                 .reduce(0) { $0 + $1.byteCount }
             journal.updatedAt = Date()
-            try saveJournal(journal)
+            try saveJournal(&journal)
             try await sendProgress(
                 DirectExportProgress(
                     jobID: journal.request.jobID,
@@ -1573,27 +1573,40 @@ final class IPhoneDirectFileExportProducer {
         try jobDirectory(jobID).appendingPathComponent("generated", isDirectory: true)
     }
 
-    private func saveJournal(_ journal: IPhoneDirectFileJournal, freshAdmission: Bool = false) throws {
+    private func saveJournal(_ journal: inout IPhoneDirectFileJournal, freshAdmission: Bool = false) throws {
         let encoder = JSONEncoder()
         encoder.userInfo[ExportSettingsSnapshot.durableSleepContextEncoding] = true
         encoder.dateEncodingStrategy = .iso8601
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        try protectedAtomicWrite(
-            encoder.encode(journal),
-            to: try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json"),
-            freshAdmission: freshAdmission
-        )
+        let destination = try jobDirectory(journal.request.jobID).appendingPathComponent("journal.json")
+        let support = try fileManager.url(for: .applicationSupportDirectory,
+            in: .userDomainMask, appropriateFor: nil, create: true)
+        let data = try encoder.encode(journal)
+        do {
+            try journal.checkpoint.publish(data, to: destination,
+                freshAdmission: freshAdmission,
+                lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
+                durabilityRoot: support, fileManager: fileManager,
+                attributes: [.posixPermissions: 0o600,
+                    .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication])
+        } catch let error as POSIXError where error.code == .EAGAIN || (freshAdmission && error.code == .EEXIST) {
+            throw IPhoneDirectFileProducerError.requestChanged
+        }
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
-        try AppleExportJournalRecovery.load(
+        var bytes: Data?
+        var journal: IPhoneDirectFileJournal? = try AppleExportJournalRecovery.load(
             at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
             directoryDurability: .required(upTo: try fileManager.url(
                 for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)),
+            didLoadBytes: { bytes = $0 },
             isSupported: { journal in
                 journal.request.jobID == jobID && (IPhoneDirectFileJournal.isSupportedVersion(journal.version))
             }
         )
+        journal?.checkpoint = AppleExportJournalCheckpoint(bytes: bytes)
+        return journal
     }
 
     private func decodeCapturedPayload(
@@ -1644,15 +1657,6 @@ final class IPhoneDirectFileExportProducer {
             try output.synchronize()
             try output.close()
         }
-    }
-
-    private func protectedAtomicWrite(_ data: Data, to destination: URL, freshAdmission: Bool = false) throws {
-        try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
-            attributes: [.posixPermissions: 0o600,
-                .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting,
-            directoryDurability: .required(upTo: try fileManager.url(
-                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)))
     }
 
     private func sha256(url: URL, offset: Int64, byteCount: Int64) throws -> String {

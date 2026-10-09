@@ -842,6 +842,22 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         }
     }
 
+    func testGeneratedJournalReadReceiptNeverChangesSerializedBytesOrRestoresFromJSON() throws {
+        var journal = try makeJournal()
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys]
+        let original = try encoder.encode(journal)
+        journal.checkpoint = AppleExportJournalCheckpoint(bytes: Data("private-read-image".utf8))
+        XCTAssertEqual(try encoder.encode(journal), original)
+        var restored = try JSONDecoder().decode(IPhoneDirectFileJournal.self, from: original)
+        XCTAssertNil(restored.checkpoint.bytes)
+        // Existing set-valued settings may reorder during decode. Compare receipt changes
+        // on the same decoded value rather than requiring unrelated set ordering stability.
+        let decodedBytes = try encoder.encode(restored)
+        restored.checkpoint = AppleExportJournalCheckpoint(bytes: Data("rebound-private-read-image".utf8))
+        XCTAssertEqual(try encoder.encode(restored), decodedBytes)
+    }
+
     private func withDirectJournalDirectory(_ body: (URL) throws -> Void) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
