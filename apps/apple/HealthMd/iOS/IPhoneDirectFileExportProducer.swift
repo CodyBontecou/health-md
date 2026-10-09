@@ -66,12 +66,15 @@ final class IPhoneDirectFileExportProducer {
         }
     }
 
-    func pause(jobID: UUID) {
-        guard var journal = try? loadJournal(jobID: jobID),
-              journal.state != "completed", journal.state != "cancelled" else { return }
-        journal.state = "paused"
-        journal.updatedAt = Date()
-        try? saveJournal(&journal)
+    func pause(jobID: UUID, ownership: AppleExportJournalCheckpoint) -> Bool {
+        (try? ownership.withGenerationOwnership {
+            guard var journal = try loadJournal(jobID: jobID),
+                  journal.state != "completed", journal.state != "cancelled" else { return false }
+            journal.state = "paused"
+            journal.updatedAt = Date()
+            try saveJournal(&journal)
+            return true
+        }) ?? false
     }
 
     func run(
@@ -81,7 +84,8 @@ final class IPhoneDirectFileExportProducer {
         channel: IPhoneDirectExportConnection,
         protocolAuthority: AppleDirectProtocolAuthority,
         healthKitManager: HealthKitManager,
-        externalIntegrations: ExternalIntegrationDailyRecordProviding?
+        externalIntegrations: ExternalIntegrationDailyRecordProviding?,
+        didAcquireOwnership: (AppleExportJournalCheckpoint) -> Void
     ) async throws -> Bool {
         #if DEBUG
         let jobPerformanceSpan = ExportPerformanceInstrumentation.beginSpan(
@@ -153,6 +157,7 @@ final class IPhoneDirectFileExportProducer {
             journal = prepared
         }
 
+        didAcquireOwnership(journal.checkpoint)
         try await channel.send(.exportAccepted(journal.accepted))
         var current = journal
         current.state = "preparing"

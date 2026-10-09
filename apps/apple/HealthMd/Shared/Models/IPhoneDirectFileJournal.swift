@@ -283,6 +283,15 @@ nonisolated struct AppleExportJournalCheckpoint {
     /// A bounded continuation check: checkpoint progress may advance within this generation.
     /// Never creates a missing job directory or refreshes this value's ownership.
     func validateGeneration(fileManager: FileManager = .default) throws {
+        try withGenerationOwnership(fileManager: fileManager) {}
+    }
+
+    /// Holds the publication transaction through a synchronous owner-bound mutation.
+    /// The original execution receipt may read newer progress, but never a new generation.
+    func withGenerationOwnership<Result>(
+        fileManager: FileManager = .default,
+        operation: () throws -> Result
+    ) throws -> Result {
         guard bytes != nil, let generation, let journalURL, let publicationLockURL else {
             throw POSIXError(.EAGAIN)
         }
@@ -292,6 +301,7 @@ nonisolated struct AppleExportJournalCheckpoint {
               try Self.readGeneration(for: journalURL, fileManager: fileManager) == generation else {
             throw POSIXError(.EAGAIN)
         }
+        return try operation()
     }
 
     enum ContinuationError: Error, Equatable { case superseded }

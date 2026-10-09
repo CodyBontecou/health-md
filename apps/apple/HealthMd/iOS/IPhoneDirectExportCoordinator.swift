@@ -143,6 +143,7 @@ final class IPhoneDirectExportCoordinator {
         #endif
         defer { protocolAuthority.endOperation() }
         var ownsQueryController = false
+        var executionOwnership: AppleExportJournalCheckpoint?
         do {
             guard activeJobID == nil else {
                 throw IPhoneDirectExportError.requestInProgress
@@ -170,7 +171,8 @@ final class IPhoneDirectExportCoordinator {
                             channel: channel,
                             protocolAuthority: protocolAuthority,
                             healthKitManager: healthKitManager,
-                            externalIntegrations: externalIntegrations
+                            externalIntegrations: externalIntegrations,
+                            didAcquireOwnership: { executionOwnership = $0 }
                         )
                     }
                     return try await run(
@@ -179,7 +181,8 @@ final class IPhoneDirectExportCoordinator {
                         negotiation: negotiation,
                         channel: channel,
                         protocolAuthority: protocolAuthority,
-                        healthKitManager: healthKitManager
+                        healthKitManager: healthKitManager,
+                        didAcquireOwnership: { executionOwnership = $0 }
                     )
                 }
             queryExecutionControllers.removeValue(forKey: request.jobID)
@@ -208,15 +211,21 @@ final class IPhoneDirectExportCoordinator {
                 checkpointConflict = false
             }
             var retainedForResume = false
-            if !checkpointConflict, request.responseMode == .writeFiles {
-                IPhoneDirectFileExportProducer.shared.pause(jobID: request.jobID)
-                retainedForResume = IPhoneDirectFileExportProducer.shared.canCancel(jobID: request.jobID)
-            } else if !checkpointConflict, var journal = try? loadJournal(jobID: request.jobID),
-                      journal.state != .cancelled, journal.state != .completed {
-                journal.state = .paused
-                journal.updatedAt = Date()
-                try? saveJournal(&journal)
-                retainedForResume = true
+            if !checkpointConflict, let executionOwnership {
+                if request.responseMode == .writeFiles {
+                    retainedForResume = IPhoneDirectFileExportProducer.shared.pause(
+                        jobID: request.jobID, ownership: executionOwnership
+                    )
+                } else {
+                    retainedForResume = (try? executionOwnership.withGenerationOwnership {
+                        guard var journal = try loadJournal(jobID: request.jobID),
+                              journal.state != .cancelled, journal.state != .completed else { return false }
+                        journal.state = .paused
+                        journal.updatedAt = Date()
+                        try saveJournal(&journal)
+                        return true
+                    }) ?? false
+                }
             }
             if ownsQueryController,
                (failureReason == .cancelled || !retainedForResume) {
@@ -298,7 +307,8 @@ final class IPhoneDirectExportCoordinator {
         negotiation: DirectTransferNegotiation,
         channel: IPhoneDirectExportConnection,
         protocolAuthority: AppleDirectProtocolAuthority,
-        healthKitManager: HealthKitManager
+        healthKitManager: HealthKitManager,
+        didAcquireOwnership: (AppleExportJournalCheckpoint) -> Void
     ) async throws -> Bool {
         guard UIApplication.shared.isProtectedDataAvailable else {
             throw IPhoneDirectExportError.protectedDataUnavailable
@@ -358,6 +368,8 @@ final class IPhoneDirectExportCoordinator {
             try saveJournal(&prepared, freshAdmission: true)
             journal = prepared
         }
+
+        didAcquireOwnership(journal.checkpoint)
 
         // Already-spooled historical jobs may transfer their exact bytes without
         // acquiring new capture authority. Partial jobs must agree before acceptance.

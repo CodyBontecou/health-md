@@ -8,6 +8,7 @@
 //
 
 import XCTest
+import Darwin
 @testable import HealthMd
 
 // MARK: - Fake Implementations
@@ -586,6 +587,51 @@ final class AtomicFileWriterTests: XCTestCase {
             }
             XCTAssertEqual(try Data(contentsOf: destination), bytes)
         }
+    }
+
+    func testErrorCleanupHoldsOriginalGenerationThroughProgressMutation() throws {
+        let root = try makeTemporaryDirectory()
+        let job = root.appendingPathComponent("job")
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        let destination = job.appendingPathComponent("journal.json")
+        let lock = root.appendingPathComponent(".publication.lock")
+        var execution = AppleExportJournalCheckpoint()
+        try execution.publish(Data("accepted".utf8), to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var progress = execution
+        try progress.publish(Data("captured".utf8), to: destination,
+            freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        try execution.withGenerationOwnership {
+            let descriptor = Darwin.open(lock.path, O_RDWR)
+            guard descriptor >= 0 else { throw POSIXError(.EIO) }
+            defer { Darwin.close(descriptor) }
+            let result = flock(descriptor, LOCK_EX | LOCK_NB)
+            let observedError = errno
+            if result == 0 { _ = flock(descriptor, LOCK_UN) }
+            XCTAssertEqual(result, -1)
+            XCTAssertEqual(observedError, EWOULDBLOCK)
+            XCTAssertEqual(try Data(contentsOf: destination), Data("captured".utf8))
+            // A loaded checkpoint may advance within this execution's generation.
+            try progress.publish(Data("paused".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }
+        XCTAssertEqual(try Data(contentsOf: destination), Data("paused".utf8))
+        try FileManager.default.removeItem(at: job)
+        try FileManager.default.createDirectory(at: job, withIntermediateDirectories: false)
+        var replacement = AppleExportJournalCheckpoint()
+        let replacementBytes = Data("paused".utf8)
+        try replacement.publish(replacementBytes, to: destination,
+            freshAdmission: true, lockURL: lock, durabilityRoot: root)
+        var cleanupCalled = false
+        XCTAssertThrowsError(try execution.withGenerationOwnership {
+            cleanupCalled = true
+            try replacement.publish(Data("stale pause".utf8), to: destination,
+                freshAdmission: false, lockURL: lock, durabilityRoot: root)
+        }) {
+            XCTAssertEqual(($0 as? POSIXError)?.code, .EAGAIN)
+        }
+        XCTAssertFalse(cleanupCalled)
+        XCTAssertEqual(try Data(contentsOf: destination), replacementBytes)
     }
 
     func testTemporaryFileURL_usesSameDirectoryAndHiddenUniqueName() {
