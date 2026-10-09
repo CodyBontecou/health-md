@@ -71,6 +71,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.job
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -546,11 +547,12 @@ class DirectCliCoordinator @Inject constructor(
                     jobStore.validateAcceptedLease(senderLease)
                 },
             )
-            val completionAdvanced = runCatching {
-                jobStore.markCompleted(senderLease)
-            }.getOrDefault(false)
-            if (completionAdvanced) {
-                runCatching { settingsRepository.incrementSuccessfulExportCount() }
+            runCatching {
+                jobStore.markCompleted(senderLease) {
+                    runBlocking {
+                        settingsRepository.recordSuccessfulExportOnce(senderLease.owner.token)
+                    }
+                }
             }
             _state.value = DirectCliConnectionState.Completed(
                 DirectCliCompletion.ExportCompleted,

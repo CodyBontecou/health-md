@@ -802,6 +802,13 @@ private class FakeSettingsRepository(
 
     override suspend fun getSuccessfulExportCount(): Int = successfulExportCount
 
+    private val successfulOperationIds = mutableSetOf<String>()
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        if (!successfulOperationIds.add(operationId)) return false
+        incrementSuccessfulExportCount()
+        return true
+    }
+
     override suspend fun incrementSuccessfulExportCount() {
         successfulExportCount++
     }

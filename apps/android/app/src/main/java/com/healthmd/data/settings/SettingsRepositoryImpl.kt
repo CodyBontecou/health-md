@@ -46,6 +46,7 @@ class SettingsRepositoryImpl(
         val DIRECT_ACCOUNTED_JOB_IDS = stringSetPreferencesKey("direct_accounted_job_ids")
         val IS_PURCHASED = booleanPreferencesKey("is_purchased")
         val HAS_COMPLETED_ONBOARDING = booleanPreferencesKey("has_completed_onboarding")
+        val DIRECT_SUCCESSFUL_OPERATION_IDS = stringSetPreferencesKey("direct_successful_operation_ids")
         val SUCCESSFUL_EXPORT_COUNT = intPreferencesKey("successful_export_count")
         val LAST_REVIEW_ATTEMPT_EPOCH_MILLIS = longPreferencesKey("last_review_attempt_epoch_millis")
         val LEGACY_HAS_REQUESTED_REVIEW = booleanPreferencesKey("has_requested_review")
@@ -234,6 +235,23 @@ class SettingsRepositoryImpl(
             val current = prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0
             prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = current + 1
         }
+    }
+
+    override suspend fun recordSuccessfulExportOnce(operationId: String): Boolean {
+        require(runCatching { java.util.UUID.fromString(operationId).toString() == operationId }.getOrDefault(false)) {
+            "Invalid successful-export operation identity."
+        }
+        var recorded = false
+        dataStore.edit { prefs ->
+            val operations = prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS].orEmpty()
+            if (operationId !in operations) {
+                val count = (prefs[Keys.SUCCESSFUL_EXPORT_COUNT] ?: 0).coerceAtLeast(0)
+                prefs[Keys.SUCCESSFUL_EXPORT_COUNT] = if (count == Int.MAX_VALUE) count else count + 1
+                prefs[Keys.DIRECT_SUCCESSFUL_OPERATION_IDS] = operations + operationId
+                recorded = true
+            }
+        }
+        return recorded
     }
 
     override suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long? {

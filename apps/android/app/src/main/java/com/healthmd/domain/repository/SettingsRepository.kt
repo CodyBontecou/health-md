@@ -69,6 +69,8 @@ interface SettingsRepository {
     // In-app review tracking
     suspend fun getSuccessfulExportCount(): Int
     suspend fun incrementSuccessfulExportCount()
+    /** Atomically persists one success and its opaque operation receipt across retries. */
+    suspend fun recordSuccessfulExportOnce(operationId: String): Boolean
     suspend fun getLastReviewAttemptEpochMillis(migrationEpochMillis: Long): Long?
     suspend fun recordReviewAttempt(epochMillis: Long)
 

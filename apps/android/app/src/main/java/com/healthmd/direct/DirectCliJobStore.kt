@@ -204,9 +204,11 @@ class DirectCliJobStore @Inject constructor(
         true
     }
 
-    fun markCompleted(lease: DirectAcceptedLease): Boolean = withStoreLock {
+    fun markCompleted(lease: DirectAcceptedLease, complete: () -> Unit = {}): Boolean = withStoreLock {
         val journal = requiredOwnedJournal(lease)
         if (journal.completed) return@withStoreLock false
+        // The callback must persist an idempotent receipt before this checkpoint.
+        complete()
         // Keep artifacts for replay after a lost completion confirmation.
         save(journal.copy(completed = true))
         true

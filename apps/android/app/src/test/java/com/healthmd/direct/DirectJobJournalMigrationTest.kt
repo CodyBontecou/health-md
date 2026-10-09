@@ -1,6 +1,13 @@
 package com.healthmd.direct
 
 import android.content.Context
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import com.healthmd.data.settings.SettingsRepositoryImpl
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import com.google.common.truth.Truth.assertThat
 import com.healthmd.direct.protocol.ExportAccepted
 import com.healthmd.direct.protocol.PeerBinding
@@ -366,6 +373,93 @@ class DirectJobJournalMigrationTest {
         assertThat(file.readBytes()).isEqualTo(completedBytes)
         assertThat(store.load(jobId, original.requestFingerprint))
             .isEqualTo(original.copy(accounted = true, completed = true))
+    }
+
+    @Test
+    fun failedSuccessCounterWriteCanResumeWithoutLosingTheCompletion() = withStore { store, _ ->
+        val original = durableJournal()
+        store.save(original)
+        val first = store.acquireAcceptedLease(original)
+        var successes = 0
+        assertThrows(IllegalStateException::class.java) {
+            store.markCompleted(first) { throw IllegalStateException("synthetic counter storage failure") }
+        }
+        assertThat(store.load(original.transfer.accepted.jobId, original.requestFingerprint)).isEqualTo(original)
+        val resumed = store.acquireAcceptedLease(original)
+        assertThat(store.markCompleted(resumed) { successes += 1 }).isTrue()
+        assertThat(store.markCompleted(first) { successes += 1 }).isFalse()
+        assertThat(successes).isEqualTo(1)
+    }
+
+    @Test
+    fun persistedSuccessReceiptSurvivesInterruptedCheckpointAndStoreRestart() = withStore { store, root ->
+        runBlocking {
+            val context = mockk<Context> { every { noBackupFilesDir } returns root }
+            val preferences = File(root, "success.preferences_pb")
+            fun settings(job: Job) = SettingsRepositoryImpl(
+                PreferenceDataStoreFactory.create(
+                    scope = CoroutineScope(job + Dispatchers.IO),
+                    produceFile = { preferences },
+                ), context,
+            )
+            val initial = durableJournal()
+            store.save(initial)
+            val lease = store.acquireAcceptedLease(initial)
+            val journalFile = File(root, "direct-cli/jobs/${lease.owner.jobId}/job.json")
+            val originalBytes = journalFile.readBytes()
+            val firstScope = SupervisorJob()
+            val firstSettings = settings(firstScope)
+            try {
+                assertThrows(IllegalStateException::class.java) {
+                    store.markCompleted(lease) {
+                        runBlocking {
+                            assertThat(firstSettings.recordSuccessfulExportOnce(lease.owner.token)).isTrue()
+                        }
+                        // Durable counter write succeeded; completion checkpoint never ran.
+                        throw IllegalStateException("synthetic interruption before checkpoint")
+                    }
+                }
+                assertThat(journalFile.readBytes()).isEqualTo(originalBytes)
+                assertThat(firstSettings.getSuccessfulExportCount()).isEqualTo(1)
+            } finally {
+                firstScope.cancel()
+                firstScope.join()
+            }
+            val secondScope = SupervisorJob()
+            val resumedSettings = settings(secondScope)
+            try {
+                val reopened = DirectCliJobStore(DirectCliTrustStore(context))
+                val resumed = reopened.acquireAcceptedLease(initial)
+                assertThat(resumed.owner.token).isEqualTo(lease.owner.token)
+                assertThat(reopened.markCompleted(resumed) {
+                    runBlocking {
+                        assertThat(resumedSettings.recordSuccessfulExportOnce(resumed.owner.token)).isFalse()
+                    }
+                }).isTrue()
+                assertThat(resumedSettings.getSuccessfulExportCount()).isEqualTo(1)
+                assertThat(reopened.markCompleted(resumed) { error("completed callback must not run") }).isFalse()
+                reopened.cancelAccepted(resumed)
+                reopened.save(initial)
+                val replacement = reopened.acquireAcceptedLease(initial)
+                assertThat(replacement.owner.token).isNotEqualTo(resumed.owner.token)
+                assertThrows(IllegalStateException::class.java) {
+                    reopened.markCompleted(resumed) { error("stale callback must not run") }
+                }
+                assertThat(reopened.markCompleted(replacement) {
+                    runBlocking {
+                        assertThat(resumedSettings.recordSuccessfulExportOnce(replacement.owner.token)).isTrue()
+                    }
+                }).isTrue()
+                assertThat(resumedSettings.getSuccessfulExportCount()).isEqualTo(2)
+                assertThrows(IllegalArgumentException::class.java) {
+                    runBlocking { resumedSettings.recordSuccessfulExportOnce("invalid") }
+                }
+                assertThat(resumedSettings.getSuccessfulExportCount()).isEqualTo(2)
+            } finally {
+                secondScope.cancel()
+                secondScope.join()
+            }
+        }
     }
 
     @Test
