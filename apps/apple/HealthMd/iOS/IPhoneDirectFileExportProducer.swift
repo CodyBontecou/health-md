@@ -1588,6 +1588,8 @@ final class IPhoneDirectFileExportProducer {
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
         try AppleExportJournalRecovery.load(
             at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+            directoryDurability: .required(upTo: try fileManager.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)),
             isSupported: { journal in
                 journal.request.jobID == jobID && (IPhoneDirectFileJournal.isSupportedVersion(journal.version))
             }
@@ -1623,7 +1625,9 @@ final class IPhoneDirectFileExportProducer {
             attributes: [
                 .posixPermissions: 0o600,
                 .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication
-            ]
+            ],
+            directoryDurability: .required(upTo: try fileManager.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true))
         ) { temporaryURL in
             let input = try FileHandle(forReadingFrom: source)
             let output = try FileHandle(forWritingTo: temporaryURL)
@@ -1646,7 +1650,9 @@ final class IPhoneDirectFileExportProducer {
         try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
             attributes: [.posixPermissions: 0o600,
                 .protectionKey: FileProtectionType.completeUntilFirstUserAuthentication],
-            commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting)
+            commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting,
+            directoryDurability: .required(upTo: try fileManager.url(
+                for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)))
     }
 
     private func sha256(url: URL, offset: Int64, byteCount: Int64) throws -> String {

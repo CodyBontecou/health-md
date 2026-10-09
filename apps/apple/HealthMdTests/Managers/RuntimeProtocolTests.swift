@@ -528,6 +528,58 @@ final class AtomicFileWriterTests: XCTestCase {
         XCTAssertEqual(try temporaryFiles(in: directory), [])
     }
 
+    func testRequiredDirectoryFailureDoesNotAcknowledgePublishedJournal() throws {
+        let directory = try makeTemporaryDirectory()
+        let destination = directory.appendingPathComponent("journal.json")
+        let authority = Data("accepted-durable-authority".utf8)
+        var synchronized: [URL] = []
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(
+            authority, to: destination, commitPolicy: .requireAbsent,
+            directoryDurability: .required(upTo: directory),
+            directorySync: { synchronized.append($0); throw POSIXError(.EIO) }
+        )) { XCTAssertEqual(($0 as? POSIXError)?.code, .EIO) }
+        XCTAssertEqual(synchronized.map(\.path), [directory.path])
+        XCTAssertEqual(try Data(contentsOf: destination), authority)
+        XCTAssertEqual(try temporaryFiles(in: directory), [])
+    }
+
+    func testRequiredDirectorySyncCoversNestedAuthorityParentsInOrder() throws {
+        let root = try makeTemporaryDirectory()
+        let first = root.appendingPathComponent("jobs", isDirectory: true)
+        let leaf = first.appendingPathComponent("synthetic-job", isDirectory: true)
+        try FileManager.default.createDirectory(at: leaf, withIntermediateDirectories: true)
+        let destination = leaf.appendingPathComponent("journal.json")
+        var synchronized: [URL] = []
+        try AtomicFileWriter.writeData(Data("authority".utf8), to: destination,
+            directoryDurability: .required(upTo: root), directorySync: {
+                synchronized.append($0)
+                try AtomicFileWriter.synchronizeDirectory($0)
+            })
+        XCTAssertEqual(synchronized.map(\.path), [leaf.path, first.path, root.path])
+        synchronized.removeAll()
+        XCTAssertThrowsError(try AtomicFileWriter.writeData(Data("checkpoint".utf8), to: destination,
+            directoryDurability: .required(upTo: root), directorySync: {
+                synchronized.append($0)
+                if $0.path == first.path { throw POSIXError(.EIO) }
+                try AtomicFileWriter.synchronizeDirectory($0)
+            }))
+        XCTAssertEqual(synchronized.map(\.path), [leaf.path, first.path])
+        XCTAssertEqual(try String(contentsOf: destination, encoding: .utf8), "checkpoint")
+        XCTAssertEqual(try temporaryFiles(in: leaf), [])
+    }
+
+    func testRequiredDirectoryRootMustContainDestinationBeforeProducerRuns() throws {
+        let root = try makeTemporaryDirectory()
+        let unrelated = root.appendingPathComponent("unrelated", isDirectory: true)
+        let destination = root.appendingPathComponent("journal.json")
+        var produced = false
+        XCTAssertThrowsError(try AtomicFileWriter.writeFile(to: destination,
+            directoryDurability: .required(upTo: unrelated), producer: { _ in produced = true }))
+        XCTAssertFalse(produced)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+        XCTAssertEqual(try temporaryFiles(in: root), [])
+    }
+
     private func makeTemporaryDirectory() throws -> URL {
         let url = FileManager.default.temporaryDirectory
             .appendingPathComponent("HealthMdAtomicFileWriterTests-\(UUID().uuidString)", isDirectory: true)

@@ -817,6 +817,31 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         }
     }
 
+    func testDirectJournalRecoveryReestablishesDirectoryDurabilityWithoutChangingBytes() throws {
+        try withDirectJournalDirectory { directory in
+            let url = directory.appendingPathComponent("journal.json")
+            let journal = try makeJournal()
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .iso8601
+            let bytes = try encoder.encode(journal)
+            try bytes.write(to: url)
+            var synchronized: [URL] = []
+            XCTAssertThrowsError(try AppleExportJournalRecovery.load(at: url,
+                directoryDurability: .required(upTo: directory),
+                directorySync: { synchronized.append($0); throw POSIXError(.EIO) },
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) })) {
+                XCTAssertEqual($0.localizedDescription, "The saved direct export journal is unavailable. Its files were retained.")
+            }
+            XCTAssertEqual(synchronized.map(\.path), [directory.path])
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+            let restored = try XCTUnwrap(AppleExportJournalRecovery.load(at: url,
+                directoryDurability: .required(upTo: directory),
+                isSupported: { (saved: IPhoneDirectFileJournal) in IPhoneDirectFileJournal.isSupportedVersion(saved.version) }))
+            XCTAssertEqual(restored.request, journal.request)
+            XCTAssertEqual(try Data(contentsOf: url), bytes)
+        }
+    }
+
     private func withDirectJournalDirectory(_ body: (URL) throws -> Void) throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

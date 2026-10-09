@@ -15,6 +15,7 @@ import Glibc
 
 nonisolated enum AtomicFileWriter {
     enum CommitPolicy { case replaceExisting, requireAbsent }
+    enum DirectoryDurability { case bestEffort, required(upTo: URL) }
     static func writeString(_ string: String, to destinationURL: URL, fileManager: FileManager = .default) throws {
         guard let data = string.data(using: .utf8) else {
             throw CocoaError(.fileWriteUnknown)
@@ -27,13 +28,17 @@ nonisolated enum AtomicFileWriter {
         to destinationURL: URL,
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil,
-        commitPolicy: CommitPolicy = .replaceExisting
+        commitPolicy: CommitPolicy = .replaceExisting,
+        directoryDurability: DirectoryDurability = .bestEffort,
+        directorySync: (URL) throws -> Void = synchronizeDirectory
     ) throws {
         try writeFile(
             to: destinationURL,
             fileManager: fileManager,
             attributes: attributes,
-            commitPolicy: commitPolicy
+            commitPolicy: commitPolicy,
+            directoryDurability: directoryDurability,
+            directorySync: directorySync
         ) { temporaryURL in
             let handle = try FileHandle(forWritingTo: temporaryURL)
             do {
@@ -55,10 +60,13 @@ nonisolated enum AtomicFileWriter {
         fileManager: FileManager = .default,
         attributes: [FileAttributeKey: Any]? = nil,
         commitPolicy: CommitPolicy = .replaceExisting,
+        directoryDurability: DirectoryDurability = .bestEffort,
+        directorySync: (URL) throws -> Void = synchronizeDirectory,
         beforeCommit: () throws -> Void = {},
         producer: (URL) throws -> Result
     ) throws -> Result {
         let directoryURL = destinationURL.deletingLastPathComponent()
+        _ = try requiredDirectories(for: directoryDurability, from: directoryURL)
         let temporaryURL = temporaryFileURL(for: destinationURL)
         var temporaryFileCreated = false
 
@@ -81,7 +89,7 @@ nonisolated enum AtomicFileWriter {
                 try? fileManager.removeItem(at: temporaryURL)
             }
             temporaryFileCreated = false
-            fsyncDirectoryIfPossible(directoryURL)
+            try synchronizeDirectories(from: directoryURL, durability: directoryDurability, directorySync: directorySync)
             return result
         } catch {
             if temporaryFileCreated {
@@ -120,13 +128,45 @@ nonisolated enum AtomicFileWriter {
         if result != 0 { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
     }
 
-    private static func fsyncDirectoryIfPossible(_ directoryURL: URL) {
-        directoryURL.withUnsafeFileSystemRepresentation { directoryPath in
-            guard let directoryPath else { return }
+    static func synchronizeDirectories(
+        from directory: URL,
+        durability: DirectoryDurability,
+        directorySync: (URL) throws -> Void = synchronizeDirectory
+    ) throws {
+        switch durability {
+        case .bestEffort:
+            try? directorySync(directory)
+        case .required:
+            for directory in try requiredDirectories(for: durability, from: directory) {
+                try directorySync(directory)
+            }
+        }
+    }
+
+    static func synchronizeDirectory(_ directoryURL: URL) throws {
+        try directoryURL.withUnsafeFileSystemRepresentation { directoryPath in
+            guard let directoryPath else { throw CocoaError(.fileWriteInvalidFileName) }
             let descriptor = open(directoryPath, O_RDONLY)
-            guard descriptor >= 0 else { return }
-            _ = fsync(descriptor)
-            _ = close(descriptor)
+            guard descriptor >= 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+            defer { _ = close(descriptor) }
+            guard fsync(descriptor) == 0 else { throw POSIXError(POSIXErrorCode(rawValue: errno) ?? .EIO) }
+        }
+    }
+
+    private static func requiredDirectories(for policy: DirectoryDurability, from directory: URL) throws -> [URL] {
+        guard case .required(let requestedRoot) = policy else { return [] }
+        let directory = directory.standardizedFileURL
+        let root = requestedRoot.standardizedFileURL
+        guard directory.isFileURL, root.isFileURL,
+              directory.pathComponents.starts(with: root.pathComponents) else {
+            throw CocoaError(.fileWriteInvalidFileName)
+        }
+        var directories: [URL] = []
+        var current = directory
+        while true {
+            directories.append(current)
+            if current.path == root.path { return directories }
+            current = current.deletingLastPathComponent()
         }
     }
 }

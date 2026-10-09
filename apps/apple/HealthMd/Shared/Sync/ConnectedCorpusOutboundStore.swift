@@ -183,6 +183,7 @@ final class ConnectedCorpusOutboundStore {
     nonisolated static let retentionInterval: TimeInterval = 7 * 24 * 60 * 60
 
     private let rootURL: URL
+    private let durabilityRootURL: URL
     private let fileManager: FileManager
     private let now: () -> Date
     private let encoder: JSONEncoder
@@ -197,6 +198,7 @@ final class ConnectedCorpusOutboundStore {
         self.now = now
         if let rootURL {
             self.rootURL = rootURL
+            self.durabilityRootURL = rootURL.deletingLastPathComponent()
         } else {
             let support = (try? fileManager.url(
                 for: .applicationSupportDirectory,
@@ -204,6 +206,7 @@ final class ConnectedCorpusOutboundStore {
                 appropriateFor: nil,
                 create: true
             )) ?? fileManager.temporaryDirectory
+            self.durabilityRootURL = support
             self.rootURL = support
                 .appendingPathComponent("Health.md", isDirectory: true)
                 .appendingPathComponent("ConnectedCorpusOutbound", isDirectory: true)
@@ -283,6 +286,7 @@ final class ConnectedCorpusOutboundStore {
         do {
             guard let saved: ConnectedCorpusOutboundJournal = try AppleExportJournalRecovery.load(
                 at: url, fileManager: fileManager, decoder: decoder,
+                directoryDurability: .required(upTo: durabilityRootURL),
                 isSupported: { saved in
                     saved.jobID == jobID && (1...ConnectedCorpusOutboundJournal.currentVersion).contains(saved.version)
                 }
@@ -763,7 +767,8 @@ final class ConnectedCorpusOutboundStore {
         do {
             try AtomicFileWriter.writeData(data, to: destination, fileManager: fileManager,
                 attributes: protectedAttributes(permissions: 0o600),
-                commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting)
+                commitPolicy: freshAdmission ? .requireAbsent : .replaceExisting,
+                directoryDurability: .required(upTo: durabilityRootURL))
         } catch let error as POSIXError where freshAdmission && error.code == .EEXIST {
             throw ConnectedCorpusOutboundStoreError.requestChanged
         }
