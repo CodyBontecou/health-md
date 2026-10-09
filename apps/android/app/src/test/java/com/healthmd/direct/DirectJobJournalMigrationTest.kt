@@ -196,7 +196,7 @@ class DirectJobJournalMigrationTest {
     @Test
     fun competingStoresAdmitOnlyOneFrozenAuthority() = withStore { firstStore, root ->
         val context = mockk<Context> { every { noBackupFilesDir } returns root }
-        val secondStore = DirectCliJobStore(DirectCliTrustStore(context))
+        val secondStore = DirectCliJobStore(DirectCliTrustStore(context), Unit, { true })
         val initial = durableJournal()
         val alternative = initial.copy(requestFingerprint = "competing-synthetic-request")
         val start = CountDownLatch(1)
@@ -428,7 +428,7 @@ class DirectJobJournalMigrationTest {
             val secondScope = SupervisorJob()
             val resumedSettings = settings(secondScope)
             try {
-                val reopened = DirectCliJobStore(DirectCliTrustStore(context))
+                val reopened = DirectCliJobStore(DirectCliTrustStore(context), Unit, { true })
                 val resumed = reopened.acquireAcceptedLease(initial)
                 assertThat(resumed.owner.token).isEqualTo(lease.owner.token)
                 assertThat(reopened.markCompleted(resumed) {
@@ -491,17 +491,97 @@ class DirectJobJournalMigrationTest {
         assertThat(charges).isEqualTo(0)
     }
 
+    @Test
+    fun directorySyncFailureCannotAcknowledgePublishedAuthority() {
+        var durable = false
+        val synced = mutableListOf<File>()
+        withStore(directorySync = { synced += it; durable }) { store, root ->
+            val original = durableJournal()
+            assertThrows(IllegalStateException::class.java) { store.save(original) }
+            val file = File(root, "direct-cli/jobs/${original.transfer.accepted.jobId}/job.json")
+            val bytes = file.readBytes()
+            assertThrows(IllegalStateException::class.java) { store.acquireAcceptedLease(original) }
+            durable = true
+            val lease = store.acquireAcceptedLease(original)
+            assertThat(file.readBytes()).isEqualTo(bytes)
+            assertThat(synced).containsAtLeast(file.parentFile, File(root, "direct-cli/jobs"), File(root, "direct-cli"), root)
+            durable = false
+            var callbacks = 0
+            assertThrows(IllegalStateException::class.java) { store.markCompleted(lease) { callbacks += 1 } }
+            assertThrows(IllegalStateException::class.java) { store.markAccounted(lease) { callbacks += 1 } }
+            assertThat(callbacks).isEqualTo(0)
+            assertThat(file.readBytes()).isEqualTo(bytes)
+            durable = true
+            assertThat(store.markCompleted(lease) { callbacks += 1 }).isTrue()
+            assertThat(callbacks).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun preparationCaptureAndRevocationSynchronizeTheirAuthorityParents() {
+        var durable = true
+        val synced = mutableListOf<File>()
+        withStore(directorySync = { synced += it; durable }) { store, root ->
+            val journal = durableJournal()
+            val jobId = journal.transfer.accepted.jobId
+            val jobDirectory = File(root, "direct-cli/jobs/$jobId")
+            val lease = store.beginPreparation(jobId, journal.requestFingerprint, journal.expiresAt)
+            assertThat(synced.take(4)).containsExactly(
+                jobDirectory, File(root, "direct-cli/jobs"), File(root, "direct-cli"), root,
+            ).inOrder()
+            assertThat(File(jobDirectory, "preparation-owner").readText()).isEqualTo(lease.token)
+            synced.clear()
+            val capture = store.directory(lease)
+            assertThat(synced.first()).isEqualTo(capture)
+            assertThat(synced).containsAtLeast(jobDirectory, root)
+            store.savePrepared(journal, lease)
+            assertThat(File(jobDirectory, "pending.json").exists()).isFalse()
+            val accepted = store.acquireAcceptedLease(journal)
+            synced.clear()
+            durable = false
+            assertThrows(IllegalStateException::class.java) { store.cancelAccepted(accepted) }
+            assertThat(jobDirectory.exists()).isFalse()
+            assertThat(synced).containsExactly(File(root, "direct-cli/jobs"))
+            durable = true
+            store.cancel(jobId)
+            store.save(journal)
+            val replacement = store.acquireAcceptedLease(journal)
+            assertThat(replacement.owner.token).isNotEqualTo(accepted.owner.token)
+            assertThrows(IllegalStateException::class.java) { store.validateAcceptedLease(accepted) }
+        }
+    }
+
+    @Test
+    fun failedOwnerPublicationRetainsPendingPreparationWithoutIssuingALease() {
+        withStore(directorySync = { directory -> !File(directory, "preparation-owner").exists() }) { store, root ->
+            val journal = durableJournal()
+            val jobId = journal.transfer.accepted.jobId
+            assertThrows(IllegalStateException::class.java) {
+                store.beginPreparation(jobId, journal.requestFingerprint, journal.expiresAt)
+            }
+            val directory = File(root, "direct-cli/jobs/$jobId")
+            assertThat(File(directory, "pending.json").isFile).isTrue()
+            assertThat(File(directory, "preparation-owner").isFile).isTrue()
+            assertThat(File(directory, "job.json").exists()).isFalse()
+            assertThat(directory.listFiles()!!.any { it.name.endsWith(".tmp") }).isFalse()
+            assertThat(store.hasIncompletePreparation(jobId, journal.requestFingerprint)).isTrue()
+        }
+    }
+
     private fun durableJournal() = DirectJobJournal(
         requestFingerprint = "request-fingerprint",
         expiresAt = Instant.now().plusSeconds(3600).toString(),
         transfer = transfer(),
     )
 
-    private fun withStore(action: (DirectCliJobStore, File) -> Unit) {
+    private fun withStore(
+        directorySync: (File) -> Boolean = { true },
+        action: (DirectCliJobStore, File) -> Unit,
+    ) {
         val root = Files.createTempDirectory("synthetic-direct-journal").toFile()
         try {
             val context = mockk<Context> { every { noBackupFilesDir } returns root }
-            action(DirectCliJobStore(DirectCliTrustStore(context)), root)
+            action(DirectCliJobStore(DirectCliTrustStore(context), Unit, directorySync), root)
         } finally { root.deleteRecursively() }
     }
 

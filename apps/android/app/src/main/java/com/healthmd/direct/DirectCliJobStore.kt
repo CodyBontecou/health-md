@@ -26,9 +26,19 @@ import kotlinx.serialization.json.JsonEncoder
 import kotlinx.serialization.json.JsonNull
 
 @Singleton
-class DirectCliJobStore @Inject constructor(
+class DirectCliJobStore private constructor(
     trustStore: DirectCliTrustStore,
+    private val directorySync: (File) -> Boolean,
 ) {
+    @Inject
+    constructor(trustStore: DirectCliTrustStore) : this(trustStore, ::syncDirectoryOnAndroid)
+
+    internal constructor(
+        trustStore: DirectCliTrustStore,
+        @Suppress("UNUSED_PARAMETER") testOnly: Unit,
+        directorySync: (File) -> Boolean,
+    ) : this(trustStore, directorySync)
+
     private val root = File(trustStore.rootDirectory(), "jobs").apply {
         check(mkdirs() || isDirectory) { "Unable to create Direct CLI job storage." }
     }
@@ -127,7 +137,7 @@ class DirectCliJobStore @Inject constructor(
     fun cancelPreparation(lease: DirectPreparationLease): Boolean = withStoreLock {
         val directory = jobDirectory(lease.jobId)
         if (!hasPreparationOwner(directory, lease)) return@withStoreLock false
-        directory.deleteRecursively()
+        deleteOwnedDirectory(directory)
     }
 
     fun save(journal: DirectJobJournal): Unit = withStoreLock {
@@ -167,14 +177,16 @@ class DirectCliJobStore @Inject constructor(
             requireDirectProtocolPinContinuity(pending.protocolPin, journal.protocolPin)
         }
         atomicWrite(File(directory, JOURNAL_NAME), json.encodeToString(journal).toByteArray())
-        pendingFile.delete()
+        check(!pendingFile.exists() || pendingFile.delete()) { "Unable to remove Direct CLI preparation marker." }
+        syncAuthorityDirectories(directory)
     }
 
     fun acquireAcceptedLease(expected: DirectJobJournal): DirectAcceptedLease = withStoreLock {
         val jobId = expected.transfer.accepted.jobId
         val current = requireNotNull(load(jobId, expected.requestFingerprint))
         check(sameAuthority(current, expected)) { "The accepted Direct CLI authority changed." }
-        val owner = File(jobDirectory(jobId), OWNER_NAME)
+        val directory = jobDirectory(jobId)
+        val owner = File(directory, OWNER_NAME)
         val token = if (owner.exists()) {
             check(owner.isFile && owner.length() == 36L) { "Invalid Direct CLI ownership." }
             owner.readText(Charsets.US_ASCII).also {
@@ -185,6 +197,8 @@ class DirectCliJobStore @Inject constructor(
         } else {
             UUID.randomUUID().toString().also { atomicWrite(owner, it.toByteArray(Charsets.US_ASCII)) }
         }
+        // Re-establish durability even after a previous rename succeeded but its sync failed.
+        syncAuthorityDirectories(directory)
         DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
     }
 
@@ -219,13 +233,14 @@ class DirectCliJobStore @Inject constructor(
         if (!hasPreparationOwner(directory, lease.owner)) return@withStoreLock false
         val current = loadUnvalidated(lease.owner.jobId) ?: return@withStoreLock false
         if (!sameAuthority(current, lease.authority)) return@withStoreLock false
-        directory.deleteRecursively()
+        deleteOwnedDirectory(directory)
     }
 
     private fun requiredOwnedJournal(lease: DirectAcceptedLease): DirectJobJournal {
         validateAcceptedLease(lease)
         val journal = requireNotNull(loadUnvalidated(lease.owner.jobId))
         check(sameAuthority(journal, lease.authority)) { "The accepted Direct CLI authority changed." }
+        syncAuthorityDirectories(jobDirectory(lease.owner.jobId))
         return journal
     }
 
@@ -233,12 +248,13 @@ class DirectCliJobStore @Inject constructor(
         left.copy(accounted = false, completed = false) == right.copy(accounted = false, completed = false)
 
     fun cancel(jobId: String): Unit = withStoreLock {
-        jobDirectory(jobId).deleteRecursively()
+        check(deleteOwnedDirectory(jobDirectory(jobId))) { "Unable to cancel the Direct CLI job." }
     }
 
     fun purgeAll(): Unit = withStoreLock {
-        root.deleteRecursively()
+        check(root.deleteRecursively()) { "Unable to purge Direct CLI job storage." }
         check(root.mkdirs() || root.isDirectory) { "Unable to recreate the Direct CLI job store." }
+        syncAuthorityDirectories(root)
     }
 
     fun sweepExpired(now: Instant = Instant.now()): Unit = withStoreLock {
@@ -254,7 +270,9 @@ class DirectCliJobStore @Inject constructor(
             val corruptRetentionElapsed = expired == null &&
                 directory.lastModified() > 0L &&
                 directory.lastModified() <= now.minusSeconds(MAXIMUM_RETENTION_SECONDS).toEpochMilli()
-            if (expired == true || corruptRetentionElapsed) directory.deleteRecursively()
+            if (expired == true || corruptRetentionElapsed) {
+                check(deleteOwnedDirectory(directory)) { "Unable to remove expired Direct CLI storage." }
+            }
         }
     }
 
@@ -263,6 +281,7 @@ class DirectCliJobStore @Inject constructor(
         check(File(directory, PENDING_NAME).isFile) { "The Direct CLI preparation is no longer pending." }
         File(directory, "capture-${lease.token}").apply {
             check(mkdirs() || isDirectory) { "Unable to create Direct CLI capture storage." }
+            syncAuthorityDirectories(this)
         }
     }
 
@@ -332,17 +351,52 @@ class DirectCliJobStore @Inject constructor(
     private fun jobDirectory(jobId: String): File =
         File(root, UUID.fromString(jobId).toString())
 
-    private fun atomicWrite(file: File, bytes: ByteArray) {
-        val temporary = File(file.parentFile, ".${file.name}.${UUID.randomUUID()}.tmp")
-        temporary.outputStream().use { output ->
-            output.write(bytes)
-            output.flush()
-            output.fd.sync()
+    /** Synchronize each changed entry through the app-private authority tree, child first. */
+    private fun syncAuthorityDirectories(directory: File) {
+        val boundary = requireNotNull(requireNotNull(root.parentFile).parentFile)
+        var current = directory
+        while (true) {
+            check(directorySync(current)) { "Unable to synchronize Direct CLI storage." }
+            if (current == boundary) return
+            current = requireNotNull(current.parentFile)
         }
-        check(temporary.renameTo(file)) { "Unable to persist Direct CLI job atomically." }
+    }
+
+    private fun deleteOwnedDirectory(directory: File): Boolean {
+        if (directory.exists() && !directory.deleteRecursively()) return false
+        syncAuthorityDirectories(root)
+        return true
+    }
+
+    private fun atomicWrite(file: File, bytes: ByteArray) {
+        val directory = requireNotNull(file.parentFile)
+        val temporary = File(directory, ".${file.name}.${UUID.randomUUID()}.tmp")
+        try {
+            temporary.outputStream().use { output ->
+                output.write(bytes)
+                output.flush()
+                output.fd.sync()
+            }
+            check(temporary.renameTo(file)) { "Unable to persist Direct CLI job atomically." }
+            syncAuthorityDirectories(directory)
+        } finally {
+            if (temporary.exists()) temporary.delete()
+        }
     }
 
     companion object {
+        private fun syncDirectoryOnAndroid(directory: File): Boolean = try {
+            val descriptor = android.system.Os.open(directory.absolutePath, android.system.OsConstants.O_RDONLY, 0)
+            try {
+                android.system.Os.fsync(descriptor)
+            } finally {
+                android.system.Os.close(descriptor)
+            }
+            true
+        } catch (_: Exception) {
+            false
+        }
+
         private val transactionLock = ReentrantLock()
         private val activeLockPaths = ThreadLocal.withInitial { mutableSetOf<String>() }
         private const val JOURNAL_NAME = "job.json"
