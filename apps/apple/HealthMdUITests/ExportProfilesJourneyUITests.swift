@@ -21,9 +21,7 @@ final class ExportProfilesJourneyUITests: XCTestCase {
     }
 
     private func openSettingsTab(_ app: XCUIApplication) {
-        let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitUntilExists(timeout: 10))
-        if !settingsTab.isSelected { settingsTab.tap() }
+        UITestLaunchHelper.openSettingsTab(in: app)
     }
 
     /// Opens the Export Profiles management sheet from Settings.

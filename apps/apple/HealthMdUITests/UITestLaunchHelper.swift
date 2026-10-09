@@ -7,6 +7,34 @@ import XCTest
 /// with the main target's `AccessibilityIdentifiers.swift`.
 enum UITestLaunchHelper {
 
+    /// Establish navigation before asserting content in the destination. A
+    /// missed tab tap must report as navigation failure, not missing profiles.
+    static func openSettingsTab(
+        in app: XCUIApplication,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let tab = app.tabBars.buttons["Settings"]
+        let hittable = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == true AND isHittable == true"),
+            object: tab
+        )
+        guard XCTWaiter().wait(for: [hittable], timeout: 10) == .completed else {
+            XCTFail("Settings tab must be hittable before navigation", file: file, line: line)
+            return
+        }
+        if !tab.isSelected { tab.tap() }
+        let selected = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "isSelected == true"),
+            object: tab
+        )
+        XCTAssertEqual(
+            XCTWaiter().wait(for: [selected], timeout: 10), .completed,
+            "Settings tab must become selected before inspecting Settings content",
+            file: file, line: line
+        )
+    }
+
     // MARK: - Accessibility Identifiers (mirrored from AccessibilityID)
 
     enum Tab {
