@@ -213,6 +213,16 @@ test("pinned browser bundle parses actual Apple and Android successor files", {
       assert.equal(day.heart.heartRateSamples[0].identity.nativeId, "synthetic-quantity");
     }
   }
+  for (const [variant, date] of [["apple-v11-blood-pressure", "2026-03-15"], ["android-v6-blood-pressure", "2026-11-01"]]) {
+    const input = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
+      "tests/fixtures/native-blood-pressure", variant, `${date}.json`), "utf8");
+    const day = api.parseHealthDay(input);
+    assert.equal(day.nativeCorrelationDetails.length, 1);
+    assert.equal(day.nativeCorrelationDetails[0].unit, "mmHg");
+    assert.deepEqual(JSON.parse(JSON.stringify(day.vitals.bloodPressureSamples)), JSON.parse(input).vitals.bloodPressureSamples);
+    assert.equal(day.canonicalMetrics?.blood_pressure_systolic, undefined);
+    assert.equal(day.canonicalMetrics?.blood_pressure_diastolic, undefined);
+  }
   const parentInput = await readFile(path.join(process.env.HEALTHMD_OBSIDIAN_PLUGIN_REPO,
     "tests/fixtures/sleep-native-parents/2026-11-01.json"), "utf8");
   const parentDay = api.parseHealthDay(parentInput);
