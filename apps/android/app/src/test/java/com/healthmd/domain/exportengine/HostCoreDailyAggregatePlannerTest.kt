@@ -101,8 +101,8 @@ class HostCoreDailyAggregatePlannerTest {
         for (invalid in listOf(
             data.copy(sleep = data.sleep.copy(stages = listOf(stage.copy(stage = "deep")))),
             data.copy(sleep = data.sleep.copy(stages = List(1500) { stage })),
-            data.copy(sleep = data.sleep.copy(sessions = listOf(com.healthmd.domain.model.SleepSessionEntry(
-                stage.startTime, stage.endTime, exactStartTime = stage.exactStartTime, exactEndTime = stage.exactEndTime)))),
+            data.copy(activity = ActivityData(steps = 1, stepSamples = listOf(com.healthmd.domain.model.TimestampedSample(
+                stage.startTime, 1.0, exactTime = stage.exactStartTime)))),
         )) {
             org.junit.Assert.assertThrows(com.healthmd.domain.render.HealthMdRenderInputAdapter.AdapterException::class.java) {
                 com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic, registry, context.zoneId.id,
@@ -119,6 +119,87 @@ class HostCoreDailyAggregatePlannerTest {
         val sleepingDetails = Json.parseToJsonElement(sleepingInput.batches.single().decodeToString()).jsonObject
             .getValue("days").jsonArray.single().jsonObject.getValue("native_details").jsonObject
         assertThat(sleepingDetails.getValue("output_keys").toString()).isEqualTo("[\"sleep_total_hours\"]")
+    }
+
+    @Test
+    fun capturedWakeDateParentsAndStagesKeepSeparateSourceRecordsAcrossEveryFormat() = runTest {
+        val core = HealthMdCoreService()
+        val context = AndroidCaptureContext(ZoneId.of("America/New_York"), SleepDayAttribution.MORNING_ENDS)
+        val date = LocalDate.of(2026, 11, 1)
+        val start = Instant.parse("2026-11-01T02:00:00.123456789Z")
+        val end = Instant.parse("2026-11-01T18:30:00.987654321Z")
+        val client = mockk<HealthConnectClient>()
+        coEvery { client.readRecords(any<ReadRecordsRequest<SleepSessionRecord>>()) } returns ReadRecordsResponse(listOf(
+            SleepSessionRecord(startTime = start, startZoneOffset = ZoneOffset.of("-04:00"),
+                endTime = end, endZoneOffset = ZoneOffset.of("-05:00"),
+                title = "Synthetic overnight, \"quoted\"", notes = "first line\nsecond line",
+                metadata = Metadata.manualEntry(clientRecordId = "synthetic-parent-overnight"),
+                stages = listOf(SleepSessionRecord.Stage(start, end, SleepSessionRecord.STAGE_TYPE_LIGHT))),
+            SleepSessionRecord(startTime = Instant.parse("2026-11-01T20:00:00.333333333Z"), startZoneOffset = null,
+                endTime = Instant.parse("2026-11-01T20:30:00.444444444Z"), endZoneOffset = null,
+                title = "Synthetic nap", metadata = Metadata.manualEntry(clientRecordId = "synthetic-parent-nap")),
+        ), null)
+        val data = HealthConnectManager(mockk<Context>(relaxed = true), client).fetchHealthDataRange(
+            listOf(date), DataTypeSelection().deselectAll().copy(sleep = true), true, context.zoneId,
+            sleepDayAttribution = SleepDayAttribution.MORNING_ENDS).single()
+        assertThat(data.sleep.sessions).hasSize(2)
+        val registry = core.getMetricRegistry(com.healthmd.core.CoreMetricRegistryProfile.ANDROID_SLEEP_V6, 2u)
+        val adapter = com.healthmd.domain.semantic.HealthMdSemanticInputAdapter
+        val profile = com.healthmd.domain.semantic.HealthMdSemanticInputAdapter.Profile.SLEEP_V6
+        val config = adapter.sessionConfiguration("android-parent-detail", profile,
+            MetricSelectionState(enabledMetrics = setOf("sleep_total", "sleep_light", "sleep_in_bed")), registry, context.zoneId.id,
+            captureContext = context)
+        val batch = adapter.batch("android-parent-detail", profile, 0u, true, listOf(data), registry,
+            com.healthmd.domain.model.UnitConverter(UnitPreference.METRIC), context.zoneId.id, captureContext = context)
+        val semantic = core.createSemanticSession(config).use { it.processBatch(batch.bytes) }
+        val customization = FormatCustomization()
+        fun encode(candidate: HealthData) = com.healthmd.domain.render.HealthMdRenderInputAdapter.encode(semantic,
+            registry, context.zoneId.id, com.healthmd.domain.render.HealthMdRenderInputAdapter.Options(
+                "android-parent-detail", listOf("json", "csv", "markdown", "obsidian_bases"), includeGranularData = true),
+            presentationByOwnerDate = mapOf(date.toString() to candidate), presentationCustomization = customization,
+            captureContext = context)
+        val encoded = encode(data)
+        val plan = core.createRenderSession(encoded.configuration, semantic).use { session ->
+            encoded.batches.forEach { session.processBatch(it) }; session.finish()
+        }
+        System.getenv("HEALTHMD_WAKE_DATE_CONSUMER_FIXTURE_DIR")?.takeIf { it.isNotBlank() }?.let { directory ->
+            for (item in plan.items) {
+                val output = File(File(directory, "android-sleep-v6-parents"), item.relativePath)
+                val parent = requireNotNull(output.parentFile)
+                check(parent.mkdirs() || parent.isDirectory)
+                output.writeBytes(item.content)
+            }
+        }
+        val csv = plan.items.single { it.relativePath.endsWith(".csv") }.content.decodeToString()
+        assertThat(csv.lines().count { it.startsWith("2026-11-01,Sleep Detail,Sleep Session,") }).isEqualTo(2)
+        for (token in listOf(start.toString(), end.toString(), "synthetic-parent-overnight", "synthetic-parent-nap",
+            "Synthetic overnight", "first line", "second line", "-04:00", "-05:00")) assertThat(csv).contains(token)
+        val texts = plan.items.map { it.content.decodeToString() }
+        val markdown = texts.single { it.contains("Sleep Session Details") }
+        assertThat(markdown).contains("Sleep Stage Details")
+        assertThat(markdown).contains(start.toString())
+        assertThat(markdown).contains("2026-11-01T20:30:00.444444444Z")
+        val bases = texts.single { it.contains("sleep_session_details") }
+        assertThat(bases).contains("sleep_stage_details")
+        assertThat(bases).contains("synthetic-parent-overnight")
+        val native = com.healthmd.data.export.JsonExporter().export(data, customization, true, captureContext = context)
+        assertThat(Json.parseToJsonElement(plan.items.single { it.relativePath.endsWith(".json") }.content.decodeToString()))
+            .isEqualTo(Json.parseToJsonElement(native))
+        val parentOnly = data.copy(sleep = data.sleep.copy(stages = emptyList()))
+        val parentEncoded = encode(parentOnly)
+        val parentPlan = core.createRenderSession(parentEncoded.configuration, semantic).use { session ->
+            parentEncoded.batches.forEach { session.processBatch(it) }; session.finish()
+        }
+        val parentTexts = parentPlan.items.map { it.content.decodeToString() }
+        assertThat(parentTexts.single { it.contains("Sleep Session Details") }).doesNotContain("Sleep Stage Details")
+        assertThat(parentTexts.single { it.contains("sleep_session_details") }).doesNotContain("sleep_stage_details")
+        assertThat(parentTexts.single { it.contains(",Sleep Detail,Sleep Session,") }
+            .lines().count { it.startsWith("2026-11-01,Sleep Detail,Sleep Session,") }).isEqualTo(2)
+        for (invalid in listOf(
+            data.copy(sleep = data.sleep.copy(sessions = data.sleep.sessions.map { it.copy(exactEndTime = null) })),
+            data.copy(date = date.plusDays(1)),
+            data.copy(sleep = data.sleep.copy(sessions = List(1500) { data.sleep.sessions[0] })),
+        )) org.junit.Assert.assertThrows(IllegalArgumentException::class.java) { encode(invalid) }
     }
 
     @Test
@@ -350,7 +431,8 @@ class HostCoreDailyAggregatePlannerTest {
                     val destination = File(directory, "android-sleep-v6-dst")
                     for (item in result.plan.items) {
                         val output = File(destination, item.relativePath)
-                        check(output.parentFile.mkdirs() || output.parentFile.isDirectory)
+                        val parent = requireNotNull(output.parentFile)
+                        check(parent.mkdirs() || parent.isDirectory)
                         output.writeBytes(item.content)
                     }
                 }

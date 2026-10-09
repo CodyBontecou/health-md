@@ -146,7 +146,7 @@ object HealthMdRenderInputAdapter {
                     val payload = json.parseToJsonElement(JsonExporter().export(data,
                         presentationCustomization, true, captureContext = captureContext))
                     if (hasUnqualifiedDetailArrays(payload, emptyList())) {
-                        throw AdapterException("wake-date non-stage details are not qualified")
+                        throw AdapterException("wake-date non-sleep details are not qualified")
                     }
                 }
             }
@@ -445,12 +445,17 @@ object HealthMdRenderInputAdapter {
             put("bases_frontmatter_blocks", buildJsonArray {})
             put("metrics", JsonArray(metrics))
             if (nativeWakeDateContext != null && options.includeGranularData &&
-                presentationData != null && presentationData.sleep.stages.isNotEmpty()) {
+                presentationData != null && (presentationData.sleep.stages.isNotEmpty() || presentationData.sleep.sessions.isNotEmpty())) {
                 val native = json.parseToJsonElement(JsonExporter().export(presentationData,
                     presentationCustomization, true, captureContext = nativeWakeDateContext)).jsonObject
-                val stages = native["sleep"]?.jsonObject?.get("sleepStages")?.jsonArray
-                    ?: throw AdapterException("wake-date native stages are incompatible")
-                put("native_details", sleepStageDetails(stages, ownerDate, selectedOutputKeys))
+                val sleep = native["sleep"]?.jsonObject
+                    ?: throw AdapterException("wake-date native sleep details are incompatible")
+                val stages = sleep["sleepStages"]?.jsonArray ?: JsonArray(emptyList())
+                val sessions = sleep["sleepSessions"]?.jsonArray ?: JsonArray(emptyList())
+                if (stages.size != presentationData.sleep.stages.size || sessions.size != presentationData.sleep.sessions.size) {
+                    throw AdapterException("wake-date native sleep details are incompatible")
+                }
+                put("native_details", sleepDetails(stages, sessions, ownerDate, selectedOutputKeys))
             }
             put("extensions", JsonArray(extensionPayloads))
             put("individual_entries", JsonArray(individualEntries))
@@ -470,12 +475,12 @@ object HealthMdRenderInputAdapter {
     }
 
     private fun hasUnqualifiedDetailArrays(value: JsonElement, path: List<String>): Boolean = when (value) {
-        is JsonArray -> value.isNotEmpty() && path != listOf("sleep", "sleepStages")
+        is JsonArray -> value.isNotEmpty() && path !in listOf(listOf("sleep", "sleepStages"), listOf("sleep", "sleepSessions"))
         is JsonObject -> value.any { (key, child) -> hasUnqualifiedDetailArrays(child, path + key) }
         else -> false
     }
 
-    private fun sleepStageDetails(stages: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
+    private fun sleepDetails(stages: JsonArray, sessions: JsonArray, ownerDate: String, selectedOutputKeys: List<String>): JsonObject {
         val keysByStage = mapOf("deep" to "sleep_deep_hours", "rem" to "sleep_rem_hours",
             "light" to "sleep_light_hours", "awake" to "sleep_awake_hours",
             "wake" to "sleep_awake_hours", "sleeping" to "sleep_total_hours",
@@ -501,15 +506,54 @@ object HealthMdRenderInputAdapter {
             lines += "| $start | $end | $name |"
             yaml += "  - $value"
         }
+        val markdownBlocks = mutableListOf<JsonObject>()
+        val basesBlocks = mutableListOf<JsonObject>()
+        fun addBlocks(heading: String, key: String, text: List<String>, records: List<String>, ordinal: Int) {
+            markdownBlocks += buildJsonObject {
+                put("heading", heading)
+                put("lines", JsonArray(text.map(::JsonPrimitive)))
+                put("ordinal", ordinal)
+            }
+            basesBlocks += buildJsonObject {
+                put("key", key)
+                put("lines", JsonArray(records.map(::JsonPrimitive)))
+                put("ordinal", ordinal)
+            }
+        }
+        if (stages.isNotEmpty()) addBlocks("Sleep Stage Details", "sleep_stage_details", lines, yaml, 0)
+        if (sessions.isNotEmpty()) {
+            val key = listOf("sleep_total_hours", "sleep_in_bed_hours").firstOrNull { it in selectedOutputKeys }
+                ?: throw AdapterException("wake-date native session selection is incompatible")
+            keys += key
+            val sessionLines = mutableListOf("| Start (UTC) | End (UTC) |", "|---|---|")
+            val sessionYaml = mutableListOf<String>()
+            for (element in sessions) {
+                val session = element.jsonObject
+                val start = session.getValue("startTimeISO").jsonPrimitive.content
+                val end = session.getValue("endTimeISO").jsonPrimitive.content
+                val value = session.toString()
+                val ordinal = rows.size
+                rows += buildJsonObject {
+                    put("date", ownerDate)
+                    put("category", "Sleep Detail")
+                    put("metric", "Sleep Session")
+                    put("value", value)
+                    // A parent object carries source facts, not an invented
+                    // quantity or a duration inferred from its display clocks.
+                    put("unit", "json")
+                    put("timestamp", start)
+                    put("ordinal", ordinal)
+                }
+                sessionLines += "| $start | $end |"
+                sessionYaml += "  - $value"
+            }
+            addBlocks("Sleep Session Details", "sleep_session_details", sessionLines, sessionYaml, 1)
+        }
         return buildJsonObject {
             put("output_keys", JsonArray(keys.sorted().map(::JsonPrimitive)))
             put("csv_rows", JsonArray(rows))
-            put("markdown_blocks", buildJsonArray { add(buildJsonObject {
-                put("heading", "Sleep Stage Details"); put("lines", JsonArray(lines.map(::JsonPrimitive))); put("ordinal", 0)
-            }) })
-            put("bases_frontmatter_blocks", buildJsonArray { add(buildJsonObject {
-                put("key", "sleep_stage_details"); put("lines", JsonArray(yaml.map(::JsonPrimitive))); put("ordinal", 0)
-            }) })
+            put("markdown_blocks", JsonArray(markdownBlocks))
+            put("bases_frontmatter_blocks", JsonArray(basesBlocks))
         }
     }
 
