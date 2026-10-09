@@ -202,6 +202,14 @@ class DirectCliJobStore private constructor(
         DirectAcceptedLease(DirectPreparationLease(jobId, token), current)
     }
 
+    fun packetSendAuthorization(lease: DirectAcceptedLease) =
+        com.healthmd.direct.protocol.DirectPacketSendAuthorization { enqueue ->
+            withStoreLock {
+                validateAcceptedLease(lease)
+                enqueue()
+            }
+        }
+
     /** A small owner read per frame; complete authority is checked at state transitions. */
     fun validateAcceptedLease(lease: DirectAcceptedLease): Unit = withStoreLock {
         val directory = requirePreparationOwner(lease.owner)

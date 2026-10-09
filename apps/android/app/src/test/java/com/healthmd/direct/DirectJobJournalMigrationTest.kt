@@ -329,6 +329,38 @@ class DirectJobJournalMigrationTest {
     }
 
     @Test
+    fun packetEnqueueHoldsTheFilesystemLockAndRejectsIdenticalReplacement() = withStore { store, root ->
+        val original = durableJournal()
+        val jobId = original.transfer.accepted.jobId
+        store.save(original)
+        val accepted = store.acquireAcceptedLease(original)
+        val authorization = store.packetSendAuthorization(accepted)
+        val lockFile = File(root, "direct-cli/.jobs.journal.lock")
+        var callbacks = 0
+        authorization.authorizeEnqueue {
+            callbacks += 1
+            java.io.RandomAccessFile(lockFile, "rw").use { file ->
+                assertThrows(java.nio.channels.OverlappingFileLockException::class.java) {
+                    file.channel.tryLock()
+                }
+            }
+        }
+        java.io.RandomAccessFile(lockFile, "rw").use { file ->
+            file.channel.tryLock().use { assertThat(it).isNotNull() }
+        }
+        store.cancel(jobId)
+        store.save(original)
+        store.acquireAcceptedLease(original)
+        val journal = File(root, "direct-cli/jobs/$jobId/job.json")
+        val replacementBytes = journal.readBytes()
+        assertThrows(IllegalStateException::class.java) {
+            authorization.authorizeEnqueue { callbacks += 1 }
+        }
+        assertThat(callbacks).isEqualTo(1)
+        assertThat(journal.readBytes()).isEqualTo(replacementBytes)
+    }
+
+    @Test
     fun staleSenderCannotAccountOrCompleteAReplacementWithTheSameJobId() = withStore { store, root ->
         val original = durableJournal()
         val jobId = original.transfer.accepted.jobId

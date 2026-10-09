@@ -115,6 +115,7 @@ object TransferPlanBuilder {
 
 class ArtifactTransferClient(
     private val channel: DirectSecureChannel,
+    private val sendAuthorization: DirectPacketSendAuthorization? = null,
 ) {
     fun transfer(
         plan: PreparedTransfer,
@@ -126,19 +127,19 @@ class ArtifactTransferClient(
         checkCancellation()
         validatePlan(plan)
         if (sendAccepted) {
-            channel.sendV2("export_accepted", ExportAccepted.serializer(), plan.accepted)
+            sendV2("export_accepted", ExportAccepted.serializer(), plan.accepted)
         }
-        channel.sendV2("transfer_session", TransferSession.serializer(), plan.session)
+        sendV2("transfer_session", TransferSession.serializer(), plan.session)
         plan.manifests.forEach { manifest ->
             checkCancellation()
-            channel.sendV2("artifact_manifest", ArtifactManifest.serializer(), manifest)
+            sendV2("artifact_manifest", ArtifactManifest.serializer(), manifest)
         }
 
         val totalBytes = plan.partitions.sumOf { it.byteCount }
         var committedBytes = 0L
         plan.partitions.forEach { partition ->
             checkCancellation()
-            channel.sendV2(
+            sendV2(
                 "transfer_open",
                 TransferOpen.serializer(),
                 TransferOpen(plan.session, partition),
@@ -159,7 +160,7 @@ class ArtifactTransferClient(
                 TransferDispositionKind.NEEDED -> sendPartition(plan, partition, checkCancellation)
             }
             if (disposition.disposition == TransferDispositionKind.NEEDED) {
-                channel.sendV2(
+                sendV2(
                     "transfer_partition_complete",
                     TransferPartitionComplete.serializer(),
                     TransferPartitionComplete(
@@ -193,7 +194,7 @@ class ArtifactTransferClient(
             totalBytes = totalBytes,
             finalPartitionSha256 = plan.partitions.lastOrNull()?.sha256,
         )
-        channel.sendV2("transfer_finalize", TransferFinalize.serializer(), finalize)
+        sendV2("transfer_finalize", TransferFinalize.serializer(), finalize)
         val acknowledgement = await(
             expectedType = "transfer_final_acknowledgement",
             deserializer = TransferFinalAcknowledgement.serializer(),
@@ -207,7 +208,7 @@ class ArtifactTransferClient(
         checkCancellation()
         beforeCompletionConfirmed()
         checkCancellation()
-        channel.sendV2(
+        sendV2(
             "completion_confirmed",
             JobPayload.serializer(),
             JobPayload(plan.accepted.jobId),
@@ -229,7 +230,7 @@ class ArtifactTransferClient(
                 checkCancellation()
                 val data = ByteArray(minOf(MAXIMUM_CHUNK_BYTES.toLong(), remaining).toInt())
                 input.readFully(data)
-                channel.sendTransferChunk(partition.transferId, sequence, data)
+                channel.sendTransferChunk(partition.transferId, sequence, data, sendAuthorization)
                 val acknowledgement = await(
                     expectedType = "transfer_chunk_acknowledgement",
                     deserializer = TransferChunkAcknowledgement.serializer(),
@@ -254,11 +255,11 @@ class ArtifactTransferClient(
             val envelope = channel.receiveV2()
             when (envelope.type) {
                 expectedType -> return V2Codec.decodePayload(envelope, deserializer)
-                "ping" -> channel.sendV2("pong", EmptyPayload.serializer(), EmptyPayload())
+                "ping" -> sendV2("pong", EmptyPayload.serializer(), EmptyPayload())
                 "cancel" -> {
                     val cancellation = V2Codec.decodePayload(envelope, JobPayload.serializer())
                     if (cancellation.jobId == jobId) {
-                        channel.sendV2(
+                        sendV2(
                             "cancel_acknowledged",
                             JobPayload.serializer(),
                             cancellation,
@@ -269,6 +270,10 @@ class ArtifactTransferClient(
                 else -> error("The CLI sent an unexpected ${envelope.type} message.")
             }
         }
+    }
+
+    private fun <T> sendV2(type: String, serializer: kotlinx.serialization.SerializationStrategy<T>, payload: T) {
+        channel.sendV2(type, serializer, payload, sendAuthorization)
     }
 
     private fun validatePlan(plan: PreparedTransfer) {

@@ -502,11 +502,6 @@ class DirectCliCoordinator @Inject constructor(
                 }
             }
             val journal = if (existing != null) {
-                channel.sendV2(
-                    "export_accepted",
-                    ExportAccepted.serializer(),
-                    existing.transfer.accepted,
-                )
                 existing
             } else {
                 prepareJob(
@@ -522,7 +517,12 @@ class DirectCliCoordinator @Inject constructor(
             acceptedLease = senderLease
             phase = ExportPhase.TRANSFERRING
             val exportContext = currentCoroutineContext()
-            val transfer = ArtifactTransferClient(channel)
+            val sendAuthorization = jobStore.packetSendAuthorization(senderLease)
+            if (existing != null) {
+                channel.sendV2("export_accepted", ExportAccepted.serializer(),
+                    existing.transfer.accepted, sendAuthorization)
+            }
+            val transfer = ArtifactTransferClient(channel, sendAuthorization)
             transfer.transfer(
                 plan = journal.transfer,
                 sendAccepted = false,
