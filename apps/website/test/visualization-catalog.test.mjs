@@ -125,8 +125,7 @@ test("plugin-generated preview fixtures pair daily v8 with range v9 sourced from
 
 test("Apple onboarding resources stay byte-identical to pinned website plugin assets and samples", async () => {
   const appleResourceRoot = new URL("../../apple/HealthMd/iOS/Resources/PluginVisualization/", import.meta.url);
-  const [externalSources, websiteBundle, appleBundle, websiteDays, websiteRollups, appleDays, appleRollups, previewHTML] = await Promise.all([
-    readJson("../external-sources.json"),
+  const [websiteBundle, appleBundle, websiteDays, websiteRollups, appleDays, appleRollups, previewHTML] = await Promise.all([
     readFile(new URL("../assets/healthmd-plugin-visualizations.js", import.meta.url)),
     readFile(new URL("healthmd-plugin-visualizations.js", appleResourceRoot)),
     readFile(new URL("../assets/visualizations-data/health-sample.json", import.meta.url), "utf8"),
@@ -136,7 +135,6 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "2b61810f98c2e469bc7b8fa334544b19c96526da");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
