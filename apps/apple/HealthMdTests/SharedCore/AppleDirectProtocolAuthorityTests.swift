@@ -575,6 +575,43 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
     }
 
     @MainActor
+    func testActualQueryRejectionRetainsAdmissionProtocolAcrossSessionChanges() async throws {
+        for selectedRust in [true, false] {
+            let core = FakeAppleDirectProtocolRustCore()
+            core.returnNativeCanonicalMessage = true
+            let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+            if selectedRust { try session.beginOperation(pin: session.pinForNewOperation()) }
+            else { session.beginBootstrap() }
+            let selected = session.frozenForCurrentOperation()
+            if selectedRust { session.beginBootstrap() } else { session.endOperation() }
+            let transport = OperationProtocolPacketTransport()
+            let key = SymmetricKey(data: Data(repeating: 0x42, count: 32))
+            let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: session)
+            let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+                peerInstallationID: UUID(), peerDisplayName: "synthetic")
+            // This version can be admitted by the service; expiry validation in
+            // the coordinator precedes authorization and every HealthKit query.
+            let request = DirectQueryRequest(requestID: UUID(), createdAt: Date(timeIntervalSince1970: 0),
+                detailLevel: .summary, query: .object([:]))
+            await IPhoneDirectQueryCoordinator.shared.handle(request, channel: channel,
+                protocolAuthority: selected, healthKitManager: HealthKitManager())
+            XCTAssertEqual(core.canonicalMessageCalls, selectedRust ? 1 : 0,
+                "The rejection must retain its admitted engine, not the later session mode")
+            XCTAssertEqual(transport.packetCount, 1)
+            guard transport.packetCount == 1 else { continue }
+            let received = try await receiver.receive()
+            guard case .message(.queryRejected(let failure)) = received else {
+                XCTFail("Expected native query rejection"); continue
+            }
+            XCTAssertEqual(failure.requestID, request.requestID)
+            XCTAssertEqual(failure.code, "invalid_query_request")
+            XCTAssertFalse(failure.retryable)
+            XCTAssertNil(IPhoneDirectQueryCoordinator.shared.activeRequestID)
+        }
+    }
+
+    @MainActor
     func testCancellationReceiptRetainsSelectedProtocolAcrossSessionBootstrap() async throws {
         let core = FakeAppleDirectProtocolRustCore()
         let session = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)

@@ -521,10 +521,11 @@ struct HealthMdApp: App {
                 directCLIService.cancelHandler = { jobID in
                     IPhoneDirectExportCoordinator.shared.cancelWithReceipt(jobID: jobID)
                 }
-                directCLIService.queryRequestHandler = { request, channel in
+                directCLIService.queryRequestHandler = { request, channel, protocolAuthority in
                     await IPhoneDirectQueryCoordinator.shared.handle(
                         request,
                         channel: channel,
+                        protocolAuthority: protocolAuthority,
                         healthKitManager: healthKitManager
                     )
                 }

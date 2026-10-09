@@ -369,7 +369,7 @@ final class IPhoneDirectCLIService: ObservableObject {
         AppleDirectProtocolAuthority
     ) async -> Void)?
     var cancelHandler: ((UUID) -> IPhoneDirectCancellationReceipt?)?
-    var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel) async -> Void)?
+    var queryRequestHandler: ((DirectQueryRequest, DirectSecureChannel, AppleDirectProtocolAuthority) async -> Void)?
 
     private let defaults: UserDefaults
     private let trustStore: ManualIPTrustStore
@@ -1254,9 +1254,10 @@ final class IPhoneDirectCLIService: ObservableObject {
             let operationID = UUID()
             activeQueryOperationID = operationID
             activeQueryRequestID = request.requestID
+            let queryProtocolAuthority = protocolAuthority.frozenForCurrentOperation()
             queryTask = Task { [weak self] in
                 guard let self else { return }
-                await queryRequestHandler(request, channel)
+                await queryRequestHandler(request, channel, queryProtocolAuthority)
                 self.finishQueryOperation(operationID)
             }
         case .cancel(let jobID):
