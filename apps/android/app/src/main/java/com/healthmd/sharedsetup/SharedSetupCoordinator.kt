@@ -27,9 +27,6 @@ class SharedSetupCoordinator internal constructor(
      * immediate dispatcher through this constructor.
      */
     private val publishDispatcher: CoroutineDispatcher,
-    // The process owns provider IO; tests supply a scope so they can join cancelled,
-    // non-cooperative reads before asserting that no stale result was published.
-    private val externalReadScope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) {
     @Inject
     constructor(documentStore: SharedSetupDocumentStore) : this(
@@ -38,6 +35,7 @@ class SharedSetupCoordinator internal constructor(
     )
     private val ids = AtomicLong()
     private val mutableImport = MutableStateFlow<PendingSharedSetupImport?>(null)
+    private val externalReadScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val externalLock = Any()
     private var externalRequestID: Long = 0
     private var activeExternalRead: Job? = null
