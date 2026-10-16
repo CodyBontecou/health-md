@@ -41,6 +41,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
             inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
             "planned"
         )
+
         XCTAssertEqual(
             inventory.capabilities.first { $0.id == "account.myself_lifetime_claim" }?.classification,
             "planned"
@@ -120,3 +121,67 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "direct.cli_agent_push_wake",
         "export.range-summary",
         "account.myself_lifetime_claim",
+        "support.local-reporting-fallback",
+    ]
+
+    private static let androidCapabilities: Set<String> = [
+        "android.activity-intensity",
+        "android.planned-workouts",
+        "android.menstruation-periods",
+        "android.personal-health-records",
+        "android.nutrition-meals",
+        "android.contextual-source-fields",
+        "android.skin-temperature",
+    ]
+
+    private static var allCapabilities: Set<String> {
+        sharedCapabilities
+            .union(appleCapabilities)
+            .union(androidCapabilities)
+            .union(["source.private-platform-database", "core.shared-rust-profile-engine", "setup.share-portable-configuration"])
+    }
+
+    private enum ManifestError: Error {
+        case notFound
+    }
+}
+
+private struct CapabilityInventory: Decodable {
+    let schema: String
+    let schemaVersion: Int
+    let outputProfiles: [OutputProfile]
+    let capabilities: [Capability]
+
+    enum CodingKeys: String, CodingKey {
+        case schema
+        case schemaVersion = "schema_version"
+        case outputProfiles = "output_profiles"
+        case capabilities
+    }
+
+    struct OutputProfile: Decodable {
+        let id: String
+    }
+
+    struct Capability: Decodable {
+        let id: String
+        let classification: String
+        let platforms: Platforms
+    }
+
+    struct Platforms: Decodable {
+        let apple: Availability
+    }
+
+    struct Availability: Decodable {
+        let state: State
+        let reason: String?
+        let target: String?
+
+        enum State: String, Decodable {
+            case available
+            case unavailable
+            case planned
+        }
+    }
+}
