@@ -27,6 +27,8 @@ final class PushRegistrationManager: @unchecked Sendable {
     private let logger = Logger(subsystem: "com.codybontecou.healthmd", category: "PushRegistration")
     private let session: URLSession
     private let baseURL: URL
+    private let apnsEnvironment: @Sendable () -> APNsEnvironment?
+    private let userIdProvider: (@Sendable () -> String)?
 
     /// Keychain service identifier (matches PurchaseManager's so all
     /// HealthMd-related items live under the same service).
@@ -36,10 +38,14 @@ final class PushRegistrationManager: @unchecked Sendable {
 
     init(
         session: URLSession = .shared,
-        baseURL: URL = URL(string: "https://healthmd-receipt-verifier.costream.workers.dev")!
+        baseURL: URL = URL(string: "https://healthmd-receipt-verifier.costream.workers.dev")!,
+        apnsEnvironment: @escaping @Sendable () -> APNsEnvironment? = { APNsEnvironment.current() },
+        userIdProvider: (@Sendable () -> String)? = nil
     ) {
         self.session = session
         self.baseURL = baseURL
+        self.apnsEnvironment = apnsEnvironment
+        self.userIdProvider = userIdProvider
     }
 
     /// The hex-encoded APNs token from the most recent successful registration, or `nil` before
@@ -55,6 +61,7 @@ final class PushRegistrationManager: @unchecked Sendable {
     /// so it survives app deletion (Keychain entries persist across reinstalls
     /// on iOS by default with kSecAttrAccessibleAfterFirstUnlock).
     var userId: String {
+        if let userIdProvider { return userIdProvider() }
         if let existing = readKeychainString(account: Self.userIdKeychainAccount) {
             return existing
         }
@@ -117,18 +124,24 @@ final class PushRegistrationManager: @unchecked Sendable {
         Task { await self.postRegisterDevice(apnsToken: hex) }
     }
 
-    private func postRegisterDevice(apnsToken: String) async {
+    func postRegisterDevice(apnsToken: String) async {
+        guard let environment = apnsEnvironment() else {
+            logger.error("APNs environment could not be read from signing — skipping device registration")
+            return
+        }
         struct Payload: Encodable {
             let userId: String
             let platform: String
             let apnsToken: String
             let bundleId: String
+            let apnsEnvironment: APNsEnvironment
         }
         let body = Payload(
             userId: userId,
             platform: platformString,
             apnsToken: apnsToken,
-            bundleId: bundleId
+            bundleId: bundleId,
+            apnsEnvironment: environment
         )
         await postJSON(path: "/devices/register", body: body, label: "register")
     }

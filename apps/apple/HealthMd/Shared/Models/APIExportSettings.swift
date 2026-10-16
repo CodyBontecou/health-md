@@ -1,4 +1,5 @@
 import Combine
+import CryptoKit
 import Foundation
 
 /// Immutable request-scoped destination used by every batch in one API export.
@@ -8,6 +9,32 @@ struct APIExportDestinationSnapshot: Equatable {
     let authorizationHeaderValue: String?
     let displayName: String
     let redactedEndpointDescription: String
+}
+
+/// Local-only recovery evidence. Never persist the URL, headers or credential itself.
+/// A per-request nonce avoids a stable cross-request identifier; this is not encryption.
+struct ScheduledAPIEndpointIdentity: Codable, Equatable {
+    let bindingID: UUID?
+    let nonce: UUID
+    let fingerprint: String
+
+    init(destination: APIExportDestinationSnapshot, bindingID: UUID?, nonce: UUID = UUID()) {
+        self.bindingID = bindingID
+        self.nonce = nonce
+        fingerprint = Self.fingerprint(destination, nonce: nonce)
+    }
+
+    func matches(_ destination: APIExportDestinationSnapshot, bindingID: UUID?) -> Bool {
+        self.bindingID == bindingID && fingerprint == Self.fingerprint(destination, nonce: nonce)
+    }
+
+    private static func fingerprint(_ destination: APIExportDestinationSnapshot, nonce: UUID) -> String {
+        // Length-prefix each value so URL/header boundaries cannot collide.
+        let values = [nonce.uuidString, destination.endpointURL.absoluteString,
+                      destination.authorizationHeaderValue ?? ""]
+        let data = Data(values.map { "\($0.utf8.count):\($0)" }.joined().utf8)
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+    }
 }
 
 enum APIExportSettingsPersistenceError: LocalizedError, Equatable {
