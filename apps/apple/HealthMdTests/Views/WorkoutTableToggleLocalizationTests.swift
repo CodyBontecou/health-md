@@ -4,8 +4,8 @@ import XCTest
 import SwiftUI
 #endif
 
-final class WorkoutTableToggleLocalizationTests: XCTestCase {
-    private func localizedResources(_ language: String) throws -> Bundle {
+nonisolated final class WorkoutTableToggleLocalizationTests: XCTestCase {
+    @MainActor private func localizedResources(_ language: String) throws -> Bundle {
         // The app host owns the production catalog. Isolated native XCTest
         // compiles that same catalog into the test bundle, without mock strings.
         let path = [Bundle.main, Bundle(for: Self.self)].compactMap {
@@ -23,7 +23,7 @@ final class WorkoutTableToggleLocalizationTests: XCTestCase {
          "ワークアウトの詳細とメタデータの表を含める", "有効", "無効")
     ]
 
-    func testWorkoutSettingPresentationUsesGermanAndJapaneseResourcesInBothStates() throws {
+    @MainActor func testWorkoutSettingPresentationUsesGermanAndJapaneseResourcesInBothStates() throws {
         for (language, title, subtitle, label, enabled, disabled) in expected {
             let bundle = try localizedResources(language)
             for isOn in [true, false] {
