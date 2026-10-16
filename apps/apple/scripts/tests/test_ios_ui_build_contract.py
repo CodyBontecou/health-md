@@ -37,6 +37,7 @@ EXPECTED_TESTS = [
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+    "ExportJourneyUITests/testDateRangePresets_selectedCustomRemainsEnabledAfterLeavingAndReopeningExport",
 ]
 
 
@@ -303,7 +304,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
             self.assertIn(setting, build)
         selections = []
-        for args, count in zip(calls[1:], (9, 6)):
+        for args, count in zip(calls[1:], (9, 7)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")
