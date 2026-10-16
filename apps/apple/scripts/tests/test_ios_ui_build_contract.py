@@ -37,6 +37,9 @@ EXPECTED_TESTS = [
     "ExportProfilesJourneyUITests/testQA_ManagementDuplicateRenameDeleteAndLastProfileGuard",
     "ExportProfilesJourneyUITests/testQA_ProfileSchedulesToggleCadenceAndEmptyStateFooter",
     "ExportProfilesJourneyUITests/testQA_ManageProfilesViewDetailCopyIDActivateAndRename",
+    "HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide",
+    "HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess",
+    "HistoryAuthorizationJourneyUITests/testDelayedAssessmentCanContinueUnverifiedWithoutBlockingReadableExport",
 ]
 
 
@@ -195,6 +198,20 @@ class ArtifactQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source SHA"):
             qualify(self.derived, "branch-name")
 
+    def test_literal_double_underscores_in_build_root_are_not_placeholders(self) -> None:
+        derived = self.derived.parent / "fresh__derived__data"
+        derived.mkdir()
+        (derived / BUILD_MARKER).touch()
+        manifest, _ = make_products(derived)
+        self.assertEqual(qualify(derived, SOURCE_SHA)[0], manifest)
+
+    def test_unresolved_product_placeholder_is_rejected(self) -> None:
+        manifest, payload = make_products(self.derived)
+        selected_target(payload)["TestBundlePath"] = "__TESTHOST__/__UNKNOWN__/HealthMdUITests.xctest"
+        manifest.write_bytes(plistlib.dumps(payload))
+        with self.assertRaisesRegex(ValueError, "placeholder"):
+            qualify(self.derived, SOURCE_SHA)
+
     def test_receipt_binds_debug_code_without_rewriting_the_manifest(self) -> None:
         manifest, _ = make_products(self.derived)
         original = manifest.read_bytes()
@@ -230,7 +247,8 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.bin.mkdir()
         scripts = self.root / "scripts"
         scripts.mkdir()
-        shutil.copy(SCRIPTS / "validate_ios_ui_xctestrun.py", scripts)
+        for name in ("validate_ios_ui_xctestrun.py", "run-owned-ui.py"):
+            shutil.copy(SCRIPTS / name, scripts)
         self.calls = self.root / "calls.jsonl"
         self.device_calls = self.root / "device-calls.jsonl"
         self.output = self.root / "github-output"
@@ -303,7 +321,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
             self.assertIn(setting, build)
         selections = []
-        for args, count in zip(calls[1:], (9, 6)):
+        for args, count in zip(calls[1:], (9, 9)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")

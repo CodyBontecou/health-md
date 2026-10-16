@@ -88,12 +88,13 @@ def ui_target(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
 def staged_path(value: Any, products: Path, test_host: Path | None = None) -> Path:
     if not isinstance(value, str) or not value.startswith(("__TESTROOT__/", "__TESTHOST__/")):
         raise ValueError("product paths must use the generated test-root/host placeholders")
-    expanded = value.replace("__TESTROOT__", str(products))
-    if test_host is not None:
-        expanded = expanded.replace("__TESTHOST__", str(test_host))
-    if "__" in expanded:
+    placeholder, relative = value.split("/", 1)
+    root = products if placeholder == "__TESTROOT__" else test_host
+    # Validate only the generated suffix. A temporary/build root may contain
+    # literal double underscores and is never an xctestrun placeholder.
+    if root is None or "__" in relative:
         raise ValueError("unresolved product path placeholder")
-    path = Path(expanded).resolve()
+    path = (root / relative).resolve()
     if not path.is_relative_to(products) or not path.is_dir():
         raise ValueError("generated product is missing or outside the fresh Products directory")
     return path
