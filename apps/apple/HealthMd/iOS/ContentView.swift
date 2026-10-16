@@ -2672,6 +2672,7 @@ struct SettingsTabView: View {
     @Binding var showClinicianReport: Bool
     @State private var showMailCompose = false
     @State private var showPaywall = false
+    @State private var showMyselfClaim = false
     @State private var showExternalIntegrations = false
     @State private var showDiagnostics = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
@@ -2774,6 +2775,9 @@ struct SettingsTabView: View {
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
         }
+        .sheet(isPresented: $showMyselfClaim) {
+            MyselfClaimView(app: "health.md")
+        }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: .settings)
                 .presentationDetents([.large])
@@ -2850,6 +2854,18 @@ struct SettingsTabView: View {
                 isActive: purchaseManager.isUnlocked,
                 accessibilityHint: "Double tap to manage purchases and Family Sharing",
                 action: { showPaywall = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
+                icon: "gift.fill",
+                title: "Claim myself.md access",
+                subtitle: "Verify an eligible purchase for complimentary Lifetime access.",
+                isActive: true,
+                accessibilityHint: "Double tap to review purchase verification for myself.md",
+                accessibilityIdentifier: "settings-myself-claim",
+                action: { showMyselfClaim = true }
             )
 
             SettingsRowDivider()
