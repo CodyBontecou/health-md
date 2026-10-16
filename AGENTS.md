@@ -69,3 +69,10 @@ For Apple App Store releases, follow the complete synchronization contract in `a
 - Never force-push.
 - Preserve imported repository history; do not squash source repositories into a single snapshot.
 - Keep source revision and history-rewrite maps under `docs/migration/`.
+
+### Isolated worktree cleanup
+
+- Track temporary isolated worktrees and build/output paths you create. Before the final task-completion report, remove these task-owned resources, including ignored DerivedData, Cargo targets, Gradle builds, and temporary artifacts.
+- Before deletion, inspect Git status and active builds. Preserve all source changes outside the checkout (a retained branch or patch) and the required verification evidence. If a push was requested, confirm the commit is on the intended remote branch first; cleanup must not lose uncommitted or unpushed work.
+- Use `git worktree remove <path>` for registered worktrees. Remove only paths created by this task; leave the primary checkout, other agents' worktrees, shared caches, and Git history untouched.
+- Keep minimal task evidence (patches/logs/receipts) in ignored `.pi/` state outside the retired worktree. Verify removal and report cleaned paths and approximate space reclaimed when measurable. If ownership is uncertain, builds are active, or the worktree is needed for a handoff, keep it and report why cleanup remains pending.
