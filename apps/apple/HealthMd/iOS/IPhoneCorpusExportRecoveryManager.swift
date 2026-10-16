@@ -50,6 +50,11 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
     private var queryExecutionControllers: [UUID: HealthKitQueryExecutionController] = [:]
     private var resumeWhenActiveTaskFinishes = false
     private var publishedCLIJobID: UUID?
+    /// Scheduled jobs must still belong to a live pending request and enabled period.
+    /// Interactive/CLI jobs retain their independent recovery authority.
+    var isScheduledRecoveryAuthorized: @MainActor (UUID) -> Bool = {
+        SchedulingManager.shared.isScheduledRecoveryAuthorized(jobID: $0)
+    }
 
     convenience init() {
         self.init(
@@ -146,6 +151,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)? = nil,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
+        try Task.checkCancellation()
         try rejectConflictingExport(
             origin: origin,
             jobID: jobID,
@@ -191,12 +197,25 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         )
     }
 
-    /// Resumes the oldest job bound to the currently connected Mac. This includes
-    /// Mac-initiated work: the Mac may already be terminal while its final ACK was
-    /// lost, so waiting for it to resend the request would strand the iPhone spool.
+    /// Cancellation only: changing scheduling authority must not start a new export.
+    @discardableResult
+    func revalidateScheduledRecovery() -> Bool {
+        if let activeJobID, activeTask != nil,
+           journal(jobID: activeJobID)?.origin == .scheduledIPhone,
+           !isScheduledRecoveryAuthorized(activeJobID) {
+            resumeWhenActiveTaskFinishes = false
+            activeTask?.cancel()
+            return false
+        }
+        return true
+    }
+
+    /// Resumes the oldest authorized job bound to the currently connected Mac. This
+    /// includes Mac-initiated work: a lost final ACK must not strand the iPhone spool.
     /// Called after hello and whenever the iPhone becomes active.
     @discardableResult
     func resumeEligibleJob() -> UUID? {
+        guard revalidateScheduledRecovery() else { return nil }
         if activeTask != nil {
             if let syncService, connectedPeerProvider(syncService) != nil {
                 syncService.isSyncing = true
@@ -215,7 +234,7 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
               let remoteInstallationID = remote.installationID else { return nil }
         let localInstallationID = syncService.installationID
         guard let journal = store.resumableJournals().first(where: {
-            $0.isBound(
+            ($0.origin != .scheduledIPhone || isScheduledRecoveryAuthorized($0.jobID)) && $0.isBound(
                 sourceInstallationID: localInstallationID,
                 destinationInstallationID: remoteInstallationID
             )
@@ -275,6 +294,29 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         }
         refreshPublishedSnapshot()
         _ = resumeEligibleJob()
+    }
+
+    /// Synchronous local revocation precedes any peer RPC. Preserve the journal and
+    /// spool here: a sender can still be unwinding, and committed Mac files are untouched.
+    func discardScheduledRecovery(jobID: UUID) throws {
+        guard let journal = try store.load(jobID: jobID, allowExpired: true),
+              journal.origin == .scheduledIPhone, !journal.state.isTerminal else { return }
+        explicitlyCancelledJobIDs.insert(jobID)
+        if activeJobID == jobID {
+            resumeWhenActiveTaskFinishes = false
+            activeTask?.cancel()
+        }
+        let message = "Scheduled recovery was discarded."
+        _ = try store.updateState(jobID: jobID, state: .cancelled, message: message)
+        refreshPublishedSnapshot()
+        if let syncService {
+            Task { [weak syncService] in
+                _ = await syncService?.sendConnectedCorpusCancelAndWait(ConnectedCorpusTransferCancel(
+                    sessionID: journal.sessionID, jobID: jobID, reason: .userRequested,
+                    message: message, requestedAt: Date()
+                ))
+            }
+        }
     }
 
     @discardableResult
@@ -413,7 +455,9 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
         ) -> Void)?,
         produceItem: @escaping ConnectedCorpusDurableSender.ItemProducer
     ) async throws -> ConnectedCorpusDurableSender.Result {
-        if activeJobID == jobID, let activeTask { return try await activeTask.value }
+        if activeJobID == jobID, let activeTask {
+            return try await awaitSenderTask(activeTask, origin: origin)
+        }
         guard activeTask == nil else {
             if origin == .interactiveIPhone {
                 let activeJournal = activeJobID.flatMap {
@@ -453,7 +497,28 @@ final class IPhoneCorpusExportRecoveryManager: ObservableObject {
                 if shouldResume { _ = resumeEligibleJob() }
             }
         }
-        return try await task.value
+        return try await awaitSenderTask(task, origin: origin)
+    }
+
+    /// Cancel Export owns a scheduled attempt, not the durable logical job. Propagate its
+    /// cancellation to the sender so the existing interruption path retains a paused journal.
+    /// Interactive and Mac/CLI jobs keep their independent caller-disconnection semantics.
+    private func awaitSenderTask(
+        _ task: Task<ConnectedCorpusDurableSender.Result, Error>,
+        origin: ConnectedCorpusOutboundOrigin
+    ) async throws -> ConnectedCorpusDurableSender.Result {
+        guard origin == .scheduledIPhone else { return try await task.value }
+        let jobID = activeJobID
+        return try await withTaskCancellationHandler {
+            try await task.value
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                if self?.activeJobID == jobID {
+                    self?.resumeWhenActiveTaskFinishes = false
+                }
+                task.cancel()
+            }
+        }
     }
 
     private func rejectConflictingExport(

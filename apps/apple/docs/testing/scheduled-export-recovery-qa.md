@@ -83,6 +83,20 @@ Result: passed on 2026-05-18. `xcresulttool` summary reported `result: Passed`, 
 
 Worker tests were not run for ISO-307 because this ticket did not change worker code.
 
+## Profile-only schedule restoration acceptance
+
+For the implemented lifecycle and recovery rules, see [Scheduled Exports](../features/scheduled-exports.md). Android already reconciles legacy and profile scheduling in `presentation/MainActivity.kt` and `data/scheduler/BootReceiver.kt`; the Apple launch-restoration fix does not require an Android lifecycle change.
+
+The historical results above do not qualify these additional scenarios. Simulator/device execution requires explicit authorization for the current task. After obtaining permission for a genuine signed build and a temporary test schedule/destination, preserve the existing configuration and verify:
+
+1. A profile-only schedule survives relaunch before its first fire time; no export starts early.
+2. With notifications allowed, the fallback appears near fire time +60 seconds when background execution does not complete the export. Include locked-device and denied-permission cases; silent pushes remain best-effort.
+3. Opening after a missed occurrence runs its frozen dates once; a failed drain preserves its recovery notification without an immediate second attempt.
+4. Repeated app-open/re-arm and simultaneous profiles/legacy scheduling preserve pending identity and do not duplicate completed exports.
+5. Restore the original test configuration and confirm unrelated schedules, history, destinations and credentials remain intact.
+
+Host tests and APNs source/configuration preflight do not establish notification delivery, protected HealthKit behavior, or physical-device qualification. Keep task-specific test receipts and build blockers in the issue/PR rather than this maintained checklist.
+
 ## GitHub Issue Response Checklist
 
 Posted response: https://github.com/CodyBontecou/health-md/issues/46#issuecomment-4479081773

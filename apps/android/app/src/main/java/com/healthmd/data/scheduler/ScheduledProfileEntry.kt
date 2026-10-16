@@ -80,6 +80,8 @@ data class ScheduledProfileEntry(
     val lastRefreshSuccessEpochMillis: Long? = null,
     /** Exact frozen residual groups left by interrupted or failed automated export attempts. */
     val pendingExports: List<ScheduledProfilePendingExport> = emptyList(),
+    /** Invalidates admitted work and its checkpoints after an explicit recovery discard. */
+    val recoveryGeneration: Long = 0,
 ) {
     init {
         require(lookbackDays in 1..30) { "Lookback must stay within 1..30." }
