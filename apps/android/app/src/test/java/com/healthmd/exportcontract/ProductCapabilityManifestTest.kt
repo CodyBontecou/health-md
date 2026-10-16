@@ -46,3 +46,138 @@ class ProductCapabilityManifestTest {
                 "export.range-summary",
                 "setup.share-portable-configuration",
                 "account.myself_lifetime_claim",
+                "export.watch-origin-manual-api",
+            ),
+            idsWithState(states, "planned"),
+        )
+        assertEquals(allCapabilities, states.keys)
+        val cancellationCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "automation.cancel-active-export"
+        }
+        assertEquals(
+            "shared",
+            cancellationCapability.getValue("classification").jsonPrimitive.content,
+        )
+        val pushWakeCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "direct.cli_agent_push_wake"
+        }
+        assertEquals(
+            "planned",
+            pushWakeCapability.getValue("classification").jsonPrimitive.content,
+        )
+
+        val claimCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
+        }
+        assertEquals("planned", claimCapability.getValue("classification").jsonPrimitive.content)
+
+        capabilities.forEach { capability ->
+            val id = capability.getValue("id").jsonPrimitive.content
+            val availability = capability.getValue("platforms").jsonObject
+                .getValue("android").jsonObject
+            when (availability.getValue("state").jsonPrimitive.content) {
+                "unavailable" -> assertTrue(
+                    "Unavailable Android capability $id must include a reason",
+                    availability["reason"]?.jsonPrimitive?.content?.isNotBlank() == true,
+                )
+                "planned" -> assertTrue(
+                    "Planned Android capability $id must include a target",
+                    availability["target"]?.jsonPrimitive?.content?.isNotBlank() == true,
+                )
+            }
+        }
+    }
+
+    @Test
+    fun watchOriginRemainsPlannedOnBothPlatformsWithoutDailyProfileClaims() {
+        val inventory = Json.parseToJsonElement(manifestFile().readText()).jsonObject
+        val watch = inventory.getValue("capabilities").jsonArray.map { it.jsonObject }.single {
+            it.getValue("id").jsonPrimitive.content == "export.watch-origin-manual-api"
+        }
+        assertEquals("planned", watch.getValue("classification").jsonPrimitive.content)
+        assertTrue("Watch snapshot is not a daily profile", watch.getValue("profiles").jsonArray.isEmpty())
+        val platforms = watch.getValue("platforms").jsonObject
+        val apple = platforms.getValue("apple").jsonObject
+        val android = platforms.getValue("android").jsonObject
+        assertEquals("planned", apple.getValue("state").jsonPrimitive.content)
+        assertEquals("planned", android.getValue("state").jsonPrimitive.content)
+        assertEquals(
+            "Qualify the healthmd.watch_snapshot v1 source path with physical Watch Wi-Fi/cellular uploads while the iPhone is unavailable, interruption/authorization checks, and backend account-bound idempotency receipts before release.",
+            apple.getValue("target").jsonPrimitive.content,
+        )
+        assertEquals(
+            "Wear OS watch-origin API export milestone: add reviewed local Health Services capture, secure destination setup, direct HTTPS delivery and retry; preserve the current phone-authoritative Wear snapshot and keep non-equivalent exercise/sensor statistics distinct.",
+            android.getValue("target").jsonPrimitive.content,
+        )
+        val evidence = watch.getValue("evidence").jsonArray.map { it.jsonPrimitive.content }
+        assertTrue(evidence.contains("packages/contracts/watch-snapshot/v1/contract.md"))
+        assertTrue(evidence.contains("apps/android/docs/features/wear-os.md"))
+    }
+
+    private fun idsWithState(states: Map<String, String>, state: String): Set<String> =
+        states.filterValues { it == state }.keys
+
+    private fun manifestFile(): File {
+        var directory: File? = File(requireNotNull(System.getProperty("user.dir"))).absoluteFile
+        while (directory != null) {
+            val candidate = File(directory, "packages/contracts/product-capabilities.json")
+            if (candidate.isFile) return candidate
+            directory = directory.parentFile
+        }
+        error("Could not locate packages/contracts/product-capabilities.json")
+    }
+
+    private companion object {
+        val sharedCapabilities = setOf(
+            "export.daily-files",
+            "export.sleep-summary",
+            "export.activity-basics",
+            "export.cardiorespiratory-summary",
+            "export.vitals-and-body",
+            "export.nutrient-totals",
+            "export.mindfulness-sessions",
+            "export.selected-time-series-detail",
+            "export.completed-workouts",
+            "export.mobility-and-performance",
+            "export.profiles",
+            "export.scheduled-today-refresh",
+            "core.shared-rust-metric-registry",
+            "automation.cancel-active-export",
+            "automation.discard-pending-recovery",
+            "direct.full_public_authorized_corpus",
+            "direct-cli.shared-qr-pairing",
+            "direct.full_public_authorized_corpus",
+            "direct.cli_agent_wake",
+        )
+
+        val appleCapabilities = setOf(
+            "apple.lossless-healthkit-archive",
+            "apple.medication-dose-events",
+            "apple.state-of-mind",
+            "apple.wrist-temperature",
+            "apple.hearing-and-symptoms",
+            "apple.typed-whoop-provider-section",
+        )
+
+        val androidCapabilities = setOf(
+            "android.activity-intensity",
+            "android.planned-workouts",
+            "android.menstruation-periods",
+            "android.personal-health-records",
+            "android.nutrition-meals",
+            "android.contextual-source-fields",
+            "android.skin-temperature",
+        )
+
+        val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
+            "source.private-platform-database",
+            "automation.api-recovery-authority",
+            "direct.cli_agent_push_wake",
+            "export.range-summary",
+            "setup.share-portable-configuration",
+            "account.myself_lifetime_claim",
+            "export.watch-origin-manual-api",
+            "core.shared-rust-profile-engine",
+        )
+    }
+}
