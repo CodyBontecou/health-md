@@ -12,6 +12,7 @@ import com.healthmd.data.settings.ExportProfileRepository
 import com.healthmd.domain.model.ExportProfile
 import com.healthmd.domain.model.ExportSettings
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.util.runCatchingCancellable
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +32,8 @@ data class ProfileScheduleRow(
 data class ProfileSchedulesUiState(
     val rows: List<ProfileScheduleRow> = emptyList(),
     val editingProfileId: String? = null,
+    val discardingRecoveryProfileId: String? = null,
+    val recoveryDiscardFailed: Boolean = false,
 )
 
 /**
@@ -135,6 +138,22 @@ class ProfileSchedulesViewModel @Inject constructor(
             entryStore.upsert(entry)
             profileScheduler.reconcile()
             _uiState.update { it.copy(editingProfileId = null) }
+        }
+    }
+
+    fun discardPendingRecovery(profileId: String) {
+        if (_uiState.value.discardingRecoveryProfileId != null) return
+        _uiState.update {
+            it.copy(discardingRecoveryProfileId = profileId, recoveryDiscardFailed = false)
+        }
+        viewModelScope.launch {
+            val discarded = runCatchingCancellable {
+                profileScheduler.discardPendingRecovery(profileId)
+            }.onFailure { Timber.e(it, "Could not discard profile scheduled recovery") }
+                .getOrDefault(false)
+            _uiState.update {
+                it.copy(discardingRecoveryProfileId = null, recoveryDiscardFailed = !discarded)
+            }
         }
     }
 

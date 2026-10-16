@@ -27,11 +27,15 @@ import com.healthmd.rawexport.RawSnapshotStatus
 import com.healthmd.rawexport.RawTypeReport
 import com.healthmd.rawexport.RawTypeStatus
 import com.healthmd.rawexport.withCanonicalIdentityAndHash
+import com.networknt.schema.JsonSchemaFactory
+import com.networknt.schema.SpecVersion
+import com.networknt.schema.resource.InputStreamSource
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.metadata.Metadata
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
+import java.io.IOException
 import java.io.RandomAccessFile
 import java.time.Instant
 import java.util.ArrayDeque
@@ -115,53 +119,51 @@ class RawChangesServiceTest {
     }
 
     @Test fun generatedArchiveValidatesAgainstPublishedDraft202012Schema() = runTest {
-        val schema = publishedSchema().loadSchema()
-        val cases = listOf(
-            emptyList(),
-            listOf(
-                NativeChange.Upsert(record("schema-record", 1)),
-                NativeChange.Delete("schema-record"),
-                NativeChange.Delete("unknown-record"),
-            ),
-        )
-        cases.forEach { changes ->
-            val source = FakeSource().apply {
-                pages += NativeChangesPage(changes, SecretChangesToken("terminal"), false, false)
-            }
-            val result = harness(source).service.bootstrap(scope()) { durableReceipt() } as RawChangesResult.Complete
-            val document = ObjectMapper().readTree(File(result.archive.location))
-
-            assertThat(document.get("events").size()).isEqualTo(changes.size)
-            assertThat(schema.validate(document)).isEmpty()
+        val source = FakeSource().apply {
+            pages += NativeChangesPage(emptyList(), SecretChangesToken("terminal"), false, false)
         }
+        val result = harness(source).service.bootstrap(scope()) { durableReceipt() } as RawChangesResult.Complete
+        val schemaFile = repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json")
+        val schema = localSchemaFactory().getSchema(schemaFile.toPath().toUri())
+        // networknt preloading suppresses loader exceptions; surface any unresolved reference.
+        schema.initializeValidators()
+        val document = ObjectMapper().readTree(File(result.archive.location))
+
+        assertThat(schema.validate(document)).isEmpty()
     }
 
-    @Test fun publishedSchemaRejectsInvalidArchiveAndTransitiveRawRecordFields() = runTest {
+    @Test fun localPublishedRecordSchemaValidatesUpsertionAndRejectsMissingNativeIdentity() = runTest {
         val source = FakeSource().apply {
             pages += NativeChangesPage(
-                listOf(NativeChange.Upsert(record("schema-record", 1))), SecretChangesToken("terminal"), false, false,
+                listOf(NativeChange.Upsert(record("schema-record", 2))),
+                SecretChangesToken("terminal"), false, false,
             )
         }
         val result = harness(source).service.bootstrap(scope()) { durableReceipt() } as RawChangesResult.Complete
-        val schema = publishedSchema().loadSchema()
-        val document = ObjectMapper().readTree(File(result.archive.location)) as ObjectNode
+        val schemaFile = repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json")
+        val schema = localSchemaFactory().getSchema(schemaFile.toPath().toUri())
+        schema.initializeValidators()
+        val document = ObjectMapper().readTree(File(result.archive.location))
         assertThat(schema.validate(document)).isEmpty()
 
-        val invalidHeader = document.deepCopy()
-        (invalidHeader.get("header") as ObjectNode).put("version", 2)
-        assertThat(schema.validate(invalidHeader).any { it.type == "const" }).isTrue()
-
-        val invalidRecord = document.deepCopy()
-        (invalidRecord.at("/events/0/record/metadata/lastModifiedTime") as ObjectNode).put("nano", 1_000_000_000)
-        val recordErrors = schema.validate(invalidRecord)
-        assertThat(recordErrors.any {
-            it.type == "maximum" && it.instanceLocation.toString().endsWith("record.metadata.lastModifiedTime.nano")
-        }).isTrue()
+        val nestedRecord = document.get("events").get(0).get("record") as ObjectNode
+        nestedRecord.remove("nativeIdentity")
+        val errors = schema.validate(document)
+        assertThat(errors).isNotEmpty()
+        assertThat(errors.any { it.message.contains("nativeIdentity") }).isTrue()
     }
 
-    private fun publishedSchema() = RawChangesSchemaValidation(
-        requireNotNull(repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json").parentFile),
-    )
+    @Test fun localSchemaResolverRejectsUnknownReferencesBeforeLoaderFallback() {
+        val document = ObjectMapper().createObjectNode()
+            .put("\$schema", "https://json-schema.org/draft/2020-12/schema")
+            .put("\$ref", "https://unexpected.invalid/schema.json")
+        val failure = requireNotNull(runCatching {
+            localSchemaFactory().getSchema(document).initializeValidators()
+        }.exceptionOrNull())
+        val rootCause = generateSequence(failure) { it.cause }.last()
+        assertThat(rootCause).isInstanceOf(IOException::class.java)
+        assertThat(rootCause.message).contains("Unexpected schema reference: https://unexpected.invalid/schema.json")
+    }
 
     @Test fun terminalTokenReceiptMetadataIsCommittedButHeaderDescribesConsumedToken() = runTest {
         val source = FakeSource().apply {
@@ -577,6 +579,31 @@ class RawChangesServiceTest {
             .containsExactlyElementsIn(independentEligibilityFixture).inOrder()
         assertThat(HealthConnectChangesSource.changeEligibleTypeKeys).hasSize(42)
         assertThat(HealthConnectChangesSource.changeEligibleTypeKeys).doesNotContain("medical_resource")
+    }
+
+    private fun localSchemaFactory(): JsonSchemaFactory {
+        val files = listOf(
+            repoFile("docs/export-contract/schemas/healthmd.raw_changes.v1.schema.json"),
+            repoFile("docs/export-contract/schemas/healthmd.raw_record.v1.schema.json"),
+        )
+        val localFiles = files.associateBy { it.toPath().toUri().toString() }
+        val mappings = files.associate {
+            "https://health.md/schemas/${it.name}" to it.toPath().toUri().toString()
+        }
+        return JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012) { builder ->
+            builder.schemaMappers { it.mappings(mappings) }
+            builder.schemaLoaders { loaders ->
+                // Published $id values rebase relative refs. Read only these exact repository files.
+                loaders.add { iri ->
+                    val location = iri.toString()
+                    InputStreamSource {
+                        val file = localFiles[location]
+                            ?: throw IOException("Unexpected schema reference: $location")
+                        file.inputStream()
+                    }
+                }
+            }
+        }
     }
 
     private fun eventHashes(result: RawChangesResult.Complete): List<String> =

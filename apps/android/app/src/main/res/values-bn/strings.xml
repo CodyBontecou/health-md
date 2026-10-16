@@ -496,6 +496,11 @@
     <string name="profile_schedule_refresh_interval">রিফ্রেশ ব্যবধান</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ঘণ্টা</string>
     <string name="profile_schedule_refresh_summary">আজ প্রতি %1$d ঘণ্টায় রিফ্রেশ করে</string>
+    <string name="profile_schedule_discard_recovery">মুলতুবি পুনরুদ্ধার বাতিল করুন</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s-এর মুলতুবি পুনরুদ্ধার বাতিল করুন</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s-এর মুলতুবি পুনরুদ্ধার বাতিল করবেন?</string>
+    <string name="profile_schedule_discard_recovery_body">এই প্রোফাইলের নির্ধারিত পুনঃচেষ্টা বন্ধ করুন এবং এর মুলতুবি তারিখ ও সংরক্ষিত রপ্তানি সেটিংস মুছে ফেলুন। পরবর্তী নির্ধারিত রানে বর্তমান প্রোফাইল ও সময়সূচি ব্যবহার হবে। আপনার প্রোফাইল, API পরিচয়পত্র, রপ্তানির ইতিহাস এবং ইতিমধ্যে রপ্তানি করা ডেটা রাখা হবে। এটি ইতিমধ্যে আপলোড করা ডেটা বা লেখা ফাইল ফিরিয়ে নিতে পারে না।</string>
+    <string name="profile_schedule_discard_recovery_failed">মুলতুবি পুনরুদ্ধার পুরোপুরি বাতিল করা যায়নি। প্রোফাইল পরীক্ষা করে আবার চেষ্টা করুন।</string>
     <string name="schedule_date_window_today">আজ</string>
     <string name="schedule_export_past_days">বিগত দিনগুলো রপ্তানি করুন</string>
     <string name="schedule_today_summary">প্রতিবার আজকের ডেটা রপ্তানি হয়, যাতে বর্তমান দৈনিক ফাইলটি হালনাগাদ থাকে। একই দিনের কনটেন্ট দুবার যোগ হওয়া এড়াতে Overwrite বা Update লেখার মোড ব্যবহার করুন।</string>

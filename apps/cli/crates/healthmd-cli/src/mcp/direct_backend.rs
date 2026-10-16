@@ -7,7 +7,7 @@ use std::{
 
 use async_trait::async_trait;
 use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64_STANDARD};
-use chrono::{DateTime, Duration as ChronoDuration, Local, Utc};
+use chrono::{Duration as ChronoDuration, Local, Utc};
 use healthmd_client::{
     ClientError,
     direct::{
@@ -125,10 +125,18 @@ impl DirectIphoneBackend {
         Ok(())
     }
 
+    /// The shared wake-window object with enrollment reported truthfully for the configured
+    /// device selection. Derives from the same client implementation the CLI reports.
+    async fn wake_status_value(&self) -> Value {
+        self.client
+            .wake_status_value(self.configuration.device_id, self.configuration.wake_window)
+            .await
+    }
+
     async fn start_ios_raw_export(
         &self,
-        input: RawCorpusExportInput,
         job_id: Uuid,
+        input: RawCorpusExportInput,
     ) -> Result<Value, BackendError> {
         if input.format == RawCorpusFormat::Ndjson
             || input
@@ -142,15 +150,31 @@ impl DirectIphoneBackend {
             )
             .with_job_id(job_id));
         }
-        // Preserve creation-time/date resolution order from the original request.
-        let created_at = Utc::now();
-        let date_selection = input
-            .dates
-            .resolve(Local::now().date_naive())
-            .map_err(|_| {
-                BackendError::new("healthmd_invalid_export", "Invalid raw export dates.")
-            })?;
-        let request = ios_raw_export_request(job_id, created_at, date_selection);
+        let request = ExportRequest {
+            protocol_version: 1,
+            job_id: SwiftUuid(job_id),
+            created_at: Utc::now(),
+            date_selection: input
+                .dates
+                .resolve(Local::now().date_naive())
+                .map_err(|_| {
+                    BackendError::new("healthmd_invalid_export", "Invalid raw export dates.")
+                })?,
+            settings_policy: SettingsPolicy::RequestedDatesOnly,
+            profile_reference: None,
+            response_mode: ResponseMode::RawJson,
+            raw_profile: Some(RawProfile::HealthDataProjection),
+            canonical_selection: Some(CanonicalSelection {
+                metric_ids: Vec::new(),
+                categories: Vec::new(),
+                source_ids: vec!["apple_health".to_owned()],
+                object_paths: vec!["/healthkit_record_archive".to_owned()],
+                field_pointers: Vec::new(),
+                all_metrics: true,
+                detail_level: DetailLevel::Lossless,
+            }),
+            destination: None,
+        };
         let result = self
             .client
             .export_raw(
@@ -174,12 +198,72 @@ impl DirectIphoneBackend {
         ))
     }
 
-    /// The shared wake-window object with enrollment reported truthfully for the configured
-    /// device selection. Derives from the same client implementation the CLI reports.
-    async fn wake_status_value(&self) -> Value {
-        self.client
-            .wake_status_value(self.configuration.device_id, self.configuration.wake_window)
+    async fn start_android_raw_export(
+        &self,
+        job_id: Uuid,
+        input: RawCorpusExportInput,
+        installation_id: Uuid,
+    ) -> Result<Value, BackendError> {
+        let provider_id = input
+            .provider_id
+            .unwrap_or_else(|| "health_connect".to_owned());
+        let date_selection = match input
+            .dates
+            .resolve(Local::now().date_naive())
+            .map_err(|_| {
+                BackendError::new("healthmd_invalid_export", "Invalid raw export dates.")
+            })? {
+            healthmd_protocol::models::DateSelection::Exact(range) => v2::DateSelection::Exact {
+                start_date: range.start,
+                end_date: range.end,
+            },
+            healthmd_protocol::models::DateSelection::AllAvailable(_) => {
+                v2::DateSelection::AllAvailable
+            }
+        };
+        let created_at = Utc::now();
+        let request = v2::ExportRequest {
+            job_id,
+            created_at,
+            expires_at: created_at + ChronoDuration::seconds(JOB_LIFETIME_SECONDS),
+            source_installation_id: installation_id,
+            date_selection,
+            product: v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
+                provider_id: provider_id.clone(),
+                format: match input.format {
+                    RawCorpusFormat::Json => v2::RawSnapshotFormat::Json,
+                    RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => {
+                        v2::RawSnapshotFormat::Ndjson
+                    }
+                },
+                scope: v2::RawSnapshotScope::AllAuthorizedSupportedData,
+                include_exercise_routes: input.include_exercise_routes,
+            },
+            destination: None,
+        };
+        let result = self
+            .client
+            .export_android(
+                request,
+                None,
+                Some(installation_id),
+                self.configuration.port,
+                input.timeout,
+            )
             .await
+            .map_err(|error| backend_error(&error, Some(job_id)))?;
+        Ok(raw_export_success(
+            job_id,
+            "android",
+            &provider_id,
+            match input.format {
+                RawCorpusFormat::Json => "json",
+                RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => "ndjson",
+            },
+            &result.receipt.status,
+            result.receipt.byte_count,
+            &result.receipt.sha256,
+        ))
     }
 }
 
@@ -333,74 +417,10 @@ impl HealthDataBackend for DirectIphoneBackend {
         let _gate = self.operation_gate.lock().await;
         self.wait_for_active_source(context).await?;
         match source_kind {
-            SourceKind::Ios => self.start_ios_raw_export(input, job_id).await,
+            SourceKind::Ios => self.start_ios_raw_export(job_id, input).await,
             SourceKind::Android => {
-                let provider_id = input
-                    .provider_id
-                    .unwrap_or_else(|| "health_connect".to_owned());
-                let date_selection =
-                    match input
-                        .dates
-                        .resolve(Local::now().date_naive())
-                        .map_err(|_| {
-                            BackendError::new(
-                                "healthmd_invalid_export",
-                                "Invalid raw export dates.",
-                            )
-                        })? {
-                        healthmd_protocol::models::DateSelection::Exact(range) => {
-                            v2::DateSelection::Exact {
-                                start_date: range.start,
-                                end_date: range.end,
-                            }
-                        }
-                        healthmd_protocol::models::DateSelection::AllAvailable(_) => {
-                            v2::DateSelection::AllAvailable
-                        }
-                    };
-                let created_at = Utc::now();
-                let request = v2::ExportRequest {
-                    job_id,
-                    created_at,
-                    expires_at: created_at + ChronoDuration::seconds(JOB_LIFETIME_SECONDS),
-                    source_installation_id: selected.installation_id.0,
-                    date_selection,
-                    product: v2::ExportProduct::AndroidProviderNativeSnapshotV1 {
-                        provider_id: provider_id.clone(),
-                        format: match input.format {
-                            RawCorpusFormat::Json => v2::RawSnapshotFormat::Json,
-                            RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => {
-                                v2::RawSnapshotFormat::Ndjson
-                            }
-                        },
-                        scope: v2::RawSnapshotScope::AllAuthorizedSupportedData,
-                        include_exercise_routes: input.include_exercise_routes,
-                    },
-                    destination: None,
-                };
-                let result = self
-                    .client
-                    .export_android(
-                        request,
-                        None,
-                        Some(selected.installation_id.0),
-                        self.configuration.port,
-                        input.timeout,
-                    )
+                self.start_android_raw_export(job_id, input, selected.installation_id.0)
                     .await
-                    .map_err(|error| backend_error(&error, Some(job_id)))?;
-                Ok(raw_export_success(
-                    job_id,
-                    "android",
-                    &provider_id,
-                    match input.format {
-                        RawCorpusFormat::Json => "json",
-                        RawCorpusFormat::Auto | RawCorpusFormat::Ndjson => "ndjson",
-                    },
-                    &result.receipt.status,
-                    result.receipt.byte_count,
-                    &result.receipt.sha256,
-                ))
             }
         }
     }
@@ -833,35 +853,6 @@ fn export_success(payload: &FileReceiptPayload) -> Value {
     })
 }
 
-/// The byte-compatible iPhone request projection, separate from transport and
-/// source selection so the fixed contract can be verified without a paired phone.
-fn ios_raw_export_request(
-    job_id: Uuid,
-    created_at: DateTime<Utc>,
-    date_selection: healthmd_protocol::models::DateSelection,
-) -> ExportRequest {
-    ExportRequest {
-        protocol_version: 1,
-        job_id: SwiftUuid(job_id),
-        created_at,
-        date_selection,
-        settings_policy: SettingsPolicy::RequestedDatesOnly,
-        profile_reference: None,
-        response_mode: ResponseMode::RawJson,
-        raw_profile: Some(RawProfile::HealthDataProjection),
-        canonical_selection: Some(CanonicalSelection {
-            metric_ids: Vec::new(),
-            categories: Vec::new(),
-            source_ids: vec!["apple_health".to_owned()],
-            object_paths: vec!["/healthkit_record_archive".to_owned()],
-            field_pointers: Vec::new(),
-            all_metrics: true,
-            detail_level: DetailLevel::Lossless,
-        }),
-        destination: None,
-    }
-}
-
 fn raw_export_success(
     job_id: Uuid,
     platform: &str,
@@ -1232,52 +1223,6 @@ mod tests {
         assert_eq!(cancelled.code, "healthmd_request_cancelled");
         assert!(!cancelled.retryable);
         assert_eq!(cancelled.wake_window_seconds, None);
-    }
-
-    #[test]
-    fn ios_raw_request_preserves_full_lossless_contract_for_both_date_selections() {
-        use healthmd_protocol::models::{DateSelection, ExactDateSelection};
-        use healthmd_protocol::wire::Empty;
-
-        let job_id = Uuid::parse_str("01234567-89ab-cdef-0123-456789abcdef").unwrap();
-        let created_at = DateTime::parse_from_rfc3339("2026-10-02T09:00:00Z")
-            .unwrap()
-            .with_timezone(&Utc);
-        let selections = [
-            DateSelection::AllAvailable(Empty::default()),
-            DateSelection::Exact(ExactDateSelection {
-                start: "2026-09-01".to_owned(),
-                end: "2026-09-07".to_owned(),
-            }),
-        ];
-        for date_selection in selections {
-            let request = ios_raw_export_request(job_id, created_at, date_selection.clone());
-            let expected = ExportRequest {
-                protocol_version: 1,
-                job_id: SwiftUuid(job_id),
-                created_at,
-                date_selection,
-                settings_policy: SettingsPolicy::RequestedDatesOnly,
-                profile_reference: None,
-                response_mode: ResponseMode::RawJson,
-                raw_profile: Some(RawProfile::HealthDataProjection),
-                canonical_selection: Some(CanonicalSelection {
-                    metric_ids: Vec::new(),
-                    categories: Vec::new(),
-                    source_ids: vec!["apple_health".to_owned()],
-                    object_paths: vec!["/healthkit_record_archive".to_owned()],
-                    field_pointers: Vec::new(),
-                    all_metrics: true,
-                    detail_level: DetailLevel::Lossless,
-                }),
-                destination: None,
-            };
-            assert_eq!(request, expected);
-            assert_eq!(
-                serde_json::to_value(&request).unwrap(),
-                serde_json::to_value(&expected).unwrap()
-            );
-        }
     }
 
     #[test]
