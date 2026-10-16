@@ -4,19 +4,18 @@ import XCTest
 import MessageUI
 #endif
 
-@MainActor
-final class FeedbackReporterTests: XCTestCase {
+nonisolated final class FeedbackReporterTests: XCTestCase {
     // STATIC RETENTION JUSTIFICATION: Match the ObservableObject test policy for
     // macOS 26 / Swift 6 deinit crashes (docs/testing/lifecycle-audit.md).
-    private static var retainedReporters: [FeedbackReporter] = []
+    @MainActor private static var retainedReporters: [FeedbackReporter] = []
 
-    private func makeReporter(strings: FeedbackFallbackCopy = .init(), opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
+    @MainActor private func makeReporter(strings: FeedbackFallbackCopy = .init(), opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
         let reporter = FeedbackReporter(opener: opener, strings: strings)
         Self.retainedReporters.append(reporter)
         return reporter
     }
 
-    func testRejectedGitHubHandoffProvidesLocalTemplateWithoutRetrying() throws {
+    @MainActor func testRejectedGitHubHandoffProvidesLocalTemplateWithoutRetrying() throws {
         var openedURLs: [URL] = []
         let reporter = makeReporter { url, completion in
             openedURLs.append(url)
@@ -38,7 +37,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertTrue(failure.reportText.contains("https://github.com/CodyBontecou/health-md/issues/new"))
     }
 
-    func testRejectedEmailHandoffProvidesAddressAndDiagnosticsWithoutRetrying() throws {
+    @MainActor func testRejectedEmailHandoffProvidesAddressAndDiagnosticsWithoutRetrying() throws {
         var attempts = 0
         let reporter = makeReporter { url, completion in
             attempts += 1
@@ -55,7 +54,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertEqual(attempts, 1)
     }
 
-    func testAsynchronousOpenerResultControlsFailurePresentation() throws {
+    @MainActor func testAsynchronousOpenerResultControlsFailurePresentation() throws {
         var completion: FeedbackReporter.Completion?
         let reporter = makeReporter { _, callback in completion = callback }
         reporter.open(.github)
@@ -64,7 +63,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertNotNil(reporter.failure)
     }
 
-    func testSuccessfulHandoffsDoNotClaimSubmissionOrDelivery() {
+    @MainActor func testSuccessfulHandoffsDoNotClaimSubmissionOrDelivery() {
         let reporter = makeReporter { _, completion in completion(true) }
         reporter.open(.github)
         XCTAssertNil(reporter.failure)
@@ -72,7 +71,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertNil(reporter.failure)
     }
 
-    func testEditingAfterCopyClearsVisibleAndAccessibleConfirmationUntilRecopied() {
+    @MainActor func testEditingAfterCopyClearsVisibleAndAccessibleConfirmationUntilRecopied() {
         var draft = FeedbackReportDraft(reportText: "Synthetic template")
         var pasteboard = ""
         let write: (String) -> Bool = { text in
@@ -99,7 +98,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertEqual(draft.copyAccessibilityLabel, String(localized: "Report copied"))
     }
 
-    func testUnchangedEditorTextKeepsConfirmationButFailedCopyClearsIt() {
+    @MainActor func testUnchangedEditorTextKeepsConfirmationButFailedCopyClearsIt() {
         var draft = FeedbackReportDraft(reportText: "Synthetic report")
         draft.copy { _ in true }
         draft.reportText = "Synthetic report"
@@ -110,7 +109,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertEqual(draft.copyAccessibilityLabel, "")
     }
 
-    private func localizedResources(_ language: String) throws -> Bundle {
+    @MainActor private func localizedResources(_ language: String) throws -> Bundle {
         // App-hosted XCTest uses the production app bundle. The isolated native
         // runner compiles the same catalog into this test bundle, without mocks.
         let path = [Bundle.main, Bundle(for: Self.self)].compactMap {
@@ -119,7 +118,7 @@ final class FeedbackReporterTests: XCTestCase {
         return try XCTUnwrap(path.flatMap(Bundle.init(path:)), "Missing production resources: \(language)")
     }
 
-    func testFallbackSheetAndHandoffMessagesUseEverySupportedLanguage() throws {
+    @MainActor func testFallbackSheetAndHandoffMessagesUseEverySupportedLanguage() throws {
         let english = FeedbackFallbackCopy(bundle: try localizedResources("en"), locale: Locale(identifier: "en"))
         func fallbackValues(_ copy: FeedbackFallbackCopy) -> [String] {
             [copy.mailQueueFailure, copy.emailHandoffFailure, copy.githubHandoffFailure,
@@ -141,7 +140,7 @@ final class FeedbackReporterTests: XCTestCase {
         }
     }
 
-    func testGermanAndJapaneseRecoveryInstructionsAndCopyConfirmation() throws {
+    @MainActor func testGermanAndJapaneseRecoveryInstructionsAndCopyConfirmation() throws {
         let expected = [
             ("de", "Feedback konnte nicht gesendet werden",
              "Bearbeite den Bericht und kopiere ihn vor dem Schließen. Nichts wird automatisch gesendet. Vermeide private Gesundheitsdaten.",
@@ -170,7 +169,7 @@ final class FeedbackReporterTests: XCTestCase {
     }
 
     #if os(iOS)
-    func testFailedMailWaitsForSheetDismissalThenOffersLocalFallback() throws {
+    @MainActor func testFailedMailWaitsForSheetDismissalThenOffersLocalFallback() throws {
         let reporter = makeReporter { _, _ in XCTFail("Mail failure must not open another app") }
         reporter.completeMail(result: .failed, error: nil)
         XCTAssertNil(reporter.failure, "Do not present two sheets at once")
@@ -184,7 +183,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertNil(reporter.failure, "Consume pending completion exactly once")
     }
 
-    func testMailErrorIsFailureEvenWithNonFailedResultAndIsNotExposed() throws {
+    @MainActor func testMailErrorIsFailureEvenWithNonFailedResultAndIsNotExposed() throws {
         let reporter = makeReporter { _, _ in XCTFail("No external fallback") }
         let error = NSError(domain: "test", code: 1, userInfo: [NSLocalizedDescriptionKey: "SECRET_ERROR_TEXT"])
         reporter.completeMail(result: .sent, error: error)
@@ -194,7 +193,7 @@ final class FeedbackReporterTests: XCTestCase {
         XCTAssertFalse(failure.reportText.contains("SECRET_ERROR_TEXT"))
     }
 
-    func testSentCancelledAndSavedMailDoNotProduceFailure() {
+    @MainActor func testSentCancelledAndSavedMailDoNotProduceFailure() {
         for result in [MFMailComposeResult.sent, .cancelled, .saved] {
             let reporter = makeReporter { _, _ in XCTFail("No external fallback") }
             reporter.completeMail(result: result, error: nil)
@@ -203,7 +202,7 @@ final class FeedbackReporterTests: XCTestCase {
         }
     }
 
-    func testCancelledSheetWithoutCompletionDoesNotProduceFailure() {
+    @MainActor func testCancelledSheetWithoutCompletionDoesNotProduceFailure() {
         let reporter = makeReporter { _, _ in XCTFail("No external fallback") }
         reporter.mailSheetDismissed()
         XCTAssertNil(reporter.failure)
