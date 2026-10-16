@@ -41,6 +41,10 @@ final class ProductCapabilityManifestTests: XCTestCase {
             inventory.capabilities.first { $0.id == "direct.cli_agent_push_wake" }?.classification,
             "planned"
         )
+        XCTAssertEqual(
+            inventory.capabilities.first { $0.id == "account.myself_lifetime_claim" }?.classification,
+            "planned"
+        )
 
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple
@@ -117,6 +121,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
+        "account.myself_lifetime_claim",
     ]
 
     private static let androidCapabilities: Set<String> = [
