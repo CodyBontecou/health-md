@@ -22,7 +22,6 @@ ANDROID_METRICS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/mod
 ANDROID_FIELDS = REPO / "apps/android/app/src/main/java/com/healthmd/domain/model/HealthDataFields.kt"
 SEMANTIC_CROSSWALK = WORKSPACE / "crates/healthmd-core/registry/native-baseline-semantic-crosswalk-v1.json"
 CAPABILITY_MANIFEST = REPO / "packages/contracts/product-capabilities.json"
-CAPABILITY_SCOPE = WORKSPACE / "scripts/fixtures/registry-capability-scope-v1.json"
 REGISTRY_DIR = WORKSPACE / "crates/healthmd-core/registry"
 REGISTRY_PATH = REGISTRY_DIR / "metric-registry-v1.json"
 APPLE_BASELINE = REGISTRY_DIR / "native-baseline-apple-v7.json"
@@ -432,7 +431,44 @@ def output_selection_ids(key: str, supported_ids: set[str]) -> list[str]:
     raise ValueError(f"no Android metric mapping for output key {key}")
 
 
-def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, Any]:
+def capability_inventory(
+    known_capability_ids: list[str], metric_capability_ids: set[str]
+) -> dict[str, Any]:
+    # The canonical registry owns its reviewed capability scope. Unrelated product
+    # additions must not change the registry hash or invalidate durable registry pins.
+    # Match validate_metric_registry: require coverage, manifest order, and current states.
+    manifest = json.loads(CAPABILITY_MANIFEST.read_text())
+    capabilities = manifest["capabilities"]
+    known = set(known_capability_ids)
+    if len(known) != len(known_capability_ids):
+        raise ValueError("duplicate registry capability")
+    unknown = known - {capability["id"] for capability in capabilities}
+    if unknown:
+        raise ValueError(f"registry references unknown product capabilities: {sorted(unknown)}")
+    if known_capability_ids != [
+        capability["id"] for capability in capabilities if capability["id"] in known
+    ]:
+        raise ValueError("known capabilities must preserve product-capabilities order")
+    missing = metric_capability_ids - known
+    if missing:
+        raise ValueError(f"metric capabilities missing from registry inventory: {sorted(missing)}")
+    return {
+        "known_capability_ids": known_capability_ids,
+        "available_capability_ids_by_platform": {
+            platform: [
+                capability["id"]
+                for capability in capabilities
+                if capability["id"] in known
+                and capability["platforms"][platform]["state"] == "available"
+            ]
+            for platform in ("apple", "android")
+        },
+    }
+
+
+def build_registry(
+    apple: dict[str, Any], android: dict[str, Any], known_capability_ids: list[str]
+) -> dict[str, Any]:
     ledger = parse_frozen_crosswalk()
     apple_by_id = {metric["selection_id"]: metric for metric in apple["metrics"]}
     supported_ids = {metric["selection_id"] for metric in android["metrics"]}
@@ -592,37 +628,13 @@ def build_registry(apple: dict[str, Any], android: dict[str, Any]) -> dict[str, 
                     }
                 )
 
-    capability_manifest = json.loads(CAPABILITY_MANIFEST.read_text())
-    scope = json.loads(CAPABILITY_SCOPE.read_text())
-    if (scope.get("schema"), scope.get("schema_version"), scope.get("registry_version")) != (
-        "healthmd.registry_capability_scope", 1, 1
-    ):
-        raise ValueError("invalid immutable registry capability scope")
-    known_ids = scope["known_capability_ids"]
-    if len(known_ids) != len(set(known_ids)):
-        raise ValueError("duplicate scoped registry capability")
-    capability_by_id = {capability["id"]: capability for capability in capability_manifest["capabilities"]}
-    if not set(known_ids).issubset(capability_by_id):
-        raise ValueError("scoped registry capability missing from product inventory")
-    if not {metric["capability_id"] for metric in semantic_metrics}.issubset(known_ids):
-        raise ValueError("new metric capability requires a reviewed registry scope/version change")
-    scoped_capabilities = [capability_by_id[identifier] for identifier in known_ids]
-    # Product-only additions (for example Watch networking) are not metric/profile
-    # authority changes. Preserve the v1 inventory fingerprint and immutable
-    # semantic-result fixtures instead of re-pinning every native renderer.
     return {
         "schema": "healthmd.metric_registry",
         "schema_version": 1,
         "registry_version": 1,
-        "known_capability_ids": known_ids,
-        "available_capability_ids_by_platform": {
-            platform: [
-                capability["id"]
-                for capability in scoped_capabilities
-                if capability["platforms"][platform]["state"] == "available"
-            ]
-            for platform in ("apple", "android")
-        },
+        **capability_inventory(
+            known_capability_ids, {metric["capability_id"] for metric in semantic_metrics}
+        ),
         "categories": category_rows,
         "metrics": semantic_metrics,
         "profiles": profiles,
@@ -638,7 +650,8 @@ def main() -> None:
     apple_baseline = json.loads(APPLE_BASELINE.read_text())
     apple = parse_apple()
     android = parse_android()
-    registry = build_registry(apple, android)
+    known_capability_ids = json.loads(REGISTRY_PATH.read_text())["known_capability_ids"]
+    registry = build_registry(apple, android, known_capability_ids)
     outputs = {
         APPLE_BASELINE: apple_baseline,
         ANDROID_BASELINE: android,

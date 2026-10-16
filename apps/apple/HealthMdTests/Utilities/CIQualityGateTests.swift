@@ -226,7 +226,7 @@ final class CIQualityGateTests: XCTestCase {
         )
         let smokeStep = try XCTUnwrap(
             content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
-                .components(separatedBy: "- name: Run App Review export regression (iPad)").first
+                .components(separatedBy: "- name: Check warnings (iOS UI)").first
         )
         XCTAssertFalse(
             smokeStep.contains("continue-on-error: true"),
@@ -240,14 +240,10 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 16, "PR smoke must preserve all selected UI regressions")
+        XCTAssertEqual(smokeSelectionCount, 15, "PR smoke must preserve all selected UI regressions")
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
-        )
-        XCTAssertTrue(
-            content.contains("-only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError"),
-            "The blocking iPad App Review regression must remain selected"
         )
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),

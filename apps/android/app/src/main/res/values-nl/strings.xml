@@ -604,6 +604,11 @@
     <string name="profile_schedule_refresh_interval">Verversingsinterval</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d u</string>
     <string name="profile_schedule_refresh_summary">Ververst vandaag elke %1$d u</string>
+    <string name="profile_schedule_discard_recovery">Openstaand herstel verwerpen</string>
+    <string name="profile_schedule_discard_recovery_named">Openstaand herstel voor %1$s verwerpen</string>
+    <string name="profile_schedule_discard_recovery_title">Openstaand herstel voor %1$s verwerpen?</string>
+    <string name="profile_schedule_discard_recovery_body">Stopt de geplande nieuwe poging van dit profiel en verwijdert de openstaande datums en opgeslagen exportinstellingen. De volgende geplande uitvoering gebruikt het huidige profiel en schema. Je profiel, API-inloggegevens, exportgeschiedenis en al geëxporteerde gegevens blijven bewaard. Dit kan een voltooide upload of een al geschreven bestand niet ongedaan maken.</string>
+    <string name="profile_schedule_discard_recovery_failed">Het openstaande herstel kon niet volledig worden verworpen. Controleer het profiel en probeer het opnieuw.</string>
     <string name="schedule_date_window_today">Vandaag</string>
     <string name="schedule_export_past_days">Afgelopen dagen exporteren</string>
     <string name="schedule_today_summary">Bij elke uitvoering worden de gegevens van vandaag geëxporteerd, zodat je huidige dagbestand up-to-date blijft. Gebruik de schrijfmodus Overschrijven of Bijwerken om dubbele inhoud van dezelfde dag te voorkomen.</string>

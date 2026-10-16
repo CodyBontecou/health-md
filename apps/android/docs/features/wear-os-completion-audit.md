@@ -1,6 +1,6 @@
 # Wear OS phases 1–7 completion audit
 
-> **Deferred release scope:** Wear OS is not part of Android `1.9.1`. The current Google Play phone artifact does not advertise Wear capabilities, start synchronization, or expose Wear settings. This audit is retained for the targeted `1.10.0` requalification cycle; every physical-device, signer, screenshot, battery, and independent-review gate remains mandatory before reactivation.
+> **Deferred release scope:** Wear OS is not part of Android `1.9.3`. The current Google Play phone artifact does not advertise Wear capabilities, start synchronization, or expose Wear settings. This audit is retained for the targeted `1.10.0` requalification cycle; every physical-device, signer, screenshot, battery, and independent-review gate remains mandatory before reactivation.
 
 This is the prompt-to-artifact audit for the Wear OS implementation worktree. A passing build,
 manifest count, validator, emulator run, or substitute signature is scoped evidence only. The

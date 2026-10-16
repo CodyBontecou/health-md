@@ -41,10 +41,11 @@ class ProductCapabilityManifestTest {
         assertEquals(
             setOf(
                 "core.shared-rust-profile-engine",
+                "automation.api-recovery-authority",
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
-                "export.watch-origin-manual-api",
+            "export.watch-origin-manual-api",
             ),
             idsWithState(states, "planned"),
         )
@@ -136,6 +137,8 @@ class ProductCapabilityManifestTest {
             "export.scheduled-today-refresh",
             "core.shared-rust-metric-registry",
             "automation.cancel-active-export",
+            "automation.discard-pending-recovery",
+            "direct.full_public_authorized_corpus",
             "direct-cli.shared-qr-pairing",
             "direct.full_public_authorized_corpus",
             "direct.cli_agent_wake",
@@ -162,11 +165,12 @@ class ProductCapabilityManifestTest {
 
         val allCapabilities = sharedCapabilities + appleCapabilities + androidCapabilities + setOf(
             "source.private-platform-database",
+            "automation.api-recovery-authority",
             "direct.cli_agent_push_wake",
             "export.range-summary",
             "setup.share-portable-configuration",
-            "core.shared-rust-profile-engine",
             "export.watch-origin-manual-api",
+            "core.shared-rust-profile-engine",
         )
     }
 }

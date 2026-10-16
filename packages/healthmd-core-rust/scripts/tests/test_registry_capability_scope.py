@@ -20,20 +20,22 @@ class RegistryCapabilityScopeTests(unittest.TestCase):
         self.apple = importer.parse_apple()
         self.android = importer.parse_android()
         self.manifest = json.loads(importer.CAPABILITY_MANIFEST.read_text())
+        self.known_ids = json.loads(importer.REGISTRY_PATH.read_text())["known_capability_ids"]
 
     def build_with_manifest(self, manifest):
         with tempfile.TemporaryDirectory(prefix="healthmd-registry-scope-test-") as directory:
             path = Path(directory) / "product-capabilities.json"
             path.write_text(json.dumps(manifest))
             with patch.object(importer, "CAPABILITY_MANIFEST", path):
-                return importer.build_registry(self.apple, self.android)
+                return importer.build_registry(self.apple, self.android, self.known_ids)
 
     def test_reproduction_preserves_exact_registry_identity_and_all_metric_rows(self):
-        actual = importer.canonical_bytes(importer.build_registry(self.apple, self.android))
+        actual = importer.canonical_bytes(importer.build_registry(self.apple, self.android, self.known_ids))
         expected = importer.REGISTRY_PATH.read_bytes()
         self.assertEqual(actual, expected)
-        scope = json.loads(importer.CAPABILITY_SCOPE.read_text())
-        self.assertEqual(hashlib.sha256(actual).hexdigest(), scope["baseline_registry_sha256"])
+        manifest = json.loads((importer.REPO / "packages/contracts/manifest.json").read_text())
+        registry = next(row for row in manifest["inventories"] if row["id"] == "healthmd.metric_registry")
+        self.assertEqual(hashlib.sha256(actual).hexdigest(), registry["sha256"])
         # Watch delivery is in the product inventory but not pure metric authority.
         self.assertIn("export.watch-origin-manual-api", [row["id"] for row in self.manifest["capabilities"]])
         self.assertNotIn("export.watch-origin-manual-api", json.loads(actual)["known_capability_ids"])
@@ -50,13 +52,13 @@ class RegistryCapabilityScopeTests(unittest.TestCase):
     def test_missing_scoped_inventory_entry_fails_closed(self):
         manifest = copy.deepcopy(self.manifest)
         manifest["capabilities"] = [row for row in manifest["capabilities"] if row["id"] != "export.activity-basics"]
-        with self.assertRaisesRegex(ValueError, "missing from product inventory"):
+        with self.assertRaisesRegex(ValueError, "unknown product capabilities"):
             self.build_with_manifest(manifest)
 
     def test_new_metric_capability_requires_explicit_scope_review(self):
         with patch.dict(importer.CATEGORY_CAPABILITY, {"Activity": "export.synthetic-new-metric-contract"}):
-            with self.assertRaisesRegex(ValueError, "reviewed registry scope/version change"):
-                importer.build_registry(self.apple, self.android)
+            with self.assertRaisesRegex(ValueError, "metric capabilities missing from registry inventory"):
+                importer.build_registry(self.apple, self.android, self.known_ids)
 
     def test_existing_scoped_availability_is_still_derived_from_product_inventory(self):
         manifest = copy.deepcopy(self.manifest)
