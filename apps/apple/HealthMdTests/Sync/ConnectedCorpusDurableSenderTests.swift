@@ -411,6 +411,135 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
         XCTAssertEqual(fixture.store.resumableJournals().map(\.jobID), [fixture.session.jobID])
     }
 
+    func testCallerCancellationPausesOnlyScheduledSenderAndRetainsRecovery() async throws {
+        for origin in [ConnectedCorpusOutboundOrigin.scheduledIPhone, .interactiveIPhone, .macInitiated] {
+            let fixture = try makeFixture(dayCount: 1, origin: origin)
+            let harness = Harness()
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, transportProvider: { _ in harness.transport() }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: ConnectedCorpusTransferNegotiation(
+                    protocolVersion: fixture.session.protocolVersion,
+                    partitionTargetBytes: fixture.session.partitionTargetBytes
+                ),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            var producerStarted = false
+            var producerStopped = false
+            let task = Task { @MainActor in
+                try await manager.send(
+                    origin: origin, jobID: fixture.session.jobID,
+                    manifest: fixture.manifest, durableNegotiation: negotiation,
+                    syncService: SyncService(),
+                    produceItem: { _, date in
+                        producerStarted = true
+                        do {
+                            try await Task.sleep(for: .seconds(30))
+                        } catch {
+                            producerStopped = true
+                            throw error
+                        }
+                        return try self.makeSmallItem(date: date)
+                    }
+                )
+            }
+            await waitUntil { producerStarted }
+            task.cancel()
+            for _ in 0..<30 where !producerStopped {
+                try await Task.sleep(for: .milliseconds(10))
+            }
+            let stoppedWithCaller = producerStopped
+            // Bound cleanup even on the pre-fix path that ignores its caller's cancellation.
+            manager.handlePeerDisconnected()
+            _ = try? await task.value
+
+            XCTAssertEqual(stoppedWithCaller, origin == .scheduledIPhone)
+            let journal = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+            XCTAssertEqual(journal.state, .paused, "attempt cancellation must not discard recovery")
+            XCTAssertEqual(journal.session.sessionID, fixture.session.sessionID)
+            XCTAssertEqual(journal.session.requestFingerprint, fixture.session.requestFingerprint)
+            XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
+            XCTAssertTrue(harness.transfers.isEmpty)
+            XCTAssertFalse(manager.hasRunningExport)
+        }
+    }
+
+    func testScheduledPartitionCancellationRetainsCheckpointOnlyForOrdinaryStop() async throws {
+        enum CancellationSource: Equatable { case attempt, discard, peer }
+        for source in [CancellationSource.attempt, .discard, .peer] {
+            let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
+            let harness = Harness()
+            let baseline = harness.transport()
+            var transmissionStarted = false
+            var partitionURL: URL?
+            let transport = ConnectedCorpusSender.Transport(
+                open: baseline.open,
+                sendPartition: { file, manifest, transferID, _ in
+                    partitionURL = file.url
+                    transmissionStarted = true
+                    if source != .peer {
+                        do { try await Task.sleep(for: .seconds(30)) } catch {}
+                    }
+                    return .failure(ConnectedTransferAbort(
+                        transferID: transferID, jobID: manifest.jobID,
+                        reason: .cancelled, message: "Synthetic partition cancellation"
+                    ))
+                },
+                finalize: baseline.finalize, cancel: baseline.cancel
+            )
+            let manager = IPhoneCorpusExportRecoveryManager(
+                store: fixture.store, transportProvider: { _ in transport }
+            )
+            Self.retainedRecoveryManagers.append(manager)
+            let negotiation = ConnectedCorpusDurableNegotiation(
+                transfer: ConnectedCorpusTransferNegotiation(
+                    protocolVersion: fixture.session.protocolVersion,
+                    partitionTargetBytes: fixture.session.partitionTargetBytes
+                ),
+                peerBinding: try XCTUnwrap(fixture.session.peerBinding)
+            )
+            let task = Task { @MainActor in
+                try await manager.send(
+                    origin: .scheduledIPhone, jobID: fixture.session.jobID,
+                    manifest: fixture.manifest, durableNegotiation: negotiation,
+                    syncService: SyncService(),
+                    produceItem: { _, date in try self.makeSmallItem(date: date) }
+                )
+            }
+            await waitUntil { transmissionStarted }
+            switch source {
+            case .attempt: task.cancel()
+            case .discard:
+                try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+            case .peer: break
+            }
+            _ = try? await task.value
+            let journal = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+            XCTAssertEqual(journal.state, source == .attempt ? .paused : .cancelled)
+            XCTAssertEqual(journal.session.requestFingerprint, fixture.session.requestFingerprint)
+            if source == .attempt {
+                let pending = try XCTUnwrap(journal.pendingPartition)
+                XCTAssertEqual(journal.items.count, 1)
+                XCTAssertGreaterThan(fixture.store.totalInternalSpoolBytes(jobID: journal.jobID), 0)
+                let resumedHarness = Harness()
+                _ = try await ConnectedCorpusDurableSender.send(
+                    configuration: .init(jobID: journal.jobID, retryDelayNanoseconds: 0),
+                    store: fixture.store, transport: resumedHarness.transport(),
+                    produceItem: { _, _ in throw TestError.unexpectedProduction }
+                )
+                XCTAssertEqual(resumedHarness.opens.first?.partition.sha256, pending.descriptor.sha256)
+                XCTAssertEqual(resumedHarness.transfers.count, 1)
+                XCTAssertEqual(manager.journal(jobID: journal.jobID)?.state, .completed)
+            } else {
+                XCTAssertNil(journal.pendingPartition)
+                XCTAssertTrue(journal.items.isEmpty)
+                XCTAssertFalse(FileManager.default.fileExists(atPath: try XCTUnwrap(partitionURL).path))
+            }
+        }
+    }
+
     func testRecoveryManagerKeepsScheduledRecoveryOutOfInteractiveUI() throws {
         let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone)
         let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
@@ -418,6 +547,42 @@ final class ConnectedCorpusDurableSenderTests: XCTestCase {
 
         XCTAssertNil(manager.activeSnapshot)
         XCTAssertEqual(manager.resumableSnapshots.map(\.jobID), [fixture.session.jobID])
+    }
+
+    func testDiscardScheduledCorpusRecoveryRetainsJournalAndDoesNotTouchInteractiveJobs() throws {
+        for origin in [ConnectedCorpusOutboundOrigin.scheduledIPhone, .interactiveIPhone, .macInitiated] {
+            let fixture = try makeFixture(dayCount: 1, origin: origin)
+            _ = try fixture.store.adoptItem(try makeSmallItem(date: fixture.dates[0]),
+                expectedIndex: 0, jobID: fixture.session.jobID)
+            let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store)
+            Self.retainedRecoveryManagers.append(manager)
+            try manager.discardScheduledRecovery(jobID: fixture.session.jobID)
+            let journal = try XCTUnwrap(manager.journal(jobID: fixture.session.jobID))
+            XCTAssertEqual(journal.state, origin == .scheduledIPhone ? .cancelled : .paused)
+            XCTAssertEqual(journal.items.count, 1, "discard must not remove spool bytes while a sender may unwind")
+            XCTAssertEqual(fixture.store.resumableJournals().count, origin == .scheduledIPhone ? 0 : 1)
+        }
+    }
+
+    func testScheduledCorpusRecoveryChecksCurrentScheduleAuthorityBeforeOpeningTransport() throws {
+        let sync = SyncService()
+        let remoteID = UUID()
+        let fixture = try makeFixture(dayCount: 1, origin: .scheduledIPhone,
+            sourceInstallationID: sync.installationID, destinationInstallationID: remoteID)
+        let harness = FastReconnectHarness()
+        let capabilities = SyncPeerCapabilities.current(platform: .macOS, installationID: remoteID)
+        let manager = IPhoneCorpusExportRecoveryManager(store: fixture.store,
+            transportProvider: { _ in harness.transport() }, connectedPeerProvider: { _ in capabilities })
+        Self.retainedRecoveryManagers.append(manager)
+        manager.isScheduledRecoveryAuthorized = { _ in false }
+        let suite = "ScheduledCorpusAuthority.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        manager.configure(syncService: sync,
+            healthKitManager: HealthKitManager(store: FakeHealthStore(), userDefaults: defaults), externalIntegrations: nil)
+        XCTAssertNil(manager.resumeEligibleJob())
+        XCTAssertFalse(manager.hasRunningExport)
+        XCTAssertEqual(harness.openCount, 0)
     }
 
     func testFastReconnectResumesAfterOldSenderReleasesOwnershipAndKeepsAssertion() async throws {

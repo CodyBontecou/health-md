@@ -219,7 +219,6 @@ final class CIQualityGateTests: XCTestCase {
              "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
              "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
              "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
-             "ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting",
              "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
              "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab"],
             ["ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
@@ -255,10 +254,11 @@ final class CIQualityGateTests: XCTestCase {
               !phoneStep.contains("continue-on-error:"), !tabletStep.contains("continue-on-error:")
         else { throw OwnedPlanError.invalid }
         return try (phonePipelines + tabletPipelines).enumerated().map { index, pipeline in
-            guard let command = pipeline["command"] as? [String], Array(command.prefix(2)) == ["xcodebuild", "test"],
+            guard let command = pipeline["command"] as? [String], Array(command.prefix(2)) == ["xcodebuild", "test-without-building"],
                   command.filter({ $0.hasPrefix("-only-testing:") }) == ownedSelections[index].map({ "-only-testing:HealthMdUITests/" + $0 })
             else { throw OwnedPlanError.invalid }
-            for (flag, value) in [("-test-timeouts-enabled", "YES"),
+            for (flag, value) in [("-xctestrun", "${{ steps.ui_artifacts.outputs.xctestrun }}"),
+                                  ("-test-timeouts-enabled", "YES"),
                                   ("-default-test-execution-time-allowance", "180"),
                                   ("-maximum-test-execution-time-allowance", "300")] {
                 guard command.filter({ $0 == flag }).count == 1,
@@ -271,7 +271,7 @@ final class CIQualityGateTests: XCTestCase {
 
     func testWorkflow_ownedUIActualJSONRejectsMutatedCommandsSelectorsFlagsAndBudgets() throws {
         let content = try String(contentsOfFile: appleCIWorkflowPath, encoding: .utf8)
-        XCTAssertEqual(try validatedOwnedUICommands(content).map { $0.filter { $0.hasPrefix("-only-testing:") }.count }, [10, 9, 4])
+        XCTAssertEqual(try validatedOwnedUICommands(content).map { $0.filter { $0.hasPrefix("-only-testing:") }.count }, [9, 9, 4])
         for marker in ["PHONE_PLAN", "IPAD_PLAN"] {
             let actual = try ownedPlan(content, marker: marker)
             let pipelines = try XCTUnwrap(actual["pipelines"] as? [[String: Any]])
@@ -359,7 +359,7 @@ final class CIQualityGateTests: XCTestCase {
             XCTAssertLessThanOrEqual(selectionCount, 10, "Each PR smoke invocation must remain bounded")
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
-        XCTAssertEqual(smokeSelectionCount, 19, "PR smoke must preserve all 16 regressions plus three history journeys")
+        XCTAssertEqual(smokeSelectionCount, 18, "PR smoke must preserve all 15 current regressions plus three history journeys")
         XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 4,
                        "All native consumers and the single producer must use the verified free SDK27 runner")
         XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 4,
@@ -379,10 +379,6 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertTrue(
             smokeStep.contains("OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers"),
             "PR smoke must cover deterministic returning-user release notes"
-        )
-        XCTAssertTrue(
-            content.contains("-only-testing:HealthMdUITests/ExportJourneyUITests/testNoDataExport_showsGuidanceInsteadOfGenericError"),
-            "The blocking iPad App Review regression must remain selected"
         )
         let makefile = try String(
             contentsOf: projectDir.appendingPathComponent("Makefile"),

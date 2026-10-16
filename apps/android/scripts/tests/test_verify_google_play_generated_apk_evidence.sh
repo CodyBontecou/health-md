@@ -38,8 +38,13 @@ apk_identity() {
 # from the retained receipt or APK.
 read -r phone_code phone_version_name < <(apk_identity phone "$phone_source")
 read -r wear_code wear_version_name < <(apk_identity wear "$wear_source")
-[[ "$phone_version_name" == "$wear_version_name" ]] || {
-  echo 'Phone and Wear APK version names differ' >&2; exit 1;
+# shellcheck source=../android-release-scope.sh
+source scripts/android-release-scope.sh
+wear_mode=$(android_release_wear_mode release-scope.json "$phone_version_name" "$phone_code") || {
+  echo 'Release scope is invalid or differs from the built phone APK' >&2; exit 1;
+}
+[[ "$wear_mode" == deferred || "$phone_version_name" == "$wear_version_name" ]] || {
+  echo 'Active paired phone and Wear APK version names differ' >&2; exit 1;
 }
 (( phone_code < 1000000 && wear_code >= 1000000 )) || {
   echo 'Phone/Wear APK version codes are outside their reserved ranges' >&2; exit 1;
@@ -68,6 +73,18 @@ checksums() {
     phone-generated-apks.json wear-generated-apks.json >play-app-signing-SHA256SUMS)
 }
 checksums
+if [[ "$phone_version_name" != "$wear_version_name" ]]; then
+  # Actual independently versioned development APKs must never qualify as a paired Play release.
+  # The SDK-free mock suite exercises all accepted/negative receipt cases in every CI run.
+  if EXPECTED_PHONE_VERSION_CODE="$phone_code" EXPECTED_WEAR_VERSION_CODE="$wear_code" \
+      EXPECTED_VERSION_NAME="$version_name" EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
+      "$verifier" "$fixture/play-app-signing.json" >"$tmp/out" 2>"$tmp/err"; then
+    echo 'Mixed-version deferred APKs unexpectedly qualified as paired Play evidence' >&2; exit 1;
+  fi
+  grep -q 'wear package/version differs' "$tmp/err" || { cat "$tmp/err" >&2; exit 1; }
+  echo 'Deferred Wear development APK pair rejected as production evidence; mock receipt regressions remain active'
+  exit 0
+fi
 EXPECTED_PHONE_VERSION_CODE="$phone_code" EXPECTED_WEAR_VERSION_CODE="$wear_code" \
   EXPECTED_VERSION_NAME="$version_name" EXPECTED_PLAY_APP_SIGNING_CERT_SHA256="$signer" \
   "$verifier" "$fixture/play-app-signing.json" >/dev/null

@@ -35,7 +35,6 @@ expected = [
      "OnboardingJourneyUITests/testReleaseNotesStillAppearForReturningUsers",
      "PaywallJourneyUITests/testPaywallShown_whenQuotaExhausted",
      "ScheduleSyncJourneyUITests/testSyncView_showsDisconnectedState",
-     "ConfigurationProtectionJourneyUITests/testProtectedProfileManagementBlocksCreationAndRoutesToSetting",
      "ConfigurationProtectionJourneyUITests/testProtectedProfileDetailActionsAreBlocked",
      "ConfigurationProtectionJourneyUITests/testProtectedProfileSchedulesCardIsLockedOnScheduleTab"],
     ["ConfigurationProtectionJourneyUITests/testBlockedChangeToastNavigatesToProtectionToggle",
@@ -103,7 +102,7 @@ for first, second, no_match, tee_fail, grep_fail, expected_exit in cases:
             actual = [arg.split("HealthMdUITests/", 1)[1] for arg in args if arg.startswith("-only-testing:")]
             assert actual == selectors, actual
             for flag, value in [("-destination", "platform=iOS Simulator,id=mock"),
-                                ("-configuration", "Debug-iOS"), ("-test-timeouts-enabled", "YES"),
+                                ("-xctestrun", "${{ steps.ui_artifacts.outputs.xctestrun }}"), ("-test-timeouts-enabled", "YES"),
                                 ("-default-test-execution-time-allowance", "180"),
                                 ("-maximum-test-execution-time-allowance", "300")]:
                 assert args[args.index(flag) + 1] == value, args

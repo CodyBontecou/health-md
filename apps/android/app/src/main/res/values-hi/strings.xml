@@ -496,6 +496,11 @@
     <string name="profile_schedule_refresh_interval">रिफ्रेश अंतराल</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d घंटे</string>
     <string name="profile_schedule_refresh_summary">आज हर %1$d घंटे में रिफ्रेश करता है</string>
+    <string name="profile_schedule_discard_recovery">लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_named">%1$s की लंबित पुनर्प्राप्ति छोड़ें</string>
+    <string name="profile_schedule_discard_recovery_title">%1$s की लंबित पुनर्प्राप्ति छोड़ें?</string>
+    <string name="profile_schedule_discard_recovery_body">इस प्रोफ़ाइल का निर्धारित पुनः प्रयास रोकें और इसकी लंबित तिथियाँ व सहेजी गई निर्यात सेटिंग मिटाएँ। अगला निर्धारित रन वर्तमान प्रोफ़ाइल और समय-सारणी का उपयोग करेगा। आपकी प्रोफ़ाइल, API क्रेडेंशियल, निर्यात इतिहास और पहले निर्यात किया गया डेटा सुरक्षित रहेंगे। इससे पहले किए गए अपलोड या लिखी गई फ़ाइल को पूर्ववत नहीं किया जा सकता।</string>
+    <string name="profile_schedule_discard_recovery_failed">लंबित पुनर्प्राप्ति पूरी तरह नहीं छोड़ी जा सकी। प्रोफ़ाइल जाँचें और फिर से प्रयास करें।</string>
     <string name="schedule_date_window_today">आज</string>
     <string name="schedule_export_past_days">पिछले दिनों निर्यात करें</string>
     <string name="schedule_today_summary">हर बार आज का डेटा निर्यात होता है, ताकि मौजूदा दैनिक फ़ाइल अप-टू-डेट रहे। एक ही दिन की सामग्री दो बार जुड़ने से बचाने के लिए Overwrite या Update लेखन मोड का उपयोग करें।</string>

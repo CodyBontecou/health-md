@@ -1078,6 +1078,16 @@ struct ContentView: View {
             apiExportSettings: apiExportSettings,
             initialTarget: exportTargetSelection
         )
+        #if DEBUG
+        // Seed only after normal migration has frozen settings and destination
+        // bindings. Reuse real duplication semantics, leave Default active,
+        // and do not add further copies if this coordinator is reconstructed.
+        if TestMode.duplicateExportProfile,
+           coordinator.profileStore.profiles.count == 1,
+           let sourceID = coordinator.profileStore.activeProfileID {
+            _ = coordinator.duplicateProfile(id: sourceID)
+        }
+        #endif
         profileCoordinator = coordinator
         bindHistoryProfilePublications(coordinator.profileStore)
         // The Shared Setup v2 review flow runs above this view; register the
