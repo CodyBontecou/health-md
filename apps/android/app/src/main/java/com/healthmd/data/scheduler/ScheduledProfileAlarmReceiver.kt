@@ -23,10 +23,11 @@ class ScheduledProfileAlarmReceiver : BroadcastReceiver() {
         if (intent.action != ScheduledProfileScheduler.ACTION_PROFILE_SCHEDULE_ALARM) return
         val profileId = intent.getStringExtra(EXTRA_PROFILE_ID)?.takeIf { it.isNotBlank() } ?: return
         Timber.i("ScheduledProfileAlarmReceiver fired profileId=%s", profileId)
+        val recoveryGeneration = intent.getLongExtra(EXTRA_RECOVERY_GENERATION, 0L)
         val pendingResult = goAsync()
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             try {
-                profileScheduler.handleAlarm(profileId)
+                profileScheduler.handleAlarm(profileId, recoveryGeneration)
             } catch (_: Exception) {
                 runCatching { profileScheduler.reconcile() }
             } finally {
@@ -37,5 +38,6 @@ class ScheduledProfileAlarmReceiver : BroadcastReceiver() {
 
     companion object {
         const val EXTRA_PROFILE_ID = "profile_id"
+        const val EXTRA_RECOVERY_GENERATION = "recovery_generation"
     }
 }

@@ -1,0 +1,3 @@
+{
+  "whatsNew": "Health.md 3.4.3 améliore la reprise des exports planifiés et clarifie les rappels concernant les exports gratuits.\n\n• Les programmations des profils d’export rétablissent leurs notifications à la réouverture de l’app et évitent les tentatives de rattrapage en double.\n• La configuration des notifications planifiées et la reprise après des erreurs temporaires d’envoi sont améliorées.\n• Les rappels de mise à niveau indiquent correctement le nombre d’exports gratuits déjà utilisés."
+}
