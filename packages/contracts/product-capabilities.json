@@ -876,12 +876,11 @@
       "id": "account.myself_lifetime_claim",
       "name": "Complimentary myself.md access claim",
       "classification": "planned",
-      "summary": "Open a user-reviewed claim screen for eligible original Health.md purchasers, verify only purchase evidence, then hand off to explicit myself.md account confirmation. Opening the screen grants no access.",
+      "summary": "On iOS/iPadOS, open a user-reviewed claim screen for eligible original Health.md purchasers, verify only purchase evidence, then hand off to explicit myself.md account confirmation. Opening the screen grants no access. The free macOS companion is not purchase evidence.",
       "profiles": [],
       "platforms": {
         "apple": {
-          "state": "available",
-          "notes": "iOS/iPadOS only; free macOS companion is not purchase evidence."
+          "state": "available"
         },
         "android": {
           "state": "planned",
