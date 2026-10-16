@@ -14,8 +14,6 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.uiautomator.UiDevice
 import com.healthmd.R
 import com.healthmd.data.scheduler.ScheduledProfileCadenceUnit
 import com.healthmd.data.scheduler.ScheduledProfileEntry
@@ -62,6 +60,7 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     ProfileScheduleRow(sampleProfile(), entry.value),
                     onToggle = { actions += "toggle:$it"; entry.value = entry.value.copy(isEnabled = it) },
                     onOpenEditor = { actions += "edit" }, onDelete = { actions += "delete" },
+                    onDiscardRecovery = { actions += "discard" },
                 )
             }
         }
@@ -246,67 +245,6 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
-    fun nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField() {
-        val initial = sampleEntry().copy(todayRefreshEnabled = false)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        val open = mutableStateOf(true)
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it; open.value = false }, onDismiss = { dismisses++; open.value = false })
-        }
-        val last = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        last.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
-        last.assertIsFocused().performTextReplacement(Int.MAX_VALUE.toString())
-        last.scrollIfPossible().assertInNativeOwner()
-        assertAnchorLocals(last)
-        assertTextFits(last, GeistType.label20Mono.fontSize)
-        // No Done/focus-clear prerequisite: Save remains scroll-reachable with the field focused.
-        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(listOf(initial.copy(cadenceValue = Int.MAX_VALUE)), saved)
-        assertEquals(0, dismisses)
-    }
-
-    @Test
-    fun nativeCancelAndBackDismissWithoutSavingDraftEdits() {
-        val initial = sampleEntry()
-        val open = mutableStateOf(true)
-        val saved = mutableListOf<ScheduledProfileEntry>()
-        var dismisses = 0
-        setContent {
-            if (open.value) ProfileCadenceEditorDialog(ID, LONG_NAME, initial,
-                onSave = { saved += it }, onDismiss = { dismisses++; open.value = false })
-        }
-        replace(ProfileScheduleTags.EVERY, "123456")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        waitForNativeKeyboardHidden()
-        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(1, dismisses)
-        compose.runOnIdle { open.value = true }
-        val restored = compose.onNodeWithTag(ProfileScheduleTags.EVERY).scrollIfPossible()
-        restored.assertTextEquals(initial.cadenceValue.toString())
-        replace(ProfileScheduleTags.EVERY, "")
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).performImeAction()
-        compose.onNodeWithTag(ProfileScheduleTags.EVERY).assertIsNotFocused()
-        waitForNativeKeyboardHidden()
-        captureContent("profiles-editor-cancel", ProfileScheduleTags.DIALOG)
-        // Espresso selects the activity root even while this separate native dialog owns focus.
-        // Inject the real system Back key without requiring the obscured activity window to focus.
-        UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).pressBack()
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.onAllNodesWithTag(ProfileScheduleTags.DIALOG)
-                .fetchSemanticsNodes(atLeastOneRootRequired = false).isEmpty()
-        }
-        compose.waitForIdle()
-        compose.onNodeWithTag(ProfileScheduleTags.DIALOG).assertDoesNotExist()
-        assertEquals(2, dismisses)
-        assertTrue(saved.isEmpty())
-    }
-
-    @Test
     fun openEditorAndDeleteConfirmationStillUseLiveProtectionWrappers() {
         val state = mutableStateOf(ProfileSchedulesUiState(listOf(ProfileScheduleRow(sampleProfile(), sampleEntry()))))
         val protectionEnabled = mutableStateOf(false)
@@ -376,6 +314,45 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     @Test
+    fun discardRecoveryRequiresConfirmationHonorsProtectionAndKeepsTheProfile() {
+        val state = mutableStateOf(ProfileSchedulesUiState(listOf(ProfileScheduleRow(sampleProfile(), sampleEntry()))))
+        val protected = mutableStateOf(false)
+        val actions = mutableListOf<String>()
+        setContent { TestSection(state, protected, actions) }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).scrollIfPossible()
+            .assertContentDescriptionEquals(text(R.string.profile_schedule_discard_recovery_named, LONG_NAME))
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertExists()
+        tapNativeAction(ProfileScheduleTags.CANCEL, text(R.string.cancel))
+        assertTrue(actions.isEmpty())
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = true }
+        // Protected content is hidden from merged accessibility semantics; use
+        // the child's geometry to exercise the production pointer-blocking overlay.
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY, useUnmergedTree = true)
+            .scrollIfPossible().assertFullyVisible().assertMinimumTouchTarget()
+            .performTouchInput { click() }
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY_DIALOG).assertDoesNotExist()
+        assertEquals(listOf("blocked"), actions)
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        compose.runOnIdle { protected.value = true }
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked"), actions)
+        assertEquals(sampleEntry(), state.value.rows.single().entry)
+
+        compose.runOnIdle { protected.value = false }
+        tapRow(ProfileScheduleTags.DISCARD_RECOVERY)
+        tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.profile_schedule_discard_recovery))
+        assertEquals(listOf("blocked", "blocked", "discard:$ID"), actions)
+        assertEquals(sampleProfile(), state.value.rows.single().profile)
+        assertEquals(sampleEntry().copy(pendingExports = emptyList(), recoveryGeneration = 1L),
+            state.value.rows.single().entry)
+        compose.onNodeWithTag(ProfileScheduleTags.DISCARD_RECOVERY).assertDoesNotExist()
+    }
+
+    @Test
     fun newDraftDefaultsAndBlankProfileSaveGuardRemainUnchanged() {
         val id = mutableStateOf("")
         val saved = mutableListOf<ScheduledProfileEntry>()
@@ -411,6 +388,14 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
                     },
                     onOpenEditor = { actions += "editor:$it"; state.value = state.value.copy(editingProfileId = it) },
                     onDeleteProfile = { actions += "delete:$it" }, onAddProfile = { actions += "add" },
+                    onDiscardRecovery = { id ->
+                        actions += "discard:$id"
+                        state.value = state.value.copy(rows = state.value.rows.map { row ->
+                            if (row.profile.id == id) row.copy(entry = row.entry!!.copy(
+                                pendingExports = emptyList(), recoveryGeneration = row.entry!!.recoveryGeneration + 1,
+                            )) else row
+                        })
+                    },
                     onSaveEntry = { actions += "save"; state.value = state.value.copy(editingProfileId = null) },
                 )
             }

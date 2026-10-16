@@ -82,9 +82,6 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
             it.setTurnScreenOn(true)
             it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.activity.window.decorView.hasWindowFocus()
-        }
     }
 
     data class DisplayCase(
@@ -604,11 +601,7 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
             compose.onAllNodes(itemMatcher).fetchSemanticsNodes(atLeastOneRootRequired = false).size == 1
         }
         val item = compose.onNode(itemMatcher)
-        item.performScrollTo()
-        // Scroll/Compose-idle does not wait for a separate native popup owner or
-        // an in-flight IME hide/layout transition to become visibly measured.
-        compose.waitUntil(timeoutMillis = 10_000) { item.isDisplayed() }
-        item.assertIsDisplayed()
+        item.performScrollTo().assertIsDisplayed()
         assertTextFits(compose.onNode(hasText(label) and hasAnyAncestor(isPopup()), useUnmergedTree = true))
         item.performTouchInput { click() }
     }
@@ -685,7 +678,6 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     }
 
     private fun SemanticsNodeInteraction.assertFullyVisible(): SemanticsNodeInteraction {
-        compose.waitUntil(timeoutMillis = 10_000) { isDisplayed() }
         assertIsDisplayed()
         val bounds = getUnclippedBoundsInRoot()
         val viewport = compose.onNodeWithTag(VIEWPORT).getUnclippedBoundsInRoot()

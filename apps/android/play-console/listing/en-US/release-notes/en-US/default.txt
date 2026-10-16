@@ -1,5 +1,5 @@
-v1.9.1 — Safer setup sharing and dependable exports
+v1.9.3 — Reliable scheduled snapshots and recovery
 
-• Move export profiles between devices with Share My Setup. Review changes before applying them; shared files contain no health data or credentials.
-• Scheduled profiles now refresh the full lookback chosen on every run, with optional Today Refresh every 3, 6, or 12 hours.
-• Improved TalkBack, keyboard focus, touch targets, scrolling, and large-text layouts across setup, export, metrics, schedules, and connection screens.
+• Scheduled Raw API Snapshot exports now use your profile’s raw format for both API endpoints and folders, including lookback and Today Refresh.
+• Discard pending recovery from a profile schedule to clear a stuck backlog while keeping your profile, credentials, and export history.
+• Recovery cleanup survives interruptions and restores the next scheduled run without starting an export.
