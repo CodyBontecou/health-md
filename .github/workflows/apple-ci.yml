@@ -414,6 +414,15 @@ jobs:
       - name: Test iOS simulator selection policy
         run: python3 scripts/tests/test_select_ios_simulator.py
 
+      - name: Verify UI ownership controls on actual macOS
+        timeout-minutes: 5
+        run: |
+          python3 --version
+          command -v python3 bash ps
+          bash --version
+          python3 scripts/test-history-ui-pipeline-status.py
+          python3 scripts/test-owned-ui-processes.py
+
       - name: Test UI build and execution contract
         run: python3 scripts/tests/test_ios_ui_build_contract.py
 
@@ -452,15 +461,6 @@ jobs:
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
           xcrun simctl bootstatus "${IOS_DESTINATION##*id=}" -b
           xcrun simctl install "${IOS_DESTINATION##*id=}" '${{ steps.ui_artifacts.outputs.app }}'
-
-      - name: Verify UI ownership controls on actual macOS
-        timeout-minutes: 5
-        run: |
-          python3 --version
-          command -v python3 bash ps
-          bash --version
-          python3 scripts/test-history-ui-pipeline-status.py
-          python3 scripts/test-owned-ui-processes.py
 
       - name: Run UI smoke tests (iOS)
         timeout-minutes: 35
