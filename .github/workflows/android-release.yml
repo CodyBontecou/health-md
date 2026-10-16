@@ -183,6 +183,8 @@ jobs:
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
 
       - name: Install pinned Google Play metadata validator
         shell: bash
