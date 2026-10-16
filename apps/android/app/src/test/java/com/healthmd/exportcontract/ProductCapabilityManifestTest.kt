@@ -45,6 +45,7 @@ class ProductCapabilityManifestTest {
                 "direct.cli_agent_push_wake",
                 "export.range-summary",
                 "setup.share-portable-configuration",
+                "account.myself_lifetime_claim",
             ),
             idsWithState(states, "planned"),
         )
@@ -63,6 +64,10 @@ class ProductCapabilityManifestTest {
             "planned",
             pushWakeCapability.getValue("classification").jsonPrimitive.content,
         )
+        val claimCapability = capabilities.single {
+            it.getValue("id").jsonPrimitive.content == "account.myself_lifetime_claim"
+        }
+        assertEquals("planned", claimCapability.getValue("classification").jsonPrimitive.content)
 
         capabilities.forEach { capability ->
             val id = capability.getValue("id").jsonPrimitive.content
@@ -160,6 +165,7 @@ class ProductCapabilityManifestTest {
             "export.range-summary",
             "setup.share-portable-configuration",
             "core.shared-rust-profile-engine",
+            "account.myself_lifetime_claim",
         )
     }
 }
