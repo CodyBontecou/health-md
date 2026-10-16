@@ -42585,6 +42585,65 @@
         }
       }
     },
+    "Diagnostics" : {
+      "comment" : "Diagnostics entry in Settings; local review and sharing are controlled by the user.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnose"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostic"
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostica"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "診断"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "진단"
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnostiek"
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Diagnóstico"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "诊断"
+          }
+        }
+      }
+    },
     "Diagnostics included automatically:" : {
       "localizations" : {
         "de" : {
@@ -68350,6 +68409,65 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "检查最近睡眠的前四个小时"
+          }
+        }
+      }
+    },
+    "Inspect local technical events and choose what to share. No automatic uploads." : {
+      "comment" : "Diagnostics entry in Settings; local review and sharing are controlled by the user.",
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lokale technische Ereignisse prüfen und auswählen, was geteilt werden soll. Keine automatischen Uploads."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Revisa los eventos técnicos locales y elige qué compartir. No se realizan cargas automáticas."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Consultez les événements techniques locaux et choisissez quoi partager. Aucun envoi automatique."
+          }
+        },
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Esamina gli eventi tecnici locali e scegli cosa condividere. Nessun caricamento automatico."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "このデバイス上の技術イベントを確認し、共有する内容を選択できます。自動アップロードは行われません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "기기에 저장된 기술 이벤트를 확인하고 공유할 내용을 선택하세요. 자동으로 업로드되지 않습니다."
+          }
+        },
+        "nl" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bekijk lokale technische gebeurtenissen en kies wat je wilt delen. Geen automatische uploads."
+          }
+        },
+        "pt-BR" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inspecione os eventos técnicos locais e escolha o que compartilhar. Nenhum envio automático."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看本地技术事件并选择要共享的内容。不会自动上传。"
           }
         }
       }
