@@ -146,6 +146,7 @@ struct HealthMdApp: App {
     @StateObject private var corpusRecoveryManager = IPhoneCorpusExportRecoveryManager.shared
     @StateObject private var sharedSetupCoordinator: SharedSetupCoordinator
     @State private var hasInstalledSharedSetupURLHandler = false
+    @State private var showingMyselfClaim = false
     #if DEBUG
     @StateObject private var exportPerformanceLab = IPhoneExportPerformanceLabCoordinator()
     #endif
@@ -406,6 +407,9 @@ struct HealthMdApp: App {
             .environmentObject(advancedSettings)
             .environmentObject(apiExportSettings)
             .environmentObject(sharedSetupCoordinator)
+            .sheet(isPresented: $showingMyselfClaim) {
+                MyselfClaimView(app: "health.md")
+            }
             .sheet(isPresented: $sharedSetupCoordinator.isFlowPresented) {
                 SharedSetupFlowView(coordinator: sharedSetupCoordinator)
             }
@@ -583,6 +587,12 @@ struct HealthMdApp: App {
                 )
             }
             .onOpenURL { url in
+                if url.scheme == "healthmd", url.host == "myself", url.path == "/claim",
+                   url.user == nil, url.password == nil, url.port == nil,
+                   url.query == nil, url.fragment == nil {
+                    showingMyselfClaim = true
+                    return
+                }
                 if sharedSetupCoordinator.handleOpenURL(url, cold: !hasInstalledSharedSetupURLHandler) {
                     hasInstalledSharedSetupURLHandler = true
                     return
