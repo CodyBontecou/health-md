@@ -1386,6 +1386,14 @@
     },
     {
       "source_type": "ScheduledProfileEntry",
+      "serialized_field": "recoveryGeneration",
+      "coverage_kind": "descriptor",
+      "disposition": "prohibited",
+      "contract_path": null,
+      "evidence": "Local recovery fencing generation prevents discarded or disabled work from restoring progress; it is runtime retry state and must never enter a Shared Setup artifact."
+    },
+    {
+      "source_type": "ScheduledProfileEntry",
       "serialized_field": "todayRefreshEnabled",
       "coverage_kind": "descriptor",
       "disposition": "local_only",

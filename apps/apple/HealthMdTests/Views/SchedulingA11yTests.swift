@@ -38,6 +38,7 @@ final class SchedulingA11yTests: XCTestCase {
                                                     isActive: true, cadenceColor: .textSecondary))),
         ("fact", AnyView(SchedulingProfileFact(title: "Folder structure", value: "{year}/{month}/{day}/complete-archive"))),
         ("management", AnyView(SchedulingProfileManagementAction(icon: "trash", title: "Delete Profile…", isDestructive: true, action: {}))),
+        ("discardRecovery", AnyView(SchedulingProfileManagementAction(icon: "trash", title: "Discard Pending Recovery", isDestructive: true, action: {}))),
         ("presets", AnyView(SchedulingDatePresets(options: [
             SchedulingDatePreset(value: 0, title: "Today", hint: "Today", identifier: "test.today"),
             SchedulingDatePreset(value: 1, title: "Yesterday", hint: "Yesterday", identifier: "test.yesterday"),
@@ -99,6 +100,7 @@ final class SchedulingA11yTests: XCTestCase {
             for component in [
                 AnyView(SchedulingInfoButton(action: {})),
                 AnyView(SchedulingProfileManagementAction(icon: "trash", title: "Delete Profile…", isDestructive: true, action: {})),
+                AnyView(SchedulingProfileManagementAction(icon: "trash", title: "Discard Pending Recovery", isDestructive: true, action: {})),
                 AnyView(SchedulingValueMenu(title: "Minute", choices: [SchedulingChoice(value: 55, title: "55")], selection: .constant(55)))
             ] {
                 let host = A11yHosting(component.environment(\.dynamicTypeSize, size))
