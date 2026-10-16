@@ -6,14 +6,18 @@
   "platforms": {
     "apple": {
       "state": "planned",
-      "target": "Source-staged SDK27 ordinary-sample adapter, All Time and bounded-range warning, and interactive execution reassessment; native/UI qualification, negotiated consumer receipts, specialized eligibility and physical device acceptance remain required.",
+      "target": "Qualify the implemented SDK27 adapter, native warning/execution reassessment, and immutable query-metadata producer on the exact native/UI and physical-device matrix before marking the capability available. Specialized eligibility and authenticated consumer acceptance remain required.",
       "evidence": [
         "apps/apple/HealthMd/Shared/Managers/HealthKitManager.swift",
         "apps/apple/HealthMd/Shared/Protocols/SystemHealthStoreAdapter.swift",
         "apps/apple/HealthMd/Shared/Models/HealthHistoryAssessment.swift",
         "apps/apple/HealthMd/iOS/Views/ExportTabView.swift",
-        "apps/apple/HealthMd/iOS/ContentView.swift"
-      ]
+        "apps/apple/HealthMd/iOS/ContentView.swift",
+        "apps/apple/HealthMd/Shared/Query/HealthHistoryQueryCapture.swift",
+        "apps/apple/HealthMd/iOS/IPhoneDirectQueryCoordinator.swift",
+        "packages/contracts/query-history/v1/README.md"
+      ],
+      "produces_contract": "implemented_unqualified"
     },
     "android": {
       "state": "planned",
@@ -22,9 +26,16 @@
         "apps/android/app/src/main/java/com/healthmd/data/health/HealthConnectManager.kt",
         "apps/android/app/src/main/java/com/healthmd/rawexport/HealthConnectRawDataProvider.kt",
         "apps/android/docs/features/health-connect-permissions.md"
-      ]
+      ],
+      "produces_contract": "planned"
     }
   },
-  "wire_adoption": "not_approved",
-  "frozen_contracts": "No changes to Apple v5-v8, Android v4-v5/raw v1, archive v1, SharedSetup, M3, registry, pins or Rust. This independently versioned staging section is not a consumer receipt or an export schema."
+  "wire_adoption": "query_metadata_implemented_unqualified",
+  "frozen_contracts": "The independently versioned query-metadata extension has Apple production-source and portable Rust consumer implementations, with qualification still pending. It changes no historical daily/export, raw/file, Shared Setup, metric-registry or packet contract bytes. This platform-staging record is neither a permission receipt nor an export schema.",
+  "contract": {
+    "schema": "healthmd.history_assessment",
+    "schema_version": 1,
+    "response_location": "metadata.history_assessment",
+    "scope": "typed_query_observation_only"
+  }
 }
