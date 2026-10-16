@@ -339,8 +339,6 @@ struct ExportProfileDetailView: View {
     @State private var showDeleteConfirmation = false
     @State private var showScheduleEditor = false
     @State private var showSettingsEditor = false
-    // Keep the immutable ID's copy receipt readable until this detail closes.
-    // A timer can erase it before a slow AX snapshot or VoiceOver read finishes.
     @State private var idCopied = false
     /// Pending overlap warning for a just-duplicated profile; undo deletes
     /// the copy (the source profile stays untouched and active).
@@ -727,6 +725,8 @@ struct ExportProfileDetailView: View {
 
                     Button {
                         UIPasteboard.general.string = profile.id.uuidString
+                        // Keep the completion state readable for the lifetime of this detail,
+                        // including accessibility clients that observe after tap synchronization.
                         idCopied = true
                     } label: {
                         Label(
@@ -827,7 +827,7 @@ struct ExportProfileDetailView: View {
         ) {
             Button(
                 String(
-                    localized: "Delete “\(profile.name)”",
+                    localized: "Delete “%@”",
                     comment: "Destructive action deleting the named export profile"
                 ),
                 role: .destructive

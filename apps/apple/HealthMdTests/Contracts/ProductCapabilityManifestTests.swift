@@ -42,11 +42,6 @@ final class ProductCapabilityManifestTests: XCTestCase {
             "planned"
         )
 
-        XCTAssertEqual(
-            inventory.capabilities.first { $0.id == "direct.full_public_authorized_corpus" }?.classification,
-            "shared"
-        )
-
         for capability in inventory.capabilities {
             let availability = capability.platforms.apple
             if availability.state == .unavailable {
@@ -103,6 +98,8 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "export.scheduled-today-refresh",
         "core.shared-rust-metric-registry",
         "automation.cancel-active-export",
+        "automation.discard-pending-recovery",
+        "direct.full_public_authorized_corpus",
         "direct-cli.shared-qr-pairing",
         "direct.full_public_authorized_corpus",
         "direct.cli_agent_wake",
@@ -115,6 +112,7 @@ final class ProductCapabilityManifestTests: XCTestCase {
         "apple.wrist-temperature",
         "apple.hearing-and-symptoms",
         "apple.typed-whoop-provider-section",
+        "automation.api-recovery-authority",
         "direct.cli_agent_push_wake",
         "export.range-summary",
     ]

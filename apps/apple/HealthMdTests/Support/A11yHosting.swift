@@ -9,8 +9,16 @@ import UIKit
 final class A11yHosting {
     let controller: UIHostingController<AnyView>
     let window: UIWindow
+    private let settle: () -> Void
 
-    init<V: View>(_ view: V, size: CGSize = CGSize(width: 320, height: 640)) {
+    init<V: View>(
+        _ view: V,
+        size: CGSize = CGSize(width: 320, height: 640),
+        settle: @escaping () -> Void = {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.03))
+        }
+    ) {
+        self.settle = settle
         controller = UIHostingController(rootView: AnyView(view))
         controller.safeAreaRegions = []
         window = UIWindow(frame: CGRect(origin: .zero, size: size))
@@ -28,12 +36,14 @@ final class A11yHosting {
     func layout() {
         controller.view.setNeedsLayout()
         controller.view.layoutIfNeeded()
-        RunLoop.main.run(until: Date().addingTimeInterval(0.03))
+        settle()
         controller.view.layoutIfNeeded()
     }
 
     func measured(proposal: CGSize = CGSize(width: 1000, height: 10000)) -> CGSize {
-        layout()
+        // Attachment and root-view updates already settle the host. Flush any
+        // synchronous layout work without another fixed run-loop wait per probe.
+        controller.view.layoutIfNeeded()
         return controller.sizeThatFits(in: proposal)
     }
 

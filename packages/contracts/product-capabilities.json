@@ -418,6 +418,54 @@
       ]
     },
     {
+      "id": "automation.discard-pending-recovery",
+      "name": "Discard pending scheduled recovery per profile",
+      "classification": "shared",
+      "summary": "On iPhone and Android, explicitly abandon one profile's frozen scheduled recovery without recreating profiles, re-entering credentials, deleting completed exports/history, or rewinding completed-day and refresh progress. Late worker callbacks are fenced; enabled schedules wait for the next ordinary occurrence and disabled schedules remain disabled. Native regression/device qualification and release remain separate from source implementation.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "available"
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/iOS/Views/ProfileScheduleSection.swift",
+        "apps/apple/HealthMd/Shared/Models/ScheduledExportEntry.swift",
+        "apps/apple/HealthMdTests/Managers/SchedulingManagerProfileSchedulingTests.swift",
+        "apps/apple/docs/features/scheduled-exports.md",
+        "apps/android/app/src/main/java/com/healthmd/presentation/schedule/ProfileSchedulesSection.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileEntryStore.kt",
+        "apps/android/docs/features/scheduled-exports.md"
+      ]
+    },
+    {
+      "id": "automation.api-recovery-authority",
+      "name": "Verify original API recovery authority before capture",
+      "classification": "planned",
+      "summary": "New iPhone scheduled recovery pins the original endpoint, credential and profile binding before capture/upload and blocks unverifiable legacy API requests. Android already freezes pending endpoint URLs and pins credentials/headers in prepared compatibility journals; equivalent pre-journal and Raw API Snapshot pending-request credential evidence remains planned, not claimed as parity.",
+      "profiles": [],
+      "platforms": {
+        "apple": {
+          "state": "available"
+        },
+        "android": {
+          "state": "planned",
+          "target": "In the next Android scheduler-hardening change, persist private credential/destination evidence when creating pending API work, pass it to compatibility and raw runners, fail closed before capture after credential changes, and verify pre-journal, legacy, raw and prepared-journal cases on an SDK-equipped host without changing v4/v5 or raw-snapshot v1."
+        }
+      },
+      "evidence": [
+        "apps/apple/HealthMd/Shared/Models/APIExportSettings.swift",
+        "apps/apple/HealthMd/iOS/SchedulingManager.swift",
+        "apps/apple/HealthMdTests/Managers/SchedulingManagerProfileSchedulingTests.swift",
+        "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileSnapshotFactory.kt",
+        "apps/android/app/src/main/java/com/healthmd/data/export/APIEndpointExportRunner.kt",
+        "apps/android/docs/features/scheduled-exports.md"
+      ]
+    },
+    {
       "id": "automation.cancel-active-export",
       "name": "Cancel an in-progress automated export",
       "classification": "shared",

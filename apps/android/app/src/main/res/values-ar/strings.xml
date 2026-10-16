@@ -644,6 +644,11 @@
     <string name="profile_schedule_refresh_interval">فاصل التحديث</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d س</string>
     <string name="profile_schedule_refresh_summary">يحدّث اليوم كل %1$d س</string>
+    <string name="profile_schedule_discard_recovery">إلغاء الاستعادة المعلّقة</string>
+    <string name="profile_schedule_discard_recovery_named">إلغاء الاستعادة المعلّقة لـ %1$s</string>
+    <string name="profile_schedule_discard_recovery_title">هل تريد إلغاء الاستعادة المعلّقة لـ %1$s؟</string>
+    <string name="profile_schedule_discard_recovery_body">أوقف إعادة المحاولة المجدولة لهذا الملف الشخصي وامسح تواريخه المعلّقة وإعدادات التصدير المحفوظة. يستخدم التشغيل المجدول التالي الملف الشخصي والجدول الحاليين. يتم الاحتفاظ بملفك الشخصي وبيانات اعتماد API وسجل التصدير والبيانات التي سبق تصديرها. لا يمكن لهذا التراجع عن تحميل أو ملف تمت كتابته بالفعل.</string>
+    <string name="profile_schedule_discard_recovery_failed">تعذّر إلغاء الاستعادة المعلّقة بالكامل. تحقّق من الملف الشخصي وحاول مجددًا.</string>
     <string name="schedule_date_window_today">اليوم</string>
     <string name="schedule_export_past_days">تصدير الأيام الماضية</string>
     <string name="schedule_today_summary">يصدّر كل تشغيل بيانات اليوم ليظل ملفك اليومي الحالي محدّثًا. استخدم وضع «الاستبدال» أو «التحديث» لتجنّب تكرار محتوى اليوم نفسه.</string>
