@@ -1594,4 +1594,9 @@
     <string name="fdroid_onboarding_access_body">يتضمن إصدار F-Droid الرسمي جميع ميزات التصدير المحلي والأتمتة مجانًا.</string>
     <string name="fdroid_onboarding_no_purchase">لا يلزم شراء أو استعادة أو سعر أو حساب Play.</string>
     <string name="fdroid_onboarding_no_play_services">تعمل عمليات التصدير المجدولة بدون Google Play Billing.</string>
+    <string name="myself_claim_title">الحصول على الوصول إلى myself.md</string>
+    <string name="myself_claim_subtitle">وصول مجاني مدى الحياة للمشترين الحاليين</string>
+    <string name="myself_claim_disclosure">سنرسل إثبات شراء Google Play إلى myself.md للتحقق من أهليتك. تبقى بياناتك الصحية على جهازك. ثم سجّل الدخول لاختيار الحساب الذي يحصل على الوصول مدى الحياة. يمكن ربط كل عملية شراء أصلية بحساب واحد.</string>
+    <string name="myself_claim_continue">التحقق من الشراء والمتابعة</string>
+    <string name="myself_claim_verifying">جارٍ التحقق من الشراء…</string>
 </resources>

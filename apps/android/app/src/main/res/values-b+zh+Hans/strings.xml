@@ -1224,4 +1224,9 @@
     <string name="fdroid_onboarding_access_body">官方 F-Droid 版本免费提供全部本地导出和自动化功能。</string>
     <string name="fdroid_onboarding_no_purchase">无需购买、恢复、价格或 Play 帐号。</string>
     <string name="fdroid_onboarding_no_play_services">定时导出无需 Google Play Billing 即可工作。</string>
+    <string name="myself_claim_title">领取 myself.md 访问权限</string>
+    <string name="myself_claim_subtitle">现有购买者可免费获得终身访问权限</string>
+    <string name="myself_claim_disclosure">我们会将你的 Google Play 购买凭证发送至 myself.md 以验证资格。你的健康数据仍保留在设备上。随后请登录并选择获得终身访问权限的账号。每笔原始购买只能关联一个账号。</string>
+    <string name="myself_claim_continue">验证购买并继续</string>
+    <string name="myself_claim_verifying">正在验证购买…</string>
 </resources>

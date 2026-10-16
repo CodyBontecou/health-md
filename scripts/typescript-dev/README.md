@@ -10,6 +10,8 @@ Use Node **24.21.0** and npm **11.19.0**. Install this tool once with
 Then run `npm --prefix scripts/typescript-dev run setup` to retain only the selected
 diagnostic compiler from the platform distribution. Repeat setup after reinstalling.
 The target component must also have its existing locked dependencies installed.
+Reuse matching installations between edits. Reinstall when dependencies or locks change;
+run setup again only after reinstalling this development tool.
 
 From the repository root:
 

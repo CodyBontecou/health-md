@@ -2661,6 +2661,7 @@ struct SettingsTabView: View {
     @Binding var showExportProfiles: Bool
     @Binding var showClinicianReport: Bool
     @State private var showMailCompose = false
+    @State private var showMyselfClaim = false
     @State private var showPaywall = false
     @State private var showExternalIntegrations = false
     private let discordURL = URL(string: "https://discord.gg/RaQYS4t6gn")!
@@ -2843,6 +2844,17 @@ struct SettingsTabView: View {
             SettingsRowDivider()
 
             SettingsRow(
+                icon: "gift.fill",
+                title: "Claim myself.md access",
+                subtitle: "Complimentary lifetime access for existing purchasers",
+                isActive: true,
+                accessibilityHint: "Verify your purchase and sign in to myself.md",
+                action: { showMyselfClaim = true }
+            )
+
+            SettingsRowDivider()
+
+            SettingsRow(
                 icon: "folder.fill",
                 title: "Obsidian Vault",
                 subtitle: vaultManager.hasVaultSelection ? vaultManager.vaultName : "Choose a folder for exports",
@@ -2854,6 +2866,7 @@ struct SettingsTabView: View {
             )
             .configurationChangesProtected()
         }
+        .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md") }
     }
 
     private var profilesAndReportsSection: some View {

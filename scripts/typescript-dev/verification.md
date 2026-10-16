@@ -4,6 +4,11 @@ Verified on macOS arm64 using Node 24.21.0, npm 11.19.0, `@effect/tsgo` 0.51.0
 and TypeScript 7.0.2 on October 8, 2026. Other hosts and editor integration are
 not qualified by these runs.
 
+The runner regression suite was rechecked after aligning the core agent instructions
+with the fast development workflow: all nine tests passed in 296 ms, including actual
+compiler rejection probes. No component runtime suite or full build was run for this
+instruction-only change.
+
 - Locked offline installation with lifecycle scripts disabled passed. Explicit setup
   removed unused platform artifacts; installed tool size fell from 233.3 to 97.3 MiB.
 - Nine runner regression tests passed. Actual compiler probes accepted valid Effect

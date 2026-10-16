@@ -1342,4 +1342,9 @@
     <string name="fdroid_onboarding_access_body">Ресми F-Droid нұсқасы барлық жергілікті экспорт және автоматтандыру мүмкіндіктерін тегін қамтиды.</string>
     <string name="fdroid_onboarding_no_purchase">Сатып алу, қалпына келтіру, баға немесе Play аккаунты қажет емес.</string>
     <string name="fdroid_onboarding_no_play_services">Жоспарланған экспорттар Google Play Billing қызметінсіз жұмыс істейді.</string>
+    <string name="myself_claim_title">myself.md қолжетімділігін алу</string>
+    <string name="myself_claim_subtitle">Бұрын сатып алғандарға тегін өмірлік қолжетімділік</string>
+    <string name="myself_claim_disclosure">Құқығыңызды тексеру үшін Google Play сатып алу дәлелін myself.md қызметіне жібереміз. Денсаулық деректеріңіз құрылғыңызда қалады. Содан кейін кіріп, өмірлік қолжетімділікті алатын тіркелгіні таңдаңыз. Әр бастапқы сатып алуды бір тіркелгімен байланыстыруға болады.</string>
+    <string name="myself_claim_continue">Сатып алуды тексеріп, жалғастыру</string>
+    <string name="myself_claim_verifying">Сатып алу тексерілуде…</string>
 </resources>

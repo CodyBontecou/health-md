@@ -27547,11 +27547,23 @@
       "stream": "core_cli",
       "phase": "M02",
       "kind": "implementation",
-      "status": "not_started",
-      "claim": null,
+      "status": "in_progress",
+      "claim": {
+        "agent": "/root/stdio_control",
+        "base_revision": "d30cae82c383dd24c46040876c3f59c862335816",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+          "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json"
+        ],
+        "reserved_resources": [
+          "private-stdio-control-interface"
+        ]
+      },
       "prerequisites": [
         "MCP-STDIO-FRAMING",
-        "MCP-JSONRPC-ENVELOPE"
+        "MCP-JSONRPC-ENVELOPE",
+        "CORE-COHORT-QUERY-USAGE"
       ],
       "required_decisions": [],
       "coverage": [
@@ -27586,7 +27598,26 @@
         "apps/cli/scripts/build-candidate.mjs",
         "apps/cli/scripts/check-candidate.mjs",
         "apps/cli/tsconfig.build.json",
-        "apps/cli/tsconfig.test.json"
+        "apps/cli/tsconfig.test.json",
+        "apps/cli/src/surfaces/stdio-framing.ts",
+        "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+        "apps/cli/src/surfaces/discovery-normalizer.ts",
+        "apps/cli/src/surfaces/result-envelope.ts",
+        "apps/cli/src/mcp/query.ts",
+        "apps/cli/src/candidate-host.ts",
+        "packages/healthmd-core-ts/src/operations/query.ts",
+        "packages/healthmd-core-ts/src/operations/catalog.ts",
+        "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+        "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "docs/migration/effect-refactor/receipts/SPLIT-SURFACES.json",
+        "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json",
+        "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+        "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json",
+        "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json",
+        "docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json",
+        "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json",
+        "scripts/typescript-dev/README.md"
       ],
       "allowed_paths": [
         "apps/cli/src/surfaces/stdio-control.ts",
@@ -27595,8 +27626,6 @@
         "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json"
       ],
       "shared_resources": [
-        "cli-candidate-build",
-        "cli-candidate-qualified-core-inputs",
         "private-stdio-control-interface"
       ],
       "target": {
@@ -27721,7 +27750,7 @@
         "docs/migration/effect-refactor/inventories/cli.json#/catalog/read_only_operation_ids",
         "docs/migration/effect-refactor/inventories/cli.json#/workflows/1"
       ],
-      "fixture_inputs": "Pinned accepted BASECLI/CORE/protocol/current40/24cohort/SLICEPARITY source contracts; fixed literal proposals require complete independent Stage1 freeze before code.",
+      "fixture_inputs": "Preserve pinned BASECLI/CORE/split-surfaces child4 and all8 planning minima. Current accepted query/usage cohort at committed d30 baseline:64 core inputs/59 full outputs/40 installed modules plus42 total package files,149 CLI inputs/24 outputs. Earlier personal-slices40-input/24-module and105CLI inventories are historical only. Stage1 freezes complete independent literal action/input/expected corpus before implementation.",
       "fixture_details": {
         "introduced_path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
         "introduced_case_ids": [
@@ -27919,7 +27948,7 @@
         "Only fake owned coarse I/O/services/authority Layers. Source strings, request IDs, TTY, tool names, executable paths and config enrollment are not current grants. Trusted current caller/source/purpose/destination and latest independent suppression authority precede materialization and publication; source/report policy unavailable stays unavailable.",
         "Bound input before properties/parser/materialization; native historical serde_json integer/unknown/duplicate policy retained profile-specifically, never ordinary JSJSONparse lossless proof. Fixed errors omit private values/provider causes. Source ASCII/integer/API/version distinctions explicit; no blanket stricter grammar without separate contract decision.",
         "Acquire completed allocations atomically in Scope and wait asynchronous finalization acknowledgment on cancellation/EOF. Bounded slow sinks and one owned process/session; fake completion never means real stdout/pipe/credential/durable atomicity or remote peer cancellation. Possible commit remains ambiguous rather than claimed rolled back.",
-        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/current105CLI source evidence not full public query, transport/export/job/auth/state qualification.",
+        "Retain exact Health14 ordinary command paths(+feature-gatedHTTP),21full/13read-only MCP operations, defaults/error/exit/catalog/resource identities. Donor40time.md tool definitions are separate desktop obligations, no widening/conflation. Whole fake chart/historical105CLI source evidence (current committed baseline149CLI inputs/24outputs) not full public query, transport/export/job/auth/state qualification.",
         "Initialize serially; concurrent ping/cancellation/progress remain control path while operation blocked. Source64inflight/32inputqueue/64notifications and16384used IDs retained, identifier type distinct, read-only surface denies mutation. Cancel fakeoperation finalization acknowledged without claiming durablejob cancelled; pairing/QR/trust and HTTP/OAuth/sourceauth remain own tasks."
       ],
       "verification": [
@@ -27932,7 +27961,7 @@
           ],
           "availability": "existing",
           "executed_during_planning": false,
-          "expected": "Pinned Node24.21.0/npm11.19.0 emitted candidatetests/63existingfilesystem negatives and one physicalEffect; existingrecursive .test.ts builder. No common build/install authorized until required resource window and complete source/interface freeze."
+          "expected": "Pinned Node24.21.0/npm11.19.0 emitted tests, accepted current successor617 ordered filesystem negatives+12 controls and one physical Effect; unchanged721 baseline titles retained without forecasting new task count. Root exclusive resources and complete source/interface freeze required before full qualification; changing core sources requires reviewed successor admission first."
         }
       ],
       "consumers": "Common operations + thin candidateCLI/MCP adapters; current Rust/native/public launchers/Obsidian/frozen health8/4/5/protocol readers remain authority.",
@@ -27960,6 +27989,30 @@
         "child_pointer": "#/children/4",
         "assigned_source": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
         "review_fingerprint": "203c82f73560ca7cc6cce5ddf69c06bf3b124735+a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      },
+      "Stage2_required_shared_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs",
+        "private-stdio-control-interface"
+      ],
+      "coordinator_verification_resources": [
+        "cli-candidate-build",
+        "cli-candidate-qualified-core-inputs"
+      ],
+      "resource_stage_rules": [
+        "Stage1 writes only own literal vector and partial receipt; complete closed interface before module/test implementation. No install/compiler/build/runtime/source/guard/cohort/package/lock/plan writes.",
+        "Root reserves exclusive CLI builder and qualified-core inputs separately after accepted stable source/fixture freeze. Full qualification waits for current/successor core admission, with static/selected iteration and unchanged evidence credit only on exact relevant closure."
+      ],
+      "preclaim_card_review": {
+        "path": "/private/tmp/healthmd-mcp-stdio-control-preclaim-card-independent-review.json",
+        "bytes": 11944,
+        "sha256": "d467e85ba19a536b95a90d8b44bb8bbd2b83d0da41c72e80ea4ba4e160367e3e",
+        "status": "bounded_Stage1_ready_after_recorded_narrow_normalization_only"
+      },
+      "Stage1_authorization": {
+        "owner": "/root",
+        "status": "bounded_interface_and_full_source_derived_literal_freeze_only",
+        "scope": "Preserve all8 minima, serial initialize ordering, ping under ordinary64 capacity while operation pending, cancellation interception before envelope validation,32input/64notifications/64inflight/16384usedIDs, source ID/queue/reuse/order distinctions. Native2MiB and private64KiB codec profiles distinct; fakeownedports cannot qualify real pipe, source grants, durablejob cancellation, public launchers or retirement."
       }
     },
     {
@@ -34574,7 +34627,7 @@
       "stream": "core_cli",
       "phase": "M03",
       "kind": "implementation",
-      "status": "not_started",
+      "status": "in_progress",
       "prerequisites": [
         "QUERY-TYPED-VALUES"
       ],
@@ -34648,8 +34701,7 @@
         "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-CONTRACT.json"
       ],
       "shared_resources": [
-        "private-coverage-contract-interface",
-        "core-component-build"
+        "private-coverage-contract-interface"
       ],
       "target": {
         "platform": "portable",
@@ -34948,7 +35000,20 @@
       "deletion_gate": "No Rust/Swift reference/native retained-state retirement or public capability promotion.",
       "receipt_path": "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-CONTRACT.json",
       "reviewer_role": "independent query/source-profile/authority reviewer",
-      "claim": null,
+      "claim": {
+        "agent": "/root/personal_codecs",
+        "base_revision": "d30cae82c383dd24c46040876c3f59c862335816",
+        "worktree": "/Users/codybontecou/dev/health-md",
+        "write_paths": [
+          "packages/healthmd-core-ts/src/query/coverage-contract.ts",
+          "packages/healthmd-core-ts/tests/query-coverage-contract.test.ts",
+          "packages/healthmd-core-ts/tests/query-coverage-contract-vectors.ts",
+          "docs/migration/effect-refactor/receipts/QUERY-COVERAGE-CONTRACT.json"
+        ],
+        "reserved_resources": [
+          "private-coverage-contract-interface"
+        ]
+      },
       "blocker": null,
       "priority": 112,
       "review": {
@@ -34969,7 +35034,48 @@
         "packet_sha256": "34cf59a7bc754f31b1a3e4c02165d3fdf70e2bbac4124531d3de455159b542bd",
         "accepted_review_fingerprint": "a0d2ab32357b69d6efeb7666b8ff4501605d2fbc+d3a2b770b6c1b0c2df539c59a49f84a310a07d64ebefbb1dac09a3e7bfc7b78b"
       },
-      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs."
+      "coordinator_card_admission": "Reviewed bounded planning packet normalized to unqualified not_started; complete private Stage1 interfaces/literal expectations and source-profile closure beforeimplementation. NativeFoundation numeric/date/serialization, originalScope/currentgrants/ownedrelease, cursorcrypto/fullcontext/otherfamilies/consumers/cohort/fullhistory/cloud/Rustretirement remain independentproofs.",
+      "Stage2_required_shared_resources": [
+        "private-coverage-contract-interface",
+        "core-component-build"
+      ],
+      "coordinator_verification_resources": [
+        "core-component-build"
+      ],
+      "Stage1_authorization": {
+        "owner": "/root",
+        "status": "bounded_source_derived_interface_and_literal_corpus_only",
+        "scope": "Complete closed coverage-only typed request/response interface, immutable full source-derived positive/negative byte corpus and exact source-profile strategy before module/test implementation. Resolve raw decoder versus constructor truncation, untagged metadata profile composition and native witness limits from actual source. Preserve nine planning minima. Only own vector fixture and partial receipt; no module/test, package/lock/export/guard/cohort/plan/native writes, compiler/install/build/runtime or consumer qualification. Root reserves exclusive builder separately after independent Stage1/code review; use static/selected iteration then stable acceptance, unchanged prior evidence only with exact relevant inputs."
+      },
+      "readonly_preparation": {
+        "path": "/private/tmp/healthmd-query-coverage-contract-readonly-proposal.json",
+        "bytes": 71368,
+        "sha256": "e77f8db84db2d9082c1bfc7de429113c1f2b2e46129161fd6b057262544d5d54"
+      },
+      "Stage1_declaration_repair_authorization": {
+        "owner": "/root",
+        "writer": "/root",
+        "scope": "Exact independent reviewer object-only metadata declaration correction; preserve full literal suffix bytes and243cases/9minima. Update ownpartialreceipt/freeze pins only, no implementation or runtime."
+      },
+      "Stage1_current_source_freeze": {
+        "path": "/private/tmp/healthmd-query-coverage-metadata-declaration-repair.freeze.json",
+        "sha256": "d254f46986c977bc1cbbe9d98bff8daf6c81032479347e2971e5647e53de55c2",
+        "bytes": 700,
+        "status": "complete243literal_source_freeze_pending_independent_review"
+      },
+      "Stage1_review": {
+        "status": "accepted_complete243case_interface_literal_source_profile_only",
+        "path": "/private/tmp/healthmd-query-coverage-contract-stage1-independent-review.json",
+        "sha256": "6fe034efba52d4cc3a4ce983d5864b435f49b8d344f4a740127f80e0cbc3d32b",
+        "bytes": 10652,
+        "fingerprint": "d30cae82c383dd24c46040876c3f59c862335816+5fd1ea79f231d00f4fd2ae99ea4c4cb2d771c4593fdcd56b7890e5c0b6a9239d"
+      },
+      "Stage2_authorization": {
+        "owner": "/root",
+        "status": "bounded_source_and_meaningful_test_implementation_authorized",
+        "frozen_vector_sha256": "cc100cbba9676e70b59fabbf2d1004dd7a67c28f7c6ba818258f26969a88edb1",
+        "scope": "Implement exactly accepted complete coverage-only codec and common originalScope/ownedissuer/current/callback/lazyread semantics with shared normal case driver preserving all243wholecases/9minima. Raw decode distinct from constructor and admission, metadataobjectonly and nativeprofile composition. Only own module/test/partialreceipt; frozenvector unchanged except separately reviewed source-derived amendment. No index/export/package/lock/guard/cohort/native/plan edits and no compiler/install/build/runtime executions. Root reviews stable source then reserves exclusive builder for faststatic/selected iteration and stablefullcore acceptance; CLI needs separately reviewed successor after changed core. Do not forecast finaltestcount or native/publicqualification."
+      }
     },
     {
       "id": "QUERY-CURSOR-BINDING",

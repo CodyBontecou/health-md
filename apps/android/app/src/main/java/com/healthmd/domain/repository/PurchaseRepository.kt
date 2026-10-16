@@ -21,5 +21,7 @@ interface PurchaseRepository {
     fun refresh()
     suspend fun launchPurchase(activity: Activity): Boolean
     suspend fun restorePurchase(): Boolean
+    /** Store purchase evidence for an explicit, user-initiated myself.md claim. */
+    suspend fun migrationPurchaseToken(): String? = null
     fun clearError()
 }

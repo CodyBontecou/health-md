@@ -1503,4 +1503,9 @@
     <string name="fdroid_onboarding_access_body">Официальная версия F-Droid бесплатно включает все локальные функции экспорта и автоматизации.</string>
     <string name="fdroid_onboarding_no_purchase">Покупка, восстановление, цена и аккаунт Play не требуются.</string>
     <string name="fdroid_onboarding_no_play_services">Экспорт по расписанию работает без Google Play Billing.</string>
+    <string name="myself_claim_title">Получить доступ к myself.md</string>
+    <string name="myself_claim_subtitle">Бесплатный пожизненный доступ для прежних покупателей</string>
+    <string name="myself_claim_disclosure">Мы отправим подтверждение покупки Google Play в myself.md для проверки права на доступ. Данные о здоровье останутся на вашем устройстве. Затем войдите и выберите аккаунт для пожизненного доступа. Каждую исходную покупку можно связать с одним аккаунтом.</string>
+    <string name="myself_claim_continue">Проверить покупку и продолжить</string>
+    <string name="myself_claim_verifying">Проверка покупки…</string>
 </resources>

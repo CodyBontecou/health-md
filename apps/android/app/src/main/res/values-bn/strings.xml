@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">অফিসিয়াল F-Droid বিল্ডে সব লোকাল এক্সপোর্ট ও অটোমেশন সুবিধা বিনামূল্যে অন্তর্ভুক্ত।</string>
     <string name="fdroid_onboarding_no_purchase">কেনা, পুনরুদ্ধার, মূল্য বা Play অ্যাকাউন্টের প্রয়োজন নেই।</string>
     <string name="fdroid_onboarding_no_play_services">নির্ধারিত এক্সপোর্ট Google Play Billing ছাড়াই কাজ করে।</string>
+    <string name="myself_claim_title">myself.md অ্যাক্সেস পান</string>
+    <string name="myself_claim_subtitle">আগে কিনেছেন এমন ব্যবহারকারীদের জন্য বিনামূল্যে আজীবন অ্যাক্সেস</string>
+    <string name="myself_claim_disclosure">যোগ্যতা যাচাই করতে আমরা আপনার Google Play কেনাকাটার প্রমাণ myself.md-তে পাঠাব। আপনার স্বাস্থ্য তথ্য আপনার ডিভাইসেই থাকবে। এরপর সাইন ইন করে আজীবন অ্যাক্সেস পাওয়ার অ্যাকাউন্ট বেছে নিন। প্রতিটি মূল কেনাকাটা একটি অ্যাকাউন্টের সঙ্গে যুক্ত করা যাবে।</string>
+    <string name="myself_claim_continue">কেনাকাটা যাচাই করে এগিয়ে যান</string>
+    <string name="myself_claim_verifying">কেনাকাটা যাচাই হচ্ছে…</string>
 </resources>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Apple Health CLI Command Builder — Free Tool | Health.md</title>
+<meta name="description" content="Build an Apple Health CLI command in seconds. Choose steps, sleep, heart rate, or workouts and export JSON or JSONL. Free, no signup, no health-data upload.">
+<link rel="canonical" href="https://healthmd.app/apple-health-cli/">
+<meta name="robots" content="index,follow">
+<meta name="theme-color" content="#fafaf8">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Health.md">
+<meta property="og:title" content="Apple Health CLI Command Builder — Free Tool | Health.md">
+<meta property="og:description" content="Build an Apple Health CLI command in seconds. Choose steps, sleep, heart rate, or workouts and export JSON or JSONL. Free, no signup, no health-data upload.">
+<meta property="og:url" content="https://healthmd.app/apple-health-cli/">
+<meta property="og:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Apple Health CLI Command Builder — Free Tool | Health.md">
+<meta name="twitter:description" content="Build an Apple Health CLI command in seconds. Choose steps, sleep, heart rate, or workouts and export JSON or JSONL. Free, no signup, no health-data upload.">
+<meta name="twitter:image" content="https://healthmd.app/assets/app-icon/icon_1024x1024.png">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/app-icon/icon_180x180.png">
+<link rel="stylesheet" href="/assets/landing.css">
+<link rel="stylesheet" href="./style.css">
+<script type="application/ld+json">{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://healthmd.app/apple-health-cli/#page",
+      "url": "https://healthmd.app/apple-health-cli/",
+      "name": "Apple Health CLI Command Builder \u2014 Free Tool | Health.md",
+      "description": "Build an Apple Health CLI command in seconds. Choose steps, sleep, heart rate, or workouts and export JSON or JSONL. Free, no signup, no health-data upload.",
+      "inLanguage": "en",
+      "mainEntity": {
+        "@id": "https://healthmd.app/apple-health-cli/#tool"
+      },
+      "publisher": {
+        "@id": "https://healthmd.app/about/#organization"
+      }
+    },
+    {
+      "@type": "WebApplication",
+      "@id": "https://healthmd.app/apple-health-cli/#tool",
+      "name": "Apple Health CLI Command Builder",
+      "url": "https://healthmd.app/apple-health-cli/",
+      "description": "Build an Apple Health CLI command in seconds. Choose steps, sleep, heart rate, or workouts and export JSON or JSONL. Free, no signup, no health-data upload.",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any modern web browser",
+      "isAccessibleForFree": true,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {
+          "@type": "ListItem",
+          "position": 1,
+          "name": "Health.md",
+          "item": "https://healthmd.app/"
+        },
+        {
+          "@type": "ListItem",
+          "position": 2,
+          "name": "Apple Health CLI",
+          "item": "https://healthmd.app/apple-health-cli/"
+        }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://healthmd.app/apple-health-cli/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is the Apple Health CLI command builder free?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. This browser tool is free, with no signup. It generates commands without accessing your health data. Health.md app export limits and pricing are separate."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can this website read my Apple Health data?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. The builder only creates command text in your browser. To read Apple Health, run the command on your computer with a paired iPhone running Health.md and the required health permissions."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does the Apple Health CLI work on Windows or Linux?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The standalone healthmd CLI runs on macOS, Linux, and Windows. Apple Health extraction requires a paired iPhone with Health.md open. The portable CLI is a public preview; full physical-device release qualification is still pending."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I export Apple Health to JSON or JSONL?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. The generated extract command supports JSON and JSONL. JSON includes an extraction receipt. JSONL saves a separate .receipt.json file next to the output. Check the receipt for status and missing dates before using the data."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is the difference between summary and lossless detail?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Summary requests daily summaries for the selected metric. Lossless requests also acquire the canonical source records needed for that metric, including source timestamps and provenance when available. Neither option guarantees that every requested record exists or is authorized."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this tool work with the CLI bundled in Health.md for Mac?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The builder targets the standalone CLI, which connects directly to your iPhone. The Mac app bundles a separate Swift helper that uses the Mac app by default. For direct iPhone extraction with that helper, add --backend direct before extract."
+          }
+        }
+      ]
+    }
+  ]
+}</script>
+<script type="module" src="./app.mjs"></script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to command builder</a>
+<header class="topbar"><a class="logo" href="/" aria-label="Health.md home">health.md</a><nav aria-label="Primary navigation"><a href="/docs/cli/">CLI docs</a><a href="#faq">FAQ</a></nav></header>
+<main id="main">
+<section aria-labelledby="title">
+<p class="eyebrow">Free developer tool</p>
+<h1 id="title">Apple Health CLI command builder</h1>
+<p class="intro">Your health data. Your terminal. Choose what you need and get a ready-to-run Health.md command.</p>
+<div class="trust"><span>No signup</span><span>Instant command</span><span>No health-data upload</span></div>
+<div class="tool">
+<form id="builder" class="settings" aria-labelledby="settings-title">
+<h2 id="settings-title">What do you want to export?</h2><p class="sub">Change any option. Your command updates instantly.</p>
+<div class="fields">
+<label>Health metric<select name="metric"><option value="steps">Steps</option><option value="sleep">Sleep duration</option><option value="heart">Resting heart rate</option><option value="workouts">Workouts</option></select></label>
+<label>Date range<select name="range"><option value="7">Last 7 complete days</option><option value="30">Last 30 complete days</option><option value="90">Last 90 complete days</option><option value="yesterday">Yesterday</option><option value="custom">Custom dates</option></select></label>
+<label>Output format<select name="format"><option value="json">JSON</option><option value="jsonl">JSONL</option></select></label>
+<label>Detail level<select name="detail"><option value="summary">Daily summary</option><option value="lossless">Lossless source records</option></select></label>
+</div>
+<div class="fields dates" id="custom-dates" hidden><label>Start date<input name="from" type="date" aria-describedby="error"></label><label>End date<input name="to" type="date" aria-describedby="error"></label></div>
+<p id="error" role="alert"></p>
+</form>
+<section class="result" aria-labelledby="result-title"><p class="eyebrow">Ready for your terminal</p><h2 id="result-title">Your command</h2>
+<pre><code id="command">healthmd extract --metric steps --last 7 --detail summary --format json --output steps.json</code></pre>
+<button id="copy" type="button">Copy command</button><p id="copy-status" role="status"></p>
+<p id="output-note" class="result-note">Saves steps.json, including an extraction receipt with status and missing dates.</p>
+</section></div>
+<p class="privacy">Runs locally in your browser. This page does not connect to your phone or execute commands.</p>
+<noscript><p>Enable JavaScript to customize and copy a command. The default command above exports steps for the last 7 complete days.</p></noscript>
+</section>
+<section class="guide" aria-labelledby="start-title"><h2 id="start-title">From Apple Health to your terminal</h2>
+<ol class="steps">
+<li><h3>Install the standalone CLI</h3><p>On macOS or Linux with Homebrew, install the public preview. For Windows and other options, see the <a href="/docs/cli/">installation guide</a>.</p><code>brew install CodyBontecou/tap/healthmd</code></li>
+<li><h3>Pair your iPhone once</h3><p>Keep Health.md open. In Sync → CLI → Direct CLI Access, scan the terminal’s pairing QR. See <a href="/docs/cli-direct/">pairing requirements</a>.</p><code>healthmd direct pair --transport manual-ip</code></li>
+<li><h3>Copy, run, inspect</h3><p>Run <code>healthmd status</code> to check readiness, then paste your command. Your iPhone reads the authorized data; the CLI saves it on your computer. Review the receipt before analysis.</p></li>
+</ol>
+<p class="preview"><strong>Public preview.</strong> The standalone CLI’s full physical-device release qualification is still pending. Use the matching mobile build described in the CLI docs. Apple Health extraction requires your iPhone to be paired, authorized, and open.</p>
+</section>
+<aside class="product" aria-labelledby="product-title"><div><h2 id="product-title">Give your terminal a path to Apple Health.</h2><p>Health.md on your iPhone connects your authorized health data to the CLI. The command builder is free; app export limits and pricing are separate.</p></div><a class="cta" href="https://apps.apple.com/us/app/health-md/id6757763969">Get Health.md for iPhone ↗</a></aside>
+<section class="faq" id="faq" aria-labelledby="faq-title"><p class="eyebrow">A few things to know</p><h2 id="faq-title">Apple Health CLI questions</h2><details><summary>Is the Apple Health CLI command builder free?</summary><p>Yes. This browser tool is free, with no signup. It generates commands without accessing your health data. Health.md app export limits and pricing are separate.</p></details>
+<details><summary>Can this website read my Apple Health data?</summary><p>No. The builder only creates command text in your browser. To read Apple Health, run the command on your computer with a paired iPhone running Health.md and the required health permissions.</p></details>
+<details><summary>Does the Apple Health CLI work on Windows or Linux?</summary><p>The standalone healthmd CLI runs on macOS, Linux, and Windows. Apple Health extraction requires a paired iPhone with Health.md open. The portable CLI is a public preview; full physical-device release qualification is still pending.</p></details>
+<details><summary>Can I export Apple Health to JSON or JSONL?</summary><p>Yes. The generated extract command supports JSON and JSONL. JSON includes an extraction receipt. JSONL saves a separate .receipt.json file next to the output. Check the receipt for status and missing dates before using the data.</p></details>
+<details><summary>What is the difference between summary and lossless detail?</summary><p>Summary requests daily summaries for the selected metric. Lossless requests also acquire the canonical source records needed for that metric, including source timestamps and provenance when available. Neither option guarantees that every requested record exists or is authorized.</p></details>
+<details><summary>Does this tool work with the CLI bundled in Health.md for Mac?</summary><p>The builder targets the standalone CLI, which connects directly to your iPhone. The Mac app bundles a separate Swift helper that uses the Mac app by default. For direct iPhone extraction with that helper, add --backend direct before extract.</p></details></section>
+<nav class="related" aria-label="Related guides"><a href="/docs/cli-extract/">Extraction reference</a><a href="/apple-health-export/">Apple Health export guide</a><a href="/apple-health-to-csv/">Apple Health to CSV</a><a href="/health-data-for-ai/">Health data for AI</a></nav>
+</main>
+<footer><span>Health.md · Your data, in your hands.</span><a href="/privacy-policy.html">Privacy</a></footer>
+</body>
+</html>

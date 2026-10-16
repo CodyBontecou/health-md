@@ -33,6 +33,7 @@ import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.ExportHistoryRepository
 import com.healthmd.domain.repository.ExportRepository
 import com.healthmd.domain.repository.HealthRepository
+import com.healthmd.domain.repository.PurchaseRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.domain.review.ReviewPromptResult
 import com.healthmd.domain.review.ReviewPrompter
@@ -493,6 +494,7 @@ class ExportViewModelTest {
             mockk<HealthProviderDiagnosticsReporter>(relaxed = true),
             FakeBillingRepository(),
             DistributionPolicy.play(),
+            mockk<PurchaseRepository>(relaxed = true),
         )
         settingsViewModel.resetSettings()
         advanceUntilIdle()

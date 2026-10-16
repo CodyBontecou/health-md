@@ -14,6 +14,7 @@ struct iPadSettingsView: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var metricProgressWidth: CGFloat = 100
     @State private var showMailCompose = false
+    @State private var showMyselfClaim = false
     @State private var showPaywall = false
     @State private var debugResult = ""
     @State private var showDebugAlert = false
@@ -65,6 +66,17 @@ struct iPadSettingsView: View {
                         title: "Settings",
                         subtitle: "Configure formats, naming, metrics, and support"
                     )
+
+                    VStack(alignment: .leading, spacing: Spacing.s3) {
+                        iPadBrandLabel("myself.md")
+                        Button("Claim myself.md access") { showMyselfClaim = true }
+                            .font(Typography.bodyEmphasis())
+                        Text("Complimentary lifetime access for existing purchasers")
+                            .font(Typography.caption())
+                            .foregroundStyle(Color.textMuted)
+                    }
+                    .padding(Spacing.s4)
+                    .iPadLiquidGlass()
 
                     configurationProtectionSection
 
@@ -304,6 +316,7 @@ struct iPadSettingsView: View {
         .sheet(isPresented: $showMailCompose) {
             MailComposeView()
         }
+        .sheet(isPresented: $showMyselfClaim) { MyselfClaimView(app: "health.md") }
         .sheet(isPresented: $showPaywall) {
             PaywallView(context: .settings)
                 .presentationDetents([.large])

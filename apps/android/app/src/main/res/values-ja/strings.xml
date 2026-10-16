@@ -1226,4 +1226,9 @@
     <string name="fdroid_onboarding_access_body">公式 F-Droid ビルドでは、ローカルのエクスポート機能と自動化機能をすべて無料で利用できます。</string>
     <string name="fdroid_onboarding_no_purchase">購入、復元、価格、Play アカウントは不要です。</string>
     <string name="fdroid_onboarding_no_play_services">予約エクスポートは Google Play Billing なしで動作します。</string>
+    <string name="myself_claim_title">myself.mdへのアクセスを受け取る</string>
+    <string name="myself_claim_subtitle">購入済みの方に無料の永久アクセスを提供</string>
+    <string name="myself_claim_disclosure">対象の購入か確認するため、Google Playの購入証明をmyself.mdに送信します。健康データは端末に残ります。その後ログインし、永久アクセスを受け取るアカウントを選んでください。元の購入1件につき、1つのアカウントに紐付けられます。</string>
+    <string name="myself_claim_continue">購入を確認して続ける</string>
+    <string name="myself_claim_verifying">購入を確認中…</string>
 </resources>

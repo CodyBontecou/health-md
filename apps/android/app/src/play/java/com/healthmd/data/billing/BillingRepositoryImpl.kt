@@ -374,6 +374,16 @@ class BillingRepositoryImpl(
         }
     }
 
+    override suspend fun migrationPurchaseToken(): String? {
+        val result = queryPurchases("claim myself.md access")
+        check(result.billingResult.responseCode == BillingClient.BillingResponseCode.OK) {
+            "Google Play could not check your purchase. Please try again."
+        }
+        return result.purchasesList.firstOrNull {
+            PRODUCT_ID in it.products && it.purchaseState == Purchase.PurchaseState.PURCHASED
+        }?.purchaseToken
+    }
+
     private suspend fun queryPurchases(operationName: String) = executeWithBillingRetry(
         operationName = operationName,
         maxAttempts = BillingRetryPolicy.FOREGROUND_MAX_ATTEMPTS,

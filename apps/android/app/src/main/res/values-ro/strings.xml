@@ -1449,4 +1449,9 @@
     <string name="fdroid_onboarding_access_body">Versiunea oficială F-Droid include gratuit toate funcțiile locale de export și automatizare.</string>
     <string name="fdroid_onboarding_no_purchase">Nu sunt necesare cumpărarea, restaurarea, un preț sau un cont Play.</string>
     <string name="fdroid_onboarding_no_play_services">Exporturile programate funcționează fără Google Play Billing.</string>
+    <string name="myself_claim_title">Revendică accesul la myself.md</string>
+    <string name="myself_claim_subtitle">Acces gratuit pe viață pentru cumpărătorii existenți</string>
+    <string name="myself_claim_disclosure">Vom trimite dovada achiziției Google Play către myself.md pentru a verifica eligibilitatea. Datele tale de sănătate rămân pe dispozitiv. Apoi autentifică-te pentru a alege contul care primește acces pe viață. Fiecare achiziție inițială poate fi asociată unui singur cont.</string>
+    <string name="myself_claim_continue">Verifică achiziția și continuă</string>
+    <string name="myself_claim_verifying">Se verifică achiziția…</string>
 </resources>

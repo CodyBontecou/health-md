@@ -1,0 +1,1143 @@
+{
+  "schema": "healthmd.candidate_cold_worker",
+  "version": 1,
+  "task_id": "NATIVE-ANDROID-COLD-WORKER-PROBE",
+  "stage": "independent_fixture_before_implementation",
+  "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+  "proof_class": "host_integration",
+  "status": "pending_independent_review",
+  "candidate_interface": {
+    "work_data": {
+      "exact_keys": [
+        "payload",
+        "submitted_elapsed_ms"
+      ],
+      "types": {
+        "payload": "java.lang.String ASCII raw closed JSON <=4096 UTF8 bytes",
+        "submitted_elapsed_ms": "java.lang.String canonical unsigned decimal0..9223372036854775807; trusted private enqueue capture elapsedRealtime. Two fields alone DO NOT bind boot identity."
+      },
+      "serialized_data_bound_bytes": 10240,
+      "private_data_bound_bytes": 8192,
+      "actual_Data_encoding_not_public_protocol": true,
+      "epoch_template": "Literal100000/100010 epochs are source-math examples; actual approved enqueue captures native elapsedRealtime and raw WorkData. Independently capture read-only Settings.Global.BOOT_COUNT before enqueue and after every actual event/report; unavailable or unequal makes sameboot test proof incomplete. Two-field persisted WorkData does not reject a replay across reboot when new elapsed reaches old elapsed; NO runtime crossboot admission guarantee. Read-only boot observation never settings mutation. Validate checked elapsed difference (backwards=>clock_invalid), TTL0 equality=>expired."
+    },
+    "frame": {
+      "schema": "healthmd.candidate_cold_worker",
+      "version": 1,
+      "exact_keys": [
+        "schema",
+        "version",
+        "case_id",
+        "sequence",
+        "ttl_ms"
+      ],
+      "canonical_ascii": "No string escapes, duplicate/unknown fields, nonASCII/NUL/control strings, signs/-0/fractions/exponents/booleans for numbers; JSON structural whitespace only. Validate raw length/types/tokens before object payload/engine or acquire. Keys may appear in any order but exactly once.",
+      "case_sequence_map": {
+        "actual_schedule_no_activity": 0,
+        "unknown_schema_before_acquire": 1,
+        "expiry_before_acquire": 2,
+        "stop_waits_native_ack": 3,
+        "duplicate_request_no_double_acquire": 4
+      },
+      "ttl_ms_range": [
+        0,
+        30000
+      ],
+      "expired": "now_elapsed_ms - submitted_elapsed_ms >= ttl_ms; backwards now invalid, deadline includes lazy load/admission/operation/release; retain no successful result on cleanup timeout"
+    },
+    "typescript": {
+      "entry": "registerColdWorker(native: ColdMailbox, identity: ReviewedCandidateEngine) -> void; registration only, no autorun/ReactUI/old10case entry",
+      "request": "type ColdRequest = Readonly<{schema:\"healthmd.candidate_cold_worker\";version:1;case_id:ColdCase;sequence:0|1|2|3|4;ttl_ms:number}>",
+      "operation": "One accepted inspectCandidate with scoped owned CandidateSession; atomic completed-native allocation/finalizer registration; Effect interruption restored during inspection, uninterruptible acknowledged release; no health/source/data payload.",
+      "capability": "interface ColdMailbox { take():Promise<OwnedTicket|null>; open(ticket:OwnedTicket):Effect<ScopedCandidateSession,FixedColdError,Scope>; checkCurrent(ticket:OwnedTicket):Effect<void,FixedColdError>; acknowledge(ticket:OwnedTicket,terminal:OwnedTerminal):Effect<void,FixedColdError>; }",
+      "scope": "Lazy host startup only after raw native admission and current ticket/elapsed fence; stop while loading forbids late acquire; stop during acquire waits ownership registration then release; expired tickets cannot later publish ready. Fixed bridge failures omit provider reasons/stack/message.",
+      "types": {
+        "ColdCase": "union of exactly five fixture case_id strings",
+        "ReviewedCandidateEngine": "opaque JS issuer-owned frozen value in private WeakMap after native-owned read-only engine observation; fields react=\"19.2.3\",effect=\"4.0.1\",hermes=true, actual engineRelease/bytecode/source bundle digests reviewed before use. Caller object/version fields alone never issue identity. Only mailbox issuer can construct.",
+        "OwnedTicket": "opaque private JS WeakMap issued object, no public structurally constructible interface; metadata internally readonly {request:ColdRequest;workId:CanonicalUUID;invocationId:CanonicalUUID;processNonce:CanonicalUUID;pid:PositiveInt;submittedElapsedMs:CanonicalLongString;expiresAfterMs:Int0To30000;logicalKey:ColdCase+sequence;generation:Int1To5}. Host captures current native ownership/deadline; map identity validation before foreign properties/Proxy traps.",
+        "OwnedTerminal": "opaque private same-factory frozen object; union Completed{code:ready|schema_invalid|expired|duplicate_request|stopped;ack:1;counts:ClosedTicketCounts} and Incomplete{code:cleanup_unverified|engine_failure;ack:0;counts:LastObservedTicketCounts}; Completed issued only after acknowledged owned scope finalization/no allocation proven; partial counters not fabricated as0.",
+        "ClosedTicketCounts": "readonly acquired,released,active,unresolved_inspections canonical integers0..1; completed released==acquired,active0,unresolved0; duplicate noownership all0. Counts per ticket, global journal totals independently sum admitted owner transitions, never each row copied global total."
+      },
+      "mailbox_complete": {
+        "declaration": "interface ColdMailbox { take():Promise<OwnedTicket|null>; open(ticket:OwnedTicket):Effect<ScopedCandidateSession,FixedColdError,Scope>; checkCurrent(ticket:OwnedTicket):Effect<void,FixedColdError>; acknowledge(ticket:OwnedTicket,terminal:OwnedTerminal):Effect<void,FixedColdError>; }",
+        "take": "One native-issued current ticket at a time, <=4 pending, null on closed owned mailbox; no arbitrary generic raw payload handed to operation. Validate issued identity before properties. Release/reject pending tickets on stop/expiry, no late-load acquire.",
+        "open": "Scoped completed allocation atomically registers native release; native acquire rejection itself owns partial-acquisition cleanup/no handle leak. Restore interruption during preparation/inspect; no detached allocation continuation. Only fixed native counters/inspection result from accepted owned session, no filesystem/credential/crypto/public data primitives.",
+        "checkCurrent": "Current generation, perprocess issued ticket, elapsed TTL and stop state before allocation/inspection and publication; synchronous last gate before terminal ledger decision. Native and JS callbacks cannot revive stopped/expired ticket.",
+        "acknowledge": "Accept only sameissuer current OwnedTerminal; Completed after scoped finalizer ACK/counters verified; Incomplete never rewritten to Completed. Native journal persists only fixed private synthetic record, successful persist acknowledgment is separate channel ACK; failure or process loss =>unverified, no work result SUCCESS/fake stopped acknowledgment.",
+        "result": "Promise-based mailbox ingestion is native coarse boundary; Effect owned lifecycle encloses operation. No primitive field getter/I/O leaks; provider reason/messages omitted."
+      }
+    },
+    "kotlin": {
+      "worker": "ColdProbeWorker: ListenableWorker, defined only coldPlay source set; startWork async single owned supervisor, onStopped lightweight signal, future cancellation distinct from independently observable native ACK. Never compile WorkManager worker into existing play graph.",
+      "private_result": "NormalResult Data exactly result_payload String <=4096UTF8 closedresult; ready=>success, all other nonstopped Completed/Incomplete=>failure, no retry. Real stop ignores Result/outputData; separate native channel mandatory. Failed release cannot produce success or completedACK.",
+      "result_fields": [
+        "schema",
+        "version",
+        "case_id",
+        "sequence",
+        "work_id",
+        "invocation_id",
+        "pid",
+        "code",
+        "acquired",
+        "released",
+        "active",
+        "unresolved_inspections",
+        "ack",
+        "activity_created",
+        "react_views",
+        "old_probe_runs"
+      ],
+      "identity": "work_id issued actual WorkRequest UUID, invocation_id freshly issued native UUID, process witness pid + per-process native nonce; harness binds WorkUUID/case/sequence/current process and rejects reused stale witnesses, no fabricated caller witnesses.",
+      "result_grammar": {
+        "schema": "healthmd.candidate_cold_worker_result",
+        "version": 1,
+        "exact_keys": [
+          "schema",
+          "version",
+          "case_id",
+          "sequence",
+          "work_id",
+          "invocation_id",
+          "pid",
+          "code",
+          "acquired",
+          "released",
+          "active",
+          "unresolved_inspections",
+          "ack",
+          "activity_created",
+          "react_views",
+          "old_probe_runs"
+        ],
+        "code_enum": [
+          "ready",
+          "schema_invalid",
+          "expired",
+          "stopped",
+          "duplicate_request",
+          "frame_limit",
+          "clock_invalid",
+          "engine_failure",
+          "cleanup_unverified",
+          "backpressure"
+        ],
+        "case_id": "one of five immutable enums, bound to owning admitted ticket",
+        "sequence": "canonical integer0..4, exact fixed case mapping",
+        "work_id": "actual WorkRequest UUID canonical lowercase string, bound to harness-issued WorkUUID not request-supplied authority",
+        "invocation_id": "fresh native UUID canonical lowercase bound to current attempt",
+        "pid": "actual positive native process ID integer1..2147483647; distinct fresh setup process plus native process nonce outside payload record",
+        "acquired_released_active_unresolved_inspections": "canonical integers0..1 for one admitted operation per ticket; duplicate output per-ticket0, independently aggregate total1",
+        "ack": "Canonical integer1 only Completed proven cleanup/noallocation; canonical0 only Incomplete fixed diagnostic. Never output1 when cleanup failed/pending/processlost. Incomplete last-observed active/released counters retained truthfully.",
+        "activity_created_react_views_old_probe_runs": "canonical integer0 required",
+        "unknown_duplicate_fields": "reject; raw canonical numeric tokens before conversion; fixed ASCII enums/UUID keys no arbitrary provider/user error text",
+        "encoding": "compact UTF8 JSON ordered exactly as result_fields; variable native UUID/PID are observed bindings checked against originating OS/ticket witnesses, not preselected fixture output. Full result byte parity bound to issued identifiers not candidate-derived expectations."
+      }
+    },
+    "cancellation": "ActualWorkManager cancellation issued by no-restart bounded OS receiver after current inspection_start witness. onStopped lightweight owned cancellation signal; WorkManager future/state maycancel before release. Independently observe samePID/processnonce/currentticket release_pending ack0 then completed released==acquired/active0/unresolved0 ack1. On processdeath/ACKtimeout emit incomplete; no native ACK from WorkInfo, no fabricated result/rollback.",
+    "scheduling": "Real WorkManager enqueue/OS service only. Unique private cold app/default process, ordinary WorkManager2.10.0 route proposed: enqueue with10000ms initial delay, setup instrumentation exits; verify own candidate absent before OS execution, optionally own candidate background am kill only if ROOT explicitly approves, never force-stop; actual fresh process/witness required. Exact merged initializer/service manifest reviewed BEFORE code. Instrumentation setup is not actual Worker invocation; worker PID fresh relative to setup, target Activity0/ReactView0. Unique private cold identity distinct from Play10candidate. No TestDriver/WorkManagerTestInitHelper/directWorker calls/force JobScheduler shell invocation/fake driver accepted as actual OS ingress.",
+    "bounds": {
+      "active_operations": 1,
+      "queued_requests": 4,
+      "native_credits": 2,
+      "operation_ms": 5000,
+      "cleanup_ack_ms": 5000,
+      "worker_deadline_ms": 30000,
+      "os_observation_ms": 60000,
+      "per_command_ms": 120000,
+      "overall_script_ms": 900000,
+      "combined_command_output_bytes": 16777216,
+      "diagnostic_bytes": 4096
+    },
+    "limits": "Bounds are private guard proposals, not measured OS scheduling guarantees/production budgets. At actual queue timeout emit partial/unavailable; no retries or alternate target substitution without root approval.",
+    "boot_proof": {
+      "scope": "same-boot measured experiment only, not runtime replay defense",
+      "capture": "Independent harness read-only Settings.Global.BOOT_COUNT (API24 named int); issue preenqueue and postevent observation under current target/process evidence; never accept a payload/caller boot flag as witness. Actual source/API reading permission feasibility unrun; fail unavailable if missing.",
+      "grammar": {
+        "schema": "healthmd.candidate_boot_observation",
+        "version": 1,
+        "before_boot_count": "canonical integer0..2147483647",
+        "after_boot_count": "canonical integer0..2147483647",
+        "same_boot": "true only after two independently observed equal native counts",
+        "no_reboot_in_test": "necessary proof precondition, not source guarantee"
+      },
+      "persisted_job_after_reboot": "Explicitly unsupported in this2field profile; no worker guarantee/production schedule/firstunlock/replay/durable once-only qualification; separate issued boot-bound contract required before those claims."
+    },
+    "ack_channel": {
+      "schema": "healthmd.candidate_cold_worker_ack",
+      "version": 1,
+      "exact_keys": [
+        "schema",
+        "version",
+        "run_nonce",
+        "process_nonce",
+        "work_id",
+        "invocation_id",
+        "case_id",
+        "sequence",
+        "generation",
+        "pid",
+        "phase",
+        "code",
+        "ack",
+        "acquired",
+        "released",
+        "active",
+        "unresolved_inspections",
+        "logical_total_acquired",
+        "logical_total_released"
+      ],
+      "types": {
+        "run_nonce": "native issued canonical lowercase UUID by initial setup; never personal/device identifier",
+        "process_nonce": "fresh native-issued canonical lowercase UUID once per target process; independent match to worker native process witness and current PID",
+        "work_id": "current native WorkRequest UUID registered by setup, harness correlation exact",
+        "invocation_id": "fresh native UUID per actual startWork, reject reused witness",
+        "case_id": "closed five IDs, paired fixed sequence0..4 from native issue registry even if payload rejected",
+        "generation": "canonical integer1..5 active generation; stale issued generation reject",
+        "pid": "canonical positive int1..2147483647 from native process observation",
+        "phase": "inspection_started|release_pending|completed|incomplete",
+        "code": "ready|schema_invalid|expired|duplicate_request|stopped|engine_failure|cleanup_unverified",
+        "ack": "0 for inspection_started/release_pending/incomplete;1 completed only",
+        "acquired_released_active_unresolved_inspections": "per-ticket0..1 actual counters; active can1 incomplete, no synthetic zeros",
+        "logical_total_acquired_logical_total_released": "aggregate0..1 for unique logical(case,sequence) reservation, duplicate contributes0; release<=acquire. Aggregate counts read under one native journal lock, never evidence of durable distributed once-only."
+      },
+      "serialization": "Compact UTF8 JSON exactly listed order, raw canonical integer checks, ASCII enums/UUIDs, unknown/duplicate/escapedkeys reject; <=4096 encoded bytes per record. No arbitrary logs/raw error/provider/userpayload. For receiver publication snapshot serialized <=2048UTF8 and whole controlresult<=4096; oversize=>control_unavailable, nopartial ACK parsing.",
+      "ownership": "Single native issuer registry on private cold variant. At enqueue register actual WorkUUID+logicalcase+runNonce+controllerNonce before dispatch; reject outside issued mapping before startup/acquire. Native processnonce captured per actualworker process and observed in ACK; PID continuity same across inspection,receiver cancellation,release_pending,completed is required. Any mismatch/missing record=>unverified.",
+      "storage": "Private candidate filesDir/cold-worker-probe/<run_nonce>/<work_uuid>.json only fixed native-created UUID names, no caller path; atomic replace on one serial writer, max5registeredtickets/max4queued/max5records*4096=20480B plus bounded5000B issue registry. Strict bounded load/filter before publication. Scope only native diagnostic synthetic metadata, no user data; owned exactrun cleanup after evidence preservation, no production files. No fd/path exposed to JS. Source/claim for receiver/journal nested classes coldPlay/ColdProbeBridge.kt proposed only.",
+      "failed_cleanup": "Emit Incomplete ack0 last actual counters, never substitute completed or WorkInfo CANCELLED. Quarantine engine/ticket; separate fixed cleanup_unverified <=4096 diagnostic. Missingprocess/record cannot be converted into ack.",
+      "observation": "Private no-restart receiver read_ack returns one exact scoped current journal snapshot via ordered broadcast PendingResult resultData <=4096; missing/stale=>fixed unavailable. No instrumentation restart to read while owned operation runs. After ACK terminal, later instrumentation output allowed only observational and cannot retroactively fabricate witness."
+    },
+    "control_ingress": {
+      "receiver": "ColdProbeControlReceiver nested in coldPlay ColdProbeBridge.kt plus coldPlay manifest overlay only; absent from original Play main manifest/package.",
+      "identity": "Only unique cold variant exports this explicit component; android:permission=\"android.permission.DUMP\" enforces sender permission. Candidate requests no DUMP and performs no grant/settings/permission mutation. Android API doc says DUMP not for third-party apps; actual OS shell principal possessing permission remains required preflight. Permission missing/ordered response unavailable=>route unavailable, not bypass.",
+      "input": "Explicit action <privatecoldid>.CONTROL; exactly three primitive String extras command,work_id,controller_nonce; command cancel|read_ack, canonical UUIDs36bytes each, combined<=128UTF8; unknown/duplicate/type/oversized =>fixed control_invalid. Intent component/action plus OSpermission must match before property materialization/workManager access. Current native-issued workUUID/controllerNonce/generation binding from issuer registry; callerstring alone never authority.",
+      "procedure": "Reviewed supervisor invokes OS shell explicit ordered broadcast to candidate receiver. cancel branch calls WorkManager.getInstance(candidateContext).cancelWorkById(issuedWorkUUID), never Worker.stop/doWork/startWork. No activity/new instrumentation invocation/default app restart/force-stop. Native activePID/processnonce must remain unchanged through control+ACK. If receiver delivery starts a new process because worker died, current active owner absent=>unverified; never resurrect/cancel stale resource.",
+      "command_template": [
+        "am",
+        "broadcast",
+        "--receiver-foreground",
+        "-n",
+        "<privatecoldid>/com.healthmd.effecthostcandidate.ColdProbeControlReceiver",
+        "-a",
+        "<privatecoldid>.CONTROL",
+        "--es",
+        "command",
+        "cancel",
+        "--es",
+        "work_id",
+        "<native-issued-work-uuid>",
+        "--es",
+        "controller_nonce",
+        "<native-issued-controller-nonce>"
+      ],
+      "response": "Ordered resultData fixed <=4096UTF8 snapshot: schema healthmd.candidate_cold_worker_control/version1/code cancel_dispatched|ack_snapshot|control_invalid|control_unavailable plus native-bound work_id/process_nonce/ACK snapshot if current. cancel_dispatched means logicalWorkManager cancellation requested only, NOT finalizerACK. Complete closed control response union forbids snapshot for errors, arbitrarycause/text omitted.",
+      "lifetimes": "onReceive lightweight; goAsync moves short work off mainthread, owned timeout2000ms covering cancel Operation dispatch or journal snapshot. Always finish PendingResult in finally; no wait for5secfinalizer inside receiver. Supervisor polls read_ack sequentially <=5000ms after cancel dispatch; future/cancel WorkInfo ignored as acknowledgment.",
+      "proof": "Primary BroadcastReceiver API supports goAsync/ordered result; exact actual am ordered command/OSsenderpermission/WorkManager2.10 Operation/source/service manifest must be independently verified BEFOREexecution. No remote-worker/multiprocess promise.",
+      "private_application_id": "com.healthmd.effecthost.androidcandidate.cold.play",
+      "response_grammar": {
+        "exact_keys": [
+          "schema",
+          "version",
+          "code",
+          "work_id",
+          "process_nonce",
+          "snapshot"
+        ],
+        "schema": "healthmd.candidate_cold_worker_control",
+        "version": 1,
+        "code": "cancel_dispatched|ack_snapshot|control_invalid|control_unavailable",
+        "work_id": "canonical current issuedUUID for admitted response, null for fixed error",
+        "process_nonce": "canonical native current processUUID for admitted response, null for fixed error",
+        "snapshot": "ACK-channel exact closed record object only ack_snapshot; null allothercodes",
+        "encoding": "Compact orderedUTF8JSON total<=4096bytes; bound snapshot<=2048 before outerencode. Error literal fields schema/version/code,nullIDs/nullsnapshot never echo inputs. Unknown/duplicate/extra keys forbidden. Invalid oroversize snapshot produces control_unavailable, never truncate an ACK into success."
+      }
+    }
+  },
+  "cases": [
+    {
+      "case_id": "actual_schedule_no_activity",
+      "sequence": 0,
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100000"
+      },
+      "literal_clock": {
+        "start_elapsed_ms": "100010",
+        "expiry_elapsed_ms": "130000"
+      },
+      "os_stimulus": "Enqueue normal OneTimeWorkRequest through real WorkManager in an already running instrumentation harness process; setup captures a request with initial delay10000ms, instrumentation setup exits, then own private cold application process must be observed absent before OS JobScheduler WorkManager starts it; never call doWork/startWork/testdriver, never launch activity.",
+      "expected": {
+        "private_code": "ready",
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "unresolved_inspections": 0,
+        "native_cleanup_ack": true,
+        "activity_created": 0,
+        "react_views": 0,
+        "old_probe_runs": 0,
+        "health_permissions_requested": 0,
+        "production_state_reads": 0,
+        "work_result": "success"
+      },
+      "requires_actual_os_witness": true
+    },
+    {
+      "case_id": "unknown_schema_before_acquire",
+      "sequence": 1,
+      "work_data": {
+        "payload": "{\"schema\":\"wrong\",\"version\":1,\"case_id\":\"unknown_schema_before_acquire\",\"sequence\":1,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100000"
+      },
+      "literal_clock": {
+        "start_elapsed_ms": "100010"
+      },
+      "os_stimulus": "Schedule malformed schema via same actual WorkManager path; reject raw frame before ReactHost start/native acquisition.",
+      "expected": {
+        "private_code": "schema_invalid",
+        "acquired": 0,
+        "released": 0,
+        "active": 0,
+        "unresolved_inspections": 0,
+        "native_cleanup_ack": true,
+        "activity_created": 0,
+        "react_views": 0,
+        "old_probe_runs": 0,
+        "health_permissions_requested": 0,
+        "production_state_reads": 0,
+        "work_result": "failure"
+      },
+      "requires_actual_os_witness": true
+    },
+    {
+      "case_id": "expiry_before_acquire",
+      "sequence": 2,
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"expiry_before_acquire\",\"sequence\":2,\"ttl_ms\":0}",
+        "submitted_elapsed_ms": "100000"
+      },
+      "literal_clock": {
+        "start_elapsed_ms": "100000",
+        "expiry_elapsed_ms": "100000"
+      },
+      "os_stimulus": "Schedule zero-TTL case actual WorkManager; equality expires before engine/acquire.",
+      "expected": {
+        "private_code": "expired",
+        "acquired": 0,
+        "released": 0,
+        "active": 0,
+        "unresolved_inspections": 0,
+        "native_cleanup_ack": true,
+        "activity_created": 0,
+        "react_views": 0,
+        "old_probe_runs": 0,
+        "health_permissions_requested": 0,
+        "production_state_reads": 0,
+        "work_result": "failure"
+      },
+      "requires_actual_os_witness": true
+    },
+    {
+      "case_id": "stop_waits_native_ack",
+      "sequence": 3,
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"stop_waits_native_ack\",\"sequence\":3,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100000"
+      },
+      "literal_clock": {
+        "start_elapsed_ms": "100010"
+      },
+      "os_stimulus": "Schedule real WorkManager holding one owned inspection; observe native issued inspection_started/PID/processnonce then send proposed permission-gated explicit OS broadcast cancel for current issuedWorkUUID/controllerNonce. Receiver calls WorkManager.cancelWorkById without instrumentation restart or directWorkerstop. Poll separate current native ACK channel, require process continuity/release_pending before completed. Route itself must pass exact OS permission/source preflight before execution.",
+      "expected": {
+        "private_code": "stopped",
+        "acquired": 1,
+        "released": 1,
+        "active": 0,
+        "unresolved_inspections": 0,
+        "native_cleanup_ack": true,
+        "activity_created": 0,
+        "react_views": 0,
+        "old_probe_runs": 0,
+        "health_permissions_requested": 0,
+        "production_state_reads": 0,
+        "work_result": "ignored_after_stop",
+        "work_info_may_be_cancelled_before_ack": true,
+        "work_info_cancelled_is_not_ack": true,
+        "result_future_may_be_cancelled_before_ack": true,
+        "private_terminal_before_release_ack": false,
+        "native_release_pending_witness_required": true
+      },
+      "requires_actual_os_witness": true
+    },
+    {
+      "case_id": "duplicate_request_no_double_acquire",
+      "sequence": 4,
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"duplicate_request_no_double_acquire\",\"sequence\":4,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100000"
+      },
+      "literal_clock": {
+        "start_elapsed_ms": "100010"
+      },
+      "os_stimulus": "Enqueue two WorkRequests in same private process with distinct WorkUUIDs but identical fixed logical case/sequence request while first inspection active; atomically reserve before acquire; replay cannot allocate again. Repeat after completed ownership only in same process, no cross-process/durable/reboot exactly-once claim.",
+      "expected": {
+        "first": {
+          "private_code": "ready",
+          "acquired": 1,
+          "released": 1,
+          "active": 0,
+          "unresolved_inspections": 0,
+          "native_cleanup_ack": true,
+          "activity_created": 0,
+          "react_views": 0,
+          "old_probe_runs": 0,
+          "health_permissions_requested": 0,
+          "production_state_reads": 0,
+          "work_result": "success"
+        },
+        "second": {
+          "private_code": "duplicate_request",
+          "acquired": 0,
+          "released": 0,
+          "active": 0,
+          "unresolved_inspections": 0,
+          "native_cleanup_ack": true,
+          "activity_created": 0,
+          "react_views": 0,
+          "old_probe_runs": 0,
+          "health_permissions_requested": 0,
+          "production_state_reads": 0,
+          "work_result": "failure"
+        },
+        "total_acquired": 1,
+        "total_released": 1,
+        "total_active": 0,
+        "atomic_reservation_before_acquire": true,
+        "cross_process_exactly_once_qualified": false
+      },
+      "requires_actual_os_witness": true
+    }
+  ],
+  "admission_negative_cases": [
+    {
+      "case_id": "version_fraction",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1.0,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "version_exponent",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1e0,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "sequence_negative_zero",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":-0,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "ttl_exponent",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":3e4}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "duplicate_key",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000,\"sequence\":0}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "escaped_key",
+      "raw_payload": "{\"\\u0073chema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "unknown_member",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000,\"health\":\"forbidden\"}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "wrong_case_sequence",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":4,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "negative_ttl",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":-1}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "too_large_ttl",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30001}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "nonascii",
+      "raw_payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"é\",\"sequence\":0,\"ttl_ms\":30000}",
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "frame_limit",
+      "raw_payload_generator": {
+        "ascii_literal": "x",
+        "repeat": 4097
+      },
+      "expected": {
+        "code": "frame_limit",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "data_unknown_member",
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100000",
+        "extra": "forbidden"
+      },
+      "expected": {
+        "code": "schema_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    },
+    {
+      "case_id": "clock_future",
+      "work_data": {
+        "payload": "{\"schema\":\"healthmd.candidate_cold_worker\",\"version\":1,\"case_id\":\"actual_schedule_no_activity\",\"sequence\":0,\"ttl_ms\":30000}",
+        "submitted_elapsed_ms": "100001"
+      },
+      "literal_start_elapsed_ms": "100000",
+      "expected": {
+        "code": "clock_invalid",
+        "engine_starts": 0,
+        "acquired": 0
+      }
+    }
+  ],
+  "current_and_assigned_git_pins": [
+    {
+      "path": "AGENTS.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 6129,
+      "sha256": "563ac20e38bf5e62d636f5e3a4f15e1f8a0b4d96c67d8150de0badcf89bef456"
+    },
+    {
+      "path": "apps/android/AGENTS.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 2502,
+      "sha256": "cde6428339645524077ae5395b3d45a8787a9374d5568412e8dccd240f47770c"
+    },
+    {
+      "path": "docs/architecture/javascript-unified-layer-research.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 13361,
+      "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+    },
+    {
+      "path": "docs/migration/effect-refactor/native-ui.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 5275,
+      "sha256": "e217f4c721ccf302a4c0d9042a6cad933ef79b9199fde2e97ca304ca7db53e05"
+    },
+    {
+      "path": "docs/migration/effect-refactor/expansions/split-native-hosts.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 98296,
+      "sha256": "11210df66e817709cd0405fb777e9ee904b3e357f5daa58a4311b03c7f8c783b"
+    },
+    {
+      "path": "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-PLAY-RELEASE-PROBE.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 197578,
+      "sha256": "a2c6efb5924723ff7af1310d20b31bf3768fbcc8d7a009d48ae37e39ead39299"
+    },
+    {
+      "path": "apps/android/gradle/libs.versions.toml",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 8646,
+      "sha256": "06fbb1ae285bcd0544309361694c67aa57e448b266cbc5aa0767750436ca33bd"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 44747,
+      "sha256": "bc4751c8987e8dc62d8aac0726b474ade7819c4f2c18b242d5d49a85743d62e7"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 27203,
+      "sha256": "6f221289c74d02b0e319537282d59b3cead9afc75049cd79ab88304496d5e5b8"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/BootReceiver.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 2043,
+      "sha256": "1f4b6fcfaf0da8f5dfc14f358dffd78573f78ec59b178ba27c0596ca2d3c4906"
+    },
+    {
+      "path": "apps/android/app/src/main/AndroidManifest.xml",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 16592,
+      "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/.gitignore",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 62,
+      "sha256": "f2d854a43a33cf98495813a648597ffe1625d2255d68a4de1bffa8b6ebebf524"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/.node-version",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 8,
+      "sha256": "73fb1b615e2043a933be1c0895cde4358036acc28d785692509b822aa53c761f"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/README.md",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 4231,
+      "sha256": "9aae495c7aff614345b259d6f3c8f50fba4336cb85df58fd5e0024c8e419103d"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/build.gradle.kts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3692,
+      "sha256": "befc9dfcb3f8e19b54e193c7341b16fa0499c726a8fb051d741c05254f56cd5b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/gradle.lockfile",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 76725,
+      "sha256": "907959263d5ca21f06b276c500264e5f0a485a07302810b25a11ec7963bf0438"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/proguard-rules.pro",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 7147,
+      "sha256": "dd0df21dd79e1a2fed363807c49e12e07455b8ff3c09d35f23138d0888d68706"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/HostProbeRuntimeTest.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3347,
+      "sha256": "310e9e2eea1588c7ecd522490e7089656dc6c0d25c9b9904dfc7f136f24b2659"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 811,
+      "sha256": "0370e878e80f37b753a820f2d775ac2b12b133af61ca05e6cd44e0a977c9819a"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeActivity.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 321,
+      "sha256": "c1f9e442494c1430207c27477d2a8626b81f821e49b479e535c4cddc474f1be7"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 1226,
+      "sha256": "1c33d3a991e39a93cf980887d35fc91d3921db2399ab99fcb4f46a6e90ab9547"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/NativeProbeModule.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 10643,
+      "sha256": "8bb8fb775f43b4c8ee647c4f4bd9f3b0b5aaf0b0a96ae93a5f5709beddcff2ec"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/app/src/test/java/com/healthmd/effecthostcandidate/NativeProbeAdmissionTest.kt",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3774,
+      "sha256": "c8970b436acdac8a47197c040b826e696df848607366253f1b895aecabecef90"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/babel.config.cjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 69,
+      "sha256": "c112365f81e63d22073e5a3858c5ba8438dbea3b059243f7725e4a2f6af2f32b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/build.gradle.kts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 142,
+      "sha256": "c8c27d1f663530aa86adbb76a22fcb1fcfb4712ce9d19a670fe436cdbe63d1cf"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/fixtures/host-probe-v1.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 4748,
+      "sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle.properties",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 248,
+      "sha256": "4a904e3ff35966ba0bfa74ec5d71dbb43c6780260e7acf619c7849cf49269486"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 205711,
+      "sha256": "dd5ef3582d96feb39fe6654ec17fbaeb1093b4950592170dfd2cdf5e3575ae05"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.jar",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 48966,
+      "sha256": "55243ef57851f12b070ad14f7f5bb8302daceeebc5bce5ece5fa6edb23e1145c"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradle/wrapper/gradle-wrapper.properties",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 339,
+      "sha256": "519280ee807cb83ee0f7be30bb3aa51b71d0e14905cb3ecc285a4243b2ce4ac8"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradlew",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 8654,
+      "sha256": "aed171fb114f82e6eaea4970a245a200e0582a7dcc8ec0891ca41b6e4a62b754"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/gradlew.bat",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 2896,
+      "sha256": "fedad02c18e266ec094995a5751b7fe1eb6e74f66bf75db64fae2e50eb22c234"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/metro.config.cjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 276,
+      "sha256": "d3cdb3bb8a8b1c9fc9dd5db0f9751357d1b0ed238f03a6d442c0194fc4461826"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/package-lock.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 167643,
+      "sha256": "b99a47a8f777c446700ccd97e3e58b5fcaa8f6f66a65ecd6849e2c7023e58499"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/package.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 656,
+      "sha256": "2edde74ff6c2db3e59cf58666577ccbbcdcf2b3dee07c7d547ba1830d0555509"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/build.mjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 3668,
+      "sha256": "b6eabf1cd0269b07d14f517902be42cf4eace4df14d50b3ec4b8fe16c8695615"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/check.mjs",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 6525,
+      "sha256": "31803e628b1943d38f99382fe098f355158dbeac3a55117cc510ab0930cf040c"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/prepare-test-signing.sh",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 947,
+      "sha256": "24162cdeefd44da0a3fc63c2b142826bbc083f8f10fbc40178dc15ffcbdbc201"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/scripts/run-release-probe.sh",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 7910,
+      "sha256": "dffb317b18bd132f3ae01d6b708b62cb2551c75aced38fe6e29a691ba959d91d"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/settings.gradle.kts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 296,
+      "sha256": "743e627bb5fe19008459e5254cb74627ded66b163956a92261be0a1e85d96a9b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/src/HostProbe.tsx",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 589,
+      "sha256": "b7d67cb8cd1f5f2d60957a9a97d81fa3360786c65e538af2776ea977dd419035"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/src/probe.ts",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 8748,
+      "sha256": "a7fc5d4c42ab76bce6e8d427ba3bd15faccca1d33ec612c47ac0fb19b4f6964b"
+    },
+    {
+      "path": "apps/android/effect-host-candidate/tsconfig.json",
+      "source_revision": "203c82f73560ca7cc6cce5ddf69c06bf3b124735",
+      "bytes": 467,
+      "sha256": "4566259156e347d3971fcbd4f59230d47f74b61264402ffec2d5b108933d402e"
+    }
+  ],
+  "historical_source_inputs": [
+    {
+      "path": "packages/healthmd-core-ts/src/index.ts",
+      "sha256": "3b2632b7f93517e259be66242444b449402d0a3821c38a76b6b28c6abce256d8",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 319,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/host-interfaces/capabilities.ts",
+      "sha256": "d782133d2e5458baad95382a5d65c36c0e97266ae22d7eb62138fd8336c78812",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 915,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "packages/healthmd-core-ts/src/host-interfaces/faults.ts",
+      "sha256": "8be680e6895512aa3f95c70ecaff076cbd021e0e3db39a785e286f7b1de7cf72",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 582,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "packages/healthmd-ui/src/index.ts",
+      "sha256": "c4ff135d20f212ab1764c9a6b7298999c1d2fa006d485e35dfe4ac10e6fcdcfe",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 7372,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "packages/healthmd-ui/README.md",
+      "sha256": "a96f58787cc897aea5957f517a25caddb52a17e729efe42616b5bc6c0e411ab0",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 9262,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/HealthMdApplication.kt",
+      "sha256": "effdb74918b15000cd3574e1ec3ec1a782514ab446f389a68467676d1637a584",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 4865,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ExportWorker.kt",
+      "sha256": "bc4751c8987e8dc62d8aac0726b474ade7819c4f2c18b242d5d49a85743d62e7",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 44747,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/ScheduledProfileExportWorker.kt",
+      "sha256": "6f221289c74d02b0e319537282d59b3cead9afc75049cd79ab88304496d5e5b8",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 27203,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "apps/android/app/src/main/java/com/healthmd/data/scheduler/BootReceiver.kt",
+      "sha256": "1f4b6fcfaf0da8f5dfc14f358dffd78573f78ec59b178ba27c0596ca2d3c4906",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 2043,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    },
+    {
+      "path": "apps/android/app/src/main/AndroidManifest.xml",
+      "sha256": "67ae29eb32c4167acdf47db19ff7b5fbf0b0ebe98a1eeb8399a10447bf10bbc6",
+      "source_revision": "e3f13acd984f762e5ffe0ddb798788969cf24b2b",
+      "inspection": "Exact interface/metadata locator, accepted native semantics retained; no producer re-audit",
+      "bytes": 16592,
+      "proof": "historical committed source interface only; current generated outputs not read"
+    }
+  ],
+  "accepted_play_retention": {
+    "source_files": 32,
+    "fixture_cases": 10,
+    "fixture_sha256": "c4a16f4b200a350f9c41e619af4129e81ad52245fdc79643c67ddf239c301ef6",
+    "existing_bridge_unchanged": true,
+    "existing_entry_not_cold": true,
+    "WorkManager_in_existing_candidate_graph": false,
+    "source_adoption": false,
+    "variant_isolation": "New distribution coldPlay; old play variant/main sources/runtime/fixtures unchanged. Future additive appGradle/lock/verification/provenance changes require exact retained oldPlay artifact graph proofs; no existing bytes modified in Stage1."
+  },
+  "official_api_feasibility": [
+    {
+      "url": "https://developer.android.com/reference/androidx/work/ListenableWorker",
+      "read_date": "2026-10-07",
+      "finding": "onStopped has no guaranteed thread; must be lightweight. Stopped future cancelled and result ignored; cancellation status not cleanup ACK.",
+      "proof": "official API feasibility only; selected2.10.0 exact artifact source/interface and deviceOS execution still pending"
+    },
+    {
+      "url": "https://developer.android.com/reference/androidx/work/Data",
+      "read_date": "2026-10-07",
+      "finding": "Data serialized size limit and typed entries; internal byte encoding not a versioned public IPC/persistence contract.",
+      "proof": "official current API feasibility; actual selected version serialization/size/source validation pending"
+    },
+    {
+      "url": "https://developer.android.com/reference/android/content/BroadcastReceiver",
+      "read_date": "2026-10-07",
+      "finding": "goAsync retains bounded broadcast lifetime; ordered broadcasts support resultData; short ownPendingResult finish required.",
+      "proof": "primary API feasibility only, actual shell delivery/permission and receiver source unrun"
+    },
+    {
+      "url": "https://developer.android.com/reference/android/Manifest.permission#DUMP",
+      "read_date": "2026-10-07",
+      "finding": "DUMP not for third-party apps; candidate does not request it; proposed receiver sender protection requires independently proven OS shell principal permission.",
+      "proof": "No privilege grant or actual device assertion"
+    },
+    {
+      "url": "https://developer.android.com/reference/android/provider/Settings.Global#BOOT_COUNT",
+      "read_date": "2026-10-07",
+      "finding": "API24 int boot_count can support independent sameboot experiment witness; read availability not tested.",
+      "proof": "No runtime crossboot contract claimed in2fieldWorkData"
+    }
+  ],
+  "implementation_path_amendments_required": [
+    {
+      "id": "isolated_coldPlay_source_graph",
+      "paths": [
+        "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+        "apps/android/effect-host-candidate/app/build.gradle.kts",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeApplication.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt",
+        "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+        "apps/android/effect-host-candidate/app/src/androidTestColdPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+        "apps/android/effect-host-candidate/app/proguard-cold-worker.pro",
+        "apps/android/effect-host-candidate/app/gradle.lockfile",
+        "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+        "apps/android/effect-host-candidate/tooling/native/complete-provenance.json",
+        "apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
+        "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+        "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+        "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+      ],
+      "purpose": "Replace original main Worker/Application/test/manifest seams with strictly additive coldPlay sources/variant/assets/audit and cold-only WorkManager dependency; preserve acceptedPlay32rawfiles except separately authorized appGradle/lock/metadata additive updates with exact original Play artifact graph retained.",
+      "status": "proposed_requires_root_amendment",
+      "future_audit_outputs": [
+        "apps/android/effect-host-candidate/dist/audit/cold-worker-resolved-artifacts.tsv",
+        "apps/android/effect-host-candidate/dist/audit/cold-worker-maven-license-review.json"
+      ]
+    }
+  ],
+  "qualification_limits": [
+    "No implementation/build/bundle/install/ADB/device/Metro/commonoutputs read; all5cases independently expected and UNRUN.",
+    "No min28/fourABI/SDK/engine/currentnewgraph/license/device/signed/OS cold/cancel proof from metadata. Actual Pixel target identity protected; no device identifier in fixture.",
+    "No production Hilt/worker/service/notif/HealthConnect/permissions/data/storage/credentials/security/user grants/schedules/settings/sourcepurpose changes.",
+    "Real OS cannot promise cancellation Result ACK or process survival; absence of independent acknowledged cleanup is incomplete, never fake success.",
+    "Crossprocess once-only/durable retry/reboot/force-stop/firstunlock/backgroundgrant/physicalcapture and promotion remain separately qualified.",
+    "Twofield WorkData contains no bootwitness: sameboot experiment only with independent before/after nativeboot observations; no persisted crossboot replay rejection/durable authority guarantee.",
+    "Crossboot counterexample literal boot7->8/submitted100000/current100010 still passes elapsed-only TTL30000 while different boot; independent harness marks test incomplete. Future product scheduler must solve issued boot-bound replay, not reuse this probe as assurance."
+  ],
+  "rollback": "Revert only isolated candidate target/source/private synthetic artifacts. Keep production launchers/identities, native SDKs, stores/trust/keychain/keystore/bookmarks/journals/schedules/Rust references untouched.",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  },
+  "supplemental_interface_cases": [
+    {
+      "case_id": "boot_changed_same_elapsed",
+      "input": {
+        "before_boot_count": 7,
+        "after_boot_count": 8,
+        "submitted_elapsed_ms": "100000",
+        "now_elapsed_ms": "100010"
+      },
+      "expected": {
+        "same_boot_test_proof": false,
+        "runtime_reboot_replay_rejection_claim": false,
+        "native_test_result": "incomplete"
+      }
+    },
+    {
+      "case_id": "boot_witness_unavailable",
+      "input": {
+        "before_boot_count": null,
+        "after_boot_count": 7
+      },
+      "expected": {
+        "same_boot_test_proof": false,
+        "native_test_result": "unavailable"
+      }
+    },
+    {
+      "case_id": "forged_ticket_no_properties",
+      "input": {
+        "ticket": "foreign_proxy",
+        "properties_would_throw": true
+      },
+      "expected": {
+        "code": "ticket_invalid",
+        "property_traps": 0,
+        "native_acquire": 0,
+        "journal_write": 0
+      }
+    },
+    {
+      "case_id": "foreign_terminal_no_properties",
+      "input": {
+        "terminal": "foreign_proxy"
+      },
+      "expected": {
+        "code": "ticket_invalid",
+        "property_traps": 0,
+        "ack_publish": 0
+      }
+    },
+    {
+      "case_id": "release_failed_truthful_incomplete",
+      "input": {
+        "actual_counts": {
+          "acquired": 1,
+          "released": 0,
+          "active": 1,
+          "unresolved_inspections": 0
+        },
+        "release_ack": "failed"
+      },
+      "expected": {
+        "phase": "incomplete",
+        "ack": 0,
+        "code": "cleanup_unverified",
+        "counts_preserved": true,
+        "work_success": false
+      }
+    },
+    {
+      "case_id": "stale_control_nonce",
+      "input": {
+        "issued_controller_nonce": "00000000-0000-4000-8000-000000000001",
+        "sent_controller_nonce": "00000000-0000-4000-8000-000000000002"
+      },
+      "expected": {
+        "code": "control_invalid",
+        "work_manager_cancel_calls": 0,
+        "native_acquire": 0
+      }
+    },
+    {
+      "case_id": "worker_process_died_before_control",
+      "input": {
+        "active_process_nonce": "00000000-0000-4000-8000-000000000003",
+        "receiver_process_nonce": "00000000-0000-4000-8000-000000000004"
+      },
+      "expected": {
+        "code": "control_unavailable",
+        "cleanup_ack_claim": false,
+        "restart_as_ack": false
+      }
+    },
+    {
+      "case_id": "cancel_dispatch_not_cleanup",
+      "input": {
+        "WorkInfo": "CANCELLED",
+        "cancel_operation": "success",
+        "native_phase": "release_pending",
+        "native_ack": 0
+      },
+      "expected": {
+        "cleanup_ack_claim": false,
+        "private_completion": false,
+        "continue_bounded_poll": true
+      }
+    }
+  ],
+  "private_state_effects": {
+    "future_execution_only": [
+      "WorkManager own private cold app database holds only five synthetic bounded WorkData requests.",
+      "Private filesDir synthetic issuer/ACK registry described in ack_channel; fixed issued UUID pathnames only, bounded bytes/generations, owned run cleanup after evidence preservation."
+    ],
+    "no_state_writes_in_Stage1": true,
+    "proof_limit": "Private test bookkeeping/SQLite WorkManager state is not customer data, production schedule/state migration, secure storage, durable once-only/crossboot/recovery qualification."
+  },
+  "proposed_implementation_scope": {
+    "status": "pending_root_exactclaim_amendment_and_graph_review",
+    "repository_relative_paths": [
+      "apps/android/effect-host-candidate/src/cold-worker-probe.ts",
+      "apps/android/effect-host-candidate/app/build.gradle.kts",
+      "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+      "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeApplication.kt",
+      "apps/android/effect-host-candidate/app/src/coldPlay/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt",
+      "apps/android/effect-host-candidate/app/src/coldPlay/AndroidManifest.xml",
+      "apps/android/effect-host-candidate/app/src/androidTestColdPlay/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+      "apps/android/effect-host-candidate/app/proguard-cold-worker.pro",
+      "apps/android/effect-host-candidate/app/gradle.lockfile",
+      "apps/android/effect-host-candidate/gradle/verification-metadata.xml",
+      "apps/android/effect-host-candidate/tooling/native/complete-provenance.json",
+      "apps/android/effect-host-candidate/scripts/build-cold-worker.mjs",
+      "apps/android/effect-host-candidate/scripts/run-cold-worker-probe.sh",
+      "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+      "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+    ],
+    "stage1_writes_only": [
+      "apps/android/effect-host-candidate/fixtures/cold-worker-v1.json",
+      "docs/migration/effect-refactor/receipts/NATIVE-ANDROID-COLD-WORKER-PROBE.json"
+    ],
+    "replaced_original_proposed_paths": [
+      "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeWorker.kt",
+      "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/HostProbeApplication.kt",
+      "apps/android/effect-host-candidate/app/src/androidTest/java/com/healthmd/effecthostcandidate/ColdProbeWorkerRuntimeTest.kt",
+      "apps/android/effect-host-candidate/app/src/main/AndroidManifest.xml",
+      "apps/android/effect-host-candidate/app/src/main/java/com/healthmd/effecthostcandidate/ColdProbeBridge.kt"
+    ],
+    "variant": "Add coldPlay to existing distribution dimension; existing play names/default graph/Application remain exactly unchanged. Cold private applicationIdSuffix .cold.play => com.healthmd.effecthost.androidcandidate.cold.play.",
+    "dependency": "ONLY coldPlayImplementation androidx.work:work-runtime:2.10.0 (not main/playImplementation). Complete exact resolved Kotlin/coroutine/WorkManager/Guava/startup/manifest/SDK/ABI/POM/license/source API hashes pending review, selected production version alone not accepted compatibility. If artifact requires extra dependencies/class, submit exact scoped proposal BEFOREcode.",
+    "application": "ColdProbeApplication in coldPlay source only, lazy ReactHost after native admission; no oldApplication eager autorun, Activity or mountedView. Standard WorkManager configuration/initialization lifecycle and library merged receiver/service ownership reviewed from selected exact artifact before code. No production Hilt/source/worker change.",
+    "manifest": "coldPlay overlay tools:replace android:name => ColdProbeApplication; explicitly tools:node remove inherited HostProbeActivity; unique private application identity, cold-only explicit DUMP-sender-protected ColdProbeControlReceiver nested in coldPlay ColdProbeBridge.kt. Keep mainManifest bytes unchanged, no broad exported service/data/permission/network promotion. Inspect actual final merged manifest before native clearance.",
+    "tests": "New androidTestColdPlay source set only compiles cold WorkManager tests; old androidTest/main Play ten runtime test source and resolved Play classpaths unchanged. Gradle named variant coldPlayRelease/coldPlayReleaseAndroidTest, exact source-set API/compilation graph verified before build.",
+    "proguard": "New optional app/proguard-cold-worker.pro applied ONLY coldPlay flavor; finite required new entry/receiver/Worker/bridge ABI keep rules justified by selected APIs; preserve old source proguard files, no blanket keep/optimization disable. Actual merge R8/ABI graph proof before runtime.",
+    "assets": "Separate cold-only build-cold-worker script produces dist/cold-worker/assets/index.android.bundle and own metadata/fixture; coldPlay asset overlay selects private cold entry. No writes accepted dist/assets/index.android.bundle, old bundle/build/check/probe scripts remain retained. If main assets packaged alongside/overridden, audit exact merged cold variant to prove selected cold entry and absence of old autorun in executed bundle; no assumption from source-set name.",
+    "audit": "Add separate auditColdWorkerArtifacts future Gradle task/configurations for coldPlayReleaseRuntimeClasspath/coldPlayReleaseUnitTestRuntimeClasspath/coldPlayReleaseAndroidTestRuntimeClasspath; preserve accepted auditResolvedArtifacts and dist/audit/resolved-artifacts.tsv. Write only separate cold-worker-* auditoutputs. Existing app/gradle.lockfile/verification metadata may add exact new cold rows only after independently reviewed complete graph; retained oldPlay97coordinates/artifactset and rawpins must remain exact.",
+    "permission": "No install/build/dependency resolution/common mutable outputs permitted by source proposal; ROOT approves exact paths and graph before code/native."
+  }
+}

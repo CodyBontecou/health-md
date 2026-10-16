@@ -1401,4 +1401,9 @@
     <string name="fdroid_onboarding_access_body">De officiële F-Droid-versie bevat gratis alle lokale export- en automatiseringsfuncties.</string>
     <string name="fdroid_onboarding_no_purchase">Geen aankoop, herstel, prijs of Play-account vereist.</string>
     <string name="fdroid_onboarding_no_play_services">Geplande exports werken zonder Google Play Billing.</string>
+    <string name="myself_claim_title">Toegang tot myself.md claimen</string>
+    <string name="myself_claim_subtitle">Gratis levenslange toegang voor bestaande kopers</string>
+    <string name="myself_claim_disclosure">We sturen je Google Play-aankoopbewijs naar myself.md om te controleren of je in aanmerking komt. Je gezondheidsgegevens blijven op je apparaat. Log daarna in om het account voor levenslange toegang te kiezen. Elke oorspronkelijke aankoop kan aan één account worden gekoppeld.</string>
+    <string name="myself_claim_continue">Aankoop controleren en doorgaan</string>
+    <string name="myself_claim_verifying">Aankoop controleren…</string>
 </resources>

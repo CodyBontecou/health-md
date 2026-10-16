@@ -6,6 +6,7 @@ import com.healthmd.data.health.providers.HealthProviderCatalog
 import com.healthmd.data.health.providers.HealthProviderConnectionManager
 import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.repository.EntitlementRepository
+import com.healthmd.domain.repository.PurchaseRepository
 import com.healthmd.domain.repository.SettingsRepository
 import com.healthmd.export.MainDispatcherRule
 import io.mockk.coEvery
@@ -47,6 +48,7 @@ class SettingsViewModelConfigurationProtectionTest {
                     every { isUnlocked } returns MutableStateFlow(false)
                 },
                 DistributionPolicy.play(),
+            mockk<PurchaseRepository>(relaxed = true),
             )
             advanceUntilIdle()
             assertThat(viewModel.preventAccidentalChanges.value).isTrue()

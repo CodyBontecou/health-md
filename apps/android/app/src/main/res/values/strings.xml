@@ -1450,4 +1450,9 @@
     <string name="fdroid_onboarding_access_body">The official F-Droid build includes every local export and automation feature at no charge.</string>
     <string name="fdroid_onboarding_no_purchase">No purchase, restore, price, or Play account is required.</string>
     <string name="fdroid_onboarding_no_play_services">Scheduled exports work without Google Play Billing.</string>
+    <string name="myself_claim_title">Claim myself.md access</string>
+    <string name="myself_claim_subtitle">Complimentary lifetime access for existing purchasers</string>
+    <string name="myself_claim_disclosure">We’ll send your Google Play purchase proof to myself.md to verify eligibility. Your health data stay on your device. Then sign in to choose the account that receives lifetime access. Each original purchase can be linked to one account.</string>
+    <string name="myself_claim_continue">Verify purchase and continue</string>
+    <string name="myself_claim_verifying">Verifying purchase…</string>
 </resources>

@@ -1,0 +1,555 @@
+{
+  "task_id": "MCP-STDIO-CONTROL",
+  "result": "partial",
+  "proof_class": "planning",
+  "source_sha": "d30cae82c383dd24c46040876c3f59c862335816",
+  "patch_digest": "b2272e856cc962f1624ac6758cc3ba122b1fa953897b15d665dbd63f056b8e7b",
+  "patch_digest_method": "SHA256 sorted repository-relative path UTF8 + NUL + raw bytes + NUL; own vector only, excludes own receipt/plan/other writers",
+  "changed_paths": [
+    "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+    "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json"
+  ],
+  "inputs": {
+    "source_pins": [
+      {
+        "path": "AGENTS.md",
+        "bytes": 6509,
+        "sha256": "830901de59e2afe2023a35bddaa6a1b620d8b40f14bad33d9675ccdadda75f0d"
+      },
+      {
+        "path": "GLOSSARY.md",
+        "bytes": 3868,
+        "sha256": "c128162016990d3f2dca7233808e36867ce683019828acb803acace9736d6a65"
+      },
+      {
+        "path": "apps/cli/Cargo.lock",
+        "bytes": 88843,
+        "sha256": "2ceea3ac125f41d6d89230af204dc619152a0b657cbcefe6d1ce817fbc213bd5"
+      },
+      {
+        "path": "apps/cli/crates/healthmd-cli/src/mcp/mod.rs",
+        "bytes": 27301,
+        "sha256": "2d727be8830adfe639faa536b875b0f0ac91690de7872d233577b0fccead6fa0"
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/Cargo.toml",
+        "bytes": 1175,
+        "sha256": "5affa065eafbd19d846b0aa27b713bbd0320fa0d552e7beb9827f6dcac5a9c66"
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/application.rs",
+        "bytes": 58209,
+        "sha256": "989bfd02c8c243237628343cf4500a07cce3731facb00565735ef35863657d8a"
+      },
+      {
+        "path": "apps/cli/crates/healthmd-mcp/src/jsonrpc.rs",
+        "bytes": 17008,
+        "sha256": "b7082b9dc860f5b20509ae0517bb76db2f6cb29d06525e463ac4342b081284ae"
+      },
+      {
+        "path": "apps/cli/docs/typescript-candidate.md",
+        "bytes": 15455,
+        "sha256": "6c385946e58d10180bd88c2eb7519bcf42245de8884083e9aa2e14e260743a3f"
+      },
+      {
+        "path": "apps/cli/package-lock.json",
+        "bytes": 28291,
+        "sha256": "3be9fb54116c58d89421e7bd43d2f5c5bb4b0f98f818a0ef3ba18c77f4903cbf"
+      },
+      {
+        "path": "apps/cli/package.json",
+        "bytes": 880,
+        "sha256": "baa07d8b88444ac74a7de411384e5ee84133a90f91fa255bf07c3fc0d61c9fd2"
+      },
+      {
+        "path": "apps/cli/scripts/build-candidate.mjs",
+        "bytes": 1574,
+        "sha256": "0f4bd85e16b9462d265a370ec132c27b9655c21e22e634c68545e5e4ee70bcfa"
+      },
+      {
+        "path": "apps/cli/scripts/check-candidate.mjs",
+        "bytes": 84602,
+        "sha256": "9aaf9bea155c9280271d12e2008ae8ee2beb8918cbd07d094c7b26aefb427691"
+      },
+      {
+        "path": "apps/cli/src/candidate-host.ts",
+        "bytes": 2377,
+        "sha256": "ea55333a133c6a035287ce41c0ddd2720d81419b904879fae381ea2496eaa624"
+      },
+      {
+        "path": "apps/cli/src/mcp/query.ts",
+        "bytes": 6487,
+        "sha256": "97ba3ed0c2a0c60872ce3a6eda757e8ecc08f9391848a74bb06c2be7ea2b50b9"
+      },
+      {
+        "path": "apps/cli/src/surfaces/discovery-normalizer.ts",
+        "bytes": 15905,
+        "sha256": "0dccb2424625e049adfb4af400b39c55f0bde0226eeaa436a1a4a259836dd31c"
+      },
+      {
+        "path": "apps/cli/src/surfaces/jsonrpc-envelope.ts",
+        "bytes": 42108,
+        "sha256": "693aeb1507aed9ef2a2073da5497a84dce58d6da4431a273246561efaff6a3e5"
+      },
+      {
+        "path": "apps/cli/src/surfaces/result-envelope.ts",
+        "bytes": 31507,
+        "sha256": "b3d1e714f95a134aefd625d5b55ed00f68f1471f920ace043ca3a252c574ac5f"
+      },
+      {
+        "path": "apps/cli/src/surfaces/stdio-framing.ts",
+        "bytes": 15632,
+        "sha256": "91f32eac2d93a8ac6b614ff49817b38f13545aeb63972127e5c9a80ea45931fa"
+      },
+      {
+        "path": "apps/cli/tests/surfaces/jsonrpc-envelope-vectors.ts",
+        "bytes": 216599,
+        "sha256": "07fd4081768c8d31bdda682a0c677a4682ae142c338c69a19bb245aaf4eeaba0"
+      },
+      {
+        "path": "apps/cli/tests/surfaces/stdio-framing-vectors.ts",
+        "bytes": 1022461,
+        "sha256": "cd87897ff0432791e7900b6c53648f6abef8664ebdd20cbe93ae3f7b052b5a28"
+      },
+      {
+        "path": "apps/cli/tsconfig.build.json",
+        "bytes": 144,
+        "sha256": "2f9f05c0822a03a2e63d07171e58988d39c55be6582c562f36e5b85690d1e42b"
+      },
+      {
+        "path": "apps/cli/tsconfig.test.json",
+        "bytes": 123,
+        "sha256": "db9dfadaa7870e3134056444efbe00eaf427c8ee0ed43f6369cbcfd61c39b4c0"
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-design-reference.md",
+        "bytes": 284562,
+        "sha256": "2c3acaf2df187e1a78516eddfb3d82958092b71894b669aabfc7c86d569039bd"
+      },
+      {
+        "path": "docs/architecture/javascript-unified-layer-research.md",
+        "bytes": 13361,
+        "sha256": "feac64a79a2a9967cabd07f4155ed1b5eaa1f05fae2aa6ea37d468eddf87bba3"
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-personal-slices-v1.json",
+        "bytes": 34945,
+        "sha256": "1dbee84851fb08b26a66d436014496f097fc94fafeeef880846897ca13ba4853"
+      },
+      {
+        "path": "docs/migration/effect-refactor/cohorts/core-ts-query-usage-v1.json",
+        "bytes": 1651134,
+        "sha256": "a006edbe5577fc46cfb1057cf67591f6aed8b25d0c187b05ccfd950b3a711c45"
+      },
+      {
+        "path": "docs/migration/effect-refactor/core-cli.md",
+        "bytes": 5578,
+        "sha256": "4b33f46482c9c3fe26b50badc07a0a604e5c97345cb7f5eb6526580ced249749"
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-protocol.json",
+        "bytes": 145883,
+        "sha256": "a0bbbf6ed6db434c957488fa37cb8ef9c92f3ac6334c0a63736c935034439c67"
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-surfaces.json",
+        "bytes": 147646,
+        "sha256": "a5159123fdd2274fd866650238fe2e23e376a3ea31b98ee1ab1b8e26a0e45d61"
+      },
+      {
+        "path": "docs/migration/effect-refactor/expansions/split-usage-desktop.json",
+        "bytes": 139864,
+        "sha256": "8aeedc538783d9e0373adec386f0bd9f1ce7a92c8a368c3d6ab2711e7ce2097f"
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/cli.json",
+        "bytes": 347600,
+        "sha256": "d013adcb657d2b190a75506ddef1adc85a3181c4eb3cf5180a8834789961fbe3"
+      },
+      {
+        "path": "docs/migration/effect-refactor/inventories/core.json",
+        "bytes": 95633,
+        "sha256": "56536fc5f207a1f8508542ca98fd7d01cff3b882db002a3df8521bdb59d39ac7"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CLI.json",
+        "bytes": 12304,
+        "sha256": "be25457e7c1672dfacc706702a47c762e3bb9781ecb978391412195247d824f1"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/BASE-CORE.json",
+        "bytes": 26431,
+        "sha256": "839b110fc881fdbf73d2bb9f06b6bab3f35c74eaf0f7c6f3d8d63d8b42c19c9a"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CLI-DISCOVERY-NORMALIZER.json",
+        "bytes": 178234,
+        "sha256": "136e18c58fb939d8157784f3bfff6de5f2da869bfa19589baeac2ac8ac8adce2"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CLI-RESULT-ENVELOPE.json",
+        "bytes": 128025,
+        "sha256": "1662baff41b73fe6a50a6552860c18b30c40e31d527a4ac994293752a45dc62d"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-PERSONAL-SLICES.json",
+        "bytes": 124059,
+        "sha256": "faaa45e7d1d19a2cd4b69eec7f05d29bd332a4beacc1fcff36111259a462c602"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/CORE-COHORT-QUERY-USAGE.json",
+        "bytes": 795427,
+        "sha256": "c77002ac074718148faff0ce095a607d7260d7e682064d70962078810cc3a654"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/MCP-JSONRPC-ENVELOPE.json",
+        "bytes": 101444,
+        "sha256": "d112252b876c471fc5e4353666f198e6cb87a743a413754f553689594a11ca80"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/MCP-STDIO-FRAMING.json",
+        "bytes": 56592,
+        "sha256": "b8e61c1588b9ec278bea3f43bf2edae4ddf95c1f97a08a3695484872febe8204"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SLICE-PARITY.json",
+        "bytes": 27886,
+        "sha256": "c8f395b086606b685c3f539d105a74036a4f42608534a1eb80d11c2ecf67a4f4"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SPLIT-PROTOCOL.json",
+        "bytes": 33855,
+        "sha256": "6ba1dbaed77ed7a024f94ed7b008b6c0001b1cabf7e493d66dfa7cb298f8620d"
+      },
+      {
+        "path": "docs/migration/effect-refactor/receipts/SPLIT-SURFACES.json",
+        "bytes": 52576,
+        "sha256": "be9b9fd1ccbe3e520d0d9ffc4d3b9eb34caa62ba80d41a664a5892c80ec56d2a"
+      },
+      {
+        "path": "docs/migration/effect-refactor/templates.md",
+        "bytes": 10054,
+        "sha256": "53c198716d79bae941c55caa634712c9fdc60a451da6f8c58847a110a8ec077e"
+      },
+      {
+        "path": "packages/healthmd-core-ts/AGENTS.md",
+        "bytes": 860,
+        "sha256": "14b3f153a9eb9d2087992b7fa90b722fc8538845f1e33c0dfdf55de32c3fca67"
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/catalog.ts",
+        "bytes": 5539,
+        "sha256": "eee557683d518595545797ed228e6e56e6659ea0d2325270059c1a13d89a0db7"
+      },
+      {
+        "path": "packages/healthmd-core-ts/src/operations/query.ts",
+        "bytes": 8929,
+        "sha256": "143c5a9c123a1febe0ac67b6fd46eefb578e669f8263aec11e2b553544add100"
+      },
+      {
+        "path": "scripts/typescript-dev/README.md",
+        "bytes": 6824,
+        "sha256": "ffbe32927dd9d505ed62c5bff0164eb41245e2057143ec04a59a9fd03731771d"
+      }
+    ],
+    "preclaim_review": {
+      "path": "/private/tmp/healthmd-mcp-stdio-control-preclaim-card-independent-review.json",
+      "bytes": 11944,
+      "sha256": "d467e85ba19a536b95a90d8b44bb8bbd2b83d0da41c72e80ea4ba4e160367e3e",
+      "status": "bounded_Stage1_ready_after_recorded_narrow_normalization_only"
+    },
+    "own_vector": {
+      "path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+      "bytes": 2924123,
+      "sha256": "b0be4f47ed1c887ffbb0be8d8ff4427b6caa9c87c6621097805fad3a4193ddc6"
+    },
+    "accepted_current_consumer_baseline": {
+      "coreInputs": 64,
+      "coreCompleteOutputs": 59,
+      "installedCoreModules": 40,
+      "installedCorePackageFiles": 42,
+      "cliInputs": 149,
+      "cliOutputs": 24,
+      "filesystemNegatives": 617,
+      "controls": 12,
+      "unchangedBaselineTests": 721,
+      "historicalOnly": [
+        "core40-input/24-module personal-slices",
+        "CLI105-input"
+      ]
+    },
+    "source_pin_revalidation": {
+      "method": "Read exact48 source files and compare rawbytes/SHA256 against retained Stage1 source_pins; own code/test/runtime not executed",
+      "source_pin_count": 48,
+      "changed_source_pins": []
+    }
+  },
+  "target": {
+    "platform": "portable",
+    "channel": "development",
+    "profile": "private synthetic stdio-control"
+  },
+  "claimed_resources": [
+    "private-stdio-control-interface"
+  ],
+  "Stage1": {
+    "status": "amended_proposal_pending_continuing_independent_full_review",
+    "case_count": 407,
+    "minimum_packet_cases": [
+      "control-ping-while-operation-blocked",
+      "control-request-id-type-bound",
+      "control-duplicate-session-id",
+      "control-capacity-bound",
+      "control-used-id-limit",
+      "control-cancel-awaits-owned-finalizer",
+      "control-readonly-no-pairing",
+      "control-eof-owned-operation"
+    ],
+    "interface": "Declaration-only ControlFactory/ControlSession.run; own prepared/result/request tokens, coarse owned IO, concurrent trusted common dispatcher/current authority; not existing serial RPC/framing concurrency",
+    "literal_authority": "Source-derived Rust literals plus verbatim independently PRECODE frozen source-envelope literals; synthetic ownership/authority/cleanup supplements distinguished. No candidate-output golden generation. Full16384 natural literal ping request/response replay, no seeded used-ID table.",
+    "frozen_contract": {
+      "actions": "Closed Action grammar. Gates/faults select callback ordinal ONLY, independent of ID/tool text/case label/expected data. Gate installed before callback. line submits then selects input; lines submits sequentially through bounded queue; settleEach awaits completion+flush before next. At most1 submitter item outside queue. checkpoint waits deterministic event-loop quiescence, no wall-clock sleeps. ack unblocks gate. operation gate interrupted on cancellation; release/io_release gate uninterruptible and acknowledged. EOF follows submitted lines and cancels each still-active request once. Ungated ordinary lines settle before next action except explicitly pending child; progress producer yields concurrently if backpressured. Fake execute always calls authorized paramsText once before returning synthetic fixed commonResultUTF8, so lazy_read callbacks are exercised. progress actions supply trusted ProgressUpdate values to pending operation emitter; IDs only protocol correlation, never fake operation behavior. Freeze all raw source literals before implementation.",
+      "scheduler": "One owned session retains initialization/profile and permanent used-ID state. Never per-request new RpcSession: would lose session state. Serial initialize waits local result+encode+publication ACK before next input selection; other requests run bounded children. Completion follows explicit ACK order. Inflight duplicate before64capacity; capacity before source envelope root/version/method/id validation and used-ID reservation. ID-absent/method-present skipped BEFORE validation (including wrong version/nonstring method); exact notifications/cancelled intercepted first, including ownID/wrongversion. Cancel target is canonical source request_key, not narrowed envelope scalar validation. Ping requires no initialize and shares64slot.",
+      "identity": "Source root/version/method/id validation then canonical key permanent reserve. Duplicate before16384exhaustion. Integer/string distinct; f64 1.0/-0/exponent retain source numeric tags. Raw UTF8 string<=128 AND canonical encoded<=128 for ID; progress token raw string UTF8<=128 or exacti64, different from encoded ID limit. Unknown outer keys scanned then ignored after full source parse; decoded duplicates last value. Source overflow anywhere is parse error before envelope validation. Ordinary JSON.parse forbidden as lossless source adapter.",
+      "seam": "NEW owned concurrent prepare/execute/local/render seam; accepted framing serial loop/RPC busy slot remain unchanged and do not prove concurrency. Controller only scheduling/admission/cancellation/queues. Trusted current common dispatcher owns actual method normalization/evaluation/profile policy/result rendering. Fake common result {} independent of incomingID; no case-specific evaluator. Source exact literals in inherited source scenes configure local metadata only; no source result simulation beyond explicitly synthetic data. Readonly hidden8 tools rejected by common owner BEFORE allocation/mutation/pairing/export. Issuer.prepared(kind, request) or rejection(value) produces own opaque OwnedPrepared; kind is closed local/operation and referenced request/value must already be own exact-callback tokens. Factory InertView.prepared checks own membership BEFORE reading kind/properties; dispatcher returns unknown. Prepared metadata never authenticates caller grants.",
+      "ownership": "Membership own WeakMaps/Sets precedes ANY properties for every frame/session/inspection/request/prepared/lease/value/output/terminal/issuer/view. Opaque prepared/result tokens bound exact factory/session/request/originalScope. Callback issuer expires on callback return; views capture originalScope and request. Current caller/source/purpose/destination/latest independent suppression authority checks before/after EVERY await/callback and EVERY lazyread/materialization/publication. No JSON/TTY/config/executable path grants. Mandatory release cannot be denied by revoked grants. Completed allocation+captured finalizer atomically installed even late after interruption; pending acquire await ACK then release once. New Scope/Layer cannot revive capabilities. Successful own request/result/inspection tokens outlive issuer callback until original Scope/session/request expiry; only callback issuer/views expire immediately. Never invalidate a successful result merely because its issuing callback returned. IoOwner.acquire receives callback IoIssuer; result is unknown and accepted only exact issuer-owned opaque OwnedIo, originalScope-bound with trusted methods captured once. No properties read from returned unknown acquisition object. IO allocation completion+release registration is atomic and asynchronous IO ACK mandatory just like operation allocations. IO amendment: io_acquire is distinct Gate/Callback from operation acquire. IoIssuer active allocation callback may complete allocation after interruption/Scope closure solely for atomic cleanup-only ownership: captured release registration precedes exposed result, dead capability cannot read/publish or become terminal. Expired callback issuer late_issue still rejects with null; active pending allocation callback cleanup-only capture is different. close_pending_scope closes original Scope while active io_acquire is gated; after completion must release then report closure. IO issuer registers each completed own allocation exactly once even if callback returns a different/foreign token; owned_issued_foreign_return therefore ownreleaseACK1, other foreign/proxy returns with no own allocation have0. Read-only/session request grants cannot deny mandatory release. Snapshot ioAllocation records actual attempts/completions/registrations/release gate; expected counters are after cleanup.",
+      "progress": "Queue64 + source progress forwarding16 distinct. Own progress token emission only live exact request, originalScope and current independent authority; bounded lazy owned value reading. Single sink writes encoded UTF8+LF then flush ACK. Drain queued notifications before selected completion response; checks before/after encode/read/publish. Slow sink blocks producer/terminal. EOF cancels all requests then waits all operation releases, admitted progress drain and IO release ACK before terminal. Completed task removes in-flight key before queued progress drain/final response, as retained Rust completion branch does; permanent used-ID remains. Amendment explicitly distinguishes1dequeued gated item+64queued=65admitted from66th producer actually blocked. Progress action schedules its bounded producer and yields at backpressure without pretending send completion. Snapshot admitted increments only upon send acceptance; gated sink item not counted in queue.",
+      "failure": "NEW private control aggregate framing precedence cleanup > interruption > sanitized original failure/defect. Cleanup error poisons lifetime and prevents successful terminal. OriginalScope closure wins callback-return success. Foreign/proxy denial membership first, zero property effects. Existing RPC interruption sanitizer not changed. Native write_line ignores write/flush faults, while new private sink failure is explicitly synthetic stricter profile. Cancel interrupts fake operation with no wire response, awaits release ACK; real common operation may return canonical cancellation value, rendered by same owner. No durablejobcancel or rollback claim; possiblecommit remains ambiguous. Normal common operation successful result is withheld until operation releaseACK; cleanup_failure/cleanup_defect after successful execute produces no success bytes, operationACK0/IOACK1 and poisoned original session. Poisoned probe sees private_control_cleanup, no capability reuse. IO acquire failure/defect sanitizes private_control_input, partial uncompleted allocation registers no phantom release.",
+      "profiles": "Only existing_private_64KiB decoded owned-line adapter availability admitted; primitive scalar/budget gate before inspector/materialization. Native2MiB raw framing/lossyUTF8/trim/fullserde numeric/parser/serializer dependency graph remains distinct owned integration, no budget relaxation. Own source cases preserve exact source bytes but fake codec is not full native profile qualification.",
+      "probe_semantics": "Probe creates fresh originalScope fake IO fixture, then probes specified token/view/issuer boundary. Foreign/proxy values never inspect properties. Expired_callback invalidates issuer AND its callback-specific view only; expired_scope closes original and new_scope provides fresh scope while probing original capability. Non-run view denial mapped to own fixed failure by harness, not public wire. Reentrant probe rejected private_control_busy while original run continues; final original result unchanged. Terminal probe uses issued terminal from clean EOF fixture; probe counters listed are probe-operation deltas only, excluding fixture setup/teardown. Amendment request/io probes: fixture opens exact original session and issues its request from own inspection or IO via IoIssuer. Foreign raw object/Proxy is presented to normal private membership check before any property; foreign_factory/session uses authentic token issued by other factory/session, not forged branding. Request foreign_request presents authentic requestA to live viewB. Request and IO are originalScope/session-bound; IO intentionally has no request binding. expired_scope/new_scope probes use original owned capability after closure, and fresh Scope cannot revive it. late_issue retains expired request/IO issuer, invokes issuance after callback return, observes null and no owned token; malformed_issuance uses foreign inspection for request or forged unknown acquisition return for IO and receives membership denial, not reflection of untrusted methods. live_callback_return uses previously successfully issued token after issuer callback returned with a new current live authorized view; token remains usable in original Scope. current_revoked/current_unavailable invokes normal authorized paramsText or owned IO read/publish path under changed trusted current authority, zero materialization/publication; mandatory fixture cleanup remains allowed. All request/IO probe counts are operation deltas excluding setup/teardown; issuer callbacks cannot issue grants.",
+      "publication": "Publication ACK means bytes already reached PRIVATE fake sink. Revocation/Scope closure discovered AFTER ACK cannot retract bytes: terminal fails but writes remain observed. Possible real commit is ambiguous and not claimed rolled back. Before-publication denial emits zero bytes."
+    },
+    "append_only_amendment": {
+      "reason": "Independent FULL review gaps: missing OwnedRequest/OwnedIo probe surfaces and65update case has no blocked producer",
+      "prior_case_count": 355,
+      "prior_complete_ordered_cases_sha256": "884887236fb578c4fb7bed98d0d48d801ac7d0c1a022c2f8a6b4b62bcf507a8c",
+      "archive_pins_path": "/private/tmp/healthmd-mcp-stdio-control-355-freeze-pins.json",
+      "all_prior_cases_unchanged": true,
+      "added_case_ids": [
+        "amendment-owned-request-foreign",
+        "amendment-owned-request-proxy",
+        "amendment-owned-request-foreign_factory",
+        "amendment-owned-request-foreign_session",
+        "amendment-owned-request-expired_scope",
+        "amendment-owned-request-new_scope",
+        "amendment-owned-request-late_issue",
+        "amendment-owned-request-malformed_issuance",
+        "amendment-owned-request-current_revoked",
+        "amendment-owned-request-current_unavailable",
+        "amendment-owned-request-live_callback_return",
+        "amendment-owned-io-foreign",
+        "amendment-owned-io-proxy",
+        "amendment-owned-io-foreign_factory",
+        "amendment-owned-io-foreign_session",
+        "amendment-owned-io-expired_scope",
+        "amendment-owned-io-new_scope",
+        "amendment-owned-io-late_issue",
+        "amendment-owned-io-malformed_issuance",
+        "amendment-owned-io-current_revoked",
+        "amendment-owned-io-current_unavailable",
+        "amendment-owned-io-live_callback_return",
+        "amendment-owned-request-foreign_request",
+        "amendment-notification64-blocks-update66"
+      ],
+      "old_case_history": "notification64-backpressures65 retained verbatim as65admitted upper occupancy scene; its historical label is not proof of blocked overflow. New66scene is the actual blocked admission edge.",
+      "new_producer_snapshot": "attempted includes currently blocked send; admitted includes1dequeued+64queued; blocked observes actual pending66th producer. After sink ACK writer drains and producer admission completes before operation completion/releaseACK.",
+      "second_amendment": {
+        "prior_case_count": 379,
+        "prior_archive_rows": [
+          {
+            "path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+            "archive": "/private/tmp/healthmd-mcp-stdio-control-379-stdio-control-vectors.ts",
+            "bytes": 2884065,
+            "sha256": "127b535d9450cec7f6f78c938424904eb5e5ba000d9aface2b77f223e8f597bb"
+          },
+          {
+            "path": "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json",
+            "archive": "/private/tmp/healthmd-mcp-stdio-control-379-MCP-STDIO-CONTROL.json",
+            "bytes": 31933,
+            "sha256": "f6d645c6d28fa855dae85673c6612fb4865982e9c1b0d83bdbe6a4034dd34c6a"
+          }
+        ],
+        "prior_whole_cases_sha256": "55233b760a41bf18bdaa8a1ec69feb9366403ca0d4d05e80e8d1eb326862f7ef",
+        "all_prior355_and379_objects_unchanged": true,
+        "added_case_ids": [
+          "amendment-io-allocation-scope-before",
+          "amendment-io-allocation-scope-after",
+          "amendment-io-allocation-authority-caller-before",
+          "amendment-io-allocation-authority-caller-after",
+          "amendment-io-allocation-authority-source-before",
+          "amendment-io-allocation-authority-source-after",
+          "amendment-io-allocation-authority-purpose-before",
+          "amendment-io-allocation-authority-purpose-after",
+          "amendment-io-allocation-authority-destination-before",
+          "amendment-io-allocation-authority-destination-after",
+          "amendment-io-allocation-authority-suppression-before",
+          "amendment-io-allocation-authority-suppression-after",
+          "amendment-io-allocation-authority-unavailable-before",
+          "amendment-io-allocation-authority-unavailable-after",
+          "amendment-io-acquire-pending-normal-ACK",
+          "amendment-io-late-completion-after-interrupt",
+          "amendment-io-late-completion-after-scope",
+          "amendment-io-return-membership-foreign_return",
+          "amendment-io-return-membership-proxy_return",
+          "amendment-io-return-membership-foreign_session_return",
+          "amendment-io-return-membership-own_issued_foreign_return",
+          "amendment-io-acquire-failure",
+          "amendment-io-acquire-defect",
+          "amendment-io-acquire-interrupt",
+          "amendment-io-release-cleanup_failure-after-completed-acquisition",
+          "amendment-operation-success-then-cleanup_failure-poisons-session",
+          "amendment-io-release-cleanup_defect-after-completed-acquisition",
+          "amendment-operation-success-then-cleanup_defect-poisons-session"
+        ],
+        "reason": "Continuing independent FULL review: actual IO acquire callbacks/late cleanup missing; normal operation success followed by release fault must suppress success and poison lifetime"
+      }
+    },
+    "archive_pins": {
+      "source_revision": "d30cae82c383dd24c46040876c3f59c862335816",
+      "archive_rows": [
+        {
+          "path": "apps/cli/tests/surfaces/stdio-control-vectors.ts",
+          "archive": "/private/tmp/healthmd-mcp-stdio-control-355-stdio-control-vectors.ts",
+          "bytes": 2829218,
+          "sha256": "ade419c88eb31202bd8d552793c21c4dd3d46ff6a70b0262adf0c59259206233"
+        },
+        {
+          "path": "docs/migration/effect-refactor/receipts/MCP-STDIO-CONTROL.json",
+          "archive": "/private/tmp/healthmd-mcp-stdio-control-355-MCP-STDIO-CONTROL.json",
+          "bytes": 26677,
+          "sha256": "140d9c4336d9aa17e5532ed7578f963aeb48db989f3f5d791607d499efbc3c35"
+        }
+      ],
+      "case_count": 355,
+      "whole_cases_sha256": "884887236fb578c4fb7bed98d0d48d801ac7d0c1a022c2f8a6b4b62bcf507a8c",
+      "digest_method": "Canonical sorted-key compact UTF8 JSON complete ordered355objects plus LF; source raw file pins above remain separate",
+      "own_patch_digest": "b48ee0ba08dd9529863657820fff3e97d27dbe1689b598cb199944182d2c8a4a"
+    }
+  },
+  "acceptance_results": [
+    {
+      "criterion": "Closed owned interface and full independent literal corpus before implementation",
+      "result": "proposed_pending_review",
+      "evidence": "Own declaration/literal artifact407scenes/all8minima;355original and379firstamendment wholeobjects unchanged; explicit request/IO probes, actual66blockedproducer, actualIOallocationpending/current/scope/foreignreturns/latecleanup and success-then-releasefault scenes appended; no runtime proof."
+    },
+    {
+      "criterion": "Stage1 exact write/resource boundary",
+      "result": "passed_source_inspection_only",
+      "evidence": "Only own vector/partialreceipt written; private-stdio-control-interface only. No module/test/config/package/lock/exports/guard/cohort/core/native/plan writes."
+    },
+    {
+      "criterion": "Common operation ownership/profile distinctions",
+      "result": "proposed_pending_review",
+      "evidence": "One owned session; new concurrent common preparation/execution/render seam; no per-request newRpcSession or second evaluator; trusted common readonly hidden8 denial before acquire/mutation; native2MiB/fullserde separate from private64KiB."
+    },
+    {
+      "criterion": "Runtime/native/public consumer qualification",
+      "result": "not_run_not_claimed",
+      "evidence": "Stage1 authoring only; no implementation/build/ignored-output/read/runtime/product calls."
+    }
+  ],
+  "checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "docs/migration/effect-refactor/manage.py",
+        "brief",
+        "MCP-STDIO-CONTROL"
+      ],
+      "result": "passed_source_inspection_only",
+      "evidence": "Read task target/read_required/source/card/packet/readiness metadata; C11/O01/F01/F09 reference reads"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "python3",
+        "-"
+      ],
+      "result": "passed_inline_authoring_integrity_only",
+      "evidence": "Source-only407uniqueIDs/all8minima; ordered first355/379wholeobjects exactly match archives; actual rawsource/pins and digest recomputed; no compiler/runtime behavior exercised."
+    }
+  ],
+  "not_run_checks": [
+    {
+      "cwd": ".",
+      "argv": [
+        "node",
+        "scripts/typescript-dev/dev.mjs",
+        "check",
+        "cli"
+      ],
+      "result": "not_run_Stage1_declaration_only"
+    },
+    {
+      "cwd": ".",
+      "argv": [
+        "node",
+        "scripts/typescript-dev/dev.mjs",
+        "selected",
+        "cli",
+        "tests/surfaces/stdio-control.test.ts"
+      ],
+      "result": "not_run_module_and_test_not_authorized"
+    },
+    {
+      "cwd": "apps/cli",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "result": "not_run_root_exclusive_later_authorization_required",
+      "expected": "Accepted current core successor617 ordered filesystem negatives+12controls/one physical Effect; unchanged721 baseline titles, no forecast task total"
+    }
+  ],
+  "inspection_summary": "Read-only task/source/design/accepted fixture evidence, then own declaration and literal authoring. No compiler/install/build/runtime/tests/output/native/product/data/credentials/network operations. Independent full Stage1 reviewer must inspect actual full artifact before any implementation. Root alone grants later static/selected iteration and stable full acceptance; do not rerun unchanged full evidence.",
+  "observations": [
+    "Rust admission: cancellation intercept first even invalid version/own ID; ID-absent method-present skip; duplicate inflight before capacity, then envelope valid used reservation; ping ordinary64slot.",
+    "Serial initialize is retained; existing accepted framing/envelope remain serial and supply no concurrency proof. New owned concurrent port seam retains one session usedIDs/initialize/profile.",
+    "Current common query/catalog/MCP adapters remain actual semantics authority; fake {} operation data is not native public query/tool/cancellation coverage.",
+    "Current baseline core64inputs/59outputs/40installedmodules/42packagefiles;CLI149inputs/24outputs;617negatives+12controls/721baseline tests. Earlier40/24personal and105CLI evidence historical only.",
+    "Private publication ACK may already have observed bytes before after-await authority failure; no retraction/rollback claimed. Cleanup precedence framed explicit privateaggregate; original RpcEnvelope precedence unchanged.",
+    "Independent review found request/IO probes missing and65updates only reached65admitted occupancy. Append-only24scene repair retains all355original wholeobjects and historical65scene; new66scene observes blocked producer before ACK.",
+    "Second independent review amendment adds actual io_acquire gate/callback/allocation counters distinct from operation acquisition, cleanup-only late ownership registration, unknown returned IO membership-first rejection, and normal successful operation then cleanupfailure/defect with no successwire and poisoned lifetime."
+  ],
+  "limitations": [
+    "Amended Stage1 proposal pending continuing independent full interface/literal/source-pin review; no implementation acceptance or runtime qualification.",
+    "Source scalar serde/lossy/native2MiB exact parsing/rendering, real pipe stdout/backpressure/OSprincipal, devices/auth/grants/state/publicwire/canonical cancellation/durablejobcancel remain unqualified.",
+    "Synthetic canceled Effect has no response and waits releaseACK; native common owner may return canonical cancellation result, not implemented here. Possible native commit stays ambiguous.",
+    "No public export/schema/protocol/package/lock/cohort/guard/launcher/version changes or Rust/reference/fixture/install retirement."
+  ],
+  "remaining_qualification": [
+    {
+      "owner": "independent core/CLI/privacy reviewer",
+      "trigger": "Full Stage1 scoped artifact review at source+ownvector patch fingerprint",
+      "required": "Resolve all interface/literal omissions BEFORE implementation/test/compiler/build/runtime"
+    },
+    {
+      "owner": "root coordinator/control writer",
+      "trigger": "Independent Stage1 accepted; explicit bounded Stage2 authorization",
+      "required": "Private module/test only; common dispatcher binding without duplicate evaluator; static then selected iteration"
+    },
+    {
+      "owner": "root coordinator",
+      "trigger": "Stable implemented source/fixtures/review; exclusive cli-candidate-build and qualified-core resources; accepted current or successor core admission",
+      "required": "Full apps/cli npm run check/consumer checks; preserve exact unchanged passing evidence, no unchanged full reruns"
+    },
+    {
+      "owner": "MCP/CLI envelope/framing/codec/catalog/resources family owners",
+      "trigger": "Real source-semantic native/public transport integration authorized with pinned dependency contracts",
+      "required": "Full2MiB/lossy/serde integer/f64/unknown/duplicate/overflow/parser/serializer; real pipe and native canonical cancellation; current21full/13readonly MCP and14commands(+HTTP) catalog/result/exit/resource parity; donor40tools separate"
+    },
+    {
+      "owner": "pairing/HTTP/OAuth/source-auth/credential/state/export/durable-job/native-distribution/external-consumer owners",
+      "trigger": "Own bounded task grants, real host fixtures and qualification receipts",
+      "required": "Actual caller/source/purpose/destination/suppression grants; pairing QR/trust; device/state credential principals; HTTP auth; durablecommit/cancellation ambiguity; public launchers/Obsidian channels/retirement independent"
+    }
+  ],
+  "rollback": "Revert own private artifacts; retain current executable/state/readers/receipts and independently admitted packed core/CLI cohort together. No user configuration mutation.",
+  "review": {
+    "status": "pending",
+    "reviewer": null,
+    "fingerprint": null
+  }
+}

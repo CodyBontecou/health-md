@@ -5436,4 +5436,10 @@
     <priority>0.7</priority>
   </url>
   <!-- END GENERATED VISUALIZATION URLS -->
+  <url>
+    <loc>https://healthmd.app/apple-health-cli/</loc>
+    <lastmod>2026-10-09</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
 </urlset>

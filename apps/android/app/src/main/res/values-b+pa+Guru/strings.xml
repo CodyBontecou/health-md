@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">ਅਧਿਕਾਰਤ F-Droid ਬਿਲਡ ਵਿੱਚ ਸਾਰੀਆਂ ਲੋਕਲ ਐਕਸਪੋਰਟ ਅਤੇ ਆਟੋਮੇਸ਼ਨ ਵਿਸ਼ੇਸ਼ਤਾਵਾਂ ਮੁਫ਼ਤ ਸ਼ਾਮਲ ਹਨ।</string>
     <string name="fdroid_onboarding_no_purchase">ਖਰੀਦ, ਰੀਸਟੋਰ, ਕੀਮਤ ਜਾਂ Play ਖਾਤੇ ਦੀ ਲੋੜ ਨਹੀਂ ਹੈ।</string>
     <string name="fdroid_onboarding_no_play_services">ਤਹਿ ਕੀਤੇ ਐਕਸਪੋਰਟ Google Play Billing ਤੋਂ ਬਿਨਾਂ ਕੰਮ ਕਰਦੇ ਹਨ।</string>
+    <string name="myself_claim_title">myself.md ਲਈ ਪਹੁੰਚ ਪ੍ਰਾਪਤ ਕਰੋ</string>
+    <string name="myself_claim_subtitle">ਪਹਿਲਾਂ ਖਰੀਦਣ ਵਾਲਿਆਂ ਲਈ ਮੁਫ਼ਤ ਜੀਵਨ ਭਰ ਦੀ ਪਹੁੰਚ</string>
+    <string name="myself_claim_disclosure">ਯੋਗਤਾ ਦੀ ਜਾਂਚ ਲਈ ਅਸੀਂ ਤੁਹਾਡੀ Google Play ਖਰੀਦ ਦਾ ਸਬੂਤ myself.md ਨੂੰ ਭੇਜਾਂਗੇ। ਤੁਹਾਡਾ ਸਿਹਤ ਡੇਟਾ ਤੁਹਾਡੀ ਡਿਵਾਈਸ ਉੱਤੇ ਰਹੇਗਾ। ਫਿਰ ਸਾਈਨ ਇਨ ਕਰਕੇ ਜੀਵਨ ਭਰ ਦੀ ਪਹੁੰਚ ਲਈ ਖਾਤਾ ਚੁਣੋ। ਹਰ ਅਸਲ ਖਰੀਦ ਨੂੰ ਇੱਕ ਖਾਤੇ ਨਾਲ ਜੋੜਿਆ ਜਾ ਸਕਦਾ ਹੈ।</string>
+    <string name="myself_claim_continue">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਕਰਕੇ ਅੱਗੇ ਵਧੋ</string>
+    <string name="myself_claim_verifying">ਖਰੀਦ ਦੀ ਪੁਸ਼ਟੀ ਹੋ ਰਹੀ ਹੈ…</string>
 </resources>

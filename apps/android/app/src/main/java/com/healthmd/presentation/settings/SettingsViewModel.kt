@@ -12,6 +12,8 @@ import com.healthmd.domain.distribution.DistributionPolicy
 import com.healthmd.domain.model.*
 import com.healthmd.domain.repository.EntitlementRepository
 import com.healthmd.domain.repository.SettingsRepository
+import com.healthmd.domain.repository.PurchaseRepository
+import com.healthmd.data.billing.MyselfClaimService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -32,7 +34,30 @@ class SettingsViewModel @Inject constructor(
     private val diagnosticsReporter: HealthProviderDiagnosticsReporter,
     private val entitlementRepository: EntitlementRepository,
     val distributionPolicy: DistributionPolicy,
+    private val purchaseRepository: PurchaseRepository,
 ) : ViewModel() {
+
+    val myselfClaimBusy = MutableStateFlow(false)
+    val myselfClaimError = MutableStateFlow<String?>(null)
+
+    fun claimMyselfAccess(onReady: (String) -> Unit) {
+        if (myselfClaimBusy.value) return
+        myselfClaimBusy.value = true
+        myselfClaimError.value = null
+        viewModelScope.launch {
+            try {
+                val token = purchaseRepository.migrationPurchaseToken()
+                    ?: error("No qualifying purchase found. Use the Google Account that bought Health.md and restore your purchase.")
+                onReady(MyselfClaimService.createClaim(token))
+            } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                myselfClaimError.value = error.message ?: "Purchase verification failed. Please try again."
+            } finally {
+                myselfClaimBusy.value = false
+            }
+        }
+    }
 
     val settings: StateFlow<ExportSettings> = settingsRepository.exportSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ExportSettings())

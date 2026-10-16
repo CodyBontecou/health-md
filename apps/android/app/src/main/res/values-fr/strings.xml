@@ -1449,4 +1449,9 @@
     <string name="fdroid_onboarding_access_body">La version F-Droid officielle inclut gratuitement toutes les fonctions locales d’exportation et d’automatisation.</string>
     <string name="fdroid_onboarding_no_purchase">Aucun achat, rétablissement, prix ou compte Play n’est requis.</string>
     <string name="fdroid_onboarding_no_play_services">Les exportations planifiées fonctionnent sans Google Play Billing.</string>
+    <string name="myself_claim_title">Obtenir un accès à myself.md</string>
+    <string name="myself_claim_subtitle">Accès à vie offert aux clients existants</string>
+    <string name="myself_claim_disclosure">Nous enverrons votre preuve d’achat Google Play à myself.md pour vérifier votre éligibilité. Vos données de santé restent sur votre appareil. Connectez-vous ensuite pour choisir le compte qui recevra l’accès à vie. Chaque achat initial peut être lié à un seul compte.</string>
+    <string name="myself_claim_continue">Vérifier l’achat et continuer</string>
+    <string name="myself_claim_verifying">Vérification de l’achat…</string>
 </resources>

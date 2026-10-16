@@ -16,6 +16,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,10 +58,32 @@ fun SettingsScreen(
     val protectionEnabled by viewModel.preventAccidentalChanges.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val claimBusy by viewModel.myselfClaimBusy.collectAsStateWithLifecycle()
+    val claimError by viewModel.myselfClaimError.collectAsStateWithLifecycle()
+    var showClaimDisclosure by remember { mutableStateOf(false) }
     val protectionRequester = remember { BringIntoViewRequester() }
 
     LaunchedEffect(protectionSettingsRequestId) {
         if (protectionSettingsRequestId != null) protectionRequester.bringIntoView()
+    }
+
+    if (showClaimDisclosure) {
+        AlertDialog(
+            onDismissRequest = { showClaimDisclosure = false },
+            title = { Text(stringResource(R.string.myself_claim_title)) },
+            text = { Text(stringResource(R.string.myself_claim_disclosure)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showClaimDisclosure = false
+                    viewModel.claimMyselfAccess { url ->
+                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                    }
+                }) { Text(stringResource(R.string.myself_claim_continue)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClaimDisclosure = false }) { Text(stringResource(android.R.string.cancel)) }
+            },
+        )
     }
 
     Column(
@@ -118,6 +142,17 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(Spacing.sm))
+
+        if (distributionPolicy.purchasesAvailable) {
+            SettingsNavigationCard(
+                title = stringResource(R.string.myself_claim_title),
+                subtitle = stringResource(R.string.myself_claim_subtitle),
+                icon = Icons.Outlined.CardGiftcard,
+                onClick = { if (!claimBusy) showClaimDisclosure = true },
+            )
+            if (claimBusy) Text(stringResource(R.string.myself_claim_verifying), style = MaterialTheme.typography.bodyMedium)
+            claimError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+        }
 
         WidgetSettingsCard()
         if (distributionPolicy.wearSyncAvailable) {

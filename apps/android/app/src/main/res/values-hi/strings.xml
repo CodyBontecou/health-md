@@ -1375,4 +1375,9 @@
     <string name="fdroid_onboarding_access_body">आधिकारिक F-Droid बिल्ड में सभी स्थानीय एक्सपोर्ट और ऑटोमेशन सुविधाएँ मुफ़्त शामिल हैं।</string>
     <string name="fdroid_onboarding_no_purchase">खरीद, रीस्टोर, कीमत या Play खाते की आवश्यकता नहीं है।</string>
     <string name="fdroid_onboarding_no_play_services">शेड्यूल किए गए एक्सपोर्ट Google Play Billing के बिना काम करते हैं।</string>
+    <string name="myself_claim_title">myself.md का ऐक्सेस पाएँ</string>
+    <string name="myself_claim_subtitle">पहले खरीद चुके लोगों के लिए मुफ़्त आजीवन ऐक्सेस</string>
+    <string name="myself_claim_disclosure">पात्रता जाँचने के लिए हम आपकी Google Play खरीद का प्रमाण myself.md को भेजेंगे। आपका स्वास्थ्य डेटा आपके डिवाइस पर रहेगा। फिर साइन इन करके आजीवन ऐक्सेस पाने वाला खाता चुनें। हर मूल खरीद को एक खाते से जोड़ा जा सकता है।</string>
+    <string name="myself_claim_continue">खरीद की पुष्टि करके आगे बढ़ें</string>
+    <string name="myself_claim_verifying">खरीद की पुष्टि हो रही है…</string>
 </resources>
