@@ -124,7 +124,7 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
 
     if (preview != null) {
         Column(Modifier.fillMaxSize().padding(Spacing.md)) {
-            SecondaryButton(stringResource(R.string.diagnostics_back), onClick = { preview = null }, icon = Icons.AutoMirrored.Outlined.ArrowBack)
+            SecondaryButton(stringResource(R.string.back), onClick = { preview = null }, icon = Icons.AutoMirrored.Outlined.ArrowBack)
             SelectionContainer {
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(Spacing.sm)) {
                     item { Text(preview!!.first, style = GeistType.heading20, color = AppColors.textPrimary) }
@@ -138,7 +138,7 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = Spacing.md), state = listState, verticalArrangement = Arrangement.spacedBy(Spacing.md), contentPadding = PaddingValues(vertical = Spacing.md)) {
         item {
-            SecondaryButton(stringResource(R.string.diagnostics_back), onBack, icon = Icons.AutoMirrored.Outlined.ArrowBack, enabled = !busy)
+            SecondaryButton(stringResource(R.string.back), onBack, icon = Icons.AutoMirrored.Outlined.ArrowBack, enabled = !busy)
             Text(stringResource(R.string.diagnostics_title), style = GeistType.heading24, color = AppColors.textPrimary)
         }
         item {
@@ -210,12 +210,12 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
             confirmShare = false
             prepared?.let { bundle -> scope.launch { busy = true; runCatching { withContext(Dispatchers.IO) { DiagnosticSharing.share(context, bundle) } }.onFailure { error = failureText }; busy = false } }
         }) { Text(stringResource(R.string.diagnostics_share_confirm)) } },
-        dismissButton = { TextButton(onClick = { confirmShare = false }) { Text(stringResource(R.string.diagnostics_cancel)) } },
+        dismissButton = { TextButton(onClick = { confirmShare = false }) { Text(stringResource(R.string.cancel)) } },
     )
     if (confirmClear) AlertDialog(
         onDismissRequest = { confirmClear = false }, title = { Text(stringResource(R.string.diagnostics_clear)) }, text = { Text(stringResource(R.string.diagnostics_clear_question)) },
         confirmButton = { TextButton(onClick = { confirmClear = false; scope.launch { busy = true; invalidate(); val cleared = withContext(Dispatchers.IO) { val local = store.clear(); DiagnosticSharing.clearCopies(context) && local }; if (!cleared) error = failureText; settings = store.settings; attachments = emptyList(); snapshot = DiagnosticSnapshot(emptyList(), 0, 0, false); busy = false } }) { Text(stringResource(R.string.diagnostics_clear)) } },
-        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.diagnostics_cancel)) } },
+        dismissButton = { TextButton(onClick = { confirmClear = false }) { Text(stringResource(R.string.cancel)) } },
     )
 }
 

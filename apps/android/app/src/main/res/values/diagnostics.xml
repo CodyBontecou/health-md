@@ -20,7 +20,7 @@
     <string name="diagnostics_include_private">Include Recorded Private Context</string>
     <string name="diagnostics_search">Search Event IDs or Fields</string>
     <string name="diagnostics_refresh">Refresh Events</string>
-    <string name="diagnostics_summary">%1$d events · %2$d session drops · %3$d invalid · truncated=%4$s</string>
+    <string name="diagnostics_summary">Events: %1$d · Session drops: %2$d · Invalid: %3$d · Truncated: %4$s</string>
     <string name="diagnostics_view_limit">Showing the newest 100 matching events. The bundle includes the selected snapshot, up to 10,000 events; any truncation is disclosed.</string>
     <string name="diagnostics_attachments">Optional Attachments</string>
     <string name="diagnostics_attachment_description">Add any existing files, including health exports or screenshots. Original bytes are copied unchanged and are NOT scrubbed. Source filenames are included. No new health reads are made. Limit: 50 files / 100 MiB.</string>
@@ -28,7 +28,7 @@
     <string name="diagnostics_remove">Remove %1$s</string>
     <string name="diagnostics_prepare">Prepare Bundle</string>
     <string name="diagnostics_review">Prepare and Review</string>
-    <string name="diagnostics_frozen">Frozen snapshot: %1$d events. Health content: %2$s. ZIP is not encrypted.</string>
+    <string name="diagnostics_frozen">Frozen snapshot. Events: %1$d. Health content: %2$s. ZIP is not encrypted.</string>
     <string name="diagnostics_reviewed">I Reviewed the Files I Want to Share</string>
     <string name="diagnostics_share">Share Reviewed ZIP</string>
     <string name="diagnostics_save">Save Reviewed ZIP</string>
@@ -39,6 +39,4 @@
     <string name="diagnostics_preview_truncated">\n\n[Preview truncated at 128 KiB. Full original file remains in the ZIP.]</string>
     <string name="diagnostics_failure">Diagnostics operation failed. Check file access and local storage, then prepare and review again.</string>
     <string name="diagnostics_invalid_operation">Operation ID must be a UUID.</string>
-    <string name="diagnostics_cancel">Cancel</string>
-    <string name="diagnostics_back">Back</string>
 </resources>

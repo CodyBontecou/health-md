@@ -16,6 +16,7 @@ import androidx.work.ForegroundInfo
 import androidx.work.WorkerParameters
 import com.healthmd.HealthMdApplication
 import com.healthmd.diagnostics.Diagnostics
+import com.healthmd.diagnostics.diagnosticOutcome
 import com.healthmd.diagnostics.DiagnosticEventID
 import com.healthmd.diagnostics.DiagnosticField
 import com.healthmd.diagnostics.DiagnosticValue
@@ -84,7 +85,7 @@ class ExportWorker @AssistedInject constructor(
         return try {
             if (ScheduledExportOccurrence.fromWorkData(inputData) != null) setForeground(getForegroundInfo())
             val result = doWorkManaged()
-            Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(when (result) { is Result.Success -> "success"; is Result.Failure -> "failure"; else -> "retry" })))
+            Diagnostics.record(DiagnosticEventID.WORKER_RESULT, identity + (DiagnosticField.REASON to DiagnosticValue.Text(result.diagnosticOutcome())))
             result
         } finally {
             Diagnostics.record(DiagnosticEventID.ATTEMPT_FINISHED, identity)
