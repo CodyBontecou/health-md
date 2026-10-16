@@ -678,6 +678,11 @@ class ScheduledProfileExportWorker @AssistedInject constructor(
                 .build()
             manager.notify(NOTIFICATION_REQUEST_CODE, notification)
             Diagnostics.record(DiagnosticEventID.NOTIFICATION_REQUESTED, mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())))
+        }.onFailure { error ->
+            Diagnostics.record(
+                DiagnosticEventID.NOTIFICATION_FAILED,
+                Diagnostics.errorFields(error) + (DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())),
+            )
         }
     }
 

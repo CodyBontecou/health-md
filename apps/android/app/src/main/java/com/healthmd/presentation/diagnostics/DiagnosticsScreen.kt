@@ -27,7 +27,7 @@ import com.healthmd.presentation.theme.AppColors
 import com.healthmd.presentation.theme.GeistType
 import com.healthmd.presentation.theme.Spacing
 import java.time.Instant
-import java.util.UUID
+import java.util.Locale
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -102,18 +102,18 @@ fun DiagnosticsScreen(onBack: () -> Unit) {
     LaunchedEffect(hours, subsystem, operationId, includePrivate, refreshTick) {
         // Cancellation prevents an old private snapshot replacing a new public one.
         invalidate(); snapshot = DiagnosticSnapshot(emptyList(), 0, 0, false)
-        snapshot = withContext(Dispatchers.IO) { store.snapshot(includePrivate, System.currentTimeMillis() - hours * 3_600_000L, subsystem.takeUnless { it == "all" }, operationId.lowercase().takeUnless(String::isBlank)) }
+        snapshot = withContext(Dispatchers.IO) { store.snapshot(includePrivate, System.currentTimeMillis() - hours * 3_600_000L, subsystem.takeUnless { it == "all" }, operationId.lowercase(Locale.ROOT).takeUnless(String::isBlank)) }
     }
 
     fun prepare() {
-        if (operationId.isNotBlank() && runCatching { UUID.fromString(operationId) }.isFailure) { error = context.getString(R.string.diagnostics_invalid_operation); return }
+        if (operationId.isNotBlank() && !DiagnosticBundleBuilder.isCanonicalOperationId(operationId.lowercase(Locale.ROOT))) { error = context.getString(R.string.diagnostics_invalid_operation); return }
         invalidate(); busy = true
         val selected = attachments.toList()
         scope.launch {
             runCatching { withContext(Dispatchers.IO) {
                 DiagnosticBundleBuilder.prepare(
                     store, includePrivate, System.currentTimeMillis() - hours * 3_600_000L,
-                    subsystem.takeUnless { it == "all" }, operationId.lowercase().takeUnless(String::isBlank),
+                    subsystem.takeUnless { it == "all" }, operationId.lowercase(Locale.ROOT).takeUnless(String::isBlank),
                     selected.map { (uri, name) -> DiagnosticAttachment(name) { context.contentResolver.openInputStream(uri) ?: throw DiagnosticBundleException("Attachment unavailable") } },
                     BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE.toString(), "Android ${Build.VERSION.RELEASE} / API ${Build.VERSION.SDK_INT}",
                 )

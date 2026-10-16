@@ -20,6 +20,32 @@ class DiagnosticStoreTest {
     @After fun cleanup() { stores.forEach { it.close() }; root.deleteRecursively() }
     private fun store(limit: Long = DiagnosticStore.DEFAULT_BYTE_LIMIT, clock: () -> Long = System::currentTimeMillis) = DiagnosticStore(File(root, UUID.randomUUID().toString()), limit, clock).also { stores += it }
 
+    @Test fun abbreviatedOperationIdCannotProduceAnInvalidBundle() {
+        val store = store()
+        assertThrows(DiagnosticBundleException::class.java) {
+            DiagnosticBundleBuilder.prepare(store, operationId = "1-1-1-1-1")
+        }
+        assertThat(File(store.directory, "bundles").exists()).isFalse()
+    }
+
+    @Test fun canonicalOperationIdSelectsTheOriginalOperationEvents() {
+        val store = store()
+        val operation = "12345678-1234-1234-1234-123456789abc"
+        store.record(DiagnosticEventID.NOTIFICATION_FAILED, mapOf(
+            DiagnosticField.OPERATION_ID to DiagnosticValue.Text(operation),
+            DiagnosticField.ERROR_DOMAIN to DiagnosticValue.Text("SecurityException"),
+        ))
+        store.record(DiagnosticEventID.APP_STARTED)
+        val recorded = store.snapshot()
+        assertThat(recorded.droppedEventCount).isEqualTo(0)
+        assertThat(recorded.events).hasSize(2)
+        assertThat(recorded.events.first { it.eventId == "notification.request_failed" }.fields["operation_id"]?.jsonPrimitive?.content).isEqualTo(operation)
+        val bundle = DiagnosticBundleBuilder.prepare(store, operationId = operation)
+        assertThat(bundle.manifest["selection_operation_id"]?.jsonPrimitive?.content).isEqualTo(operation)
+        assertThat(bundle.manifest["event_count"]?.jsonPrimitive?.int).isEqualTo(1)
+        assertThat(File(bundle.directory, "events.jsonl").readText()).contains("notification.request_failed")
+    }
+
     @Test fun sharedPrivacyFixtureRejectsUnknownFieldsAndRootData() {
         val repository = generateSequence(File(requireNotNull(System.getProperty("user.dir")))) { it.parentFile }.first { File(it, "packages/contracts").isDirectory }
         val fixture = Json.parseToJsonElement(File(repository, "packages/contracts/diagnostics/v1/fixtures/privacy.json").readText()).jsonObject

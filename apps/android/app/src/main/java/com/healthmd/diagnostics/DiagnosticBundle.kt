@@ -57,6 +57,10 @@ data class PreparedDiagnosticBundle(val directory: File, val zip: File, val zipS
 /** A frozen, local ZIP; never a health query or upload. Attachment streams are user-selected. */
 object DiagnosticBundleBuilder {
     const val ATTACHMENT_BYTE_LIMIT = 100 * 1024 * 1024L
+
+    fun isCanonicalOperationId(value: String): Boolean =
+        runCatching { UUID.fromString(value).toString() == value }.getOrDefault(false)
+
     val README = """
         Health.md diagnostics v1
 
@@ -94,6 +98,9 @@ object DiagnosticBundleBuilder {
         appBuild: String = "unavailable",
         osVersion: String = "unavailable",
     ): PreparedDiagnosticBundle {
+        if (operationId != null && !isCanonicalOperationId(operationId)) {
+            throw DiagnosticBundleException("Enter a complete canonical operation UUID.")
+        }
         if (attachments.size > 50) throw DiagnosticBundleException("Attachments exceed 50 files. Remove files and prepare again.")
         require(!Files.isSymbolicLink(store.directory.toPath()))
         val root = File(store.directory, "bundles")

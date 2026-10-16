@@ -929,7 +929,10 @@ class ExportWorker @AssistedInject constructor(
             manager.notify(notificationId, notification)
             Diagnostics.record(DiagnosticEventID.NOTIFICATION_REQUESTED, mapOf(DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())))
         } catch (error: RuntimeException) {
-            Diagnostics.record(DiagnosticEventID.NOTIFICATION_FAILED, Diagnostics.errorFields(error))
+            Diagnostics.record(
+                DiagnosticEventID.NOTIFICATION_FAILED,
+                Diagnostics.errorFields(error) + (DiagnosticField.OPERATION_ID to DiagnosticValue.Text(id.toString())),
+            )
             throw error
         }
     }
