@@ -1350,7 +1350,10 @@ struct ContentView: View {
         detail: FailedDateDetail? = nil
     ) {
         errorReason = reason
-        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
+        let description = detail?.detailedMessage ?? reason.detailedDescription
+        errorMessage = reason == .noHealthData
+            ? "\(description)\n\n\(reason.recoverySuggestion)"
+            : description
         showError = true
     }
 

@@ -160,14 +160,22 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
             // page (the exact bounded/pending execution failures showed no travel).
             let export = app.buttons[UITestLaunchHelper.Export.exportButton]
             if (!exists || element.identifier != UITestLaunchHelper.Export.exportButton) && export.exists && export.isHittable {
-                // SchedulingExportFooter adds 8pt inner and 12pt top padding;
-                // its hit-testing area begins above the button's AX frame.
-                bottom = min(bottom, export.frame.minY - 20)
-                let quota = app.staticTexts[UITestLaunchHelper.Export.freeExportsLabel]
-                if quota.exists { bottom = min(bottom, quota.frame.minY - 20) }
+                let exportFrame = export.frame
+                // The phone footer occludes the bottom of the scroll viewport.
+                // The iPad action is in the top header; treating it as a footer
+                // reduces pans to the status bar and never reveals lower cards.
+                if exportFrame.midY > viewport.midY {
+                    // SchedulingExportFooter adds 8pt inner and 12pt top padding.
+                    bottom = min(bottom, exportFrame.minY - 20)
+                    let quota = app.staticTexts[UITestLaunchHelper.Export.freeExportsLabel]
+                    if quota.exists { bottom = min(bottom, quota.frame.minY - 20) }
+                }
             }
             let status = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
-            if status.exists { bottom = min(bottom, status.frame.minY) }
+            if status.exists {
+                let statusFrame = status.frame
+                if statusFrame.midY > viewport.midY { bottom = min(bottom, statusFrame.minY) }
+            }
             let visible = CGRect(x: viewport.minX, y: viewport.minY,
                                  width: viewport.width, height: max(0, bottom - viewport.minY)).insetBy(dx: 4, dy: 4)
             let center = exists ? CGPoint(x: element.frame.midX, y: element.frame.midY) : .zero
