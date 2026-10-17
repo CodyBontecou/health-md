@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import copy
+import hashlib
+import io
 import json
 import os
 import plistlib
@@ -11,6 +13,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,6 +22,7 @@ SCRIPTS = Path(__file__).resolve().parents[1]
 REPO = SCRIPTS.parents[2]
 sys.path.insert(0, str(SCRIPTS))
 from validate_ios_ui_xctestrun import BUILD_MARKER, qualify  # noqa: E402
+from prepared_ios_ui_artifacts import digest, pack, restore  # noqa: E402
 
 SOURCE_SHA = "a" * 40
 EXPECTED_TESTS = [
@@ -106,6 +110,92 @@ class ArtifactQualificationTests(unittest.TestCase):
                 self.assertEqual(receipt["source_sha"], SOURCE_SHA)
                 self.assertEqual(len(receipt["products"]), 3)
                 self.assertNotIn("preserve-this-value", json.dumps(receipt))
+
+    def test_prepared_transfer_preserves_manifest_bytes_modes_and_compile_log(self) -> None:
+        manifest, _ = make_products(self.derived)
+        (self.derived / "compile.log").write_text("original compiler warning evidence\n")
+        app_binary = manifest.parent / "Debug-iOS-iphonesimulator/HealthMd.app/HealthMd"
+        app_binary.chmod(0o755)
+        archive = self.derived.parent / "products.tar.gz"
+        checksum = pack(self.derived, SOURCE_SHA, archive)
+        destination = self.derived.parent / "another-runner-root"
+        destination.mkdir()
+        copied, receipt = restore(archive, destination, SOURCE_SHA, checksum)
+        self.assertEqual(copied.read_bytes(), manifest.read_bytes())
+        self.assertEqual((destination / "compile.log").read_text(), "original compiler warning evidence\n")
+        self.assertEqual((destination / app_binary.relative_to(self.derived)).stat().st_mode & 0o777, 0o755)
+        self.assertEqual(receipt["prepared_archive_sha256"], checksum)
+        for source, digest in (("b" * 40, checksum), (SOURCE_SHA, "0" * 64)):
+            empty = self.derived.parent / ("rejected-" + source[:1] + digest[:1])
+            empty.mkdir()
+            with self.assertRaises(ValueError):
+                restore(archive, empty, source, digest)
+            self.assertEqual(list(empty.iterdir()), [])
+
+    def test_prepared_transfer_rejects_modified_archive_and_nonempty_restore(self) -> None:
+        make_products(self.derived)
+        (self.derived / "compile.log").write_text("compiler evidence\n")
+        archive = self.derived.parent / "products.tar.gz"
+        checksum = pack(self.derived, SOURCE_SHA, archive)
+        with self.assertRaisesRegex(ValueError, "empty"):
+            restore(archive, self.derived, SOURCE_SHA, checksum)
+        with archive.open("ab") as file:
+            file.write(b"altered transport")
+        empty = self.derived.parent / "empty"
+        empty.mkdir()
+        with self.assertRaisesRegex(ValueError, "digest"):
+            restore(archive, empty, SOURCE_SHA, checksum)
+        self.assertEqual(list(empty.iterdir()), [])
+
+    def test_prepared_inventory_and_native_attestation_fail_closed(self) -> None:
+        make_products(self.derived)
+        (self.derived / "compile.log").write_text("compiler evidence\n")
+        archive = self.derived.parent / "original.tar.gz"
+        pack(self.derived, SOURCE_SHA, archive)
+        for scenario in ("path", "symlink", "size", "mode", "content", "attestation", "missing-log", "duplicate"):
+            with self.subTest(scenario=scenario):
+                with tarfile.open(archive) as bundle:
+                    entries = [(copy.copy(member), bundle.extractfile(member).read()) for member in bundle.getmembers()]
+                metadata = json.loads(entries[0][1])
+                index = next(i for i, (member, _) in enumerate(entries)
+                             if member.name.endswith("/HealthMd.app/HealthMd"))
+                member, data = entries[index]
+                inventory = next(item for item in metadata["files"] if "products/" + item["path"] == member.name)
+                if scenario == "path":
+                    member.name = "products/../../outside"
+                    inventory["path"] = "../../outside"
+                elif scenario == "symlink":
+                    member.type = tarfile.SYMTYPE
+                    member.linkname = "../../outside"
+                elif scenario == "size":
+                    inventory["size"] += 1
+                elif scenario == "mode":
+                    member.mode ^= 0o100
+                elif scenario in ("content", "attestation"):
+                    data = b"altered native bytes"
+                    member.size = len(data)
+                    inventory["size"] = len(data)
+                    if scenario == "attestation":
+                        inventory["sha256"] = hashlib.sha256(data).hexdigest()
+                elif scenario == "missing-log":
+                    metadata["files"] = [item for item in metadata["files"] if item["path"] != "compile.log"]
+                    entries = [(m, d) for m, d in entries if m.name != "products/compile.log"]
+                elif scenario == "duplicate":
+                    entries.append((copy.copy(member), data))
+                if scenario in ("content", "attestation"):
+                    entries[index] = (member, data)
+                encoded = json.dumps(metadata).encode()
+                entries[0][0].size = len(encoded)
+                entries[0] = (entries[0][0], encoded)
+                changed = self.derived.parent / (scenario + ".tar.gz")
+                with tarfile.open(changed, "w:gz") as bundle:
+                    for info, content in entries:
+                        bundle.addfile(info, io.BytesIO(content))
+                destination = self.derived.parent / (scenario + "-restore")
+                destination.mkdir()
+                with self.assertRaises(ValueError):
+                    restore(changed, destination, SOURCE_SHA, digest(changed))
+                self.assertFalse((self.derived.parent / "outside").exists())
 
     def test_missing_ambiguous_stale_and_unmarked_artifacts_fail_closed(self) -> None:
         with self.assertRaises(ValueError):
@@ -229,7 +319,9 @@ class ArtifactQualificationTests(unittest.TestCase):
 def ui_steps() -> tuple[str, dict[str, str]]:
     workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
     job = workflow.split("  test-ios-ui:\n", 1)[1].split("\n  connectivity-package:", 1)[0]
-    pieces = re.split(r"^      - name: ", job, flags=re.MULTILINE)[1:]
+    preparation = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
+    pieces = re.split(r"^      - name: ", preparation, flags=re.MULTILINE)[1:]
+    pieces += re.split(r"^      - name: ", job, flags=re.MULTILINE)[1:]
     return job, {piece.splitlines()[0]: piece for piece in pieces}
 
 
@@ -239,6 +331,17 @@ def shell_body(step: str) -> str:
 
 
 class WorkflowExecutionTests(unittest.TestCase):
+    def test_preparation_does_not_consume_the_bounded_native_execution_job(self) -> None:
+        workflow = (REPO / ".github/workflows/apple-ci.yml").read_text()
+        self.assertNotIn("Build UI test artifacts once", self.job)
+        self.assertIn("prepare-ui-artifacts", self.job.split("    steps:", 1)[0])
+        prepared = workflow.split("  prepare-ui-artifacts:\n", 1)[1].split("\n  test-ios-ui:", 1)[0]
+        self.assertIn("Build UI test artifacts once", prepared)
+        self.assertIn("prepare-shared-core", prepared.split("    steps:", 1)[0])
+        self.assertEqual(workflow.count("xcodebuild build-for-testing"), 1)
+        gate = workflow.split("  gate:\n", 1)[1]
+        self.assertIn("needs.prepare-ui-artifacts.result", gate)
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
@@ -247,7 +350,7 @@ class WorkflowExecutionTests(unittest.TestCase):
         self.bin.mkdir()
         scripts = self.root / "scripts"
         scripts.mkdir()
-        for name in ("validate_ios_ui_xctestrun.py", "run-owned-ui.py"):
+        for name in ("validate_ios_ui_xctestrun.py", "run-owned-ui.py", "prepared_ios_ui_artifacts.py"):
             shutil.copy(SCRIPTS / name, scripts)
         self.calls = self.root / "calls.jsonl"
         self.device_calls = self.root / "device-calls.jsonl"
@@ -294,17 +397,30 @@ class WorkflowExecutionTests(unittest.TestCase):
         script = script.replace("${{ steps.ui_artifacts.outputs.xctestrun }}", artifact)
         script = script.replace("${{ steps.ui_artifacts.outputs.app }}", self.app if artifact else "")
         script = script.replace("${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=SYNTHETIC-IPHONE")
+        script = script.replace("${{ steps.ui_artifacts.outputs.derived_data }}", getattr(self, "derived", ""))
+        script = script.replace("${{ needs.prepare-ui-artifacts.outputs.sha256 }}", getattr(self, "archive_sha", ""))
         return subprocess.run(["bash", "-e", "-o", "pipefail", "-c", script], cwd=self.root, env=self.environment, text=True, capture_output=True)
 
     def build(self) -> str:
         result = self.run_step("Build UI test artifacts once")
         self.assertEqual(result.returncode, 0, result.stderr)
         outputs = dict(line.split("=", 1) for line in self.output.read_text().splitlines())
-        self.assertEqual(set(outputs), {"xctestrun", "app"})
+        self.assertEqual(set(outputs), {"xctestrun", "app", "derived_data"})
         receipt = json.loads((self.root / "build/logs/ios-ui-build-receipt.json").read_text())
         self.app = outputs["app"]
         self.assertEqual(self.app, receipt["products"][0]["path"])
-        return outputs["xctestrun"]
+        self.derived = outputs["derived_data"]
+        self.output.write_text("")
+        packed = self.run_step("Package qualified UI products and compile log")
+        self.assertEqual(packed.returncode, 0, packed.stderr)
+        self.archive_sha = dict(line.split("=", 1) for line in self.output.read_text().splitlines())["sha256"]
+        self.output.write_text("")
+        restored = self.run_step("Verify restored UI products")
+        self.assertEqual(restored.returncode, 0, restored.stderr)
+        consumer = dict(line.split("=", 1) for line in self.output.read_text().splitlines())
+        self.assertEqual(set(consumer), {"xctestrun", "app"})
+        self.app = consumer["app"]
+        return consumer["xctestrun"]
 
     def test_one_generic_build_and_two_run_only_commands_share_exact_artifact(self) -> None:
         artifact = self.build()

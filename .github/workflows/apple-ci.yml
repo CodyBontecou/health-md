@@ -369,12 +369,14 @@ jobs:
             apps/apple/build/logs/build-macos.log
           retention-days: 14
 
-  test-ios-ui:
-    name: iOS UI regressions
+  prepare-ui-artifacts:
+    name: Prepare qualified UI products once
     needs: [changes, prepare-shared-core]
     if: ${{ needs.changes.outputs.run == 'true' }}
     runs-on: xcode-27
-    timeout-minutes: 60
+    timeout-minutes: 20
+    outputs:
+      sha256: ${{ steps.package.outputs.sha256 }}
     defaults:
       run:
         working-directory: apps/apple
@@ -447,6 +449,96 @@ jobs:
             --derived-data "$MD_UI_DERIVED_DATA" \
             --source-sha "$(git rev-parse HEAD)" \
             --receipt build/logs/ios-ui-build-receipt.json)
+          MD_UI_APP=$(python3 -c 'import json; print(json.load(open("build/logs/ios-ui-build-receipt.json"))["products"][0]["path"])')
+          {
+            echo "xctestrun=$MD_UI_XCTESTRUN"
+            echo "app=$MD_UI_APP"
+            echo "derived_data=$MD_UI_DERIVED_DATA"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Package qualified UI products and compile log
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/prepared-ios-ui
+          cp build/logs/build-ios-ui-compile.log '${{ steps.ui_artifacts.outputs.derived_data }}/compile.log'
+          MD_UI_ARCHIVE_SHA=$(python3 scripts/prepared_ios_ui_artifacts.py pack \
+            --derived-data '${{ steps.ui_artifacts.outputs.derived_data }}' \
+            --source-sha "$(git rev-parse HEAD)" \
+            --archive build/prepared-ios-ui/ui-products.tar.gz)
+          echo "sha256=$MD_UI_ARCHIVE_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Share exact qualified UI products
+        uses: actions/upload-artifact@v4
+        with:
+          name: apple-sdk27-ui-products
+          path: apps/apple/build/prepared-ios-ui/ui-products.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  test-ios-ui:
+    name: iOS UI regressions
+    needs: [changes, prepare-shared-core, prepare-ui-artifacts]
+    if: ${{ needs.changes.outputs.run == 'true' }}
+    runs-on: xcode-27
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '27.0'
+
+      - name: Restore prepared shared Rust core
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Verify SDK27 consumer provenance (UI)
+        run: |
+          bash scripts/qualify-history-authorization-sdk27.sh
+          cmp build/logs/history-sdk27-receipt.txt Packages/HealthMdCoreRust/Artifacts/.healthmd-core-sdk27.txt
+
+      - name: Validate prepared shared Rust core
+        run: |
+          test -f Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework/Info.plist
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+
+      - name: Restore exact qualified UI products
+        uses: actions/download-artifact@v4
+        with:
+          name: apple-sdk27-ui-products
+          path: apps/apple/build/prepared-ios-ui
+
+      - name: Verify restored UI products
+        id: ui_artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/test-results
+          MD_UI_DERIVED_DATA=$(mktemp -d "$PWD/build/ios-ui-derived-data.XXXXXX")
+          MD_UI_XCTESTRUN=$(python3 scripts/prepared_ios_ui_artifacts.py restore \
+            --derived-data "$MD_UI_DERIVED_DATA" \
+            --source-sha "$(git rev-parse HEAD)" \
+            --archive build/prepared-ios-ui/ui-products.tar.gz \
+            --sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}' \
+            --receipt build/logs/ios-ui-build-receipt.json)
+          cp "$MD_UI_DERIVED_DATA/compile.log" build/logs/build-ios-ui-compile.log
           MD_UI_APP=$(python3 -c 'import json; print(json.load(open("build/logs/ios-ui-build-receipt.json"))["products"][0]["path"])')
           echo "xctestrun=$MD_UI_XCTESTRUN" >> "$GITHUB_OUTPUT"
           echo "app=$MD_UI_APP" >> "$GITHUB_OUTPUT"
@@ -565,6 +657,7 @@ jobs:
     needs:
       - changes
       - prepare-shared-core
+      - prepare-ui-artifacts
       - test-ios
       - test-ios-ui
       - test-macos
@@ -577,6 +670,7 @@ jobs:
           CHANGES_RUN: ${{ needs.changes.outputs.run }}
           PREPARE_RESULT: ${{ needs.prepare-shared-core.result }}
           IOS_RESULT: ${{ needs.test-ios.result }}
+          PREPARE_UI_RESULT: ${{ needs.prepare-ui-artifacts.result }}
           IOS_UI_RESULT: ${{ needs.test-ios-ui.result }}
           MACOS_RESULT: ${{ needs.test-macos.result }}
           CONNECTIVITY_RESULT: ${{ needs.connectivity-package.result }}
@@ -589,6 +683,7 @@ jobs:
           fi
           test "$PREPARE_RESULT" = success
           test "$IOS_RESULT" = success
+          test "$PREPARE_UI_RESULT" = success
           test "$IOS_UI_RESULT" = success
           test "$MACOS_RESULT" = success
           test "$CONNECTIVITY_RESULT" = success
