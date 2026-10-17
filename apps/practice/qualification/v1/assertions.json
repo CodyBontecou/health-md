@@ -1864,7 +1864,7 @@
       "evidenceLayer": "browser-e2e",
       "declaration": {
         "normalizedAstSha256": "08b456849d37ce332352bc46ab5d01d36ce2e96491c3b87b33c6b962548f206c",
-        "line": 276
+        "line": 283
       },
       "assertions": [
         {
@@ -1872,84 +1872,84 @@
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "243d4fb890b5b381d4afdb2f1cea1da18c8a991bfd93f5c0a429a6060ab5a858",
           "excerpt": "signIn(page, \"admin\") ⇒ expect(page).toHaveTitle(genericTitle)",
-          "line": 277
+          "line": 284
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "848be0cf6041366efb62b253514b272c60cc6ba0518c4021d1a2de6b8432d519",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Session expired\" })).toBeVisible()",
-          "line": 278
+          "line": 285
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-003",
           "kind": "expect-matcher",
           "normalizedAstSha256": "848be0cf6041366efb62b253514b272c60cc6ba0518c4021d1a2de6b8432d519",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Session expired\" })).toBeVisible()",
-          "line": 279
+          "line": 286
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bdf636e7acbc97292e33350bdcb51a4d07b0e341e3bf2d920ac1c004a1e5f6dd",
           "excerpt": "expect(page.getByRole(\"navigation\", { name: \"Practice portal\" })).toHaveCount(0)",
-          "line": 279
+          "line": 286
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "3e706cd5ac2d3be0a45a3c154729050eceaa87d5dcd8c45ed6d55c0bd3a50427",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Clinician sign in\" })).toBeVisible()",
-          "line": 280
+          "line": 287
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-006",
           "kind": "expect-matcher",
           "normalizedAstSha256": "848be0cf6041366efb62b253514b272c60cc6ba0518c4021d1a2de6b8432d519",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Session expired\" })).toBeVisible()",
-          "line": 281
+          "line": 288
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-007",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bdf636e7acbc97292e33350bdcb51a4d07b0e341e3bf2d920ac1c004a1e5f6dd",
           "excerpt": "expect(page.getByRole(\"navigation\", { name: \"Practice portal\" })).toHaveCount(0)",
-          "line": 281
+          "line": 288
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-008",
           "kind": "expect-matcher",
           "normalizedAstSha256": "4788d2e18bf5e29967dd54d8da608637e8d1dde32b61c246d16ebacde261d66c",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Practice portal overview\" })).toHaveCount(0)",
-          "line": 282
+          "line": 289
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-009",
           "kind": "expect-matcher",
           "normalizedAstSha256": "3e706cd5ac2d3be0a45a3c154729050eceaa87d5dcd8c45ed6d55c0bd3a50427",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Clinician sign in\" })).toBeVisible()",
-          "line": 282
+          "line": 289
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-010",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "fc3e535d5301eac248166ca796c9822fa0e3d74d0b2caee1a19ac5d5e761064f",
           "excerpt": "assertEphemeralBrowserState(context, page, observed.persistenceMutations) ⇒ expect(persistenceMutations).toEqual([])",
-          "line": 283
+          "line": 290
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-011",
           "kind": "expect-matcher",
           "normalizedAstSha256": "406b3792fc032995e880bfa768ad8e3613b04535b5293fbcb28eff06fb1e9123",
           "excerpt": "expect(observed.consoleOutput, `${browserName} non-allowlisted console output`).toEqual([])",
-          "line": 283
+          "line": 290
         },
         {
           "id": "test-observable-448eb3bb7745b98a-assertion-012",
           "kind": "expect-matcher",
           "normalizedAstSha256": "4e894d97904f15ae2fa372ffde92b598dbef26bf8b5a81ac5fad72dc4228a906",
           "excerpt": "expect(observed.pageErrors).toEqual([])",
-          "line": 283
+          "line": 290
         }
       ]
     },
@@ -3509,7 +3509,7 @@
       "evidenceLayer": "browser-e2e",
       "declaration": {
         "normalizedAstSha256": "249743f99a34551fbd2f6d4a40d1726670222484a606ae2ab923267cb0aefa72",
-        "line": 286
+        "line": 293
       },
       "assertions": [
         {
@@ -3517,189 +3517,189 @@
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "243d4fb890b5b381d4afdb2f1cea1da18c8a991bfd93f5c0a429a6060ab5a858",
           "excerpt": "signIn(page, \"admin\") ⇒ expect(page).toHaveTitle(genericTitle)",
-          "line": 288
+          "line": 295
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-002",
           "kind": "expect-matcher",
           "normalizedAstSha256": "b54372cdac5daf89a075aa13e58f5ae7b3aed96538a3f48e0783a7ffd7492a48",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Create template\" })).toBeVisible()",
-          "line": 289
+          "line": 296
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-003",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 289
+          "line": 296
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-004",
           "kind": "expect-matcher",
           "normalizedAstSha256": "275a4fc75d2bab5bd1e6af0402aec68de6bdcb3472d5434f8e9bed99b28adf24",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Template details\" })).toBeVisible()",
-          "line": 289
+          "line": 296
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-005",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ef65956478672280d29b19f8900936613434566cee831b5f13468012cb07314f",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Template revision metadata\" })).toContainText(\"active\")",
-          "line": 289
+          "line": 296
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-006",
           "kind": "expect-matcher",
           "normalizedAstSha256": "df62f168e9660bc3c879153503e75aa08222b9510c394f281bc7c28f981b90cd",
           "excerpt": "expect(page.getByText(\"Capability unavailable\")).toBeVisible()",
-          "line": 291
+          "line": 298
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-007",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 292
+          "line": 299
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-008",
           "kind": "expect-matcher",
           "normalizedAstSha256": "8ab7e9a01013642984988a03af5ffa46442d0d35cba8435fa5671933648c69a2",
           "excerpt": "expect(dialog.getByLabel(\"Fictional step-up code\")).toHaveValue(\"246810\")",
-          "line": 297
+          "line": 304
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-009",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 297
+          "line": 304
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-010",
           "kind": "expect-matcher",
           "normalizedAstSha256": "370ec8f75c2c3b59e3d4a98cc0a61dda404614abfca5644f7d6d76cc16efc7e8",
           "excerpt": "expect(page.getByText(/Step-up succeeded; revoke recorded/)).toBeVisible()",
-          "line": 299
+          "line": 306
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-011",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f4f23830af1f4c08cc7d411dc3b3a3d1fa79c32d9f43cff21c73407d210b2695",
           "excerpt": "expect(clinicianRow).not.toContainText(\"No\")",
-          "line": 300
+          "line": 307
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-012",
           "kind": "expect-matcher",
           "normalizedAstSha256": "2bcea5aa29e475a5d011ec35ec55b85cce1b3be67e0a76363fa7d52d03bd7113",
           "excerpt": "expect(clinicianRow).toContainText(/2040|20\\d\\d-/)",
-          "line": 300
+          "line": 307
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-013",
           "kind": "expect-matcher",
           "normalizedAstSha256": "96797968cede3e718627bb6fce85be2d7c1aee351e90432e340f295b9a6b53c6",
           "excerpt": "expect(page.getByText(\"Legal approval: no\")).toBeVisible()",
-          "line": 302
+          "line": 309
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-014",
           "kind": "expect-matcher",
           "normalizedAstSha256": "8905b2f9fc7facc26d3f3186be10a4a5c8b3efccb21eb47a06a65f0f84c66607",
           "excerpt": "expect(initialRetention).toContainText(\"scheduled\")",
-          "line": 302
+          "line": 309
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-015",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bd3cbbbf055daad0d468e660dc76211b18a46c84c4d0991aba5e00a714a3d6bc",
           "excerpt": "expect(initialRetention).toContainText(\"unacknowledged max\")",
-          "line": 302
+          "line": 309
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-016",
           "kind": "expect-matcher",
           "normalizedAstSha256": "4b946c2cbe99550a27490089409f272c86471c62e162f1ad95c64c086f10460e",
           "excerpt": "expect(initialRetention).toContainText(\"2040-04-08\")",
-          "line": 302
+          "line": 309
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-017",
           "kind": "expect-matcher",
           "normalizedAstSha256": "c5042e2d203649cf1ee5a07bcecbe4d1695bf06bd08bf00f45fbc0fa82596d71",
           "excerpt": "expect(revokeAudit).toHaveCount(1)",
-          "line": 305
+          "line": 312
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-018",
           "kind": "expect-matcher",
           "normalizedAstSha256": "c3b6e8c636b78a4d5a771f15d3481ae05fd0066f1227f8211f4a282a4dffca34",
           "excerpt": "expect(revokeAudit).toContainText(\"actor_admin\")",
-          "line": 305
+          "line": 312
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-019",
           "kind": "expect-matcher",
           "normalizedAstSha256": "242e02cdc713ff6793d1d551823b0e3ee910fa7285d7624a65bf0978652dbf56",
           "excerpt": "expect(revokeAudit).toContainText(\"success\")",
-          "line": 305
+          "line": 312
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-020",
           "kind": "expect-matcher",
           "normalizedAstSha256": "d8fb2ba07bf9f33e962f90bb8dea251aeb450e6e80fc388ea6fd4d83f3e821c7",
           "excerpt": "expect(revokeAudit).toContainText(\"revocation\")",
-          "line": 305
+          "line": 312
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-021",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 306
+          "line": 313
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-022",
           "kind": "expect-matcher",
           "normalizedAstSha256": "0df1f3c63411875056769acfe2fd924d754977a6673b8943bd8f5d269f8933f9",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Signed out\" })).toBeVisible()",
-          "line": 308
+          "line": 315
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-023",
           "kind": "expect-matcher",
           "normalizedAstSha256": "fbe0484e5543897ce63cedf66658efac261918fe1403c9de8e323baf48397746",
           "excerpt": "expect(page.locator(\"body\")).not.toContainText(\"actor_clinician\")",
-          "line": 310
+          "line": 317
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-024",
           "kind": "expect-matcher",
           "normalizedAstSha256": "3e706cd5ac2d3be0a45a3c154729050eceaa87d5dcd8c45ed6d55c0bd3a50427",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Clinician sign in\" })).toBeVisible()",
-          "line": 313
+          "line": 320
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-025",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "fc3e535d5301eac248166ca796c9822fa0e3d74d0b2caee1a19ac5d5e761064f",
           "excerpt": "assertEphemeralBrowserState(context, page, observed.persistenceMutations) ⇒ expect(persistenceMutations).toEqual([])",
-          "line": 314
+          "line": 321
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-026",
           "kind": "expect-matcher",
           "normalizedAstSha256": "406b3792fc032995e880bfa768ad8e3613b04535b5293fbcb28eff06fb1e9123",
           "excerpt": "expect(observed.consoleOutput, `${browserName} non-allowlisted console output`).toEqual([])",
-          "line": 315
+          "line": 322
         },
         {
           "id": "test-observable-a3741223cf774362-assertion-027",
           "kind": "expect-matcher",
           "normalizedAstSha256": "a9e544ae56e3ced37b47b5a632cfdf1de01556fe100d747ad52da45301c7e81c",
           "excerpt": "expect(observed.pageErrors, `${browserName} page errors`).toEqual([])",
-          "line": 316
+          "line": 323
         }
       ]
     },
@@ -3859,7 +3859,7 @@
       },
       "evidenceLayer": "browser-e2e",
       "declaration": {
-        "normalizedAstSha256": "83679527f6cb239a7db33cbc564af0438376c1c78b8a940a3d78c5886f6f26a4",
+        "normalizedAstSha256": "af52895d0e008b6fc935c8e1dc89c728db0858f2634099edc1891375aba523e8",
         "line": 108
       },
       "assertions": [
@@ -4081,424 +4081,445 @@
           "line": 165
         },
         {
+          "id": "test-observable-aa3f24b7a9295779-assertion-092",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "0a4cfa40bf58fd4148792889c1c505c302c29c86619fa84547fd4ea03add1c77",
+          "excerpt": "expect(successorId).toMatch(/^request_synthetic_/)",
+          "line": 169
+        },
+        {
+          "id": "test-observable-aa3f24b7a9295779-assertion-093",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "5bf0e7b719f38984caf65ff47e01acecc070bc3d82653d97e86fce14040cd2d6",
+          "excerpt": "expect(page.getByText(/Claimant receipt cleared/)).toBeVisible()",
+          "line": 173
+        },
+        {
+          "id": "test-observable-aa3f24b7a9295779-assertion-094",
+          "kind": "expect-matcher",
+          "normalizedAstSha256": "f1db12e815e20e9386cee7a53a7da00250580d70bd1eb77e9cf1d25a952c0eee",
+          "excerpt": "expect((await cancellation).postDataJSON().payload.requestId).toBe(successorId)",
+          "line": 179
+        },
+        {
           "id": "test-observable-aa3f24b7a9295779-assertion-032",
           "kind": "expect-matcher",
           "normalizedAstSha256": "6ce80c245f0c47ff5e1844d36888b8b387c04198883e27ce1d234f889ebe2522",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Separate lifecycle facts\" })).toContainText(\"canceled\")",
-          "line": 173
+          "line": 180
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-033",
           "kind": "expect-matcher",
           "normalizedAstSha256": "2aeacf12767a6a64d9f63906da026ef381221aedf8ec921ab34809f1d2ea8c7c",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Packet inbox\" })).toBeVisible()",
-          "line": 176
+          "line": 183
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-034",
           "kind": "expect-matcher",
           "normalizedAstSha256": "569f3553459e1a8f017dd0da00e3ef69a1c4cfd057bef1be7ecd659133452025",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Synthetic packet metadata\" })).toBeVisible()",
-          "line": 176
+          "line": 183
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-035",
           "kind": "expect-matcher",
           "normalizedAstSha256": "2f3b54d88ea947902d247d5a123ca047038b49361eb3e00450dba0493dd1856f",
           "excerpt": "expect(appliedInboxRequests).toBe(0)",
-          "line": 178
+          "line": 185
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-036",
           "kind": "expect-matcher",
           "normalizedAstSha256": "569f3553459e1a8f017dd0da00e3ef69a1c4cfd057bef1be7ecd659133452025",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Synthetic packet metadata\" })).toBeVisible()",
-          "line": 179
+          "line": 186
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-037",
           "kind": "expect-matcher",
           "normalizedAstSha256": "34709154bd8660b5c95db46b4728e5bfb244dab156b76ebb36e4643c78996e87",
           "excerpt": "expect(page.getByText(/Page 2/)).toBeVisible()",
-          "line": 182
+          "line": 189
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-038",
           "kind": "expect-matcher",
           "normalizedAstSha256": "569f3553459e1a8f017dd0da00e3ef69a1c4cfd057bef1be7ecd659133452025",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Synthetic packet metadata\" })).toBeVisible()",
-          "line": 186
+          "line": 193
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-039",
           "kind": "expect-matcher",
           "normalizedAstSha256": "d9391e0bf894e1a60435fe9c8dfc0ef3a5fecfd156489bead7c0a69d6d4166cf",
           "excerpt": "expect(page.locator(\"article\")).toContainText(fixture.text)",
-          "line": 196
+          "line": 203
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-040",
           "kind": "expect-matcher",
           "normalizedAstSha256": "798daba46d70e19400f71bc1d717e17d6ff07fe7d4d39ffc7406418afdc40f29",
           "excerpt": "expect(page.getByRole(\"heading\", { name: \"Blood-pressure document report\" })).toBeVisible()",
-          "line": 201
+          "line": 208
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-041",
           "kind": "expect-matcher",
           "normalizedAstSha256": "4be4fdd8872af3af1202c287945cbc29ebb58a7f5666b4d917833f0202fbe8a8",
           "excerpt": "expect(page.getByRole(\"table\", { name: /Complete reading table/ })).toContainText(\"apple health\")",
-          "line": 202
+          "line": 209
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-042",
           "kind": "expect-matcher",
           "normalizedAstSha256": "13ba8fb2b4269c242cc64f2c4cbd78c6d4aacb3284db197875bcc71ecc4a1caa",
           "excerpt": "expect(page.getByRole(\"img\", { name: /Neutral systolic trend/ })).toBeVisible()",
-          "line": 203
+          "line": 210
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-043",
           "kind": "expect-matcher",
           "normalizedAstSha256": "0b977582d30e073215859e7d9b483e2334b9039df7ac6c37cb41810c482f563f",
           "excerpt": "expect(page.getByText(\"Apple Health synthetic provenance\")).toBeVisible()",
-          "line": 204
+          "line": 211
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-044",
           "kind": "expect-matcher",
           "normalizedAstSha256": "c6cf01a5273d776c5fa574f930d23594255f65d6a8390443b21e5570b26a887c",
           "excerpt": "expect(page.getByRole(\"table\", { name: \"Document provenance and exact periods\" })).toContainText(\"packet_superseded\")",
-          "line": 205
+          "line": 212
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-045",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 206
+          "line": 213
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-046",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5e2aafe1f15fc976bc2df2b82569433ae50e865ffdeed1ee8e03eb41674b3a6e",
           "excerpt": "expect(freshFacts).toContain(\"actor_clinician\")",
-          "line": 209
+          "line": 216
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-047",
           "kind": "expect-matcher",
           "normalizedAstSha256": "7c2731ffd4bdf486ac1d62f648513d6192e28c5e72fe038a082e720dc2b515b4",
           "excerpt": "expect(freshFacts?.match(/Not recorded/g)).toHaveLength(2)",
-          "line": 209
+          "line": 216
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-048",
           "kind": "expect-matcher",
           "normalizedAstSha256": "048c6a961ff7b8a25fdfe0e9d5edf5fb71266ba5989fbd054dbf4b5a6258f756",
           "excerpt": "expect(await page.evaluate(() => (globalThis as typeof globalThis & { __practicePrintCalls?: number }).__practicePrintCalls)).toBe(1)",
-          "line": 211
+          "line": 218
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-049",
           "kind": "expect-matcher",
           "normalizedAstSha256": "08e31c0e3a5cdf6acb96822e6a40f80862c68e0965f9703713241c3f54870030",
           "excerpt": "expect(await workflowFacts.textContent()).toBe(freshFacts)",
-          "line": 212
+          "line": 219
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-050",
           "kind": "expect-matcher",
           "normalizedAstSha256": "8604b9fbe82a10aee4f379774a1340e17026e470f1f76e22a4b22add204bd82e",
           "excerpt": "expect(download.suggestedFilename()).toBe(\"practice-document.json\")",
-          "line": 217
+          "line": 224
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-051",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ed6dcd014db6d9d7af2cc67c8e3815571bce882831a81693e29bcbe39078d77e",
           "excerpt": "expect(stream).not.toBeNull()",
-          "line": 218
+          "line": 225
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-052",
           "kind": "expect-matcher",
           "normalizedAstSha256": "8dbd7312513dec63b5ad04cad782188b922ccf9ed842ddbb5f9348eb0c214690",
           "excerpt": "expect(downloadedBytes.byteLength).toBeGreaterThan(100)",
-          "line": 220
+          "line": 227
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-053",
           "kind": "expect-matcher",
           "normalizedAstSha256": "bbe4ec6ff56676fc61f00176bfe7504be2ed53b5b7f0315ac5ef0f280ba59450",
           "excerpt": "expect(artifact).toMatchObject({ schema: \"practice.synthetic.packet/1.0-draft.2\", id: \"packet_complete_apple\", shape: \"complete\", revision: 1 })",
-          "line": 221
+          "line": 228
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-054",
           "kind": "expect-matcher",
           "normalizedAstSha256": "40b96088f40e8f0916d8fc80addf18cec93ef954b3c2c790df61380f4c306bcb",
           "excerpt": "expect(artifact.readings).toHaveLength(2)",
-          "line": 221
+          "line": 228
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-055",
           "kind": "expect-matcher",
           "normalizedAstSha256": "fa06afc21463cf4c3ffcd158187fa4bd62e03622e341f0200f0d0e5989851e42",
           "excerpt": "expect(await page.evaluate(() => (globalThis as typeof globalThis & { __practiceBlobFacts?: { type: string; size: number }[] }).__practiceBlobFacts)).toEqual([{ type: \"applicati…",
-          "line": 222
+          "line": 229
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-056",
           "kind": "expect-matcher",
           "normalizedAstSha256": "08e31c0e3a5cdf6acb96822e6a40f80862c68e0965f9703713241c3f54870030",
           "excerpt": "expect(await workflowFacts.textContent()).toBe(freshFacts)",
-          "line": 223
+          "line": 230
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-057",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f84854e0b812077747f77ea2060c0701508ea99818014d1947bb74a97918d384",
           "excerpt": "expect(dialog).toBeVisible()",
-          "line": 229
+          "line": 236
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-058",
           "kind": "expect-matcher",
           "normalizedAstSha256": "074c3f5d559c247d4133e1d56b9daf7c1efa41bbab9324dd260d315ae4915b0f",
           "excerpt": "expect(focusedCancel).toBeFocused()",
-          "line": 230
+          "line": 237
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-059",
           "kind": "expect-matcher",
           "normalizedAstSha256": "43cdcc062212fc788598372deed5ef2bee243c911316c3455007a50a371f4f75",
           "excerpt": "expect(focusGeometry.top).toBeGreaterThanOrEqual(0)",
-          "line": 232
+          "line": 239
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-060",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5bd158c9112d1fb412513b2546634eef01e09b302c1338d069ea8834a832c2e0",
           "excerpt": "expect(focusGeometry.bottom).toBeLessThanOrEqual(focusGeometry.height)",
-          "line": 232
+          "line": 239
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-061",
           "kind": "expect-matcher",
           "normalizedAstSha256": "c73b54cf02bbb6802af589de0f71946945c2dd95e543a92ee256d21780674ea2",
           "excerpt": "expect(focusGeometry.unobscured).toBe(true)",
-          "line": 232
+          "line": 239
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-062",
           "kind": "expect-matcher",
           "normalizedAstSha256": "6f22220c74d37e897856476949554f732731fab29b04525d0764927f5aee877b",
           "excerpt": "expect(dialogReflow.body).toBeLessThanOrEqual(dialogReflow.viewport)",
-          "line": 233
+          "line": 240
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-063",
           "kind": "expect-matcher",
           "normalizedAstSha256": "9cd2f9376d5d0b64c7fbf3db538a8c836a81555b1103100800689165ad2d3b0e",
           "excerpt": "expect(dialogReflow.document).toBeLessThanOrEqual(dialogReflow.viewport)",
-          "line": 233
+          "line": 240
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-064",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 233
+          "line": 240
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-065",
           "kind": "expect-matcher",
           "normalizedAstSha256": "52095de0d13ad288f30080d9849a8d5301e037e3c8865c7df524c96ae56e2f0a",
           "excerpt": "expect(acknowledge).toBeFocused()",
-          "line": 235
+          "line": 242
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-066",
           "kind": "expect-matcher",
           "normalizedAstSha256": "c781b360c61925f3fbc6d4171bfe2c358a03ba04817c7c6d3bd20498f9e01f27",
           "excerpt": "expect(page.getByText(\"Explicit receipt acknowledgment recorded.\")).toBeVisible()",
-          "line": 238
+          "line": 245
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-067",
           "kind": "expect-matcher",
           "normalizedAstSha256": "93087d3e4ce94b93bae906b3c1fa7bae5fba85ea259bda64737e31f7c594ee46",
           "excerpt": "expect(page.getByText(\"Separate review attestation recorded.\")).toBeVisible()",
-          "line": 241
+          "line": 248
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-068",
           "kind": "expect-matcher",
           "normalizedAstSha256": "678da9b0dfdc87f43fca1b0427e828df51bcd6be947bc142df7117db28589cdd",
           "excerpt": "expect(historyRows).toHaveCount(4)",
-          "line": 244
+          "line": 251
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-069",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ba1d721b00c3ad6b3911ffbccf4a242edb58c1e56e95d46d1d84d2b80d23c115",
           "excerpt": "expect(row).toContainText(fact)",
-          "line": 245
+          "line": 252
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-070",
           "kind": "expect-matcher",
           "normalizedAstSha256": "8f91533e4c52e87f04b5ccef2e14951d560f3d013eb69c234e4050e30301a733",
           "excerpt": "expect(row).toContainText(\"actor_clinician\")",
-          "line": 245
+          "line": 252
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-071",
           "kind": "expect-matcher",
           "normalizedAstSha256": "f4284016f50a59eeda3e76a8fe8ff1a3b50ac830341a9a7ecd27b046ba2f7ce7",
           "excerpt": "expect(row).toContainText(\"1\")",
-          "line": 245
+          "line": 252
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-072",
           "kind": "expect-matcher",
           "normalizedAstSha256": "da408f2b3b6c94f6b45edc333d921015e2d2caaa2a259ebeef1481a515d3d142",
           "excerpt": "expect(page.locator(\"article.print-view\")).toBeVisible()",
-          "line": 250
+          "line": 257
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-073",
           "kind": "expect-matcher",
           "normalizedAstSha256": "a1cf14197da691e8b3f3fc4ee2344e1b1736ac5784f56ec6e28cfbb0817866b7",
           "excerpt": "expect(page.locator(\"nav[aria-label='Practice portal']\")).toHaveCSS(\"display\", \"none\")",
-          "line": 251
+          "line": 258
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-074",
           "kind": "expect-matcher",
           "normalizedAstSha256": "b0fdf8e8f9184256429cf0840de1d950a5e6713e91ee6d1ae5400bea80230fd0",
           "excerpt": "expect(page.locator(\".screen-only\")).toHaveCount(0)",
-          "line": 252
+          "line": 259
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-075",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ba68f395d4a539bb20a81a14ade819f47119d556be2ef118e5cf4010d813f9be",
           "excerpt": "expect(page.getByRole(\"table\", { name: /Complete reading table/ })).toBeVisible()",
-          "line": 253
+          "line": 260
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-076",
           "kind": "expect-matcher",
           "normalizedAstSha256": "13ba8fb2b4269c242cc64f2c4cbd78c6d4aacb3284db197875bcc71ecc4a1caa",
           "excerpt": "expect(page.getByRole(\"img\", { name: /Neutral systolic trend/ })).toBeVisible()",
-          "line": 254
+          "line": 261
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-077",
           "kind": "expect-matcher",
           "normalizedAstSha256": "19c36215e32387cb3805828c2060a26898754f254f6d87682782d7f6572b5831",
           "excerpt": "expect(await page.evaluate(() => matchMedia(\"(prefers-reduced-motion: reduce)\").matches)).toBe(false)",
-          "line": 256
+          "line": 263
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-078",
           "kind": "expect-matcher",
           "normalizedAstSha256": "771f457bb35118ca65ef163e9c6e456204f50892576beba02d51fa4f8b9a7845",
           "excerpt": "expect(page.getByLabel(\"Health.md Practice synthetic portal home\")).toHaveCSS(\"transition-duration\", \"0s\")",
-          "line": 257
+          "line": 264
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-079",
           "kind": "expect-matcher",
           "normalizedAstSha256": "62087917ed8936231cc17925852617c78c9d0a14ac8cf42deeea9ba9f097d3c9",
           "excerpt": "expect(baselineMotion).not.toBe(\"0s\")",
-          "line": 258
+          "line": 265
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-080",
           "kind": "expect-matcher",
           "normalizedAstSha256": "fffae62dfdce18b84d9c66cf6d6dc9caa1bf19692bb6f806a00bd4a248363a64",
           "excerpt": "expect(await page.evaluate(() => matchMedia(\"(prefers-reduced-motion: reduce)\").matches)).toBe(true)",
-          "line": 260
+          "line": 267
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-081",
           "kind": "expect-matcher",
           "normalizedAstSha256": "e7284e5014e345d0488b5581a7ea7ddaab40a74cd3eb94b9a805fea87bfb2e54",
           "excerpt": "expect(page.getByRole(\"button\", { name: \"Sign out\" })).toHaveCSS(\"transition-duration\", \"0s\")",
-          "line": 260
+          "line": 267
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-082",
           "kind": "expect-matcher",
           "normalizedAstSha256": "dc296ed0a06d10999d962b7b2db85d2a71da26fea3c99e2469e564207bbaf170",
           "excerpt": "expect(await page.getByRole(\"button\", { name: \"Sign out\" }).evaluate(element => getComputedStyle(element).borderTopWidth)).not.toBe(baselineBorder)",
-          "line": 263
+          "line": 270
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-083",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5ebdb0883f72cc253849636fb08b4b172cbb65f7eccaa8cb11a131b843be28ce",
           "excerpt": "expect(reflow.body).toBeLessThanOrEqual(reflow.viewport)",
-          "line": 266
+          "line": 273
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-084",
           "kind": "expect-matcher",
           "normalizedAstSha256": "2c859a26659ae2efdea3434a7c3e0a48e89fe003d231fe2ef43638877fb2c1c7",
           "excerpt": "expect(reflow.document).toBeLessThanOrEqual(reflow.viewport)",
-          "line": 266
+          "line": 273
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-085",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "9e3ef37a7cf2b88a824c5eeeb6b325798ab2350e7f2b76e69f8d00fee513d4ff",
           "excerpt": "assertAxe(page) ⇒ expect(results.violations, results.violations.map(item => `${item.id}: ${item.help}`).join(\"\\n\")).toEqual([])",
-          "line": 266
+          "line": 273
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-086",
           "kind": "local-assertion-helper",
           "normalizedAstSha256": "fc3e535d5301eac248166ca796c9822fa0e3d74d0b2caee1a19ac5d5e761064f",
           "excerpt": "assertEphemeralBrowserState(context, page, observed.persistenceMutations) ⇒ expect(persistenceMutations).toEqual([])",
-          "line": 268
+          "line": 275
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-087",
           "kind": "expect-matcher",
           "normalizedAstSha256": "65865eff24fd71d259dcbf02cedf448ec5975b04e2c9ad382f32e5edfd1afa1d",
           "excerpt": "expect(observed.paths).toContain(\"/api/v1/operation\")",
-          "line": 269
+          "line": 276
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-088",
           "kind": "expect-matcher",
           "normalizedAstSha256": "ae7159b59c54f749ff16094e7b29c0a80b7dbfc3cbc761ad4ab3a5f64ec91a3b",
           "excerpt": "expect(observed.paths.every(path => !unsafeAddressData.test(path))).toBe(true)",
-          "line": 270
+          "line": 277
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-089",
           "kind": "expect-matcher",
           "normalizedAstSha256": "406b3792fc032995e880bfa768ad8e3613b04535b5293fbcb28eff06fb1e9123",
           "excerpt": "expect(observed.consoleOutput, `${browserName} non-allowlisted console output`).toEqual([])",
-          "line": 271
+          "line": 278
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-090",
           "kind": "expect-matcher",
           "normalizedAstSha256": "a9e544ae56e3ced37b47b5a632cfdf1de01556fe100d747ad52da45301c7e81c",
           "excerpt": "expect(observed.pageErrors, `${browserName} page errors`).toEqual([])",
-          "line": 272
+          "line": 279
         },
         {
           "id": "test-observable-aa3f24b7a9295779-assertion-091",
           "kind": "expect-matcher",
           "normalizedAstSha256": "5edfd193b5022289af94ac6ebd8c3e5396a534de8658f8f5e797ffe8f5752e22",
           "excerpt": "expect(page).toHaveTitle(genericTitle)",
-          "line": 273
+          "line": 280
         }
       ]
     },
