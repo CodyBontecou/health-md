@@ -195,6 +195,20 @@ class ArtifactQualificationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "source SHA"):
             qualify(self.derived, "branch-name")
 
+    def test_literal_double_underscores_in_build_root_are_not_placeholders(self) -> None:
+        derived = self.derived.parent / "fresh__derived__data"
+        derived.mkdir()
+        (derived / BUILD_MARKER).touch()
+        manifest, _ = make_products(derived)
+        self.assertEqual(qualify(derived, SOURCE_SHA)[0], manifest)
+
+    def test_unresolved_product_placeholder_is_rejected(self) -> None:
+        manifest, payload = make_products(self.derived)
+        selected_target(payload)["TestBundlePath"] = "__TESTHOST__/__UNKNOWN__/HealthMdUITests.xctest"
+        manifest.write_bytes(plistlib.dumps(payload))
+        with self.assertRaisesRegex(ValueError, "placeholder"):
+            qualify(self.derived, SOURCE_SHA)
+
     def test_receipt_binds_debug_code_without_rewriting_the_manifest(self) -> None:
         manifest, _ = make_products(self.derived)
         original = manifest.read_bytes()
