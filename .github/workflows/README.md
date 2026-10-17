@@ -12,11 +12,29 @@ Every pull request triggers the component CI workflows, and each reports one of 
 - `Wake CI / Wake CI`
 - `Website CI / Website CI`
 
-Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files. Most use `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger; Android uses the job planner described below. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files. Most use `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger; Apple and Android use the job planners described below. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
 
-For workflows using the composite detector, the path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Android's push filter and `apps/android/scripts/android-ci-plan.py` jointly define its triggers. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
+For workflows using the composite detector, the path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Apple's and Android's push filters and component job planners jointly define their triggers. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
 
 The final gate jobs require every selected job to succeed and accept only explicitly unselected skips. Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+
+## Apple CI selection
+
+`apps/apple/scripts/apple-ci-plan.py` selects existing jobs for pull requests.
+Reviewed documentation paths retain macOS coverage and generated-document checks;
+documents and resources read by shared XCTest assertions retain both unit suites.
+Embedded Apple Swift CLI changes retain macOS, and UI-test changes retain the UI job.
+Production sources, packages, project/build configuration, shared contracts/core,
+and unclassified inputs retain the full suite. The planner also includes the
+website resources and root workflows read by Apple tests.
+
+The lightweight changes job runs planner/gate regression checks and validates
+documentation links even when native jobs are unselected. PR file discovery
+must prove a complete, revision-pinned change list and include rename sources;
+uncertainty selects every job. The stable `Apple CI` gate requires all selected
+jobs to pass and rejects missing selection outputs or selected skips. The Rust
+artifact preparation job runs whenever an Xcode test job needs it. Main/testing
+pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
 ## Android CI selection and accessibility coverage
 
@@ -65,6 +83,18 @@ repository files outside Gradle's declared task inputs. An offline real-Gradle
 fixture checks compilation reuse, fresh test execution, and failure after an
 external contract file changes. Test XML, per-invocation task profiles, and hosted
 runner CPU/memory details are retained on both successful and failed JVM jobs.
+
+## CLI packaged-source cache
+
+The packaged-crate smoke job retains verification targets under
+`apps/cli/target/packaged-crates` through `HEALTHMD_PACKAGED_CACHE_DIR`. Rust 1.85
+MSRV and Rust 1.88 targets are separated by compiler identity, and the workflow
+cache key includes both compilers plus manifests, lockfiles, and build settings.
+Archive generation, extraction, and MSRV dependency resolution remain fresh.
+Every invocation cleans the five extracted project crates before compiling them;
+only third-party compilation is reused. Full workspace tests, default-feature
+binary builds, and version/help/MCP schema compatibility smoke checks still run.
+Local use keeps temporary targets unless caching is explicitly enabled.
 
 ## Optional Apple local pilot
 

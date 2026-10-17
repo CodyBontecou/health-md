@@ -7,11 +7,14 @@ and Hamcrest jars, so it needs neither Android tooling nor network access.
 """
 
 import argparse
+from contextlib import contextmanager
+import errno
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import time
 import xml.etree.ElementTree as ET
@@ -19,6 +22,69 @@ import xml.etree.ElementTree as ET
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 GRADLE_VERSION = "8.11.1"
+
+
+def _cleanup_note(error: BaseException, message: str) -> None:
+    if hasattr(error, "add_note"):
+        error.add_note(message)
+    else:
+        # The fixture also runs with older local Python versions.
+        error.__notes__ = [*getattr(error, "__notes__", []), message]
+        print(message, file=sys.stderr)
+
+
+@contextmanager
+def fixture_directory():
+    root = Path(tempfile.mkdtemp(prefix="healthmd-ci-gradle-cache-"))
+    primary_error = None
+    try:
+        yield root
+    except BaseException as error:
+        primary_error = error
+        raise
+    finally:
+        # --stop can return before the daemon's final files reach this isolated
+        # directory. Retry only that ENOTEMPTY race, including partial removals.
+        deadline = time.monotonic() + 5.0
+        attempts = 0
+        while True:
+            attempts += 1
+            try:
+                shutil.rmtree(root)
+                break
+            except OSError as error:
+                remaining = deadline - time.monotonic()
+                if error.errno == errno.ENOTEMPTY and remaining > 0:
+                    time.sleep(min(0.1, remaining))
+                    continue
+                message = (
+                    f"Fixture cleanup failed for {root} after "
+                    f"{attempts} attempts: {error}"
+                )
+                if primary_error is not None:
+                    _cleanup_note(primary_error, message)
+                    break
+                _cleanup_note(error, message)
+                raise
+
+
+def stop_fixture_daemon(gradle: Path, environment: dict) -> None:
+    primary_error = sys.exc_info()[1]
+    try:
+        result = subprocess.run(
+            [str(gradle), "--stop"], env=environment, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=30,
+            check=False,
+        )
+        if result.returncode:
+            raise RuntimeError(
+                f"Failed to stop the fixture's isolated Gradle daemon "
+                f"(exit {result.returncode}):\n{result.stdout}"
+            )
+    except (OSError, RuntimeError, subprocess.SubprocessError) as error:
+        if primary_error is None:
+            raise
+        _cleanup_note(primary_error, f"Fixture daemon cleanup also failed: {error}")
 
 
 def installed_gradle() -> Path:
@@ -91,8 +157,7 @@ def main() -> None:
     init_script = SCRIPT_DIR / "ci-gradle.init.gradle"
     receipt = {"gradle": str(gradle), "init_script": str(init_script), "runs": []}
 
-    with tempfile.TemporaryDirectory(prefix="healthmd-ci-gradle-cache-") as temporary:
-        root = Path(temporary)
+    with fixture_directory() as root:
         project = root / "project"
         write_fixture(project)
         environment = dict(os.environ, GRADLE_USER_HOME=str(root / "gradle-home"))
@@ -167,8 +232,7 @@ def main() -> None:
         finally:
             # Only this fixture's daemon and temporary build/cache paths are owned
             # here; never stop app builds or remove shared Gradle caches.
-            subprocess.run([str(gradle), "--stop"], env=environment, text=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+            stop_fixture_daemon(gradle, environment)
 
     receipt["temporary_resources_removed"] = True
     if args.receipt:
