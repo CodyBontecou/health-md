@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 SERIAL = 'emulator-5554'
 METHOD = 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField'
@@ -49,6 +50,35 @@ def validate(text, expected_cases):
 
 EXPECTED_CASES = ['nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=640, fontScale=2.0, language=ja, dark=false)]']
 
+
+def prepare_launcher(output, index):
+    """Clear only a disposable emulator launcher ANR; require its actual home focus."""
+    shell = ['adb', '-s', SERIAL, 'shell']
+    resolved = run(*shell, 'cmd', 'package', 'resolve-activity', '--brief',
+                   '-a', 'android.intent.action.MAIN', '-c', 'android.intent.category.HOME',
+                   capture_output=True, timeout=30).stdout
+    components = [line.strip() for line in resolved.splitlines() if '/' in line]
+    assert len(components) == 1, f'Unexpected home resolution: {resolved}'
+    component = components[0]
+    package = component.split('/', 1)[0]
+    assert package in {'com.google.android.apps.nexuslauncher', 'com.android.launcher3'}, component
+    run(*shell, 'am', 'force-stop', package, capture_output=True, timeout=30)
+    launch = run(*shell, 'am', 'start', '-W', '-a', 'android.intent.action.MAIN',
+                 '-c', 'android.intent.category.HOME', capture_output=True, timeout=30).stdout
+    focus = ''
+    for _ in range(60):
+        windows = run(*shell, 'dumpsys', 'window', capture_output=True, timeout=10).stdout
+        focus = next((line.strip() for line in windows.splitlines() if 'mCurrentFocus=' in line), '')
+        if package + '/' in focus and 'Application Error' not in focus and 'Not Responding' not in focus:
+            record = {'home_component': component, 'focused_home_window': focus,
+                      'launch_output': launch, 'scope': 'Disposable hosted emulator launcher only; no app test or production source changed.'}
+            (output / f'launcher-{index:02d}.json').write_text(json.dumps(record, indent=2) + '\n')
+            print(f'Launcher {index}: actual home window has focus before native instrumentation.', flush=True)
+            return
+        time.sleep(0.5)
+    raise AssertionError(f'Emulator launcher did not regain its own home window: {focus}')
+
+
 def main():
     output = Path('apps/android/build/native-save-repro')
     output.mkdir(parents=True, exist_ok=True)
@@ -57,6 +87,7 @@ def main():
     (output / 'source.json').write_text(json.dumps({'head': head, 'trees': trees}, indent=2) + '\n')
     for index in range(1, 11):
         log = output / f'attempt-{index:02d}.log'
+        prepare_launcher(output, index)
         proc = subprocess.run(['adb', '-s', SERIAL, 'shell', 'am', 'instrument', '-w', '-r',
                                '-e', 'class', CLASS, '-e', 'tests_regex', '.*' + METHOD + '.*language=ja.*',
                                'com.healthmd.android.test/androidx.test.runner.AndroidJUnitRunner'],
@@ -77,6 +108,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except (AssertionError, subprocess.CalledProcessError, OSError) as exc:
+    except (AssertionError, subprocess.CalledProcessError, subprocess.TimeoutExpired, OSError) as exc:
         print(f'Reproduction stopped: {exc}', file=sys.stderr, flush=True)
         sys.exit(1)
