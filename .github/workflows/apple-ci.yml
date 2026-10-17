@@ -621,6 +621,13 @@ jobs:
         run: |
           scripts/check-warnings.sh build/logs/build-ios-ui-compile.log
           scripts/check-warnings.sh build/logs/build-ios-ui.log
+          python3 - <<'PY'
+          from pathlib import Path
+          runtime_log = Path("build/logs/build-ios-ui.log").read_text(errors="replace")
+          if "Accessing StateObject<" in runtime_log:
+              raise SystemExit("::error::UI launch accessed StateObject before SwiftUI installed its storage")
+          print("PASS: no premature StateObject access in UI runtime.")
+          PY
 
       - name: Upload iOS UI artifacts
         if: ${{ !cancelled() }}
