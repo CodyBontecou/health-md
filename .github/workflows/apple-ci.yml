@@ -310,7 +310,7 @@ jobs:
 
       - name: Verify generated export documentation
         if: ${{ success() }}
-        run: make check-export-docs
+        run: make check-export-docs-after-tests
 
       - name: Coverage summary
         if: ${{ !cancelled() }}

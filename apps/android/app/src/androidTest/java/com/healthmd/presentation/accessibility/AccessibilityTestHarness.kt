@@ -53,26 +53,8 @@ import org.junit.Rule
 import java.io.File
 import java.util.Locale
 
-/** Shared geometry only: fixture callbacks must never read or mutate real health/settings state. */
-data class AccessibilityDisplayCase(
-    val width: Int,
-    val height: Int,
-    val fontScale: Float,
-    val language: String = "en",
-    val dark: Boolean = false,
-)
-
-fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = listOf(
-    AccessibilityDisplayCase(411, 720, 1f),
-    AccessibilityDisplayCase(320, 640, 1f),
-    AccessibilityDisplayCase(320, 480, 1.3f),
-    AccessibilityDisplayCase(320, 480, 2f),
-    AccessibilityDisplayCase(320, 640, 2f),
-    AccessibilityDisplayCase(568, 280, 2f),
-    AccessibilityDisplayCase(640, 280, 2f),
-    AccessibilityDisplayCase(320, 480, 2f, language = "de", dark = true),
-    AccessibilityDisplayCase(320, 480, 2f, language = "ar", dark = true),
-    AccessibilityDisplayCase(320, 640, 2f, language = "ja"),
+fun accessibilityDisplays(): List<Array<AccessibilityDisplayCase>> = accessibilityDisplayCases(
+    InstrumentationRegistry.getArguments().getString(ACCESSIBILITY_MATRIX_ARGUMENT),
 ).map { arrayOf(it) }
 
 /**

@@ -12,11 +12,59 @@ Every pull request triggers the component CI workflows, and each reports one of 
 - `Wake CI / Wake CI`
 - `Website CI / Website CI`
 
-Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files through `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
+Inside each workflow except Wake CI (whose single job finishes in well under a minute and stays always-on), a small `changes` job evaluates the pull request's changed files. Most use `.github/actions/component-changes` against the same path map that gates that workflow's `main`-branch push trigger; Android uses the job planner described below. When nothing matches, the heavy jobs are skipped and the final gate job still runs and succeeds, so every PR receives a conclusive required context without paying for unaffected components. Detection fails closed: if the `changes` job itself errors, the gate fails rather than silently skipping. Scheduled, manually dispatched, and `workflow_call` release-qualification runs always execute the full workflow.
 
-Each workflow's path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
+For workflows using the composite detector, the path map lives in two places — the `on.push.paths` trigger filter and the `changes` job's `paths` input — and the two copies must stay in sync. Android's push filter and `apps/android/scripts/android-ci-plan.py` jointly define its triggers. Shared contract paths (`packages/contracts/**`) and shared-core paths (`packages/healthmd-core-rust/**`) intentionally trigger every consuming component, including Apple CI.
 
-The final gate jobs fail unless every job in their component workflow succeeds (or path filtering skipped the whole component). Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+The final gate jobs require every selected job to succeed and accept only explicitly unselected skips. Main-branch push triggers remain path-aware — Apple CI's `main`/`testing` pushes included — so unaffected components are not rebuilt after merge.
+
+## Android CI selection and accessibility coverage
+
+On pull requests, `apps/android/scripts/android-ci-plan.py` selects the Android jobs
+that consume the changed files. Phone sources keep both distribution flavors and
+phone instrumentation; Wear sources keep JVM and Wear emulator checks; CLI source
+changes keep phone instrumentation and live Rust/Kotlin interop. Shared contracts,
+shared Rust core, build configuration, and CI infrastructure retain every consumer.
+Documentation and release tooling use the lightweight policy job, with JVM tests
+also retained for files read by source/document contract assertions. New
+unclassified shared or Android paths run all jobs until their consumers are reviewed.
+
+The planner paginates the PR files API, includes rename sources, and verifies the
+event's head/base revisions and file count before and after pagination. Incomplete
+or changing results run every job and both full display matrices. The final gate
+accepts a skipped job only when its selection output explicitly says `false`;
+selected jobs must succeed. The policy job's listing validator discovers every
+`scripts/tests/test_*.py`, including routing and gate regressions.
+
+Ordinary PR instrumentation runs all test methods on both Play and F-Droid. Play
+uses the complete ten-display accessibility matrix. F-Droid uses a baseline English
+light display and a constrained large-font Arabic RTL dark display, avoiding 304
+repeated parameterized executions while retaining every method, channel-specific
+test, native-input check, shared-core smoke, and Direct CLI UI E2E. The scope argument
+is confined to a separate F-Droid Gradle invocation. Standalone accessibility runs
+continue to use all ten displays by default; invalid scope arguments fail.
+
+Main pushes, manual runs, and reusable/exact-SHA qualification run every job and
+both complete flavor matrices. Main pushes remain filtered at the workflow trigger.
+This preserves the exact push evidence consumed by Android release recovery and
+Wear qualification. Reusable calls default `full_qualification` to `true`, and a
+nonempty `release_sha` always forces complete qualification.
+
+`.github/actions/android-native-cache` caches pinned cargo-ndk, Cargo downloads,
+and the actual component build directories selected by each job. Keys include
+OS/architecture, tool versions, lockfiles, and the checked-out source revision for
+compiled targets. Only successful main pushes publish caches; PRs restore them.
+Cargo still validates and builds the checked-out source. F-Droid clean builds
+restore downloads and tools only, without compiled project targets. The action
+selects Rust 1.88 for subsequent host commands as well as native preparation.
+
+The JVM job also enables Gradle's task-output cache for compilation and lint via
+`apps/android/scripts/run-ci-gradle.sh`. Its CI init script always executes every
+`Test` task and prohibits restoring cached test results: contract tests can read
+repository files outside Gradle's declared task inputs. An offline real-Gradle
+fixture checks compilation reuse, fresh test execution, and failure after an
+external contract file changes. Test XML, per-invocation task profiles, and hosted
+runner CPU/memory details are retained on both successful and failed JVM jobs.
 
 ## Optional Apple local pilot
 
