@@ -42,11 +42,21 @@ run_case() {
     CASES=$((CASES + 1))
 }
 
+DIAGNOSTICS='-Pandroid.testInstrumentationRunnerArguments.healthmd.ciInputDiagnostics=false'
+export GITHUB_ACTIONS=false
 FOCUS_COMMAND=':app:connectedFdroidDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.accessibility.NativeInputReadinessTest --stacktrace'
 
 PLAY_COMMAND=':healthmd-core:connectedDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace'
 FDROID_COMMAND=':app:connectedFdroidDebugAndroidTest --stacktrace'
 SMOKE_COMMAND=':app:connectedFdroidDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.healthmd.accessibility.matrix=smoke --stacktrace'
+
+FOCUS_COMMAND="$DIAGNOSTICS $FOCUS_COMMAND"
+
+PLAY_COMMAND="$DIAGNOSTICS $PLAY_COMMAND"
+
+FDROID_COMMAND="$DIAGNOSTICS $FDROID_COMMAND"
+
+SMOKE_COMMAND="$DIAGNOSTICS $SMOKE_COMMAND"
 
 run_case standard 0
 printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$SMOKE_COMMAND" > "$TEST_ROOT/expected"
