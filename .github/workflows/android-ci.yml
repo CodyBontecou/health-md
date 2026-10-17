@@ -11,7 +11,7 @@ jobs:
   instrumentation:
     name: Focused native Save reproduction
     runs-on: ubuntu-24.04
-    # Diagnostic only: repeat one unchanged native journey across its 10 displays.
+    # Diagnostic only: repeat the unchanged native journey for the exact Japanese display.
     timeout-minutes: 30
     defaults:
       run:

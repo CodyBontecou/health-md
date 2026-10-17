@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the unchanged synthetic Save journey on the repository-required Pixel 7.
+"""Repeat the unchanged synthetic Save journey for its exact Japanese display on hosted API35.
 
 A green run means only that this attempt did not reproduce the intermittent failure.
 Stop on the first failure; never alter device settings, permissions, or app storage.
@@ -15,7 +15,7 @@ import sys
 SERIAL = 'emulator-5554'
 METHOD = 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField'
 CLASS = 'com.healthmd.presentation.accessibility.ProfileScheduleAccessibilityTest'
-EXPECTED = 10
+EXPECTED = 1
 ROOT = Path(__file__).resolve().parent
 
 
@@ -43,11 +43,11 @@ def validate(text, expected_cases):
     assert all(c['code'] == 0 for c in completed), 'Native failure/error/skip: inspect the retained log'
     assert any('language=ja' in c['test'] and 'width=320, height=640, fontScale=2.0' in c['test'] for c in completed), 'Japanese failure configuration missing'
     assert not re.search(r'^(?:FAILURES!!!|INSTRUMENTATION_FAILED|INSTRUMENTATION_ABORTED|Error:|INSTRUMENTATION_RESULT: (?:shortMsg|longMsg)=)', text, re.M), 'Runner failed'
-    assert re.search(r'^OK \(10 tests\)', text, re.M), 'Missing complete native runner success'
+    assert re.search(r'^OK \(1 test\)', text, re.M), 'Missing complete native runner success'
     return completed
 
 
-EXPECTED_CASES = ['nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=411, height=720, fontScale=1.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=640, fontScale=1.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=480, fontScale=1.3, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=480, fontScale=2.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=640, fontScale=2.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=568, height=280, fontScale=2.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=640, height=280, fontScale=2.0, language=en, dark=false)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=480, fontScale=2.0, language=de, dark=true)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=480, fontScale=2.0, language=ar, dark=true)]', 'nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=640, fontScale=2.0, language=ja, dark=false)]']
+EXPECTED_CASES = ['nativeSaveReachesTheLastFocusedNumberAndPreservesEveryOtherEntryField[AccessibilityDisplayCase(width=320, height=640, fontScale=2.0, language=ja, dark=false)]']
 
 def main():
     output = Path('apps/android/build/native-save-repro')
@@ -58,7 +58,7 @@ def main():
     for index in range(1, 11):
         log = output / f'attempt-{index:02d}.log'
         proc = subprocess.run(['adb', '-s', SERIAL, 'shell', 'am', 'instrument', '-w', '-r',
-                               '-e', 'class', CLASS, '-e', 'tests_regex', '.*' + METHOD + '.*',
+                               '-e', 'class', CLASS, '-e', 'tests_regex', '.*' + METHOD + '.*language=ja.*',
                                'com.healthmd.android.test/androidx.test.runner.AndroidJUnitRunner'],
                               text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         log.write_text(proc.stdout)
@@ -71,7 +71,7 @@ def main():
             print(proc.stdout, flush=True)
             raise
         (output / f'attempt-{index:02d}.json').write_text(json.dumps({'head': head, 'cases': cases}, indent=2) + '\n')
-        print(f'Attempt {index}: all 10 display cases passed without skips; failure not reproduced.', flush=True)
+        print(f'Attempt {index}: the exact Japanese display case passed without skips; failure not reproduced.', flush=True)
     print('No reproduction in these attempts. No fix or complete-head qualification is claimed.', flush=True)
 
 if __name__ == '__main__':
