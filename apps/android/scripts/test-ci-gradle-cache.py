@@ -82,6 +82,26 @@ public class ContractTest {
     (project / "external-contract.txt").write_text("valid\n")
 
 
+def await_daemon_shutdown(directory: Path, timeout: float = 30) -> None:
+    """Wait for this temporary home's writers, not just Gradle's stop request."""
+    pending = {int(log.stem.split("-")[1].split(".")[0])
+               for log in directory.rglob("daemon-*.out.log")}
+    deadline = time.monotonic() + timeout
+    while pending:
+        for pid in tuple(pending):
+            status = subprocess.run(["ps", "-p", str(pid), "-o", "stat="],
+                                    text=True, capture_output=True, check=False)
+            # An exited process awaiting reaping cannot write the registry either.
+            if status.returncode == 1 or status.stdout.strip().startswith("Z"):
+                pending.remove(pid)
+            elif status.returncode != 0:
+                raise RuntimeError(f"Could not check fixture daemon {pid}: {status.stderr}")
+        if pending:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"Fixture Gradle daemons did not stop: {sorted(pending)}")
+            time.sleep(.05)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--gradle", type=Path, help="Installed Gradle 8.11.1 executable")
@@ -169,6 +189,7 @@ def main() -> None:
             # here; never stop app builds or remove shared Gradle caches.
             subprocess.run([str(gradle), "--stop"], env=environment, text=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+            await_daemon_shutdown(root / "gradle-home")
 
     receipt["temporary_resources_removed"] = True
     if args.receipt:
