@@ -181,9 +181,16 @@ sys.exit(result)
         self.supervisors.append(process)
         (self.cwd / "supervisor").write_text(str(process.pid))
         if not blocked:
-            process.stdin.write(json.dumps(self.plan(modes)))
-            process.stdin.close()
-            process.stdin = None
+            try:
+                with process.stdin:
+                    process.stdin.write(json.dumps(self.plan(modes)))
+            except BrokenPipeError:
+                # A rejected prerequisite may close stdin before reading the
+                # plan. Like communicate(input=...), retain the child's status
+                # and output so the caller still verifies rejection/no launch.
+                pass
+            finally:
+                process.stdin = None
         return process
 
     def finish(self, process, code):
