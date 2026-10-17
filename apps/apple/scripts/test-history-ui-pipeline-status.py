@@ -26,7 +26,9 @@ ipad_block = workflow.split("      - name: Run App Review export regression (iPa
     "      - name: Check warnings (iOS UI)\n", 1
 )[0]
 assert "timeout-minutes: 15" in ipad_block
-ipad_script = textwrap.dedent(ipad_block.split("        run: |\n", 1)[1])
+ipad_script = textwrap.dedent(ipad_block.split("        run: |\n", 1)[1]).replace(
+    "${{ steps.simulator.outputs.ios_destination }}", "platform=iOS Simulator,id=mock"
+).replace("${{ steps.ui_artifacts.outputs.app }}", "/prepared/HealthMd.app")
 expected = [
     ["HealthMdUILaunchTests/testAppLaunches",
      "ExportJourneyUITests/testFirstRunExportJourney_showsExportButton_andCompletesExport",
@@ -82,7 +84,14 @@ for first, second, no_match, tee_fail, grep_fail, expected_exit in cases:
         shutil.copyfile(ROOT / "apps/apple/scripts/run-owned-ui.py", scripts / "run-owned-ui.py")
         binaries = cwd / "bin"
         binaries.mkdir()
-        xcrun = "#!/usr/bin/env bash\necho 'iPad Pro (10000000-0000-0000-0000-000000000001) (Shutdown)'\n"
+        xcrun = '''#!/usr/bin/env python3
+import json, os, sys
+with open('simctl.jsonl', 'a') as f: f.write(json.dumps(sys.argv[1:]) + '\\n')
+if sys.argv[1:5] == ['simctl', 'list', 'devices', 'available']:
+    print('iPad Pro (10000000-0000-0000-0000-000000000001) (Shutdown)')
+if len(sys.argv) > 2 and sys.argv[2] == os.environ.get('SIMCTL_FAIL'):
+    sys.exit(7)
+'''
         for name, content in [("xcodebuild", mock), ("tee", tee), ("grep", grep), ("xcrun", xcrun)]:
             file = binaries / name
             file.write_text(content)
@@ -137,4 +146,27 @@ for first, second, no_match, tee_fail, grep_fail, expected_exit in cases:
             assert third[third.index("-default-test-execution-time-allowance") + 1] == "180"
             assert third[third.index("-maximum-test-execution-time-allowance") + 1] == "300"
             assert "Test Case mock-3" in raw.read_text()
+            simulator_calls = [json.loads(line) for line in (cwd / "simctl.jsonl").read_text().splitlines()]
+            assert simulator_calls == [
+                ["simctl", "list", "devices", "available", "iOS"],
+                ["simctl", "shutdown", "mock"],
+                ["simctl", "bootstatus", "10000000-0000-0000-0000-000000000001", "-b"],
+                ["simctl", "install", "10000000-0000-0000-0000-000000000001", "/prepared/HealthMd.app"],
+            ], simulator_calls
+            for failure in ["shutdown", "bootstatus", "install"]:
+                (cwd / "simctl.jsonl").unlink()
+                failure_records = cwd / "build" / ("setup-" + failure)
+                failure_records.mkdir()
+                for suffix in [".json", ".owner.json"]:
+                    shutil.copyfile(raw.parent / ("ui-owner-phone" + suffix),
+                                    failure_records / ("ui-owner-phone" + suffix))
+                failure_script = ipad_script.replace("--records build/logs", "--records build/setup-" + failure)
+                failed_setup = subprocess.run(["bash", "-c", failure_script], cwd=cwd,
+                                              env=dict(env, SIMCTL_FAIL=failure),
+                                              capture_output=True, text=True, timeout=10)
+                assert failed_setup.returncode != 0, failed_setup
+                assert len((cwd / "calls.jsonl").read_text().splitlines()) == 3
+                setup_calls = [json.loads(line) for line in (cwd / "simctl.jsonl").read_text().splitlines()]
+                assert setup_calls[-1][1] == failure, setup_calls
+            print("PASS tablet setup targets only selected devices; shutdown/boot/install failures prevent native tests")
             print("PASS actual tablet setup/ownership/four original selectors/15m step/180-300 case/raw append")

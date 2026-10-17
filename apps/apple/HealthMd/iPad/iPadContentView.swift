@@ -582,7 +582,7 @@ struct iPadContentView: View {
         detail: FailedDateDetail? = nil
     ) {
         errorReason = reason
-        errorMessage = detail?.detailedMessage ?? reason.detailedDescription
+        errorMessage = reason.alertMessage(detail: detail)
         showError = true
     }
 
