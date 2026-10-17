@@ -161,10 +161,7 @@ generate-export-docs:
 	@scripts/check-documentation-links.py
 
 check-export-docs:
-	@scripts/generated-export-docs.sh check
-	@scripts/generated-individual-entry-docs.sh check
-	@scripts/generated-rollup-reference-docs.sh check
-	@scripts/generated-automation-reference-docs.sh check
+	@scripts/check-generated-reference-docs.sh
 	@scripts/generated-cli-reference-docs.sh check
 	@scripts/check-documentation-links.py
 
