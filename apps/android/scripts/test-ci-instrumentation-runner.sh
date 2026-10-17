@@ -23,6 +23,17 @@ esac
 MOCK
 chmod +x "$TEST_ROOT/android/gradlew"
 
+mkdir -p "$TEST_ROOT/bin"
+export MOCK_ADB_CALLS="$TEST_ROOT/adb-calls"
+: > "$MOCK_ADB_CALLS"
+cat > "$TEST_ROOT/bin/adb" <<'MOCK'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$MOCK_ADB_CALLS"
+printf '  mCurrentFocus=Window{123 u0 Synthetic platform blocker}\n'
+MOCK
+chmod +x "$TEST_ROOT/bin/adb"
+export PATH="$TEST_ROOT/bin:$PATH"
+
 CASES=0
 run_case() {
     local mode="$1" expected="$2" actual
@@ -84,6 +95,17 @@ export MOCK_FOCUS_EXIT=25
 run_case standard 25
 printf '%s\n' "$FOCUS_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
+unset MOCK_FOCUS_EXIT
+
+[[ ! -s "$MOCK_ADB_CALLS" ]]
+export GITHUB_ACTIONS=true MOCK_FOCUS_EXIT=25
+run_case standard 25
+printf '%s\n' "${FOCUS_COMMAND/Diagnostics=false/Diagnostics=true}" > "$TEST_ROOT/expected"
+cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
+printf '%s\n' '-s emulator-5554 shell dumpsys window windows' > "$TEST_ROOT/expected-adb"
+cmp "$TEST_ROOT/expected-adb" "$MOCK_ADB_CALLS"
+grep -q 'Synthetic platform blocker' "$TEST_ROOT/result.log"
+export GITHUB_ACTIONS=false
 unset MOCK_FOCUS_EXIT
 
 export MOCK_PLAY_EXIT=23
