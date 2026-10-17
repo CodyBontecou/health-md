@@ -195,48 +195,81 @@ jobs:
         with:
           min-wrapper-count: 1
 
+      - name: Record hosted runner CPU and memory
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import pathlib
+          import platform
+          import subprocess
+
+          report = pathlib.Path("build/reports/ci/runner.json")
+          report.parent.mkdir(parents=True, exist_ok=True)
+          report.write_text(json.dumps({
+              "system": platform.system(),
+              "kernel": platform.release(),
+              "architecture": platform.machine(),
+              "logical_cpus": os.cpu_count(),
+              "cpu": json.loads(subprocess.check_output(["lscpu", "--json"], text=True)),
+              "memory": pathlib.Path("/proc/meminfo").read_text(),
+          }, indent=2) + "\n")
+          PY
+
+      - name: Verify compilation cache never reuses test results
+        run: |
+          ./gradlew --version
+          python3 scripts/test-ci-gradle-cache.py
+
       - name: Prepare source-built Rust core
-        run: ./gradlew :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
+        run: ./scripts/run-ci-gradle.sh :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
       - name: Run app variant, wearable contract, Wear, and protocol tests
         shell: bash
         run: |
           set -euo pipefail
           # Keep Compose compiler peaks bounded and compile one app variant at a time.
-          ./gradlew --no-daemon --max-workers=2 \
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 \
             :app:testPlayDebugUnitTest \
             :healthmd-core:testDebugUnitTest \
             :wearable-contract:test \
             :wear:testDebugUnitTest \
             :direct-protocol:test \
             --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
-          ./gradlew --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
-
-      - name: Retain failed JVM test reports
-        if: ${{ failure() }}
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: android-jvm-failure-reports-${{ github.run_attempt }}
-          path: |
-            apps/android/app/build/reports/tests/
-            apps/android/app/build/test-results/
-          retention-days: 7
-          if-no-files-found: warn
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
+          ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
       - name: Run Wear lint, assemble, and bundle
-        run: ./gradlew :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
+        run: ./scripts/run-ci-gradle.sh :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
 
       - name: Run Android lint
-        run: ./gradlew :app:lintPlayDebug --stacktrace
+        run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
       - name: Assemble debug app and validate packaged pair and retained Play-generated APK policy
         run: |
-          ./gradlew :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
+          ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
           ./scripts/test-wear-bundle-manifest-verifier.sh \
             wear/build/outputs/bundle/debug/wear-debug.aab \
             app/build/outputs/bundle/playDebug/app-play-debug.aab
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh
+
+      - name: Retain JVM test results, task profiles, and runner diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-jvm-results-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            apps/android/build/reports/ci/
+            apps/android/build/reports/profile/
+            apps/android/app/build/reports/tests/
+            apps/android/app/build/test-results/
+            apps/android/healthmd-core/build/test-results/
+            apps/android/wear/build/test-results/
+            apps/android/wearable-contract/build/test-results/
+            apps/android/direct-protocol/build/test-results/
+          retention-days: 7
+          if-no-files-found: warn
 
   instrumentation:
     name: Emulator instrumentation and direct E2E

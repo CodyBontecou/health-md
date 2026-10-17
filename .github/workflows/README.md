@@ -58,6 +58,14 @@ Cargo still validates and builds the checked-out source. F-Droid clean builds
 restore downloads and tools only, without compiled project targets. The action
 selects Rust 1.88 for subsequent host commands as well as native preparation.
 
+The JVM job also enables Gradle's task-output cache for compilation and lint via
+`apps/android/scripts/run-ci-gradle.sh`. Its CI init script always executes every
+`Test` task and prohibits restoring cached test results: contract tests can read
+repository files outside Gradle's declared task inputs. An offline real-Gradle
+fixture checks compilation reuse, fresh test execution, and failure after an
+external contract file changes. Test XML, per-invocation task profiles, and hosted
+runner CPU/memory details are retained on both successful and failed JVM jobs.
+
 ## Optional Apple local pilot
 
 The Mac runner belongs exclusively to the private
