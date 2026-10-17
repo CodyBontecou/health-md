@@ -242,7 +242,13 @@ final class CIQualityGateTests: XCTestCase {
         let tablet = try ownedPlan(content, marker: "IPAD_PLAN")
         guard let phonePipelines = phone["pipelines"] as? [[String: Any]], phonePipelines.count == 2,
               let tabletPipelines = tablet["pipelines"] as? [[String: Any]], tabletPipelines.count == 1,
-              content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60")
+              content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60")
+        else { throw OwnedPlanError.invalid }
+        guard content.contains("prepare-ui-artifacts:\n    name: Prepare qualified UI products once\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 20"),
+              content.contains("PREPARE_UI_RESULT: ${{ needs.prepare-ui-artifacts.result }}"),
+              content.contains("test \"$PREPARE_UI_RESULT\" = success"),
+              content.contains("--sha256 '${{ needs.prepare-ui-artifacts.outputs.sha256 }}'"),
+              content.contains("--source-sha \"$(git rev-parse HEAD)\"")
         else { throw OwnedPlanError.invalid }
         let phoneStep = content.components(separatedBy: "- name: Run UI smoke tests (iOS)").last?
             .components(separatedBy: "- name: Run App Review export regression (iPad)").first
@@ -314,6 +320,12 @@ final class CIQualityGateTests: XCTestCase {
         for (before, after) in [("timeout-minutes: 35", "timeout-minutes: 36"),
                                 ("timeout-minutes: 15", "timeout-minutes: 16"),
                                 ("timeout-minutes: 60", "timeout-minutes: 61"),
+                                ("timeout-minutes: 20", "timeout-minutes: 21"),
+                                ("needs: [changes, prepare-shared-core, prepare-ui-artifacts]", "needs: [changes, prepare-shared-core]"),
+                                ("needs.prepare-ui-artifacts.result", "needs.changes.result"),
+                                ("test \"$PREPARE_UI_RESULT\" = success", "echo unchecked-preparation"),
+                                ("needs.prepare-ui-artifacts.outputs.sha256", "needs.changes.outputs.sha256"),
+                                ("--source-sha \"$(git rev-parse HEAD)\"", "--source-sha unchecked"),
                                 ("- name: Run UI smoke tests (iOS)", "- name: Run UI smoke tests (iOS)\n        continue-on-error: true")] {
             XCTAssertThrowsError(try validatedOwnedUICommands(content.replacingOccurrences(of: before, with: after)))
         }
@@ -328,8 +340,8 @@ final class CIQualityGateTests: XCTestCase {
             "Hosted Apple unit and coverage jobs must allow enough time for clean builds"
         )
         XCTAssertTrue(
-            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
-            "The split UI job must allow at least 60 minutes for clean builds"
+            content.contains("test-ios-ui:\n    name: iOS UI regressions\n    needs: [changes, prepare-shared-core, prepare-ui-artifacts]\n    if: ${{ needs.changes.outputs.run == 'true' }}\n    runs-on: xcode-27\n    timeout-minutes: 60"),
+            "The native UI execution job must retain 60 minutes after preparation"
         )
         XCTAssertEqual(
             content.components(separatedBy: "- name: Prepare and validate shared Rust core for Apple").count - 1,
@@ -339,7 +351,7 @@ final class CIQualityGateTests: XCTestCase {
         XCTAssertEqual(
             content.components(separatedBy: "needs: [changes, prepare-shared-core]").count - 1,
             3,
-            "All Xcode test jobs must consume the single prepared shared-core artifact"
+            "Unit jobs and UI preparation must consume the single prepared shared-core artifact"
         )
         let commands = try validatedOwnedUICommands(content)
         XCTAssertEqual(commands.count, 3, "Two phone and one tablet native invocation must remain bounded")
@@ -360,13 +372,13 @@ final class CIQualityGateTests: XCTestCase {
         }
         let smokeSelectionCount = smokeStep.components(separatedBy: "-only-testing:HealthMdUITests/").count - 1
         XCTAssertEqual(smokeSelectionCount, 18, "PR smoke must preserve all 15 current regressions plus three history journeys")
-        XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 4,
-                       "All native consumers and the single producer must use the verified free SDK27 runner")
-        XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 4,
-                       "The producer and all three consumers must share the SDK27 artifact namespace")
+        XCTAssertEqual(content.components(separatedBy: "runs-on: xcode-27").count - 1, 5,
+                       "Both producers and all three native test jobs must use the verified free SDK27 runner")
+        XCTAssertEqual(content.components(separatedBy: "name: apple-sdk27-shared-core").count - 1, 5,
+                       "The core producer and all four consumers must share the SDK27 artifact namespace")
         XCTAssertTrue(content.contains("apple-shared-core-sdk27-27A266a-"))
-        XCTAssertEqual(content.components(separatedBy: "cmp build/logs/history-sdk27-receipt.txt").count - 1, 3,
-                       "All native consumers must verify producer SDK/target/head/tree provenance")
+        XCTAssertEqual(content.components(separatedBy: "cmp build/logs/history-sdk27-receipt.txt").count - 1, 4,
+                       "UI preparation and all native test jobs must verify producer SDK/target/head/tree provenance")
         XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testAllTimeLimitedHistoryShowsBoundaryAndPermissionGuide"))
         XCTAssertTrue(smokeStep.contains("HistoryAuthorizationJourneyUITests/testBoundedUnknownHistoryRechecksExecutionWithoutClaimingFullAccess"))
         XCTAssertTrue(content.contains("HistoryAuthorizationJourneyUITests/testUnavailableHistoryAtLargeTextHasAccessibleAction"))
