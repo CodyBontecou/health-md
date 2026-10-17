@@ -58,7 +58,7 @@ def main():
     for index in range(1, 11):
         log = output / f'attempt-{index:02d}.log'
         proc = subprocess.run(['adb', '-s', SERIAL, 'shell', 'am', 'instrument', '-w', '-r',
-                               '-e', 'class', CLASS + '#' + METHOD,
+                               '-e', 'class', CLASS, '-e', 'tests_regex', '.*' + METHOD + '.*',
                                'com.healthmd.android.test/androidx.test.runner.AndroidJUnitRunner'],
                               text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         log.write_text(proc.stdout)
