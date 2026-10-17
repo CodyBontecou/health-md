@@ -20,6 +20,25 @@ esac
 ANDROID_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ANDROID_DIR"
 
+capture_focus_failure() {
+    local status=$?
+    # Only the disposable hosted AVD may expose platform window identities. Do
+    # not collect window titles or other apps' state on a developer's device.
+    if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
+        echo 'Hosted AVD focus at instrumentation failure:' >&2
+        adb -s emulator-5554 shell dumpsys window windows \
+            | sed -n '/mCurrentFocus=/p; /mFocusedApp=/p' >&2 || true
+    fi
+    exit "$status"
+}
+trap capture_focus_failure ERR
+
+# Fail early on the actual native input admission contract. A focus blocker
+# otherwise repeats through hundreds of fixture tests before surfacing.
+./gradlew :app:connectedFdroidDebugAndroidTest \
+    -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.accessibility.NativeInputReadinessTest \
+    --stacktrace
+
 # No class/package filter: all core, shared app, and flavor-specific test methods run.
 ./gradlew :healthmd-core:connectedDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
 
