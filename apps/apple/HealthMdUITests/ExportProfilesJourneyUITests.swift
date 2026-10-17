@@ -137,8 +137,10 @@ final class ExportProfilesJourneyUITests: XCTestCase {
         let delete = app.buttons["Delete Profile…"]
         XCTAssertTrue(delete.waitUntilExists(timeout: 5))
         delete.tap()
+        // The detail button also starts with "Delete ". Select the destructive
+        // confirmation's quoted-name prefix instead of tapping the detail again.
         let confirm = app.buttons.matching(
-            NSPredicate(format: "label BEGINSWITH 'Delete '")
+            NSPredicate(format: "label BEGINSWITH %@", "Delete “")
         ).firstMatch
         XCTAssertTrue(confirm.waitUntilExists(timeout: 5))
         confirm.tap()

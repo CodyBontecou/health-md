@@ -46,6 +46,29 @@ final class ExportJourneyUITests: XCTestCase {
         )
     }
 
+    /// The App Review iPad lane selects this empty-device recovery journey.
+    /// Use the existing synthetic export result; never read simulator health data.
+    func testNoDataExport_showsGuidanceInsteadOfGenericError() throws {
+        let app = UITestLaunchHelper.configuredApp(
+            healthAuthorized: true,
+            vaultSelected: true,
+            purchaseUnlocked: true,
+            exportResult: "no-data"
+        )
+        app.launch()
+        defer { app.terminate() }
+        let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
+        XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
+        exportButton.tap()
+        XCTAssertTrue(app.staticTexts["No Health Data Found"].waitForExistence(timeout: 10))
+        let guidance = app.staticTexts.matching(NSPredicate(
+            format: "label CONTAINS %@", "Try All Time or another date range"
+        )).firstMatch
+        XCTAssertTrue(guidance.waitForExistence(timeout: 5))
+        XCTAssertTrue(guidance.isHittable, "Empty-device recovery guidance must be visible")
+        XCTAssertFalse(app.staticTexts["Export Couldn’t Finish"].exists)
+    }
+
     func testMultiFileExport_hidesCompletionUntilEntireExportFinishes() throws {
         let app = UITestLaunchHelper.configuredApp(
             healthAuthorized: true,

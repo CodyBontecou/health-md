@@ -321,8 +321,14 @@ class WorkflowExecutionTests(unittest.TestCase):
         for setting in ("CODE_SIGNING_ALLOWED=NO", "CODE_SIGNING_REQUIRED=NO", "CODE_SIGN_IDENTITY=", "DEVELOPMENT_TEAM=", "PROVISIONING_PROFILE_SPECIFIER="):
             self.assertIn(setting, build)
         selections = []
+        result_bundles = set()
         for args, count in zip(calls[1:], (9, 9)):
             self.assertEqual(args[args.index("-xctestrun") + 1], artifact)
+            bundle = Path(args[args.index("-resultBundlePath") + 1])
+            self.assertEqual(bundle.parent, Path("build/test-results"))
+            self.assertTrue(bundle.name.startswith("HealthMd-UI-"))
+            self.assertEqual(bundle.suffix, ".xcresult")
+            result_bundles.add(bundle)
             self.assertFalse(set(args) & {"-project", "-workspace", "-scheme", "-configuration"})
             self.assertEqual(args[args.index("-test-timeouts-enabled") + 1], "YES")
             self.assertEqual(args[args.index("-default-test-execution-time-allowance") + 1], "180")
@@ -331,6 +337,7 @@ class WorkflowExecutionTests(unittest.TestCase):
             self.assertEqual(len(selected), count)
             selections.extend(selected)
         self.assertEqual(selections, EXPECTED_TESTS)
+        self.assertEqual(len(result_bundles), 2, "Each invocation must preserve its own native result")
         self.assertEqual(
             [json.loads(line) for line in self.device_calls.read_text().splitlines()],
             [
@@ -340,6 +347,23 @@ class WorkflowExecutionTests(unittest.TestCase):
         )
         self.assertTrue((self.root / "build/logs/build-ios-ui-compile.log").is_file())
         self.assertTrue((self.root / "build/logs/ios-ui-build-receipt.json").is_file())
+
+    def test_tablet_native_result_is_retained_by_the_existing_artifact_upload(self) -> None:
+        tablet = shell_body(self.steps["Run App Review export regression (iPad)"])
+        plan = json.loads(tablet.split("<<'IPAD_PLAN'\n", 1)[1].split("\nIPAD_PLAN", 1)[0])
+        command = plan["pipelines"][0]["command"]
+        bundle = Path(command[command.index("-resultBundlePath") + 1])
+        self.assertEqual(bundle, Path("build/test-results/HealthMd-UI-AppReview-iPad.xcresult"))
+        self.assertIn("apps/apple/build/test-results/HealthMd-UI-*.xcresult",
+                      self.steps["Upload iOS UI artifacts"])
+
+    def test_every_selected_native_case_has_an_implemented_test_method(self) -> None:
+        selections = re.findall(r"-only-testing:HealthMdUITests/([A-Za-z0-9_]+/[A-Za-z0-9_]+)", self.job)
+        self.assertEqual(len(selections), 22, "Preserve all18 phone and4 tablet selections")
+        for selection in selections:
+            suite, method = selection.split("/")
+            source = (REPO / "apps/apple/HealthMdUITests" / (suite + ".swift")).read_text()
+            self.assertRegex(source, r"\bfunc\s+" + re.escape(method) + r"\s*\(", selection)
 
     def test_a_second_build_uses_a_new_directory_instead_of_old_artifacts(self) -> None:
         first = self.build()

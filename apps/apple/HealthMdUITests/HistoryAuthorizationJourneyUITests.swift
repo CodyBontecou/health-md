@@ -31,6 +31,14 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
         allTime.tap()
         let message = app.staticTexts["export.historyWarning.message"]
         reveal(message, in: app)
+        // Selecting a range invalidates the old preview before the asynchronous
+        // assessment publishes. Wait for the expected state, not just the card.
+        let limitedMessage = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label CONTAINS %@",
+            "export.historyWarning.message", "Earlier data is unknown, not missing"
+        )).firstMatch
+        XCTAssertTrue(limitedMessage.waitForExistence(timeout: 5),
+                      "Limited assessment must publish its warning; actual: \(message.label)")
         XCTAssertTrue(message.label.contains("Earlier data is unknown, not missing"))
         assertDistinctPreviewIdentifiers(in: app)
         let details = app.buttons["export.historyWarning.details"]
@@ -170,18 +178,24 @@ final class HistoryAuthorizationJourneyUITests: XCTestCase {
             let above = exists && center.y < visible.minY
             let pickers = scroll.datePickers.allElementsBoundByIndex.map(\.frame)
             let preferredY = visible.minY + visible.height * (above ? 0.25 : 0.75)
-            let anchors = scroll.staticTexts.allElementsBoundByIndex.compactMap { text -> CGPoint? in
-                let intersection = text.frame.intersection(visible.insetBy(dx: 4, dy: 12))
-                guard intersection.width > 8, intersection.height > 8 else { return nil }
-                let point = CGPoint(x: intersection.midX, y: intersection.midY)
-                return pickers.contains(where: { $0.contains(point) }) ? nil : point
-            }
-            guard let point = anchors.min(by: { abs($0.y - preferredY) < abs($1.y - preferredY) }) else { break }
+            // Querying every virtual StaticText costs one remote AX snapshot
+            // per node. This consumed the pending phone fixture's lifetime and
+            // the iPad lane deadline. Pan inside the real scroll viewport instead,
+            // avoiding date-picker wheels and the pinned footer above.
+            let xPositions = [visible.midX, visible.minX + 12, visible.maxX - 12]
+            let yPositions = [preferredY, visible.midY,
+                              visible.minY + visible.height * (above ? 0.75 : 0.25)]
+            let anchors = yPositions.flatMap { y in xPositions.map { CGPoint(x: $0, y: y) } }
+            guard let point = anchors.first(where: { candidate in
+                visible.contains(candidate) && !pickers.contains(where: { $0.contains(candidate) })
+            }) else { break }
             let room = above ? visible.maxY - point.y : point.y - visible.minY
             let travel = min(visible.height * 0.55, room - 4)
             guard travel > 12 else { break }
-            let start = scroll.coordinate(withNormalizedOffset: .zero)
-                .withOffset(CGVector(dx: point.x - scroll.frame.minX, dy: point.y - scroll.frame.minY))
+            // Preserve the selected scroll owner's geometry without repeatedly
+            // re-resolving an ancestor query containing a transient child.
+            let start = app.coordinate(withNormalizedOffset: .zero)
+                .withOffset(CGVector(dx: point.x - app.frame.minX, dy: point.y - app.frame.minY))
             start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: above ? travel : -travel)),
                         withVelocity: .slow, thenHoldForDuration: 0.15)
         }
