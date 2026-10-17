@@ -23,6 +23,8 @@
 ##   make generate-export-docs
 ##                           regenerate all source-backed export reference artifacts
 ##   make check-export-docs  verify generated artifacts and local documentation links
+##   make check-export-docs-after-tests
+##                           verify CLI docs and links after a successful full macOS test run
 ##   make test-export-lab-tools
 ##                           run host runner and private API sink tests
 ##   make check-export-lab-release
@@ -47,7 +49,7 @@ IOS_TEST_RAW_LOG   ?= build/logs/xcodebuild-ios-raw.log
 COVERAGE_DIR       := build/coverage
 XCRESULT_PATH      := $(COVERAGE_DIR)/HealthMd.xcresult
 
-.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs test-cli cli install-cli test-export-lab-tools check-export-lab-release
+.PHONY: test test-ios test-macos prepare-healthmd-core-rust test-tsan coverage coverage-report check-coverage check-warnings check-apns-scheduling check-macos-localizations update-export-schema-signature generate-export-docs check-export-docs check-export-docs-after-tests test-cli cli install-cli test-export-lab-tools check-export-lab-release
 
 prepare-healthmd-core-rust:
 	@$(CORE_RUST_PREPARE)
@@ -163,6 +165,13 @@ check-export-docs:
 	@scripts/generated-individual-entry-docs.sh check
 	@scripts/generated-rollup-reference-docs.sh check
 	@scripts/generated-automation-reference-docs.sh check
+	@scripts/generated-cli-reference-docs.sh check
+	@scripts/check-documentation-links.py
+
+# Requires a successful full HealthMdTests run on macOS. That suite already
+# checks core, individual-entry, rollup, and automation documentation for drift.
+# Keep the separate CLI package check and repository link validation here.
+check-export-docs-after-tests:
 	@scripts/generated-cli-reference-docs.sh check
 	@scripts/check-documentation-links.py
 
