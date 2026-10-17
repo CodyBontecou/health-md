@@ -90,8 +90,7 @@ def staged_path(value: Any, products: Path, test_host: Path | None = None) -> Pa
         raise ValueError("product paths must use the generated test-root/host placeholders")
     placeholder, relative = value.split("/", 1)
     root = products if placeholder == "__TESTROOT__" else test_host
-    # Validate only the generated suffix. A temporary/build root may contain
-    # literal double underscores and is never an xctestrun placeholder.
+    # Validate the generated suffix, not literal underscores in the build root.
     if root is None or "__" in relative:
         raise ValueError("unresolved product path placeholder")
     path = (root / relative).resolve()
