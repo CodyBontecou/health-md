@@ -29,9 +29,9 @@ final class FeedbackReporter: ObservableObject {
     private let opener: Opener
     private let strings: FeedbackFallbackCopy
 
-    init(opener: @escaping Opener = FeedbackReporter.openURL, strings: FeedbackFallbackCopy = .init()) {
+    init(opener: @escaping Opener = FeedbackReporter.openURL, strings: FeedbackFallbackCopy? = nil) {
         self.opener = opener
-        self.strings = strings
+        self.strings = strings ?? FeedbackFallbackCopy()
     }
 
     func open(_ route: Route) {

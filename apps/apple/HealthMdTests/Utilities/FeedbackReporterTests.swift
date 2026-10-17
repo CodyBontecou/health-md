@@ -9,7 +9,7 @@ nonisolated final class FeedbackReporterTests: XCTestCase {
     // macOS 26 / Swift 6 deinit crashes (docs/testing/lifecycle-audit.md).
     @MainActor private static var retainedReporters: [FeedbackReporter] = []
 
-    @MainActor private func makeReporter(strings: FeedbackFallbackCopy = .init(), opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
+    @MainActor private func makeReporter(strings: FeedbackFallbackCopy? = nil, opener: @escaping FeedbackReporter.Opener) -> FeedbackReporter {
         let reporter = FeedbackReporter(opener: opener, strings: strings)
         Self.retainedReporters.append(reporter)
         return reporter
