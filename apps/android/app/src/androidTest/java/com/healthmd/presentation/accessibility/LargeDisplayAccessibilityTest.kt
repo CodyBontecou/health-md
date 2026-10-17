@@ -486,7 +486,10 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
             }
         }
         capture("schedule-fields")
-        val field = compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_VALUE)
+        // This unique editor tag does not require descendant semantics merging.
+        // Keep lookup from merging live text-field children on the test thread
+        // while Android is delivering keyboard/layout updates.
+        val field = compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_VALUE, useUnmergedTree = true)
         field.performScrollTo().assertFullyVisible().assertMinimumTouchTarget()
         assertTextFits(field, GeistType.label20Mono.fontSize)
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -647,7 +650,9 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         val results = mutableListOf<TextLayoutResult>()
         node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertTrue("Expected measured text", results.isNotEmpty())
-        val visibleWidth = node.fetchSemanticsNode().boundsInRoot.width
+        val semanticsNode = node.fetchSemanticsNode()
+        // Geometry can observe layout state; read it on the Android owner thread.
+        val visibleWidth = compose.runOnIdle { semanticsNode.boundsInRoot.width }
         results.forEach { result ->
             assertEquals("Respect the chosen font scale", display.fontScale, result.layoutInput.density.fontScale)
             if (expectedFontSize != null) assertEquals(expectedFontSize, result.layoutInput.style.fontSize)
