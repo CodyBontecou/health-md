@@ -3,6 +3,7 @@ package com.healthmd.presentation.accessibility
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -36,6 +37,7 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsAnimationCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
@@ -62,6 +64,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,6 +78,9 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
 
+    // Accessed only by native callbacks and runOnUiThread below.
+    private val activeImeAnimations = mutableSetOf<WindowInsetsAnimationCompat>()
+
     @Before
     fun keepTestActivityAwake() {
         UiDevice.getInstance(InstrumentationRegistry.getInstrumentation()).wakeUp()
@@ -83,6 +89,33 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
             it.setShowWhenLocked(true)
             it.setTurnScreenOn(true)
             it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            ViewCompat.setWindowInsetsAnimationCallback(
+                it.window.decorView,
+                object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    override fun onPrepare(animation: WindowInsetsAnimationCompat) {
+                        if (animation.typeMask and WindowInsetsCompat.Type.ime() != 0) {
+                            activeImeAnimations += animation
+                        }
+                    }
+
+                    override fun onProgress(
+                        insets: WindowInsetsCompat,
+                        runningAnimations: MutableList<WindowInsetsAnimationCompat>,
+                    ): WindowInsetsCompat = insets
+
+                    override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                        activeImeAnimations -= animation
+                    }
+                },
+            )
+        }
+    }
+
+    @After
+    fun releaseKeyboardObserver() {
+        compose.runOnUiThread {
+            ViewCompat.setWindowInsetsAnimationCallback(compose.activity.window.decorView, null)
+            activeImeAnimations.clear()
         }
     }
 
@@ -617,20 +650,40 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
 
     /** Wait on the real window owner; Compose idle does not settle platform IME animations. */
     private fun awaitNativeKeyboardVisibility(expectedVisible: Boolean) {
-        compose.waitUntil(timeoutMillis = 10_000) {
-            compose.runOnUiThread {
-                val insets = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
-                if (insets == null) {
-                    false
-                } else {
+        var rejectedAnimationFrames = 0
+        var nativeFacts = "insets unavailable"
+        var editorCount = 0
+        try {
+            compose.waitUntil(timeoutMillis = 10_000) {
+                val nativeReady = compose.runOnUiThread {
+                    val insets = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
                     val ime = WindowInsetsCompat.Type.ime()
-                    val bottom = insets.getInsets(ime).bottom
-                    insets.isVisible(ime) == expectedVisible &&
+                    val bottom = insets?.getInsets(ime)?.bottom
+                    val visible = insets?.isVisible(ime)
+                    val visibilityMatches = visible == expectedVisible && bottom != null &&
                         (if (expectedVisible) bottom > 0 else bottom == 0)
+                    if (visibilityMatches && activeImeAnimations.isNotEmpty()) rejectedAnimationFrames++
+                    nativeFacts = "visible=$visible, bottom=$bottom, activeAnimations=${activeImeAnimations.size}"
+                    visibilityMatches && activeImeAnimations.isEmpty()
                 }
+                // An IME resize can replace the fitted viewport's semantics between
+                // native visibility and the next Compose layout. Query the unmerged
+                // unique tag without invoking missing-node tree diagnostics.
+                if (nativeReady) {
+                    editorCount = compose.onAllNodesWithTag(
+                        ScheduleControlTags.FREQUENCY_VALUE, useUnmergedTree = true,
+                    ).fetchSemanticsNodes(atLeastOneRootRequired = false).size
+                }
+                nativeReady && editorCount == 1
             }
+        } catch (failure: ComposeTimeoutException) {
+            throw AssertionError(
+                "Native keyboard did not settle: expectedVisible=$expectedVisible, $nativeFacts, editorCount=$editorCount",
+                failure,
+            )
         }
         compose.waitForIdle()
+        Log.i("HealthMdImeReadiness", "expectedVisible=$expectedVisible, rejectedAnimationFrames=$rejectedAnimationFrames")
     }
 
     private fun selectMenuItem(label: String) {
