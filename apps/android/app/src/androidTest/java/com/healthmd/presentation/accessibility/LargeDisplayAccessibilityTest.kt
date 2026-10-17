@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -464,17 +466,22 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     fun scheduleFieldsFitLocalizedValuesAndCommitKeyboardEdits() {
         val state = mutableStateOf(ScheduleUiState(cadenceValue = 99999, lookbackDays = 365))
         compose.setContent {
-            TestViewport {
-                Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()
-                    .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
-                    ScheduleSettingsCard(
-                        uiState = state.value,
-                        onFrequencyValueChange = { state.value = state.value.copy(cadenceValue = it) },
-                        onFrequencyUnitSelected = { state.value = state.value.copy(cadenceUnit = it) },
-                        onHourDelta = {}, onMinuteDelta = {}, onTogglePeriod = {},
-                        onDateWindowSelected = { state.value = state.value.copy(dateWindow = it) },
-                        onLookbackDelta = { state.value = state.value.copy(lookbackDays = state.value.lookbackDays + it) },
-                    )
+            // Consume physical IME insets at native density, then fit the
+            // synthetic viewport into the remaining host. Applying imePadding
+            // inside the scaled viewport can consume all 280 dp of a short case.
+            Box(Modifier.fillMaxSize().imePadding()) {
+                TestViewport {
+                    Column(Modifier.fillMaxSize().background(AppColors.bgPrimary)
+                        .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
+                        ScheduleSettingsCard(
+                            uiState = state.value,
+                            onFrequencyValueChange = { state.value = state.value.copy(cadenceValue = it) },
+                            onFrequencyUnitSelected = { state.value = state.value.copy(cadenceUnit = it) },
+                            onHourDelta = {}, onMinuteDelta = {}, onTogglePeriod = {},
+                            onDateWindowSelected = { state.value = state.value.copy(dateWindow = it) },
+                            onLookbackDelta = { state.value = state.value.copy(lookbackDays = state.value.lookbackDays + it) },
+                        )
+                    }
                 }
             }
         }
@@ -492,21 +499,33 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.onNodeWithTag(ScheduleControlTags.HOUR).assertDoesNotExist()
 
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement(formatInteger(7, locale))
         compose.runOnIdle { assertEquals("Don't persist a below-minimum partial edit", 99999, state.value.cadenceValue) }
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         compose.runOnIdle { assertEquals(15, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(15, locale))
 
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement("")
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         field.assertTextContains(formatInteger(15, locale))
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement(formatInteger(123456, locale))
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(12345, locale))
+        // Keyboard dismissal can change the short viewport and its scroll offset.
+        // Measure the editor only after bringing it back into view, as above.
+        field.performScrollTo().assertFullyVisible()
         assertTextFits(field, GeistType.label20Mono.fontSize)
 
         val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)
@@ -591,6 +610,24 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.onNodeWithContentDescription(text(R.string.schedule_increase_hour)).performScrollTo()
             .assertFullyVisible().performTouchInput { click() }
         compose.runOnIdle { assertEquals(1, changed); assertEquals(1, blocked) }
+    }
+
+    /** Wait on the real window owner; Compose idle does not settle platform IME animations. */
+    private fun awaitNativeKeyboardVisibility(expectedVisible: Boolean) {
+        compose.waitUntil(timeoutMillis = 10_000) {
+            compose.runOnUiThread {
+                val insets = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                if (insets == null) {
+                    false
+                } else {
+                    val ime = WindowInsetsCompat.Type.ime()
+                    val bottom = insets.getInsets(ime).bottom
+                    insets.isVisible(ime) == expectedVisible &&
+                        (if (expectedVisible) bottom > 0 else bottom == 0)
+                }
+            }
+        }
+        compose.waitForIdle()
     }
 
     private fun selectMenuItem(label: String) {
