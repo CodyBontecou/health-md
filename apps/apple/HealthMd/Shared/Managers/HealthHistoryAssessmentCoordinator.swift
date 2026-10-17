@@ -15,7 +15,12 @@ final class HealthHistoryAssessmentCoordinator {
         operation: @escaping @MainActor () async -> HealthHistoryAssessment
     ) async -> HealthHistoryAssessment? {
         await assess(scope: scope, isCurrent: isCurrent) {
-            await worker.assess(notCompleted: notCompleted, operation: operation)
+            // A new task can arrive before the old task's asynchronous
+            // cancellation handler. Replace its logical waiter synchronously;
+            // the physical owner is still retained until its provider returns.
+            worker.cancelLogicalWaiter()
+            return await worker.assess(notCompleted: notCompleted,
+                                       waitForPhysicalOperation: true, operation: operation)
         }
     }
 

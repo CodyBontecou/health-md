@@ -74,13 +74,13 @@ struct iPadExportView: View {
         #endif
         guard scenePhase == .active else { return }
         let request = historyPreviewRequest
-        let result = await historyCoordinator.assess(scope: request.scope, isCurrent: {
+        let result = await historyCoordinator.assessPreview(worker: historyPreviewWorker,
+            notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope),
+            scope: request.scope, isCurrent: {
             request == historyPreviewRequest && scenePhase == .active
                 && request.scope.profileID == HealthHistoryCanonicalProfileIdentity.read()
         }, operation: {
-            await historyPreviewWorker.assess(notCompleted: healthKitManager.historyAssessmentNotCompleted(scope: request.scope)) {
-                await healthKitManager.assessHistoryAccess(scope: request.scope)
-            }
+            await healthKitManager.assessHistoryAccess(scope: request.scope)
         })
         #if DEBUG
         if TestMode.isUITesting, request == historyPreviewRequest {
