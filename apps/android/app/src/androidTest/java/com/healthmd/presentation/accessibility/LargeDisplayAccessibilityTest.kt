@@ -730,7 +730,7 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.waitUntil(timeoutMillis = 10_000) { isDisplayed() }
         assertIsDisplayed()
         val bounds = getUnclippedBoundsInRoot()
-        val viewport = compose.onNodeWithTag(VIEWPORT).getUnclippedBoundsInRoot()
+        val viewport = compose.onNodeWithTag(VIEWPORT, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val tolerance = 1.dp
         assertTrue("Control has no width: $bounds", bounds.right > bounds.left)
         assertTrue("Control has no height: $bounds", bounds.bottom > bounds.top)
