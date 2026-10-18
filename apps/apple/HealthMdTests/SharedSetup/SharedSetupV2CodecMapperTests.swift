@@ -4,6 +4,17 @@ import XCTest
 
 @MainActor
 final class SharedSetupV2CodecMapperTests: XCTestCase {
+    func testMinuteSchedulesCannotBeSilentlyRoundedIntoFrozenSharedSetupV2() throws {
+        let profile = makeProfile(id: profileID(1), name: "Minute profile", policy: .summary, enabledNativeIDs: ["steps"])
+        for minutes in [30, 60] {
+            let entry = ScheduledExportEntry(profileID: profile.id, todayRefreshEnabled: true,
+                todayRefreshIntervalMinutes: minutes)
+            XCTAssertThrowsError(try map(profiles: [profile], activeProfileID: profile.id, schedules: [entry])) { error in
+                XCTAssertTrue(error.localizedDescription.contains("Shared Setup v2"))
+            }
+        }
+    }
+
     func testFourAppleDetailPoliciesRemainOrthogonalAndRangeSummaryUsesCurrentPreference() throws {
         let policies: [(String, AppleExportDetailPolicy)] = [
             ("Summary", .summary),

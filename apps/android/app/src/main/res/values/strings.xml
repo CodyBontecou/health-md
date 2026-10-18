@@ -518,6 +518,8 @@
     <string name="schedule_through_today_summary">Each run exports the trailing complete days plus today’s partial file, so a daytime run also captures last night’s sleep. Combine with an hourly frequency to refresh both files all day. Use Overwrite or Update write mode to avoid duplicate same-day content.</string>
     <string name="profile_schedule_today_refresh">Refresh today’s export</string>
     <string name="profile_schedule_refresh_interval">Refresh interval</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Refreshes today every %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Refreshes today every %1$d h</string>
     <string name="profile_schedule_discard_recovery">Discard Pending Recovery</string>

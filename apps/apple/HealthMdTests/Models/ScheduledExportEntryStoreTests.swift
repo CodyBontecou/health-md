@@ -3,6 +3,42 @@ import XCTest
 
 final class ScheduledExportEntryStoreTests: XCTestCase {
 
+    func testMinuteCadencePersistenceDowngradeRetainsDisabledIntentAndProgress() throws {
+        let store = makeStore()
+        let profile = UUID()
+        let success = fixedNow.addingTimeInterval(-3600)
+        var entry = ScheduledExportEntry(profileID: profile, isEnabled: true,
+            todayRefreshEnabled: true, todayRefreshIntervalMinutes: 30,
+            lastExportDate: success, lastTodayRefreshDate: fixedNow)
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshMinutes, 30)
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshEnabled, true)
+        let data = try XCTUnwrap(defaults.data(forKey: "scheduledExportEntries.list"))
+        var wire = try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [[String: Any]])
+        XCTAssertEqual(wire[0]["todayRefreshEnabled"] as? Bool, false)
+        XCTAssertEqual(wire[0]["todayRefreshIntervalHours"] as? Int, 3)
+        // A shipped older writer drops unknown fields. Its disabled flag is authoritative.
+        for key in ["todayRefreshIntervalMinutes", "todayRefreshRequestedV2", "todayRefreshPersistenceVersion"] {
+            wire[0].removeValue(forKey: key)
+        }
+        defaults.set(try JSONSerialization.data(withJSONObject: wire), forKey: "scheduledExportEntries.list")
+        let downgraded = try XCTUnwrap(makeStore().entry(profileID: profile))
+        XCTAssertFalse(downgraded.todayRefreshEnabled)
+        XCTAssertEqual(downgraded.todayRefreshMinutes, 30)
+        XCTAssertEqual(downgraded.lastExportDate, success)
+        XCTAssertEqual(downgraded.lastTodayRefreshDate, fixedNow)
+        entry = downgraded
+        entry.todayRefreshMinutes = 60
+        entry.todayRefreshEnabled = true
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.dateMathProjection.todayRefreshMinutes, 60)
+        entry.todayRefreshMinutes = 360
+        XCTAssertTrue(store.upsert(entry))
+        XCTAssertNil(makeStore().entry(profileID: profile)?.todayRefreshIntervalMinutes)
+        XCTAssertEqual(makeStore().entry(profileID: profile)?.todayRefreshMinutes, 360)
+    }
+
+
     // STATIC RETENTION JUSTIFICATION: MainActor-isolated deinits take the
     // back-deployed task path on older runtimes (CI's iOS 26.2 simulator)
     // where nested store release aborts; retain for the process lifetime.

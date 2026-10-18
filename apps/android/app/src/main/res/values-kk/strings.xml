@@ -475,6 +475,8 @@
     <string name="schedule_through_today_summary">Әр іске қосу өткен толық күндерді және бүгінгі ішінара файлды экспорттайды, сондықтан күндізгі іске қосу түнгі ұйқыны да қамтиды. Екі файлды күні бойы жаңартып тұру үшін сағаттық жиілікпен бірге қолданыңыз. Бір күндегі қайталанатын мазмұннан сақтану үшін Қайта жазу немесе Жаңарту жазу режимін пайдаланыңыз.</string>
     <string name="profile_schedule_today_refresh">Бүгінгі экспортты жаңарту</string>
     <string name="profile_schedule_refresh_interval">Жаңарту аралығы</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d мин</string>
+    <string name="profile_schedule_refresh_summary_minutes">Бүгін әр %1$d мин сайын жаңартады</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d сағ</string>
     <string name="profile_schedule_refresh_summary">Бүгін әр %1$d сағ сайын жаңартады</string>
     <string name="profile_schedule_discard_recovery">Күтудегі қалпына келтіруден бас тарту</string>
