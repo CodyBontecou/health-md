@@ -1,0 +1,78 @@
+name: Apple UI Bootstrap Diagnostic
+on:
+  push:
+    branches: [codex/apple-nightly-halving]
+    paths: [.github/workflows/apple-ui-bootstrap-probe.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+jobs:
+  picker-bootstrap:
+    runs-on: macos-26
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [headless, gui]
+    defaults:
+      run:
+        working-directory: apps/apple
+    env:
+      APP_SOURCE_SHA: 4d4ed5c015d4e78c5a64d3e9f7e47024c9153cee
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: 4d4ed5c015d4e78c5a64d3e9f7e47024c9153cee
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+      - uses: actions/download-artifact@v4
+        with:
+          name: nightly-ui-products
+          run-id: 39156848696
+          github-token: ${{ github.token }}
+          path: apps/apple/build/ui-products
+      - name: Prepare the same simulator and Files state
+        id: simulator
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "destination=$IOS_DESTINATION" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py ready-simulator --root build/probe \
+            --source-sha "$APP_SOURCE_SHA" --destination "$IOS_DESTINATION"
+      - name: Open matching Simulator GUI in the experimental job
+        if: ${{ matrix.mode == 'gui' }}
+        env:
+          IOS_DESTINATION: ${{ steps.simulator.outputs.destination }}
+        run: |
+          set -euo pipefail
+          DEVELOPER_DIRECTORY=$(xcode-select -p)
+          open -a "$DEVELOPER_DIRECTORY/Applications/Simulator.app" \
+            --args -CurrentDeviceUDID "${IOS_DESTINATION##*id=}"
+      # This is a diagnostic A/B, not a nightly qualification or coverage claim.
+      # Both jobs execute the same two unchanged assertions from the same build.
+      - name: Run unchanged direct and preview folder-picker assertions
+        env:
+          IOS_DESTINATION: ${{ steps.simulator.outputs.destination }}
+          PYTHONPATH: scripts
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/test-results
+          UI_MANIFEST=$(python3 -c 'import os; from pathlib import Path; from apple_nightly_ui import unpack; print(unpack(Path("build/ui-products"), Path("build/probe"), os.environ["APP_SOURCE_SHA"], os.environ["IOS_DESTINATION"]))')
+          xcodebuild test-without-building -xctestrun "$UI_MANIFEST" \
+            -destination "$IOS_DESTINATION" -parallel-testing-enabled NO \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testExportButton_staysEnabledWithoutVault \
+            -only-testing:HealthMdUITests/ExportJourneyUITests/testExportPreview_canStartExportFlow \
+            -resultBundlePath build/test-results/Bootstrap.xcresult \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 300 \
+            2>&1 | tee build/logs/bootstrap.log
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: bootstrap-${{ matrix.mode }}
+          path: |
+            apps/apple/build/logs/bootstrap.log
+            apps/apple/build/test-results/Bootstrap.xcresult
+          retention-days: 7
