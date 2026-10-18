@@ -11,9 +11,8 @@ concurrency:
 
 jobs:
   extended-ios:
-    # Notelet requires Swift tools 6.3. GitHub-hosted macos-15 currently selects
-    # an older Swift toolchain, so use the self-hosted runner's matching Xcode.
-    runs-on: self-hosted
+    # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
+    runs-on: macos-26
     timeout-minutes: 60
     defaults:
       run:
@@ -31,6 +30,22 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Restore exact-source shared Rust core from Apple CI
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('packages/healthmd-core-rust/Cargo.toml',
+            'packages/healthmd-core-rust/Cargo.lock',
+            'packages/healthmd-core-rust/rust-toolchain.toml',
+            'packages/healthmd-core-rust/crates/**',
+            'packages/healthmd-core-rust/scripts/*apple*',
+            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      # Always validate the source digest, bindings and slices, including hits.
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
@@ -47,7 +62,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+          make test-ios CORE_RUST_PREPARE=: IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
       - name: Run full UI test suite (iOS, non-blocking)
         if: ${{ success() }}
@@ -81,9 +96,8 @@ jobs:
           retention-days: 30
 
   extended-macos:
-    # Notelet currently requires Swift tools 6.3; use the self-hosted runner
-    # with the matching Xcode instead of GitHub-hosted macos-15.
-    runs-on: self-hosted
+    # Match the toolchain and coverage-enabled suite used by Apple CI.
+    runs-on: macos-26
     timeout-minutes: 60
     defaults:
       run:
@@ -101,19 +115,31 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Restore exact-source shared Rust core from Apple CI
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('packages/healthmd-core-rust/Cargo.toml',
+            'packages/healthmd-core-rust/Cargo.lock',
+            'packages/healthmd-core-rust/rust-toolchain.toml',
+            'packages/healthmd-core-rust/crates/**',
+            'packages/healthmd-core-rust/scripts/*apple*',
+            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      # Always validate the source digest, bindings and slices, including hits.
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
-      - name: Run macOS unit tests
+      - name: Run macOS unit tests with coverage
+        timeout-minutes: 45
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-macos 2>&1 | tee build/logs/build-macos.log
-
-      - name: Collect code coverage (macOS)
-        if: ${{ success() }}
-        timeout-minutes: 30
-        run: make coverage
+          make coverage CORE_RUST_PREPARE=: 2>&1 | tee build/logs/build-macos.log
 
       - name: Coverage summary
         if: ${{ !cancelled() }}
