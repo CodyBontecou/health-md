@@ -10,14 +10,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  extended-ios:
-    # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
+  prepare-shared-core:
     runs-on: macos-26
-    timeout-minutes: 60
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: apps/apple
-
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -58,6 +56,42 @@ jobs:
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
 
+      - name: Record validated source commit
+        run: git rev-parse HEAD > Packages/HealthMdCoreRust/Artifacts/.nightly-source-sha
+
+      - name: Share validated native core from this run
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-shared-core
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.nightly-source-sha
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+
+  extended-ios:
+    needs: prepare-shared-core
+    # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
+    runs-on: macos-26
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - name: Select newest compatible iOS Simulator
         id: simulator
         shell: bash
@@ -66,6 +100,23 @@ jobs:
           IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
           echo "Using simulator destination: ${IOS_DESTINATION}"
           echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-unit \
+            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
+
+      - name: Download validated native core from this run
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
+
+      - name: Validate native core source and slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat Packages/HealthMdCoreRust/Artifacts/.nightly-source-sha)" = '${{ github.sha }}'
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Run iOS unit tests
         run: |
@@ -89,6 +140,7 @@ jobs:
           retention-days: 30
 
   extended-macos:
+    needs: prepare-shared-core
     # Match the toolchain and coverage-enabled suite used by Apple CI.
     runs-on: macos-26
     timeout-minutes: 60
@@ -108,33 +160,20 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Restore exact-source shared Rust core from Apple CI
-        uses: actions/cache/restore@v4
+      - name: Download validated native core from this run
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
-            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
-          key: >-
-            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
-            hashFiles('packages/healthmd-core-rust/Cargo.toml',
-            'packages/healthmd-core-rust/Cargo.lock',
-            'packages/healthmd-core-rust/rust-toolchain.toml',
-            'packages/healthmd-core-rust/crates/**',
-            'packages/healthmd-core-rust/scripts/*apple*',
-            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+          name: nightly-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
 
-      - name: Set up pinned Rust compiler for binding verification
-        uses: dtolnay/rust-toolchain@1.88.0
-
-      - name: Cache binding compiler dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: apple-nightly-bindings
-          workspaces: packages/healthmd-core-rust -> target
-
-      # Always validate the source digest, bindings and slices, including hits.
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
+      - name: Validate native core source and slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat Packages/HealthMdCoreRust/Artifacts/.nightly-source-sha)" = '${{ github.sha }}'
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Run macOS unit tests with coverage
         timeout-minutes: 45
@@ -172,6 +211,7 @@ jobs:
           retention-days: 30
 
   prepare-ui:
+    needs: prepare-shared-core
     # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
     runs-on: macos-26
     timeout-minutes: 30
@@ -201,33 +241,20 @@ jobs:
           python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
             --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
 
-      - name: Restore exact-source shared Rust core from Apple CI
-        uses: actions/cache/restore@v4
+      - name: Download validated native core from this run
+        uses: actions/download-artifact@v4
         with:
-          path: |
-            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
-            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
-          key: >-
-            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
-            hashFiles('packages/healthmd-core-rust/Cargo.toml',
-            'packages/healthmd-core-rust/Cargo.lock',
-            'packages/healthmd-core-rust/rust-toolchain.toml',
-            'packages/healthmd-core-rust/crates/**',
-            'packages/healthmd-core-rust/scripts/*apple*',
-            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+          name: nightly-shared-core
+          path: apps/apple/Packages/HealthMdCoreRust/Artifacts
 
-      - name: Set up pinned Rust compiler for binding verification
-        uses: dtolnay/rust-toolchain@1.88.0
-
-      - name: Cache binding compiler dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          shared-key: apple-nightly-bindings
-          workspaces: packages/healthmd-core-rust -> target
-
-      # Always validate the source digest, bindings and slices, including hits.
-      - name: Prepare and validate shared Rust core for Apple
-        run: make prepare-healthmd-core-rust
+      - name: Validate native core source and slices
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(cat Packages/HealthMdCoreRust/Artifacts/.nightly-source-sha)" = '${{ github.sha }}'
+          test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
+            Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
       - name: Build and enumerate complete UI suite once
         if: ${{ success() }}

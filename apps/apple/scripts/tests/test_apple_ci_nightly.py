@@ -43,6 +43,7 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.ios = job(self.text, "extended-ios")
         self.mac = job(self.text, "extended-macos")
         self.prepare = job(self.text, "prepare-ui")
+        self.core = job(self.text, "prepare-shared-core")
 
     def test_both_nightly_jobs_use_the_same_hosted_toolchain_as_apple_ci(self):
         ci_mac = job(CI.read_text(), "test-macos")
@@ -74,16 +75,59 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("apps/apple/build/logs/build-macos.log", self.mac)
         self.assertIn("retention-days: 30", self.mac)
 
-    def test_shared_core_is_prepared_once_before_each_native_suite(self):
-        for block, suite in [(self.ios, "make test-ios"), (self.mac, "make coverage")]:
-            self.assertEqual(block.count("make prepare-healthmd-core-rust"), 1)
-            self.assertLess(block.index("make prepare-healthmd-core-rust"), block.index(suite))
-            self.assertIn(f"{suite} CORE_RUST_PREPARE=:", block)
+    def test_shared_core_is_validated_once_and_consumers_require_same_run_source(self):
+        self.assertEqual(self.text.count("run: make prepare-healthmd-core-rust"), 1)
+        self.assertIn("run: make prepare-healthmd-core-rust", self.core)
+        share = step(self.core, "Share validated native core from this run")
+        self.assertIn("include-hidden-files: true", share)
+        self.assertIn("if-no-files-found: error", share)
+        self.assertIn(".nightly-source-sha", share)
+        for block in [self.ios, self.mac, self.prepare]:
+            self.assertIn("needs: prepare-shared-core", block)
+            self.assertNotIn("make prepare-healthmd-core-rust", block)
+            download = step(block, "Download validated native core from this run")
+            self.assertIn("name: nightly-shared-core", download)
+            self.assertNotIn("run-id:", download)
+            validate = step(block, "Validate native core source and slices")
+            self.assertIn("github.sha", validate)
+            self.assertIn(".nightly-source-sha", validate)
+            self.assertIn(".healthmd-core-source.sha256", validate)
+            self.assertIn("validate-apple-xcframework.sh", validate)
+            self.assertLess(block.index(download), block.index(validate))
+        self.assertIn("make test-ios CORE_RUST_PREPARE=:", self.ios)
+        self.assertIn("make coverage CORE_RUST_PREPARE=:", self.mac)
+
+    def test_unit_simulator_startup_overlaps_download_and_build(self):
+        boot = step(self.ios, "Select newest compatible iOS Simulator")
+        self.assertIn("apple_nightly_ui.py start-simulator", boot)
+        self.assertLess(self.ios.index(boot), self.ios.index("Download validated native core"))
+        self.assertNotIn("bootstatus", boot)
+
+    def test_actual_consumer_rejects_missing_or_wrong_source_before_validation(self):
+        sha = "a" * 40
+        shell = command(step(self.ios, "Validate native core source and slices"))
+        shell = shell.replace("${{ github.sha }}", sha)
+        for receipt in (sha, "b" * 40, None):
+            with self.subTest(receipt=receipt), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                apple = root / "apps/apple"
+                artifacts = apple / "Packages/HealthMdCoreRust/Artifacts"
+                artifacts.mkdir(parents=True)
+                (artifacts / ".healthmd-core-source.sha256").write_text("validated digest")
+                if receipt is not None:
+                    (artifacts / ".nightly-source-sha").write_text(receipt + "\n")
+                validator = root / "packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh"
+                validator.parent.mkdir(parents=True)
+                validator.write_text("#!/bin/sh\ntouch validated-slices\n")
+                validator.chmod(0o755)
+                result = subprocess.run(["bash", "-c", shell], cwd=apple, capture_output=True)
+                self.assertEqual(result.returncode == 0, receipt == sha)
+                self.assertEqual((apple / "validated-slices").exists(), receipt == sha)
 
     def test_native_cache_reuses_apple_ci_key_but_preparation_still_validates_hits(self):
         prepare = job(CI.read_text(), "prepare-shared-core")
         shared_key = prepare.split("          key: >-\n", 1)[1].split("\n\n", 1)[0]
-        for block in [self.ios, self.mac, self.prepare]:
+        for block in [self.core]:
             cached = step(block, "Restore exact-source shared Rust core from Apple CI")
             self.assertIn("uses: actions/cache/restore@v4", cached)
             self.assertNotIn("restore-keys", cached)
@@ -97,7 +141,7 @@ class NightlyWorkflowTests(unittest.TestCase):
                             block.index("make prepare-healthmd-core-rust"))
 
     def test_binding_dependency_cache_never_bypasses_generation_or_validation(self):
-        for block in [self.ios, self.mac, self.prepare]:
+        for block in [self.core]:
             compiler = step(block, "Set up pinned Rust compiler for binding verification")
             self.assertIn("uses: dtolnay/rust-toolchain@1.88.0", compiler)
             cache = step(block, "Cache binding compiler dependencies")
