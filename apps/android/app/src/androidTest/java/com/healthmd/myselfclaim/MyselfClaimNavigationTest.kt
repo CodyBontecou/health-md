@@ -6,6 +6,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import com.healthmd.BuildConfig
 import com.healthmd.presentation.MainActivity
 import org.junit.Rule
 import org.junit.Test
@@ -13,7 +14,7 @@ import org.junit.Test
 class MyselfClaimNavigationTest {
     @get:Rule val compose = createEmptyComposeRule()
 
-    @Test fun coldAndWarmExactDeepLinksPresentDisclosureWithoutVerification() {
+    @Test fun coldAndWarmExactDeepLinksRespectDistributionWithoutVerification() {
         fun link() = Intent(ApplicationProvider.getApplicationContext(), MainActivity::class.java)
             .setAction(Intent.ACTION_VIEW).setData(Uri.parse(MyselfClaimLinks.URL))
         fun awaitDisclosure() {
@@ -23,6 +24,14 @@ class MyselfClaimNavigationTest {
             }
         }
         ActivityScenario.launch<MainActivity>(link()).use { scenario ->
+            if (BuildConfig.FLAVOR != "play") {
+                compose.waitForIdle()
+                compose.onNodeWithTag("myself_claim_screen").assertDoesNotExist()
+                scenario.onActivity { it.startActivity(link().addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)) }
+                compose.waitForIdle()
+                compose.onNodeWithTag("myself_claim_screen").assertDoesNotExist()
+                return@use
+            }
             awaitDisclosure()
             compose.onNodeWithTag("myself_claim_screen").assertIsDisplayed()
             compose.onNodeWithTag("myself_claim_verify").performScrollTo().assertIsEnabled()
