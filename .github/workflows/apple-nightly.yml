@@ -269,7 +269,7 @@ jobs:
           touch build/nightly-ui/.healthmd-ui-build-start
           xcodebuild build-for-testing \
             -project HealthMd.xcodeproj -scheme HealthMd-UITests-iOS \
-            -configuration Debug-iOS -destination 'generic/platform=iOS Simulator' \
+            -configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}' \
             -derivedDataPath build/nightly-ui \
             ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
@@ -285,7 +285,8 @@ jobs:
             2>&1 | tee -a build/logs/nightly-ui-build.log
           python3 scripts/apple_nightly_ui.py plan --root build/nightly-ui --source-sha '${{ github.sha }}'
           python3 scripts/apple_nightly_ui.py pack --root build/nightly-ui \
-            --artifact build/nightly-ui-products --source-sha '${{ github.sha }}'
+            --artifact build/nightly-ui-products --source-sha '${{ github.sha }}' \
+            --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
 
       - name: Check UI build warnings (strict)
         if: ${{ !cancelled() }}

@@ -26,6 +26,8 @@ class TopologyTests(unittest.TestCase):
         self.assertEqual(build.count('xcodebuild build-for-testing'), 1)
         self.assertIn('-scheme HealthMd-UITests-iOS', build)
         self.assertIn('ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES', build)
+        self.assertNotIn('generic/platform=iOS Simulator', build)
+        self.assertIn("-configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}'", build)
         self.assertIn('-enumerate-tests', build)
         self.assertNotIn('-only-testing', build)
         self.assertNotIn('-skip-testing', build)
@@ -64,11 +66,14 @@ import os
 import plistlib
 from unittest.mock import patch
 from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
-                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan, wait_products)
+                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan, wait_products, simulator_profile)
 from test_ios_ui_build_contract import make_products
 from validate_ios_ui_xctestrun import BUILD_MARKER
 
 SHA = 'a' * 40
+DEST = 'platform=iOS Simulator,id=AAAAAAAA-BBBB-CCCC-DDDD-EEEEEEEEEEEE'
+PROFILE = {'runtime': 'com.apple.CoreSimulator.SimRuntime.iOS-26-5',
+           'device_type': 'com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro'}
 TESTS = [f'HealthMdUITests/Journey{i % 5}Tests/testCase{i}' for i in range(20)]
 
 
@@ -100,6 +105,17 @@ class SimulatorOverlapTests(unittest.TestCase):
         with patch('apple_nightly_ui.subprocess.check_output', return_value='{"devices":{}}'), \
              self.assertRaises(ValueError):
             start_simulator('platform=iOS Simulator,id=' + identifier)
+
+    def test_profile_binds_runtime_and_model_without_using_host_specific_uuid(self):
+        devices = {'devices': {PROFILE['runtime']: [{'udid': DEST.rsplit('=', 1)[1],
+                    'deviceTypeIdentifier': PROFILE['device_type']}]}}
+        with patch('apple_nightly_ui.subprocess.check_output', return_value=json.dumps(devices)):
+            self.assertEqual(simulator_profile(DEST), PROFILE)
+        with patch('apple_nightly_ui.subprocess.check_output', return_value='{"devices":{}}'), \
+             self.assertRaises(ValueError):
+            simulator_profile(DEST)
+        with self.assertRaises(ValueError):
+            simulator_profile('platform=iOS,id=physical')
 
     def test_readiness_waits_for_boot_and_starts_files_before_xctest(self):
         destination = 'platform=iOS Simulator,id=' + 'A' * 36
@@ -257,37 +273,49 @@ class TransportTests(unittest.TestCase):
         self.toolchain = patch('apple_nightly_ui.toolchain', return_value='Xcode matching build')
         self.toolchain.start()
         self.addCleanup(self.toolchain.stop)
+        profile = patch('apple_nightly_ui.simulator_profile', return_value=PROFILE)
+        profile.start()
+        self.addCleanup(profile.stop)
 
     def test_relocated_products_preserve_generated_manifest_bytes(self):
-        pack(self.root, self.artifact, SHA)
-        result = unpack(self.artifact, self.base / 'relocated', SHA)
+        pack(self.root, self.artifact, SHA, DEST)
+        result = unpack(self.artifact, self.base / 'relocated', SHA, DEST)
         self.assertEqual(result.read_bytes(), self.manifest.read_bytes())
         self.assertNotEqual(result, self.manifest)
         with self.assertRaises(ValueError):
-            unpack(self.artifact, self.base / 'relocated', SHA)
+            unpack(self.artifact, self.base / 'relocated', SHA, DEST)
 
     def test_wrong_source_toolchain_or_archive_bytes_fail_closed(self):
-        pack(self.root, self.artifact, SHA)
+        pack(self.root, self.artifact, SHA, DEST)
         with self.assertRaises(ValueError):
-            unpack(self.artifact, self.base / 'wrong-source', 'b' * 40)
+            unpack(self.artifact, self.base / 'wrong-source', 'b' * 40, DEST)
         with patch('apple_nightly_ui.toolchain', return_value='Other Xcode'), self.assertRaises(ValueError):
-            unpack(self.artifact, self.base / 'wrong-toolchain', SHA)
+            unpack(self.artifact, self.base / 'wrong-toolchain', SHA, DEST)
         with patch('apple_nightly_ui.platform.machine', return_value='other-architecture'), self.assertRaises(ValueError):
-            unpack(self.artifact, self.base / 'wrong-architecture', SHA)
+            unpack(self.artifact, self.base / 'wrong-architecture', SHA, DEST)
         with (self.artifact / 'products.tar.gz').open('ab') as stream: stream.write(b'tampered')
         with self.assertRaises(ValueError):
-            unpack(self.artifact, self.base / 'wrong-bytes', SHA)
+            unpack(self.artifact, self.base / 'wrong-bytes', SHA, DEST)
+
+    def test_assets_cannot_run_on_a_different_model_or_runtime(self):
+        pack(self.root, self.artifact, SHA, DEST)
+        for key in ('runtime', 'device_type'):
+            changed = dict(PROFILE, **{key: 'another simulator profile'})
+            with self.subTest(key=key), \
+                 patch('apple_nightly_ui.simulator_profile', return_value=changed), \
+                 self.assertRaises(ValueError):
+                unpack(self.artifact, self.base / key, SHA, DEST)
 
     def test_plan_cannot_omit_a_compiled_case(self):
         (self.root / 'ui-plan.json').write_text(json.dumps(plan(TESTS[:-1], {}, SHA)))
         with self.assertRaises(ValueError):
-            pack(self.root, self.artifact, SHA)
+            pack(self.root, self.artifact, SHA, DEST)
 
     def test_filtered_generated_manifest_cannot_be_published(self):
         self.payload['HealthMdUITests']['SkipTestIdentifiers'] = ['JourneyTests/testHidden']
         self.manifest.write_bytes(plistlib.dumps(self.payload))
         with self.assertRaises(ValueError):
-            pack(self.root, self.artifact, SHA)
+            pack(self.root, self.artifact, SHA, DEST)
 
 
 class ProcessBoundaryTests(unittest.TestCase):

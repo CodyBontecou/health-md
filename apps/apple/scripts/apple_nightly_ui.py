@@ -33,6 +33,23 @@ def start_simulator(destination: str) -> None:
     print(f"Simulator startup requested: {identifier}; compilation/download can run while it boots.")
 
 
+def simulator_profile(destination: str) -> dict:
+    match = re.fullmatch(r'platform=iOS Simulator,id=([A-Fa-f0-9-]{36})', destination)
+    if not match:
+        raise ValueError('expected one selected iOS simulator UUID')
+    devices = json.loads(subprocess.check_output(
+        ['xcrun', 'simctl', 'list', 'devices', 'available', '--json'], text=True))
+    matches = [(runtime, device) for runtime, group in devices['devices'].items()
+               for device in group if device['udid'] == match[1]]
+    if len(matches) != 1:
+        raise ValueError('selected simulator profile is unavailable or ambiguous')
+    runtime, device = matches[0]
+    model = device.get('deviceTypeIdentifier', '')
+    if not runtime.startswith('com.apple.CoreSimulator.SimRuntime.iOS-') or not model:
+        raise ValueError('selected simulator has no iOS runtime or model identifier')
+    return {'runtime': runtime, 'device_type': model}
+
+
 def ready_simulator(destination: str) -> None:
     start_simulator(destination)
     identifier = destination.rsplit('=', 1)[1]
@@ -183,7 +200,7 @@ def aggregate(value: dict, receipts: list[dict]) -> dict:
             'skipped': 0, 'tests': sorted(actual), 'shards': SHARDS}
 
 
-def pack(root: Path, output: Path, source_sha: str) -> None:
+def pack(root: Path, output: Path, source_sha: str, destination: str) -> None:
     manifest, _ = qualify(root, source_sha)
     validate_inventory(root, source_sha)
     output.mkdir(parents=True, exist_ok=True)
@@ -191,17 +208,19 @@ def pack(root: Path, output: Path, source_sha: str) -> None:
     subprocess.run(['tar', '-czf', str(archive.resolve()), '-C', str(root),
                     'Build/Products', BUILD_MARKER, 'ui-plan.json', 'ui-enumeration.json'], check=True)
     receipt = {'source_sha': source_sha, 'xcode': toolchain(), 'architecture': platform.machine(),
+               'simulator': simulator_profile(destination),
                'archive_sha256': digest(archive),
                'manifest': manifest.name, 'manifest_sha256': digest(manifest)}
     (output / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
 
-def unpack(artifact: Path, root: Path, source_sha: str) -> Path:
+def unpack(artifact: Path, root: Path, source_sha: str, destination: str) -> Path:
     receipt = json.loads((artifact / 'receipt.json').read_text())
     archive = artifact / 'products.tar.gz'
     if (receipt['source_sha'] != source_sha or receipt['xcode'] != toolchain()
-            or receipt['architecture'] != platform.machine()):
-        raise ValueError('prepared UI artifacts do not match the checked-out source, Xcode, and worker architecture')
+            or receipt['architecture'] != platform.machine()
+            or receipt['simulator'] != simulator_profile(destination)):
+        raise ValueError('prepared UI artifacts do not match the checked-out source, Xcode, architecture, simulator model, and runtime')
     if digest(archive) != receipt['archive_sha256']:
         raise ValueError('prepared UI archive digest mismatch')
     if root.exists():
@@ -228,6 +247,8 @@ def main() -> None:
     args = parser.parse_args()
     if args.action in ('pack', 'run') and args.artifact is None:
         parser.error('--artifact is required for pack/run')
+    if args.action == 'pack' and not args.destination:
+        parser.error('--destination is required for the prepared simulator profile')
     if args.action == 'run' and (args.shard is None or not args.destination):
         parser.error('--shard and --destination are required for run')
     if args.action in ('start-simulator', 'ready-simulator'):
@@ -249,9 +270,9 @@ def main() -> None:
         (args.root / 'ui-plan.json').write_text(json.dumps(value, indent=2) + '\n')
         print(json.dumps({'tests': len(tests), 'shard_seconds': value['estimated_seconds']}))
     elif args.action == 'pack':
-        pack(args.root, args.artifact, args.source_sha)
+        pack(args.root, args.artifact, args.source_sha, args.destination)
     elif args.action == 'run':
-        manifest = unpack(args.artifact, args.root, args.source_sha)
+        manifest = unpack(args.artifact, args.root, args.source_sha, args.destination)
         value = json.loads((args.root / 'ui-plan.json').read_text())
         results = Path('build/test-results')
         results.mkdir(parents=True, exist_ok=True)
