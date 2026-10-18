@@ -191,9 +191,12 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
             selectNativeOption(ProfileScheduleTags.CADENCE_UNIT, text(it))
         }
         val locale = Locale.forLanguageTag(display.language)
-        (1..7).forEach { iso ->
-            selectNativeOption(ProfileScheduleTags.WEEKDAY, DayOfWeek.of(iso).getDisplayName(TextStyle.FULL, locale),
-                captureName = if (iso == 7) "profiles-weekday-menu" else null)
+        // A second pass also covers reopening a scrolled native popup after dismissal.
+        repeat(2) { pass ->
+            (1..7).forEach { iso ->
+                selectNativeOption(ProfileScheduleTags.WEEKDAY, DayOfWeek.of(iso).getDisplayName(TextStyle.FULL, locale),
+                    captureName = if (pass == 1 && iso == 7) "profiles-weekday-menu" else null)
+            }
         }
         val refresh = compose.onNodeWithTag(ProfileScheduleTags.REFRESH).scrollIfPossible()
         refresh.assertRole(Role.Switch).assertIsOff().assertMinimumTouchTarget().assertInNativeOwner()
@@ -452,10 +455,13 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
     }
 
     private fun selectNativeOption(tag: String, label: String, captureName: String? = null) {
-        compose.onNodeWithTag(tag).scrollIfPossible().assertMinimumTouchTarget().assertInNativeOwner()
-            .performTouchInput { click() }
+        val anchor = compose.onNodeWithTag(tag).scrollIfPossible()
+        awaitNativeControlVisible(anchor, "menu anchor $tag before selecting $label")
+        anchor.assertMinimumTouchTarget().assertInNativeOwner().performTouchInput { click() }
         val item = compose.onNode(hasText(label) and hasClickAction() and hasAnyAncestor(isPopup()))
-            .scrollIfPossible().assertMinimumTouchTarget().assertInNativeOwner()
+            .scrollIfPossible()
+        awaitNativeControlVisible(item, "popup option $label in $tag")
+        item.assertMinimumTouchTarget().assertInNativeOwner()
         val copy = compose.onNode(hasText(label) and hasAnyAncestor(isPopup()), useUnmergedTree = true)
         assertTextFits(copy, GeistType.button14.fontSize)
         assertAnchorLocals(copy)
@@ -465,6 +471,22 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         val selected = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag(tag)), useUnmergedTree = true)
             .scrollIfPossible()
         assertTextFits(selected, GeistType.copy16.fontSize)
+    }
+
+    /** Native popup dismissal/scroll layout can settle after Compose's semantics update. */
+    private fun awaitNativeControlVisible(control: SemanticsNodeInteraction, stage: String) {
+        try {
+            compose.waitUntil(timeoutMillis = 5_000) { control.isDisplayed() }
+        } catch (failure: Throwable) {
+            val geometry = runCatching {
+                val node = control.fetchSemanticsNode()
+                val ancestors = generateSequence(node) { it.parent }.map {
+                    "bounds=${it.boundsInRoot}, semantics=${it.config}"
+                }.joinToString("\n")
+                "unclipped=${control.getUnclippedBoundsInRoot()}\n$ancestors"
+            }.getOrElse { "Unable to capture geometry: ${it.message}" }
+            throw AssertionError("Native visibility did not settle: $stage on $display\n$geometry", failure)
+        }
     }
 
     private fun captureContent(name: String, tag: String) {
