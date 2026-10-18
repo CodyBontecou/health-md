@@ -250,9 +250,20 @@ abstract class AccessibilityTestHarness(protected val display: AccessibilityDisp
                 .firstOrNull { Regex("displayId=$display(?:,|\\s)").containsMatchIn(it) }
             if (record == null) "none" else focusOwnerCategory(record, packageName)
         }
+        // The normal diagnostics intentionally classify other owners without naming
+        // them. Only disposable hosted emulators opt into the exact platform title,
+        // captured here before ActivityScenario tears down the failed host.
+        val hostedIdentity = if (
+            InstrumentationRegistry.getArguments().getString("healthmd.ciInputDiagnostics") == "true" &&
+            Build.HARDWARE in setOf("ranchu", "goldfish")
+        ) {
+            "; hostedCurrentFocus=${currentFocus?.take(256)}"
+        } else {
+            ""
+        }
         "nativePolicy=window(currentFocus=${focusOwnerCategory(currentFocus, packageName)}, " +
             "focusedApp=${focusOwnerCategory(focusedApp, packageName)}, focusedSurface=$surface); " +
-            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)"
+            "input(focusedDisplay=${display ?: "unavailable"}, focusedWindow=$focusedWindow)$hostedIdentity"
     }.getOrElse { "nativePolicy unavailable: ${it.javaClass.simpleName}" }
 
     private fun focusOwnerCategory(record: String?, packageName: String): String = when {
