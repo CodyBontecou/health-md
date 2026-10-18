@@ -76,7 +76,7 @@ class WorkflowRoutingTests(unittest.TestCase):
                         "make check-export-docs-after-tests", "scripts/check-coverage.sh build/coverage/HealthMd.xcresult",
                         "swift test --package-path apps/apple/Packages/HealthMdConnectivity"):
             self.assertIn(command, workflow)
-        self.assertEqual(15, jobs()["test-ios-ui"].count("-only-testing:HealthMdUITests/"))
+        self.assertEqual(14, jobs()["test-ios-ui"].count("-only-testing:HealthMdUITests/"))
         self.assertNotIn("continue-on-error", workflow)
 
 
