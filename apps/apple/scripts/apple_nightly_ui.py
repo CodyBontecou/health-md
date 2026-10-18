@@ -11,6 +11,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import time
 
 from validate_ios_ui_xctestrun import BUILD_MARKER, qualify
 
@@ -40,6 +41,33 @@ def ready_simulator(destination: str) -> None:
     # had. Start its native providers before XCTest installs and launches the
     # app, preserving the existing document-picker assertions and deadlines.
     subprocess.run(['xcrun', 'simctl', 'launch', identifier, 'com.apple.DocumentsApp'], check=True)
+
+
+def wait_products(repository: str, run_id: int, source_sha: str, timeout: float = 900) -> None:
+    if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or run_id <= 0:
+        raise ValueError('expected the current workflow repository and run ID')
+    prefix = f'repos/{repository}/actions/runs/{run_id}'
+
+    def api(suffix=''):
+        return json.loads(subprocess.check_output(['gh', 'api', prefix + suffix], text=True))
+
+    if api()['head_sha'] != source_sha:
+        raise ValueError('UI product wait targets a different source revision')
+    deadline = time.monotonic() + timeout
+    while True:
+        artifacts = api('/artifacts?per_page=100')['artifacts']
+        matches = [a for a in artifacts if a['name'] == 'nightly-ui-products' and not a['expired']]
+        if len(matches) == 1:
+            print('Exact-run UI products are available; continuing with verified artifact download.')
+            return
+        if matches:
+            raise ValueError('duplicate UI product artifacts in this workflow run')
+        builders = [j for j in api('/jobs?per_page=100')['jobs'] if j['name'] == 'prepare-ui']
+        if any(j['status'] == 'completed' and j['conclusion'] != 'success' for j in builders):
+            raise ValueError('UI producer failed before publishing products')
+        if time.monotonic() >= deadline:
+            raise ValueError('timed out waiting for exact-run UI products')
+        time.sleep(15)
 
 
 def digest(path: Path) -> str:
@@ -189,12 +217,14 @@ def unpack(artifact: Path, root: Path, source_sha: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start-simulator', 'ready-simulator', 'plan', 'pack', 'run', 'aggregate'])
+    parser.add_argument('action', choices=['start-simulator', 'ready-simulator', 'wait-products', 'plan', 'pack', 'run', 'aggregate'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--source-sha', required=True)
     parser.add_argument('--artifact', type=Path)
     parser.add_argument('--shard', type=int, choices=range(SHARDS))
     parser.add_argument('--destination')
+    parser.add_argument('--repository')
+    parser.add_argument('--run-id', type=int)
     args = parser.parse_args()
     if args.action in ('pack', 'run') and args.artifact is None:
         parser.error('--artifact is required for pack/run')
@@ -207,6 +237,10 @@ def main() -> None:
             ready_simulator(args.destination)
         else:
             start_simulator(args.destination)
+    elif args.action == 'wait-products':
+        if not args.repository or args.run_id is None:
+            parser.error('--repository and --run-id are required for wait-products')
+        wait_products(args.repository, args.run_id, args.source_sha)
     elif args.action == 'plan':
         tests = identifiers(json.loads((args.root / 'ui-enumeration.json').read_text()))
         weights = json.loads((Path(__file__).parent / 'fixtures/apple-nightly-ui-timings.json').read_text())['seconds']

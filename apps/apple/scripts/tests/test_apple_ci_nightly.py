@@ -97,10 +97,11 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("make test-ios CORE_RUST_PREPARE=:", self.ios)
         self.assertIn("make coverage CORE_RUST_PREPARE=:", self.mac)
 
-    def test_unit_simulator_startup_overlaps_download_and_build(self):
+    def test_unit_simulator_startup_overlaps_build_after_native_validation(self):
         boot = step(self.ios, "Select newest compatible iOS Simulator")
         self.assertIn("apple_nightly_ui.py start-simulator", boot)
-        self.assertLess(self.ios.index(boot), self.ios.index("Download validated native core"))
+        self.assertLess(self.ios.index("Validate native core source and slices"), self.ios.index(boot))
+        self.assertLess(self.ios.index(boot), self.ios.index("Run iOS unit tests"))
         self.assertNotIn("bootstatus", boot)
 
     def test_actual_consumer_rejects_missing_or_wrong_source_before_validation(self):
@@ -178,6 +179,42 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn(".xcresult", ui)
         self.assertIn("retention-days: 30", ui)
         self.assertIn("if-no-files-found: error", ui)
+
+    def test_ios_native_arch_flags_keep_unfiltered_suite_and_raw_failure_output(self):
+        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES"', self.ios)
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                binary = root / "bin"
+                binary.mkdir()
+                xcode = binary / "xcodebuild"
+                xcode.write_text(f"#!{sys.executable}\n" + '''
+import json, os, sys
+from pathlib import Path
+Path('arguments.json').write_text(json.dumps(sys.argv[1:]))
+print('Test Case native suite output')
+print('raw compiler diagnostic', file=sys.stderr)
+sys.exit(int(os.environ['FAKE_STATUS']))
+''')
+                xcode.chmod(0o755)
+                pretty = binary / "xcpretty"
+                pretty.write_text("#!/bin/sh\ncat\n")
+                pretty.chmod(0o755)
+                result = subprocess.run(["make", "-f", str(REPO / "apps/apple/Makefile"),
+                    "test-ios", "CORE_RUST_PREPARE=:", "IOS_SIM=platform=iOS Simulator,id=fake",
+                    "IOS_TEST_BUILD_FLAGS=ARCHS=arm64 ONLY_ACTIVE_ARCH=YES"],
+                    cwd=root, text=True, capture_output=True, env=dict(os.environ,
+                    PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)))
+                self.assertEqual(result.returncode == 0, status == 0)
+                args = json.loads((root / "arguments.json").read_text())
+                self.assertEqual(args[:1], ["test"])
+                self.assertIn("ARCHS=arm64", args)
+                self.assertIn("ONLY_ACTIVE_ARCH=YES", args)
+                self.assertEqual(args[args.index("-scheme") + 1], "HealthMd-Tests-iOS")
+                self.assertFalse(any(a.startswith(("-only-testing", "-skip-testing")) for a in args))
+                raw = (root / "build/logs/xcodebuild-ios-raw.log").read_text()
+                self.assertIn("native suite output", raw)
+                self.assertIn("raw compiler diagnostic", raw)
 
     def test_actual_mac_command_runs_once_and_preserves_failure_and_raw_log(self):
         shell = command(step(self.mac, "Run macOS unit tests with coverage"))

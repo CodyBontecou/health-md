@@ -37,9 +37,15 @@ class TopologyTests(unittest.TestCase):
     def test_all_workers_and_exact_inventory_gate_are_required(self):
         text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
         workers = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertIn('needs: prepare-ui', workers)
+        self.assertIn('needs: prepare-shared-core', workers)
         self.assertNotIn('extended-ios', workers)
-        self.assertIn('shard: [0, 1, 2, 3]', workers)
+        self.assertIn('shard: [1, 2, 3]', workers)
+        builder = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
+        self.assertIn('--shard 0', builder)
+        self.assertIn('name: nightly-ui-inventory-0', builder)
+        self.assertIn('name: nightly-ui-results-0', builder)
+        self.assertLess(builder.index('Upload prepared UI products'),
+                        builder.index('Prepare builder simulator and run UI shard zero'))
         self.assertIn('fail-fast: false', workers)
         self.assertNotIn('continue-on-error', workers)
         gate = text.split('  ui-inventory:\n', 1)[1]
@@ -58,7 +64,7 @@ import os
 import plistlib
 from unittest.mock import patch
 from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
-                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan)
+                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan, wait_products)
 from test_ios_ui_build_contract import make_products
 from validate_ios_ui_xctestrun import BUILD_MARKER
 
@@ -107,8 +113,10 @@ class SimulatorOverlapTests(unittest.TestCase):
             self.assertTrue(all(call.kwargs['check'] for call in run.call_args_list))
         text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
         worker = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertLess(worker.index('Download exact-run prepared UI products'),
-                        worker.index('Wait for simulator and native Files providers'))
+        self.assertLess(worker.index('Wait for simulator and native Files providers'),
+                        worker.index('Wait for exact-run UI products'))
+        self.assertLess(worker.index('Wait for exact-run UI products'),
+                        worker.index('Download exact-run prepared UI products'))
         self.assertLess(worker.index('Wait for simulator and native Files providers'),
                         worker.index('Run and audit assigned UI shard'))
 
@@ -124,6 +132,36 @@ class SimulatorOverlapTests(unittest.TestCase):
         self.assertIn('steps.ui_simulator.outputs.ios_destination', worker)
         self.assertNotIn('bootstatus', prepare)
         self.assertNotIn('bootstatus', worker)
+
+
+class ProductWaitTests(unittest.TestCase):
+    def test_waits_only_for_current_source_run_and_never_retries_tests(self):
+        responses = [
+            {'head_sha': SHA}, {'artifacts': []},
+            {'jobs': [{'name': 'prepare-ui', 'status': 'in_progress'}]},
+            {'artifacts': [{'name': 'nightly-ui-products', 'expired': False}]}]
+        with patch('apple_nightly_ui.subprocess.check_output',
+                   side_effect=map(json.dumps, responses)) as api, \
+             patch('apple_nightly_ui.time.sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+            wait_products('owner/repo', 123, SHA)
+            sleep.assert_called_once_with(15)
+            for call in api.call_args_list:
+                self.assertEqual(call.args[0][:2], ['gh', 'api'])
+                self.assertTrue(call.args[0][2].startswith('repos/owner/repo/actions/runs/123'))
+
+    def test_wrong_source_failed_producer_and_deadline_are_fatal(self):
+        scenarios = [
+            [{'head_sha': 'b' * 40}],
+            [{'head_sha': SHA}, {'artifacts': []},
+             {'jobs': [{'name': 'prepare-ui', 'status': 'completed', 'conclusion': 'failure'}]}],
+            [{'head_sha': SHA}, {'artifacts': []}, {'jobs': []}],
+        ]
+        for responses in scenarios:
+            with self.subTest(responses=responses), \
+                 patch('apple_nightly_ui.subprocess.check_output', side_effect=map(json.dumps, responses)), \
+                 patch('apple_nightly_ui.time.sleep') as sleep, self.assertRaises(ValueError):
+                wait_products('owner/repo', 123, SHA, timeout=0)
+            sleep.assert_not_called()
 
 
 class PartitionTests(unittest.TestCase):

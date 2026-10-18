@@ -5,6 +5,10 @@ on:
     - cron: '0 4 * * *'  # 4:00 AM UTC daily
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: read
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -92,17 +96,6 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Select newest compatible iOS Simulator
-        id: simulator
-        shell: bash
-        run: |
-          set -euo pipefail
-          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
-          echo "Using simulator destination: ${IOS_DESTINATION}"
-          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
-          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-unit \
-            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
-
       - name: Download validated native core from this run
         uses: actions/download-artifact@v4
         with:
@@ -118,11 +111,22 @@ jobs:
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
 
+      - name: Select newest compatible iOS Simulator
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "Using simulator destination: ${IOS_DESTINATION}"
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-unit \
+            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
+
       - name: Run iOS unit tests
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios CORE_RUST_PREPARE=: IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+          make test-ios CORE_RUST_PREPARE=: IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES" IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
       - name: Check warnings (iOS — strict)
         if: ${{ !cancelled() }}
@@ -214,7 +218,7 @@ jobs:
     needs: prepare-shared-core
     # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
     runs-on: macos-26
-    timeout-minutes: 30
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: apps/apple
@@ -231,16 +235,6 @@ jobs:
         with:
           xcode-version: latest-stable
 
-      - name: Start simulator before independent work
-        id: ui_simulator
-        shell: bash
-        run: |
-          set -euo pipefail
-          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
-          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
-          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
-            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
-
       - name: Download validated native core from this run
         uses: actions/download-artifact@v4
         with:
@@ -255,6 +249,16 @@ jobs:
           test -s Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
           ../../packages/healthmd-core-rust/scripts/validate-apple-xcframework.sh \
             Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+
+      - name: Start simulator before independent work
+        id: ui_simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
+            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
 
       - name: Build and enumerate complete UI suite once
         if: ${{ success() }}
@@ -314,14 +318,52 @@ jobs:
           path: apps/apple/build/logs/nightly-ui-*
           retention-days: 30
 
+      # Reuse the build runner's warm simulator for one complete UI shard.
+      # The other three workers can consume products as soon as they upload.
+      - name: Prepare builder simulator and run UI shard zero
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/apple_nightly_ui.py ready-simulator \
+            --root build/nightly-ui-execution --source-sha '${{ github.sha }}' \
+            --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
+          python3 scripts/apple_nightly_ui.py run \
+            --artifact build/nightly-ui-products --root build/nightly-ui-execution \
+            --source-sha '${{ github.sha }}' --shard 0 \
+            --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
+
+      - name: Check builder UI runtime warnings (strict)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/nightly-ui-0.log
+
+      - name: Upload builder UI inventory
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-inventory-0
+          path: apps/apple/build/logs/ui-shard-0.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload builder UI diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-results-0
+          path: |
+            apps/apple/build/logs/nightly-ui-0.log
+            apps/apple/build/test-results/Nightly-UI-0.xcresult
+          retention-days: 30
+
   ui-shards:
-    needs: prepare-ui
+    needs: prepare-shared-core
     runs-on: macos-26
-    timeout-minutes: 45
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [1, 2, 3]
     defaults:
       run:
         working-directory: apps/apple
@@ -344,18 +386,29 @@ jobs:
           python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
             --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
 
-      - name: Download exact-run prepared UI products
-        uses: actions/download-artifact@v4
-        with:
-          name: nightly-ui-products
-          path: apps/apple/build/nightly-ui-products
-
       - name: Wait for simulator and native Files providers
         shell: bash
         run: >-
           python3 scripts/apple_nightly_ui.py ready-simulator
           --root build/nightly-ui --source-sha '${{ github.sha }}'
           --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
+
+      # Workers boot while the separate UI producer compiles. Wait only for
+      # this run's products; source/toolchain/inventory checks still precede tests.
+      - name: Wait for exact-run UI products
+        timeout-minutes: 16
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/apple_nightly_ui.py wait-products
+          --root build/nightly-ui --source-sha '${{ github.sha }}'
+          --repository '${{ github.repository }}' --run-id '${{ github.run_id }}'
+
+      - name: Download exact-run prepared UI products
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-ui-products
+          path: apps/apple/build/nightly-ui-products
 
       - name: Run and audit assigned UI shard
         if: ${{ success() }}
