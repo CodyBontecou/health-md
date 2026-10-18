@@ -158,6 +158,30 @@ class FixtureCleanupTest(unittest.TestCase):
         self.assertTrue(any("isolated daemon stop" in note for note in raised.exception.__notes__))
         self.assert_removed_and_scoped()
 
+    def test_writer_exit_is_awaited_after_stop_and_before_directory_removal(self) -> None:
+        def wait(directory):
+            self.assertEqual(1, len(self.stop_calls))
+            self.assertEqual(0, self.cleanup_attempts)
+            self.assertEqual(self.directories[0] / "gradle-home", directory)
+            self.assertTrue(self.directories[0].exists())
+        with patch.object(fixture, "await_daemon_shutdown", side_effect=wait) as awaited:
+            self.exercise(cleanup_errno=errno.ENOTEMPTY)
+            awaited.assert_called_once()
+        self.assert_removed_and_scoped()
+
+    def test_writer_shutdown_failure_fails_an_otherwise_successful_fixture(self) -> None:
+        with patch.object(fixture, "await_daemon_shutdown", side_effect=RuntimeError("writer still active")):
+            with self.assertRaisesRegex(RuntimeError, "writer still active"):
+                self.exercise()
+        self.assert_removed_and_scoped()
+
+    def test_safety_failure_survives_writer_shutdown_failure(self) -> None:
+        with patch.object(fixture, "await_daemon_shutdown", side_effect=RuntimeError("writer still active")):
+            with self.assertRaisesRegex(AssertionError, "safety scenario failed") as raised:
+                self.exercise(fail_scenario=True)
+        self.assertTrue(any("writer still active" in note for note in raised.exception.__notes__))
+        self.assert_removed_and_scoped()
+
 
 if __name__ == "__main__":
     unittest.main()
