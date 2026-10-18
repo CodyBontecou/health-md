@@ -612,6 +612,8 @@
     <string name="schedule_through_today_summary">Chaque exécution exporte les derniers jours complets ainsi que le fichier partiel d’aujourd’hui, de sorte qu’une exécution en journée capture aussi le sommeil de la nuit dernière. Combinée à une fréquence horaire, elle garde les deux fichiers à jour toute la journée. Utilisez le mode d’écriture Écraser ou Mettre à jour pour éviter le contenu dupliqué d’une même journée.</string>
     <string name="profile_schedule_today_refresh">Actualiser l’export du jour</string>
     <string name="profile_schedule_refresh_interval">Intervalle d’actualisation</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Actualise aujourd’hui toutes les %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Actualise aujourd’hui toutes les %1$d h</string>
     <string name="profile_schedule_discard_recovery">Abandonner la récupération en attente</string>

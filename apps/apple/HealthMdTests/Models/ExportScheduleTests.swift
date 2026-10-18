@@ -2,6 +2,29 @@ import XCTest
 @testable import HealthMd
 
 final class ScheduledExportTargetScheduleTests: XCTestCase {
+    func testSingleScheduleMinuteStorageRoundTripAndDowngradeRequireNewOptIn() throws {
+        let suite = "MinuteCadence.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        for minutes in [30, 60] {
+            var schedule = ExportSchedule(isEnabled: true, todayRefreshEnabled: true,
+                todayRefreshIntervalMinutes: minutes, lastExportDate: Date(timeIntervalSince1970: 123))
+            schedule.save(userDefaults: defaults)
+            XCTAssertEqual(ExportSchedule.load(userDefaults: defaults), schedule)
+            var wire = try XCTUnwrap(JSONSerialization.jsonObject(with:
+                try XCTUnwrap(defaults.data(forKey: "exportSchedule"))) as? [String: Any])
+            XCTAssertEqual(wire["todayRefreshEnabled"] as? Bool, false)
+            for key in ["todayRefreshIntervalMinutes", "todayRefreshRequestedV2", "todayRefreshPersistenceVersion"] {
+                wire.removeValue(forKey: key)
+            }
+            defaults.set(try JSONSerialization.data(withJSONObject: wire), forKey: "exportSchedule")
+            schedule = ExportSchedule.load(userDefaults: defaults)
+            XCTAssertFalse(schedule.todayRefreshEnabled)
+            XCTAssertEqual(schedule.todayRefreshMinutes, minutes)
+            XCTAssertEqual(schedule.lastExportDate, Date(timeIntervalSince1970: 123))
+        }
+    }
+
     func testDefaultScheduleTargetsLocalIPhoneFolder() {
         XCTAssertEqual(ExportSchedule().target, .localIPhoneFolder)
     }
@@ -41,8 +64,8 @@ final class ScheduledExportTargetScheduleTests: XCTestCase {
         }
     }
 
-    func testLegacyReaderIgnoresUnrecognizedMinuteIntentAndDropsItOnReencode() throws {
-        // A hypothetical additive field alone cannot safely change old-reader semantics.
+    func testUnversionedMinuteIntentRetainsChoiceButCannotEnableRefresh() throws {
+        // A minute key alone is not activation authority; the explicit v2 flag is required.
         let payload: [String: Any] = [
             "isEnabled": true,
             "frequency": ScheduleFrequency.daily.rawValue,
@@ -57,7 +80,9 @@ final class ScheduledExportTargetScheduleTests: XCTestCase {
         XCTAssertEqual(decoded.todayRefreshIntervalHours, 3)
         let reencoded = try XCTUnwrap(JSONSerialization.jsonObject(with:
             JSONEncoder().encode(decoded)) as? [String: Any])
-        XCTAssertNil(reencoded["todayRefreshIntervalMinutes"])
+        XCTAssertEqual(reencoded["todayRefreshIntervalMinutes"] as? Int, 30)
+        XCTAssertFalse(decoded.todayRefreshEnabled)
+        XCTAssertEqual(reencoded["todayRefreshEnabled"] as? Bool, false)
     }
 
     func testLegacyHourReaderRejectsFractionalHours() throws {

@@ -612,6 +612,8 @@
     <string name="schedule_through_today_summary">Cada execução exporta os dias completos anteriores mais o arquivo parcial de hoje, então uma execução diurna também captura o sono da última noite. Combine com uma frequência horária para atualizar os dois arquivos o dia todo. Use o modo de gravação Sobrescrever ou Atualizar para evitar conteúdo duplicado no mesmo dia.</string>
     <string name="profile_schedule_today_refresh">Atualizar a exportação de hoje</string>
     <string name="profile_schedule_refresh_interval">Intervalo de atualização</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Atualiza hoje a cada %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Atualiza hoje a cada %1$d h</string>
     <string name="profile_schedule_discard_recovery">Descartar recuperação pendente</string>

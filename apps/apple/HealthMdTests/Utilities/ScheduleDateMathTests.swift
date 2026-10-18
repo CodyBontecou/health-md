@@ -11,6 +11,52 @@ import XCTest
 
 final class ScheduleDateMathTests: XCTestCase {
 
+    func testMinuteRefreshBoundariesDeduplicateWithoutAdvancingCompletedDays() throws {
+        for minutes in [30, 60] {
+            let start = date(2026, 3, 15, 8, 15)
+            var schedule = ExportSchedule(isEnabled: true, preferredHour: 8, preferredMinute: 15,
+                todayRefreshEnabled: true, todayRefreshIntervalMinutes: minutes,
+                lastExportDate: start, lastTodayRefreshDate: start)
+            let next = start.addingTimeInterval(Double(minutes * 60))
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: start, calendar: Self.cal), next)
+            XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(schedule: schedule,
+                now: next.addingTimeInterval(-0.001), calendar: Self.cal).contains { $0.kind == .todayRefresh })
+            let due = ScheduleDateMath.dueScheduledOccurrences(schedule: schedule, now: next, calendar: Self.cal)
+            XCTAssertEqual(due.filter { $0.kind == .todayRefresh }.map(\.fireDate), [next])
+            schedule.lastTodayRefreshDate = next
+            XCTAssertFalse(ScheduleDateMath.dueScheduledOccurrences(schedule: schedule,
+                now: next.addingTimeInterval(0.001), calendar: Self.cal).contains { $0.kind == .todayRefresh })
+            XCTAssertEqual(schedule.lastExportDate, start)
+            XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: date(2026, 3, 15, 23, 59), calendar: Self.cal), date(2026, 3, 16, 8, 15))
+            schedule.todayRefreshEnabled = false
+            XCTAssertNil(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+                now: start, calendar: Self.cal))
+        }
+    }
+
+    func testMinuteRefreshCivilDSTGapFoldAndTimezoneChange() throws {
+        var calendar = Self.cal
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "America/Los_Angeles"))
+        let iso = ISO8601DateFormatter()
+        func instant(_ value: String) throws -> Date { try XCTUnwrap(iso.date(from: value)) }
+        let schedule = ExportSchedule(isEnabled: true, preferredHour: 0, preferredMinute: 30,
+            todayRefreshEnabled: true, todayRefreshIntervalMinutes: 30)
+        // Gap slots move forward preserving minutes, then deduplicate/sort with real03:00/03:30.
+        XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: try instant("2026-03-08T09:30:00Z"), calendar: calendar), try instant("2026-03-08T10:00:00Z"))
+        // First fold occurrence is canonical; never run the repeated01:00/01:30 a second time.
+        XCTAssertEqual(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: try instant("2026-11-01T08:30:00Z"), calendar: calendar), try instant("2026-11-01T10:00:00Z"))
+        calendar.timeZone = try XCTUnwrap(TimeZone(identifier: "Asia/Kolkata"))
+        let now = try instant("2026-03-15T08:01:00Z")
+        let next = try XCTUnwrap(ScheduleDateMath.calculateNextRunDate(schedule: schedule, kind: .todayRefresh,
+            now: now, calendar: calendar))
+        XCTAssertEqual(calendar.component(.minute, from: next), 0)
+    }
+
+
     private static let cal: Calendar = {
         var c = Calendar(identifier: .gregorian)
         c.timeZone = TimeZone(identifier: "UTC")!

@@ -602,6 +602,8 @@
     <string name="schedule_through_today_summary">Jeder Lauf exportiert die zurückliegenden vollständigen Tage plus die heutige Teildatei, sodass ein Lauf tagsüber auch den Schlaf der letzten Nacht erfasst. Kombinieren Sie dies mit einer stündlichen Häufigkeit, um beide Dateien den ganzen Tag aufzufrischen. Verwenden Sie den Schreibmodus Überschreiben oder Aktualisieren, um doppelte Inhalte für denselben Tag zu vermeiden.</string>
     <string name="profile_schedule_today_refresh">Heutigen Export aktualisieren</string>
     <string name="profile_schedule_refresh_interval">Aktualisierungsintervall</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Aktualisiert heute alle %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Aktualisiert heute alle %1$d h</string>
     <string name="profile_schedule_discard_recovery">Ausstehende Wiederherstellung verwerfen</string>

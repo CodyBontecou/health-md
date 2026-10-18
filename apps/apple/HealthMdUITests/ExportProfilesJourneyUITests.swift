@@ -233,6 +233,46 @@ final class ExportProfilesJourneyUITests: XCTestCase {
             "row summary should reflect the weekly cadence"
         )
         snap("10-weekly-cadence-saved")
+
+        // Minute choices survive save/reopen and do not change completed-day cadence.
+        for label in ["Every 30 minutes", "Every hour"] {
+            XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5), "previous editor must finish dismissing")
+            editSchedule.tap()
+            XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5), "editor must reopen before editing refresh")
+            let form = app.collectionViews.firstMatch
+            let refresh = app.switches["Today Refresh"].firstMatch
+            if !refresh.isHittable { form.swipeUp() }
+            XCTAssertTrue(refresh.waitUntilExists(timeout: 5))
+            XCTAssertTrue(refresh.isHittable, "refresh control must be visible before tapping")
+            // SwiftUI exposes a full-width row and a nested native switch. Tap the
+            // switch itself; the empty center of the row does not toggle it.
+            if refresh.value as? String == "0" { refresh.switches.firstMatch.tap() }
+            XCTAssertEqual(refresh.value as? String, "1", "refresh should be enabled")
+            let interval = app.buttons["Refresh Interval"].firstMatch
+            if !interval.isHittable { form.swipeUp() }
+            XCTAssertTrue(interval.waitUntilExists(timeout: 5), "minute interval menu should appear when refresh is enabled")
+            interval.tap()
+            app.buttons[label].firstMatch.tap()
+            app.buttons["Save"].firstMatch.tap()
+            XCTAssertTrue(enabledToggle.waitForNonExistence(timeout: 5))
+            editSchedule.tap()
+            XCTAssertTrue(enabledToggle.waitUntilExists(timeout: 5))
+            let savedInterval = app.buttons["Refresh Interval"].firstMatch
+            if !savedInterval.isHittable { app.collectionViews.firstMatch.swipeUp() }
+            XCTAssertTrue(savedInterval.waitUntilExists(timeout: 5))
+            XCTAssertEqual(savedInterval.value as? String, label)
+            let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+            screenshot.name = "Persisted Today Refresh - \(label)"
+            screenshot.lifetime = .keepAlways
+            add(screenshot)
+            app.buttons["Cancel"].firstMatch.tap()
+            XCTAssertTrue(
+                app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'Weekly on'"))
+                    .firstMatch.waitUntilExists(timeout: 5),
+                "Today Refresh must preserve the completed-day cadence"
+            )
+        }
+
     }
 
     // MARK: - Journey D: dedicated management view

@@ -397,7 +397,7 @@
       "id": "export.scheduled-today-refresh",
       "name": "Scheduled exports refresh today's file",
       "classification": "shared",
-      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple runs best-effort same-day refresh occurrences (3, 6, or 12 hours) beside the completed-day schedule, Android profile schedules mirror those refresh slots exactly, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 carries Today Refresh only in the Apple typed extension today; the neutral schedule section remains review-pending.",
+      "summary": "A scheduled export keeps the current day's partial file fresh alongside completed-day trailing windows, so a daytime run captures last night's sleep in addition to yesterday. The user outcome is unified; the native mechanism differs: Apple and Android profiles offer best-effort same-day refresh windows every 30 or 60 minutes, or 3, 6, or 12 hours, independently of completed-day cadence, and the Android single schedule offers a 'past complete days + today' window that pairs with its sub-day cadence. Shared Setup v2 remains frozen: its Apple typed extension supports only 3/6/12-hour refresh, and sharing a native 30/60-minute choice is explicitly blocked on both platforms rather than rounded or omitted. Local persistence v2 disables minute refresh for older apps and retains the minute choice without reactivating it after downgrade edits.",
       "profiles": [],
       "platforms": {
         "apple": {

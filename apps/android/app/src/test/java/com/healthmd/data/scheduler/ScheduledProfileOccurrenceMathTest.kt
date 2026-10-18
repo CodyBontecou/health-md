@@ -16,6 +16,42 @@ import java.time.ZonedDateTime
 /** Occurrence math for per-profile scheduled entries, mirroring the iOS evaluator semantics. */
 class ScheduledProfileOccurrenceMathTest {
 
+    @Test
+    fun `minute slots have exact exclusive next inclusive due and independent frontiers`() {
+        val day = LocalDate.of(2026, 7, 1)
+        val start = millisOf(day, LocalTime.of(8, 15))
+        for (minutes in listOf(30, 60)) {
+            val e = entry(todayRefreshEnabled = true, minute = 15,
+                lastSuccessEpochMillis = start, lastRefreshSuccessEpochMillis = start)
+                .withTodayRefreshMinutes(minutes)
+            val next = start + minutes * 60_000L
+            assertEquals(next, ScheduledProfileOccurrenceMath.nextRefreshOccurrence(e, start)?.toEpochMilli())
+            assertNull(ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(e, next - 1))
+            assertEquals(next, ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(e, next))
+            val due = ScheduledProfileOccurrenceMath.dueOccurrence(e, next)!!
+            assertEquals(listOf(day), due.exportDates)
+            assertEquals(start, due.entry.lastSuccessEpochMillis)
+            assertNull(ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(e.copy(lastRefreshSuccessEpochMillis = next), next + 1))
+            assertEquals(millisOf(day.plusDays(1), LocalTime.of(8, 15)),
+                ScheduledProfileOccurrenceMath.nextRefreshOccurrence(e, millisOf(day, LocalTime.of(23, 59)))?.toEpochMilli())
+            assertNull(ScheduledProfileOccurrenceMath.nextRefreshOccurrence(e.copy(todayRefreshEnabled = false), start))
+        }
+    }
+
+    @Test
+    fun `minute civil slots resolve gap forward and first fold exactly once`() {
+        val e = entry(hour = 0, minute = 30, todayRefreshEnabled = true)
+            .withTodayRefreshMinutes(30).copy(zoneId = "America/Los_Angeles")
+        fun ms(s: String) = java.time.Instant.parse(s).toEpochMilli()
+        assertEquals(ms("2026-03-08T10:00:00Z"),
+            ScheduledProfileOccurrenceMath.nextRefreshOccurrence(e, ms("2026-03-08T09:30:00Z"))?.toEpochMilli())
+        assertEquals(ms("2026-11-01T10:00:00Z"),
+            ScheduledProfileOccurrenceMath.nextRefreshOccurrence(e, ms("2026-11-01T08:30:00Z"))?.toEpochMilli())
+        assertEquals(ms("2026-03-08T10:00:00Z"),
+            ScheduledProfileOccurrenceMath.dueRefreshSlotMillis(e, ms("2026-03-08T10:00:00Z")))
+    }
+
+
     private val zone = ZoneId.of("UTC")
 
     private fun millisOf(date: LocalDate, time: LocalTime = LocalTime.of(8, 0)): Long =

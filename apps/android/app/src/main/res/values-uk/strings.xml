@@ -622,6 +622,8 @@
     <string name="schedule_through_today_summary">Кожен запуск експортує повні минулі дні та сьогоднішній частковий файл, тому денний запуск охоплює й минулу ніч. Поєднуйте з погодинною частотою, щоб обидва файли залишалися актуальними цілий день. Використовуйте режим запису «Перезаписати» або «Оновити», щоб уникнути дублювання вмісту за той самий день.</string>
     <string name="profile_schedule_today_refresh">Оновлювати сьогоднішній експорт</string>
     <string name="profile_schedule_refresh_interval">Інтервал оновлення</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d хв</string>
+    <string name="profile_schedule_refresh_summary_minutes">Оновлює сьогодні кожні %1$d хв</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d год</string>
     <string name="profile_schedule_refresh_summary">Оновлює сьогодні кожні %1$d год</string>
     <string name="profile_schedule_discard_recovery">Скасувати очікуване відновлення</string>

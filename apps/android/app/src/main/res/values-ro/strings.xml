@@ -612,6 +612,8 @@
     <string name="schedule_through_today_summary">Fiecare rulare exportă zilele complete anterioare plus fișierul parțial de astăzi, astfel încât o rulare în timpul zilei capturează și somnul de aseară. Combină cu o frecvență orară pentru a actualiza ambele fișiere toată ziua. Folosește modul de scriere Suprascriere sau Actualizare pentru a evita duplicarea conținutului din aceeași zi.</string>
     <string name="profile_schedule_today_refresh">Reîmprospătează exportul de astăzi</string>
     <string name="profile_schedule_refresh_interval">Interval de reîmprospătare</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Reîmprospătează astăzi la fiecare %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d h</string>
     <string name="profile_schedule_refresh_summary">Reîmprospătează astăzi la fiecare %1$d h</string>
     <string name="profile_schedule_discard_recovery">Renunțați la recuperarea în așteptare</string>
