@@ -6,6 +6,7 @@ import argparse
 from collections import Counter
 import hashlib
 import json
+import platform
 from pathlib import Path
 import re
 import subprocess
@@ -14,6 +15,21 @@ import sys
 from validate_ios_ui_xctestrun import BUILD_MARKER, qualify
 
 SHARDS = 4
+
+
+def start_simulator(destination: str) -> None:
+    match = re.fullmatch(r'platform=iOS Simulator,id=([A-Fa-f0-9-]{36})', destination)
+    if not match:
+        raise ValueError('expected one selected iOS simulator UUID')
+    identifier = match[1]
+    devices = json.loads(subprocess.check_output(
+        ['xcrun', 'simctl', 'list', 'devices', 'available', '--json'], text=True))
+    matches = [d for group in devices['devices'].values() for d in group if d['udid'] == identifier]
+    if len(matches) != 1 or matches[0]['state'] not in ('Shutdown', 'Booting', 'Booted'):
+        raise ValueError('selected simulator is unavailable or in an unexpected state')
+    if matches[0]['state'] == 'Shutdown':
+        subprocess.run(['xcrun', 'simctl', 'boot', identifier], check=True)
+    print(f"Simulator startup requested: {identifier}; compilation/download can run while it boots.")
 
 
 def digest(path: Path) -> str:
@@ -49,12 +65,20 @@ def identifiers(value) -> list[str]:
 def plan(tests: list[str], weights: dict, source_sha: str) -> dict:
     if len(tests) < SHARDS or len(tests) != len(set(tests)):
         raise ValueError('compiled inventory is empty, too small, or duplicated')
+    # Existing journeys intentionally share installed-app fixture state within
+    # their XCTest class. Keep canonical method order and never split a class.
+    classes = {}
+    for test in tests:
+        classes.setdefault(test.split('/')[1], []).append(test)
+    if len(classes) < SHARDS:
+        raise ValueError('nightly UI sharding requires at least four complete classes')
+    duration = lambda group: sum(weights.get(test, 30.0) for test in group)
     groups = [[] for _ in range(SHARDS)]
     totals = [0.0] * SHARDS
-    for test in sorted(tests, key=lambda t: (-weights.get(t, 30.0), t)):
+    for name in sorted(classes, key=lambda cls: (-duration(classes[cls]), cls)):
         index = min(range(SHARDS), key=lambda i: (totals[i], len(groups[i]), i))
-        groups[index].append(test)
-        totals[index] += weights.get(test, 30.0)
+        groups[index].extend(classes[name])
+        totals[index] += duration(classes[name])
     return {'source_sha': source_sha, 'tests': sorted(tests),
             'shards': [sorted(group) for group in groups], 'estimated_seconds': totals}
 
@@ -65,6 +89,13 @@ def validate_plan(value: dict, source_sha: str) -> None:
     expected = value['tests']
     if not expected or len(set(expected)) != len(expected):
         raise ValueError('UI plan inventory must be nonempty and unique')
+    owners = {}
+    for index, group in enumerate(value['shards']):
+        for test in group:
+            cls = test.split('/')[1]
+            if cls in owners and owners[cls] != index:
+                raise ValueError('a UI test class was split between workers')
+            owners[cls] = index
     actual = [test for group in value['shards'] for test in group]
     if any(not group for group in value['shards']) or Counter(actual) != Counter(expected):
         raise ValueError('UI shards must be an exact disjoint partition of the compiled inventory')
@@ -121,7 +152,8 @@ def pack(root: Path, output: Path, source_sha: str) -> None:
     archive = output / 'products.tar.gz'
     subprocess.run(['tar', '-czf', str(archive.resolve()), '-C', str(root),
                     'Build/Products', BUILD_MARKER, 'ui-plan.json', 'ui-enumeration.json'], check=True)
-    receipt = {'source_sha': source_sha, 'xcode': toolchain(), 'archive_sha256': digest(archive),
+    receipt = {'source_sha': source_sha, 'xcode': toolchain(), 'architecture': platform.machine(),
+               'archive_sha256': digest(archive),
                'manifest': manifest.name, 'manifest_sha256': digest(manifest)}
     (output / 'receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
 
@@ -129,8 +161,9 @@ def pack(root: Path, output: Path, source_sha: str) -> None:
 def unpack(artifact: Path, root: Path, source_sha: str) -> Path:
     receipt = json.loads((artifact / 'receipt.json').read_text())
     archive = artifact / 'products.tar.gz'
-    if receipt['source_sha'] != source_sha or receipt['xcode'] != toolchain():
-        raise ValueError('prepared UI artifacts do not match the checked-out source and Xcode')
+    if (receipt['source_sha'] != source_sha or receipt['xcode'] != toolchain()
+            or receipt['architecture'] != platform.machine()):
+        raise ValueError('prepared UI artifacts do not match the checked-out source, Xcode, and worker architecture')
     if digest(archive) != receipt['archive_sha256']:
         raise ValueError('prepared UI archive digest mismatch')
     if root.exists():
@@ -146,7 +179,7 @@ def unpack(artifact: Path, root: Path, source_sha: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['plan', 'pack', 'run', 'aggregate'])
+    parser.add_argument('action', choices=['start-simulator', 'plan', 'pack', 'run', 'aggregate'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--source-sha', required=True)
     parser.add_argument('--artifact', type=Path)
@@ -157,7 +190,11 @@ def main() -> None:
         parser.error('--artifact is required for pack/run')
     if args.action == 'run' and (args.shard is None or not args.destination):
         parser.error('--shard and --destination are required for run')
-    if args.action == 'plan':
+    if args.action == 'start-simulator':
+        if not args.destination:
+            parser.error('--destination is required for start-simulator')
+        start_simulator(args.destination)
+    elif args.action == 'plan':
         tests = identifiers(json.loads((args.root / 'ui-enumeration.json').read_text()))
         weights = json.loads((Path(__file__).parent / 'fixtures/apple-nightly-ui-timings.json').read_text())['seconds']
         value = plan(tests, weights, args.source_sha)

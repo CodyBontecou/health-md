@@ -191,6 +191,16 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Start simulator before independent work
+        id: ui_simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
+            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
+
       - name: Restore exact-source shared Rust core from Apple CI
         uses: actions/cache/restore@v4
         with:
@@ -230,15 +240,15 @@ jobs:
             -project HealthMd.xcodeproj -scheme HealthMd-UITests-iOS \
             -configuration Debug-iOS -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build/nightly-ui \
+            ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee build/logs/nightly-ui-build.log
           UI_MANIFEST=$(python3 scripts/validate_ios_ui_xctestrun.py \
             --derived-data build/nightly-ui --source-sha '${{ github.sha }}' \
             --receipt build/logs/nightly-ui-build-receipt.json)
-          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
           xcodebuild test-without-building -xctestrun "$UI_MANIFEST" \
-            -destination "$IOS_DESTINATION" -enumerate-tests \
+            -destination '${{ steps.ui_simulator.outputs.ios_destination }}' -enumerate-tests \
             -test-enumeration-style flat -test-enumeration-format json \
             -test-enumeration-output-path "$PWD/build/nightly-ui/ui-enumeration.json" \
             2>&1 | tee -a build/logs/nightly-ui-build.log
@@ -297,6 +307,16 @@ jobs:
         with:
           xcode-version: latest-stable
 
+      - name: Start simulator before independent work
+        id: ui_simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          echo "ios_destination=${IOS_DESTINATION}" >> "$GITHUB_OUTPUT"
+          python3 scripts/apple_nightly_ui.py start-simulator --root build/nightly-ui \
+            --source-sha '${{ github.sha }}' --destination "$IOS_DESTINATION"
+
       - name: Download exact-run prepared UI products
         uses: actions/download-artifact@v4
         with:
@@ -309,11 +329,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
           python3 scripts/apple_nightly_ui.py run \
             --artifact build/nightly-ui-products --root build/nightly-ui \
             --source-sha '${{ github.sha }}' --shard '${{ matrix.shard }}' \
-            --destination "$IOS_DESTINATION"
+            --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
 
       - name: Check UI runtime warnings (strict)
         if: ${{ !cancelled() }}

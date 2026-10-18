@@ -25,6 +25,7 @@ class TopologyTests(unittest.TestCase):
         build = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
         self.assertEqual(build.count('xcodebuild build-for-testing'), 1)
         self.assertIn('-scheme HealthMd-UITests-iOS', build)
+        self.assertIn('ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES', build)
         self.assertIn('-enumerate-tests', build)
         self.assertNotIn('-only-testing', build)
         self.assertNotIn('-skip-testing', build)
@@ -57,12 +58,12 @@ import os
 import plistlib
 from unittest.mock import patch
 from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
-                              main, pack, plan, unpack, validate_plan)
+                              main, pack, plan, start_simulator, unpack, validate_plan)
 from test_ios_ui_build_contract import make_products
 from validate_ios_ui_xctestrun import BUILD_MARKER
 
 SHA = 'a' * 40
-TESTS = [f'HealthMdUITests/JourneyTests/testCase{i}' for i in range(20)]
+TESTS = [f'HealthMdUITests/Journey{i % 5}Tests/testCase{i}' for i in range(20)]
 
 
 def enumeration(tests):
@@ -73,6 +74,39 @@ def enumeration(tests):
 def transcript(tests, result='passed'):
     return '\n'.join(f"Test Case '-[HealthMdUITests.{t.split('/')[1]} {t.split('/')[2]}]' {result} (1.000 seconds)."
                      for t in tests) + '\n** TEST EXECUTE SUCCEEDED **\n'
+
+
+class SimulatorOverlapTests(unittest.TestCase):
+    def test_only_shutdown_simulator_needs_a_nonblocking_boot_request(self):
+        identifier = 'A' * 8 + '-' + 'B' * 4 + '-' + 'C' * 4 + '-' + 'D' * 4 + '-' + 'E' * 12
+        for state in ('Shutdown', 'Booting', 'Booted'):
+            devices = {'devices': {'iOS': [{'udid': identifier, 'state': state}]}}
+            with self.subTest(state=state), patch('apple_nightly_ui.subprocess.check_output',
+                    return_value=json.dumps(devices)), patch('apple_nightly_ui.subprocess.run') as boot, \
+                    contextlib.redirect_stdout(io.StringIO()):
+                start_simulator('platform=iOS Simulator,id=' + identifier)
+                if state == 'Shutdown':
+                    boot.assert_called_once_with(['xcrun', 'simctl', 'boot', identifier], check=True)
+                else:
+                    boot.assert_not_called()
+        with self.assertRaises(ValueError):
+            start_simulator('platform=iOS,id=physical-device')
+        with patch('apple_nightly_ui.subprocess.check_output', return_value='{"devices":{}}'), \
+             self.assertRaises(ValueError):
+            start_simulator('platform=iOS Simulator,id=' + identifier)
+
+    def test_prepare_boot_overlaps_compilation_and_worker_boot_precedes_download(self):
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        prepare = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
+        worker = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
+        self.assertLess(prepare.index('Start simulator before independent work'),
+                        prepare.index('xcodebuild build-for-testing'))
+        self.assertLess(worker.index('Start simulator before independent work'),
+                        worker.index('Download exact-run prepared UI products'))
+        self.assertIn('steps.ui_simulator.outputs.ios_destination', prepare)
+        self.assertIn('steps.ui_simulator.outputs.ios_destination', worker)
+        self.assertNotIn('bootstatus', prepare)
+        self.assertNotIn('bootstatus', worker)
 
 
 class PartitionTests(unittest.TestCase):
@@ -87,6 +121,20 @@ class PartitionTests(unittest.TestCase):
         validate_plan(value, SHA)
         self.assertEqual(sorted(t for group in value['shards'] for t in group), sorted(actual))
         self.assertTrue(all(value['shards']))
+
+    def test_each_complete_class_remains_on_one_worker_in_canonical_order(self):
+        value = plan(TESTS, {TESTS[0]: 90}, SHA)
+        validate_plan(value, SHA)
+        for cls in {test.split('/')[1] for test in TESTS}:
+            groups = [group for group in value['shards'] if any('/' + cls + '/' in t for t in group)]
+            self.assertEqual(len(groups), 1)
+            self.assertEqual([t for t in groups[0] if '/' + cls + '/' in t],
+                             sorted(t for t in TESTS if '/' + cls + '/' in t))
+        bad = copy.deepcopy(value)
+        source = next(i for i, group in enumerate(bad['shards']) if len(group) > 1)
+        bad['shards'][(source + 1) % SHARDS].append(bad['shards'][source].pop())
+        with self.assertRaises(ValueError):
+            validate_plan(bad, SHA)
 
     def test_partial_disabled_or_duplicate_compiled_enumeration_fails(self):
         for mutation in ('error', 'disabled', 'duplicate', 'unexpected'):
@@ -169,6 +217,8 @@ class TransportTests(unittest.TestCase):
             unpack(self.artifact, self.base / 'wrong-source', 'b' * 40)
         with patch('apple_nightly_ui.toolchain', return_value='Other Xcode'), self.assertRaises(ValueError):
             unpack(self.artifact, self.base / 'wrong-toolchain', SHA)
+        with patch('apple_nightly_ui.platform.machine', return_value='other-architecture'), self.assertRaises(ValueError):
+            unpack(self.artifact, self.base / 'wrong-architecture', SHA)
         with (self.artifact / 'products.tar.gz').open('ab') as stream: stream.write(b'tampered')
         with self.assertRaises(ValueError):
             unpack(self.artifact, self.base / 'wrong-bytes', SHA)
