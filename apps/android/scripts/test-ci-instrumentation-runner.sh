@@ -102,7 +102,7 @@ export GITHUB_ACTIONS=true MOCK_FOCUS_EXIT=25
 run_case standard 25
 printf '%s\n' "${FOCUS_COMMAND/Diagnostics=false/Diagnostics=true}" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
-printf '%s\n' '-s emulator-5554 shell dumpsys window windows' > "$TEST_ROOT/expected-adb"
+printf '%s\n' '-s emulator-5554 shell dumpsys -t 2 window' > "$TEST_ROOT/expected-adb"
 cmp "$TEST_ROOT/expected-adb" "$MOCK_ADB_CALLS"
 grep -q 'Synthetic platform blocker' "$TEST_ROOT/result.log"
 export GITHUB_ACTIONS=false

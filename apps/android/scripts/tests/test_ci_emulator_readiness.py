@@ -29,6 +29,8 @@ elif a[:3] == ['shell', 'cmd', 'package']:
   print('com.google.android.googlesdksetup/.DefaultActivity')
  else: print('other.launcher/.Home' if mode == 'wrong-home' else 'com.google.android.apps.nexuslauncher/.NexusLauncherActivity')
 elif a == ['shell', 'dumpsys', 'window', 'windows']:
+ sys.exit(0)  # Android 15's windows-only section omits mCurrentFocus.
+elif a == ['shell', 'dumpsys', '-t', '2', 'window']:
  if mode == 'other-anr': focus = 'Application Not Responding: com.healthmd'
  elif mode == 'stuck' or (mode in ('launcher-anr', 'setup-anr') and not s['recovered']):
   focus = 'Application Not Responding: com.google.android.apps.nexuslauncher'

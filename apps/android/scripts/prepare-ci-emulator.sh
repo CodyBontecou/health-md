@@ -25,7 +25,7 @@ for attempt in $(seq 1 30); do
         sleep 1
         continue
     fi
-    focus="$(adb_ci shell dumpsys window windows | tr -d '\r' | sed -n '/mCurrentFocus=/p')"
+    focus="$(adb_ci shell dumpsys -t 2 window | tr -d '\r' | sed -n '/mCurrentFocus=/p')"
     echo "Hosted AVD focus: $focus"
     case "$focus" in
         *"Application Not Responding: $launcher}"*)

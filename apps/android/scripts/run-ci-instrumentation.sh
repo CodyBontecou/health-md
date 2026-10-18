@@ -43,7 +43,7 @@ capture_focus_failure() {
     # not collect window titles or other apps' state on a developer's device.
     if [[ "${GITHUB_ACTIONS:-}" == true ]]; then
         echo 'Hosted AVD focus at instrumentation failure:' >&2
-        adb -s emulator-5554 shell dumpsys window windows \
+        adb -s emulator-5554 shell dumpsys -t 2 window \
             | sed -n '/mCurrentFocus=/p; /mFocusedApp=/p' >&2 || true
     fi
     exit "$status"
