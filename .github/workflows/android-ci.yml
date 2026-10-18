@@ -324,8 +324,26 @@ jobs:
         with:
           cache-read-only: ${{ github.ref != 'refs/heads/main' }}
 
-      - name: Prepare source-built Rust core before the emulator boots
-        run: ./gradlew --no-daemon :healthmd-core:prepareRustDebug --stacktrace
+      - name: Prepare instrumentation APKs before the emulator boots
+        # Avoid running Kotlin compilation alongside the emulator's first boot.
+        # In-process compilation leaves no Kotlin daemon holding memory afterward.
+        run: |
+          ./gradlew --no-daemon --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            :healthmd-core:prepareRustDebug \
+            :app:assembleFdroidDebug :app:assembleFdroidDebugAndroidTest \
+            :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
+
+      - name: Prepare core and direct E2E artifacts on shard zero before boot
+        if: ${{ matrix.shard == 0 }}
+        run: |
+          ./gradlew --no-daemon --max-workers=2 \
+            -Pkotlin.compiler.execution.strategy=in-process \
+            -PhealthmdInstrumentedTestBuildType=e2e \
+            :healthmd-core:assembleDebugAndroidTest \
+            :app:assemblePlayE2e :app:assemblePlayE2eAndroidTest --stacktrace
+          cd ../cli
+          cargo test --locked -p healthmd-client --test android_live_listener --no-run
 
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm
@@ -355,6 +373,7 @@ jobs:
             adb -s emulator-5554 shell locksettings set-disabled true
             test "$(adb -s emulator-5554 shell locksettings get-disabled | tr -d '\r')" = true
             adb -s emulator-5554 shell wm dismiss-keyguard
+            cd apps/android && bash -o pipefail -c 'mkdir -p build/logs; timeout 90 ./scripts/prepare-ci-emulator.sh 2>&1 | tee build/logs/emulator-readiness.log'
             cd apps/android && ./scripts/run-ci-instrumentation.sh
             if [ "${{ matrix.shard }}" = 0 ]; then cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh; fi
 
@@ -366,6 +385,7 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
           path: |
+            apps/android/build/logs/emulator-readiness.log
             apps/android/app/build/reports/androidTests/connected/**
             apps/android/app/build/outputs/androidTest-results/connected/**
             apps/android/healthmd-core/build/reports/androidTests/connected/**
