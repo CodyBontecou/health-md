@@ -73,27 +73,6 @@ jobs:
           mkdir -p build/logs
           make test-ios CORE_RUST_PREPARE=: IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
-      - name: Run full UI test suite (iOS)
-        if: ${{ success() }}
-        # The 20-minute hosted budget truncated the complete suite.
-        # Keep the per-test limits unchanged.
-        timeout-minutes: 30
-        run: |
-          set -euo pipefail
-          mkdir -p build/test-results
-          xcodebuild test \
-            -project HealthMd.xcodeproj \
-            -scheme HealthMd-UITests-iOS \
-            -resultBundlePath build/test-results/HealthMd-Nightly-UI.xcresult \
-            -destination '${{ steps.simulator.outputs.ios_destination }}' \
-            -configuration Debug-iOS \
-            -test-timeouts-enabled YES \
-            -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios.log
-
       - name: Check warnings (iOS — strict)
         if: ${{ !cancelled() }}
         run: scripts/check-warnings.sh build/logs/build-ios.log
@@ -105,7 +84,8 @@ jobs:
           name: nightly-ios-logs
           path: |
             apps/apple/build/logs/build-ios.log
-            apps/apple/build/test-results/HealthMd-Nightly-UI.xcresult
+            apps/apple/build/test-results/HealthMd-iOS.xcresult
+            apps/apple/build/logs/xcodebuild-ios-raw.log
           retention-days: 30
 
   extended-macos:
@@ -189,4 +169,212 @@ jobs:
           path: |
             apps/apple/build/coverage/HealthMd.xcresult
             apps/apple/build/logs/build-macos.log
+          retention-days: 30
+
+  prepare-ui:
+    # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
+    runs-on: macos-26
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/apple
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Restore exact-source shared Rust core from Apple CI
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/HealthmdCore.xcframework
+            apps/apple/Packages/HealthMdCoreRust/Artifacts/.healthmd-core-source.sha256
+          key: >-
+            apple-shared-core-${{ runner.os }}-${{ runner.arch }}-${{
+            hashFiles('packages/healthmd-core-rust/Cargo.toml',
+            'packages/healthmd-core-rust/Cargo.lock',
+            'packages/healthmd-core-rust/rust-toolchain.toml',
+            'packages/healthmd-core-rust/crates/**',
+            'packages/healthmd-core-rust/scripts/*apple*',
+            'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      - name: Set up pinned Rust compiler for binding verification
+        uses: dtolnay/rust-toolchain@1.88.0
+
+      - name: Cache binding compiler dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: apple-nightly-bindings
+          workspaces: packages/healthmd-core-rust -> target
+
+      # Always validate the source digest, bindings and slices, including hits.
+      - name: Prepare and validate shared Rust core for Apple
+        run: make prepare-healthmd-core-rust
+
+      - name: Build and enumerate complete UI suite once
+        if: ${{ success() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p build/logs build/nightly-ui
+          touch build/nightly-ui/.healthmd-ui-build-start
+          xcodebuild build-for-testing \
+            -project HealthMd.xcodeproj -scheme HealthMd-UITests-iOS \
+            -configuration Debug-iOS -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/nightly-ui \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
+            2>&1 | tee build/logs/nightly-ui-build.log
+          UI_MANIFEST=$(python3 scripts/validate_ios_ui_xctestrun.py \
+            --derived-data build/nightly-ui --source-sha '${{ github.sha }}' \
+            --receipt build/logs/nightly-ui-build-receipt.json)
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          xcodebuild test-without-building -xctestrun "$UI_MANIFEST" \
+            -destination "$IOS_DESTINATION" -enumerate-tests \
+            -test-enumeration-style flat -test-enumeration-format json \
+            -test-enumeration-output-path "$PWD/build/nightly-ui/ui-enumeration.json" \
+            2>&1 | tee -a build/logs/nightly-ui-build.log
+          python3 scripts/apple_nightly_ui.py plan --root build/nightly-ui --source-sha '${{ github.sha }}'
+          python3 scripts/apple_nightly_ui.py pack --root build/nightly-ui \
+            --artifact build/nightly-ui-products --source-sha '${{ github.sha }}'
+
+      - name: Check UI build warnings (strict)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/nightly-ui-build.log
+
+      - name: Upload prepared UI products
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-products
+          path: apps/apple/build/nightly-ui-products
+          compression-level: 0
+          retention-days: 1
+          if-no-files-found: error
+
+      - name: Upload complete UI plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-plan
+          path: |
+            apps/apple/build/nightly-ui/ui-plan.json
+            apps/apple/build/nightly-ui/ui-enumeration.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload UI build diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-build-logs
+          path: apps/apple/build/logs/nightly-ui-*
+          retention-days: 30
+
+  ui-shards:
+    needs: prepare-ui
+    runs-on: macos-26
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
+    defaults:
+      run:
+        working-directory: apps/apple
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Download exact-run prepared UI products
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-ui-products
+          path: apps/apple/build/nightly-ui-products
+
+      - name: Run and audit assigned UI shard
+        if: ${{ success() }}
+        timeout-minutes: 30
+        shell: bash
+        run: |
+          set -euo pipefail
+          IOS_DESTINATION=$(scripts/select-ios-simulator.sh)
+          python3 scripts/apple_nightly_ui.py run \
+            --artifact build/nightly-ui-products --root build/nightly-ui \
+            --source-sha '${{ github.sha }}' --shard '${{ matrix.shard }}' \
+            --destination "$IOS_DESTINATION"
+
+      - name: Check UI runtime warnings (strict)
+        if: ${{ !cancelled() }}
+        run: scripts/check-warnings.sh build/logs/nightly-ui-${{ matrix.shard }}.log
+
+      - name: Upload UI shard inventory
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-inventory-${{ matrix.shard }}
+          path: apps/apple/build/logs/ui-shard-${{ matrix.shard }}.json
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Upload UI shard diagnostics
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-results-${{ matrix.shard }}
+          path: |
+            apps/apple/build/logs/nightly-ui-${{ matrix.shard }}.log
+            apps/apple/build/test-results/Nightly-UI-${{ matrix.shard }}.xcresult
+          retention-days: 30
+
+  ui-inventory:
+    needs: [prepare-ui, ui-shards]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Require all UI workers to pass
+        env:
+          UI_BUILD_RESULT: ${{ needs.prepare-ui.result }}
+          UI_SHARD_RESULT: ${{ needs.ui-shards.result }}
+        run: test "$UI_BUILD_RESULT" = success && test "$UI_SHARD_RESULT" = success
+
+      - name: Download compiled full-suite inventory
+        uses: actions/download-artifact@v4
+        with:
+          name: nightly-ui-plan
+          path: apps/apple/build/nightly-ui-inventory
+
+      - name: Download every UI shard receipt
+        uses: actions/download-artifact@v4
+        with:
+          pattern: nightly-ui-inventory-*
+          path: apps/apple/build/nightly-ui-inventory/shards
+
+      - name: Verify complete UI coverage exactly once
+        working-directory: apps/apple
+        run: >-
+          python3 scripts/apple_nightly_ui.py aggregate
+          --root build/nightly-ui-inventory --source-sha '${{ github.sha }}'
+
+      - name: Upload verified UI inventory
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-ui-full-inventory
+          path: apps/apple/build/nightly-ui-inventory
           retention-days: 30

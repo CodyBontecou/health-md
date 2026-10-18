@@ -1,0 +1,245 @@
+"""Coverage and failure contracts for nightly UI fan-out."""
+import json
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+SCRIPTS = Path(__file__).resolve().parents[1]
+REPO = SCRIPTS.parents[2]
+sys.path.insert(0, str(SCRIPTS))
+
+
+class TopologyTests(unittest.TestCase):
+    def test_unit_job_does_not_wait_for_or_run_ui_suite(self):
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        unit = text.split('  extended-ios:\n', 1)[1].split('\n  extended-macos:', 1)[0]
+        self.assertIn('make test-ios CORE_RUST_PREPARE=:', unit)
+        self.assertNotIn('HealthMd-UITests-iOS', unit)
+        self.assertNotIn('-only-testing', unit)
+        self.assertNotIn('-skip-testing', unit)
+
+
+    def test_build_once_enumerates_unfiltered_bundle_before_partitioning(self):
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        build = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
+        self.assertEqual(build.count('xcodebuild build-for-testing'), 1)
+        self.assertIn('-scheme HealthMd-UITests-iOS', build)
+        self.assertIn('-enumerate-tests', build)
+        self.assertNotIn('-only-testing', build)
+        self.assertNotIn('-skip-testing', build)
+        self.assertLess(build.index('validate_ios_ui_xctestrun.py'), build.index('-enumerate-tests'))
+        self.assertLess(build.index('-enumerate-tests'), build.index('apple_nightly_ui.py plan'))
+        self.assertLess(build.index('apple_nightly_ui.py plan'), build.index('apple_nightly_ui.py pack'))
+        self.assertIn('scripts/check-warnings.sh', build)
+
+    def test_all_workers_and_exact_inventory_gate_are_required(self):
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        workers = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
+        self.assertIn('needs: prepare-ui', workers)
+        self.assertNotIn('extended-ios', workers)
+        self.assertIn('shard: [0, 1, 2, 3]', workers)
+        self.assertIn('fail-fast: false', workers)
+        self.assertNotIn('continue-on-error', workers)
+        gate = text.split('  ui-inventory:\n', 1)[1]
+        self.assertIn('needs: [prepare-ui, ui-shards]', gate)
+        self.assertIn('if: ${{ !cancelled() }}', gate)
+        self.assertIn('needs.ui-shards.result', gate)
+        self.assertIn('apple_nightly_ui.py aggregate', gate)
+        self.assertIn('nightly-ui-inventory-*', gate)
+
+
+# Every SDK-free test here exercises the real planner, artifact or process boundary.
+import copy
+import contextlib
+import io
+import os
+import plistlib
+from unittest.mock import patch
+from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
+                              main, pack, plan, unpack, validate_plan)
+from test_ios_ui_build_contract import make_products
+from validate_ios_ui_xctestrun import BUILD_MARKER
+
+SHA = 'a' * 40
+TESTS = [f'HealthMdUITests/JourneyTests/testCase{i}' for i in range(20)]
+
+
+def enumeration(tests):
+    return {'errors': [], 'values': [{'disabledTests': [],
+                                    'enabledTests': [{'identifier': t} for t in tests]}]}
+
+
+def transcript(tests, result='passed'):
+    return '\n'.join(f"Test Case '-[HealthMdUITests.{t.split('/')[1]} {t.split('/')[2]}]' {result} (1.000 seconds)."
+                     for t in tests) + '\n** TEST EXECUTE SUCCEEDED **\n'
+
+
+class PartitionTests(unittest.TestCase):
+    def setUp(self):
+        self.value = plan(TESTS, {TESTS[0]: 90}, SHA)
+
+    def test_compiled_inventory_includes_new_tests_without_editing_weights(self):
+        tests = TESTS + ['HealthMdUITests/NewJourney/testFutureCase()']
+        actual = identifiers(enumeration(tests))
+        self.assertIn('HealthMdUITests/NewJourney/testFutureCase', actual)
+        value = plan(actual, {}, SHA)
+        validate_plan(value, SHA)
+        self.assertEqual(sorted(t for group in value['shards'] for t in group), sorted(actual))
+        self.assertTrue(all(value['shards']))
+
+    def test_partial_disabled_or_duplicate_compiled_enumeration_fails(self):
+        for mutation in ('error', 'disabled', 'duplicate', 'unexpected'):
+            value = enumeration(TESTS)
+            if mutation == 'error': value['errors'] = ['collection failed']
+            if mutation == 'disabled': value['values'][0]['disabledTests'] = [{'identifier': TESTS[0]}]
+            if mutation == 'duplicate': value['values'][0]['enabledTests'].append({'identifier': TESTS[0]})
+            if mutation == 'unexpected': value['values'][0]['enabledTests'].append({'identifier': 'OtherTests/Other/testWrong'})
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                identifiers(value)
+
+    def test_empty_enumeration_and_duplicate_plans_fail(self):
+        with self.assertRaises(ValueError):
+            identifiers({'values': []})
+        with self.assertRaises(ValueError):
+            plan(TESTS + TESTS, {}, SHA)
+        for mutation in ('missing', 'duplicate', 'source', 'empty'):
+            value = copy.deepcopy(self.value)
+            if mutation == 'missing': value['shards'][0].pop()
+            if mutation == 'duplicate': value['shards'][1].append(value['shards'][0][0])
+            if mutation == 'source': value['source_sha'] = 'b' * 40
+            if mutation == 'empty': value['tests'] = []
+            with self.subTest(mutation=mutation), self.assertRaises(ValueError):
+                validate_plan(value, SHA)
+
+    def test_shard_and_aggregate_require_every_case_once_and_passed(self):
+        receipts = [audit_shard(self.value, i, transcript(group))
+                    for i, group in enumerate(self.value['shards'])]
+        self.assertEqual(aggregate(self.value, receipts)['passed'], len(TESTS))
+        for result in ('failed', 'skipped'):
+            with self.subTest(result=result), self.assertRaises(ValueError):
+                audit_shard(self.value, 0, transcript(self.value['shards'][0], result))
+        group = self.value['shards'][0]
+        for tests in (group[:-1], group + group[:1], group + ['HealthMdUITests/Other/testWrong']):
+            with self.assertRaises(ValueError):
+                audit_shard(self.value, 0, transcript(tests))
+        with self.assertRaises(ValueError):
+            audit_shard(self.value, 0, transcript(group).replace('** TEST EXECUTE SUCCEEDED **', ''))
+        with self.assertRaises(ValueError):
+            aggregate(self.value, receipts[:-1])
+        with self.assertRaises(ValueError):
+            aggregate(self.value, receipts + receipts[:1])
+        wrong = copy.deepcopy(receipts)
+        wrong[0]['source_sha'] = 'b' * 40
+        with self.assertRaises(ValueError):
+            aggregate(self.value, wrong)
+        wrong = copy.deepcopy(receipts)
+        wrong[0]['tests'][0] = (group[0], 'skipped')
+        with self.assertRaises(ValueError):
+            aggregate(self.value, wrong)
+
+
+class TransportTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.base = Path(self.temporary.name)
+        self.root = self.base / 'original'
+        self.root.mkdir()
+        (self.root / BUILD_MARKER).touch()
+        self.manifest, self.payload = make_products(self.root)
+        (self.root / 'ui-plan.json').write_text(json.dumps(plan(TESTS, {}, SHA)))
+        (self.root / 'ui-enumeration.json').write_text(json.dumps(enumeration(TESTS)))
+        self.artifact = self.base / 'artifact'
+        self.toolchain = patch('apple_nightly_ui.toolchain', return_value='Xcode matching build')
+        self.toolchain.start()
+        self.addCleanup(self.toolchain.stop)
+
+    def test_relocated_products_preserve_generated_manifest_bytes(self):
+        pack(self.root, self.artifact, SHA)
+        result = unpack(self.artifact, self.base / 'relocated', SHA)
+        self.assertEqual(result.read_bytes(), self.manifest.read_bytes())
+        self.assertNotEqual(result, self.manifest)
+        with self.assertRaises(ValueError):
+            unpack(self.artifact, self.base / 'relocated', SHA)
+
+    def test_wrong_source_toolchain_or_archive_bytes_fail_closed(self):
+        pack(self.root, self.artifact, SHA)
+        with self.assertRaises(ValueError):
+            unpack(self.artifact, self.base / 'wrong-source', 'b' * 40)
+        with patch('apple_nightly_ui.toolchain', return_value='Other Xcode'), self.assertRaises(ValueError):
+            unpack(self.artifact, self.base / 'wrong-toolchain', SHA)
+        with (self.artifact / 'products.tar.gz').open('ab') as stream: stream.write(b'tampered')
+        with self.assertRaises(ValueError):
+            unpack(self.artifact, self.base / 'wrong-bytes', SHA)
+
+    def test_plan_cannot_omit_a_compiled_case(self):
+        (self.root / 'ui-plan.json').write_text(json.dumps(plan(TESTS[:-1], {}, SHA)))
+        with self.assertRaises(ValueError):
+            pack(self.root, self.artifact, SHA)
+
+    def test_filtered_generated_manifest_cannot_be_published(self):
+        self.payload['HealthMdUITests']['SkipTestIdentifiers'] = ['JourneyTests/testHidden']
+        self.manifest.write_bytes(plistlib.dumps(self.payload))
+        with self.assertRaises(ValueError):
+            pack(self.root, self.artifact, SHA)
+
+
+class ProcessBoundaryTests(unittest.TestCase):
+    def test_actual_worker_preserves_xcode_failure_and_audits_success(self):
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                value = plan(TESTS, {}, SHA)
+                staged = root / 'staged'
+                staged.mkdir()
+                (staged / 'ui-plan.json').write_text(json.dumps(value))
+                binary = root / 'bin'
+                binary.mkdir()
+                fake = binary / 'xcodebuild'
+                fake.write_text(f'#!{sys.executable}\n' + '''
+import json, os, sys
+from pathlib import Path
+Path('args.json').write_text(json.dumps(sys.argv[1:]))
+print('raw stdout')
+print('raw diagnostic', file=sys.stderr)
+for arg in sys.argv[1:]:
+    if arg.startswith('-only-testing:'):
+        _, cls, method = arg.split(':', 1)[1].split('/')
+        print(f"Test Case '-[HealthMdUITests.{cls} {method}]' passed (1.000 seconds).")
+print('** TEST EXECUTE SUCCEEDED **')
+sys.exit(int(os.environ['FAKE_STATUS']))
+''')
+                fake.chmod(0o755)
+                cwd = Path.cwd()
+                try:
+                    os.chdir(root)
+                    with patch.dict(os.environ, PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)), \
+                         patch('apple_nightly_ui.unpack', return_value=staged / 'generated.xctestrun'), \
+                         patch.object(sys, 'argv', ['apple_nightly_ui.py', 'run', '--root', str(staged),
+                                                   '--artifact', 'artifact', '--source-sha', SHA,
+                                                   '--shard', '0', '--destination', 'synthetic-simulator']), \
+                         contextlib.redirect_stdout(io.StringIO()):
+                        if status:
+                            with self.assertRaises(SystemExit) as failure: main()
+                            self.assertEqual(failure.exception.code, status)
+                        else:
+                            main()
+                    log = (root / 'build/logs/nightly-ui-0.log').read_text()
+                    self.assertIn('raw stdout', log)
+                    self.assertIn('raw diagnostic', log)
+                    receipt = root / 'build/logs/ui-shard-0.json'
+                    self.assertEqual(receipt.exists(), status == 0)
+                    args = json.loads((root / 'args.json').read_text())
+                    self.assertEqual(args[0], 'test-without-building')
+                    self.assertEqual([a.split(':', 1)[1] for a in args if a.startswith('-only-testing:')],
+                                     value['shards'][0])
+                    self.assertNotIn('-skip-testing', args)
+                    self.assertEqual(args[args.index('-default-test-execution-time-allowance') + 1], '180')
+                    self.assertEqual(args[args.index('-maximum-test-execution-time-allowance') + 1], '300')
+                finally:
+                    os.chdir(cwd)
+
+
+if __name__ == '__main__':
+    unittest.main()
