@@ -622,6 +622,8 @@
     <string name="schedule_through_today_summary">Каждый запуск экспортирует прошедшие полные дни и сегодняшний неполный файл, поэтому дневной запуск охватывает и прошлую ночь. Сочетайте с почасовой частотой, чтобы оба файла обновлялись весь день. Используйте режим записи «Перезаписать» или «Обновить», чтобы избежать дублирования содержимого за один день.</string>
     <string name="profile_schedule_today_refresh">Обновлять сегодняшний экспорт</string>
     <string name="profile_schedule_refresh_interval">Интервал обновления</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d мин</string>
+    <string name="profile_schedule_refresh_summary_minutes">Обновляет сегодня каждые %1$d мин</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d ч</string>
     <string name="profile_schedule_refresh_summary">Обновляет сегодня каждые %1$d ч</string>
     <string name="profile_schedule_discard_recovery">Отменить ожидающее восстановление</string>

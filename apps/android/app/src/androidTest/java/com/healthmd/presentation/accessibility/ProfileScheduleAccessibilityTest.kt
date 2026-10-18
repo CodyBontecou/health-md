@@ -183,10 +183,11 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         refresh.assertRole(Role.Switch).assertIsOff().assertMinimumTouchTarget().assertInNativeOwner()
             .performTouchInput { click(Offset(width * 0.1f, height * 0.2f)) }
         refresh.assertIsOn()
-        ScheduledProfileEntry.TODAY_REFRESH_INTERVAL_OPTIONS.forEach { hours ->
+        ScheduledProfileEntry.TODAY_REFRESH_MINUTE_OPTIONS.forEach { minutes ->
             selectNativeOption(ProfileScheduleTags.REFRESH_INTERVAL,
-                text(R.string.profile_schedule_refresh_interval_hours, hours),
-                captureName = if (hours == 12) "profiles-refresh-menu" else null)
+                if (minutes < 180) text(R.string.profile_schedule_refresh_interval_minutes, minutes)
+                else text(R.string.profile_schedule_refresh_interval_hours, minutes / 60),
+                captureName = if (minutes == 720) "profiles-refresh-menu" else null)
         }
         captureContent("profiles-editor-refresh", ProfileScheduleTags.DIALOG)
         tapNativeAction(ProfileScheduleTags.SAVE, text(R.string.a11y_profiles_save))

@@ -465,6 +465,8 @@
     <string name="schedule_through_today_summary">実行ごとに、過去の丸一日に加えて今日の部分ファイルもエクスポートされるため、日中の実行で昨夜の睡眠も記録されます。毎時の頻度と組み合わせれば、両方のファイルを一日中最新に保てます。同じ日のコンテンツの重複を避けるには、上書きまたは更新の書き込みモードを使用します。</string>
     <string name="profile_schedule_today_refresh">今日のエクスポートを更新</string>
     <string name="profile_schedule_refresh_interval">更新間隔</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d 分</string>
+    <string name="profile_schedule_refresh_summary_minutes">今日を %1$d 分ごとに更新</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d 時間</string>
     <string name="profile_schedule_refresh_summary">今日を %1$d 時間ごとに更新</string>
     <string name="profile_schedule_discard_recovery">保留中の復旧を破棄</string>

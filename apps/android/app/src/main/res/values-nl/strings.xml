@@ -602,6 +602,8 @@
     <string name="schedule_through_today_summary">Elke run exporteert de afgelopen volledige dagen plus het gedeeltelijke bestand van vandaag, zodat een run overdag ook de slaap van afgelopen nacht vastlegt. Combineer met een uurlijkse frequentie om beide bestanden de hele dag vers te houden. Gebruik de schrijfmodus Overschrijven of Bijwerken om dubbele inhoud op dezelfde dag te voorkomen.</string>
     <string name="profile_schedule_today_refresh">Export van vandaag verversen</string>
     <string name="profile_schedule_refresh_interval">Verversingsinterval</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d min</string>
+    <string name="profile_schedule_refresh_summary_minutes">Ververst vandaag elke %1$d min</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d u</string>
     <string name="profile_schedule_refresh_summary">Ververst vandaag elke %1$d u</string>
     <string name="profile_schedule_discard_recovery">Openstaand herstel verwerpen</string>

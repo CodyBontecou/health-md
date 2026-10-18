@@ -363,9 +363,9 @@ private fun ProfileCard(
                     text = cadenceSummary(
                         row.entry,
                         stringResource(
-                            R.string.profile_schedule_refresh_summary,
-                            row.entry?.todayRefreshIntervalHours
-                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                            R.string.profile_schedule_refresh_summary_minutes,
+                            row.entry?.todayRefreshMinutes
+                                ?: 180,
                         ),
                     ),
                     style = MaterialTheme.typography.bodySmall,
@@ -507,9 +507,9 @@ private fun ProfileDetailDialog(
                     cadenceSummary(
                         row.entry,
                         stringResource(
-                            R.string.profile_schedule_refresh_summary,
-                            row.entry?.todayRefreshIntervalHours
-                                ?: ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+                            R.string.profile_schedule_refresh_summary_minutes,
+                            row.entry?.todayRefreshMinutes
+                                ?: 180,
                         ),
                     ),
                 )

@@ -642,6 +642,8 @@
     <string name="schedule_through_today_summary">كل عملية تشغيل تصدّر الأيام الكاملة السابقة بالإضافة إلى ملف اليوم الجزئي، لذا فإن التشغيل أثناء النهار يلتقط أيضًا نوم الليلة الماضية. ادمجها مع تكرار كل ساعة لتحديث الملفين طوال اليوم. استخدم وضع الكتابة «استبدال» أو «تحديث» لتجنب تكرار محتوى اليوم نفسه.</string>
     <string name="profile_schedule_today_refresh">تحديث تصدير اليوم</string>
     <string name="profile_schedule_refresh_interval">فاصل التحديث</string>
+    <string name="profile_schedule_refresh_interval_minutes">%1$d د</string>
+    <string name="profile_schedule_refresh_summary_minutes">يحدّث اليوم كل %1$d د</string>
     <string name="profile_schedule_refresh_interval_hours">%1$d س</string>
     <string name="profile_schedule_refresh_summary">يحدّث اليوم كل %1$d س</string>
     <string name="profile_schedule_discard_recovery">إلغاء الاستعادة المعلّقة</string>
