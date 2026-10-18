@@ -20,6 +20,19 @@ class TopologyTests(unittest.TestCase):
         self.assertNotIn('-skip-testing', unit)
 
 
+    def test_critical_runners_start_before_mac_coverage_and_ui_fanout(self):
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        for name in ('extended-ios', 'prepare-ui'):
+            block = text.split('  ' + name + ':\n', 1)[1].split('\n  ', 1)[0]
+            self.assertIn('needs: prepare-shared-core', block)
+            self.assertNotIn('ui-runner-gate', block)
+        for name in ('extended-macos', 'ui-shards'):
+            block = text.split('  ' + name + ':\n', 1)[1].split('\n  ', 1)[0]
+            self.assertIn('needs: [prepare-shared-core, ui-runner-gate]', block)
+        gate = text.split('  ui-runner-gate:\n', 1)[1].split('\n  extended-ios:', 1)[0]
+        self.assertIn('runs-on: ubuntu-latest', gate)
+        self.assertIn('apple_nightly_ui.py wait-build-runners', gate)
+
     def test_build_once_enumerates_unfiltered_bundle_before_partitioning(self):
         text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
         build = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
@@ -39,7 +52,7 @@ class TopologyTests(unittest.TestCase):
     def test_all_workers_and_exact_inventory_gate_are_required(self):
         text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
         workers = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
-        self.assertIn('needs: prepare-shared-core', workers)
+        self.assertIn('needs: [prepare-shared-core, ui-runner-gate]', workers)
         self.assertNotIn('extended-ios', workers)
         self.assertIn('shard: [1, 2, 3]', workers)
         builder = text.split('  prepare-ui:\n', 1)[1].split('\n  ui-shards:', 1)[0]
@@ -66,7 +79,7 @@ import os
 import plistlib
 from unittest.mock import patch
 from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
-                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan, wait_products, simulator_profile)
+                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan, wait_products, simulator_profile, wait_build_runners)
 from test_ios_ui_build_contract import make_products
 from validate_ios_ui_xctestrun import BUILD_MARKER
 
@@ -177,6 +190,34 @@ class ProductWaitTests(unittest.TestCase):
                  patch('apple_nightly_ui.subprocess.check_output', side_effect=map(json.dumps, responses)), \
                  patch('apple_nightly_ui.time.sleep') as sleep, self.assertRaises(ValueError):
                 wait_products('owner/repo', 123, SHA, timeout=0)
+            sleep.assert_not_called()
+
+
+class CriticalRunnerTests(unittest.TestCase):
+    def test_queued_critical_job_prevents_matrix_release(self):
+        responses = [{'head_sha': SHA}, {'jobs': [
+            {'name': 'extended-ios', 'status': 'queued'},
+            {'name': 'prepare-ui', 'status': 'in_progress'}]}, {'jobs': [
+            {'name': 'extended-ios', 'status': 'in_progress'},
+            {'name': 'prepare-ui', 'status': 'in_progress'}]}]
+        with patch('apple_nightly_ui.subprocess.check_output', side_effect=map(json.dumps, responses)), \
+             patch('apple_nightly_ui.time.sleep') as sleep, contextlib.redirect_stdout(io.StringIO()):
+            wait_build_runners('owner/repo', 123, SHA)
+            sleep.assert_called_once_with(15)
+
+    def test_missing_failed_or_wrong_source_critical_jobs_fail_closed(self):
+        responses = [
+            [{'head_sha': 'b' * 40}],
+            [{'head_sha': SHA}, {'jobs': []}],
+            [{'head_sha': SHA}, {'jobs': [
+                {'name': 'extended-ios', 'status': 'completed', 'conclusion': 'failure'},
+                {'name': 'prepare-ui', 'status': 'in_progress'}]}],
+        ]
+        for data in responses:
+            with self.subTest(data=data), \
+                 patch('apple_nightly_ui.subprocess.check_output', side_effect=map(json.dumps, data)), \
+                 patch('apple_nightly_ui.time.sleep') as sleep, self.assertRaises(ValueError):
+                wait_build_runners('owner/repo', 123, SHA, timeout=0)
             sleep.assert_not_called()
 
 

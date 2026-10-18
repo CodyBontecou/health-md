@@ -136,6 +136,7 @@ final class ExportJourneyUITests: XCTestCase {
         let app = UITestLaunchHelper.firstRunExportApp()
         app.launchEnvironment["UITEST_ARCHIVE_EXPORTS"] = "true"
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
@@ -227,6 +228,7 @@ final class ExportJourneyUITests: XCTestCase {
             useHealthKitExportPreviewFixtures: true
         )
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let previewButton = app.buttons[UITestLaunchHelper.Export.previewButton]
         XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
@@ -347,6 +349,7 @@ final class ExportJourneyUITests: XCTestCase {
             purchaseUnlocked: true
         )
         app.launch()
+        addTeardownBlock { UITestLaunchHelper.finishSystemPresentation(in: app) }
 
         let exportButton = app.buttons[UITestLaunchHelper.Export.exportButton]
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))

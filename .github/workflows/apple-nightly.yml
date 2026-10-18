@@ -75,6 +75,24 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+  ui-runner-gate:
+    needs: prepare-shared-core
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      # Claim the long iOS/unit and UI/build runners before matrix fan-out can
+      # occupy the account's macOS slots. This gate consumes no macOS runner.
+      - name: Allocate critical Apple build runners first
+        working-directory: apps/apple
+        timeout-minutes: 16
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          python3 scripts/apple_nightly_ui.py wait-build-runners
+          --root build/nightly-ui --source-sha '${{ github.sha }}'
+          --repository '${{ github.repository }}' --run-id '${{ github.run_id }}'
+
   extended-ios:
     needs: prepare-shared-core
     # Match Apple CI's hosted Xcode 26 / Swift 6.3 runner.
@@ -144,7 +162,7 @@ jobs:
           retention-days: 30
 
   extended-macos:
-    needs: prepare-shared-core
+    needs: [prepare-shared-core, ui-runner-gate]
     # Match the toolchain and coverage-enabled suite used by Apple CI.
     runs-on: macos-26
     timeout-minutes: 60
@@ -358,7 +376,7 @@ jobs:
           retention-days: 30
 
   ui-shards:
-    needs: prepare-shared-core
+    needs: [prepare-shared-core, ui-runner-gate]
     runs-on: macos-26
     timeout-minutes: 60
     strategy:

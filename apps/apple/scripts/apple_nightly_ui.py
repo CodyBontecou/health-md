@@ -60,7 +60,7 @@ def ready_simulator(destination: str) -> None:
     subprocess.run(['xcrun', 'simctl', 'launch', identifier, 'com.apple.DocumentsApp'], check=True)
 
 
-def wait_products(repository: str, run_id: int, source_sha: str, timeout: float = 900) -> None:
+def workflow_reader(repository: str, run_id: int, source_sha: str):
     if not re.fullmatch(r'[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+', repository) or run_id <= 0:
         raise ValueError('expected the current workflow repository and run ID')
     prefix = f'repos/{repository}/actions/runs/{run_id}'
@@ -69,7 +69,29 @@ def wait_products(repository: str, run_id: int, source_sha: str, timeout: float 
         return json.loads(subprocess.check_output(['gh', 'api', prefix + suffix], text=True))
 
     if api()['head_sha'] != source_sha:
-        raise ValueError('UI product wait targets a different source revision')
+        raise ValueError('workflow wait targets a different source revision')
+    return api
+
+
+def wait_build_runners(repository: str, run_id: int, source_sha: str, timeout: float = 900) -> None:
+    api = workflow_reader(repository, run_id, source_sha)
+    deadline = time.monotonic() + timeout
+    required = {'extended-ios', 'prepare-ui'}
+    while True:
+        jobs = [j for j in api('/jobs?per_page=100')['jobs'] if j['name'] in required]
+        if any(j['status'] == 'completed' and j['conclusion'] != 'success' for j in jobs):
+            raise ValueError('a critical Apple build failed before worker scheduling')
+        if ({j['name'] for j in jobs} == required
+                and all(j['status'] in ('in_progress', 'completed') for j in jobs)):
+            print('Both critical Apple build runners are allocated; remaining workers may start.')
+            return
+        if time.monotonic() >= deadline:
+            raise ValueError('timed out waiting for critical Apple build runners')
+        time.sleep(15)
+
+
+def wait_products(repository: str, run_id: int, source_sha: str, timeout: float = 900) -> None:
+    api = workflow_reader(repository, run_id, source_sha)
     deadline = time.monotonic() + timeout
     while True:
         artifacts = api('/artifacts?per_page=100')['artifacts']
@@ -236,7 +258,7 @@ def unpack(artifact: Path, root: Path, source_sha: str, destination: str) -> Pat
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start-simulator', 'ready-simulator', 'wait-products', 'plan', 'pack', 'run', 'aggregate'])
+    parser.add_argument('action', choices=['start-simulator', 'ready-simulator', 'wait-products', 'wait-build-runners', 'plan', 'pack', 'run', 'aggregate'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--source-sha', required=True)
     parser.add_argument('--artifact', type=Path)
@@ -258,10 +280,11 @@ def main() -> None:
             ready_simulator(args.destination)
         else:
             start_simulator(args.destination)
-    elif args.action == 'wait-products':
+    elif args.action in ('wait-products', 'wait-build-runners'):
         if not args.repository or args.run_id is None:
-            parser.error('--repository and --run-id are required for wait-products')
-        wait_products(args.repository, args.run_id, args.source_sha)
+            parser.error('--repository and --run-id are required for workflow waiting')
+        wait = wait_products if args.action == 'wait-products' else wait_build_runners
+        wait(args.repository, args.run_id, args.source_sha)
     elif args.action == 'plan':
         tests = identifiers(json.loads((args.root / 'ui-enumeration.json').read_text()))
         weights = json.loads((Path(__file__).parent / 'fixtures/apple-nightly-ui-timings.json').read_text())['seconds']

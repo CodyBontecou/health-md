@@ -83,7 +83,7 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("if-no-files-found: error", share)
         self.assertIn(".nightly-source-sha", share)
         for block in [self.ios, self.mac, self.prepare]:
-            self.assertIn("needs: prepare-shared-core", block)
+            self.assertIn("prepare-shared-core", re.search(r"^    needs: (.+)$", block, re.MULTILINE).group(1))
             self.assertNotIn("make prepare-healthmd-core-rust", block)
             download = step(block, "Download validated native core from this run")
             self.assertIn("name: nightly-shared-core", download)
