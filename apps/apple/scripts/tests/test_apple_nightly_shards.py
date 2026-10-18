@@ -39,6 +39,7 @@ class TopologyTests(unittest.TestCase):
         self.assertEqual(build.count('xcodebuild build-for-testing'), 1)
         self.assertIn('-scheme HealthMd-UITests-iOS', build)
         self.assertIn('ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES', build)
+        self.assertIn('COMPILER_INDEX_STORE_ENABLE=NO', build)
         self.assertNotIn('generic/platform=iOS Simulator', build)
         self.assertIn("-configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}'", build)
         self.assertIn('-enumerate-tests', build)

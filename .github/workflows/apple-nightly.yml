@@ -144,7 +144,7 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p build/logs
-          make test-ios CORE_RUST_PREPARE=: IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES" IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
+          make test-ios CORE_RUST_PREPARE=: IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO" IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
       - name: Check warnings (iOS — strict)
         if: ${{ !cancelled() }}
@@ -290,6 +290,7 @@ jobs:
             -configuration Debug-iOS -destination '${{ steps.ui_simulator.outputs.ios_destination }}' \
             -derivedDataPath build/nightly-ui \
             ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES \
+            COMPILER_INDEX_STORE_ENABLE=NO \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
             2>&1 | tee build/logs/nightly-ui-build.log

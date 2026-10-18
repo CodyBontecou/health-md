@@ -181,7 +181,7 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("if-no-files-found: error", ui)
 
     def test_ios_native_arch_flags_keep_unfiltered_suite_and_raw_failure_output(self):
-        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES"', self.ios)
+        self.assertIn('IOS_TEST_BUILD_FLAGS="ARCHS=$(uname -m) ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"', self.ios)
         for status in (0, 65):
             with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
@@ -202,7 +202,7 @@ sys.exit(int(os.environ['FAKE_STATUS']))
                 pretty.chmod(0o755)
                 result = subprocess.run(["make", "-f", str(REPO / "apps/apple/Makefile"),
                     "test-ios", "CORE_RUST_PREPARE=:", "IOS_SIM=platform=iOS Simulator,id=fake",
-                    "IOS_TEST_BUILD_FLAGS=ARCHS=arm64 ONLY_ACTIVE_ARCH=YES"],
+                    "IOS_TEST_BUILD_FLAGS=ARCHS=arm64 ONLY_ACTIVE_ARCH=YES COMPILER_INDEX_STORE_ENABLE=NO"],
                     cwd=root, text=True, capture_output=True, env=dict(os.environ,
                     PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)))
                 self.assertEqual(result.returncode == 0, status == 0)
@@ -210,6 +210,7 @@ sys.exit(int(os.environ['FAKE_STATUS']))
                 self.assertEqual(args[:1], ["test"])
                 self.assertIn("ARCHS=arm64", args)
                 self.assertIn("ONLY_ACTIVE_ARCH=YES", args)
+                self.assertIn("COMPILER_INDEX_STORE_ENABLE=NO", args)
                 self.assertEqual(args[args.index("-scheme") + 1], "HealthMd-Tests-iOS")
                 self.assertFalse(any(a.startswith(("-only-testing", "-skip-testing")) for a in args))
                 raw = (root / "build/logs/xcodebuild-ios-raw.log").read_text()
