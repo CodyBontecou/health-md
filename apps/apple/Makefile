@@ -38,6 +38,12 @@ HOST_ARCH   := $(shell uname -m)
 PROJECT     := HealthMd.xcodeproj
 IOS_SIM     ?=
 MACOS_DEST  ?= platform=macOS,arch=$(HOST_ARCH)
+# Root parallel tests opt into independent Xcode build databases. Direct
+# component and hosted CI invocations retain Xcode's existing default paths.
+IOS_DERIVED_DATA_DIR ?=
+MACOS_DERIVED_DATA_DIR ?=
+IOS_DERIVED_DATA_FLAGS = $(if $(IOS_DERIVED_DATA_DIR),-derivedDataPath "$(IOS_DERIVED_DATA_DIR)")
+MACOS_DERIVED_DATA_FLAGS = $(if $(MACOS_DERIVED_DATA_DIR),-derivedDataPath "$(MACOS_DERIVED_DATA_DIR)")
 XCODE_TEST_SIGNING_FLAGS := CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER=""
 XCODE_TEST_TIMEOUT_FLAGS := -test-timeouts-enabled YES -default-test-execution-time-allowance 120 -maximum-test-execution-time-allowance 300
 CLI_INSTALL_DIR ?= $(HOME)/.local/bin
@@ -73,6 +79,7 @@ test-ios: prepare-healthmd-core-rust
 	  xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-iOS \
+	  $(IOS_DERIVED_DATA_FLAGS) \
 	  -destination "$$ios_sim" \
 	  -configuration Debug-iOS \
 	  -resultBundlePath "$(IOS_XCRESULT_PATH)" \
@@ -91,6 +98,7 @@ test-macos: prepare-healthmd-core-rust
 	xcodebuild test \
 	  -project $(PROJECT) \
 	  -scheme HealthMd-Tests-macOS \
+	  $(MACOS_DERIVED_DATA_FLAGS) \
 	  -destination '$(MACOS_DEST)' \
 	  $(XCODE_TEST_TIMEOUT_FLAGS) \
 	  $(XCODE_TEST_SIGNING_FLAGS) \
