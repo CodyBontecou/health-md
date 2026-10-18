@@ -22,8 +22,16 @@ final class ExportProfilesJourneyUITests: XCTestCase {
 
     private func openSettingsTab(_ app: XCUIApplication) {
         let settingsTab = app.tabBars.buttons["Settings"]
-        XCTAssertTrue(settingsTab.waitUntilExists(timeout: 10))
+        // Use XCTest's normal wait for the first navigation after launch.
+        // A hosted failure stayed on Export after this action; verify the tab
+        // selection before looking for controls belonging to Settings.
+        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
         if !settingsTab.isSelected { settingsTab.tap() }
+        let selected = expectation(
+            for: NSPredicate(format: "selected == true"),
+            evaluatedWith: settingsTab
+        )
+        wait(for: [selected], timeout: 10)
     }
 
     /// Opens the Export Profiles management sheet from Settings.
