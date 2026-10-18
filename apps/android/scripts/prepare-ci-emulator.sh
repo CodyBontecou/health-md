@@ -17,15 +17,9 @@ if [[ "$(adb_ci shell getprop ro.boot.qemu | tr -d '\r')" != 1 ]]; then
 fi
 
 launcher=com.google.android.apps.nexuslauncher
-home="$(adb_ci shell cmd package resolve-activity --brief \
-    -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -n 1)"
-case "$home" in
-    "$launcher/"*) ;;
-    *) echo "Unexpected HOME component on pinned CI image: $home" >&2; exit 1 ;;
-esac
-
 recovered=false
 home_started=false
+setup_started=false
 for attempt in $(seq 1 30); do
     if [[ "$(adb_ci shell getprop sys.boot_completed | tr -d '\r')" != 1 ]]; then
         sleep 1
@@ -48,6 +42,24 @@ for attempt in $(seq 1 30); do
             echo 'Unexpected ANR; refusing to hide an application or platform failure.' >&2
             exit 1
             ;;
+    esac
+    home="$(adb_ci shell cmd package resolve-activity --brief \
+        -a android.intent.action.MAIN -c android.intent.category.HOME | tr -d '\r' | tail -n 1)"
+    case "$home" in
+        com.google.android.googlesdksetup/.DefaultActivity|com.google.android.googlesdksetup/com.google.android.googlesdksetup.DefaultActivity)
+            # A fresh Google APIs image initially resolves HOME to SDK setup.
+            # Let that known activity finish provisioning and retire itself;
+            # do not disable setup packages or force completion settings.
+            if [[ "$setup_started" == false ]]; then
+                echo 'Initializing the hosted image SDK setup activity once.'
+                adb_ci shell am start -W -n "$home"
+                setup_started=true
+            fi
+            sleep 1
+            continue
+            ;;
+        "$launcher/"*) ;;
+        *) echo "Unexpected HOME component on pinned CI image: $home" >&2; exit 1 ;;
     esac
     if [[ "$home_started" == false ]]; then
         adb_ci shell am start -W -n "$home"

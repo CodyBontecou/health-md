@@ -25,10 +25,12 @@ elif a == ['shell', 'getprop', 'sys.boot_completed']:
  s['boots'] += 1; p.write_text(json.dumps(s))
  print('0' if mode == 'booting' and s['boots'] == 1 else '1')
 elif a[:3] == ['shell', 'cmd', 'package']:
- print('other.launcher/.Home' if mode == 'wrong-home' else 'com.google.android.apps.nexuslauncher/.NexusLauncherActivity')
+ if mode in ('setup', 'setup-anr', 'stuck-setup') and not s['provisioned']:
+  print('com.google.android.googlesdksetup/.DefaultActivity')
+ else: print('other.launcher/.Home' if mode == 'wrong-home' else 'com.google.android.apps.nexuslauncher/.NexusLauncherActivity')
 elif a == ['shell', 'dumpsys', 'window', 'windows']:
  if mode == 'other-anr': focus = 'Application Not Responding: com.healthmd'
- elif mode == 'stuck' or (mode == 'launcher-anr' and not s['recovered']):
+ elif mode == 'stuck' or (mode in ('launcher-anr', 'setup-anr') and not s['recovered']):
   focus = 'Application Not Responding: com.google.android.apps.nexuslauncher'
  elif mode == 'no-focus':
   print('  mCurrentFocus=null'); sys.exit(0)
@@ -37,6 +39,8 @@ elif a == ['shell', 'dumpsys', 'window', 'windows']:
 elif a == ['shell', 'am', 'force-stop', 'com.google.android.apps.nexuslauncher']:
  s['recovered'] = True; p.write_text(json.dumps(s))
 elif a[:4] == ['shell', 'am', 'start', '-W']:
+ if a[-1] == 'com.google.android.googlesdksetup/.DefaultActivity' and mode != 'stuck-setup':
+  s['provisioned'] = True; p.write_text(json.dumps(s))
  print('Status: ok')
 else: raise SystemExit('Unexpected adb command: ' + repr(a))
 '''
@@ -47,7 +51,7 @@ class EmulatorReadinessTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             state = root / 'state.json'
-            state.write_text(json.dumps({'calls': [], 'recovered': False, 'boots': 0}))
+            state.write_text(json.dumps({'calls': [], 'recovered': False, 'boots': 0, 'provisioned': False}))
             for name, code in [('adb', FAKE_ADB), ('sleep', '#!/bin/sh\nexit 0\n'),
                                ('timeout', '#!/bin/sh\nshift\nexec "$@"\n')]:
                 p = root / name; p.write_text(code); p.chmod(0o755)
@@ -63,6 +67,20 @@ class EmulatorReadinessTests(unittest.TestCase):
         self.assertEqual([['shell', 'am', 'force-stop', 'com.google.android.apps.nexuslauncher']], stops)
         self.assertIn('Recovered', result.stdout)
         self.assertIn('ready', result.stdout)
+
+    def test_first_boot_setup_is_started_once_before_launcher_admission(self):
+        for mode in ('setup', 'setup-anr'):
+            with self.subTest(mode=mode):
+                result, state = self.run_setup(mode)
+                self.assertEqual(0, result.returncode, result.stderr)
+                starts = [c for c in state['calls'] if 'start' in c]
+                self.assertEqual(1, sum(c[-1] == 'com.google.android.googlesdksetup/.DefaultActivity' for c in starts))
+                self.assertEqual('com.google.android.apps.nexuslauncher/.NexusLauncherActivity', starts[-1][-1])
+
+    def test_setup_that_never_selects_launcher_remains_a_failure(self):
+        result, state = self.run_setup('stuck-setup')
+        self.assertNotEqual(0, result.returncode)
+        self.assertFalse(any('force-stop' in c for c in state['calls']))
 
     def test_healthy_launcher_is_not_restarted(self):
         result, state = self.run_setup()
