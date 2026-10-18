@@ -77,8 +77,7 @@ internal fun ProfileScheduleRowContent(
         Text(row.profile.name, style = MaterialTheme.typography.bodyLarge, color = AppColors.textPrimary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.NAME))
         Text(
-            cadenceSummary(row.entry, stringResource(R.string.profile_schedule_refresh_summary_minutes,
-                row.entry?.todayRefreshMinutes ?: 180)),
+            cadenceSummary(row.entry, todayRefreshSummary(row.entry)),
             style = MaterialTheme.typography.bodySmall, color = AppColors.textSecondary,
             modifier = Modifier.fillMaxWidth().testTag(ProfileScheduleTags.SUMMARY),
         )

@@ -75,6 +75,22 @@ class ProfileScheduleAccessibilityTest(display: AccessibilityDisplayCase) : Acce
         }
         val summary = cadenceSummary(entry.value, text(R.string.profile_schedule_refresh_summary, 3))
         compose.onNodeWithTag(ProfileScheduleTags.SUMMARY).assertTextEquals(summary)
+        // Exercise the rendered row rather than sharing its formatter: minute choices must
+        // retain their units, while shipped hour choices keep their existing localized copy.
+        listOf(
+            Triple(30, R.string.profile_schedule_refresh_summary_minutes, 30),
+            Triple(60, R.string.profile_schedule_refresh_summary_minutes, 60),
+            Triple(180, R.string.profile_schedule_refresh_summary, 3),
+            Triple(360, R.string.profile_schedule_refresh_summary, 6),
+            Triple(720, R.string.profile_schedule_refresh_summary, 12),
+        ).forEach { (minutes, resource, amount) ->
+            compose.runOnIdle { entry.value = entry.value.withTodayRefreshMinutes(minutes) }
+            val expected = cadenceSummary(entry.value, text(resource, amount))
+            val rendered = compose.onNodeWithTag(ProfileScheduleTags.SUMMARY).performScrollTo()
+            rendered.assertTextEquals(expected)
+            assertTextFits(rendered, GeistType.copy13.fontSize)
+        }
+        compose.runOnIdle { entry.value = entry.value.withTodayRefreshMinutes(180) }
         compose.onNodeWithTag(ProfileScheduleTags.NAME).performScrollTo()
         capture("profiles-rows")
 
