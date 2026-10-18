@@ -76,6 +76,16 @@ Cargo still validates and builds the checked-out source. F-Droid clean builds
 restore downloads and tools only, without compiled project targets. The action
 selects Rust 1.88 for subsequent host commands as well as native preparation.
 
+F-Droid debug tests, lint, and debug APK assembly run in parallel with release
+APK assembly and the existing artifact/metadata/scanner checks on independent
+clean runners. Both lanes build all four native ABIs from source; neither restores
+compiled project outputs or uses the Gradle build/configuration cache. Fail-fast
+is disabled so a failed lane cannot cancel the other lane’s coverage. The stable
+`F-Droid clean build` gate requires both lanes, including for retained release
+qualification. Per-lane test XML, task profiles, and runner CPU/memory diagnostics
+are retained to separate build work from runner variation and queue time. This
+uses an extra runner concurrently and may increase total runner work.
+
 The JVM job also enables Gradle's task-output cache for compilation and lint via
 `apps/android/scripts/run-ci-gradle.sh`. Its CI init script always executes every
 `Test` task and prohibits restoring cached test results: contract tests can read

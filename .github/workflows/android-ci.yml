@@ -365,12 +365,18 @@ jobs:
             apps/android/healthmd-core/build/reports/androidTests/connected/**
             apps/android/healthmd-core/build/outputs/androidTest-results/connected/**
 
-  fdroid:
-    name: F-Droid clean build
+  fdroid-build:
+    name: F-Droid clean build (${{ matrix.variant }})
     needs: changes
     if: ${{ needs.changes.outputs.fdroid == 'true' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    strategy:
+      # Independent clean runners overlap debug validation with release shrinking.
+      # Keep both lanes running so one failure cannot cancel the other's coverage.
+      fail-fast: false
+      matrix:
+        variant: [debug, release]
     defaults:
       run:
         working-directory: apps/android
@@ -416,17 +422,54 @@ jobs:
         with:
           min-wrapper-count: 1
 
-      - name: Test, lint, and build both F-Droid artifacts
+      - name: Record F-Droid runner diagnostics
+        shell: bash
         run: |
-          ./gradlew --no-daemon --max-workers=2 \
-            :app:testFdroidDebugUnitTest \
-            :app:lintFdroidDebug \
-            :app:assembleFdroidDebug \
-            :app:assembleFdroidRelease \
-            --stacktrace
-          ./scripts/verify-fdroid-artifact.sh
+          mkdir -p build/reports/ci
+          lscpu > build/reports/ci/cpu.txt
+          cat /proc/meminfo > build/reports/ci/memory-before.txt
+          for resource in cpu memory io; do
+            if [[ -r "/proc/pressure/$resource" ]]; then
+              cat "/proc/pressure/$resource" > "build/reports/ci/$resource-pressure-before.txt"
+            fi
+          done
+
+      - name: Build and validate clean F-Droid lane
+        shell: bash
+        env:
+          FDROID_VARIANT: ${{ matrix.variant }}
+        run: |
+          set -euo pipefail
+          case "$FDROID_VARIANT" in
+            debug)
+              tasks=(:app:testFdroidDebugUnitTest :app:lintFdroidDebug :app:assembleFdroidDebug)
+              ;;
+            release) tasks=(:app:assembleFdroidRelease) ;;
+            *) echo "Invalid F-Droid CI lane: $FDROID_VARIANT" >&2; exit 2 ;;
+          esac
+          # Keep this inline: reusable qualification may check out an older release_sha.
+          # Neither lane may reuse compiled project outputs or cached test results.
+          /usr/bin/time -v -o build/reports/ci/build-resources.txt \
+            ./gradlew --no-daemon --max-workers=2 --no-build-cache --no-configuration-cache \
+            --profile "${tasks[@]}" --stacktrace
+          if [[ "$FDROID_VARIANT" == release ]]; then
+            ./scripts/verify-fdroid-artifact.sh
+          fi
+
+      - name: Retain final F-Droid runner diagnostics
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          mkdir -p build/reports/ci
+          cat /proc/meminfo > build/reports/ci/memory-after.txt
+          for resource in cpu memory io; do
+            if [[ -r "/proc/pressure/$resource" ]]; then
+              cat "/proc/pressure/$resource" > "build/reports/ci/$resource-pressure-after.txt"
+            fi
+          done
 
       - name: Scan F-Droid release APK
+        if: ${{ matrix.variant == 'release' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -453,7 +496,7 @@ jobs:
           test "$scanner_status" -eq 0
 
       - name: Retain unsigned F-Droid evidence
-        if: ${{ always() }}
+        if: ${{ always() && matrix.variant == 'release' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: android-fdroid-${{ github.run_id }}-${{ github.run_attempt }}
@@ -464,6 +507,36 @@ jobs:
             apps/android/app/build/reports/fdroid-release-runtime-classpath.txt
             apps/android/app/build/reports/fdroid-scanner.json
             apps/android/app/build/reports/fdroid-scanner.log
+
+      - name: Retain F-Droid test results, profiles, and runner diagnostics
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-fdroid-${{ matrix.variant }}-results-${{ github.run_id }}-${{ github.run_attempt }}
+          retention-days: 7
+          if-no-files-found: warn
+          path: |
+            apps/android/build/reports/ci/
+            apps/android/build/reports/profile/
+            apps/android/app/build/reports/tests/testFdroidDebugUnitTest/
+            apps/android/app/build/test-results/testFdroidDebugUnitTest/
+            apps/android/app/build/reports/lint-results-fdroidDebug.*
+
+  fdroid:
+    # Release recovery requires this exact stable job name. Matrix success means
+    # both clean lanes passed; failure/cancellation/skipping cannot qualify it.
+    name: F-Droid clean build
+    needs: [changes, fdroid-build]
+    if: ${{ always() && needs.changes.outputs.fdroid == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require both clean F-Droid lanes
+        env:
+          FDROID_BUILD_RESULT: ${{ needs.fdroid-build.result }}
+        run: |
+          set -euo pipefail
+          test "$FDROID_BUILD_RESULT" = success
 
   wear-emulator-smoke:
     name: Wear emulator smoke
