@@ -17,6 +17,23 @@ case "$MATRIX" in
         ;;
 esac
 
+# Both values must be explicit; standalone runs remain unsharded.
+SHARD_ARGS=()
+if [[ ${HEALTHMD_ANDROID_SHARD_INDEX+x} == x || ${HEALTHMD_ANDROID_SHARD_COUNT+x} == x ]]; then
+    SHARD_INDEX="${HEALTHMD_ANDROID_SHARD_INDEX:-}"
+    SHARD_COUNT="${HEALTHMD_ANDROID_SHARD_COUNT:-}"
+    if [[ ! "$SHARD_INDEX" =~ ^(0|[1-9][0-9]*)$ || ! "$SHARD_COUNT" =~ ^[1-9][0-9]*$ ]] \
+        || (( ${#SHARD_INDEX} > 2 || ${#SHARD_COUNT} > 2 )) \
+        || (( 10#$SHARD_COUNT > 16 || 10#$SHARD_INDEX >= 10#$SHARD_COUNT )); then
+        echo 'Explicit shard index/count must satisfy 0 <= index < count <= 16' >&2
+        exit 2
+    fi
+    SHARD_ARGS=(
+        "-Pandroid.testInstrumentationRunnerArguments.numShards=$SHARD_COUNT"
+        "-Pandroid.testInstrumentationRunnerArguments.shardIndex=$SHARD_INDEX"
+    )
+fi
+
 ANDROID_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ANDROID_DIR"
 
@@ -44,13 +61,29 @@ CI_INPUT_DIAGNOSTICS="-Pandroid.testInstrumentationRunnerArguments.healthmd.ciIn
     --stacktrace
 
 # No class/package filter: all core, shared app, and flavor-specific test methods run.
-./gradlew "$CI_INPUT_DIAGNOSTICS" :healthmd-core:connectedDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
+if [[ ${HEALTHMD_ANDROID_SHARD_COUNT+x} != x ]]; then
+    ./gradlew "$CI_INPUT_DIAGNOSTICS" :healthmd-core:connectedDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace
+else
+    # Core has two cases: run them once, without filtering, on shard zero.
+    if [[ "$SHARD_INDEX" == 0 ]]; then
+        ./gradlew "$CI_INPUT_DIAGNOSTICS" :healthmd-core:connectedDebugAndroidTest --stacktrace
+    fi
+    ./gradlew "$CI_INPUT_DIAGNOSTICS" "${SHARD_ARGS[@]}" :app:connectedPlayDebugAndroidTest --stacktrace
+fi
+
+run_app_tests() {
+    if [[ ${HEALTHMD_ANDROID_SHARD_COUNT+x} == x ]]; then
+        ./gradlew "$CI_INPUT_DIAGNOSTICS" "${SHARD_ARGS[@]}" "$@" --stacktrace
+    else
+        ./gradlew "$CI_INPUT_DIAGNOSTICS" "$@" --stacktrace
+    fi
+}
 
 # The scope argument is confined to this separate invocation. Full qualification
 # omits it so both flavors exercise all ten viewports, just like standalone runs.
 if [[ "$MATRIX" == standard ]]; then
-    ./gradlew "$CI_INPUT_DIAGNOSTICS" :app:connectedFdroidDebugAndroidTest \
-        -Pandroid.testInstrumentationRunnerArguments.healthmd.accessibility.matrix=smoke --stacktrace
+    run_app_tests :app:connectedFdroidDebugAndroidTest \
+        -Pandroid.testInstrumentationRunnerArguments.healthmd.accessibility.matrix=smoke
 else
-    ./gradlew "$CI_INPUT_DIAGNOSTICS" :app:connectedFdroidDebugAndroidTest --stacktrace
+    run_app_tests :app:connectedFdroidDebugAndroidTest
 fi

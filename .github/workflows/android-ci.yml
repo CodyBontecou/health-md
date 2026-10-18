@@ -271,8 +271,12 @@ jobs:
           retention-days: 7
           if-no-files-found: warn
 
-  instrumentation:
-    name: Emulator instrumentation and direct E2E
+  instrumentation-shards:
+    name: Android device shard ${{ matrix.shard }}
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     needs: changes
     if: ${{ needs.changes.outputs.instrumentation == 'true' }}
     runs-on: ubuntu-24.04
@@ -329,6 +333,8 @@ jobs:
       - name: Run core and flavor instrumentation with scoped display coverage
         env:
           HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}
+          HEALTHMD_ANDROID_SHARD_COUNT: '4'
+          HEALTHMD_ANDROID_SHARD_INDEX: ${{ matrix.shard }}
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2
         with:
           api-level: 35
@@ -350,13 +356,13 @@ jobs:
             test "$(adb -s emulator-5554 shell locksettings get-disabled | tr -d '\r')" = true
             adb -s emulator-5554 shell wm dismiss-keyguard
             cd apps/android && ./scripts/run-ci-instrumentation.sh
-            cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh
+            if [ "${{ matrix.shard }}" = 0 ]; then cd apps/android && ANDROID_SERIAL=emulator-5554 HEALTHMD_ANDROID_E2E_HOST=10.0.2.2 ./scripts/run-direct-cli-ui-e2e.sh; fi
 
       - name: Retain instrumentation reports and per-test results
         if: ${{ always() }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}-shard-${{ matrix.shard }}
           retention-days: 7
           if-no-files-found: warn
           path: |
@@ -364,6 +370,40 @@ jobs:
             apps/android/app/build/outputs/androidTest-results/connected/**
             apps/android/healthmd-core/build/reports/androidTests/connected/**
             apps/android/healthmd-core/build/outputs/androidTest-results/connected/**
+
+  instrumentation:
+    # Preserve the release qualification job name and legacy aggregate artifact.
+    name: Emulator instrumentation and direct E2E
+    needs: [changes, instrumentation-shards]
+    if: ${{ always() && needs.changes.outputs.instrumentation == 'true' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Checkout report verifier
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.release_sha || github.sha }}
+      - name: Collect all shard reports without overwriting matching XML paths
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}-shard-*
+          path: shard-reports
+      - name: Verify every shard and the combined test reports
+        env:
+          SHARDS_RESULT: ${{ needs.instrumentation-shards.result }}
+        run: |
+          set -euo pipefail
+          test "$SHARDS_RESULT" = success
+          python3 apps/android/scripts/verify-ci-instrumentation-shards.py \
+            --reports shard-reports --run-id '${{ github.run_id }}' --attempt '${{ github.run_attempt }}'
+      - name: Retain complete instrumentation evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: android-instrumentation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: shard-reports/
+          retention-days: 7
+          if-no-files-found: error
 
   fdroid:
     name: F-Droid clean build

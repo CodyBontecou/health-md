@@ -16,7 +16,7 @@ printf '%s\n' "$*" >> "$MOCK_CALLS"
 [[ "$PWD" == */android ]]
 case "$*" in
     *RunnerArguments.class=*) exit "${MOCK_FOCUS_EXIT:-0}" ;;
-    *:healthmd-core:connectedDebugAndroidTest*) exit "${MOCK_PLAY_EXIT:-0}" ;;
+    *:healthmd-core:connectedDebugAndroidTest*|*:app:connectedPlayDebugAndroidTest*) exit "${MOCK_PLAY_EXIT:-0}" ;;
     *:app:connectedFdroidDebugAndroidTest*) exit "${MOCK_FDROID_EXIT:-0}" ;;
     *) exit 19 ;;
 esac
@@ -118,5 +118,39 @@ export MOCK_FDROID_EXIT=24
 run_case standard 24
 printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$SMOKE_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
+
+unset MOCK_FDROID_EXIT
+for shard in 0 1 2 3; do
+    export HEALTHMD_ANDROID_SHARD_INDEX="$shard" HEALTHMD_ANDROID_SHARD_COUNT=4
+    run_case full 0
+    printf '%s\n' "$FOCUS_COMMAND" > "$TEST_ROOT/expected"
+    if [[ "$shard" == 0 ]]; then
+        printf '%s\n' "$DIAGNOSTICS :healthmd-core:connectedDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
+    fi
+    FLAGS="-Pandroid.testInstrumentationRunnerArguments.numShards=4 -Pandroid.testInstrumentationRunnerArguments.shardIndex=$shard"
+    printf '%s\n' "$DIAGNOSTICS $FLAGS :app:connectedPlayDebugAndroidTest --stacktrace" \
+        "$DIAGNOSTICS $FLAGS :app:connectedFdroidDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
+    cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
+done
+run_case standard 0
+grep -q "numShards=4.*shardIndex=3.*healthmd.accessibility.matrix=smoke" "$MOCK_CALLS"
+export MOCK_PLAY_EXIT=23
+run_case full 23
+[[ $(wc -l < "$MOCK_CALLS") -eq 2 ]]
+unset MOCK_PLAY_EXIT
+for pair in '0 0' '4 4' '-1 4' 'one 4' '00 4' '0 17' '0 9999999999999999999'; do
+    read -r HEALTHMD_ANDROID_SHARD_INDEX HEALTHMD_ANDROID_SHARD_COUNT <<< "$pair"
+    export HEALTHMD_ANDROID_SHARD_INDEX HEALTHMD_ANDROID_SHARD_COUNT
+    run_case full 2
+    [[ ! -s "$MOCK_CALLS" ]]
+done
+unset HEALTHMD_ANDROID_SHARD_COUNT
+run_case full 2
+[[ ! -s "$MOCK_CALLS" ]]
+unset HEALTHMD_ANDROID_SHARD_INDEX
+export HEALTHMD_ANDROID_SHARD_COUNT=4
+run_case full 2
+[[ ! -s "$MOCK_CALLS" ]]
+unset HEALTHMD_ANDROID_SHARD_COUNT
 
 printf 'CI instrumentation runner: %s mocked cases passed\n' "$CASES"
