@@ -32,6 +32,16 @@ def start_simulator(destination: str) -> None:
     print(f"Simulator startup requested: {identifier}; compilation/download can run while it boots.")
 
 
+def ready_simulator(destination: str) -> None:
+    start_simulator(destination)
+    identifier = destination.rsplit('=', 1)[1]
+    subprocess.run(['xcrun', 'simctl', 'bootstatus', identifier, '-b'], check=True)
+    # Fresh hosted devices have not opened Files as the serial unit/UI runner
+    # had. Start its native providers before XCTest installs and launches the
+    # app, preserving the existing document-picker assertions and deadlines.
+    subprocess.run(['xcrun', 'simctl', 'launch', identifier, 'com.apple.DocumentsApp'], check=True)
+
+
 def digest(path: Path) -> str:
     value = hashlib.sha256()
     with path.open('rb') as stream:
@@ -179,7 +189,7 @@ def unpack(artifact: Path, root: Path, source_sha: str) -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['start-simulator', 'plan', 'pack', 'run', 'aggregate'])
+    parser.add_argument('action', choices=['start-simulator', 'ready-simulator', 'plan', 'pack', 'run', 'aggregate'])
     parser.add_argument('--root', type=Path, required=True)
     parser.add_argument('--source-sha', required=True)
     parser.add_argument('--artifact', type=Path)
@@ -190,10 +200,13 @@ def main() -> None:
         parser.error('--artifact is required for pack/run')
     if args.action == 'run' and (args.shard is None or not args.destination):
         parser.error('--shard and --destination are required for run')
-    if args.action == 'start-simulator':
+    if args.action in ('start-simulator', 'ready-simulator'):
         if not args.destination:
-            parser.error('--destination is required for start-simulator')
-        start_simulator(args.destination)
+            parser.error('--destination is required for simulator readiness')
+        if args.action == 'ready-simulator':
+            ready_simulator(args.destination)
+        else:
+            start_simulator(args.destination)
     elif args.action == 'plan':
         tests = identifiers(json.loads((args.root / 'ui-enumeration.json').read_text()))
         weights = json.loads((Path(__file__).parent / 'fixtures/apple-nightly-ui-timings.json').read_text())['seconds']

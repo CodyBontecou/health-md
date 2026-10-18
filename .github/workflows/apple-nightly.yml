@@ -350,6 +350,13 @@ jobs:
           name: nightly-ui-products
           path: apps/apple/build/nightly-ui-products
 
+      - name: Wait for simulator and native Files providers
+        shell: bash
+        run: >-
+          python3 scripts/apple_nightly_ui.py ready-simulator
+          --root build/nightly-ui --source-sha '${{ github.sha }}'
+          --destination '${{ steps.ui_simulator.outputs.ios_destination }}'
+
       - name: Run and audit assigned UI shard
         if: ${{ success() }}
         timeout-minutes: 30

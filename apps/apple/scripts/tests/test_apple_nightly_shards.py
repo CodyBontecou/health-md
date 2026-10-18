@@ -58,7 +58,7 @@ import os
 import plistlib
 from unittest.mock import patch
 from apple_nightly_ui import (SHARDS, aggregate, audit_shard, cases, identifiers,
-                              main, pack, plan, start_simulator, unpack, validate_plan)
+                              main, pack, plan, ready_simulator, start_simulator, unpack, validate_plan)
 from test_ios_ui_build_contract import make_products
 from validate_ios_ui_xctestrun import BUILD_MARKER
 
@@ -94,6 +94,23 @@ class SimulatorOverlapTests(unittest.TestCase):
         with patch('apple_nightly_ui.subprocess.check_output', return_value='{"devices":{}}'), \
              self.assertRaises(ValueError):
             start_simulator('platform=iOS Simulator,id=' + identifier)
+
+    def test_readiness_waits_for_boot_and_starts_files_before_xctest(self):
+        destination = 'platform=iOS Simulator,id=' + 'A' * 36
+        with patch('apple_nightly_ui.start_simulator') as start, \
+             patch('apple_nightly_ui.subprocess.run') as run:
+            ready_simulator(destination)
+            start.assert_called_once_with(destination)
+            self.assertEqual([call.args[0] for call in run.call_args_list], [
+                ['xcrun', 'simctl', 'bootstatus', 'A' * 36, '-b'],
+                ['xcrun', 'simctl', 'launch', 'A' * 36, 'com.apple.DocumentsApp']])
+            self.assertTrue(all(call.kwargs['check'] for call in run.call_args_list))
+        text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
+        worker = text.split('  ui-shards:\n', 1)[1].split('\n  ui-inventory:', 1)[0]
+        self.assertLess(worker.index('Download exact-run prepared UI products'),
+                        worker.index('Wait for simulator and native Files providers'))
+        self.assertLess(worker.index('Wait for simulator and native Files providers'),
+                        worker.index('Run and audit assigned UI shard'))
 
     def test_prepare_boot_overlaps_compilation_and_worker_boot_precedes_download(self):
         text = (REPO / '.github/workflows/apple-nightly.yml').read_text()
