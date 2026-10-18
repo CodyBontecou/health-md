@@ -81,6 +81,10 @@ def stop_fixture_daemon(gradle: Path, environment: dict) -> None:
                 f"Failed to stop the fixture's isolated Gradle daemon "
                 f"(exit {result.returncode}):\n{result.stdout}"
             )
+        # A successful stop request can precede the daemon's final registry write.
+        # Keep the owned home alive until its writers exit; fixture_directory also
+        # retains main's bounded ENOTEMPTY retry and primary-error preservation.
+        await_daemon_shutdown(Path(environment["GRADLE_USER_HOME"]))
     except (OSError, RuntimeError, subprocess.SubprocessError) as error:
         if primary_error is None:
             raise
@@ -146,6 +150,26 @@ public class ContractTest {
 """
     )
     (project / "external-contract.txt").write_text("valid\n")
+
+
+def await_daemon_shutdown(directory: Path, timeout: float = 30) -> None:
+    """Wait for this temporary home's writers, not just Gradle's stop request."""
+    pending = {int(log.stem.split("-")[1].split(".")[0])
+               for log in directory.rglob("daemon-*.out.log")}
+    deadline = time.monotonic() + timeout
+    while pending:
+        for pid in tuple(pending):
+            status = subprocess.run(["ps", "-p", str(pid), "-o", "stat="],
+                                    text=True, capture_output=True, check=False)
+            # An exited process awaiting reaping cannot write the registry either.
+            if status.returncode == 1 or status.stdout.strip().startswith("Z"):
+                pending.remove(pid)
+            elif status.returncode != 0:
+                raise RuntimeError(f"Could not check fixture daemon {pid}: {status.stderr}")
+        if pending:
+            if time.monotonic() >= deadline:
+                raise RuntimeError(f"Fixture Gradle daemons did not stop: {sorted(pending)}")
+            time.sleep(.05)
 
 
 def main() -> None:
