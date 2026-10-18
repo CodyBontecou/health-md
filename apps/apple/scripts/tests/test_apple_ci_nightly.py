@@ -111,9 +111,9 @@ class NightlyWorkflowTests(unittest.TestCase):
 
     def test_full_ios_unit_and_ui_coverage_and_cancellation_policy_remain(self):
         self.assertIn("make test-ios", self.ios)
-        ui = step(self.ios, "Run full UI test suite (iOS, non-blocking)")
+        ui = step(self.ios, "Run full UI test suite (iOS)")
         self.assertIn("if: ${{ success() }}", ui)
-        self.assertIn("continue-on-error: true", ui)
+        self.assertNotIn("continue-on-error", ui)
         self.assertIn("-scheme HealthMd-UITests-iOS", ui)
         self.assertNotIn("-only-testing", ui)
         self.assertNotIn("-skip-testing", ui)
@@ -121,6 +121,31 @@ class NightlyWorkflowTests(unittest.TestCase):
         self.assertIn("cron: '0 4 * * *'", self.text)
         self.assertIn("workflow_dispatch:", self.text)
         self.assertIn("scripts/check-warnings.sh build/logs/build-ios.log", self.ios)
+
+    def test_actual_ui_command_preserves_failure_and_appends_raw_log(self):
+        shell = command(step(self.ios, "Run full UI test suite (iOS)"))
+        for status in (0, 65):
+            with self.subTest(status=status), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                binary = root / "bin"
+                binary.mkdir()
+                fake = binary / "xcodebuild"
+                fake.write_text(f"#!{sys.executable}\n" + """
+import os, sys
+print('UI suite output')
+print('raw UI diagnostic', file=sys.stderr)
+sys.exit(int(os.environ['FAKE_STATUS']))
+""")
+                fake.chmod(0o755)
+                log = root / "build/logs/build-ios.log"
+                log.parent.mkdir(parents=True)
+                log.write_text("unit suite output\n")
+                result = subprocess.run(["bash", "-c", shell], cwd=root, text=True,
+                                        capture_output=True, env=dict(os.environ,
+                                        PATH=f"{binary}:{os.environ['PATH']}", FAKE_STATUS=str(status)))
+                self.assertEqual(result.returncode, status, result.stderr)
+                self.assertEqual(set(log.read_text().splitlines()),
+                                 {"unit suite output", "UI suite output", "raw UI diagnostic"})
 
     def test_actual_mac_command_runs_once_and_preserves_failure_and_raw_log(self):
         shell = command(step(self.mac, "Run macOS unit tests with coverage"))

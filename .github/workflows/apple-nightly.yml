@@ -73,9 +73,8 @@ jobs:
           mkdir -p build/logs
           make test-ios CORE_RUST_PREPARE=: IOS_SIM='${{ steps.simulator.outputs.ios_destination }}' 2>&1 | tee build/logs/build-ios.log
 
-      - name: Run full UI test suite (iOS, non-blocking)
+      - name: Run full UI test suite (iOS)
         if: ${{ success() }}
-        continue-on-error: true
         # The 20-minute hosted budget truncated the complete suite.
         # Keep the per-test limits unchanged.
         timeout-minutes: 30
