@@ -76,12 +76,16 @@ jobs:
       - name: Run full UI test suite (iOS, non-blocking)
         if: ${{ success() }}
         continue-on-error: true
-        timeout-minutes: 20
+        # The 20-minute hosted budget truncated the complete suite.
+        # Keep the per-test limits unchanged.
+        timeout-minutes: 30
         run: |
           set -euo pipefail
+          mkdir -p build/test-results
           xcodebuild test \
             -project HealthMd.xcodeproj \
             -scheme HealthMd-UITests-iOS \
+            -resultBundlePath build/test-results/HealthMd-Nightly-UI.xcresult \
             -destination '${{ steps.simulator.outputs.ios_destination }}' \
             -configuration Debug-iOS \
             -test-timeouts-enabled YES \
@@ -89,8 +93,7 @@ jobs:
             -maximum-test-execution-time-allowance 300 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" DEVELOPMENT_TEAM="" PROVISIONING_PROFILE_SPECIFIER="" \
-            2>&1 | tee -a build/logs/build-ios.log \
-            | grep -E "Test Case|error:|PASSED|FAILED|Executed"
+            2>&1 | tee -a build/logs/build-ios.log
 
       - name: Check warnings (iOS — strict)
         if: ${{ !cancelled() }}
@@ -101,7 +104,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nightly-ios-logs
-          path: apps/apple/build/logs/build-ios.log
+          path: |
+            apps/apple/build/logs/build-ios.log
+            apps/apple/build/test-results/HealthMd-Nightly-UI.xcresult
           retention-days: 30
 
   extended-macos:
