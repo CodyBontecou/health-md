@@ -45,6 +45,15 @@ jobs:
             'packages/healthmd-core-rust/scripts/*apple*',
             'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
 
+      - name: Set up pinned Rust compiler for binding verification
+        uses: dtolnay/rust-toolchain@1.88.0
+
+      - name: Cache binding compiler dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: apple-nightly-bindings
+          workspaces: packages/healthmd-core-rust -> target
+
       # Always validate the source digest, bindings and slices, including hits.
       - name: Prepare and validate shared Rust core for Apple
         run: make prepare-healthmd-core-rust
@@ -129,6 +138,15 @@ jobs:
             'packages/healthmd-core-rust/crates/**',
             'packages/healthmd-core-rust/scripts/*apple*',
             'apps/apple/Packages/HealthMdCoreRust/Bindings/**') }}
+
+      - name: Set up pinned Rust compiler for binding verification
+        uses: dtolnay/rust-toolchain@1.88.0
+
+      - name: Cache binding compiler dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          shared-key: apple-nightly-bindings
+          workspaces: packages/healthmd-core-rust -> target
 
       # Always validate the source digest, bindings and slices, including hits.
       - name: Prepare and validate shared Rust core for Apple

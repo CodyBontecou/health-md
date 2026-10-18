@@ -95,6 +95,20 @@ class NightlyWorkflowTests(unittest.TestCase):
             self.assertLess(block.index("uses: actions/cache/restore@v4"),
                             block.index("make prepare-healthmd-core-rust"))
 
+    def test_binding_dependency_cache_never_bypasses_generation_or_validation(self):
+        for block in [self.ios, self.mac]:
+            compiler = step(block, "Set up pinned Rust compiler for binding verification")
+            self.assertIn("uses: dtolnay/rust-toolchain@1.88.0", compiler)
+            cache = step(block, "Cache binding compiler dependencies")
+            self.assertIn("uses: Swatinem/rust-cache@v2", cache)
+            self.assertIn("workspaces: packages/healthmd-core-rust -> target", cache)
+            self.assertNotIn("cache-workspace-crates: true", cache)
+            self.assertLess(block.index(compiler), block.index(cache))
+            validated = step(block, "Prepare and validate shared Rust core for Apple")
+            self.assertLess(block.index(cache), block.index(validated))
+            self.assertNotIn("if:", validated)
+            self.assertIn("run: make prepare-healthmd-core-rust", validated)
+
     def test_full_ios_unit_and_ui_coverage_and_cancellation_policy_remain(self):
         self.assertIn("make test-ios", self.ios)
         ui = step(self.ios, "Run full UI test suite (iOS, non-blocking)")
