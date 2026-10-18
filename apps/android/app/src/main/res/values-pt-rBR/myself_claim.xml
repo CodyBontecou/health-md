@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">Resgatar acesso ao myself.md</string>
+    <string name="myself_claim_entry_subtitle">Verifique uma compra vitalícia existente do Google Play.</string>
+    <string name="myself_claim_title">Acesso ao myself.md</string>
+    <string name="myself_claim_intro">Sua compra vitalícia do Health.md inclui acesso gratuito vitalício ao myself.md.</string>
+    <string name="myself_claim_disclosure">Ao continuar, leremos seu comprovante de compra do Google Play e o enviaremos ao myself.md para verificação. Seus dados de saúde e localização ficam no dispositivo.</string>
+    <string name="myself_claim_account">Depois, entre para escolher a conta do myself.md que receberá o acesso. Cada compra original pode ser vinculada a uma conta. O acesso Android gratuito ou mantido por direitos anteriores, por si só, não é elegível.</string>
+    <string name="myself_claim_verify">Verificar compra e continuar</string>
+    <string name="myself_claim_verifying">Verificando compra…</string>
+    <string name="myself_claim_awaiting_user">Entre e confirme a conta que receberá o acesso no navegador. Depois, use a mesma conta no myself.md. O acesso só será resgatado após sua confirmação.</string>
+    <string name="myself_claim_no_purchase">Nenhuma compra vitalícia concluída do Health.md foi encontrada. Use a conta do Google Play que fez a compra e tente novamente. Compras pendentes não são elegíveis.</string>
+    <string name="myself_claim_store_unavailable">O Google Play não conseguiu obter sua compra. Verifique a conexão e a conta do Google Play e tente novamente.</string>
+    <string name="myself_claim_verification_failed">Não foi possível verificar sua compra. Confira a conexão e tente novamente. Se continuar, contate o suporte; nenhum acesso foi resgatado.</string>
+    <string name="myself_claim_browser_unavailable">Não foi possível abrir o navegador. Ative um navegador e verifique a compra novamente.</string>
+</resources>

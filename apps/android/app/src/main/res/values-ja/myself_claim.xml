@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">myself.md のアクセスを受け取る</string>
+    <string name="myself_claim_entry_subtitle">Google Play の既存の永久購入を確認します。</string>
+    <string name="myself_claim_title">myself.md アクセス</string>
+    <string name="myself_claim_intro">Health.md の永久購入には、myself.md の無料の永久アクセスが含まれます。</string>
+    <string name="myself_claim_disclosure">続行すると、Google Play の購入証明を読み取り、資格の確認のため myself.md に送信します。健康データと位置情報は端末内に残ります。</string>
+    <string name="myself_claim_account">その後ログインし、アクセスを受け取る myself.md アカウントを選びます。元の購入は1つのアカウントにのみ関連付けられます。Android の無料利用や従来の継続利用権だけでは対象になりません。</string>
+    <string name="myself_claim_verify">購入を確認して続行</string>
+    <string name="myself_claim_verifying">購入を確認中…</string>
+    <string name="myself_claim_awaiting_user">ブラウザでログインし、受け取り先アカウントを確認してください。その後 myself.md で同じアカウントを使います。確認するまでアクセスは付与されません。</string>
+    <string name="myself_claim_no_purchase">完了した Health.md の永久購入が見つかりません。購入時の Google Play アカウントで再試行してください。保留中の購入は対象外です。</string>
+    <string name="myself_claim_store_unavailable">Google Play から購入を取得できませんでした。接続と Google Play アカウントを確認して再試行してください。</string>
+    <string name="myself_claim_verification_failed">購入を確認できませんでした。接続を確認して再試行してください。解決しない場合はサポートに連絡してください。アクセスは付与されていません。</string>
+    <string name="myself_claim_browser_unavailable">ブラウザを開けませんでした。ブラウザを有効にして購入を再確認してください。</string>
+</resources>

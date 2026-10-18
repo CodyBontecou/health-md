@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">myself.md का ऐक्सेस पाएँ</string>
+    <string name="myself_claim_entry_subtitle">Google Play की मौजूदा आजीवन खरीद की पुष्टि करें।</string>
+    <string name="myself_claim_title">myself.md ऐक्सेस</string>
+    <string name="myself_claim_intro">आपकी Health.md की आजीवन खरीद में myself.md का मुफ़्त आजीवन ऐक्सेस शामिल है।</string>
+    <string name="myself_claim_disclosure">आगे बढ़ने पर हम Google Play का खरीद प्रमाण पढ़कर पात्रता की जाँच के लिए myself.md को भेजेंगे। आपके स्वास्थ्य और स्थान का डेटा डिवाइस पर ही रहेगा।</string>
+    <string name="myself_claim_account">फिर साइन इन करके ऐक्सेस पाने वाला myself.md खाता चुनें। हर मूल खरीद केवल एक खाते से जोड़ी जा सकती है। केवल मुफ़्त या पुराना बना हुआ Android ऐक्सेस पात्र नहीं है।</string>
+    <string name="myself_claim_verify">खरीद की पुष्टि करके आगे बढ़ें</string>
+    <string name="myself_claim_verifying">खरीद की पुष्टि हो रही है…</string>
+    <string name="myself_claim_awaiting_user">ब्राउज़र में साइन इन करें और ऐक्सेस पाने वाले खाते की पुष्टि करें। फिर myself.md में वही खाता इस्तेमाल करें। पुष्टि से पहले ऐक्सेस नहीं मिलेगा।</string>
+    <string name="myself_claim_no_purchase">Health.md की पूरी हुई आजीवन खरीद नहीं मिली। खरीदने वाला Google Play खाता इस्तेमाल करके फिर कोशिश करें। लंबित खरीद पात्र नहीं है।</string>
+    <string name="myself_claim_store_unavailable">Google Play खरीद नहीं ला सका। कनेक्शन और Google Play खाता जाँचकर फिर कोशिश करें।</string>
+    <string name="myself_claim_verification_failed">खरीद की पुष्टि नहीं हो सकी। कनेक्शन जाँचकर फिर कोशिश करें। समस्या बनी रहे तो सहायता से संपर्क करें; ऐक्सेस नहीं दिया गया है।</string>
+    <string name="myself_claim_browser_unavailable">ब्राउज़र नहीं खुल सका। ब्राउज़र चालू करके खरीद की पुष्टि फिर करें।</string>
+</resources>

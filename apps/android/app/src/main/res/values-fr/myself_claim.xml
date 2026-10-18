@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">Demander l’accès à myself.md</string>
+    <string name="myself_claim_entry_subtitle">Vérifier un achat à vie existant sur Google Play.</string>
+    <string name="myself_claim_title">Accès à myself.md</string>
+    <string name="myself_claim_intro">Votre achat à vie de Health.md inclut un accès gratuit à vie à myself.md.</string>
+    <string name="myself_claim_disclosure">En continuant, nous lirons votre preuve d’achat Google Play et l’enverrons à myself.md pour vérification. Vos données de santé et de localisation restent sur votre appareil.</string>
+    <string name="myself_claim_account">Connectez-vous ensuite pour choisir le compte myself.md qui recevra l’accès. Chaque achat initial peut être lié à un seul compte. Un accès Android gratuit ou conservé au titre de droits acquis ne suffit pas.</string>
+    <string name="myself_claim_verify">Vérifier l’achat et continuer</string>
+    <string name="myself_claim_verifying">Vérification de l’achat…</string>
+    <string name="myself_claim_awaiting_user">Connectez-vous et confirmez le compte bénéficiaire dans le navigateur. Utilisez ensuite ce même compte dans myself.md. L’accès n’est demandé qu’après votre confirmation.</string>
+    <string name="myself_claim_no_purchase">Aucun achat à vie Health.md finalisé n’a été trouvé. Utilisez le compte Google Play ayant effectué l’achat et réessayez. Les achats en attente ne sont pas éligibles.</string>
+    <string name="myself_claim_store_unavailable">Google Play n’a pas pu récupérer votre achat. Vérifiez votre connexion et votre compte Google Play, puis réessayez.</string>
+    <string name="myself_claim_verification_failed">Votre achat n’a pas pu être vérifié. Vérifiez votre connexion et réessayez. Si le problème persiste, contactez l’assistance. Aucun accès n’a été accordé.</string>
+    <string name="myself_claim_browser_unavailable">Le navigateur n’a pas pu s’ouvrir. Activez un navigateur, puis vérifiez à nouveau votre achat.</string>
+</resources>

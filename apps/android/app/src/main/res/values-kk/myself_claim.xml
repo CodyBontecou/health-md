@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">myself.md қолжетімділігін алу</string>
+    <string name="myself_claim_entry_subtitle">Google Play-дегі бұрынғы өмірлік сатып алуды растаңыз.</string>
+    <string name="myself_claim_title">myself.md қолжетімділігі</string>
+    <string name="myself_claim_intro">Health.md өмірлік сатып алуы myself.md қызметіне тегін өмірлік қолжетімділікті қамтиды.</string>
+    <string name="myself_claim_disclosure">Жалғастырғанда Google Play сатып алу дәлелін оқып, тексеру үшін myself.md қызметіне жібереміз. Денсаулық пен орналасқан жер деректері құрылғыда қалады.</string>
+    <string name="myself_claim_account">Содан кейін кіріп, қолжетімділік алатын myself.md есептік жазбасын таңдаңыз. Әр бастапқы сатып алу тек бір жазбаға байланысады. Тегін немесе бұрыннан сақталған Android қолжетімділігі жеткіліксіз.</string>
+    <string name="myself_claim_verify">Сатып алуды тексеріп жалғастыру</string>
+    <string name="myself_claim_verifying">Сатып алу тексерілуде…</string>
+    <string name="myself_claim_awaiting_user">Браузерде кіріп, алушы есептік жазбаны растаңыз. Содан кейін myself.md ішінде сол жазбаны пайдаланыңыз. Растағанға дейін қолжетімділік берілмейді.</string>
+    <string name="myself_claim_no_purchase">Health.md өмірлік сатып алуы табылмады. Сатып алған Google Play жазбасын пайдаланып, қайталап көріңіз. Аяқталмаған сатып алулар жарамсыз.</string>
+    <string name="myself_claim_store_unavailable">Google Play сатып алуды ала алмады. Байланыс пен Google Play жазбасын тексеріп, қайталап көріңіз.</string>
+    <string name="myself_claim_verification_failed">Сатып алу тексерілмеді. Байланысты тексеріп, қайталап көріңіз. Мәселе шешілмесе, қолдау қызметіне хабарласыңыз. Қолжетімділік берілмеді.</string>
+    <string name="myself_claim_browser_unavailable">Браузер ашылмады. Браузерді қосып, сатып алуды қайта тексеріңіз.</string>
+</resources>

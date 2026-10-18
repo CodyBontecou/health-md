@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="myself_claim_entry">Toegang tot myself.md claimen</string>
+    <string name="myself_claim_entry_subtitle">Controleer een bestaande levenslange Google Play-aankoop.</string>
+    <string name="myself_claim_title">Toegang tot myself.md</string>
+    <string name="myself_claim_intro">Je levenslange Health.md-aankoop omvat gratis levenslange toegang tot myself.md.</string>
+    <string name="myself_claim_disclosure">Als je doorgaat, lezen we je Google Play-aankoopbewijs en sturen we het naar myself.md ter controle. Je gezondheids- en locatiegegevens blijven op je apparaat.</string>
+    <string name="myself_claim_account">Meld je daarna aan om het myself.md-account te kiezen dat toegang krijgt. Elke oorspronkelijke aankoop kan aan één account worden gekoppeld. Gratis of behouden oude Android-toegang alleen komt niet in aanmerking.</string>
+    <string name="myself_claim_verify">Aankoop controleren en doorgaan</string>
+    <string name="myself_claim_verifying">Aankoop controleren…</string>
+    <string name="myself_claim_awaiting_user">Meld je aan en bevestig het ontvangende account in je browser. Gebruik daarna hetzelfde account in myself.md. Toegang wordt pas na jouw bevestiging geclaimd.</string>
+    <string name="myself_claim_no_purchase">Geen voltooide levenslange Health.md-aankoop gevonden. Gebruik het Google Play-account waarmee je kocht en probeer opnieuw. Aankopen in behandeling komen niet in aanmerking.</string>
+    <string name="myself_claim_store_unavailable">Google Play kon je aankoop niet ophalen. Controleer je verbinding en Google Play-account en probeer opnieuw.</string>
+    <string name="myself_claim_verification_failed">Je aankoop kon niet worden gecontroleerd. Controleer je verbinding en probeer opnieuw. Neem bij aanhoudende problemen contact op met ondersteuning; er is geen toegang geclaimd.</string>
+    <string name="myself_claim_browser_unavailable">De browser kon niet worden geopend. Schakel een browser in en controleer de aankoop opnieuw.</string>
+</resources>
