@@ -33,6 +33,7 @@ enum UITestLaunchHelper {
         static let customEndDatePicker = "export.dateRange.custom.endDate"
         static let pathPreview = "export.pathPreview"
         static let activityBanner = "export.activityBanner"
+        static let finishSimulatedBatch = "uitest.export.finishBatch"
         static let filenameEditorButton = "export.filenameEditorButton"
         static let outputEditorSaveButton = "export.outputEditorSaveButton"
     }

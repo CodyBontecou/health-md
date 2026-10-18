@@ -56,6 +56,12 @@ final class ExportJourneyUITests: XCTestCase {
         XCTAssertTrue(exportButton.waitForExistence(timeout: 5))
         exportButton.tap()
 
+        let finishBatch = app.buttons[UITestLaunchHelper.Export.finishSimulatedBatch]
+        XCTAssertTrue(
+            finishBatch.waitForExistence(timeout: 5),
+            "The fixture should publish its per-file result and wait before finishing the batch"
+        )
+
         XCTAssertTrue(
             app.buttons[UITestLaunchHelper.Export.cancelExportButton].waitForExistence(timeout: 1),
             "The simulated multi-file export should still be running"
@@ -73,10 +79,14 @@ final class ExportJourneyUITests: XCTestCase {
 
         let statusBadge = app.descendants(matching: .any)[UITestLaunchHelper.Status.exportStatusBadge]
         XCTAssertFalse(
-            statusBadge.waitForExistence(timeout: 0.8),
+            statusBadge.waitForExistence(timeout: 5),
             "A per-file completion must not show the success view while the batch is running"
         )
         XCTAssertFalse(app.buttons["View Exported File"].exists)
+
+        // Explicitly release the batch after every intermediate-state assertion.
+        XCTAssertTrue(finishBatch.isHittable, "The fixture's completion control should remain accessible")
+        finishBatch.tap()
 
         XCTAssertTrue(
             statusBadge.waitForExistence(timeout: 5),
