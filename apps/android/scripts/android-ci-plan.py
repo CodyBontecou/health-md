@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Select Android CI jobs from a complete change list; uncertainty runs all jobs.
+"""Select active Android CI jobs from a complete change list.
 
-Pull requests use the paginated GitHub files API pinned to the event's head/base.
-Other events run every job and the full flavor accessibility matrix. In particular,
-android-release.yml recovery and Wear evidence consumers require every named job
-to succeed on an exact standalone push run; a reduced push cannot qualify it.
---files-json
-accepts an offline list of paths or GitHub file records for policy regression tests.
+Uncertainty and non-PR events run all active jobs. F-Droid and Wear execution
+remain paused while those builds are not distributed; their output keys stay
+present so the final CI gate can verify that the jobs were skipped.
+--files-json accepts offline paths or GitHub file records for regression tests.
 """
 from __future__ import annotations
 
@@ -21,6 +19,8 @@ from typing import Any
 
 
 JOBS = ("test", "fdroid", "instrumentation", "wear", "interop")
+# Re-enable these jobs when distribution resumes. Applies even to release qualification.
+PAUSED_JOBS = frozenset(("fdroid", "wear"))
 PHONE = frozenset(("test", "fdroid", "instrumentation"))
 ALL = frozenset(JOBS)
 MAX_PR_FILES = 3000
@@ -192,11 +192,11 @@ def plan(paths: set[str], matrix: str = "standard") -> dict[str, bool | str]:
         affected, jobs = jobs_for_path(valid_path(path))
         relevant |= affected
         selected.update(jobs)
-    return {"run": relevant, **{job: job in selected for job in JOBS}, "accessibility_matrix": matrix}
+    return {"run": relevant, **{job: job in selected and job not in PAUSED_JOBS for job in JOBS}, "accessibility_matrix": matrix}
 
 
 def full_plan(matrix: str = "full") -> dict[str, bool | str]:
-    return {"run": True, **dict.fromkeys(JOBS, True), "accessibility_matrix": matrix}
+    return {"run": True, **{job: job not in PAUSED_JOBS for job in JOBS}, "accessibility_matrix": matrix}
 
 
 def pr_files(event: dict[str, Any], repository: str, token: str) -> set[str]:
@@ -269,7 +269,7 @@ def determine_plan(args: argparse.Namespace) -> tuple[dict[str, bool | str], str
     # appearing in GITHUB_EVENT_NAME. Invalid values also fail closed.
     if (args.force_full_qualification != "false" or args.release_sha
             or args.event_name != "pull_request"):
-        return full_plan(), "standalone push, manual, reusable, or release qualification runs every job and both flavor matrices"
+        return full_plan(), "standalone push, manual, reusable, or release qualification runs every active job and the full Play matrix"
     try:
         if args.files_json:
             records = json.loads(Path(args.files_json).read_text())
@@ -283,7 +283,7 @@ def determine_plan(args: argparse.Namespace) -> tuple[dict[str, bool | str], str
             paths = pr_files(event, args.repository, args.token)
         return plan(paths), f"classified {len(paths)} changed path(s), including rename sources"
     except (OSError, ValueError, KeyError, TypeError) as error:
-        return full_plan(), f"complete change detection unavailable ({type(error).__name__}); running every job"
+        return full_plan(), f"complete change detection unavailable ({type(error).__name__}); running every active job"
 
 
 def main() -> int:

@@ -305,19 +305,24 @@ See `release-scope.json`, `PLAY_STORE_COMMANDS.md`, `PLAY_STORE_SETUP.md`, `GRAD
 
 ## Testing
 
-Run the unit and export-contract suite:
+F-Droid and Wear test/build execution is paused in the default local and CI
+runners while those builds are not distributed. Shared wearable-contract tests
+remain active for the phone consumer. Explicit Gradle targets remain available
+for deferred-channel development.
+
+Run the Play unit and export-contract suite plus shared module tests from the
+repository root:
 
 ```bash
-./gradlew :app:testPlayDebugUnitTest :app:testFdroidDebugUnitTest
+make test-android
 ```
 
 Focused commands:
 
 ```bash
 ./gradlew :app:testPlayDebugUnitTest --tests com.healthmd.export.PluginCompatibilityValidationTest
-./gradlew :app:testFdroidDebugUnitTest --tests com.healthmd.distribution.FdroidDistributionPolicyTest
-./gradlew :app:lintPlayDebug :app:lintFdroidDebug
-./gradlew :app:connectedPlayDebugAndroidTest :app:connectedFdroidDebugAndroidTest
+./gradlew :app:lintPlayDebug
+./scripts/run-ci-instrumentation.sh
 
 # Hermetic Direct CLI Compose workflow coverage on a connected device/emulator
 ./gradlew :app:connectedPlayDebugAndroidTest \

@@ -32,22 +32,33 @@ class RoutingTest(unittest.TestCase):
     def assertJobs(self, paths, jobs, *, relevant=True):
         result = ci.plan(set(paths))
         self.assertEqual(relevant, result["run"])
-        self.assertEqual(set(jobs), {job for job in ci.JOBS if result[job]})
+        self.assertEqual(set(jobs) - {"fdroid", "wear"}, {job for job in ci.JOBS if result[job]})
         self.assertEqual("standard", result["accessibility_matrix"])
 
-    def test_phone_change_keeps_both_flavors_without_wear_emulator(self):
+    def test_paused_distribution_jobs_stay_off_for_all_event_modes(self):
+        for args in (arguments(event_name="push"), arguments(event_name="workflow_dispatch"),
+                     arguments(force_full_qualification="true"), arguments(release_sha="abc123"),
+                     arguments(event_path="missing-event.json")):
+            result, _ = ci.determine_plan(args)
+            self.assertFalse(result["fdroid"])
+            self.assertFalse(result["wear"])
+            self.assertTrue(result["test"])
+            self.assertTrue(result["instrumentation"])
+            self.assertTrue(result["interop"])
+
+    def test_phone_change_keeps_active_phone_jobs(self):
         self.assertJobs(["apps/android/app/src/main/java/com/healthmd/Home.kt"], ci.PHONE)
 
-    def test_phone_flavor_change_keeps_both_flavors(self):
+    def test_phone_flavor_change_keeps_active_phone_jobs(self):
         self.assertJobs(["apps/android/app/src/fdroid/java/com/healthmd/Billing.kt"], ci.PHONE)
 
     def test_shared_android_core_keeps_phone_consumers(self):
         self.assertJobs(["apps/android/healthmd-core/src/main/kotlin/Core.kt"], ci.PHONE)
 
-    def test_wear_change_keeps_wear_and_jvm(self):
+    def test_wear_change_keeps_jvm_only(self):
         self.assertJobs(["apps/android/wear/src/main/AndroidManifest.xml"], {"test", "wear"})
 
-    def test_wearable_contract_keeps_phone_and_wear_consumers(self):
+    def test_wearable_contract_keeps_active_phone_consumers(self):
         self.assertJobs(["apps/android/wearable-contract/src/main/kotlin/Snapshot.kt"], ci.PHONE | {"wear"})
 
     def test_direct_protocol_keeps_instrumentation_and_live_interop(self):
@@ -162,7 +173,7 @@ class ChangeCompletenessTest(unittest.TestCase):
         self.assertIn("page=2", fetch.call_args_list[2].args[0].full_url)
         self.assertTrue(fetch.call_args_list[0].args[0].full_url.endswith("/pulls/7"))
         self.assertTrue(fetch.call_args_list[3].args[0].full_url.endswith("/pulls/7"))
-        self.assertEqual(ci.PHONE, {job for job in ci.JOBS if ci.plan(paths)[job]})
+        self.assertEqual(ci.PHONE - {"fdroid", "wear"}, {job for job in ci.JOBS if ci.plan(paths)[job]})
 
     def test_pull_request_rename_includes_source_path(self):
         records = [{"filename": "docs/retired.md", "status": "renamed",
@@ -277,7 +288,7 @@ class QualificationAndCliTest(unittest.TestCase):
                             "--files-json", str(files), "--output", str(output)], env=env,
                            check=True, capture_output=True, text=True)
             actual = dict(line.split("=", 1) for line in output.read_text().splitlines())
-            self.assertEqual({"run": "true", "test": "true", "fdroid": "true", "instrumentation": "true",
+            self.assertEqual({"run": "true", "test": "true", "fdroid": "false", "instrumentation": "true",
                               "wear": "false", "interop": "false", "accessibility_matrix": "standard"}, actual)
 
     def test_offline_cli_push_cannot_reduce_release_qualification(self):
@@ -290,7 +301,7 @@ class QualificationAndCliTest(unittest.TestCase):
                             "--files-json", str(files), "--output", str(output)], env=env,
                            check=True, capture_output=True, text=True)
             actual = dict(line.split("=", 1) for line in output.read_text().splitlines())
-            self.assertEqual({"run": "true", **dict.fromkeys(ci.JOBS, "true"), "accessibility_matrix": "full"}, actual)
+            self.assertEqual({"run": "true", **{job: "false" if job in {"fdroid", "wear"} else "true" for job in ci.JOBS}, "accessibility_matrix": "full"}, actual)
 
     def test_offline_invalid_and_oversized_lists_run_every_job(self):
         for records in ({"not": "a list"}, ["docs/../hidden"] , ["docs/readme.md"] * 3000):

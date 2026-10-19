@@ -27,7 +27,7 @@ on:
         required: false
         type: string
       full_qualification:
-        description: Run every job and the full accessibility matrix for reusable qualification
+        description: Run every active job and the full Play accessibility matrix for reusable qualification
         required: false
         type: boolean
         default: true
@@ -225,7 +225,7 @@ jobs:
       - name: Prepare source-built Rust core
         run: ./scripts/run-ci-gradle.sh :healthmd-core:prepareRustDebug :healthmd-core:checkHealthMdCoreKotlinBindings --stacktrace
 
-      - name: Run app variant, wearable contract, Wear, and protocol tests
+      - name: Run Play app, shared contract, core, and protocol tests
         shell: bash
         run: |
           set -euo pipefail
@@ -234,24 +234,17 @@ jobs:
             :app:testPlayDebugUnitTest \
             :healthmd-core:testDebugUnitTest \
             :wearable-contract:test \
-            :wear:testDebugUnitTest \
             :direct-protocol:test \
             --stacktrace
           ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayReleaseUnitTest --stacktrace
           ./scripts/run-ci-gradle.sh --no-daemon --max-workers=2 :app:testPlayE2eUnitTest --stacktrace
 
-      - name: Run Wear lint, assemble, and bundle
-        run: ./scripts/run-ci-gradle.sh :wear:lintDebug :wear:assembleDebug :wear:bundleDebug --stacktrace
-
       - name: Run Android lint
         run: ./scripts/run-ci-gradle.sh :app:lintPlayDebug --stacktrace
 
-      - name: Assemble debug app and validate packaged pair and retained Play-generated APK policy
+      - name: Assemble Play debug app and validate retained Play-generated APK policy
         run: |
           ./scripts/run-ci-gradle.sh :app:assemblePlayDebug :app:bundlePlayDebug --stacktrace
-          ./scripts/test-wear-bundle-manifest-verifier.sh \
-            wear/build/outputs/bundle/debug/wear-debug.aab \
-            app/build/outputs/bundle/playDebug/app-play-debug.aab
           bash scripts/tests/test_verify_google_play_generated_apk_evidence.sh
 
       - name: Retain JVM test results, task profiles, and runner diagnostics
@@ -265,7 +258,6 @@ jobs:
             apps/android/app/build/reports/tests/
             apps/android/app/build/test-results/
             apps/android/healthmd-core/build/test-results/
-            apps/android/wear/build/test-results/
             apps/android/wearable-contract/build/test-results/
             apps/android/direct-protocol/build/test-results/
           retention-days: 7
@@ -280,9 +272,8 @@ jobs:
     needs: changes
     if: ${{ needs.changes.outputs.instrumentation == 'true' }}
     runs-on: ubuntu-24.04
-    # Ordinary CI runs the full Play display matrix and representative F-Droid
-    # displays, with every method and all channel/native-input tests on both flavors.
-    # Exact-SHA and reusable/manual qualification retain both complete matrices.
+    # F-Droid instrumentation is paused while that build is not distributed.
+    # Play retains the complete accessibility display matrix.
     timeout-minutes: 100
     defaults:
       run:
@@ -331,7 +322,6 @@ jobs:
           ./gradlew --no-daemon --max-workers=2 \
             -Pkotlin.compiler.execution.strategy=in-process \
             :healthmd-core:prepareRustDebug \
-            :app:assembleFdroidDebug :app:assembleFdroidDebugAndroidTest \
             :app:assemblePlayDebug :app:assemblePlayDebugAndroidTest --stacktrace
 
       - name: Prepare core and direct E2E artifacts on shard zero before boot
@@ -348,7 +338,7 @@ jobs:
       - name: Enable KVM access
         run: sudo chmod 666 /dev/kvm
 
-      - name: Run core and flavor instrumentation with scoped display coverage
+      - name: Run core and Play instrumentation
         env:
           HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX: ${{ needs.changes.outputs.accessibility_matrix }}
           HEALTHMD_ANDROID_SHARD_COUNT: '4'
