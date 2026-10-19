@@ -162,6 +162,68 @@ final class AppleDirectProtocolAuthorityTests: XCTestCase {
 
 #if os(iOS)
     @MainActor
+    func testMissingDirectJobInspectionDoesNotCreateStorage() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = DirectLookupFileManager(support: root)
+        let files = IPhoneDirectFileExportProducer(fileManager: manager)
+        let coordinator = IPhoneDirectExportCoordinator(fileManager: manager, fileProducer: files)
+        XCTAssertFalse(files.canCancel(jobID: UUID()))
+        XCTAssertNil(try files.cancel(jobID: UUID()))
+        XCTAssertNil(coordinator.cancelWithReceipt(jobID: UUID()))
+        coordinator.cleanupExpiredJobs()
+        XCTAssertGreaterThanOrEqual(manager.supportLookups.count, 3)
+        XCTAssertTrue(manager.supportLookups.allSatisfy { !$0 }, "Discovery must not request support-directory creation")
+        XCTAssertEqual(manager.directoryCreations, 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), [])
+    }
+
+    @MainActor
+    func testActivePreparationCanCancelBeforeStorageExists() async throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let manager = DirectLookupFileManager(support: root)
+        let files = IPhoneDirectFileExportProducer(fileManager: manager)
+        let coordinator = IPhoneDirectExportCoordinator(fileManager: manager, fileProducer: files)
+        let model = try IPhoneDirectFileJournalTests.makeJournal(jobID: UUID())
+        let request = DirectExportRequest(jobID: model.request.jobID, createdAt: Date(),
+            dateSelection: model.request.dateSelection, responseMode: .rawJSON,
+            rawProfile: .healthDataProjection,
+            canonicalSelection: DirectCanonicalSelection(metricIDs: ["sleep_total"]))
+        defer { CLIExportActivityTracker.shared.clear(jobID: request.jobID) }
+        let capture = DirectLookupCancellationCapture()
+        manager.onNextSupportLookup {
+            MainActor.assumeIsolated { capture.receipt = coordinator.cancelWithReceipt(jobID: request.jobID) }
+        }
+        let core = FakeAppleDirectProtocolRustCore()
+        core.returnNativeCanonicalMessage = true
+        let authority = AppleDirectProtocolAuthority(defaultMode: .rust, rustCore: core)
+        let transport = OperationProtocolPacketTransport()
+        let key = SymmetricKey(data: Data(repeating: 0x47, count: 32))
+        let channel = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic", messageCanonicalizer: authority)
+        let suite = "DirectLookupCancellation.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        await coordinator.handle(request, peerBinding: model.session.peerBinding,
+            negotiation: try XCTUnwrap(DirectTransferCapabilities.current.negotiated(with: .current)),
+            channel: IPhoneDirectExportConnection(channel: channel), protocolAuthority: authority,
+            healthKitManager: HealthKitManager(store: FakeHealthStore(), userDefaults: defaults))
+        XCTAssertNotNil(capture.receipt)
+        XCTAssertNil(coordinator.currentJobID)
+        XCTAssertEqual(manager.directoryCreations, 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), [])
+        let receiver = DirectSecureChannel(packetConnection: transport, sessionKey: key,
+            peerInstallationID: UUID(), peerDisplayName: "synthetic")
+        guard case .message(.exportRejected(let failure)) = try await receiver.receive() else {
+            return XCTFail("Cancelled preparation must produce its ordinary owned rejection")
+        }
+        XCTAssertEqual(failure.reason, .cancelled)
+    }
+
+    @MainActor
     func testActualPreparationFailurePreservesReplacementSameIDActivityAdmission() async throws {
         for (files, replacementSource) in [(false, CLIExportActivityTracker.Source.macApp),
             (true, .macApp), (false, .direct), (true, .direct)] {
@@ -818,6 +880,39 @@ private final class FakeAppleDirectProtocolRustCore: AppleDirectProtocolRustCore
 }
 
 #if os(iOS)
+nonisolated private final class DirectLookupFileManager: FileManager, @unchecked Sendable {
+    private let support: URL
+    private let lock = NSLock()
+    private var lookups: [Bool] = []
+    private var creations = 0
+    private var nextLookup: (@Sendable () -> Void)?
+    var supportLookups: [Bool] { lock.withLock { lookups } }
+    var directoryCreations: Int { lock.withLock { creations } }
+    init(support: URL) { self.support = support; super.init() }
+    func onNextSupportLookup(_ action: @escaping @Sendable () -> Void) { lock.withLock { nextLookup = action } }
+    override func url(for directory: SearchPathDirectory, in domain: SearchPathDomainMask,
+                      appropriateFor url: URL?, create shouldCreate: Bool) throws -> URL {
+        guard directory == .applicationSupportDirectory else { throw CocoaError(.fileReadNoSuchFile) }
+        let action = lock.withLock {
+            lookups.append(shouldCreate)
+            defer { nextLookup = nil }
+            return nextLookup
+        }
+        action?()
+        return support
+    }
+    override func createDirectory(at url: URL, withIntermediateDirectories createIntermediates: Bool,
+                                  attributes: [FileAttributeKey: Any]? = nil) throws {
+        lock.withLock { creations += 1 }
+        try super.createDirectory(at: url, withIntermediateDirectories: createIntermediates, attributes: attributes)
+    }
+}
+
+@MainActor
+private final class DirectLookupCancellationCapture {
+    var receipt: IPhoneDirectCancellationReceipt?
+}
+
 @MainActor
 private final class ActivityAdmissionCapture {
     var snapshot: CLIExportActivityTracker.Snapshot?

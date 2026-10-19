@@ -1128,6 +1128,25 @@ final class IPhoneDirectFileJournalTests: XCTestCase {
         try body(directory)
     }
 
+    func testJobDirectoryDiscoveryRetainsMissingAndInvalidEntries() throws {
+        try withDirectJournalDirectory { directory in
+            XCTAssertTrue(try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory))
+            let missing = directory.appendingPathComponent("missing")
+            XCTAssertFalse(try AppleExportJournalRecovery.hasExistingJobDirectory(at: missing))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: missing.path))
+            let file = directory.appendingPathComponent("retained")
+            let bytes = Data("synthetic retained entry".utf8)
+            try bytes.write(to: file)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.hasExistingJobDirectory(at: file))
+            XCTAssertEqual(try Data(contentsOf: file), bytes)
+            let link = directory.appendingPathComponent("directory-link")
+            try FileManager.default.createSymbolicLink(at: link, withDestinationURL: directory)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.hasExistingJobDirectory(at: link))
+            XCTAssertEqual(try FileManager.default.destinationOfSymbolicLink(atPath: link.path), directory.path)
+            XCTAssertThrowsError(try AppleExportJournalRecovery.hasExistingJobDirectory(at: URL(string: "https://example.invalid/job")!))
+        }
+    }
+
     private func makeJournal() throws -> IPhoneDirectFileJournal {
         try Self.makeJournal(jobID: UUID(uuidString: "11111111-2222-3333-4444-555555555555")!)
     }

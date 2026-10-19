@@ -470,6 +470,23 @@ nonisolated struct AppleExportJournalCheckpoint: Sendable {
 }
 
 enum AppleExportJournalRecovery {
+    /// Discovery must not create a job or interpret an unreadable/non-directory
+    /// entry as absence. Callers may inspect multiple storage namespaces.
+    static func hasExistingJobDirectory(at directory: URL, fileManager: FileManager = .default) throws -> Bool {
+        guard directory.isFileURL else { throw RecoveryError.unreadableJournal }
+        do {
+            let attributes = try fileManager.attributesOfItem(atPath: directory.path)
+            guard attributes[.type] as? FileAttributeType == .typeDirectory else {
+                throw RecoveryError.unreadableJournal
+            }
+            return true
+        } catch {
+            let failure = error as NSError
+            if failure.domain == NSCocoaErrorDomain, failure.code == NSFileReadNoSuchFileError { return false }
+            throw RecoveryError.unreadableJournal
+        }
+    }
+
     /// Bind decoded bytes and auxiliary ownership while holding one publication transaction.
     /// Legacy journals receive a sidecar without rewriting their JSON.
     static func loadOwned<Journal: Decodable>(

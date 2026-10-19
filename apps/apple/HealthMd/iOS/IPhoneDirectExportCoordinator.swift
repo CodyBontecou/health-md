@@ -235,7 +235,13 @@ final class IPhoneDirectExportCoordinator {
         let controller: HealthKitQueryExecutionController
     }
     private var queryExecutionControllers: [UUID: AcceptedQueryController] = [:]
-    private let fileManager = FileManager.default
+    private let fileManager: FileManager
+    private let fileProducer: IPhoneDirectFileExportProducer
+
+    init(fileManager: FileManager = .default, fileProducer: IPhoneDirectFileExportProducer? = nil) {
+        self.fileManager = fileManager
+        self.fileProducer = fileProducer ?? .shared
+    }
 
     var isExporting: Bool { activeJobID != nil }
     var currentJobID: UUID? { activeJobID }
@@ -314,7 +320,7 @@ final class IPhoneDirectExportCoordinator {
             let completedWithoutMissingData = try await HealthKitQueryExecutionController
                 .withController(queryController) {
                     if request.responseMode == .writeFiles {
-                        return try await IPhoneDirectFileExportProducer.shared.run(
+                        return try await fileProducer.run(
                             request,
                             peerBinding: peerBinding,
                             negotiation: negotiation,
@@ -380,7 +386,7 @@ final class IPhoneDirectExportCoordinator {
             var retainedForResume = false
             if !checkpointConflict, let executionOwnership {
                 if request.responseMode == .writeFiles {
-                    retainedForResume = IPhoneDirectFileExportProducer.shared.pause(
+                    retainedForResume = fileProducer.pause(
                         jobID: request.jobID, ownership: executionOwnership
                     )
                 } else {
@@ -520,10 +526,26 @@ final class IPhoneDirectExportCoordinator {
         let invocation = activeCancellation?.jobID == jobID ? activeCancellation : nil
         let expected = invocation?.ownership
         let configuration = invocation?.cancellationProtocolAuthority ?? protocolAuthority
+        // Durable ownership alone grants no banner ownership. Only this live
+        // invocation may signal its admitted activity, including before spooling.
+        let signal = {
+            invocation?.cancel()
+            self.queryExecutionControllers.removeValue(forKey: jobID)
+            if let invocation,
+               CLIExportActivityTracker.shared.admissionID == invocation.activityAdmissionID {
+                CLIExportActivityTracker.shared.setMessage(
+                    jobID: jobID, message: "Cancelling the direct CLI export…")
+            }
+        }
         do {
-            let directory = try jobDirectory(jobID)
+            let directory = try jobDirectory(jobID, createIfMissing: false)
+            guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else {
+                guard let invocation, expected == nil else { return nil }
+                signal()
+                return IPhoneDirectCancellationReceipt(invocation: invocation)
+            }
             let support = try fileManager.url(for: .applicationSupportDirectory,
-                in: .userDomainMask, appropriateFor: nil, create: true)
+                in: .userDomainMask, appropriateFor: nil, create: false)
             let transaction = try AtomicFileWriter.beginPublicationTransaction(
                 at: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"))
             defer { transaction.close() }
@@ -556,22 +578,11 @@ final class IPhoneDirectExportCoordinator {
                 rawReceipt = IPhoneDirectCancellationReceipt(jobID: jobID, ownership: journal.checkpoint,
                     protocolAuthority: cancellationAuthority.frozenForCurrentOperation())
             }
-            let fileReceipt = try IPhoneDirectFileExportProducer.shared.cancel(
+            let fileReceipt = try fileProducer.cancel(
                 jobID: jobID, expectedOwnership: expected, protocolAuthority: configuration)
             let receipt = rawReceipt ?? fileReceipt
             let committed = receipt?.durableOwnership
             guard committed != nil || (invocation != nil && expected == nil) else { return nil }
-            let signal = {
-                invocation?.cancel()
-                self.queryExecutionControllers.removeValue(forKey: jobID)
-                // A persisted journal owns cancellation, not a live activity. Only
-                // the admitted invocation may update its associated banner.
-                if let invocation,
-                   CLIExportActivityTracker.shared.admissionID == invocation.activityAdmissionID {
-                    CLIExportActivityTracker.shared.setMessage(
-                        jobID: jobID, message: "Cancelling the direct CLI export…")
-                }
-            }
             if let committed {
                 try committed.withGenerationOwnership { signal() }
             } else {
@@ -1529,26 +1540,28 @@ final class IPhoneDirectExportCoordinator {
     }
 
     func cleanupExpiredJobs(now: Date = Date()) {
-        guard let root = try? jobsRootDirectory(),
+        guard let root = try? jobsRootDirectory(createIfMissing: false),
+              (try? AppleExportJournalRecovery.hasExistingJobDirectory(at: root, fileManager: fileManager)) == true,
               let support = try? fileManager.url(for: .applicationSupportDirectory,
-                in: .userDomainMask, appropriateFor: nil, create: true) else { return }
+                in: .userDomainMask, appropriateFor: nil, create: false) else { return }
         _ = try? AppleExportJournalRecovery.cleanupExpiredDirectJobs(at: root,
             lockURL: root.deletingLastPathComponent().appendingPathComponent(".v1.journal.lock"),
             durabilityRoot: support, now: now, lifetime: HealthMdDirectProtocol.jobLifetime,
             fileManager: fileManager)
     }
 
-    private func jobsRootDirectory() throws -> URL {
+    private func jobsRootDirectory(createIfMissing: Bool = true) throws -> URL {
         let applicationSupport = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create: createIfMissing
         )
         let root = applicationSupport
             .appendingPathComponent("Health.md", isDirectory: true)
             .appendingPathComponent("DirectCLIOutbound", isDirectory: true)
             .appendingPathComponent("v1", isDirectory: true)
+        guard createIfMissing else { return root }
         try fileManager.createDirectory(
             at: root,
             withIntermediateDirectories: true,
@@ -1564,9 +1577,10 @@ final class IPhoneDirectExportCoordinator {
         return root
     }
 
-    private func jobDirectory(_ jobID: UUID) throws -> URL {
-        let directory = try jobsRootDirectory()
+    private func jobDirectory(_ jobID: UUID, createIfMissing: Bool = true) throws -> URL {
+        let directory = try jobsRootDirectory(createIfMissing: createIfMissing)
             .appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
+        guard createIfMissing else { return directory }
         try fileManager.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
@@ -1604,11 +1618,13 @@ final class IPhoneDirectExportCoordinator {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectExportJournal? {
+        let directory = try jobDirectory(jobID, createIfMissing: false)
+        guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { return nil }
         let support = try fileManager.url(for: .applicationSupportDirectory,
-            in: .userDomainMask, appropriateFor: nil, create: true)
+            in: .userDomainMask, appropriateFor: nil, create: false)
         let saved: (journal: IPhoneDirectExportJournal, checkpoint: AppleExportJournalCheckpoint)? =
             try AppleExportJournalRecovery.loadOwned(
-                at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+                at: directory.appendingPathComponent("journal.json"),
                 lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
                 durabilityRoot: support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,

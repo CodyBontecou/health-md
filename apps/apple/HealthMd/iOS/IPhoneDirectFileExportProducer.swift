@@ -49,7 +49,11 @@ final class IPhoneDirectFileExportProducer {
         category: "IPhoneDirectFileExportProducer"
     )
 
-    private let fileManager = FileManager.default
+    private let fileManager: FileManager
+
+    init(fileManager: FileManager = .default) {
+        self.fileManager = fileManager
+    }
 
     func canCancel(jobID: UUID) -> Bool {
         guard let journal = try? loadJournal(jobID: jobID) else { return false }
@@ -1651,12 +1655,12 @@ final class IPhoneDirectFileExportProducer {
         }
     }
 
-    private func jobDirectory(_ jobID: UUID) throws -> URL {
+    private func jobDirectory(_ jobID: UUID, createIfMissing: Bool = true) throws -> URL {
         let applicationSupport = try fileManager.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
-            create: true
+            create: createIfMissing
         )
         let directory = applicationSupport
             .appendingPathComponent("Health.md", isDirectory: true)
@@ -1664,6 +1668,7 @@ final class IPhoneDirectFileExportProducer {
             .appendingPathComponent("v1", isDirectory: true)
             .appendingPathComponent(jobID.uuidString.lowercased(), isDirectory: true)
             .appendingPathComponent("files", isDirectory: true)
+        guard createIfMissing else { return directory }
         try fileManager.createDirectory(
             at: directory,
             withIntermediateDirectories: true,
@@ -1701,11 +1706,13 @@ final class IPhoneDirectFileExportProducer {
     }
 
     private func loadJournal(jobID: UUID) throws -> IPhoneDirectFileJournal? {
+        let directory = try jobDirectory(jobID, createIfMissing: false)
+        guard try AppleExportJournalRecovery.hasExistingJobDirectory(at: directory, fileManager: fileManager) else { return nil }
         let support = try fileManager.url(for: .applicationSupportDirectory,
-            in: .userDomainMask, appropriateFor: nil, create: true)
+            in: .userDomainMask, appropriateFor: nil, create: false)
         let saved: (journal: IPhoneDirectFileJournal, checkpoint: AppleExportJournalCheckpoint)? =
             try AppleExportJournalRecovery.loadOwned(
-                at: try jobDirectory(jobID).appendingPathComponent("journal.json"),
+                at: directory.appendingPathComponent("journal.json"),
                 lockURL: support.appendingPathComponent("Health.md/DirectCLIOutbound/.v1.journal.lock"),
                 durabilityRoot: support, fileManager: fileManager,
                 attributes: [.posixPermissions: 0o600,
