@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.healthmd.domain.model.ExportProfile
@@ -17,6 +18,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.intOrNull
 import timber.log.Timber
 
 /**
@@ -35,13 +42,14 @@ class ScheduledProfileEntryStore @Inject constructor(
     private val listSerializer = ListSerializer(ScheduledProfileEntry.serializer())
 
     private object Keys {
+        val MINUTE_INTENT = stringPreferencesKey("scheduled_profile_refresh_minutes_v2")
         val ENTRIES = stringPreferencesKey("scheduled_profile_entries")
         val LEGACY_MIGRATION_PENDING_PROFILE_ID =
             stringPreferencesKey("scheduled_profile_legacy_migration_pending_profile_id")
     }
 
     val entries: Flow<List<ScheduledProfileEntry>> = dataStore.data.map { prefs ->
-        decode(prefs[Keys.ENTRIES]).orEmpty()
+        decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]).orEmpty()
     }
 
     suspend fun getEntries(): List<ScheduledProfileEntry> = entries.first()
@@ -59,7 +67,7 @@ class ScheduledProfileEntryStore @Inject constructor(
         dataStore.edit { prefs ->
             // A corrupt persisted list must never be rewritten from a failed read;
             // that would silently wipe every other entry. Skip the mutation instead.
-            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            val existing = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
             if (
                 entry.isEnabled &&
                 entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
@@ -81,9 +89,10 @@ class ScheduledProfileEntryStore @Inject constructor(
                 // A configuration draft may predate a worker's cancellation checkpoint. Preserve
                 // exact residual groups until the worker clears them individually.
                 pendingExports = previous?.pendingExports ?: entry.pendingExports,
+                recoveryGeneration = previous?.recoveryGeneration ?: entry.recoveryGeneration,
             )
             val updated = existing.filterNot { it.profileId == entry.profileId } + merged
-            prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
+            persist(prefs, updated.sortedBy { it.profileId })
             persisted = true
         }
         return persisted
@@ -92,12 +101,28 @@ class ScheduledProfileEntryStore @Inject constructor(
     suspend fun update(
         profileId: String,
         change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
+    ): Boolean = updateIfCurrent(profileId, null, change)
+
+    /** Worker-owned configuration changes must also be inert after recovery is discarded. */
+    suspend fun updateForGeneration(
+        profileId: String,
+        expectedRecoveryGeneration: Long,
+        change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
+    ): Boolean = updateIfCurrent(profileId, expectedRecoveryGeneration, change)
+
+    private suspend fun updateIfCurrent(
+        profileId: String,
+        expectedRecoveryGeneration: Long?,
+        change: (ScheduledProfileEntry) -> ScheduledProfileEntry,
     ): Boolean {
         var persisted = false
         dataStore.edit { prefs ->
-            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            val existing = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
             val index = existing.indexOfFirst { it.profileId == profileId }
             if (index < 0) return@edit
+            if (expectedRecoveryGeneration != null &&
+                existing[index].recoveryGeneration != expectedRecoveryGeneration
+            ) return@edit
             val changed = change(existing[index])
             require(changed.profileId == profileId) { "Scheduled profile update cannot change identity." }
             if (
@@ -107,30 +132,38 @@ class ScheduledProfileEntryStore @Inject constructor(
                 return@edit
             }
             val updated = existing.toMutableList().apply { set(index, changed) }
-            prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, updated.sortedBy { it.profileId })
+            persist(prefs, updated.sortedBy { it.profileId })
             persisted = true
         }
         return persisted
     }
 
-    /** Disconnect configuration only: keep frontiers and frozen residual work unchanged. */
+    /** Disconnect configuration only: preserve frontiers, minute intent and frozen residual work. */
     internal fun disableForDisconnect(prefs: MutablePreferences, profileIds: List<String>) {
         if (profileIds.isEmpty()) return
-        val existing = checkNotNull(decode(prefs[Keys.ENTRIES])) { "Scheduled profile entries are unavailable." }
+        val existing = checkNotNull(decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT])) {
+            "Scheduled profile entries are unavailable."
+        }
         if (existing.none { it.profileId in profileIds && it.isEnabled }) return
-        prefs[Keys.ENTRIES] = json.encodeToString(
-            listSerializer,
-            existing.map { if (it.profileId in profileIds) it.copy(isEnabled = false) else it },
+        persist(prefs, existing.map { if (it.profileId in profileIds) it.copy(isEnabled = false) else it })
+    }
+
+    /**
+     * Abandons frozen retry groups without changing configuration, credentials, history, or
+     * completed/refresh frontiers. The atomic generation bump fences late worker checkpoints;
+     * cancelling WorkManager alone does not wait for the worker coroutine to finish.
+     */
+    suspend fun discardPendingRecovery(profileId: String): Boolean = update(profileId) { current ->
+        current.copy(
+            pendingExports = emptyList(),
+            recoveryGeneration = Math.addExact(current.recoveryGeneration, 1L),
         )
     }
 
     suspend fun delete(profileId: String) {
         dataStore.edit { prefs ->
-            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
-            prefs[Keys.ENTRIES] = json.encodeToString(
-                listSerializer,
-                existing.filterNot { it.profileId == profileId },
-            )
+            val existing = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
+            persist(prefs, existing.filterNot { it.profileId == profileId })
         }
     }
 
@@ -143,8 +176,9 @@ class ScheduledProfileEntryStore @Inject constructor(
         profileId: String,
         fireAtMillis: Long?,
         completedPendingID: String? = null,
+        expectedRecoveryGeneration: Long? = null,
     ) {
-        update(profileId) { current ->
+        updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
             current.copy(
                 lastSuccessEpochMillis = fireAtMillis?.let { latest(current.lastSuccessEpochMillis, it) }
                     ?: current.lastSuccessEpochMillis,
@@ -160,8 +194,12 @@ class ScheduledProfileEntryStore @Inject constructor(
      * success is independent of the completed-day frontier: a merged run may satisfy its slot
      * while other dates still fail and stay retryable.
      */
-    suspend fun recordRefreshSuccess(profileId: String, slotMillis: Long) {
-        update(profileId) { current ->
+    suspend fun recordRefreshSuccess(
+        profileId: String,
+        slotMillis: Long,
+        expectedRecoveryGeneration: Long? = null,
+    ) {
+        updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
             current.copy(
                 lastRefreshSuccessEpochMillis = latest(
                     current.lastRefreshSuccessEpochMillis,
@@ -181,11 +219,13 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
+        expectedRecoveryGeneration: Long? = null,
     ): Boolean = recordResiduals(
         profileId = profileId,
         fireAtMillis = fireAtMillis,
         attemptedPendingID = attemptedPendingID,
         replacements = replacements,
+        expectedRecoveryGeneration = expectedRecoveryGeneration,
     )
 
     /** Freezes unresolved work before a WorkManager backoff retry can observe profile edits. */
@@ -194,11 +234,13 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
+        expectedRecoveryGeneration: Long? = null,
     ): Boolean = recordResiduals(
         profileId = profileId,
         fireAtMillis = fireAtMillis,
         attemptedPendingID = attemptedPendingID,
         replacements = replacements,
+        expectedRecoveryGeneration = expectedRecoveryGeneration,
     )
 
     private suspend fun recordResiduals(
@@ -206,7 +248,8 @@ class ScheduledProfileEntryStore @Inject constructor(
         fireAtMillis: Long?,
         attemptedPendingID: String?,
         replacements: List<ScheduledProfilePendingExport>,
-    ): Boolean = update(profileId) { current ->
+        expectedRecoveryGeneration: Long?,
+    ): Boolean = updateIfCurrent(profileId, expectedRecoveryGeneration) { current ->
         val retained = attemptedPendingID?.let { attemptedID ->
             current.pendingExports.filterNot { it.id == attemptedID }
         } ?: current.pendingExports
@@ -229,14 +272,14 @@ class ScheduledProfileEntryStore @Inject constructor(
     suspend fun beginLegacyMigration(entry: ScheduledProfileEntry): Boolean {
         var persisted = false
         dataStore.edit { prefs ->
-            val existing = decode(prefs[Keys.ENTRIES]) ?: return@edit
+            val existing = decode(prefs[Keys.ENTRIES], prefs[Keys.MINUTE_INTENT]) ?: return@edit
             if (
                 existing.isNotEmpty() ||
                 entry.profileId in prefs[SharedSetupV2ProfilePersistence.blockedProfileIdsKey].orEmpty()
             ) {
                 return@edit
             }
-            prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, listOf(entry))
+            persist(prefs, listOf(entry))
             prefs[Keys.LEGACY_MIGRATION_PENDING_PROFILE_ID] = entry.profileId
             persisted = true
         }
@@ -266,9 +309,26 @@ class ScheduledProfileEntryStore @Inject constructor(
     private fun latest(first: Long?, second: Long?): Long? =
         listOfNotNull(first, second).maxOrNull()
 
-    private fun decode(raw: String?): List<ScheduledProfileEntry>? {
+    private fun persist(prefs: MutablePreferences, entries: List<ScheduledProfileEntry>) {
+        prefs[Keys.MINUTE_INTENT] = JsonObject(entries.mapNotNull { entry ->
+            entry.todayRefreshIntervalMinutes?.let { entry.profileId to JsonPrimitive(it) }
+        }.toMap()).toString()
+        prefs[Keys.ENTRIES] = json.encodeToString(listSerializer, entries)
+    }
+
+    private fun decode(raw: String?, archived: String? = null): List<ScheduledProfileEntry>? {
         if (raw.isNullOrBlank()) return emptyList()
-        return runCatching { json.decodeFromString(listSerializer, raw) }.getOrElse { error ->
+        return runCatching {
+            val decoded = json.decodeFromString(listSerializer, raw)
+            val objects = json.parseToJsonElement(raw) as JsonArray
+            val choices = archived?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
+            decoded.mapIndexed { index, entry ->
+                val minutes = choices?.get(entry.profileId)?.jsonPrimitive?.intOrNull
+                if (objects[index].jsonObject["todayRefreshPersistenceVersion"] == null &&
+                    !entry.todayRefreshEnabled && minutes in listOf(30, 60)
+                ) entry.copy(todayRefreshIntervalMinutes = minutes) else entry
+            }
+        }.getOrElse { error ->
             Timber.e(error, "Scheduled profile entries failed to decode; blocking entry writes")
             null
         }

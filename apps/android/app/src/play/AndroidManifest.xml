@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
+        <activity android:name=".presentation.MainActivity" android:launchMode="singleTop" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="healthmd" android:host="myself" android:path="/claim" />
+            </intent-filter>
+        </activity>
         <!-- OAuth redirect callback for direct cloud health providers. -->
         <activity
             android:name=".presentation.oauth.OAuthCallbackActivity"

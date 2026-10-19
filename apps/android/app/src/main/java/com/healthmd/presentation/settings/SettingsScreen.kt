@@ -47,6 +47,7 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
     protectionSettingsRequestId: Long? = null,
     onNavigateToPaywall: () -> Unit = {},
+    onNavigateToMyselfClaim: () -> Unit = {},
     onNavigateToExportProfiles: () -> Unit = {},
     onNavigateToClinicianReport: () -> Unit = {},
     onNavigateToDirectCli: () -> Unit = {},
@@ -121,6 +122,16 @@ fun SettingsScreen(
         Spacer(modifier = Modifier.height(Spacing.sm))
 
         GoogleDriveSettingsCard()
+        if (distributionPolicy.purchasesAvailable) {
+            SettingsNavigationCard(
+                title = stringResource(R.string.myself_claim_entry),
+                subtitle = stringResource(R.string.myself_claim_entry_subtitle),
+                icon = Icons.Outlined.WorkspacePremium,
+                onClick = onNavigateToMyselfClaim,
+                modifier = Modifier.testTag("settings_myself_claim"),
+            )
+        }
+
         WidgetSettingsCard()
         if (distributionPolicy.wearSyncAvailable) {
             DistributionWearSettingsCard()

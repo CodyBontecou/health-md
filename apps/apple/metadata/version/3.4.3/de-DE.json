@@ -1,0 +1,3 @@
+{
+  "whatsNew": "Health.md 3.4.3 verbessert die Wiederherstellung von Exportzeitplänen und macht Hinweise zu kostenlosen Exporten klarer.\n\n• Zeitpläne für Exportprofile stellen ihre Mitteilungen beim erneuten Öffnen der App wieder her und vermeiden doppelte Nachholversuche.\n• Die Einrichtung geplanter Mitteilungen und die Wiederherstellung nach vorübergehenden Zustellfehlern wurden verbessert.\n• Upgrade-Hinweise zeigen korrekt an, wie viele kostenlose Exporte du bereits genutzt hast."
+}

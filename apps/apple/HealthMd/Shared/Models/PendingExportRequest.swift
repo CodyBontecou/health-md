@@ -34,6 +34,10 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
     let profileName: String?
     /// Frozen Drive destination ID/fingerprint only. No account, folder, resource key or token.
     let googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot?
+    /// Local runtime authority, not part of the exported health-data contract.
+    let recoveryGeneration: Int
+    let scheduleEnabledAt: Date?
+    let apiDestinationIdentity: ScheduledAPIEndpointIdentity?
     /// When a scheduled run attempted this request and preserved unresolved
     /// dates for retry. An attempted request is a preserved retry: bulk
     /// fallback re-arm cancellation must never delete it (only its exact-ID
@@ -78,6 +82,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         profileID: UUID? = nil,
         profileName: String? = nil,
         googleDriveDestinationSnapshot: GoogleDriveDestinationSnapshot? = nil,
+        recoveryGeneration: Int = 0,
+        scheduleEnabledAt: Date? = nil,
+        apiDestinationIdentity: ScheduledAPIEndpointIdentity? = nil,
         attemptedAt: Date? = nil,
         calendar: Calendar = .current
     ) {
@@ -104,6 +111,9 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         self.profileID = source == .scheduled ? profileID : nil
         self.profileName = source == .scheduled ? profileName : nil
         self.googleDriveDestinationSnapshot = source == .scheduled ? googleDriveDestinationSnapshot : nil
+        self.recoveryGeneration = source == .scheduled ? recoveryGeneration : 0
+        self.scheduleEnabledAt = source == .scheduled ? scheduleEnabledAt : nil
+        self.apiDestinationIdentity = source == .scheduled ? apiDestinationIdentity : nil
         self.attemptedAt = source == .scheduled ? attemptedAt : nil
     }
 
@@ -141,6 +151,13 @@ struct PendingExportRequest: Codable, Equatable, Identifiable {
         googleDriveDestinationSnapshot = try container.decodeIfPresent(
             GoogleDriveDestinationSnapshot.self,
             forKey: .googleDriveDestinationSnapshot
+        )
+        recoveryGeneration = try container.decodeIfPresent(Int.self, forKey: .recoveryGeneration) ?? 0
+        scheduleEnabledAt = try container.decodeIfPresent(Date.self, forKey: .scheduleEnabledAt)
+        // Legacy API work lacks proof of its original destination. Do not synthesize it
+        // from mutable preferences on resume; execution will fail closed.
+        apiDestinationIdentity = try container.decodeIfPresent(
+            ScheduledAPIEndpointIdentity.self, forKey: .apiDestinationIdentity
         )
         // Pre-marker persisted requests decode as never-attempted; the
         // fallback-window heuristic covers those during migration.
@@ -224,6 +241,7 @@ struct PendingExportStore: PendingExportStoring {
             && existing.scheduledFireDate == request.scheduledFireDate
             && existing.scheduledKind == request.scheduledKind
             && existing.profileID == request.profileID
+            && existing.recoveryGeneration == request.recoveryGeneration
             && request.scheduledFireDate != nil
     }
 

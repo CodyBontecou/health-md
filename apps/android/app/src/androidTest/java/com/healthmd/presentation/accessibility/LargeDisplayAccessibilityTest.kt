@@ -3,6 +3,7 @@ package com.healthmd.presentation.accessibility
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Bitmap
+import android.util.Log
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.compose.foundation.background
@@ -35,6 +36,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsAnimationCompat
+import androidx.core.view.WindowInsetsCompat
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.UiDevice
@@ -60,6 +64,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -69,9 +74,12 @@ import java.io.File
 
 /** Real Compose measurements and pointer taps; no health, storage, or billing side effects. */
 @RunWith(Parameterized::class)
-class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
+class LargeDisplayAccessibilityTest(private val display: AccessibilityDisplayCase) {
     @get:Rule
     val compose = createAndroidComposeRule<ComponentActivity>()
+
+    // Accessed only by native callbacks and runOnUiThread below.
+    private val activeImeAnimations = mutableSetOf<WindowInsetsAnimationCompat>()
 
     @Before
     fun keepTestActivityAwake() {
@@ -81,19 +89,38 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
             it.setShowWhenLocked(true)
             it.setTurnScreenOn(true)
             it.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            ViewCompat.setWindowInsetsAnimationCallback(
+                it.window.decorView,
+                object : WindowInsetsAnimationCompat.Callback(DISPATCH_MODE_CONTINUE_ON_SUBTREE) {
+                    override fun onPrepare(animation: WindowInsetsAnimationCompat) {
+                        if (animation.typeMask and WindowInsetsCompat.Type.ime() != 0) {
+                            activeImeAnimations += animation
+                        }
+                    }
+
+                    override fun onProgress(
+                        insets: WindowInsetsCompat,
+                        runningAnimations: MutableList<WindowInsetsAnimationCompat>,
+                    ): WindowInsetsCompat = insets
+
+                    override fun onEnd(animation: WindowInsetsAnimationCompat) {
+                        activeImeAnimations -= animation
+                    }
+                },
+            )
         }
         compose.waitUntil(timeoutMillis = 10_000) {
             compose.activity.window.decorView.hasWindowFocus()
         }
     }
 
-    data class DisplayCase(
-        val width: Int,
-        val height: Int,
-        val fontScale: Float,
-        val language: String = "en",
-        val dark: Boolean = false,
-    )
+    @After
+    fun releaseKeyboardObserver() {
+        compose.runOnUiThread {
+            ViewCompat.setWindowInsetsAnimationCallback(compose.activity.window.decorView, null)
+            activeImeAnimations.clear()
+        }
+    }
 
     companion object {
         private const val VIEWPORT = "accessibility.viewport"
@@ -101,18 +128,7 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
 
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun displays() = listOf(
-            DisplayCase(411, 720, 1f),
-            DisplayCase(320, 640, 1f), // enlarged display with the default font setting
-            DisplayCase(320, 480, 1.3f),
-            DisplayCase(320, 480, 2f),
-            DisplayCase(320, 640, 2f),
-            DisplayCase(568, 280, 2f),
-            DisplayCase(640, 280, 2f),
-            DisplayCase(320, 480, 2f, language = "de", dark = true),
-            DisplayCase(320, 480, 2f, language = "ar", dark = true),
-            DisplayCase(320, 640, 2f, language = "ja"), // period-before-hour locale
-        ).map { arrayOf(it) }
+        fun displays() = accessibilityDisplays()
     }
 
     private fun configuration(base: Configuration) = Configuration(base).apply {
@@ -467,22 +483,30 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
     fun scheduleFieldsFitLocalizedValuesAndCommitKeyboardEdits() {
         val state = mutableStateOf(ScheduleUiState(cadenceValue = 99999, lookbackDays = 365))
         compose.setContent {
-            TestViewport {
-                Column(Modifier.fillMaxSize().background(AppColors.bgPrimary).imePadding()
-                    .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
-                    ScheduleSettingsCard(
-                        uiState = state.value,
-                        onFrequencyValueChange = { state.value = state.value.copy(cadenceValue = it) },
-                        onFrequencyUnitSelected = { state.value = state.value.copy(cadenceUnit = it) },
-                        onHourDelta = {}, onMinuteDelta = {}, onTogglePeriod = {},
-                        onDateWindowSelected = { state.value = state.value.copy(dateWindow = it) },
-                        onLookbackDelta = { state.value = state.value.copy(lookbackDays = state.value.lookbackDays + it) },
-                    )
+            // Consume physical IME insets at native density, then fit the
+            // synthetic viewport into the remaining host. Applying imePadding
+            // inside the scaled viewport can consume all 280 dp of a short case.
+            Box(Modifier.fillMaxSize().imePadding()) {
+                TestViewport {
+                    Column(Modifier.fillMaxSize().background(AppColors.bgPrimary)
+                        .verticalScroll(rememberScrollState()).padding(Spacing.md)) {
+                        ScheduleSettingsCard(
+                            uiState = state.value,
+                            onFrequencyValueChange = { state.value = state.value.copy(cadenceValue = it) },
+                            onFrequencyUnitSelected = { state.value = state.value.copy(cadenceUnit = it) },
+                            onHourDelta = {}, onMinuteDelta = {}, onTogglePeriod = {},
+                            onDateWindowSelected = { state.value = state.value.copy(dateWindow = it) },
+                            onLookbackDelta = { state.value = state.value.copy(lookbackDays = state.value.lookbackDays + it) },
+                        )
+                    }
                 }
             }
         }
         capture("schedule-fields")
-        val field = compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_VALUE)
+        // This unique editor tag does not require descendant semantics merging.
+        // Keep lookup from merging live text-field children on the test thread
+        // while Android is delivering keyboard/layout updates.
+        val field = compose.onNodeWithTag(ScheduleControlTags.FREQUENCY_VALUE, useUnmergedTree = true)
         field.performScrollTo().assertFullyVisible().assertMinimumTouchTarget()
         assertTextFits(field, GeistType.label20Mono.fontSize)
         val context = ApplicationProvider.getApplicationContext<Context>()
@@ -495,21 +519,33 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.onNodeWithTag(ScheduleControlTags.HOUR).assertDoesNotExist()
 
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement(formatInteger(7, locale))
         compose.runOnIdle { assertEquals("Don't persist a below-minimum partial edit", 99999, state.value.cadenceValue) }
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         compose.runOnIdle { assertEquals(15, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(15, locale))
 
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement("")
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         field.assertTextContains(formatInteger(15, locale))
         field.performScrollTo().performTouchInput { click() }
+        awaitNativeKeyboardVisibility(true)
+        field.performScrollTo().assertFullyVisible()
         field.performTextReplacement(formatInteger(123456, locale))
         field.performImeAction()
+        awaitNativeKeyboardVisibility(false)
         compose.runOnIdle { assertEquals("Retain the five-digit limit", 12345, state.value.cadenceValue) }
         field.assertTextContains(formatInteger(12345, locale))
+        // Keyboard dismissal can change the short viewport and its scroll offset.
+        // Measure the editor only after bringing it back into view, as above.
+        field.performScrollTo().assertFullyVisible()
         assertTextFits(field, GeistType.label20Mono.fontSize)
 
         val dates = compose.onNodeWithTag(ScheduleControlTags.DATE_WINDOW)
@@ -596,6 +632,44 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.runOnIdle { assertEquals(1, changed); assertEquals(1, blocked) }
     }
 
+    /** Wait on the real window owner; Compose idle does not settle platform IME animations. */
+    private fun awaitNativeKeyboardVisibility(expectedVisible: Boolean) {
+        var rejectedAnimationFrames = 0
+        var nativeFacts = "insets unavailable"
+        var editorCount = 0
+        try {
+            compose.waitUntil(timeoutMillis = 10_000) {
+                val nativeReady = compose.runOnUiThread {
+                    val insets = ViewCompat.getRootWindowInsets(compose.activity.window.decorView)
+                    val ime = WindowInsetsCompat.Type.ime()
+                    val bottom = insets?.getInsets(ime)?.bottom
+                    val visible = insets?.isVisible(ime)
+                    val visibilityMatches = visible == expectedVisible && bottom != null &&
+                        (if (expectedVisible) bottom > 0 else bottom == 0)
+                    if (visibilityMatches && activeImeAnimations.isNotEmpty()) rejectedAnimationFrames++
+                    nativeFacts = "visible=$visible, bottom=$bottom, activeAnimations=${activeImeAnimations.size}"
+                    visibilityMatches && activeImeAnimations.isEmpty()
+                }
+                // An IME resize can replace the fitted viewport's semantics between
+                // native visibility and the next Compose layout. Query the unmerged
+                // unique tag without invoking missing-node tree diagnostics.
+                if (nativeReady) {
+                    editorCount = compose.onAllNodesWithTag(
+                        ScheduleControlTags.FREQUENCY_VALUE, useUnmergedTree = true,
+                    ).fetchSemanticsNodes(atLeastOneRootRequired = false).size
+                }
+                nativeReady && editorCount == 1
+            }
+        } catch (failure: ComposeTimeoutException) {
+            throw AssertionError(
+                "Native keyboard did not settle: expectedVisible=$expectedVisible, $nativeFacts, editorCount=$editorCount",
+                failure,
+            )
+        }
+        compose.waitForIdle()
+        Log.i("HealthMdImeReadiness", "expectedVisible=$expectedVisible, rejectedAnimationFrames=$rejectedAnimationFrames")
+    }
+
     private fun selectMenuItem(label: String) {
         val itemMatcher = hasText(label) and hasClickAction() and hasAnyAncestor(isPopup())
         // The popup is a separate native owner and can attach just after the anchor action's
@@ -617,7 +691,9 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         val results = mutableListOf<TextLayoutResult>()
         node.performSemanticsAction(SemanticsActions.GetTextLayoutResult) { it(results) }
         assertTrue("Expected measured text", results.isNotEmpty())
-        val visibleWidth = node.fetchSemanticsNode().boundsInRoot.width
+        val semanticsNode = node.fetchSemanticsNode()
+        // Geometry can observe layout state; read it on the Android owner thread.
+        val visibleWidth = compose.runOnIdle { semanticsNode.boundsInRoot.width }
         results.forEach { result ->
             assertEquals("Respect the chosen font scale", display.fontScale, result.layoutInput.density.fontScale)
             if (expectedFontSize != null) assertEquals(expectedFontSize, result.layoutInput.style.fontSize)
@@ -688,7 +764,7 @@ class LargeDisplayAccessibilityTest(private val display: DisplayCase) {
         compose.waitUntil(timeoutMillis = 10_000) { isDisplayed() }
         assertIsDisplayed()
         val bounds = getUnclippedBoundsInRoot()
-        val viewport = compose.onNodeWithTag(VIEWPORT).getUnclippedBoundsInRoot()
+        val viewport = compose.onNodeWithTag(VIEWPORT, useUnmergedTree = true).getUnclippedBoundsInRoot()
         val tolerance = 1.dp
         assertTrue("Control has no width: $bounds", bounds.right > bounds.left)
         assertTrue("Control has no height: $bounds", bounds.bottom > bounds.top)

@@ -3,7 +3,7 @@ import XCTest
 @testable import HealthMd
 
 final class HealthKitQueryExecutionTests: XCTestCase {
-    private final class LockedCounter: @unchecked Sendable {
+    nonisolated private final class LockedCounter: @unchecked Sendable {
         private let lock = NSLock()
         private var storage = 0
 
@@ -18,6 +18,40 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             let value = storage
             lock.unlock()
             return value
+        }
+    }
+
+    /// The test releases physical completion after observing logical timeout;
+    /// scheduler delays cannot accidentally turn "still outstanding" into done.
+    nonisolated private final class ControlledQuery: @unchecked Sendable {
+        private let lock = NSLock()
+        private var continuation: CheckedContinuation<Int, Never>?
+        private var result: Int?
+
+        func value() async -> Int {
+            await withCheckedContinuation { continuation in
+                lock.lock()
+                if let result {
+                    lock.unlock()
+                    continuation.resume(returning: result)
+                } else {
+                    self.continuation = continuation
+                    lock.unlock()
+                }
+            }
+        }
+
+        func complete() {
+            lock.lock()
+            guard result == nil else {
+                lock.unlock()
+                return
+            }
+            result = 42
+            let continuation = self.continuation
+            self.continuation = nil
+            lock.unlock()
+            continuation?.resume(returning: 42)
         }
     }
 
@@ -73,6 +107,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
             configuration: configuration(deadlineMilliseconds: 25)
         )
         let physicalCompletions = LockedCounter()
+        let physicalQuery = ControlledQuery()
         let startedAt = ContinuousClock.now
 
         do {
@@ -81,11 +116,9 @@ final class HealthKitQueryExecutionTests: XCTestCase {
                     operation: "testTimeout",
                     typeIdentifier: "test.type"
                 ) {
-                    await self.delayedValue(
-                        42,
-                        milliseconds: 150,
-                        completionCounter: physicalCompletions
-                    )
+                    let result = await physicalQuery.value()
+                    physicalCompletions.increment()
+                    return result
                 }
             }
             XCTFail("Expected timeout")
@@ -97,6 +130,7 @@ final class HealthKitQueryExecutionTests: XCTestCase {
 
         XCTAssertLessThan(milliseconds(from: startedAt), 300)
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
+        physicalQuery.complete()
         let physicalWorkerReleased = await waitUntil {
             physicalCompletions.value == 1 && controller.snapshot().unresolvedQueries == 0
         }
@@ -135,6 +169,67 @@ final class HealthKitQueryExecutionTests: XCTestCase {
         XCTAssertEqual(physicalCompletions.value, 1)
         XCTAssertEqual(controller.snapshot().activeQueries, 0)
         XCTAssertEqual(controller.snapshot().unresolvedQueries, 0)
+    }
+
+    func testBlockedDiagnosticsDoNotDelayDeadlineOrReleasePhysicalOwnership() async {
+        for blockedOutcome in ["start", "slow", "timeout"] {
+            let observed = LockedCounter()
+            let controller = HealthKitQueryExecutionController(
+                configuration: configuration(deadlineMilliseconds: 25),
+                diagnosticSink: { _, _, _, outcome in
+                    if outcome == blockedOutcome {
+                        observed.increment()
+                        Thread.sleep(forTimeInterval: 0.5)
+                    }
+                }
+            )
+            let physicalCompletions = LockedCounter()
+            let physicalQuery = ControlledQuery()
+            let startedAt = ContinuousClock.now
+            do {
+                _ = try await HealthKitQueryExecutionController.withController(controller) {
+                    try await executeHealthKitQuery(operation: "blockedDiagnostic", typeIdentifier: "synthetic") {
+                        let result = await physicalQuery.value()
+                        physicalCompletions.increment()
+                        return result
+                    }
+                }
+                XCTFail("Expected timeout with blocked \(blockedOutcome) diagnostic")
+            } catch {
+                XCTAssertEqual((error as NSError).domain, HealthKitQueryExecutionError.domain)
+                XCTAssertEqual((error as NSError).code, HealthKitQueryExecutionError.Code.timedOut.rawValue)
+            }
+            XCTAssertLessThan(milliseconds(from: startedAt), 300, "Blocked \(blockedOutcome) diagnostic")
+            XCTAssertEqual(controller.snapshot().unresolvedQueries, 1)
+            physicalQuery.complete()
+            let finished = await waitUntil(timeoutMilliseconds: 1_500) {
+                observed.value == 1 && physicalCompletions.value == 1 && controller.snapshot().unresolvedQueries == 0
+            }
+            XCTAssertTrue(finished, "The actual worker must complete exactly once after \(blockedOutcome)")
+        }
+    }
+
+    func testBlockedCompletionDiagnosticDoesNotDelaySuccessfulCaller() async throws {
+        let observed = LockedCounter()
+        let controller = HealthKitQueryExecutionController(
+            configuration: configuration(deadlineMilliseconds: 25),
+            diagnosticSink: { _, _, _, outcome in
+                if outcome == "completion" {
+                    observed.increment()
+                    Thread.sleep(forTimeInterval: 0.5)
+                }
+            }
+        )
+        let startedAt = ContinuousClock.now
+        let value = try await HealthKitQueryExecutionController.withController(controller) {
+            try await executeHealthKitQuery(operation: "blockedCompletion", typeIdentifier: "synthetic") { 42 }
+        }
+        XCTAssertEqual(value, 42)
+        XCTAssertLessThan(milliseconds(from: startedAt), 300)
+        XCTAssertEqual(controller.snapshot().activeQueries, 0)
+        XCTAssertEqual(controller.snapshot().unresolvedQueries, 0)
+        let emitted = await waitUntil { observed.value == 1 }
+        XCTAssertTrue(emitted)
     }
 
     func testSameOperationAndTypeCircuitFailsFastWithoutInvokingAgain() async {
