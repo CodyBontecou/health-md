@@ -354,10 +354,12 @@ struct PartialExportNoticeToast: View {
                 ]
                 : [.action("OK", role: .secondary)]
         )
-        .task(id: notice?.id) {
-            guard notice != nil else { return }
+        // Opening the dialog cancels the toast's expiry. Permission guidance
+        // stays available until the user chooses an action or dismisses it.
+        .task(id: presentedNotice == nil ? notice?.id : nil) {
+            guard notice != nil, presentedNotice == nil else { return }
             try? await Task.sleep(for: .seconds(8))
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled, presentedNotice == nil else { return }
             clearNotice()
         }
     }
