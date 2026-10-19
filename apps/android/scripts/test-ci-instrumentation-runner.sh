@@ -17,7 +17,6 @@ printf '%s\n' "$*" >> "$MOCK_CALLS"
 case "$*" in
     *RunnerArguments.class=*) exit "${MOCK_FOCUS_EXIT:-0}" ;;
     *:healthmd-core:connectedDebugAndroidTest*|*:app:connectedPlayDebugAndroidTest*) exit "${MOCK_PLAY_EXIT:-0}" ;;
-    *:app:connectedFdroidDebugAndroidTest*) exit "${MOCK_FDROID_EXIT:-0}" ;;
     *) exit 19 ;;
 esac
 MOCK
@@ -55,26 +54,22 @@ run_case() {
 
 DIAGNOSTICS='-Pandroid.testInstrumentationRunnerArguments.healthmd.ciInputDiagnostics=false'
 export GITHUB_ACTIONS=false
-FOCUS_COMMAND=':app:connectedFdroidDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.accessibility.NativeInputReadinessTest --stacktrace'
+FOCUS_COMMAND=':app:connectedPlayDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.accessibility.NativeInputReadinessTest --stacktrace'
 
 PLAY_COMMAND=':healthmd-core:connectedDebugAndroidTest :app:connectedPlayDebugAndroidTest --stacktrace'
-FDROID_COMMAND=':app:connectedFdroidDebugAndroidTest --stacktrace'
-SMOKE_COMMAND=':app:connectedFdroidDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.healthmd.accessibility.matrix=smoke --stacktrace'
 
 FOCUS_COMMAND="$DIAGNOSTICS $FOCUS_COMMAND"
 
 PLAY_COMMAND="$DIAGNOSTICS $PLAY_COMMAND"
 
-FDROID_COMMAND="$DIAGNOSTICS $FDROID_COMMAND"
 
-SMOKE_COMMAND="$DIAGNOSTICS $SMOKE_COMMAND"
 
 run_case standard 0
-printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$SMOKE_COMMAND" > "$TEST_ROOT/expected"
+printf '%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 
 run_case full 0
-printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$FDROID_COMMAND" > "$TEST_ROOT/expected"
+printf '%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 
 run_case '' 2
@@ -83,7 +78,7 @@ run_case '' 2
 : > "$MOCK_CALLS"
 env -u HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX bash "$TEST_ROOT/android/scripts/run-ci-instrumentation.sh"
 CASES=$((CASES + 1))
-printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$FDROID_COMMAND" > "$TEST_ROOT/expected"
+printf '%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 
 run_case smoke 2
@@ -114,12 +109,6 @@ printf '%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" > "$TEST_ROOT/expected"
 cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 unset MOCK_PLAY_EXIT
 
-export MOCK_FDROID_EXIT=24
-run_case standard 24
-printf '%s\n%s\n%s\n' "$FOCUS_COMMAND" "$PLAY_COMMAND" "$SMOKE_COMMAND" > "$TEST_ROOT/expected"
-cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
-
-unset MOCK_FDROID_EXIT
 for shard in 0 1 2 3; do
     export HEALTHMD_ANDROID_SHARD_INDEX="$shard" HEALTHMD_ANDROID_SHARD_COUNT=4
     run_case full 0
@@ -128,12 +117,11 @@ for shard in 0 1 2 3; do
         printf '%s\n' "$DIAGNOSTICS :healthmd-core:connectedDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
     fi
     FLAGS="-Pandroid.testInstrumentationRunnerArguments.numShards=4 -Pandroid.testInstrumentationRunnerArguments.shardIndex=$shard"
-    printf '%s\n' "$DIAGNOSTICS $FLAGS :app:connectedPlayDebugAndroidTest --stacktrace" \
-        "$DIAGNOSTICS $FLAGS :app:connectedFdroidDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
+    printf '%s\n' "$DIAGNOSTICS $FLAGS :app:connectedPlayDebugAndroidTest --stacktrace" >> "$TEST_ROOT/expected"
     cmp "$TEST_ROOT/expected" "$MOCK_CALLS"
 done
 run_case standard 0
-grep -q "numShards=4.*shardIndex=3.*healthmd.accessibility.matrix=smoke" "$MOCK_CALLS"
+grep -q "numShards=4.*shardIndex=3.*connectedPlayDebugAndroidTest" "$MOCK_CALLS"
 export MOCK_PLAY_EXIT=23
 run_case full 23
 [[ $(wc -l < "$MOCK_CALLS") -eq 2 ]]

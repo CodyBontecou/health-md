@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
-# Keep flavor-specific instrumentation while avoiding a second full display matrix.
+# Run instrumentation for the distributed Play phone app and shared core.
 set -euo pipefail
 
 if [[ $# -ne 0 ]]; then
     echo "Usage: HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX=standard|full $0" >&2
     exit 2
 fi
-# Standalone/manual use stays complete. CI must explicitly request the reduced
-# PR matrix; an empty selection must not silently weaken qualification.
+# Retain the CI mode interface; both modes now run the complete Play matrix.
+# An empty or invalid selection still fails.
 MATRIX="${HEALTHMD_ANDROID_ACCESSIBILITY_MATRIX-full}"
 case "$MATRIX" in
     standard|full) ;;
@@ -56,7 +56,7 @@ CI_INPUT_DIAGNOSTICS="-Pandroid.testInstrumentationRunnerArguments.healthmd.ciIn
 
 # Fail early on the actual native input admission contract. A focus blocker
 # otherwise repeats through hundreds of fixture tests before surfacing.
-./gradlew "$CI_INPUT_DIAGNOSTICS" :app:connectedFdroidDebugAndroidTest \
+./gradlew "$CI_INPUT_DIAGNOSTICS" :app:connectedPlayDebugAndroidTest \
     -Pandroid.testInstrumentationRunnerArguments.class=com.healthmd.presentation.accessibility.NativeInputReadinessTest \
     --stacktrace
 
@@ -71,19 +71,4 @@ else
     ./gradlew "$CI_INPUT_DIAGNOSTICS" "${SHARD_ARGS[@]}" :app:connectedPlayDebugAndroidTest --stacktrace
 fi
 
-run_app_tests() {
-    if [[ ${HEALTHMD_ANDROID_SHARD_COUNT+x} == x ]]; then
-        ./gradlew "$CI_INPUT_DIAGNOSTICS" "${SHARD_ARGS[@]}" "$@" --stacktrace
-    else
-        ./gradlew "$CI_INPUT_DIAGNOSTICS" "$@" --stacktrace
-    fi
-}
-
-# The scope argument is confined to this separate invocation. Full qualification
-# omits it so both flavors exercise all ten viewports, just like standalone runs.
-if [[ "$MATRIX" == standard ]]; then
-    run_app_tests :app:connectedFdroidDebugAndroidTest \
-        -Pandroid.testInstrumentationRunnerArguments.healthmd.accessibility.matrix=smoke
-else
-    run_app_tests :app:connectedFdroidDebugAndroidTest
-fi
+# F-Droid instrumentation is paused while that build is not distributed.

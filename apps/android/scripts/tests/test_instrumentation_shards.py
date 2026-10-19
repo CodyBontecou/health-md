@@ -17,7 +17,7 @@ class ShardReportTests(unittest.TestCase):
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)
         for index in range(4):
-            for kind in ('play', 'fdroid') + (('core', 'direct_e2e') if index == 0 else ()):
+            for kind in ('play',) + (('core', 'direct_e2e') if index == 0 else ()):
                 self.report(index, kind)
 
     def report(self, index, kind, *, name=None, failed=False, skipped=False, count=1):
@@ -40,11 +40,11 @@ class ShardReportTests(unittest.TestCase):
     def test_full_distinct_union_and_skips_are_retained(self):
         self.report(2, 'play', skipped=True)
         result = shards.verify(self.root, '12', '1')
-        self.assertEqual((10, 9, 1), (result['tests'], result['passed'], result['skipped']))
+        self.assertEqual((6, 5, 1), (result['tests'], result['passed'], result['skipped']))
         self.assertEqual({0, 1, 2, 3}, {x['shard'] for x in result['cases']})
 
     def test_missing_artifact_report_or_required_group_fails(self):
-        for kind in ('play', 'fdroid', 'core', 'direct_e2e'):
+        for kind in ('play', 'core', 'direct_e2e'):
             with self.subTest(kind=kind):
                 p = self.report(0, kind)
                 data = p.read_bytes()

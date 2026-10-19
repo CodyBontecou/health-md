@@ -55,7 +55,7 @@ test-apple:
 	  MACOS_DERIVED_DATA_DIR="$(APPLE_TEST_DERIVED_DATA_DIR)/macos"
 
 test-android:
-	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew test $(ANDROID_TEST_ARGS)
+	cd apps/android && ANDROID_HOME="$(ANDROID_HOME)" ./gradlew :app:testPlayDebugUnitTest :app:testPlayReleaseUnitTest :app:testPlayE2eUnitTest :healthmd-core:testDebugUnitTest :wearable-contract:test :direct-protocol:test $(ANDROID_TEST_ARGS)
 
 test-cli:
 	cd apps/cli && cargo test --workspace --all-features

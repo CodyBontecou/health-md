@@ -38,51 +38,40 @@ pushes, manual runs, and reusable/exact-SHA qualification retain every job.
 
 ## Android CI selection and accessibility coverage
 
-On pull requests, `apps/android/scripts/android-ci-plan.py` selects the Android jobs
-that consume the changed files. Phone sources keep both distribution flavors and
-phone instrumentation; Wear sources keep JVM and Wear emulator checks; CLI source
-changes keep phone instrumentation and live Rust/Kotlin interop. Shared contracts,
-shared Rust core, build configuration, and CI infrastructure retain every consumer.
-Documentation and release tooling use the lightweight policy job, with JVM tests
-also retained for files read by source/document contract assertions. New
-unclassified shared or Android paths run all jobs until their consumers are reviewed.
+On pull requests, `apps/android/scripts/android-ci-plan.py` selects the active Android
+jobs that consume changed files. Phone sources keep Play JVM tests and phone
+instrumentation; CLI changes keep instrumentation and live Rust/Kotlin interop.
+Shared contracts, shared Rust core, build configuration, and CI infrastructure
+retain every active consumer. Documentation and release tooling use the lightweight
+policy job, with JVM tests retained for source/document contract assertions.
+
+F-Droid and Wear builds are not currently distributed, so their CI jobs remain
+paused for all events, including push, manual, and reusable/release qualification.
+The planner emits `false` for those jobs and the final gate requires them to be
+skipped. The main JVM job does not build or test Wear. Shared wearable-contract
+JVM tests remain active because the phone consumes that module. Explicit build
+and release tooling remains available for future qualification.
 
 The planner paginates the PR files API, includes rename sources, and verifies the
 event's head/base revisions and file count before and after pagination. Incomplete
-or changing results run every job and both full display matrices. The final gate
-accepts a skipped job only when its selection output explicitly says `false`;
-selected jobs must succeed. The policy job's listing validator discovers every
-`scripts/tests/test_*.py`, including routing and gate regressions.
+or changing results run every active job. Selected jobs must succeed; a skipped
+job is accepted only when its selection output explicitly says `false`. The policy
+job's listing validator discovers every `scripts/tests/test_*.py`.
 
-Phone instrumentation runs in four AndroidJUnitRunner shards on independent
-hosted emulators. Each shard runs its assigned Play and F-Droid cases; shard zero
-also runs the complete core suite and direct CLI E2E. The native input readiness
-check runs unsharded before each worker's suites. Local invocations remain complete
-and unsharded unless both `HEALTHMD_ANDROID_SHARD_INDEX` and
-`HEALTHMD_ANDROID_SHARD_COUNT` are explicitly supplied.
+Phone instrumentation retains four hosted shards. Shard zero also runs the core
+suite and direct E2E; every shard runs the native-input readiness check using Play.
+The stable instrumentation gate validates the combined Play/core/E2E XML inventory.
+Local runs remain unsharded unless shard index/count are explicitly supplied.
 
-The stable `Emulator instrumentation and direct E2E` job requires all four workers
-to succeed and validates their combined XML inventory. Missing artifacts, empty
-reports, duplicate cases, test failures, or missing flavor/core/E2E groups fail the
-gate. The existing `android-instrumentation-<run>-<attempt>` artifact contains each
-worker's reports in a separate directory and a combined `case-inventory.json`;
-matching XML filenames are never flattened or overwritten. Release qualification
-continues to require the stable job, and full qualification still selects both
-complete display matrices.
+Instrumentation runs every core and Play test method with the full ten-display
+accessibility matrix. The local `run-ci-instrumentation.sh` runner has the same
+Play-only scope. `make test-android` runs Play debug/release/E2E JVM tests plus
+shared core, wearable-contract, and direct-protocol tests.
 
-Ordinary PR instrumentation runs all test methods on both Play and F-Droid. Play
-uses the complete ten-display accessibility matrix. F-Droid uses a baseline English
-light display and a constrained large-font Arabic RTL dark display, avoiding 304
-repeated parameterized executions while retaining every method, channel-specific
-test, native-input check, shared-core smoke, and Direct CLI UI E2E. The scope argument
-is confined to a separate F-Droid Gradle invocation. Standalone accessibility runs
-continue to use all ten displays by default; invalid scope arguments fail.
-
-Main pushes, manual runs, and reusable/exact-SHA qualification run every job and
-both complete flavor matrices. Main pushes remain filtered at the workflow trigger.
-This preserves the exact push evidence consumed by Android release recovery and
-Wear qualification. Reusable calls default `full_qualification` to `true`, and a
-nonempty `release_sha` always forces complete qualification.
+Main pushes, manual runs, and reusable/exact-SHA qualification run every active
+job. Main pushes remain filtered at the workflow trigger. Reusable calls default
+`full_qualification` to `true`; a nonempty `release_sha` forces full active
+qualification. Phone release recovery requires only active CI jobs to succeed.
 
 `.github/actions/android-native-cache` caches pinned cargo-ndk, Cargo downloads,
 and the actual component build directories selected by each job. Keys include

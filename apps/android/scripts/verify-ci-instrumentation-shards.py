@@ -57,7 +57,7 @@ def verify(reports: Path, run_id: str, attempt: str) -> dict:
                 seen.add(key)
                 inventory.append({'kind': kind, 'class': key[1], 'name': key[2], 'shard': index,
                                   'result': 'skipped' if case.find('skipped') is not None else 'passed'})
-        required = {'play', 'fdroid', 'core', 'direct_e2e'} if index == 0 else {'play', 'fdroid'}
+        required = {'play', 'core', 'direct_e2e'} if index == 0 else {'play'}
         if groups != required:
             raise ValueError(f'Shard {index} report groups mismatch: expected={sorted(required)}, found={sorted(groups)}')
     return {'run_id': run_id, 'attempt': attempt, 'shards': SHARD_COUNT,
