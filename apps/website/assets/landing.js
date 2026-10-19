@@ -475,6 +475,34 @@
     });
   }
 
+  function setupTestimonials() {
+    var wall = document.querySelector("[data-testimonials]");
+    var button = document.querySelector(".testimonials-pause");
+    if (!wall || !button || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    wall.querySelectorAll(".testimonials-group").forEach(function (group) {
+      var copy = group.cloneNode(true);
+      copy.setAttribute("aria-hidden", "true");
+      copy.setAttribute("inert", "");
+      group.parentNode.appendChild(copy);
+    });
+    wall.classList.add("is-animated");
+    button.hidden = false;
+    button.addEventListener("click", function () {
+      var paused = wall.classList.toggle("is-paused");
+      button.setAttribute("aria-pressed", String(paused));
+      button.textContent = paused ? "Resume scrolling" : "Pause scrolling";
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        wall.classList.toggle("is-in-view", entries[0].isIntersecting);
+      }).observe(wall);
+    } else {
+      wall.classList.add("is-in-view");
+    }
+  }
+
+  setupTestimonials();
   setupThreadField();
   setupReveal();
   setupExportFormats();

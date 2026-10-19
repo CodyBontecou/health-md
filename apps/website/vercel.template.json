@@ -1,4 +1,10 @@
 {
+  "git": {
+    "deploymentEnabled": {
+      "**": false,
+      "main": true
+    }
+  },
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "trailingSlash": true,
