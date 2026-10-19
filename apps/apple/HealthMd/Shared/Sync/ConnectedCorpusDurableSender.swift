@@ -349,7 +349,13 @@ enum ConnectedCorpusDurableSender {
                     }
                     return .accepted
                 case .failure(let abort):
-                    if abort.reason == .cancelled { return .cancelled }
+                    if abort.reason == .cancelled {
+                        // SyncService also uses this transport abort for local coroutine
+                        // cancellation. Let the outer interruption handler pause that attempt;
+                        // only a peer/job cancellation may delete the durable checkpoint.
+                        try Task.checkCancellation()
+                        return .cancelled
+                    }
                     if isFatal(abort.reason) { return .rejected(abort.message) }
                     lastPauseMessage = abort.message
                     if attempt + 1 < configuration.maximumImmediateAttempts {

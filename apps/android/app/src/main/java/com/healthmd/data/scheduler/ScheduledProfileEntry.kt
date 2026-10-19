@@ -2,6 +2,10 @@ package com.healthmd.data.scheduler
 
 import com.healthmd.domain.model.ExportTarget
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.KSerializer
+import kotlinx.serialization.descriptors.SerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -54,7 +58,7 @@ data class ScheduledProfilePendingExport(
  * math works independently per profile. Cancellation residuals freeze the original profile
  * destination and output snapshot until their exact owner dates are resolved.
  */
-@Serializable
+@Serializable(with = ScheduledProfileEntrySerializer::class)
 data class ScheduledProfileEntry(
     val profileId: String,
     val isEnabled: Boolean = false,
@@ -71,8 +75,10 @@ data class ScheduledProfileEntry(
     val lookbackDays: Int = 1,
     /** Whether today's partial file is also refreshed during the day (iOS Today Refresh parity). */
     val todayRefreshEnabled: Boolean = false,
-    /** Hours between same-day refresh runs; Apple exposes the same {3, 6, 12} set. */
+    /** Shipped hour field remains 3/6/12; local v2 adds 30/60-minute intent separately. */
     val todayRefreshIntervalHours: Int = DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+    /** Local v2 minute intent. Legacy writers see refresh disabled, never a rounded schedule. */
+    val todayRefreshIntervalMinutes: Int? = null,
     val zoneId: String = "UTC",
     /** Latest satisfied completed-day boundary; deduplicates occurrences, not overlapping dates. */
     val lastSuccessEpochMillis: Long? = null,
@@ -80,6 +86,8 @@ data class ScheduledProfileEntry(
     val lastRefreshSuccessEpochMillis: Long? = null,
     /** Exact frozen residual groups left by interrupted or failed automated export attempts. */
     val pendingExports: List<ScheduledProfilePendingExport> = emptyList(),
+    /** Invalidates admitted work and its checkpoints after an explicit recovery discard. */
+    val recoveryGeneration: Long = 0,
 ) {
     init {
         require(lookbackDays in 1..30) { "Lookback must stay within 1..30." }
@@ -89,7 +97,20 @@ data class ScheduledProfileEntry(
         require(todayRefreshIntervalHours in TODAY_REFRESH_INTERVAL_OPTIONS) {
             "Today Refresh interval must be one of $TODAY_REFRESH_INTERVAL_OPTIONS hours."
         }
+        require(todayRefreshIntervalMinutes == null || todayRefreshIntervalMinutes in listOf(30, 60)) {
+            "Unsupported Today Refresh minute interval."
+        }
         require(ZoneId.of(zoneId).id == zoneId) { "Zone id must be canonical." }
+    }
+
+    val todayRefreshMinutes: Int get() = todayRefreshIntervalMinutes ?: todayRefreshIntervalHours * 60
+
+    fun withTodayRefreshMinutes(minutes: Int): ScheduledProfileEntry {
+        require(minutes in TODAY_REFRESH_MINUTE_OPTIONS)
+        return copy(
+            todayRefreshIntervalMinutes = minutes.takeIf { it < 180 },
+            todayRefreshIntervalHours = if (minutes >= 180) minutes / 60 else DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+        )
     }
 
     val zone: ZoneId get() = ZoneId.of(zoneId)
@@ -114,6 +135,7 @@ data class ScheduledProfileEntry(
 
     companion object {
         /** Same-day refresh interval options, mirroring iOS Today Refresh. */
+        val TODAY_REFRESH_MINUTE_OPTIONS = listOf(30, 60, 180, 360, 720)
         val TODAY_REFRESH_INTERVAL_OPTIONS: List<Int> = listOf(3, 6, 12)
         const val DEFAULT_TODAY_REFRESH_INTERVAL_HOURS = 3
 
@@ -121,6 +143,93 @@ data class ScheduledProfileEntry(
         fun clampTodayRefreshInterval(hours: Int): Int =
             TODAY_REFRESH_INTERVAL_OPTIONS.minByOrNull { kotlin.math.abs(it - hours) }
                 ?: DEFAULT_TODAY_REFRESH_INTERVAL_HOURS
+    }
+}
+
+
+/** Local wire v2 disables refresh for older readers while preserving every frozen residual. */
+@Serializable
+private data class ScheduledProfileEntryV2Wire(
+    val profileId: String,
+    val isEnabled: Boolean = false,
+    /** Anchor day establishing the repeating phase for custom cadences. */
+    val anchorEpochDay: Long,
+    /** ISO day-of-week for weekly entries (1 = Monday … 7 = Sunday). */
+    val weekdayIso: Int = 1,
+    val hour: Int = 8,
+    val minute: Int = 0,
+    val cadenceValue: Int = 1,
+    val cadenceUnit: ScheduledProfileCadenceUnit = ScheduledProfileCadenceUnit.DAY,
+    val dateWindow: ScheduledProfileDateWindow = ScheduledProfileDateWindow.PAST_COMPLETE_DAYS,
+    /** Days exported by one completed-day run. */
+    val lookbackDays: Int = 1,
+    /** Whether today's partial file is also refreshed during the day (iOS Today Refresh parity). */
+    val todayRefreshEnabled: Boolean = false,
+    /** Shipped hour field remains 3/6/12; local v2 adds 30/60-minute intent separately. */
+    val todayRefreshIntervalHours: Int = ScheduledProfileEntry.DEFAULT_TODAY_REFRESH_INTERVAL_HOURS,
+    /** Local v2 minute intent. Legacy writers see refresh disabled, never a rounded schedule. */
+    val todayRefreshIntervalMinutes: Int? = null,
+    val zoneId: String = "UTC",
+    /** Latest satisfied completed-day boundary; deduplicates occurrences, not overlapping dates. */
+    val lastSuccessEpochMillis: Long? = null,
+    /** Epoch millis of the most recent successful Today Refresh occurrence. */
+    val lastRefreshSuccessEpochMillis: Long? = null,
+    /** Exact frozen residual groups left by interrupted or failed automated export attempts. */
+    val pendingExports: List<ScheduledProfilePendingExport> = emptyList(),
+    /** Invalidates admitted work and its checkpoints after an explicit recovery discard. */
+    val recoveryGeneration: Long = 0,
+    val todayRefreshRequestedV2: Boolean? = null,
+    val todayRefreshPersistenceVersion: Int = 0,
+)
+
+object ScheduledProfileEntrySerializer : KSerializer<ScheduledProfileEntry> {
+    override val descriptor: SerialDescriptor = ScheduledProfileEntryV2Wire.serializer().descriptor
+    override fun serialize(encoder: Encoder, value: ScheduledProfileEntry) {
+        encoder.encodeSerializableValue(ScheduledProfileEntryV2Wire.serializer(), ScheduledProfileEntryV2Wire(
+            profileId = value.profileId,
+            isEnabled = value.isEnabled,
+            anchorEpochDay = value.anchorEpochDay,
+            weekdayIso = value.weekdayIso,
+            hour = value.hour,
+            minute = value.minute,
+            cadenceValue = value.cadenceValue,
+            cadenceUnit = value.cadenceUnit,
+            dateWindow = value.dateWindow,
+            lookbackDays = value.lookbackDays,
+            todayRefreshEnabled = if (value.todayRefreshIntervalMinutes == null) value.todayRefreshEnabled else false,
+            todayRefreshIntervalHours = value.todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes = value.todayRefreshIntervalMinutes,
+            zoneId = value.zoneId,
+            lastSuccessEpochMillis = value.lastSuccessEpochMillis,
+            lastRefreshSuccessEpochMillis = value.lastRefreshSuccessEpochMillis,
+            pendingExports = value.pendingExports,
+            recoveryGeneration = value.recoveryGeneration,
+            todayRefreshRequestedV2 = value.todayRefreshEnabled.takeIf { value.todayRefreshIntervalMinutes != null },
+            todayRefreshPersistenceVersion = 2,
+        ))
+    }
+    override fun deserialize(decoder: Decoder): ScheduledProfileEntry {
+        val wire = decoder.decodeSerializableValue(ScheduledProfileEntryV2Wire.serializer())
+        return ScheduledProfileEntry(
+            profileId = wire.profileId,
+            isEnabled = wire.isEnabled,
+            anchorEpochDay = wire.anchorEpochDay,
+            weekdayIso = wire.weekdayIso,
+            hour = wire.hour,
+            minute = wire.minute,
+            cadenceValue = wire.cadenceValue,
+            cadenceUnit = wire.cadenceUnit,
+            dateWindow = wire.dateWindow,
+            lookbackDays = wire.lookbackDays,
+            todayRefreshEnabled = if (wire.todayRefreshIntervalMinutes == null) wire.todayRefreshEnabled else wire.todayRefreshPersistenceVersion == 2 && wire.todayRefreshRequestedV2 == true,
+            todayRefreshIntervalHours = wire.todayRefreshIntervalHours,
+            todayRefreshIntervalMinutes = wire.todayRefreshIntervalMinutes,
+            zoneId = wire.zoneId,
+            lastSuccessEpochMillis = wire.lastSuccessEpochMillis,
+            lastRefreshSuccessEpochMillis = wire.lastRefreshSuccessEpochMillis,
+            pendingExports = wire.pendingExports,
+            recoveryGeneration = wire.recoveryGeneration,
+        )
     }
 }
 
@@ -144,7 +253,7 @@ object ScheduledProfileOccurrenceMath {
 
     /**
      * Next same-day refresh slot strictly after [nowMillis], mirroring iOS
-     * `ScheduleDateMath.nextTodayRefreshRunDate`: slots run at the preferred time plus whole
+     * `ScheduleDateMath.nextTodayRefreshRunDate`: slots run at the preferred time plus civil-minute
      * intervals while they stay inside the same calendar day; after the last slot, the next is
      * tomorrow's preferred time (which coincides with the completed-day boundary).
      */
@@ -153,16 +262,13 @@ object ScheduledProfileOccurrenceMath {
         val zone = entry.zone
         val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
         val today = now.toLocalDate()
-        val interval = entry.todayRefreshIntervalHours
-        var slotHour = entry.hour
-        while (slotHour < HOURS_PER_DAY) {
-            val candidate = today.atTime(LocalTime.of(slotHour, entry.minute)).atZone(zone)
-            if (candidate.toInstant().isAfter(now.toInstant())) {
-                return candidate.toInstant()
-            }
-            slotHour += interval
-        }
-        return today.plusDays(1).atTime(LocalTime.of(entry.hour, entry.minute)).atZone(zone).toInstant()
+        return generateSequence(entry.hour * 60 + entry.minute) { it + entry.todayRefreshMinutes }
+            .takeWhile { it < 1440 }
+            .map { today.atTime(it / 60, it % 60).atZone(zone).toInstant() }
+            .filter { it.isAfter(now.toInstant()) }
+            .minOrNull()
+            ?: today.plusDays(1).atTime(LocalTime.of(entry.hour, entry.minute)).atZone(zone).toInstant()
+
     }
 
     /**
@@ -176,15 +282,15 @@ object ScheduledProfileOccurrenceMath {
         val zone = entry.zone
         val now = Instant.ofEpochMilli(nowMillis).atZone(zone)
         val today = now.toLocalDate()
-        val interval = entry.todayRefreshIntervalHours
+        val interval = entry.todayRefreshMinutes
         var latest: Long? = null
-        var slotHour = entry.hour
-        while (slotHour < HOURS_PER_DAY) {
-            val candidate = today.atTime(LocalTime.of(slotHour, entry.minute)).atZone(zone)
+        var slotMinute = entry.hour * 60 + entry.minute
+        while (slotMinute < 1440) {
+            val candidate = today.atTime(LocalTime.of(slotMinute / 60, slotMinute % 60)).atZone(zone)
             if (!candidate.toInstant().isAfter(now.toInstant())) {
-                latest = candidate.toInstant().toEpochMilli()
+                latest = maxOf(latest ?: Long.MIN_VALUE, candidate.toInstant().toEpochMilli())
             }
-            slotHour += interval
+            slotMinute += interval
         }
         val lastSuccess = entry.lastRefreshSuccessEpochMillis
         return latest?.takeIf { slot -> lastSuccess == null || slot > lastSuccess }
@@ -299,7 +405,6 @@ object ScheduledProfileOccurrenceMath {
         return index.takeIf { it >= 0 }?.let(::occurrence)
     }
 
-    private const val HOURS_PER_DAY = 24
 }
 
 /** Coalescing helper shared with the push scheduler mirror (earliest preferred time wins). */

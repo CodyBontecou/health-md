@@ -3,16 +3,23 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 fail() { echo "Wear audit evidence: $*" >&2; exit 1; }
 
-# These are evidence-link checks, not substitutes for the underlying tests/manual gates. Derive the
-# release identity from source so this validator cannot silently bless yesterday's version.
+# These are evidence-link checks, not substitutes for the underlying tests/manual gates. Validate
+# each source identity and the release scope before allowing independently versioned deferred Wear.
+# shellcheck source=android-release-scope.sh
+source scripts/android-release-scope.sh
 phone_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -1)
 wear_version=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' wear/build.gradle.kts | head -1)
 phone_code=$(sed -n 's/.*versionCode = \([0-9][0-9]*\).*/\1/p' app/build.gradle.kts | head -1)
 wear_code=$(sed -n 's/.*versionCode = \([0-9_][0-9_]*\).*/\1/p' wear/build.gradle.kts | head -1 | tr -d '_')
 [[ "$phone_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ &&
-   "$wear_version" == "$phone_version" && "$phone_code" =~ ^[1-9][0-9]*$ &&
+   "$wear_version" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ &&
+   "$phone_code" =~ ^[1-9][0-9]*$ &&
    "$wear_code" =~ ^[1-9][0-9]*$ && "$phone_code" -lt 1000000 && "$wear_code" -ge 1000000 ]] \
-  || fail 'unable to derive a valid paired release identity from Gradle' 
+  || fail 'unable to derive valid phone and Wear identities from Gradle'
+wear_mode=$(android_release_wear_mode release-scope.json "$phone_version" "$phone_code") \
+  || fail 'release-scope.json is invalid or differs from the phone source identity'
+[[ "$wear_mode" == deferred || "$wear_version" == "$phone_version" ]] \
+  || fail 'active paired release version names differ'
 [[ $(grep -c 'ComplicationService" android:exported' wear/src/main/AndroidManifest.xml) -eq 10 ]] || fail 'complication count drift'
 [[ $(grep -c 'TileService" android:exported' wear/src/main/AndroidManifest.xml) -eq 2 ]] || fail 'Tile count drift'
 [[ -f docs/features/wear-os-completion-audit.md ]] || fail 'completion audit missing'
@@ -86,6 +93,9 @@ for spec in \
   'phone:app/build/outputs/bundle/playRelease/app-play-release.aab' \
   'Wear:wear/build/outputs/bundle/release/wear-release.aab'; do
   label=${spec%%:*}; artifact=${spec#*:}
+  # The phone-only release AAB is outside deferred Wear qualification. Any retained Wear artifact
+  # still needs its own audit proof, and an active paired release retains both digest checks.
+  [[ "$wear_mode" != deferred || "$label" != phone ]] || continue
   if [[ -f "$artifact" ]]; then
     digest=$(shasum -a 256 "$artifact" | awk '{print $1}')
     grep -q "$digest" "$audit" || fail "$label current release AAB hash is absent from audit: $digest"

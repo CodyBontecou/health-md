@@ -1,0 +1,1683 @@
+{
+  "schema": "healthmd.shared_setup.field_coverage_baseline",
+  "schema_version": 1,
+  "source_git_revision": "c0f4f05fdf693d1a5f86a41096d9e487a74213a4",
+  "frozen_assets": {
+    "shared-setup.schema.json": "39e56dc54dfb56c556e2c71c734c00da4f02305a2a9b98ad795486c3e9c81f45",
+    "fixtures/apple-shared-setup-v2.json": "51c4151a040f487cc1f1b1fff1fa9cd0dc7891babf1395d5e1c5ade58e7807c0",
+    "fixtures/android-shared-setup-v2.json": "1072b48321ec8a3a19c3dfd900108bac0527df62c57d0fd326ca82488ded72d0",
+    "fixtures/transaction-scenarios-v1.json": "2f72266daa4ac8d0a61e724b7eb9cada5528593d50f5b8f0de28dff4bb5d9deb"
+  },
+  "inventories": {
+    "apple-profile-field-coverage.json": {
+      "metadata_sha256": "8cea0c89b488f96e320356b66e26ab319365f8d21f23cf39f0ec88b4b4b26f34",
+      "fields": [
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "artifactPlanVersion",
+          "sha256": "ce9e485e32043c7707371c964a83736589ef612184bfdc6d64b530e1a3ddb58e"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "calendarTimeZoneIdentifier",
+          "sha256": "999e974c092049675374429fc1be11d514ff83c46bff66fd12e29fcc920d5922"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "canonicalModelVersion",
+          "sha256": "8abeefb07363fbeeb6f949a62ae1e40bb6f5225a46a502f129092eb2824988bf"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "coreAPIVersion",
+          "sha256": "e9cc464db2bda80d23aeb27a95592fb0a6cbb6a519c7769bb7e59dbf9e06b548"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "coreSourceRevision",
+          "sha256": "fc6f787416c2c3b18cdcf39b39e24068badd7dadbbc7c3be22ca556d3b371fef"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "engine",
+          "sha256": "ece5830356c66224a748e44a2895d81274a0027fd3d25182a1a9efa1144febb1"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "profile",
+          "sha256": "b7a6b2cff76c7321dcfe498af408fbfc777622c7c00f63a05ac574670100c3f7"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "publicSchema",
+          "sha256": "4ed4a0cb0f4b7834932e1e20cf369bfb72e652be754a5cc7c10b1a8ffac6fc27"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "publicSchemaVersion",
+          "sha256": "be14f2bf9b4026c067f464deae844e2019aa8e4b7013caa4d1a7302ef7cf4ff9"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "registrySHA256",
+          "sha256": "397af33ce029d18b9a1006df503ee771f93b2f8da16826d2ed0537f944496bea"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "registryVersion",
+          "sha256": "49616b66e22ef6e04ece0be6f5530e713f071243897f48258f0ff0a90a1cb8e8"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "renderInputVersion",
+          "sha256": "87668a5c686b7b3615e5e65424cf0caf43e49dda018be65865638818f9fc66ff"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "renderProfileRevision",
+          "sha256": "a01d4de8656bf1ae3b52eb8c7d1d26654768134a920178d7984e5b842d966b47"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "semanticInputVersion",
+          "sha256": "c81f737a29f45c9e38cde75546aad993215f796cc7e8e5c6dfad68e21b31516a"
+        },
+        {
+          "source_type": "AppleExportEnginePin",
+          "field": "semanticProfileRevision",
+          "sha256": "9d051b673242de5de4abb18769692e1ad13f401a92b9106bb2b98627a5a5e173"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "field": "customKey",
+          "sha256": "7f41f9c0fb3d14223edfc9cd469a4e6db02c0c56b6a4ad638dddcdd393dd6e88"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "field": "isEnabled",
+          "sha256": "8d139c854040bafe0b900fae31187ebe54dbc7ec07bcec9d351e48e2088c9524"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "field": "originalKey",
+          "sha256": "7374fe1a109a29b04896bd286bf058ee75538b6d0e3a4973318dffcf52046ac1"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "createIfMissing",
+          "sha256": "6898d5b0153bf0e5dd7df97519c2808be6e495558f069987c405711b7c29be74"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "dailyNotesOnly",
+          "sha256": "e45d3d4fc272be3b99c8f8e961c0e69ac2730618a75a1ae64f591b22ffcc7dd9"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "enabled",
+          "sha256": "a9e67f7f317400d9c1e2176d9e67cf3f5d21004eb704b7e0dad90fa6942fe249"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "filenamePattern",
+          "sha256": "af6c4d0fe2de8ea8285c1b5f36fb44e2171abe04e5fe175d831d2743df8c9653"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "folderPath",
+          "sha256": "7b87489864372cbe4f6bb3366cb03f2c8c0e2990017da67fc82c492a3fb37a05"
+        },
+        {
+          "source_type": "DailyNoteInjectionSnapshot",
+          "field": "injectMarkdownSections",
+          "sha256": "292a2a481f2d94746118eb6131e13ea8fd807d61c0633e5718867a0a19f0e7f1"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "apiEndpointID",
+          "sha256": "2f37c00a5e1a5d1dc3319eaa3a6faeeacc37fcfd61457a8e1569bb4551ec046b"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "createdAt",
+          "sha256": "e8e5c20f9f36805eb004414ec045d096b76886c258fc7581ca9d4cdcf70eefd8"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "folderVaultID",
+          "sha256": "f3c0fd86ae61c4a1f5622a4f2a856d522b9d907a7ea4b029b174b1e7a9c35ce6"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "id",
+          "sha256": "38d56b6acc1ffbfe3a8310ab8d1bb6a94b8c178801ca19cf342753ee5099a7f9"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "isMigrationDefault",
+          "sha256": "666edac59fec86d724fdd55af1c100563b73eb9f1d0ea75f6606b0ba319bfac1"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "name",
+          "sha256": "d066acfc820f870e54a02fd5a69b65844e50be17b86040ec204e59c9ddf7fc1e"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "settings",
+          "sha256": "60e9b43fa87ad793cd7f2bcd4734975c5cfbbd3dbae5108b8916497271712872"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "target",
+          "sha256": "d519c89c850c57cb6198fff16d51ae66315c5ddf0e1a745d0ed843ebbb04735b"
+        },
+        {
+          "source_type": "ExportProfile",
+          "field": "updatedAt",
+          "sha256": "87183e10773da8229a716dbca89e0b40534b310e87d1c81f4d59360d11b90d2e"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "appleExportEngineAuthorityIsFrozen",
+          "sha256": "d26f2027d6c2d9f7b1121e48264c189e1c584fe01a2bcd185050ec0b0e173755"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "appleExportEnginePin",
+          "sha256": "35f86ff30a2d0e4bb25e53f13e5a94edc41e1423138e784dc917a52a5ca541d9"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "archiveExportFiles",
+          "sha256": "e29255168f5d8f6bde84ae7072a4e42d18d39de2f66284d47c6fd2925dc7f844"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "archiveMarkdownExports",
+          "sha256": "f99c301e77925523f40efefda73e804ad6e2b53e3fa4b6634f988459c6a9a63d"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "calendarTimeZoneIdentifier",
+          "sha256": "cd1c86ff57d40db2e3533fe142408f30ec871c731e4ca0c405d2db7b164ab095"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "compatibilityDetail",
+          "sha256": "7ce7e3c8803367af6909b972fe5985bf8babb3f922bc36aabca5639f7124ddb5"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "dailyNoteInjection",
+          "sha256": "22998e3ff8a7ddf5f24db4c103f16a5012b7a5d0099b35c2afbe65a8632f7bad"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "exportFormats",
+          "sha256": "517bdc21c41ba2981147bf3edcc02d2b6feda7e59ed0e81ce9fec409bc5bfb02"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "filenameFormat",
+          "sha256": "97eac092c9c86c92bd980b613251463749974ced092151316091c36cc2bb0ff1"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "folderStructure",
+          "sha256": "66e0b8dc85258aa3115dbb379f33f0ae1762df80e5119144f6abf4d7ceefd281"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "formatCustomization",
+          "sha256": "968e5a6dd002007ac0164b3c1a22fa70581d6970d89439abab5ad1921e069b88"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "generateMonthlyRollups",
+          "sha256": "9e7a93e6d23129cbf53ea15c66307d52c5214d726cf071c95cf75ba8412c2342"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "generateRangeSummary",
+          "sha256": "90b5404bfb028e3ecdee0539d43435454419724de45d08fbb90e58cd7d086379"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "generateWeeklyRollups",
+          "sha256": "6dc01c3e2b502cbb06e79ec8a33a80a534ae8b5a9c9009f479e2c05a413f147a"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "generateYearlyRollups",
+          "sha256": "6944a8bfe8b7337f1228c20dba9a22645280eceb7d87f770f902cb4f204b8318"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "groupByCategory",
+          "sha256": "b084557fb466d9a2f0a4670494d6bc44d2cf5ccf71de3b3fecb5ce9b213d2eee"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "healthKitSourceArchivePolicy",
+          "sha256": "0f3cffcd3111b34eabbc539499a8d20722c2bb24870d8eccbb8e44cc99317995"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "healthSubfolder",
+          "sha256": "a711911807b21ab4068560883e8e01490f8081deb26ceb2e911418c2fd525a0a"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "includeDataDictionary",
+          "sha256": "05283c13748d0efc8b0ed9b215360f414893e3a5ca6427428df6372376d92a20"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "includeGranularData",
+          "sha256": "5089105a01aa8f3c49154d033f87a176719f2ea5e96debeef6423d5ce05e4ca2"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "includeMetadata",
+          "sha256": "88e7f1c98d4066af6d21aeb0c82eb118ad5a8eaee18af345add9577f8e81a550"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "individualTracking",
+          "sha256": "42076a0253c45dd1c600c0f532a22ac98597174acd3e3e75fcb1af15c3bd2c51"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "metricSelection",
+          "sha256": "adbd263543c8d1b0521cbbb90e70fa93a2d89a88f1b320f855df04afd7995d5f"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "organizeFormatsIntoFolders",
+          "sha256": "9960d2f2fe14dfc54c86fe3f5c25cdd461facb56a0e72543950422e3ed49d5a8"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "summaryOnlyExport",
+          "sha256": "80a06783f9f69095af770f545e7e5b5bb11eaa66bb1247778e4d5129fb37adc1"
+        },
+        {
+          "source_type": "ExportSettingsSnapshot",
+          "field": "writeMode",
+          "sha256": "0a395dff6e551b5895d479cee78367ead79fba6db2ef98ac2af2777ebb0a6a90"
+        },
+        {
+          "source_type": "FormatCustomizationSnapshot",
+          "field": "dateFormat",
+          "sha256": "a0e38be70625fe68bcdf4a5f0ab27a50a8a49a38f31461dd8640bec72ae3747f"
+        },
+        {
+          "source_type": "FormatCustomizationSnapshot",
+          "field": "frontmatterConfig",
+          "sha256": "f36bd468a9f8a4154535a84200e41794591d8eba99905da91484b850d1c0738a"
+        },
+        {
+          "source_type": "FormatCustomizationSnapshot",
+          "field": "markdownTemplate",
+          "sha256": "ae4608edc35f000a4c26383ccb4a1d7c9b943f49f9d1a6e07922d3c2512e4333"
+        },
+        {
+          "source_type": "FormatCustomizationSnapshot",
+          "field": "timeFormat",
+          "sha256": "c509551dd4820bfadbb397c4b3b2624413c6ca33e0dac6c82285e103f8d59995"
+        },
+        {
+          "source_type": "FormatCustomizationSnapshot",
+          "field": "unitPreference",
+          "sha256": "5023ff9ecd13ca10b0a9e2030d141115e361a767f5d34d79fd14cead62ab3dbb"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "customDateKey",
+          "sha256": "b7a94759bed0fb8125e5798aa2189c0e5e40e728cf1c4371f7af3e682c269d26"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "customFields",
+          "sha256": "7046e16a2f10d68ee92376a3de5644ff543bff74d3c8f756292dea760b74c534"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "customTypeKey",
+          "sha256": "1d6b656d7fcf5ff53ecafc36250fc57a48f429d3a0d0a0100cdd95394d9d084b"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "customTypeValue",
+          "sha256": "aed18729c94de9e134328f25f4e7c60ebd63434077707098c58296e0f52a1844"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "fields",
+          "sha256": "da038b77c343e9cef265ff9b4a6ad91f6949fd6907039cdd502534a6ae4a731d"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "includeDate",
+          "sha256": "44b2bce5ea8f014cd82a504272131e37ca3be58bc44ac995c28e9f555e6ff954"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "includeType",
+          "sha256": "06dd297d1b3dbe8022c92c97240ee3b4036c191a838e0a4aa03e7faab3da4eda"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "keyStyle",
+          "sha256": "bd9c2cbc7c5a4b489c4e04450f22fd46041d58887516da0072359127bf3928e7"
+        },
+        {
+          "source_type": "FrontmatterConfigurationSnapshot",
+          "field": "placeholderFields",
+          "sha256": "194ff78d87cf7047a486b7c0a52999590c685dfe2296317c22811c103dae4be5"
+        },
+        {
+          "source_type": "IndividualTrackingSnapshot",
+          "field": "entriesFolder",
+          "sha256": "d074dfa345d141899ee432d36f842b22ae6cdd7e2632c7189cd19aba09b6f9c9"
+        },
+        {
+          "source_type": "IndividualTrackingSnapshot",
+          "field": "filenameTemplate",
+          "sha256": "4cded10b5f50323e49fdd60be2c8a23f9e35e37e11c6b2104ea638c41bf6c6e0"
+        },
+        {
+          "source_type": "IndividualTrackingSnapshot",
+          "field": "globalEnabled",
+          "sha256": "21154d3178d7549141eedb67e22cd3bd5265f21f1a433a47ccf7c9bb7f480bcb"
+        },
+        {
+          "source_type": "IndividualTrackingSnapshot",
+          "field": "metricConfigs",
+          "sha256": "5ec657899ad8247d6dbe6da61c95c60ef9d4443a3291d3168ca5ffeceecbeedc"
+        },
+        {
+          "source_type": "IndividualTrackingSnapshot",
+          "field": "useCategoryFolders",
+          "sha256": "9e623f9d3948899da5629027f3691ac744e67726d04d72a58eb2712c741aded1"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "bulletStyle",
+          "sha256": "8022ae0b17ccb24e5013bbc44c404fa4ef47b0acf1960762b682edcf24cb677a"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "customTemplate",
+          "sha256": "f9e9e3e8b1e7b718077d0d9da58e0480d0d86f52ede5a451fa8efae911492fe3"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "includeSummary",
+          "sha256": "f1f64c1e4ce92359bf154cfd42eb228ec9f068505607485b44d5c01d4ca920d6"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "sectionHeaderLevel",
+          "sha256": "85d603360ad3d3b7e547d904a3ab667f733328d2de35bed7d811444c63cfda81"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "style",
+          "sha256": "bc06a93f517628f4f71c22e709222f7f28c8c1c6abaaf44099cf8b2f42103c4d"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "field": "useEmoji",
+          "sha256": "d511a705aaeef7c72cb52c82220a0e7c0408aa65e31890c4853eadc3939d2bc7"
+        },
+        {
+          "source_type": "MetricSelectionSnapshot",
+          "field": "enabledCategoryIDs",
+          "sha256": "8742252b0af293a610c8ff4c4cef413b265e3c47c656f228e67d0a2df2f8dbef"
+        },
+        {
+          "source_type": "MetricSelectionSnapshot",
+          "field": "enabledMetricIDs",
+          "sha256": "69a8b417255d7c09cc0518171e69c6502d8af3c3f682b1566a6996e13766704d"
+        },
+        {
+          "source_type": "MetricTrackingConfig",
+          "field": "customFolder",
+          "sha256": "fabbd2a04aaba68b28d248645152e2461f9dd75ebb40bd3bf8f2796ca7abdb10"
+        },
+        {
+          "source_type": "MetricTrackingConfig",
+          "field": "trackIndividually",
+          "sha256": "445d1c988dcf482708b6284d8dd96e59c59614513a41fd6c63b726096a98be1b"
+        },
+        {
+          "source_type": "SavedAPIEndpoint",
+          "field": "createdAt",
+          "sha256": "fdaecbbdfd24cd8ac898e8ead62cd3c89557ef816b6e681555bf412a32bdaa9c"
+        },
+        {
+          "source_type": "SavedAPIEndpoint",
+          "field": "endpointURLString",
+          "sha256": "b19aab9c38dd28f1178d971e0e79d48c31020d65e57d9a971135da4818a98263"
+        },
+        {
+          "source_type": "SavedAPIEndpoint",
+          "field": "id",
+          "sha256": "2cbbd08dee113b4bec1cf3b0e2eded11cdc69d53d65f4ed941507efe41dbccfe"
+        },
+        {
+          "source_type": "SavedAPIEndpoint",
+          "field": "name",
+          "sha256": "24ee30b0425ad8ea1c1d942c0383cca048a25ab22193759029a4f2c283f58d8d"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "bookmarkData",
+          "sha256": "2e288172bd93a04549d0588978129d89d9c05d9e6036a30b9fc1cd13cbc2ff12"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "createdAt",
+          "sha256": "204cb1d0607ad538561bfa5bc83d65a96e2318f7878e2ccb488092c50bab963f"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "id",
+          "sha256": "de9015f8dd338081e3ce1b27de48a0ef51452537ba3e0c6da269f3dcee886b7d"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "identity",
+          "sha256": "f59c6d915264cf628e09442cf04167d095c3da08c9436f3626fe684db52d2487"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "name",
+          "sha256": "9eb1273d0d4db33e61ad3652db022d961822864a60f30b6c7e71a9f34b896087"
+        },
+        {
+          "source_type": "SavedVaultDestination",
+          "field": "standardizedPath",
+          "sha256": "ee6f22b5077e6ff8335c90281a5a83fac6c4389b6ec45fbb5e1bf3b797856397"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "customAnchorDate",
+          "sha256": "7f3a4d834c52df1f4d790be8cfe44aaa827658b9bda01eea7f042a134ec46b28"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "customInterval",
+          "sha256": "fc9b59cd9aa0a75c66338a1cdaac21b82d309382ad610d9af98451dec9744307"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "customUnit",
+          "sha256": "fb6fccd4991548b21664c595b4d8029a1e5a7f3ef5afaa0da9664406c6651139"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "enabledAt",
+          "sha256": "2c9772b7f903fe7077740d7491c2a056551e3f247b95670afa43df4a103a9aa3"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "frequency",
+          "sha256": "6c949a62367fae76ab5aa18077c80ac9c3112a15b149eeabb517667a2f376b2c"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "id",
+          "sha256": "dcc58a0291d6881cef610d28c73ec7f35407e365814751d8116ec8d2b665fe08"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "isEnabled",
+          "sha256": "32443a1215c58278be19ed2fb52152b2c9970d1ff7f083fab1d8ae65544a9003"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "lastExportDate",
+          "sha256": "0e5209e5b0f258b88fdeb37320fae476c3cf47b7cc0a7812b7ec93448f62da7c"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "lastTodayRefreshDate",
+          "sha256": "8520eee6b31c0e3fb644afffef68ef7ffd3c4f457c86f974c0359e862dc336e8"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "lookbackDays",
+          "sha256": "572c6d85e7d1615e7c573c5a4b82e801922704b053fdf6399db169da887ffb1e"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "preferredHour",
+          "sha256": "6c9ef5eb782bf14187379223a391dbf778d1af9e3cf20a4e2ae217e34d705e9b"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "preferredMinute",
+          "sha256": "8cfc33252f61303884c04d9cfa4cff6b924dcdefe8f14cf5cf4d5cbcd5ebbe77"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "profileID",
+          "sha256": "de73bea464916156356c6df8d46dddc46d130aa943a9f689615d0e93c08813cc"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "recoveryDiscardedAt",
+          "sha256": "e5b519fa044d044d1b6bd4ebca41226b6b31e8cf655f8864f2d9d9446fb45ee2"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "recoveryGeneration",
+          "sha256": "b41661ea82655db9c0ee2331cf6caaba4e82e60bfa5f1c82b3e6f421598831fa"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "todayRefreshEnabled",
+          "sha256": "f431eab65e5346d3f7f751ed5e99bf25dd852d67e6113629605a44dc271bad7c"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "todayRefreshIntervalHours",
+          "sha256": "d85e3e7e565db7ef681112809d6a7727df51878d231b2b48efb4b208e72eaa1f"
+        },
+        {
+          "source_type": "ScheduledExportEntry",
+          "field": "weekday",
+          "sha256": "411169ed833a756b22d4dd7602479335e769cfdf54c1735e859637939433b30b"
+        },
+        {
+          "source_type": "VaultFolderIdentity",
+          "field": "fileIdentifier",
+          "sha256": "bdb92307e476094570782c5a8b82f1f060e8061caa2738433cb2d56ea2ee43eb"
+        },
+        {
+          "source_type": "VaultFolderIdentity",
+          "field": "volumeUUIDString",
+          "sha256": "1c6d5da3a05fb0cd6b4a671a757c87b4f4ea461abc4cdd8f392c366d38bbc18d"
+        }
+      ]
+    },
+    "android-profile-field-coverage.json": {
+      "metadata_sha256": "ac3659acaf2c7379fc25a9f28c3ee1cc297df3b457b5dd325b7709ec10603f53",
+      "fields": [
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "apiEndpointIdentitySha256",
+          "sha256": "69df30f7912d74664e38a8467b8e91e23f3dfb01820c4953b5c65f454c569afa"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "dailyNoteInjection",
+          "sha256": "95330eb709580770a9970be5aa7496c2d4b80f2cec588e3ec17f54bf0bd00249"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "dataTypes",
+          "sha256": "a1c93f88ef60969874665914e954388dafafa6c3c068afca395bde57a7ef0d21"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "enginePin",
+          "sha256": "59c10c485d4329436e9a304814da3a714adc002c6055739e939f68887a8ee3e6"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "exportFormat",
+          "sha256": "57ce95b68d7d865d1d91962b713a4bedaa30fc2fe155bb8e8c84229261dc7292"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "exportFormats",
+          "sha256": "c339413a3e039bb090f8edb10471291c9a2c4ec9705fc5a60b98d35d65478a7e"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "exportMode",
+          "sha256": "1926017e2fb8feecbebea9f2e478a2dee15451dafaa3a7cf01592f04aea45b61"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "exportProfile",
+          "sha256": "d16282b65622f74c7de293f5f6304584705b30cd85be5f08b385bc90114a3984"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "exportTarget",
+          "sha256": "1ac4b20d5c02eca391d053b3dfaa3826aa4a2faaeab9108ab853a68632881895"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "filenameFormat",
+          "sha256": "0c137203050d0caa56d5811700ae4bbfe5aed21f472acc5c2566008f12544653"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "folderOrganization",
+          "sha256": "80674a9b992a7d7898ae82b27cedd2a997c5e56add4b4b7d757e3e137405101f"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "folderStructure",
+          "sha256": "82391aafd2f60b569b66f81d8133b1d85be515e68441e1cb3d3fe1f1234b4a00"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "formatCustomization",
+          "sha256": "d24236d64099764a340c22c56cff461fa30e4bd92912efddd7380a3e782940df"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "groupByCategory",
+          "sha256": "cd5fe1625835a64a1fd39ae5028f6f7bad8c19c231adba831cc1c3466715112c"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "ianaTimeZone",
+          "sha256": "7f20b35df552dc8d415e3000594077e5e2cbab572398b98eb2e319a26fdff5f4"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "includeGranularData",
+          "sha256": "0da341ab63aae68117e2e76d74f7274f835f4d9e61dcfe839e49112c88be8579"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "includeMetadata",
+          "sha256": "02425d25e8f3444f294fa27a52f10fad3c46d61c8568acb3e7651caf4ffe9254"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "individualTracking",
+          "sha256": "9fba42a0cc4f14890802b34c5c595c6fd296bf3d48bef9d366f8152ef22a727b"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "metricSelection",
+          "sha256": "5a009a3f09908cad02654135aeb980f83fe6ec28cfcc3eee8780b87facdff4c5"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "rawSnapshot",
+          "sha256": "eaa80890f565456f1007e680a11e83baa4539192ad237cef47b033dc0358a5df"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "scheduledExportTarget",
+          "sha256": "830a412a7e221687836eba6c0414cf8c7555176081eedf0c7cc1f1ffe2d3b669"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "subfolder",
+          "sha256": "cbdc93af7cab0ebaae4f186f0b76daafafd963d6db321e8a293779163198aa9b"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "version",
+          "sha256": "736a7103ccd9d79e70fd2bf80016c080f2df2b62088049f0dbbddc5ed8eacc30"
+        },
+        {
+          "source_type": "AndroidExportSettingsSnapshot",
+          "serialized_field": "writeMode",
+          "sha256": "f18b37634456c8612978f3e2fcef54b7b46615ace60e0c8c47b5a71285d92458"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "serialized_field": "customKey",
+          "sha256": "4fb20264fe3211f79f9c5531b3972159335a3c15eb330ad8d7f2ccade90be0e0"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "serialized_field": "isEnabled",
+          "sha256": "53e86623d31f7883e79ab4d0cc2f64229c96cae6f117a88f0feaf1ed27fb40ee"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "serialized_field": "originalKey",
+          "sha256": "02db02db01a086f2913f1f97dd4a1dad1da59a6d33907ad5efee49f454ba7add"
+        },
+        {
+          "source_type": "CustomFrontmatterField",
+          "serialized_field": "outputKey",
+          "sha256": "c4d5d61fd94239ec327d74af95ffa87d56b8974d898a1ebde3465e12f2eeebeb"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "createIfMissing",
+          "sha256": "d1c7426ab8afde74f39aa24b1d2c6566b03082aec9bae27867a2a5d1acb77ce6"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "enabled",
+          "sha256": "1f002ab332369cb180eedec368e019c5f1d470067937b32c178f5f3eceb492c0"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "enabledMetrics",
+          "sha256": "410df3349ca1b0badb881ba56321245f72ddaf61bcf98c6e53f70a8d4d3ec976"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "filenamePattern",
+          "sha256": "00ac27fdb04af4e08650a79d63c02bbd0bbd818d77aa21265409405ba8d51af3"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "folderPath",
+          "sha256": "63d043afba5813ef48c0368218ac96016b92023e9f7aa31f6de20e320b96339e"
+        },
+        {
+          "source_type": "DailyNoteInjectionSettings",
+          "serialized_field": "injectMarkdownSections",
+          "sha256": "bf287e46a41eef0ffc208ae8b85612615ef5706b7f4352196e2209fb8545abda"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "activity",
+          "sha256": "27d20fc367b7acb145b88b64d92de219ad5fe2de3810c3ce82cc82000bfaeae0"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "body",
+          "sha256": "a8fc60b0e9c6268657637f6988e07b87c1215cc863e7d58b29b265ea86c50cf1"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "enabledCount",
+          "sha256": "0f4cfee032f7aeac762172a1b8097c17dce4ce90e27311429285282ad647db75"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "hasAnySelected",
+          "sha256": "9447f393e2beca903d92fec8ff5344874dabade105dfba1bbc2ba1c74103cf8b"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "heart",
+          "sha256": "c657cdb88796312ed64b9386bdc4ab411e1c9b495334a43be2045a485c03bc07"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "medicalResources",
+          "sha256": "e74b8b58861a8e1c8aa1278590d54ab049f44b2229fa79550b7ec93391f31d45"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "mindfulness",
+          "sha256": "d50df67c2151fac89107fc2966f1ff5413f2f8ca0223f02eae41f31ffe761b70"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "mobility",
+          "sha256": "c0141c5f0b8d6be6f797816f208e56b9540ac47d4b145da102c4d1cd64381cd6"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "nutrition",
+          "sha256": "67c4980a196c3f2756953553dd57e841a9628f4f1170c390498afca4ddc365b3"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "plannedWorkouts",
+          "sha256": "41cc08b734d75f39b017349dede64ec3b045a42825999b4d6b4a604113eee22f"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "reproductiveHealth",
+          "sha256": "8c2e905b3181bda1c2b936ba6b257c411fcd09c28be9fb026f519ccbda173b4e"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "sleep",
+          "sha256": "ad2ab66eea22c6bb1103f3b64a4718a075abc223333b5af8531002cca3eb4a0c"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "vitals",
+          "sha256": "f0edc634c50f3f0e75c83a901d80eff3b36dd33a1f53b175d23a1e482981be4d"
+        },
+        {
+          "source_type": "DataTypeSelection",
+          "serialized_field": "workouts",
+          "sha256": "32381c54ee55f01dc4fe37df48cdf089f1ec3ec89ef588a8fe0bed0a5053c8ce"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "artifact_plan_version",
+          "sha256": "a74573676cd50150a7dc9fb298007b912e25b4929d72f9a90d0a1178a2c08ef1"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "canonical_model_version",
+          "sha256": "610b27d45487c990dd1c028c16d5b8605b200b4fcc81a84b65fef683417c1efa"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "core_api_version",
+          "sha256": "ff0a0ad1d5a4c07242f40c0692a236222fb46fc798085d67589d7b1ab8a4e333"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "core_source_revision",
+          "sha256": "41e42c321daae1c3f80b195346cae12717e04ffcfee6531c5b139d7cdd4990dd"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "engine",
+          "sha256": "ff5d593694b0442791caa1d96c4618a83bfbf5b42d68089756feefcc2354508a"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "iana_time_zone",
+          "sha256": "44f9fb9c25bb87093f87233dd3f110b88afcd30a00a68dd8a1cf6fd383978b1a"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "profile",
+          "sha256": "b630b48efdbcddabe94a1864ad41073ece2a7ba475d18dc564622d2ca247c439"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "public_schema",
+          "sha256": "015cc553604de28e42e10de57ffc6851cf4cc21f1e7ae877079ce2df7333b188"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "public_schema_version",
+          "sha256": "59d2d872afa9c52439656475934cf8f99d05e1995e854d5dcc018f5d76b45389"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "registry_sha256",
+          "sha256": "af77095abbf6fce82de9e4a5190e54dcdc510ffb1c2a889635bba7245d0fe746"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "registry_version",
+          "sha256": "28185a7739c923d3cc2f5ce0cdd4b7ab6e2884e5f4701dd5864441227883f9eb"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "render_input_version",
+          "sha256": "80965e2f73729786ffc9970628e51cd35453f40cd802d023ae060fb1e4c6f6e6"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "render_profile_revision",
+          "sha256": "b08c5a573820697f9b97c174203e96ac0577574cb4688760780bd0e4d63d08bd"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "semantic_input_version",
+          "sha256": "2f7a8c4fc84e25ac0abe4cdf1578e7ba3e72717667e0be4ca11634dfbf8d31c1"
+        },
+        {
+          "source_type": "ExportEnginePin",
+          "serialized_field": "semantic_profile_revision",
+          "sha256": "8245be5eeab88c1c445c5c8abd0efd7ad639fc3f9ccdb10f4799c75189d1658e"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "apiEndpointUrl",
+          "sha256": "5b580be4e71e3232fb0c861f93bbb47d8e7940535d7be6d49325456e31102b09"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "createdAtEpochMillis",
+          "sha256": "6b904ef8dd346ec5097f5c8f9b6f418ab1ee510d0d3a718433d157adecdef7b1"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "folderDisplayName",
+          "sha256": "e09316cec7ed956ed69ba9f6f7725ef5096990e4db49d2203b1a308af0d37e14"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "folderUri",
+          "sha256": "1fa9d1ad3fee9da56a02e8b471a19f4879844ef3a6db1cb6beaea2976db56d27"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "id",
+          "sha256": "bcd08eb631ae37fd791f927680d7f6406f1ebcc717794d68fb07fdaea36328e6"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "isMigrationDefault",
+          "sha256": "81feed6d9a33eec340b147dfd82711b0348f960c27e37e458a5bb5c1d85bdf38"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "name",
+          "sha256": "8b27f97b5d136935d276f1f37b9f41bb329f87c4042a1021b821f9fd2fba6e4c"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "settingsSnapshotJson",
+          "sha256": "bdfeae7d9510937236371f33e621ec9ebf04bde67635926a25db8351299a6aca"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "target",
+          "sha256": "a38ebd2f9716f0bf2d74a65c2308122c472a2e863161550569f59e4cab06b703"
+        },
+        {
+          "source_type": "ExportProfile",
+          "serialized_field": "updatedAtEpochMillis",
+          "sha256": "8bd17e9c41e85543b58bd93c343e6ec764617dfd6683539c04a951263cd20059"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "apiEndpointUrl",
+          "sha256": "50c8e4f805f695e820ef61df3368dd0dd9940fbc21a4cd0153dcca82e158b8a5"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "dailyNoteInjection",
+          "sha256": "74efddb9033d76228a23910e8fead6afe9e3d561f346f2e67c8dfac087afe343"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "dataTypes",
+          "sha256": "cdd2b3383cebe5f82d283a6330c6b39341c4992e7398068074cf96307312d24a"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "executionEngineAuthorityIsFrozen",
+          "sha256": "09c4741c74ec338ec9f8e9ae9afada984a84581da82214e928b9027672fd1e83"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "executionEnginePin",
+          "sha256": "183b861097ae164e41bc0755969b10e2a365b0a040b9171d782ffa14e3d25ac0"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "exportFormat",
+          "sha256": "03bc2048bfa75d26270e78b3cd364e46bdc0add21ff5634dcd114ea8b91bc918"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "exportFormats",
+          "sha256": "049372beb3f5a2c8530722aef8214f9121294e0f04c92c93fde68cbb2411a44a"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "exportMode",
+          "sha256": "bb60d6c58a45b285bb6b5e3ceca91413995f4577cbf1d3e554f32009f04b3372"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "exportTarget",
+          "sha256": "c5a751c7efd80ed62179676d091e952bf91d222871b1457c53e23a226c769caf"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "filenameFormat",
+          "sha256": "67341f09b527b43e74148d4188a4d7ec5fdebe77a957e38a7b2ff8a4d41b5ede"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "folderOrganization",
+          "sha256": "f241e00888dc228ae05fe2a225ba7b072aef5d8fe647e6926e6b324a40ad3688"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "folderStructure",
+          "sha256": "58c7fc197524761ba5bdbf45d02877ceea90b9b1e7c961d0e88740c7213c90a5"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "formatCustomization",
+          "sha256": "bdf85a3fc8d7af55924b52f1dd76ecc256e72947049f2f937dc5d7d315bfc66f"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "groupByCategory",
+          "sha256": "f8fb8ae54e53e71bc021a852fabfcae64d35db16f147e50f6717de02040ef607"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "includeGranularData",
+          "sha256": "8963559a142dc6d31f72a528b00fa0661dbe1eb3af3be98d735e7b40c6733a59"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "includeMetadata",
+          "sha256": "49f363748ae083cfb27571689b65b02a2337e14062e9c5a78c6ee3e7e9b34487"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "individualTracking",
+          "sha256": "3eee4100c66b6a5897349cde2764ba6cdc877b4bc07ba76543072d0b72f9aa75"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "metricSelection",
+          "sha256": "1cd0c55e940e5c99a093f1fe73a520c82418fe7f08081808bcc656d64f437916"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "pendingScheduledExportRequests",
+          "sha256": "1a27076da2d3246b9e167e3d9b2e550be941a2d763e19d4e7edd79c0cbc660e3"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "pendingScheduledRetryDates",
+          "sha256": "1625c6aeef1b5c438bcbecb961897499b3ff7fc1cdfb3628d4e4051f851f4b27"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "rawSnapshot",
+          "sha256": "2780173fd32cc264b4c878f3e3d45bcc60c1cbf3c291b5603fdcf5f6ec7f8b8d"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleCadenceUnit",
+          "sha256": "b9d5810fe874419583b018376c729b616ee1bf0b09f305ae571cc5b876098eb6"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleCadenceValue",
+          "sha256": "f9726f1823f4a21f8b06da1650a646658db1a3eefab506009ebf610d0d71f156"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleDateWindow",
+          "sha256": "3aa5ffbfabb598f77e91e40430d40bbac4198d29c2b7a69ff0b9d3aaec1edda9"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleEnabled",
+          "sha256": "a45f437038894ec4a60cc9d36ee65b8827b2995877072fbfba465480ee9d871b"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleHour",
+          "sha256": "b9c722dd92feb622dd8dd222bef952ba428aea19aeaad867badb1ab081443d95"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleLookbackDays",
+          "sha256": "e89045d06dc1562ee4dcf2c4f40b74c501f1f4501b3568126c84fcca1d62c169"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduleMinute",
+          "sha256": "4c1e3189ffa3685dea2b67887b19fde6b9a2c12ecd9a7dce6fb939c707a1f2b1"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "scheduledExportTarget",
+          "sha256": "842f425b9fc42d7719699d5c79a32e444e73a82c13ad43cb16604f206dbcae44"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "selectedExportFormats",
+          "sha256": "7d403ac28f1e80d9ddcb5b2e35b6a751dd908d6eb12dbb9cae5207f1c3bc5a80"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "subfolder",
+          "sha256": "41c8a46f9bec0cea51489c4f73f7cb5fdc5c8e187ca05ae5b4d381b01c98a5cd"
+        },
+        {
+          "source_type": "ExportSettings",
+          "serialized_field": "writeMode",
+          "sha256": "4c4bb31b5ac20d625199c117d6e8417039a7ef5c3c30e1c6bb58e1b0d5379681"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "compatibilitySchemaProfile",
+          "sha256": "3f2275f5c35704bc1a36a3227a91e1227edc193d93d61d2567f58b46aedd1123"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "dateFormat",
+          "sha256": "e36701bba4a5f81fb0211c5fea1279789843cc6532e292bb211cd036ecd0a174"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "frontmatterConfig",
+          "sha256": "8302679f067aeaf5fd704c6213a692f0683b08b0cbb539ae5c018ea4f2f1b28e"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "includeAndroidCompatibilityKeys",
+          "sha256": "038c580a94be21e7594bbafaf6559a93c5ea2d71adbca491a0e31f89b27d781f"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "includeAndroidNativeFields",
+          "sha256": "ccaf6413674f1badca42c997751e1eda4c23c03ffe1b70369c8de6153f3be18d"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "includeLegacyAndroidAliases",
+          "sha256": "bf806dbde3c1d7db6c82b1c625685b260fa001d6e7f1f3ccf9dccc4fed6c182c"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "markdownTemplate",
+          "sha256": "e6e9aeaa6f59837e2c654d878ff05e8bd4bdcbfa567aaf75951caa24eaf67c6e"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "timeFormat",
+          "sha256": "7829e5048442c4469dd585cd5f0a49c6445566cf68adbd11396f60a74e67eaec"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "unitConverter",
+          "sha256": "5b5704f4f98eae4b8b08fa44a388fb92be16baa555e9d2a379e002ade7f3027d"
+        },
+        {
+          "source_type": "FormatCustomization",
+          "serialized_field": "unitPreference",
+          "sha256": "6815e2856dc91a1cc2613fe8e466c086a0c2961fb8484218375b49b67ab399d4"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "customDateKey",
+          "sha256": "d581eeee0e33b03a5996ee5b0347336f297fd8bee7da8c15a8ce5f7b58e35165"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "customFields",
+          "sha256": "e5e3cbac3e16b22f0716cd67ee447eab9c6da82403cbe724b4b4b79499e6802d"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "customTypeKey",
+          "sha256": "9419e51b3fee0f7bfd6021a130bfd1240851d06333f6455cdb778435b8ab6750"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "customTypeValue",
+          "sha256": "e60b1de8980e5d324474235eabb65353d8e57ddb3a9f084e3d55f26efecb537d"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "fields",
+          "sha256": "b9de3ce69c17f5d02012905eccedbf8658ed4f1d5758d7778752a7541499dfd5"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "includeDate",
+          "sha256": "05a5c2a6d1fd198a60cb9df903a3cfcd14b40ef0902170d625ff209f56419aea"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "includeType",
+          "sha256": "6bc553fa6d0a2daa7d8a3b3fc9777d4138ab1a52eb40e0864cca3c1e00f73ad4"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "keyStyle",
+          "sha256": "683fdfdf2c7a746cba5342e8ee3758c52de7a2ce10ae0f87e7e2c121d05b078b"
+        },
+        {
+          "source_type": "FrontmatterConfiguration",
+          "serialized_field": "placeholderFields",
+          "sha256": "77c417c2a735feab22f5520c0e9880bbbe1d4170cc1d66200887fe5941a94b70"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "enabledMetrics",
+          "sha256": "e8f192ce2c102312b99734f0578bbb2335a1057a3d3afa517d94eceaf41dd1cf"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "entriesFolder",
+          "sha256": "6283f423ed4e2de793b43ba5f0d72e710d94b0fb94862b2e792360c04e04b764"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "filenameTemplate",
+          "sha256": "62dd2f87b862b05b8d2fb8f3f5e4b305a7be9460a11651e14e6fb4cab4c883fd"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "globalEnabled",
+          "sha256": "6ce7b04c90cf4957e291a13be6ff2f8a32dccbaab612b26fc5b9e260b0928bb2"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "metricConfigs",
+          "sha256": "b3b9460200c6a541be29f88c95f8235b7bb08dcb9333093cfc018d8ec2664da4"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "organizeByCategory",
+          "sha256": "c7f73e4cfb0055b924c91e88c4b7e21586853c9b3710293a0cb3523053d2b027"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "rawTrackedMetricIds",
+          "sha256": "32186c9f330370b38b9ac19f808de5ad85e078f42500e16ff88c716931f2bf52"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "requiresGranularData",
+          "sha256": "7ab0a1f82d5f43a52d727ec00abeac76d9c20cb8e072305f80f78049e0469cb1"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "trackedMetricCount",
+          "sha256": "dfbcebe9655f2a479f571ee255313f0022ec08433dcbc6c55844aebb616e09fd"
+        },
+        {
+          "source_type": "IndividualTrackingSettings",
+          "serialized_field": "trackedMetricIds",
+          "sha256": "e759889e3fb436a1a3710b9bd0a60a2f412db3b38f8be26e389fda7fb86e000c"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "bulletStyle",
+          "sha256": "8349f5228b692643c90d449892e59c9e33cc9e0985e10a0b2650aad38d8c9eee"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "customTemplate",
+          "sha256": "c57738c5dbf70a19ea79c28ee38995ed213a00c4fc0ddb2d451f957bfaec8174"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "includeSummary",
+          "sha256": "2bca5615f6dc8fea1275ae446f3d9168070714beb7ccd2fbea860e9f3bb02f52"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "sectionHeaderLevel",
+          "sha256": "25c405c279602425da5265b3f3fae7ece36ded45d7f4167bab1a4652edd2451f"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "style",
+          "sha256": "c1e856143afc84f57b3c1230aa07bbd3bd86fe6f82f1fdff3ce66b55ae30cab8"
+        },
+        {
+          "source_type": "MarkdownTemplateConfig",
+          "serialized_field": "useEmoji",
+          "sha256": "f01170797bf947ef9d1190b8af134180444ac8ff0fa37f666f8d6cb56d31cc75"
+        },
+        {
+          "source_type": "MetricSelectionState",
+          "serialized_field": "enabledCount",
+          "sha256": "c89efb093e079263a325f8ade89df94e84a7ddccfe23dada405e29cc7910d5a3"
+        },
+        {
+          "source_type": "MetricSelectionState",
+          "serialized_field": "enabledMetrics",
+          "sha256": "6a484fd175ef729da226a7b9b7fbef2cf342dbfce77bab4ca7bff128996280b2"
+        },
+        {
+          "source_type": "MetricTrackingConfig",
+          "serialized_field": "customFolder",
+          "sha256": "d4caefee861c5e08ee9e03140ca6f032e0024f6d9da433eb4ac7a7d3494f5691"
+        },
+        {
+          "source_type": "MetricTrackingConfig",
+          "serialized_field": "trackIndividually",
+          "sha256": "c41526748427b3fe122323d46e7732c02fdca40272f611e55e455acb42935bad"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "apiOperationId",
+          "sha256": "251eb10000a3ceb04ac97870181eaf57b1623cf1f340c966650858a39c6f9541"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "attemptCount",
+          "sha256": "d523a8b82cb00770fb57bc3819412a9295aca087e9140dfacbbd4cf223b11233"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "date",
+          "sha256": "c73556911398713d9390ec10b97e3b60efa854d288342a4f36cb45098ec25ac3"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "destinationFingerprint",
+          "sha256": "df945a7bc5781b2e40e3ad0aa1ad8831d260f298e3f2c437fc800f1e2e79f68f"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "enginePin",
+          "sha256": "9b09886888889cf399c7940dfc232dc435adae29c4002d9592b1f72d47d23d9e"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "exportTarget",
+          "sha256": "ed18441980f946e632fc2b196480e6350640d0f0882993fd024cacba16a806ff"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "firstFailedAtMillis",
+          "sha256": "4a962d02f846c9f83c3595d68c3f1f2a0868878220d4d9b7a41f9261b389562e"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "folderOperationId",
+          "sha256": "a86eda18170197b320ecd2bbf1c8bbb7b6d752caeefc517fac66da23ca86bfec"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "lastAttemptAtMillis",
+          "sha256": "34f139402db71b659c3fc9270ac4a548be11e5c1ccbde07ca37e82ce0d84c723"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "lastFailureReason",
+          "sha256": "41d9f8c371bf2c51f68edd371e3deb5b15d8b342c0fd564edde85c13a2129f5d"
+        },
+        {
+          "source_type": "PendingScheduledExportRequest",
+          "serialized_field": "settingsSnapshotJson",
+          "sha256": "33b5d55c7044c1a1df00bd48b6a6453fdde3e33043ebf081b7fe9636b07332ed"
+        },
+        {
+          "source_type": "RawSnapshotSettings",
+          "serialized_field": "format",
+          "sha256": "0661e6e3908dac94da873757c781e86e5e1ef7d325bc4ef5d6d2377fe548bf95"
+        },
+        {
+          "source_type": "RawSnapshotSettings",
+          "serialized_field": "includeExerciseRoutes",
+          "sha256": "8d496848ee4a1eba0e17bdf82a53825921bfb932c580d9554f07bb3b4fd88db9"
+        },
+        {
+          "source_type": "RawSnapshotSettings",
+          "serialized_field": "pageSize",
+          "sha256": "b5e4c05ac62cbe400ad256a004b899f8e4ca9596bd8e92511dc8cb23fe23f5e1"
+        },
+        {
+          "source_type": "RawSnapshotSettings",
+          "serialized_field": "scope",
+          "sha256": "49a2f36d48c4f1783cbc7d626b84824c593e8d4b8585f1c7490eb7246691a96e"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "anchorEpochDay",
+          "sha256": "09a96bc6e0c87f315706c7fd17cbb01749c954bc306fadf62c5189f7b21d0acf"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "cadenceUnit",
+          "sha256": "cf175b5c97586dc8b12283e43216552b02a25ca0240f054eeb9c3e9e4879c2af"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "cadenceValue",
+          "sha256": "445c39bc61f300b2bc237ebac10132f6c7c826b9a9fa57ac3568e2c4d7801503"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "dateWindow",
+          "sha256": "7acb1ae3c8228434d4239847992461b00dab7f8c9371953cf5bb8704306e496f"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "hour",
+          "sha256": "468ec7d9570d2e6a40cd1ee850c066ce550311be82b3eeb6d46f8fbf56a3a208"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "isEnabled",
+          "sha256": "287fe8ba8430a3df892781985472060651ff89dca1d9381d415e34b57e43a574"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "lastRefreshSuccessEpochMillis",
+          "sha256": "b8bb963cfb32912886ee75d00f9886a556ba0dc53ef36964cab42cef1167bf2c"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "lastSuccessEpochMillis",
+          "sha256": "4b1f3bae5eb2a8359e01efea0211d5f6690a756713ee3bdad447d4e968220455"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "lookbackDays",
+          "sha256": "f5696c725c14c8aa820b726dfada90822931154faf1672ded70f87cab8e08ff9"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "minute",
+          "sha256": "ee92fbc4c9ce6405f886a5951f3031b80d7fb13fe380098cc531e8c05ca7af69"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "pendingExports",
+          "sha256": "06616cf0da5f1cd465e5ec8f8b81bd356bb393331d8b553ee8c2fd0d81c79955"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "profileId",
+          "sha256": "af17e7e6816db8e84db4ead95cde186f81e069b232fae6d750bfc6974a2288aa"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "recoveryGeneration",
+          "sha256": "fb74a733c6819af8fcc47fa8890004b1e18785bb922b0188b44e798a2951f16a"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "todayRefreshEnabled",
+          "sha256": "73f5d1fb180a3efec666f68b6ad3723ed1aa4174238800a6de9f5485268f1ca6"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "todayRefreshIntervalHours",
+          "sha256": "8608793a889c9e5b4982f5570be43c258853e3be86ffa80c5e85f0c6aec5e1d0"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "weekdayIso",
+          "sha256": "5c1472cd29963aaa69fae933bc390c6d2945dcf6d55428b484f70f31c02e2773"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "zone",
+          "sha256": "a522c9d36599548e574e59acda4f119ea26625bdde78feb7258903041b34c492"
+        },
+        {
+          "source_type": "ScheduledProfileEntry",
+          "serialized_field": "zoneId",
+          "sha256": "87008466619248af800673a314c9fdabdf1732c514c2bcb5096e2557a7fab7b0"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "apiEndpointUrl",
+          "sha256": "222a04be9b67c3856d69fe5dd08418b3ec547475f72d53efd31f788569f5b6d4"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "durableOperationId",
+          "sha256": "84b6854cc9167dd06078a327f82cb8758fcc1a236c15dfce5589adccf0cb64e1"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "fireAtMillis",
+          "sha256": "bbfc945c4bf72897de7a825c7ecc2dc6491c3bdde3232f9417e469fb837d8475"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "folderDisplayName",
+          "sha256": "0e89e9befa45a0f7bf6411f759ccbdc5148e748fd644086334d6ec817670e09b"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "folderUri",
+          "sha256": "b87a2e0cf2261c58fc48792e8e76dba61490d64a015a7dc8b5f704157e422cc3"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "id",
+          "sha256": "6ee0ff1d5150831593dcdfb4d7ef0b88098e82a9fe42f865dfa5fa23f5e2fb2e"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "ownerDates",
+          "sha256": "640582a9903c23cdd3188b13aa2318d590ad74e9cd80f192aa3a9b6c35a5be5b"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "ownerEpochDays",
+          "sha256": "4332483e1f2086fd47b1a333987e134345bf6f02e8dbaab410c63a592e989116"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "profileName",
+          "sha256": "7316ff41fafa6daa638e25c5b3349f6702ddfbbe7f565e63550286d126bdf4ca"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "settingsSnapshotJson",
+          "sha256": "5612ef290a581600895ff7cf906f53927ad998f5085be2ef9d91775db6a54a5a"
+        },
+        {
+          "source_type": "ScheduledProfilePendingExport",
+          "serialized_field": "target",
+          "sha256": "14e7b3ae211e382e9eb8b163d058fa86e56ab721dd240d217a23b2fdcd7d70f3"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "c",
+          "sha256": "aac5482d57268cdf8e29b051274748db9ef2a773949e60db24a95e26abebca2d"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "d",
+          "sha256": "b8a05988b62eea9f4835dc079cf220b54ce0f96eb30bf16fe1c0717e081c783c"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "f",
+          "sha256": "b3ce4ce6e9d8d58964d305b46c749e1ae89e494223b95809dccd45a14f6d49cf"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "l",
+          "sha256": "6f88bc2a46b724da999dd4ed3f3bb18cda0aec019bce7c31b376a6b19a5404a7"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "m",
+          "sha256": "e1e3f50f8f02827faf5951ce8f3d6e2a273bbc48d16a5889650307b84b0a00e4"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "n",
+          "sha256": "1c98da2450927f967fccdd5e9e503edd600022ce730bee90b588040619612233"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "p",
+          "sha256": "b136a9822adb97f411cd776397e55932c82437194c20ae4e2afba3b057df22c5"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "t",
+          "sha256": "f9d18e57ef3b279ff2a9686bfc1579d22d7f7d7d0f7cde4e5e4054f1e49c9b92"
+        },
+        {
+          "source_type": "SnapshotFormatCustomizationPayload",
+          "serialized_field": "u",
+          "sha256": "d3b7110f632d20ca4c882acd241dd56fa162ffbad57fea2552b82d79b32cd53f"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "D",
+          "sha256": "b358f9224a1b536f4f8bfc69fac2329631ba25358d7f854a0f4f88a1962eddf8"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "T",
+          "sha256": "dbc121f72cb53777ab7493db0614f3bc8c1b451d50f0bf42efdedbe324baf315"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "c",
+          "sha256": "cad4b4b61066753c16f11fd27e0243d7a000a57a4f4e91bfde459dab62e0c210"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "d",
+          "sha256": "b79f6668ff64fd0a0a42fefd49d9d889b1e2564e93b8975071a33aac06a3cc29"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "k",
+          "sha256": "569baf4134bb8d9e07d10a4928e614376b1b0f99f18bc3bad63045fb0d872584"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "o",
+          "sha256": "b53ed4874ee624d3b513a6597fdcb595ebca87a32c5520f62e2e33ae6ae8c35c"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "p",
+          "sha256": "36e7e9df363faae4a02713f3b5dfa6091e0bb6e0f30d2a0683816aa7677113fb"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "s",
+          "sha256": "064cfcbeccdd115fc8cd039e5c32c36013f7e4817c229ccde7e0c9b6d3c92e1d"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "t",
+          "sha256": "d09a56fff4adff56e5a191c091a4bbd006b41bd2709ca1bfcf5bb231978ad30e"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "v",
+          "sha256": "419679b8d44112be43e9fbc6f0163c178c84e5fa8ff346ee0690f2b7523255e6"
+        },
+        {
+          "source_type": "SnapshotFrontmatterPayload",
+          "serialized_field": "x",
+          "sha256": "3abbed2b7622237b0c485f281de31d4442e9f5a4f89f42989e1ae94d123eedf0"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "b",
+          "sha256": "42e758d2453c45b90a3039f523da4ec3d08791af90f455ed967e71084d23ef8b"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "e",
+          "sha256": "7329fcef9f9a5f64bdbb2357be5c141db6e36b7bcdec771f9b353b75498fcf3a"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "h",
+          "sha256": "024c017fca1e0e0e9ef0898b60a5e3fb30e6db3fb2bae140a4ee4099d73aeb00"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "i",
+          "sha256": "f47de884111960ba274888d8b3d43747ceaa6c054ff42f45ee58c770b6ec7042"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "s",
+          "sha256": "183325d98494d2ab5478ff9f8de91240cd2a95a8be3a0670afee3d6d12027496"
+        },
+        {
+          "source_type": "SnapshotMarkdownPayload",
+          "serialized_field": "t",
+          "sha256": "b8c6b998ee371ab09d9261b4569b982be7c256b2f09a11aa1d55cb71a19228c1"
+        }
+      ]
+    }
+  }
+}

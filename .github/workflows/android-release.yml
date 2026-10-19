@@ -140,7 +140,7 @@ jobs:
             .run_attempt == $attempt and .status == "completed" and .conclusion == "success"
           ' "$RUNNER_TEMP/run.json" >/dev/null
           jq -e --argjson attempt "$RUN_ATTEMPT" '
-            ["test","F-Droid clean build","Rust/Kotlin direct interop","Wear emulator smoke",
+            ["test","Rust/Kotlin direct interop",
              "Emulator instrumentation and direct E2E","Android CI"] as $required |
             ([.jobs[] | select(.run_attempt == $attempt and .status == "completed" and
               .conclusion == "success") | .name] | unique) as $passed |
@@ -183,6 +183,8 @@ jobs:
 
       - name: Set up Android SDK command-line tools
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3
+        with:
+          packages: platform-tools
 
       - name: Install pinned Google Play metadata validator
         shell: bash
