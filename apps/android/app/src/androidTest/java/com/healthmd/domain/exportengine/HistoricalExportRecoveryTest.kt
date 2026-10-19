@@ -1,6 +1,8 @@
 package com.healthmd.domain.exportengine
 
 import com.google.common.truth.Truth.assertThat
+import com.healthmd.data.scheduler.ScheduledProfileSnapshotFactory
+import com.healthmd.domain.model.ExportProfile
 import com.healthmd.core.HealthMdCoreService
 import com.healthmd.data.export.CsvExporter
 import com.healthmd.data.export.JsonExporter
@@ -39,7 +41,19 @@ class HistoricalExportRecoveryTest {
                     compatibilitySchemaProfile = if (profile == AndroidExportProfile.android_frozen_v4) CompatibilitySchemaProfile.IOS_V4_FROZEN else CompatibilitySchemaProfile.ANDROID_ANALYTICAL_V5,
                 )) }
                 val snapshot = AndroidExportSettingsSnapshot.capture(settings, original, ZoneId.of("UTC"))
-                val restored = AndroidExportSettingsSnapshotCodec.decode(AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)).restoreOnto(ExportSettings())
+                val encoded = AndroidExportSettingsSnapshotCodec.encodeCanonical(snapshot)
+                // The generic settings projection deliberately excludes execution authority.
+                // Exercise the shipped profile recovery path that rebinds the saved exact pin.
+                val decoded = AndroidExportSettingsSnapshotCodec.decode(encoded)
+                assertThat(decoded.restoreOnto(ExportSettings()).executionEnginePin).isNull()
+                val restored = requireNotNull(ScheduledProfileSnapshotFactory(ExportEnginePinPlanner()).restoreForRun(
+                    profile = ExportProfile(
+                        id = "historical-profile", name = "Synthetic historical profile",
+                        settingsSnapshotJson = encoded, target = settings.exportTarget,
+                        createdAtEpochMillis = 0L, updatedAtEpochMillis = 0L,
+                    ),
+                    current = ExportSettings(), lookbackDays = 1,
+                ))
                 assertThat(restored.executionEnginePin).isEqualTo(original)
                 val data = HealthData(LocalDate.of(2026, 3, 15), activity = ActivityData(steps = 1234))
                 val ids = DailyAggregateExportIds("historical-request", "historical-session")
