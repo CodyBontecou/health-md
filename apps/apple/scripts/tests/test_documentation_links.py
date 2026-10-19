@@ -36,6 +36,13 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(errors, [])
         self.assertEqual(count, 2)
 
+    def test_ignored_runtime_directory_is_optional_but_link_targets_are_checked(self):
+        errors, count = self.validate("Keep task receipts in ignored `.pi/` state.\n")
+        self.assertEqual(errors, [])
+        self.assertEqual(count, 0)
+        errors, _ = self.validate("[Receipt](.pi/missing.md)\n")
+        self.assertEqual(errors, ["AGENTS.md:1: missing local target .pi/missing.md"])
+
     def test_missing_task_pointer_reports_line_and_target(self):
         errors, _ = self.validate("# Tasks\n[Guide](apps/apple/docs/moved.md)\n")
         self.assertEqual(errors, ["AGENTS.md:2: missing local target apps/apple/docs/moved.md"])
