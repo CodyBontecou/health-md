@@ -10,6 +10,12 @@ Apple and Android should expose the same capability, terminology, settings seman
 - Keep non-equivalent statistics distinct, including HealthKit HRV SDNN versus Health Connect/WHOOP RMSSD.
 - Update shared contracts, Android-facing docs/fixtures, and cross-product consumers whenever the boundary changes.
 
+## Verification
+
+Follow the root [verification policy](../../AGENTS.md#verification-policy) and [test selection guide](../../docs/testing-strategy.md). `make test` runs macOS tests without a simulator; use `make test-macos TEST_FILTER=HealthMdTests/<Class>[/<Method>]` for iteration. Prefer existing standalone package tests when they own the behavior. Use `make test-ios` or `make test-platforms` only with the current task's explicit simulator authorization.
+
+macOS tests and generated-documentation scripts share `build/DerivedData/macOS` within this worktree. Normal `xcodebuild test` still rebuilds changed inputs. Keep caches isolated between worktrees/concurrent jobs; use `DERIVED_DATA_PATH` to override. Coverage and documentation verification in CI use the same coverage-enabled profile.
+
 ## Export schema contract
 
 Health.md export files are a public, long-lived contract for Obsidian, JSON, CSV, and downstream automation.

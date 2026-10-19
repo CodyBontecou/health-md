@@ -2,9 +2,11 @@
 
 Audit state: **objective not achieved; production rollout remains blocked**. This maps the concrete “implement end to end” objective to actual evidence rather than treating green tests or source volume as completion.
 
-## Concrete success criteria
+For the changed public-MVP outcome, see the [experience backlog](production-experience-roadmap.md), [design interview](production-design-interview.md) and [checked native billing/retirement/large-export facts](native-subscription-and-large-export-research.md). Public self-service, essential MCP/backend decryption, shared durable future-upload All grants with grandfathered limits, passkeys/recovery codes, proven platform semantics and conditional provider consent remain selected. Q35–Q56 select decimal monthly/annual **1 GB/50 GB/100 GB/1 TB** plans, retained-original-byte accounting and **10 GB lifetime-linked storage/no general free tier**. Required native checkout need not wait for web; paid Cloud exports require no second lifetime purchase. iOS/Play enrollment excludes first-class F-Droid integration but permits otherwise-authorized generic API clients. Q48–Q53 settle verified paid-expiry clock, 30-day archive-grace reads/downloads, days 0/7/21/29 email plus persistent warnings, service-warning-failure holds and archive-only primary erasure/old-grant revocation/minimal account retention. No age expiry under valid entitlement or silent quota eviction; Q50 requires prior reduction rather than automatic still-paid retirement. Q46–Q47 select bounded resumable within-allowance JSON-only artifacts with schema families pending. Lifetime-linked eligibility/binding/stacking/continuation, prices/trials, external store reductions and deletion granularity remain open. **Q56 withdraws the $100 spending envelope; profitability is an owner assumption, not evidence or spending approval.** No public benefit/billing/retirement/native target/large-artifact path is implemented or qualified. **US-only hosting remains required and the target intentionally unbacked with permanent-loss disclosure**; reviewed D1-history permission is not archive/key recovery. Topology/custody/copy terms and clients remain unqualified. Reconcile this earlier audit after overall design confirmation: no gate passed, roles silently filled, independent review waived or deployment/client/recovery/residency approval created.
 
-End-to-end completion means all of the following, not merely source implementation:
+## Concrete success criteria (earlier recoverable-service objective)
+
+The original end-to-end objective required all of the following, not merely source implementation. These criteria are not an accepted release checklist for the newly selected unbacked MVP; reconcile its declined recovery work and expanded MCP/US/identity scope through review rather than treating them as passed gates:
 
 1. The existing public writer is healthy and cannot leak upload capacity after client disconnects.
 2. The proposed multi-user architecture and product/security/privacy/operations decisions are approved by named owners.
@@ -93,10 +95,10 @@ No listed test substitutes for the unresolved deployed/provider/mobile/legal gat
 
 ## Current blockers and next required inputs
 
-No defensible implementation path can complete external/deployed gates without:
+The revised MVP still needs overall design confirmation and reviewed reconciliation of this earlier audit/gate set. No defensible implementation path can complete external/deployed gates without:
 
 1. named product, security, privacy/legal, operations and mobile owners;
-2. explicit approval of identity/recovery, region, retention/backup expiry, RPO/RTO, quota/pricing, age/support and signup policy;
+2. confirmation of the revised unbacked/shared-connection/US-only product contract, with explicit approval of credential mechanisms, provider-copy policy, exact custody/topology, audit/deletion retention, quota/cost, age/support and signup; formal RPO/RTO and Health.md backups are not selected MVP requirements;
 3. approved Cloudflare/email/monitoring/support/key-custody arrangements and credentials;
 4. authorization to provision separate synthetic staging and production resources;
 5. Apple/Android product scope and physical-device access;

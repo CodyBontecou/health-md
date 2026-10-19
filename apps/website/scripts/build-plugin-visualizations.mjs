@@ -140,7 +140,7 @@ async function loadPluginMetadata(esbuild, tmpDir) {
   const entry = path.join(tmpDir, "healthmd-viz-metadata-entry.ts");
   const outfile = path.join(tmpDir, "healthmd-viz-metadata.mjs");
   await fs.writeFile(entry, `
-import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "insert-wizard.ts"))};
+import { VISUALIZATION_CATALOG, VISUALIZATION_CATEGORIES } from ${importPath(path.join(pluginSrc, "visualization-catalog.ts"))};
 
 export const pluginMetadata = {
   categories: VISUALIZATION_CATEGORIES,

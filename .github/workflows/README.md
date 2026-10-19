@@ -169,6 +169,12 @@ This pilot is optional and is not the complete Apple CI matrix or release qualif
 Its checks/artifacts appear in the private controller and do not satisfy public PR status gates.
 Existing required hosted CI, nightly, release, and exact-SHA qualification remain in place.
 
+## Testing-tool feedback
+
+[`testing-tools-ci.yml`](testing-tools-ci.yml) runs host-side command-routing, documentation build reuse, CI selection/final-gate, and website build orchestration regressions without compiling native apps or starting devices. Run `make test-testing-tools` locally after installing `scripts/testing-requirements.txt`; this is not a substitute for product or release gates. See the root [test selection guide](../../docs/testing-strategy.md) for iteration and qualification tiers.
+
+Apple's macOS job reuses coverage-enabled DerivedData for documentation checks; normal `xcodebuild test` keeps source-change detection. The nightly macOS suite executes once with coverage, rather than once normally and again for coverage. Website CI uses `build:ci` after its locked install, building and checking documentation once.
+
 ## Android release trigger
 
 Android `1.9.3` is a phone-only Google Play release. `apps/android/release-scope.json` records the active artifact and explicitly defers Wear OS publication. The phone build does not advertise a Wear capability, start Wear synchronization, or expose Wear settings.

@@ -18,6 +18,8 @@ The referenced product protocol `1.0-draft.4` and common instructions `practice-
 
 This is an independent Node 24/npm component with its own lockfile and generated output.
 
+Follow the root [verification policy](../../AGENTS.md#verification-policy) and [test selection guide](../../docs/testing-strategy.md). During iteration use `npm test -- <owning-test-file>` and `npm run typecheck`; run `npm run check` once for the affected finished change. Install locked dependencies when missing or the lockfile changes, not before every test run. The following is full synthetic qualification, not a per-edit checklist:
+
 ```bash
 npm ci
 npm run check
@@ -32,4 +34,4 @@ npm run dry-run
 
 `npm start` builds and starts the local synthetic Worker on `127.0.0.1:8787`. Generated `dist/` and `.wrangler/` content is never committed. CI qualifies a build but never deploys it.
 
-Before finishing, run type checking, unit tests, the source/build/fixture scanner and canary, security/qualification verifiers, production build, real local-Wrangler browser projects where available, smoke, Wrangler dry-run, `npm audit --audit-level=moderate`, and `git diff --check`. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and `qualification/generated/` provenance are synthetic-only and ignored.
+For clinical-boundary, runtime/security, artifact/provenance, dependency, or qualification-wiring changes, run the source/build/fixture scanner and canary, security/qualification verifiers, and the relevant browser, smoke, dry-run, and dependency-audit gates once against the finished inputs. Full `check:ci` remains required for CI/release qualification. For documentation-only changes run the affected scanner/verifier, not every native/browser suite. Preserve strict no-store/security headers and the fail-closed runtime guard. Generated browser failure artifacts and `qualification/generated/` provenance are synthetic-only and ignored.

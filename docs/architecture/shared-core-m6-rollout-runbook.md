@@ -2,7 +2,7 @@
 
 Status: implementation rollout support; production authority remains legacy
 
-This runbook controls the profile-scoped migration from native deterministic exporters to the shared Rust core. It does not change Apple `healthmd.health_data` v7, Android frozen v4, Android analytical v5, or direct protocol v1/v2.
+This runbook controls profile-scoped migration from native deterministic exporters to the shared Rust core; selecting an engine does not change a public schema or direct protocol. The [M6 baseline](shared-core-m6-rollout-baseline.md) preserves its historical v7 evidence. Current Apple profile/control names are owned by the [policy resolver](../../apps/apple/HealthMd/Shared/ExportEngine/AppleExportEnginePolicyResolver.swift) and [durable pin](../../apps/apple/HealthMd/Shared/ExportEngine/AppleExportEnginePin.swift).
 
 ## Authority modes
 
@@ -20,12 +20,12 @@ Committed defaults remain `legacy` until release evidence is approved.
 
 ### Apple
 
-Apple modes are selected per `apple_health_data_v7` profile with mutually exclusive Swift compilation conditions:
+Current Apple modes are selected per `apple_health_data_v10` profile (core API 5). The v10 extension preserves registry-v1 and primary metric semantics; historical v8 pins are not migrated and incompatible present pins fail closed. WHOOP-v2 rendering remains native-authoritative. Modes use mutually exclusive Swift compilation conditions:
 
 - `HEALTHMD_APPLE_EXPORT_ENGINE_SHADOW`
 - `HEALTHMD_APPLE_EXPORT_ENGINE_RUST`
 
-Defining both fails closed to `legacy`. Debug/internal builds may use `HEALTHMD_EXPORT_ENGINE_APPLE_HEALTH_DATA_V7` or the profile-scoped debug `UserDefaults` override. Release builds ignore runtime overrides.
+Defining both fails closed to `legacy`. Debug/internal builds may use `HEALTHMD_EXPORT_ENGINE_APPLE_HEALTH_DATA_V10` or the profile-scoped debug `UserDefaults` override. Release builds ignore runtime overrides.
 
 ### Android
 
@@ -37,7 +37,7 @@ Android modes are compile-time `BuildConfig` values sourced from Gradle properti
 
 Allowed values are `legacy`, `shadow`, and `rust`; every other value becomes `legacy` during configuration. API v1 always uses the frozen-v4 profile. Debug/test builds may inject profile-scoped preferences; release builds ignore them.
 
-Apple pure-Rust admission is currently limited to non-archive summary-only overwrite roll-ups on range-capable local, generated-direct, and connected-corpus surfaces without provider sidecars. Apple daily-output, preview, and API operations may run shadow but cannot select Rust authority while exact v7 daily records still require native profile documents. Do not broaden this predicate without independent exact-byte/path evidence and native-renderer fault-injection coverage.
+Apple pure-Rust admission is limited to non-archive summary-only overwrite roll-ups and their range-limit daily fallback on range-capable local, generated-direct, and connected-corpus surfaces without provider sidecars. Outside that narrow fallback, daily-output, preview, and API operations cannot select Rust authority. The operation-specific admission predicates in [ExportSettingsSnapshot.swift](../../apps/apple/HealthMd/Shared/Models/ExportSettingsSnapshot.swift) govern shadow and Rust support for the active v10 profile; frozen native-v7/v8 fixtures remain historical evidence. Do not broaden admission without independent exact-byte/path evidence and native-renderer fault-injection coverage.
 
 ## Promotion sequence
 
@@ -45,7 +45,7 @@ Apple pure-Rust admission is currently limited to non-archive summary-only overw
 2. Enable Android frozen-v4 shadow on the Play internal track.
 3. Review health-free mismatch counts, crashes, latency, RSS, and AAB growth. Resolve every difference.
 4. Repeat for Android analytical-v5, then promote each complete profile independently.
-5. Enable Apple v7 summary shadow in TestFlight. Lossless archive authority remains gated until bounded-stream physical-device tests pass.
+5. Enable the active Apple profile's summary shadow in TestFlight after its operation-specific gates pass. Lossless archive authority remains gated until bounded-stream physical-device tests pass.
 6. Review downstream Obsidian/plugin, website visualization, API, schedule, connected, direct, interruption, and resume evidence.
 7. Record profile-owner approval before changing a release default to `rust`.
 

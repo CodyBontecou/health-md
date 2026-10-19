@@ -123,9 +123,12 @@ class ExportArtifactPlanTest {
             totalByteCount = 0uL,
         )
 
-        val error = assertThrows(ExportArtifactPlanValidationException::class.java) {
-            ExportArtifactPlan.fromCore(core)
+        for (profile in listOf(CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V8,
+            CoreMetricRegistryProfile.APPLE_HEALTH_DATA_V10)) {
+            val error = assertThrows(ExportArtifactPlanValidationException::class.java) {
+                ExportArtifactPlan.fromCore(core.copy(profile = profile))
+            }
+            assertThat(error.issue).isEqualTo(ExportArtifactPlanValidationIssue.PROFILE)
         }
-        assertThat(error.issue).isEqualTo(ExportArtifactPlanValidationIssue.PROFILE)
     }
 }

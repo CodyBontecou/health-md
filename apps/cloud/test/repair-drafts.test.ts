@@ -135,6 +135,7 @@ it("previews without inventing readings, encrypts owner-only drafts, and never e
       headers: { Authorization: `Bearer ${bearer}` },
     }), env)).status).toBe(401);
     const fixture = JSON.parse(readFileSync(resolve(root, "../apple/docs/reference/generated/core/summary-day.json"), "utf8"));
+    fixture.schema_version = 8; // Metric-scoped repair v1 is explicitly pinned to Apple v8.
     fixture.date = "2026-04-01"; fixture.activity.steps = 0;
     fixture.sleep.totalDuration = null;
     const upload = await worker.fetch(new Request(`${origin}/api/v1/exports`, {

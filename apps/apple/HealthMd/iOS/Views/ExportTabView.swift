@@ -11,6 +11,7 @@ private struct ExportSizeEstimateConfiguration: Equatable {
     let target: ExportTargetSelection
     let formats: Set<ExportFormat>
     let metricIDs: Set<String>
+    let whoopResources: Set<WHOOPResourceName>
     let formatCustomization: FormatCustomizationSnapshot
     let includesLosslessRecords: Bool
     let includesIndividualEntries: Bool
@@ -74,8 +75,13 @@ struct ExportTabView: View {
               externalIntegrations.connectedProviderCount > 0 else {
             return nil
         }
+        let whoopResources = advancedSettings.metricSelection.enabledWHOOPResources
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = advancedSettings.exportTimeZoneOverride ?? .current
         return { date in
-            await externalIntegrations.fetchDailyRecords(for: date)
+            await externalIntegrations.fetchDailyRecords(
+                for: date, calendar: calendar, whoopResources: whoopResources
+            )
         }
     }
 
@@ -128,7 +134,7 @@ struct ExportTabView: View {
         .task(id: historyAssessmentScopeID) {
             guard healthKitManager.isAuthorized else { return }
             _ = await healthKitManager.assessHistoryAuthorization(
-                forMetricIDs: advancedSettings.metricSelection.enabledMetricIDs,
+                forMetricIDs: advancedSettings.metricSelection.enabledMetrics,
                 publish: true
             )
         }
@@ -556,7 +562,7 @@ struct ExportTabView: View {
     // MARK: - Health Data
 
     private var historyAssessmentScopeID: String {
-        advancedSettings.metricSelection.enabledMetricIDs.sorted().joined(separator: ",")
+        advancedSettings.metricSelection.enabledMetrics.sorted().joined(separator: ",")
     }
 
     @ViewBuilder
@@ -658,20 +664,19 @@ struct ExportTabView: View {
     private func dataDetailPicker(
         presets: [AppleExportDetailPreset]
     ) -> some View {
-        Picker(
+        SecondaryPicker(
             "Data Detail",
+            selectedTitle: AppleExportDetailPreset(policy: advancedSettings.detailPolicy).localizedTitle,
             selection: Binding(
                 get: { AppleExportDetailPreset(policy: advancedSettings.detailPolicy) },
                 set: { advancedSettings.detailPolicy = $0.policy }
-            )
+            ),
+            showsTitle: false
         ) {
             ForEach(presets) { preset in
                 Text(preset.localizedTitle).tag(preset)
             }
         }
-        .labelsHidden()
-        .pickerStyle(.menu)
-        .tint(Color.accent)
     }
 
     // MARK: - Export Formats
@@ -1063,6 +1068,7 @@ struct ExportTabView: View {
             target: exportTargetSelection,
             formats: advancedSettings.exportFormats,
             metricIDs: advancedSettings.metricSelection.enabledMetrics,
+            whoopResources: advancedSettings.metricSelection.enabledWHOOPResources,
             formatCustomization: FormatCustomizationSnapshot.from(
                 advancedSettings.formatCustomization
             ),

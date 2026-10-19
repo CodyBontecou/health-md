@@ -5,7 +5,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
 - Markdown frontmatter when **Include Metadata** is on, and Obsidian Bases frontmatter:
   ```yaml
   schema: healthmd.health_data
-  schema_version: 8
+  schema_version: 10
   raw_capture_status: complete
   time_context:
     calendar_timezone: America/Los_Angeles
@@ -15,7 +15,7 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```json
   {
     "schema": "healthmd.health_data",
-    "schema_version": 8,
+    "schema_version": 10,
     "raw_capture_status": "complete",
     "time_context": {
       "calendar_timezone": "America/Los_Angeles",
@@ -27,15 +27,19 @@ Health.md exports are durable public files for Obsidian, scripts, spreadsheets, 
   ```csv
   Date,Category,Metric,Value,Unit,Timestamp
   2026-07-15,Metadata,schema,healthmd.health_data,,
-  2026-07-15,Metadata,schema_version,8,,
+  2026-07-15,Metadata,schema_version,10,,
   2026-07-15,Raw HealthKit,Raw Capture Status,complete,status,
   ```
 
-## Version 8 live schema
+## Version 10 current source contract
 
-`schema_version: 8` is the current Apple Health.md daily export contract. Versions 5, 6, and 7 and their signature fixtures remain historical and must not be rewritten. Android frozen v4 and Android analytical v5 are unchanged.
+Current writers identify `schema_version: 10` and newly captured WHOOP sections identify provider v2. The primary Apple metrics, units and reducers are unchanged from v8. Optional `cycles[].step_count` represents WHOOP physiological-cycle steps, never civil-day Apple steps: exact integers in 0…2147483647, meaningful zero, and missing/null/invalid upstream values omitted. Multiple cycles remain separate; no daily total or roll-up is inferred. Existing `read:cycles` covers the measurement.
 
-Version 8 carries forward the complete lossless source representation and v7 summary corrections, and adds the optional typed `providers.whoop` section described below. The v7 corrections remain part of v8:
+Versions 5–8 and their signatures remain historical and must not be rewritten. Daily v9 remains reserved for the deferred unified grammar. Android frozen v4 and analytical v5 are unchanged; typed Android WHOOP cycle-step projection is planned. The shared registry-v1 bytes/hash remain frozen, with an independently versioned `apple_health_data_v10` profile extension and core API 5.
+
+See `packages/contracts/apple-export/v10/contract.md` and `packages/contracts/provider-sections/v2/contract.md`. Compatible cloud/plugin/connected-app readers must be released before enabling v10 writers against them; source tests do not verify deployed or installed readers. Incompatible present durable pins fail closed rather than re-render historical jobs as v10.
+
+Version 8 introduced the complete lossless source representation and v7 summary corrections, and adds the optional typed `providers.whoop` section described below. The v7 corrections remain part of v8:
 
 - `vo2_max` is a latest measurement, not a period maximum. Its period headline follows the latest daily source value even when that value is lower than an earlier measurement.
 - CSV extended summary categories, including cycling, vitamins, minerals, reproductive health, and other health, populate canonical `Unit` values from the production data dictionary instead of dropping them.
@@ -47,10 +51,10 @@ Clinical Health Records access is temporarily absent from current App Store buil
 
 ## Summary, provider, and source layers
 
-A v8 daily record has three complementary layers:
+A v10 daily record has three complementary layers:
 
 1. Existing `sleep`, `activity`, `heart`, `vitals`, `body`, `nutrition`, `mindfulness`, `mobility`, `hearing`, `workouts`, and medication summaries remain convenient for reading, charts, and roll-ups.
-2. Optional `providers.whoop` contains reviewed typed WHOOP facts under its independently versioned `healthmd.provider.whoop_daily` v1 contract. Provider values never overwrite or relabel Apple summaries.
+2. Optional `providers.whoop` contains reviewed typed WHOOP facts under its independently versioned `healthmd.provider.whoop_daily` v2 contract. Historical provider v1 remains readable. Provider values never overwrite or relabel Apple summaries.
 3. JSON `healthkit_record_archive` is the authoritative Apple source layer. It uses `schema: healthmd.healthkit_records` and `schema_version: 1`.
 
 The archive is the complete public representation Health.md captured from the selected HealthKit APIs. Downstream tools that need source identity, exact samples, or relationships should read it instead of treating summary arrays as authoritative.
@@ -60,11 +64,11 @@ Format roles are intentional:
 - **JSON** embeds the full archive.
 - **CSV** writes the same canonical objects as RFC 4180-safe JSON rows: `Archive Manifest`, `Raw HealthKit Record`, `Raw HealthKit External Record`, query failures, warnings, and partial failures. Canonical JSON and CSV record UUIDs must match.
 - **Markdown and Obsidian Bases** keep daily summaries readable and do not dump the archive. Their shared frontmatter exposes capture status, source-record count, failed-query count, warning count, and archive schema. Markdown additionally renders external-record, query-status, and medication-inventory counts in its compact diagnostics section.
-- **Individual Entry Tracking** derives source-event files from canonical HealthKit records whenever an archive is present. WHOOP v1 records do not participate in Individual Entry Tracking.
+- **Individual Entry Tracking** derives source-event files from canonical HealthKit records whenever an archive is present. WHOOP records do not participate in Individual Entry Tracking.
 
 ## Typed WHOOP provider section
 
-When WHOOP capture is enabled and an Apple Health day is retained, v8 may add `providers.whoop`. Provider-only days remain non-exportable. The same WHOOP fetch also continues to supply provider-native `healthmd.external_provider_daily` v1 sidecars; the typed section does not replace or weaken that fidelity layer.
+When WHOOP capture is enabled and an Apple Health day is retained, v10 may add `providers.whoop`. Provider-only days remain non-exportable. The same WHOOP fetch also continues to supply provider-native `healthmd.external_provider_daily` v1 sidecars; the typed section does not replace or weaken that fidelity layer.
 
 The nested section preserves WHOOP cycles, recoveries, sleep/nap records, workouts, and the current-day body-profile snapshot. Provider IDs are strings; duration fields retain exact integer milliseconds; the recent-nap adjustment retains its signed value; current v2 workout `sport_name` and cycle/sleep relationships are preserved. WHOOP HRV is named `hrv_rmssd_ms` and is never projected into Apple `hrv_ms` (SDNN).
 

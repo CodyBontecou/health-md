@@ -111,7 +111,7 @@ final class IPhoneMacContextRefreshCoordinator {
             dateRangeStart: allAvailable ? end : start,
             dateRangeEnd: end,
             selection: CanonicalHealthDataSelection(
-                metricIDs: Array(settings.metricSelection.enabledMetricIDs),
+                metricIDs: Array(settings.metricSelection.enabledMetrics),
                 sourceIDs: ["apple_health"],
                 detailLevel: detailLevel
             ),

@@ -38,7 +38,7 @@ enum ExportFixtures {
             ExternalProviderPayload(name: "cycles", endpoint: "https://redacted.invalid/cycle", statusCode: 200, fetchedAt: fetchedAt, data: .object([
                 "records": .array([.object([
                     "id": .number(101), "start": .string("2026-03-15T07:00:00Z"), "end": .string("2026-03-15T17:30:00Z"),
-                    "timezone_offset": .string("Z"), "score_state": .string("SCORED"),
+                    "timezone_offset": .string("Z"), "score_state": .string("SCORED"), "step_count": .number(8_234),
                     "score": .object(["strain": .number(12.7), "kilojoule": .number(8420), "average_heart_rate": .number(68), "max_heart_rate": .number(174)])
                 ])])
             ])),
@@ -61,7 +61,7 @@ enum ExportFixtures {
             ExternalProviderPayload(name: "workouts", endpoint: "https://redacted.invalid/workout", statusCode: 200, fetchedAt: fetchedAt, data: .object([
                 "records": .array([.object([
                     "id": .number(303), "start": .string("2026-03-15T16:00:00Z"), "end": .string("2026-03-15T17:00:00Z"), "timezone_offset": .string("Z"), "sport_name": .string("running"), "sport_id": .number(0), "score_state": .string("SCORED"),
-                    "score": .object(["strain": .number(10.4), "average_heart_rate": .number(146), "max_heart_rate": .number(174), "kilojoule": .number(2500), "distance_meter": .number(10_000), "altitude_gain_meter": .number(120), "altitude_change_meter": .number(15), "percent_recorded": .number(99.4), "zone_duration": .object(["zone_zero_milli": .number(120_000), "zone_one_milli": .number(480_000), "zone_two_milli": .number(900_000), "zone_three_milli": .number(1_020_000), "zone_four_milli": .number(780_000), "zone_five_milli": .number(300_000)])])
+                    "score": .object(["strain": .number(10.4), "average_heart_rate": .number(146), "max_heart_rate": .number(174), "kilojoule": .number(2500), "distance_meter": .number(10_000), "altitude_gain_meter": .number(120), "altitude_change_meter": .number(15), "percent_recorded": .number(99.4), "zone_durations": .object(["zone_zero_milli": .number(120_000), "zone_one_milli": .number(480_000), "zone_two_milli": .number(900_000), "zone_three_milli": .number(1_020_000), "zone_four_milli": .number(780_000), "zone_five_milli": .number(300_000)])])
                 ])])
             ])),
             ExternalProviderPayload(name: "body_measurements_snapshot", endpoint: "https://redacted.invalid/body", statusCode: 200, fetchedAt: fetchedAt, data: .object(["height_meter": .number(1.82), "weight_kilogram": .number(78.4), "max_heart_rate": .number(190)]))

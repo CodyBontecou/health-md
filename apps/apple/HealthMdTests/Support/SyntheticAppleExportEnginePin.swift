@@ -11,7 +11,7 @@ func makeSyntheticAppleExportEnginePin(
         "profile": AppleExportEnginePin.profileID,
         "public_schema": HealthMdExportSchema.identifier,
         "public_schema_version": HealthMdExportSchema.version,
-        "core_api_version": 4,
+        "core_api_version": 5,
         "semantic_input_version": 1,
         "canonical_model_version": 1,
         "render_input_version": 1,
