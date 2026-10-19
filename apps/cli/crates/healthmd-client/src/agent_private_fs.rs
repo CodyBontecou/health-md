@@ -126,14 +126,13 @@ pub(crate) fn open_private(
     }
     let file = dir.open_with(name, &options).map_err(unavailable)?;
     let metadata = file.metadata().map_err(unavailable)?;
+    if !metadata.is_file() {
+        return Err(ClientError::AgentAuthorityUnavailable);
+    }
     #[cfg(unix)]
     {
         use cap_std::fs::MetadataExt as _;
-        if !metadata.is_file()
-            || metadata.nlink() != 1
-            || metadata.uid() != owner()?
-            || metadata.mode() & 0o077 != 0
-        {
+        if metadata.nlink() != 1 || metadata.uid() != owner()? || metadata.mode() & 0o077 != 0 {
             return Err(ClientError::AgentAuthorityUnavailable);
         }
     }

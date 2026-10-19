@@ -1454,7 +1454,7 @@ async fn direct_export(
         .selected_source(device)
         .await
         .map_err(map_direct_client_error)?;
-    if !options.raw {
+    if !options.raw_mode.raw {
         return direct_file_export(
             options,
             selected_source.installation_id.0,
@@ -1471,9 +1471,6 @@ async fn direct_export(
             source_client,
         )
         .await;
-    }
-    if !options.raw_mode.raw {
-        return direct_file_export(options, device, port).await;
     }
     if options.destination.is_some() {
         return Err(usage_error("--destination cannot be used with --raw"));
