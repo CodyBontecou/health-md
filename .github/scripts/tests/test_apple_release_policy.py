@@ -2,6 +2,7 @@
 """Deterministic checks of both store release workflows (no native/store work)."""
 
 import json
+import importlib.util
 import os
 import subprocess
 import tempfile
@@ -52,7 +53,13 @@ class AppleReleasePolicyTests(unittest.TestCase):
     def test_release_changes_trigger_policy_and_apple_gates_with_synchronized_path_maps(self):
         ci = workflow("apple-ci.yml")
         step = next(step for step in ci["jobs"]["changes"]["steps"] if step.get("id") == "detect")
-        self.assertEqual(set(ci["on"]["push"]["paths"]), set(step["with"]["paths"].splitlines()))
+        self.assertIn("apps/apple/scripts/apple-ci-plan.py", step["run"])
+        spec = importlib.util.spec_from_file_location("apple_ci_plan", ROOT / "apps/apple/scripts/apple-ci-plan.py")
+        planner = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(planner)
+        for path in (".github/workflows/release-ios.yml", ".github/workflows/release-macos.yml", ".github/scripts/apple-release-source.py"):
+            self.assertTrue(planner.plan({path})["policy"], path)
+        self.assertTrue(all(planner.full_plan()[flag] for flag in planner.JOBS))
         for path in (".github/workflows/release-ios.yml", ".github/workflows/release-macos.yml", ".github/scripts/**"):
             self.assertIn(path, ci["on"]["push"]["paths"])
         self.assertIn("workflow-policy", ci["jobs"]["gate"]["needs"])
@@ -75,16 +82,20 @@ class AppleReleasePolicyTests(unittest.TestCase):
     def test_full_apple_gate_rejects_failed_skipped_or_cancelled_checks(self):
         step = workflow("apple-ci.yml")["jobs"]["gate"]["steps"][0]
         script = step["run"]
-        env = {key: "true" if key == "CHANGES_RUN" else "success" for key in step["env"]}
+        env = {key: "true" if key.endswith("_SELECTED") else "success" for key in step["env"]}
 
         def run(overrides):
             return subprocess.run(["bash", "-c", script], env={**os.environ, **env, **overrides},
                                   capture_output=True, text=True).returncode
         self.assertEqual(run({}), 0)
-        for key in env.keys() - {"CHANGES_RUN"}:
+        for key in (key for key in env if key.endswith("_RESULT")):
             for result in ("failure", "skipped", "cancelled"):
                 with self.subTest(check=key, result=result):
                     self.assertNotEqual(run({key: result}), 0)
+        for key in (key for key in env if key.endswith("_SELECTED")):
+            for invalid in ("", "unexpected"):
+                with self.subTest(selection=key, invalid=invalid):
+                    self.assertNotEqual(run({key: invalid}), 0)
 
     def test_archive_and_publication_are_surrounded_by_source_guards(self):
         for name in RELEASES:
