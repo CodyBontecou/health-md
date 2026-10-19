@@ -565,7 +565,9 @@ class AgentBridgeExportNativeTrustTest {
     }
 
     private class NativeTrustBoundary : AutoCloseable {
-        val data: Path = Files.createTempDirectory("synthetic-pairing-", privateDirectory)
+        // Model the canonical SDK data directory, including on hosts whose temp
+        // directory has a symlinked prefix (macOS /var -> /private/var).
+        val data: Path = Files.createTempDirectory("synthetic-pairing-", privateDirectory).toRealPath()
         val parent = Files.createDirectory(data.resolve("no_backup"), privateDirectory)
         val root = Files.createDirectory(parent.resolve("direct-cli"), privateDirectory)
         val identity = root.resolve("installation-id")
