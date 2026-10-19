@@ -290,7 +290,18 @@ jobs:
           assert responses[1]["result"]["capabilities"]["extensions"]["io.modelcontextprotocol/ui"]["mimeTypes"] == ["text/html;profile=mcp-app"]
           tools = responses[2]["result"]["tools"]
           tool_names = {tool["name"] for tool in tools}
-          assert len(tools) == 21, sorted(tool_names)
+          expected_tool_names = {
+              "healthmd_status", "healthmd_doctor", "healthmd_capabilities", "healthmd_metrics",
+              "healthmd_metric_chart", "healthmd_sleep_sessions", "healthmd_training_alignment",
+              "healthmd_workouts", "healthmd_coverage", "healthmd_compare_periods",
+              "healthmd_training_evidence", "healthmd_query", "healthmd_evidence_packet",
+              "healthmd_pairing_start", "healthmd_pairing_status", "healthmd_export_plan",
+              "healthmd_export_approval", "healthmd_export_raw", "healthmd_raw_artifact_read",
+              "healthmd_export_files", "healthmd_export_job_status", "healthmd_export_job_resume",
+              "healthmd_export_job_cancel",
+          }
+          assert len(tools) == 23, sorted(tool_names)
+          assert tool_names == expected_tool_names, sorted(tool_names)
           assert "healthmd_metric_chart" in tool_names
           assert {"healthmd_pairing_start", "healthmd_pairing_status"} <= tool_names
           assert {"healthmd_export_raw", "healthmd_raw_artifact_read"} <= tool_names

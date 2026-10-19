@@ -164,11 +164,12 @@ Negative smoke:
 
 Verify the current iPhone source below against its negotiated profile/version and
 [Apple daily schema](../../../apps/apple/docs/features/export-schema.md).
-Older peers keep their historical v5/v6/v7 grammar; never relabel their bytes as v8.
+Older peers keep their historical v5/v6/v7 and v8 grammar; never relabel their bytes as v10.
+Daily v9 remains reserved for the deferred unified grammar.
 
 1. `extract --category Sleep --yesterday` sends `health_data_projection` with resolved Sleep selection and summary detail.
 2. iPhone clones settings and does not persist selection.
-3. Current Apple v8 summaries report `raw_capture_status: not_requested` and no hidden archive.
+3. Current Apple v10 summaries report `raw_capture_status: not_requested` and no hidden archive.
 4. `--object records` or archive pointers imply lossless and return honest projections, not falsely complete documents.
 5. Receipts cover every requested day; JSONL writes to stderr or `OUTPUT.receipt.json`.
 6. Incomplete extraction emits no retained data without `--allow-partial`.

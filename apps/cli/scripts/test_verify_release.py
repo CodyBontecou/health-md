@@ -446,12 +446,13 @@ class DevelopmentQASkillDocumentationTests(unittest.TestCase):
         self.assertIsNotNone(declaration)
         version = re.search(r"static let version = (\d+)\b", declaration.group(1))
         self.assertIsNotNone(version)
-        self.assertEqual(version.group(1), "8")
+        self.assertEqual(version.group(1), "10")
         text = self.SKILLS[1].read_text(encoding="utf-8")
         extraction = text.split("## Extraction contract\n", 1)[1].split("\n## Live prerequisites", 1)[0]
         self.assertNotIn("Summary returns schema-v7 documents", extraction)
         self.assertIn(f"Apple v{version.group(1)}", extraction)
-        for term in ("historical v5/v6/v7", "raw_capture_status: not_requested", "no hidden archive",
+        for term in ("historical v5/v6/v7", "v8 grammar", "Daily v9 remains reserved",
+                     "raw_capture_status: not_requested", "no hidden archive",
                      "Android source-shaped extraction remains planned", "android_source_projection_v1",
                      "android_daily_records_v1", "reserved", "frozen-v4/analytical-v5"):
             self.assertIn(term, extraction)
