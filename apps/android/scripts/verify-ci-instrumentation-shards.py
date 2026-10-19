@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
 
@@ -25,14 +26,26 @@ def report_kind(path: Path) -> str:
 def verify(reports: Path, run_id: str, attempt: str) -> dict:
     if not run_id.isdecimal() or not attempt.isdecimal() or int(run_id) < 1 or int(attempt) < 1:
         raise ValueError('Run ID and attempt must be positive integers')
-    expected = {f'android-instrumentation-{run_id}-{attempt}-shard-{i}' for i in range(SHARD_COUNT)}
-    found = {p.name for p in reports.iterdir() if p.is_dir()}
-    if expected != found:
-        raise ValueError(f'Shard artifact set mismatch: missing={sorted(expected-found)}, unexpected={sorted(found-expected)}')
+    # GitHub retains successful jobs when only a failed shard is rerun. Select
+    # the newest artifact for each shard from this immutable workflow run;
+    # never fall back if that artifact has failing or incomplete reports.
+    selected = {}
+    for directory in reports.iterdir():
+        if not directory.is_dir():
+            continue
+        match = re.fullmatch(r'android-instrumentation-([1-9][0-9]*)-([1-9][0-9]*)-shard-([0-3])', directory.name)
+        if not match or match[1] != run_id or int(match[2]) > int(attempt):
+            raise ValueError(f'Shard artifact set mismatch: unexpected={directory.name}')
+        artifact_attempt, index = int(match[2]), int(match[3])
+        if index not in selected or artifact_attempt > selected[index][0]:
+            selected[index] = (artifact_attempt, directory)
+    missing = set(range(SHARD_COUNT)) - selected.keys()
+    if missing:
+        raise ValueError(f'Shard artifact set mismatch: missing shards={sorted(missing)}')
     inventory = []
     seen = set()
     for index in range(SHARD_COUNT):
-        directory = reports / f'android-instrumentation-{run_id}-{attempt}-shard-{index}'
+        directory = selected[index][1]
         groups = set()
         files = sorted(directory.glob('**/outputs/androidTest-results/connected/**/*.xml'))
         for path in files:
@@ -61,6 +74,7 @@ def verify(reports: Path, run_id: str, attempt: str) -> dict:
         if groups != required:
             raise ValueError(f'Shard {index} report groups mismatch: expected={sorted(required)}, found={sorted(groups)}')
     return {'run_id': run_id, 'attempt': attempt, 'shards': SHARD_COUNT,
+            'artifact_attempts': {str(index): selected[index][0] for index in range(SHARD_COUNT)},
             'tests': len(inventory), 'passed': sum(x['result'] == 'passed' for x in inventory),
             'skipped': sum(x['result'] == 'skipped' for x in inventory),
             'cases': sorted(inventory, key=lambda x: (x['kind'], x['class'], x['name']))}
