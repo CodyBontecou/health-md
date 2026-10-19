@@ -133,7 +133,7 @@ test("Apple onboarding resources stay byte-identical to pinned website plugin as
     readFile(new URL("plugin-activity-rings-preview.html", appleResourceRoot), "utf8"),
   ]);
 
-  assert.equal(externalSources.obsidian_plugin.revision, "c33dcbe935d681216faca78c5dae251344cb4014");
+  assert.equal(externalSources.obsidian_plugin.revision, "fd5356c4dd032fed975122f4d691d0fdf6fd804f");
   assert.deepEqual(appleBundle, websiteBundle);
   assert.equal(appleDays, `window.HealthMdSampleData = ${websiteDays.trim()};\n`);
   assert.equal(appleRollups, `window.HealthMdRollupSampleData = ${websiteRollups.trim()};\n`);
