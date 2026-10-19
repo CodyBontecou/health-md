@@ -1,6 +1,9 @@
 package com.healthmd.accountsync
 
 import java.io.File
+import com.healthmd.sharedsetup.SharedSetupMetricRegistry
+import com.healthmd.sharedsetup.SharedSetupRegistryBinding
+import com.healthmd.sharedsetup.SharedSetupV2Codec
 import kotlinx.serialization.json.*
 import org.junit.Test
 
@@ -121,6 +124,23 @@ class ProfileSyncV1Test {
     @Test fun sharedFixturesAndSourceScenarios() {
         val root = generateSequence(File(".").absoluteFile) { it.parentFile }
             .first { File(it, "packages/contracts/profile-sync/v1/fixtures").isDirectory }
-        ProfileSyncV1FixtureConformance.run(root, ProfileSyncV1())
+        // Match the standalone conformance runner's pinned registry, while exercising
+        // the real codecs. Desktop JVM fixtures do not load the Android UniFFI adapter.
+        val evidence = Json.parseToJsonElement(
+            File(root, "packages/contracts/profile-sync/v1/registry-evidence.json").readText(),
+        ).jsonObject
+        val registry = object : SharedSetupMetricRegistry {
+            override val version = 1
+            override val sha256 = evidence.getValue("sha256").jsonPrimitive.content
+            override val bySemanticId = evidence.getValue("aliases").jsonObject.mapValues { (id, raw) ->
+                val row = raw.jsonArray
+                SharedSetupRegistryBinding(id, row[1].jsonPrimitive.contentOrNull,
+                    row[2].jsonPrimitive.contentOrNull, row[0].jsonPrimitive.content)
+            }
+            override val byAndroidSelectionId = bySemanticId.values.mapNotNull { binding ->
+                binding.androidSelectionId?.let { it to binding }
+            }.toMap()
+        }
+        ProfileSyncV1FixtureConformance.run(root, ProfileSyncV1(SharedSetupV2Codec(registry)))
     }
 }
