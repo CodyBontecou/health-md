@@ -413,6 +413,47 @@ final class ScheduledExportCoordinatorTests: XCTestCase {
         XCTAssertEqual(restarted.apiDestinationIdentity, identity)
     }
 
+    func testPreRecoveryGenerationRequestKeepsOldFormatsButNextOccurrenceUsesEditedProfile() async throws {
+        let fireDate = date(year: 2026, month: 10, day: 19, hour: 8)
+        let profileID = UUID()
+        var oldSettings = makeFrozenSnapshot(pin: try makeSyntheticAppleExportEnginePin())
+        oldSettings.exportFormats = [.markdown, .obsidianBases]
+        let oldRequest = PendingExportRequest(
+            dates: [date(year: 2026, month: 10, day: 18)], source: .scheduled,
+            scheduledFireDate: fireDate, createdAt: fireDate,
+            exportTarget: .localIPhoneFolder, settingsSnapshot: oldSettings,
+            profileID: profileID, profileName: "Migrated Default", calendar: Self.calendar
+        )
+        // v3.4.2 predates these recovery-authority fields. Simulate those persisted bytes,
+        // not a real old-binary writer or a health export payload.
+        var wire = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(oldRequest)) as? [String: Any])
+        for key in ["recoveryGeneration", "scheduleEnabledAt", "apiDestinationIdentity"] {
+            wire.removeValue(forKey: key)
+        }
+        let decoded = try JSONDecoder().decode(PendingExportRequest.self,
+                                               from: JSONSerialization.data(withJSONObject: wire))
+        let store = InMemoryPendingExportStore()
+        try store.upsert(decoded)
+        let coordinator = makeCoordinator(store: store,
+            scheduler: InspectableExportNotificationScheduler(), now: fireDate)
+        var editedSettings = oldSettings
+        editedSettings.exportFormats = [.markdown, .json]
+        let context = ScheduledExportCoordinator.ScheduledProfileRequestContext(
+            profileID: profileID, profileName: "Migrated Default",
+            target: .localIPhoneFolder, settings: editedSettings)
+        let schedule = ExportSchedule(isEnabled: true, frequency: .daily, preferredHour: 8)
+
+        let retry = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule, fireDate: fireDate, profile: context)
+        XCTAssertEqual(retry.id, oldRequest.id)
+        XCTAssertEqual(retry.settingsSnapshot?.exportFormats, [.markdown, .obsidianBases],
+                       "An already-queued retry deliberately retains its original settings")
+        let next = try await coordinator.preparePendingScheduledExport(
+            schedule: schedule, fireDate: date(year: 2026, month: 10, day: 20, hour: 8), profile: context)
+        XCTAssertEqual(next.settingsSnapshot?.exportFormats, [.markdown, .json],
+                       "A new occurrence must use the edited saved profile")
+    }
+
     private func makeCoordinator(
         store: InMemoryPendingExportStore,
         scheduler: InspectableExportNotificationScheduler,
